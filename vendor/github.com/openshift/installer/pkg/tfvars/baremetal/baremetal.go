@@ -17,11 +17,11 @@ import (
 )
 
 type config struct {
-	LibvirtURI              string `json:"libvirt_uri,omitempty"`
-	BootstrapProvisioningIP string `json:"bootstrap_provisioning_ip,omitempty"`
-	BootstrapOSImage        string `json:"bootstrap_os_image,omitempty"`
-	ExternalBridge          string `json:"external_bridge,omitempty"`
-	ProvisioningBridge      string `json:"provisioning_bridge,omitempty"`
+	LibvirtURI              string `json:"libvirt_uri"`
+	BootstrapProvisioningIP string `json:"bootstrap_provisioning_ip"`
+	BootstrapOSImage        string `json:"bootstrap_os_image"`
+	ExternalBridge          string `json:"external_bridge"`
+	ProvisioningBridge      string `json:"provisioning_bridge"`
 
 	// Data required for control plane deployment - several maps per host, because of terraform's limitations
 	Hosts         []map[string]interface{} `json:"hosts"`
@@ -76,16 +76,32 @@ func TFVars(libvirtURI, bootstrapProvisioningIP, bootstrapOSImage, externalBridg
 			"vendor_interface":     accessDetails.VendorInterface(),
 		}
 
+		// Explicitly set the boot mode to the default "uefi" in case
+		// it is not set. We use the capabilities field instead of
+		// instance_info to ensure the host is in the right mode for
+		// virtualmedia-based introspection.
+		bootMode := "boot_mode:uefi"
+		if host.BootMode == baremetal.Legacy {
+			bootMode = "boot_mode:bios"
+		}
+
 		// Properties
 		propertiesMap := map[string]interface{}{
 			"local_gb":     profile.LocalGB,
 			"cpu_arch":     profile.CPUArch,
-			"capabilities": "boot_mode:uefi",
+			"capabilities": bootMode,
 		}
 
 		// Root device hints
 		rootDevice := make(map[string]interface{})
-		if profile.RootDeviceHints.HCTL != "" {
+
+		// host.RootDeviceHints overrides the root device hint in the profile
+		if host.RootDeviceHints != nil {
+			rootDeviceStringMap := host.RootDeviceHints.MakeHintMap()
+			for key, value := range rootDeviceStringMap {
+				rootDevice[key] = value
+			}
+		} else if profile.RootDeviceHints.HCTL != "" {
 			rootDevice["hctl"] = profile.RootDeviceHints.HCTL
 		} else {
 			rootDevice["name"] = profile.RootDeviceHints.DeviceName

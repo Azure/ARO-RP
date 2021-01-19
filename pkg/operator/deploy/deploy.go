@@ -13,7 +13,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
-	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -208,7 +208,7 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 		switch un.GroupVersionKind().GroupKind().String() {
 		case "CustomResourceDefinition.apiextensions.k8s.io":
 			err = wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
-				crd, err := o.extensionscli.ApiextensionsV1beta1().CustomResourceDefinitions().Get(ctx, un.GetName(), metav1.GetOptions{})
+				crd, err := o.extensionscli.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, un.GetName(), metav1.GetOptions{})
 				if err != nil {
 					return false, err
 				}
@@ -294,11 +294,11 @@ func (o *operator) IsReady(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func isCRDEstablished(crd *extv1beta1.CustomResourceDefinition) bool {
-	m := make(map[extv1beta1.CustomResourceDefinitionConditionType]extv1beta1.ConditionStatus, len(crd.Status.Conditions))
+func isCRDEstablished(crd *extv1.CustomResourceDefinition) bool {
+	m := make(map[extv1.CustomResourceDefinitionConditionType]extv1.ConditionStatus, len(crd.Status.Conditions))
 	for _, cond := range crd.Status.Conditions {
 		m[cond.Type] = cond.Status
 	}
-	return m[extv1beta1.Established] == extv1beta1.ConditionTrue &&
-		m[extv1beta1.NamesAccepted] == extv1beta1.ConditionTrue
+	return m[extv1.Established] == extv1.ConditionTrue &&
+		m[extv1.NamesAccepted] == extv1.ConditionTrue
 }

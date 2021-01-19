@@ -73,6 +73,7 @@ func (client ProvidersClient) Get(ctx context.Context, resourceProviderNamespace
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "features.ProvidersClient", "Get", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -151,6 +152,7 @@ func (client ProvidersClient) GetAtTenantScope(ctx context.Context, resourceProv
 	result, err = client.GetAtTenantScopeResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "features.ProvidersClient", "GetAtTenantScope", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -230,9 +232,11 @@ func (client ProvidersClient) List(ctx context.Context, top *int32, expand strin
 	result.plr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "features.ProvidersClient", "List", resp, "Failure responding to request")
+		return
 	}
 	if result.plr.hasNextLink() && result.plr.IsEmpty() {
 		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -352,9 +356,11 @@ func (client ProvidersClient) ListAtTenantScope(ctx context.Context, top *int32,
 	result.plr, err = client.ListAtTenantScopeResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "features.ProvidersClient", "ListAtTenantScope", resp, "Failure responding to request")
+		return
 	}
 	if result.plr.hasNextLink() && result.plr.IsEmpty() {
 		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -466,6 +472,7 @@ func (client ProvidersClient) Register(ctx context.Context, resourceProviderName
 	result, err = client.RegisterResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "features.ProvidersClient", "Register", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -539,6 +546,7 @@ func (client ProvidersClient) Unregister(ctx context.Context, resourceProviderNa
 	result, err = client.UnregisterResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "features.ProvidersClient", "Unregister", resp, "Failure responding to request")
+		return
 	}
 
 	return

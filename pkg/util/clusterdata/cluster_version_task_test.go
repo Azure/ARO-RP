@@ -32,7 +32,7 @@ func TestClusterVersionEnricherTask(t *testing.T) {
 			client: fake.NewSimpleClientset(&configv1.ClusterVersion{
 				ObjectMeta: metav1.ObjectMeta{Name: "version"},
 				Status: configv1.ClusterVersionStatus{
-					Desired: configv1.Update{Version: "1.2.3"},
+					Desired: configv1.Release{Version: "1.2.3"},
 				},
 			}),
 			wantOc: &api.OpenShiftCluster{

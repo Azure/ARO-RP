@@ -8,21 +8,19 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/ghodss/yaml"
-
 	"github.com/gophercloud/utils/openstack/clientconfig"
+	"github.com/pkg/errors"
 
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
-	"github.com/openshift/installer/pkg/asset/installconfig/azure"
 	"github.com/openshift/installer/pkg/asset/installconfig/gcp"
 	"github.com/openshift/installer/pkg/asset/installconfig/ovirt"
 	"github.com/openshift/installer/pkg/asset/machines"
+	osmachine "github.com/openshift/installer/pkg/asset/machines/openstack"
 	openstackmanifests "github.com/openshift/installer/pkg/asset/manifests/openstack"
 	"github.com/openshift/installer/pkg/asset/openshiftinstall"
-	"github.com/openshift/installer/pkg/asset/rhcos"
-
-	osmachine "github.com/openshift/installer/pkg/asset/machines/openstack"
 	"github.com/openshift/installer/pkg/asset/password"
+	"github.com/openshift/installer/pkg/asset/rhcos"
 	"github.com/openshift/installer/pkg/asset/templates/content/openshift"
 	"github.com/openshift/installer/pkg/types"
 	awstypes "github.com/openshift/installer/pkg/types/aws"
@@ -56,7 +54,6 @@ func (o *Openshift) Name() string {
 // Openshift asset
 func (o *Openshift) Dependencies() []asset.Asset {
 	return []asset.Asset{
-		&installconfig.PlatformCreds{},
 		&installconfig.InstallConfig{},
 		&installconfig.ClusterID{},
 		&password.KubeadminPassword{},
@@ -73,12 +70,11 @@ func (o *Openshift) Dependencies() []asset.Asset {
 
 // Generate generates the respective operator config.yml files
 func (o *Openshift) Generate(dependencies asset.Parents) error {
-	platformCreds := &installconfig.PlatformCreds{}
 	installConfig := &installconfig.InstallConfig{}
 	clusterID := &installconfig.ClusterID{}
 	kubeadminPassword := &password.KubeadminPassword{}
 	openshiftInstall := &openshiftinstall.Config{}
-	dependencies.Get(platformCreds, installConfig, kubeadminPassword, clusterID, openshiftInstall)
+	dependencies.Get(installConfig, kubeadminPassword, clusterID, openshiftInstall)
 	var cloudCreds cloudCredsSecretData
 	platform := installConfig.Config.Platform.Name()
 	switch platform {
@@ -98,7 +94,8 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 		}
 
 	case azuretypes.Name:
-		session, err := azure.GetSession(platformCreds.Azure)
+		resourceGroupName := installConfig.Config.Azure.ClusterResourceGroupName(clusterID.InfraID)
+		session, err := installConfig.Azure.Session()
 		if err != nil {
 			return err
 		}
@@ -110,7 +107,7 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 				Base64encodeClientSecret:   base64.StdEncoding.EncodeToString([]byte(creds.ClientSecret)),
 				Base64encodeTenantID:       base64.StdEncoding.EncodeToString([]byte(creds.TenantID)),
 				Base64encodeResourcePrefix: base64.StdEncoding.EncodeToString([]byte(clusterID.InfraID)),
-				Base64encodeResourceGroup:  base64.StdEncoding.EncodeToString([]byte(installConfig.Config.Azure.ResourceGroupName)),
+				Base64encodeResourceGroup:  base64.StdEncoding.EncodeToString([]byte(resourceGroupName)),
 				Base64encodeRegion:         base64.StdEncoding.EncodeToString([]byte(installConfig.Config.Azure.Region)),
 			},
 		}
@@ -132,6 +129,12 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 		if err != nil {
 			return err
 		}
+
+		// We need to replace the local cacert path with one that is used in OpenShift
+		if cloud.CACertFile != "" {
+			cloud.CACertFile = "/etc/kubernetes/static-pod-resources/configmaps/cloud-config/ca-bundle.pem"
+		}
+
 		clouds := make(map[string]map[string]*clientconfig.Cloud)
 		clouds["clouds"] = map[string]*clientconfig.Cloud{
 			osmachine.CloudName: cloud,
@@ -215,7 +218,10 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 		assetData["99_baremetal-provisioning-config.yaml"] = applyTemplateData(baremetalConfig.Files()[0].Data, bmTemplateData)
 	}
 
-	if platform == azuretypes.Name && !installConfig.Config.Azure.ARO && installConfig.Config.Publish == types.InternalPublishingStrategy {
+	if platform == azuretypes.Name &&
+		!installConfig.Config.Azure.ARO &&
+		installConfig.Config.Publish == types.InternalPublishingStrategy &&
+		installConfig.Config.Azure.OutboundType == azuretypes.LoadbalancerOutboundType {
 		privateClusterOutbound := &openshift.PrivateClusterOutbound{}
 		dependencies.Get(privateClusterOutbound)
 		assetData["99_private-cluster-outbound-service.yaml"] = applyTemplateData(privateClusterOutbound.Files()[0].Data, templateData)
@@ -246,10 +252,20 @@ func (o *Openshift) Files() []*asset.File {
 
 // Load returns the openshift asset from disk.
 func (o *Openshift) Load(f asset.FileFetcher) (bool, error) {
-	fileList, err := f.FetchByPattern(filepath.Join(openshiftManifestDir, "*"))
+	yamlFileList, err := f.FetchByPattern(filepath.Join(openshiftManifestDir, "*.yaml"))
 	if err != nil {
-		return false, err
+		return false, errors.Wrap(err, "failed to load *.yaml files")
 	}
+	ymlFileList, err := f.FetchByPattern(filepath.Join(openshiftManifestDir, "*.yml"))
+	if err != nil {
+		return false, errors.Wrap(err, "failed to load *.yml files")
+	}
+	jsonFileList, err := f.FetchByPattern(filepath.Join(openshiftManifestDir, "*.json"))
+	if err != nil {
+		return false, errors.Wrap(err, "failed to load *.json files")
+	}
+	fileList := append(yamlFileList, ymlFileList...)
+	fileList = append(fileList, jsonFileList...)
 
 	for _, file := range fileList {
 		if machines.IsMachineManifest(file) {

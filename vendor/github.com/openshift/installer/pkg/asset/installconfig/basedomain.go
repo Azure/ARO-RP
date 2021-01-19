@@ -24,28 +24,30 @@ var _ asset.Asset = (*baseDomain)(nil)
 // Dependencies returns no dependencies.
 func (a *baseDomain) Dependencies() []asset.Asset {
 	return []asset.Asset{
-		&PlatformCreds{},
 		&platform{},
 	}
 }
 
 // Generate queries for the base domain from the user.
 func (a *baseDomain) Generate(parents asset.Parents) error {
-	platformCreds := &PlatformCreds{}
 	platform := &platform{}
-	parents.Get(platformCreds, platform)
+	parents.Get(platform)
 
+	var err error
 	switch platform.CurrentName() {
 	case aws.Name:
-		var err error
 		a.BaseDomain, err = awsconfig.GetBaseDomain()
 		cause := errors.Cause(err)
 		if !(awsconfig.IsForbidden(cause) || request.IsErrorThrottle(cause)) {
 			return err
 		}
 	case azure.Name:
-		var err error
-		azureDNS, _ := azureconfig.NewDNSConfig(platformCreds.Azure)
+		// Create client using public cloud because install config has not been generated yet.
+		ssn, err := azureconfig.GetSession(azure.PublicCloud, nil)
+		if err != nil {
+			return err
+		}
+		azureDNS := azureconfig.NewDNSConfig(ssn)
 		zone, err := azureDNS.GetDNSZone()
 		if err != nil {
 			return err
@@ -53,7 +55,6 @@ func (a *baseDomain) Generate(parents asset.Parents) error {
 		a.BaseDomain = zone.Name
 		return platform.Azure.SetBaseDomain(zone.ID)
 	case gcp.Name:
-		var err error
 		a.BaseDomain, err = gcpconfig.GetBaseDomain(platform.GCP.ProjectID)
 
 		// We are done if success (err == nil) or an err besides forbidden/throttling

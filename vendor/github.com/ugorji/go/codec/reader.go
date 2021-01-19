@@ -10,7 +10,6 @@ import "io"
 type decReader interface {
 	// readx will use the implementation scratch buffer if possible i.e. n < len(scratchbuf), OR
 	// just return a view of the []byte being decoded from.
-	// Ensure you call detachZeroCopyBytes later if this needs to be sent outside codec control.
 	readx(n uint) []byte
 	readb([]byte)
 
@@ -788,6 +787,11 @@ func (z *decRd) readn1IO() uint8 {
 	}
 	return z.ri.readn1()
 }
+
+type devNullReader struct{}
+
+func (devNullReader) Read(p []byte) (int, error) { return 0, io.EOF }
+func (devNullReader) Close() error               { return nil }
 
 func readFull(r io.Reader, bs []byte) (n uint, err error) {
 	var nn int

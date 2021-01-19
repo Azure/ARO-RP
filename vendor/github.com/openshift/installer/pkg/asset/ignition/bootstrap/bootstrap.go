@@ -13,8 +13,8 @@ import (
 	"text/template"
 
 	"github.com/containers/image/pkg/sysregistriesv2"
-	"github.com/coreos/ignition/config/util"
-	igntypes "github.com/coreos/ignition/config/v2_2/types"
+	ignutil "github.com/coreos/ignition/v2/config/util"
+	igntypes "github.com/coreos/ignition/v2/config/v3_1/types"
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -196,7 +196,7 @@ func (a *Bootstrap) Generate(dependencies asset.Parents) error {
 		}},
 	)
 
-	data, err := json.Marshal(a.Config)
+	data, err := ignition.Marshal(a.Config)
 	if err != nil {
 		return errors.Wrap(err, "failed to Marshal Ignition config")
 	}
@@ -249,7 +249,7 @@ func (a *Bootstrap) getTemplateData(installConfig *types.InstallConfig, releaseI
 
 	switch installConfig.Platform.Name() {
 	case baremetaltypes.Name:
-		platformData.BareMetal = baremetal.GetTemplateData(installConfig.Platform.BareMetal)
+		platformData.BareMetal = baremetal.GetTemplateData(installConfig.Platform.BareMetal, installConfig.MachineNetwork)
 	case vspheretypes.Name:
 		platformData.VSphere = vsphere.GetTemplateData(installConfig.Platform.VSphere)
 	}
@@ -320,7 +320,9 @@ func (a *Bootstrap) addStorageFiles(base string, uri string, templateData *boots
 		mode = 0600
 	}
 	ign := ignition.FileFromBytes(strings.TrimSuffix(base, ".template"), "root", mode, data)
-	ign.Append = appendToFile
+	if appendToFile {
+		ignition.ConvertToAppendix(&ign)
+	}
 
 	// Replace files that already exist in the slice with ones added later, otherwise append them
 	a.Config.Storage.Files = replaceOrAppend(a.Config.Storage.Files, ign)
@@ -382,7 +384,7 @@ func (a *Bootstrap) addSystemdUnits(uri string, templateData *bootstrapTemplateD
 				return err
 			}
 
-			dropins := []igntypes.SystemdDropin{}
+			dropins := []igntypes.Dropin{}
 			for _, childInfo := range children {
 				file, err := data.Assets.Open(path.Join(dir, childInfo.Name()))
 				if err != nil {
@@ -395,9 +397,9 @@ func (a *Bootstrap) addSystemdUnits(uri string, templateData *bootstrapTemplateD
 					return err
 				}
 
-				dropins = append(dropins, igntypes.SystemdDropin{
+				dropins = append(dropins, igntypes.Dropin{
 					Name:     childName,
-					Contents: string(contents),
+					Contents: ignutil.StrToPtr(string(contents)),
 				})
 			}
 
@@ -407,7 +409,7 @@ func (a *Bootstrap) addSystemdUnits(uri string, templateData *bootstrapTemplateD
 				Dropins: dropins,
 			}
 			if _, ok := enabled[name]; ok {
-				unit.Enabled = util.BoolToPtr(true)
+				unit.Enabled = ignutil.BoolToPtr(true)
 			}
 			a.Config.Systemd.Units = append(a.Config.Systemd.Units, unit)
 		} else {
@@ -418,10 +420,10 @@ func (a *Bootstrap) addSystemdUnits(uri string, templateData *bootstrapTemplateD
 
 			unit := igntypes.Unit{
 				Name:     name,
-				Contents: string(contents),
+				Contents: ignutil.StrToPtr(string(contents)),
 			}
 			if _, ok := enabled[name]; ok {
-				unit.Enabled = util.BoolToPtr(true)
+				unit.Enabled = ignutil.BoolToPtr(true)
 			}
 			a.Config.Systemd.Units = append(a.Config.Systemd.Units, unit)
 		}

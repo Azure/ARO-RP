@@ -27,7 +27,7 @@ func TestEmitSummary(t *testing.T) {
 			Name: "version",
 		},
 		Status: configv1.ClusterVersionStatus{
-			Desired: configv1.Update{
+			Desired: configv1.Release{
 				Version: "4.3.3",
 			},
 			History: []configv1.UpdateHistory{

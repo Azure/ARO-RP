@@ -1,15 +1,18 @@
 // +build !safe
 // +build !appengine
-// +build go1.7
+// +build go1.8
 
 // Copyright (c) 2012-2020 Ugorji Nwoke. All rights reserved.
 // Use of this source code is governed by a MIT license found in the LICENSE file.
+
+// go 1.8 is needed, as that is when all linknames exist.
+// specifically, typedmemclr was introduced in go 1.8
 
 package codec
 
 import (
 	"reflect"
-	"runtime"
+	_ "runtime" // needed so that gccgo works with go linkname(s)
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -31,12 +34,12 @@ const safeMode = false
 // helperUnsafeCopyMapEntry says that we should copy the pointer in the map
 // to another value during mapRange/iteration and mapGet calls.
 //
-// The only callers of mapRange/iteration is encode. Here, we just walk through the values
-// and encode them
-
-// The only caller of mapGet is decode. Here, it does a Get if the underlying value is a pointer,
-// and decodes into that.
-
+// The only callers of mapRange/iteration is encode.
+// Here, we just walk through the values and encode them
+//
+// The only caller of mapGet is decode.
+// Here, it does a Get if the underlying value is a pointer, and decodes into that.
+//
 // For both users, we are very careful NOT to modify or keep the pointers around.
 // Consequently, it is ok for take advantage of the performance that the map is not modified
 // during an iteration and we can just "peek" at the internal value" in the map and use it.
@@ -786,21 +789,20 @@ func (t *unsafeMapIter) Next() (r bool) {
 		return
 	}
 
-	k := (*unsafeReflectValue)(unsafe.Pointer(&t.k))
 	if helperUnsafeCopyMapEntry {
+		k := (*unsafeReflectValue)(unsafe.Pointer(&t.k))
 		unsafeMapSet(k.typ, k.ptr, t.it.key, t.kisref)
-	} else {
-		k.ptr = t.it.key
-	}
-
-	if t.mapvalues {
-		v := (*unsafeReflectValue)(unsafe.Pointer(&t.v))
-		if helperUnsafeCopyMapEntry {
+		if t.mapvalues {
+			v := (*unsafeReflectValue)(unsafe.Pointer(&t.v))
 			unsafeMapSet(v.typ, v.ptr, t.it.value, t.visref)
-		} else {
-			v.ptr = t.it.value
+		}
+	} else {
+		(*unsafeReflectValue)(unsafe.Pointer(&t.k)).ptr = t.it.key
+		if t.mapvalues {
+			(*unsafeReflectValue)(unsafe.Pointer(&t.v)).ptr = t.it.value
 		}
 	}
+
 	return true
 }
 
@@ -812,8 +814,7 @@ func (t *unsafeMapIter) Value() (r reflect.Value) {
 	return t.v
 }
 
-func (t *unsafeMapIter) Done() {
-}
+func (t *unsafeMapIter) Done() {}
 
 // unsafeMapSet does equivalent of: p = p2
 func unsafeMapSet(ptyp, p, p2 unsafe.Pointer, isref bool) {
@@ -842,9 +843,9 @@ func mapRange(t *mapIter, m, k, v reflect.Value, mapvalues bool) {
 	t.started = false
 	t.mapvalues = mapvalues
 
-	var urv *unsafeReflectValue
+	// var urv *unsafeReflectValue
 
-	urv = (*unsafeReflectValue)(unsafe.Pointer(&m))
+	urv := (*unsafeReflectValue)(unsafe.Pointer(&m))
 	t.mtyp = urv.typ
 	t.mptr = rvRefPtr(urv)
 
@@ -949,6 +950,14 @@ func (n *structFieldInfoPathNode) rvField(v reflect.Value) (rv reflect.Value) {
 // ---------- go linknames (LINKED to runtime/reflect) ---------------
 
 // MARKER: always check that these linknames match subsequent versions of go
+//
+// Note that as of Jan 2021 (go 1.16 release), go:linkname(s) are not inlined
+// outside of the standard library use (e.g. within sync, reflect, etc).
+//
+// Consequently, these do not necessarily give a performance boost, as a function overhead.
+//
+// Also, we link to the functions in reflect where possible, as opposed to those in runtime.
+// They are guaranteed to be safer for our use, even when they are just trampoline functions.
 
 //go:linkname maplen reflect.maplen
 //go:noescape
@@ -978,24 +987,36 @@ func mapassign(typ unsafe.Pointer, m unsafe.Pointer, key, val unsafe.Pointer)
 //go:noescape
 func mapdelete(typ unsafe.Pointer, m unsafe.Pointer, key unsafe.Pointer)
 
-//go:linkname typedmemmove runtime.typedmemmove
+//go:linkname unsafe_New reflect.unsafe_New
 //go:noescape
-func typedmemmove(typ unsafe.Pointer, dst, src unsafe.Pointer)
-
-//go:linkname typedmemclr runtime.typedmemclr
-//go:noescape
-func typedmemclr(typ unsafe.Pointer, dst unsafe.Pointer)
+func unsafe_New(typ unsafe.Pointer) unsafe.Pointer
 
 //go:linkname typedslicecopy reflect.typedslicecopy
 //go:noescape
 func typedslicecopy(elemType unsafe.Pointer, dst, src unsafeSlice) int
 
-// //go:linkname memmove reflect.memmove
-// //go:noescape
-// func memmove(dst, src unsafe.Pointer, n int)
-
-//go:linkname unsafe_New reflect.unsafe_New
+//go:linkname typedmemmove reflect.typedmemmove
 //go:noescape
-func unsafe_New(typ unsafe.Pointer) unsafe.Pointer
+func typedmemmove(typ unsafe.Pointer, dst, src unsafe.Pointer)
 
-var _ = runtime.MemProfileRate
+//go:linkname typedmemclr reflect.typedmemclr
+//go:noescape
+func typedmemclr(typ unsafe.Pointer, dst unsafe.Pointer)
+
+/*
+
+//go:linkname memhash runtime.memhash
+//go:noescape
+func memhash(p unsafe.Pointer, seed, length uintptr) uintptr
+
+// ---------- others ---------------
+
+func hashShortString(b []byte) uintptr {
+	return memhash(unsafe.Pointer(&b[0]), 0, uintptr(len(b)))
+}
+
+// var _ = runtime.MemProfileRate
+// func maplen(typ unsafe.Pointer) int { return *((*int)(typ)) }
+// func chanlen(typ unsafe.Pointer) int { return int(*((*uint)(typ))) }
+
+*/

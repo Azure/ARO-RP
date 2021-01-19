@@ -15,7 +15,6 @@ import (
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	icaws "github.com/openshift/installer/pkg/asset/installconfig/aws"
-	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	icgcp "github.com/openshift/installer/pkg/asset/installconfig/gcp"
 	"github.com/openshift/installer/pkg/types"
 	awstypes "github.com/openshift/installer/pkg/types/aws"
@@ -49,7 +48,6 @@ func (*DNS) Name() string {
 // the asset.
 func (*DNS) Dependencies() []asset.Asset {
 	return []asset.Asset{
-		&installconfig.PlatformCreds{},
 		&installconfig.InstallConfig{},
 		&installconfig.ClusterID{},
 		// PlatformCredsCheck just checks the creds (and asks, if needed)
@@ -61,10 +59,9 @@ func (*DNS) Dependencies() []asset.Asset {
 
 // Generate generates the DNS config and its CRD.
 func (d *DNS) Generate(dependencies asset.Parents) error {
-	platformCreds := &installconfig.PlatformCreds{}
 	installConfig := &installconfig.InstallConfig{}
 	clusterID := &installconfig.ClusterID{}
-	dependencies.Get(platformCreds, installConfig, clusterID)
+	dependencies.Get(installConfig, clusterID)
 
 	config := &configv1.DNS{
 		TypeMeta: metav1.TypeMeta{
@@ -98,7 +95,7 @@ func (d *DNS) Generate(dependencies asset.Parents) error {
 			"Name": fmt.Sprintf("%s-int", clusterID.InfraID),
 		}}
 	case azuretypes.Name:
-		dnsConfig, err := icazure.NewDNSConfig(platformCreds.Azure)
+		dnsConfig, err := installConfig.Azure.DNSConfig()
 		if err != nil {
 			return err
 		}
@@ -111,7 +108,7 @@ func (d *DNS) Generate(dependencies asset.Parents) error {
 			}
 		}
 		config.Spec.PrivateZone = &configv1.DNSZone{
-			ID: dnsConfig.GetPrivateDNSZoneID(installConfig.Config.Azure.ResourceGroupName, installConfig.Config.ClusterDomain()),
+			ID: dnsConfig.GetPrivateDNSZoneID(installConfig.Config.Azure.ClusterResourceGroupName(clusterID.InfraID), installConfig.Config.ClusterDomain()),
 		}
 	case gcptypes.Name:
 		if installConfig.Config.Publish == types.ExternalPublishingStrategy {

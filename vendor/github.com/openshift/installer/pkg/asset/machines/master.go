@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
-	baremetalapi "github.com/openshift/cluster-api-provider-baremetal/pkg/apis"
-	baremetalprovider "github.com/openshift/cluster-api-provider-baremetal/pkg/apis/baremetal/v1alpha1"
+	baremetalapi "github.com/metal3-io/cluster-api-provider-baremetal/pkg/apis"
+	baremetalprovider "github.com/metal3-io/cluster-api-provider-baremetal/pkg/apis/baremetal/v1alpha1"
 	gcpapi "github.com/openshift/cluster-api-provider-gcp/pkg/apis"
 	gcpprovider "github.com/openshift/cluster-api-provider-gcp/pkg/apis/gcpprovider/v1beta1"
 	libvirtapi "github.com/openshift/cluster-api-provider-libvirt/pkg/apis"
@@ -112,7 +112,6 @@ func (m *Master) Name() string {
 // Master asset
 func (m *Master) Dependencies() []asset.Asset {
 	return []asset.Asset{
-		&installconfig.PlatformCreds{},
 		&installconfig.ClusterID{},
 		// PlatformCredsCheck just checks the creds (and asks, if needed)
 		// We do not actually use it in this asset directly, hence
@@ -136,12 +135,11 @@ func awsDefaultMasterMachineTypes(region string) []string {
 // Generate generates the Master asset.
 func (m *Master) Generate(dependencies asset.Parents) error {
 	ctx := context.TODO()
-	platformCreds := &installconfig.PlatformCreds{}
 	clusterID := &installconfig.ClusterID{}
 	installConfig := &installconfig.InstallConfig{}
 	rhcosImage := new(rhcos.Image)
 	mign := &machine.Master{}
-	dependencies.Get(platformCreds, clusterID, installConfig, rhcosImage, mign)
+	dependencies.Get(clusterID, installConfig, rhcosImage, mign)
 
 	ic := installConfig.Config
 
@@ -252,7 +250,11 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		mpool.Set(ic.Platform.Azure.DefaultMachinePlatform)
 		mpool.Set(pool.Platform.Azure)
 		if len(mpool.Zones) == 0 {
-			azs, err := azure.AvailabilityZones(platformCreds.Azure, ic.Platform.Azure.Region, mpool.InstanceType)
+			session, err := installConfig.Azure.Session()
+			if err != nil {
+				return errors.Wrap(err, "failed to fetch session for availability zones")
+			}
+			azs, err := azure.AvailabilityZones(session, ic.Platform.Azure.Region, mpool.InstanceType)
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch availability zones")
 			}
@@ -364,25 +366,25 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 
 	machineConfigs := []*mcfgv1.MachineConfig{}
 	if pool.Hyperthreading == types.HyperthreadingDisabled {
-		config, err := machineconfig.ForHyperthreadingDisabled("master")
+		ignHT, err := machineconfig.ForHyperthreadingDisabled("master")
 		if err != nil {
-			return errors.Wrap(err, "failed to create master machine objects")
+			return errors.Wrap(err, "failed to create ignition for hyperthreading disabled for master machines")
 		}
-		machineConfigs = append(machineConfigs, config)
+		machineConfigs = append(machineConfigs, ignHT)
 	}
 	if ic.SSHKey != "" {
-		config, err := machineconfig.ForAuthorizedKeys(ic.SSHKey, "master")
+		ignSSH, err := machineconfig.ForAuthorizedKeys(ic.SSHKey, "master")
 		if err != nil {
-			return errors.Wrap(err, "failed to create master machine objects")
+			return errors.Wrap(err, "failed to create ignition for authorized SSH keys for master machines")
 		}
-		machineConfigs = append(machineConfigs, config)
+		machineConfigs = append(machineConfigs, ignSSH)
 	}
 	if ic.FIPS {
-		config, err := machineconfig.ForFIPSEnabled("master")
+		ignFIPS, err := machineconfig.ForFIPSEnabled("master")
 		if err != nil {
-			return errors.Wrap(err, "failed to create master machine objects")
+			return errors.Wrap(err, "failed to create ignition for FIPS enabled for master machines")
 		}
-		machineConfigs = append(machineConfigs, config)
+		machineConfigs = append(machineConfigs, ignFIPS)
 	}
 
 	m.MachineConfigFiles, err = machineconfig.Manifests(machineConfigs, "master", directory)

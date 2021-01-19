@@ -9,14 +9,12 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
-	"reflect"
+	"fmt"
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/go-test/deep"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
-	icopenstack "github.com/openshift/installer/pkg/asset/installconfig/openstack"
 	"github.com/openshift/installer/pkg/asset/rhcos"
 	"github.com/openshift/installer/pkg/asset/targets"
 	"github.com/openshift/installer/pkg/ipnet"
@@ -41,13 +39,6 @@ func TestGraphRoundTrip(t *testing.T) {
 	sshkey, err := ssh.NewPublicKey(&key.PublicKey)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	platformCreds := &installconfig.PlatformCreds{
-		Azure: &icazure.Credentials{
-			ClientID:     "dummy",
-			ClientSecret: "dummy",
-		},
 	}
 
 	installConfig := &installconfig.InstallConfig{
@@ -94,21 +85,27 @@ func TestGraphRoundTrip(t *testing.T) {
 			Platform: types.Platform{
 				Azure: &azure.Platform{
 					Region:                      "dummy",
-					ResourceGroupName:           "dummy",
+					CloudName:                   azure.PublicCloud,
 					BaseDomainResourceGroupName: "dummy",
+					OutboundType:                azure.LoadbalancerOutboundType,
+					ResourceGroupName:           "dummy",
 				},
 			},
 			PullSecret: `{"auths":{"dummy":{"auth":"dummy"}}}`,
 			Publish:    types.ExternalPublishingStrategy,
 		},
+		Azure: icazure.NewMetadata(azure.PublicCloud, &icazure.Credentials{
+			ClientID:     "dummy",
+			ClientSecret: "dummy",
+		}),
 	}
 
-	errs := validation.ValidateInstallConfig(installConfig.Config, icopenstack.NewValidValuesFetcher()).ToAggregate()
+	errs := validation.ValidateInstallConfig(installConfig.Config).ToAggregate()
 	if errs != nil {
 		t.Fatal(errs.Error())
 	}
 
-	g := newGraph(installConfig, platformCreds)
+	g := newGraph(installConfig)
 
 	for _, a := range targets.Cluster {
 		err = g.resolve(a)
@@ -122,15 +119,19 @@ func TestGraphRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var g2 graph
-
-	err = json.Unmarshal(b, &g2)
+	err = json.Unmarshal(b, &g)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(g, g2) {
-		t.Fatal(deep.Equal(g, g2))
+	b2, err := json.Marshal(g)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(b, b2) {
+		fmt.Println(string(b))
+		fmt.Println(string(b2))
 	}
 }
 

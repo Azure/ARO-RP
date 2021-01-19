@@ -38,6 +38,23 @@
             "storageVersionHash": "t6BHpUAzPig="
         },
         {
+            "name": "probes",
+            "singularName": "probe",
+            "namespaced": true,
+            "kind": "Probe",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "x4d99qNb5YI="
+        },
+        {
             "name": "prometheuses",
             "singularName": "prometheus",
             "namespaced": true,

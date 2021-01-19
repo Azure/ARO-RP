@@ -272,6 +272,14 @@ rules:
   - list
   - watch
 - apiGroups:
+  - helm.openshift.io
+  resources:
+  - helmchartrepositories
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - image.openshift.io
   resources:
   - images
@@ -372,6 +380,7 @@ rules:
   resources:
   - alertmanagers
   - podmonitors
+  - probes
   - prometheuses
   - prometheusrules
   - servicemonitors
@@ -422,6 +431,7 @@ rules:
   resources:
   - authentications
   - cloudcredentials
+  - clustercsidrivers
   - configs
   - consoles
   - csisnapshotcontrollers
@@ -437,6 +447,7 @@ rules:
   - openshiftapiservers
   - openshiftcontrollermanagers
   - servicecas
+  - storages
   verbs:
   - get
   - list
@@ -448,7 +459,7 @@ rules:
   - clusterserviceversions
   - installplans
   - operatorgroups
-  - operatorsources
+  - operators
   - subscriptions
   verbs:
   - get
@@ -535,6 +546,14 @@ rules:
   - list
   - watch
 - apiGroups:
+  - security.internal.openshift.io
+  resources:
+  - rangeallocations
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - security.openshift.io
   resources:
   - rangeallocations
@@ -603,6 +622,7 @@ rules:
   - whereabouts.cni.cncf.io
   resources:
   - ippools
+  - overlappingrangeipreservations
   verbs:
   - get
   - list

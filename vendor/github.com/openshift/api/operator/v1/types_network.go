@@ -74,17 +74,23 @@ type NetworkSpec struct {
 	// by the operator. Currently only Kuryr SDN is affected by this setting.
 	// Please note that turning on extensive logging may affect performance.
 	// The default value is "Normal".
+	//
+	// Valid values are: "Normal", "Debug", "Trace", "TraceAll".
+	// Defaults to "Normal".
 	// +optional
-	LogLevel LogLevel `json:"logLevel"`
+	// +kubebuilder:default=Normal
+	LogLevel LogLevel `json:"logLevel,omitempty"`
 }
 
 // ClusterNetworkEntry is a subnet from which to allocate PodIPs. A network of size
-// HostPrefix (in CIDR notation) will be allocated when nodes join the cluster.
+// HostPrefix (in CIDR notation) will be allocated when nodes join the cluster. If
+// the HostPrefix field is not used by the plugin, it can be left unset.
 // Not all network providers support multiple ClusterNetworks
 type ClusterNetworkEntry struct {
 	CIDR string `json:"cidr"`
 	// +kubebuilder:validation:Minimum=0
-	HostPrefix uint32 `json:"hostPrefix"`
+	// +optional
+	HostPrefix uint32 `json:"hostPrefix,omitempty"`
 }
 
 // DefaultNetworkDefinition represents a single network plugin's configuration.
@@ -320,6 +326,10 @@ type OVNKubernetesConfig struct {
 type HybridOverlayConfig struct {
 	// HybridClusterNetwork defines a network space given to nodes on an additional overlay network.
 	HybridClusterNetwork []ClusterNetworkEntry `json:"hybridClusterNetwork"`
+	// HybridOverlayVXLANPort defines the VXLAN port number to be used by the additional overlay network.
+	// Default is 4789
+	// +optional
+	HybridOverlayVXLANPort *uint32 `json:"hybridOverlayVXLANPort,omitempty"`
 }
 
 // NetworkType describes the network plugin type to configure

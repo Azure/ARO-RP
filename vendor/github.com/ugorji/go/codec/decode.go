@@ -6,7 +6,6 @@ package codec
 import (
 	"encoding"
 	"errors"
-	"fmt"
 	"io"
 	"reflect"
 	"strconv"
@@ -51,6 +50,17 @@ var (
 	errMaxDepthExceeded             = errors.New("maximum decoding depth exceeded")
 )
 
+// decByteState tracks where the []byte returned by the last call
+// to DecodeBytes or DecodeStringAsByte came from
+type decByteState uint8
+
+const (
+	decByteStateNone     decByteState = iota
+	decByteStateZerocopy              // view into the []byte that we are decoding from
+	decByteStateReuseBuf              // view into the transient buffer used internally by the decDriver
+	// decByteStateNewAlloc
+)
+
 type decDriver interface {
 	// this will check if the next token is a break.
 	CheckBreak() bool
@@ -88,20 +98,29 @@ type decDriver interface {
 	DecodeBool() (b bool)
 
 	// DecodeStringAsBytes returns the bytes representing a string.
-	// By definition, it will return a view into a scratch buffer.
+	// It will return a view into scratch buffer or input []byte (if applicable).
 	//
 	// Note: This can also decode symbols, if supported.
 	//
 	// Users should consume it right away and not store it for later use.
 	DecodeStringAsBytes() (v []byte)
 
-	// DecodeBytes may be called directly, without going through reflection.
-	// Consequently, it must be designed to handle possible nil.
+	// DecodeBytes returns the bytes representing a binary value.
+	// It will return a view into scratch buffer or input []byte (if applicable).
+	//
+	// All implementations must honor the contract below:
+	//    if ZeroCopy and applicable, return a view into input []byte we are decoding from
+	//    else if in == nil,          return a view into scratch buffer
+	//    else                        append decoded value to in[:0] and return that
+	//                                (this can be simulated by passing []byte{} as in parameter)
+	//
+	// Implementations must also update Decoder.decByteState on each call to
+	// DecodeBytes or DecodeStringAsBytes. Some callers may check that and work appropriately.
 	//
 	// Note: DecodeBytes may decode past the length of the passed byte slice, up to the cap.
 	// Consequently, it is ok to pass a zero-len slice to DecodeBytes, as the returned
 	// byte slice will have the appropriate length.
-	DecodeBytes(bs []byte, zerocopy bool) (bsOut []byte)
+	DecodeBytes(in []byte) (out []byte)
 	// DecodeBytes(bs []byte, isstring, zerocopy bool) (bsOut []byte)
 
 	// DecodeExt will decode into a *RawExt or into an extension.
@@ -134,15 +153,6 @@ type decDriverContainerTracker interface {
 	ReadArrayElem()
 	ReadMapElemKey()
 	ReadMapElemValue()
-}
-
-type decodeError struct {
-	codecError
-	pos int
-}
-
-func (d decodeError) Error() string {
-	return fmt.Sprintf("%s decode error [pos %d]: %v", d.name, d.pos, d.err)
 }
 
 type decDriverNoopContainerReader struct{}
@@ -263,17 +273,17 @@ type DecodeOptions struct {
 	// By default, they are decoded as []byte, but can be decoded as string (if configured).
 	RawToString bool
 
-	// ZeroCopy controls whether decoded values point into the
-	// input bytes passed into a NewDecoderBytes/ResetBytes(...) call.
+	// ZeroCopy controls whether decoded values of []byte or string type
+	// point into the input []byte parameter passed to a NewDecoderBytes/ResetBytes(...) call.
 	//
 	// To illustrate, if ZeroCopy and decoding from a []byte (not io.Writer),
-	// then a []byte in the output result may just be a slice of (point into)
+	// then a []byte or string in the output result may just be a slice of (point into)
 	// the input bytes.
 	//
 	// This optimization prevents unnecessary copying.
 	//
-	// However, it is made optional, as the caller MUST ensure that the input parameter
-	// is not modified after the Decode() happens.
+	// However, it is made optional, as the caller MUST ensure that the input parameter []byte is
+	// not modified after the Decode() happens, as any changes are mirrored in the decoded result.
 	ZeroCopy bool
 
 	// PreferPointerForStructOrArray controls whether a struct or array
@@ -299,7 +309,7 @@ func (d *Decoder) selferUnmarshal(f *codecFnInfo, rv reflect.Value) {
 
 func (d *Decoder) binaryUnmarshal(f *codecFnInfo, rv reflect.Value) {
 	bm := rv2i(rv).(encoding.BinaryUnmarshaler)
-	xbs := d.d.DecodeBytes(nil, true)
+	xbs := d.d.DecodeBytes(nil)
 	fnerr := bm.UnmarshalBinary(xbs)
 	d.onerror(fnerr)
 }
@@ -329,7 +339,7 @@ func (d *Decoder) raw(f *codecFnInfo, rv reflect.Value) {
 }
 
 func (d *Decoder) kString(f *codecFnInfo, rv reflect.Value) {
-	rvSetString(rv, string(d.d.DecodeStringAsBytes()))
+	rvSetString(rv, d.stringZC(d.d.DecodeStringAsBytes()))
 }
 
 func (d *Decoder) kBool(f *codecFnInfo, rv reflect.Value) {
@@ -474,7 +484,7 @@ func (d *Decoder) kInterfaceNaked(f *codecFnInfo) (rvn reflect.Value) {
 		} else {
 			// one of the BytesExt ones: binc, msgpack, simple
 			if bfn == nil {
-				re.Data = detachZeroCopyBytes(d.bytes, nil, bytes)
+				re.setData(bytes, false)
 				rvn = rv4i(&re).Elem()
 			} else {
 				rvn = reflect.New(bfn.rt)
@@ -556,16 +566,6 @@ func (d *Decoder) kInterface(f *codecFnInfo, rv reflect.Value) {
 	rvSetDirect(rvn2, rvn)
 	d.decodeValue(rvn2, nil)
 	rv.Set(rvn2)
-}
-
-func decStructFieldKey(dd decDriver, keyType valueType, b *[decScratchByteArrayLen]byte) (rvkencname []byte) {
-	// use if-else-if, not switch (which compiles to binary-search)
-	// since keyType is typically valueTypeString, branch prediction is pretty good.
-
-	if keyType == valueTypeString {
-		return dd.DecodeStringAsBytes()
-	}
-	return decStructFieldKeyNotString(dd, keyType, b)
 }
 
 func decStructFieldKeyNotString(dd decDriver, keyType valueType, b *[decScratchByteArrayLen]byte) (rvkencname []byte) {
@@ -689,7 +689,7 @@ func (d *Decoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 			// not addressable byte slice, so do not decode into it past the length
 			rvbs = rvbs[:len(rvbs):len(rvbs)]
 		}
-		bs2 := d.d.DecodeBytes(rvbs, false)
+		bs2 := d.decodeBytesInto(rvbs)
 		if !(len(bs2) > 0 && len(bs2) == len(rvbs) && &bs2[0] == &rvbs[0]) {
 			if rvCanset {
 				rvSetBytes(rv, bs2)
@@ -860,7 +860,7 @@ func (d *Decoder) kSliceForChan(f *codecFnInfo, rv reflect.Value) {
 		if !(f.ti.rtid == uint8SliceTypId || f.ti.elemkind == uint8(reflect.Uint8)) {
 			d.errorf("bytes/string in stream must decode into slice/array of bytes, not %v", f.ti.rt)
 		}
-		bs2 := d.d.DecodeBytes(nil, true)
+		bs2 := d.d.DecodeBytes(nil)
 		irv := rv2i(rv)
 		ch, ok := irv.(chan<- byte)
 		if !ok {
@@ -994,9 +994,39 @@ func (d *Decoder) kMap(f *codecFnInfo, rv reflect.Value) {
 	ktypeIsIntf := ktypeId == intfTypId
 
 	hasLen := containerLen > 0
-	var kstrbs []byte
+
+	// kstrbs is used locally for the key bytes, so we can reduce allocation.
+	// When we read keys, we copy to this local bytes array, and use a stringView for lookup.
+	// We only convert it into a true string if we have to do a set on the map.
+	var kstrarr [64]byte // most keys are less than 32 bytes, and even more less than 64
+	var kstrbs = kstrarr[:0]
+	var kstr2bs []byte
+	var s string
+
+	var callFnRvk bool
+
+	fnRvk2 := func() (s string) {
+		callFnRvk = false
+		if len(kstr2bs) < 2 {
+			return string(kstr2bs)
+		}
+		if safeMode {
+			return d.string(kstr2bs)
+		}
+		// unsafe mode below
+		if d.decByteState == decByteStateZerocopy && d.h.ZeroCopy {
+			return stringView(kstr2bs)
+		}
+		callFnRvk = true
+		if d.decByteState == decByteStateReuseBuf {
+			kstrbs = append(kstrbs[:0], kstr2bs...)
+			kstr2bs = kstrbs
+		}
+		return stringView(kstr2bs)
+	}
 
 	for j := 0; d.mapNext(j, containerLen, hasLen); j++ {
+		callFnRvk = false
 		if j == 0 {
 			if !rvkMut {
 				rvkn = rvZeroAddrK(ktype, ktypeKind)
@@ -1019,17 +1049,17 @@ func (d *Decoder) kMap(f *codecFnInfo, rv reflect.Value) {
 		}
 
 		d.mapElemKey()
-
 		if ktypeIsString {
-			kstrbs = d.d.DecodeStringAsBytes()
-			rvk.SetString(d.string(kstrbs))
+			kstr2bs = d.d.DecodeStringAsBytes()
+			rvSetString(rvk, fnRvk2())
 		} else {
+			d.decByteState = decByteStateNone
 			d.decodeValue(rvk, keyFn)
-
 			// special case if interface wrapping a byte array.
 			if ktypeIsIntf {
 				if rvk2 := rvk.Elem(); rvk2.IsValid() && rvType(rvk2) == uint8SliceTyp {
-					rvk.Set(rv4i(d.string(rvGetBytes(rvk2))))
+					kstr2bs = rvGetBytes(rvk2)
+					rvk.Set(rv4i(fnRvk2()))
 				}
 				// NOTE: consider failing early if map/slice/func
 			}
@@ -1041,6 +1071,14 @@ func (d *Decoder) kMap(f *codecFnInfo, rv reflect.Value) {
 			// since a map, we have to set zero value if needed
 			if !rvvz.IsValid() {
 				rvvz = rvZeroK(vtype, vtypeKind)
+			}
+			if callFnRvk {
+				s = d.string(kstr2bs)
+				if ktypeIsString {
+					rvSetString(rvk, s)
+				} else { // ktypeIsIntf
+					rvk.Set(rv4i(s))
+				}
 			}
 			mapSet(rv, rvk, rvvz)
 			continue
@@ -1080,6 +1118,14 @@ func (d *Decoder) kMap(f *codecFnInfo, rv reflect.Value) {
 		d.decodeValueNoCheckNil(rvv, valFn)
 
 		if doMapSet {
+			if callFnRvk {
+				s = d.string(kstr2bs)
+				if ktypeIsString {
+					rvSetString(rvk, s)
+				} else { // ktypeIsIntf
+					rvk.Set(rv4i(s))
+				}
+			}
 			mapSet(rv, rvk, rvv)
 		}
 	}
@@ -1117,7 +1163,8 @@ type Decoder struct {
 	hh  Handle
 	err error
 
-	is map[string]string // used for interning strings
+	// used for interning strings
+	is internerMap
 
 	// ---- cpu cache line boundary?
 	// ---- writable fields during execution --- *try* to keep in sep cache line
@@ -1130,7 +1177,8 @@ type Decoder struct {
 	calls uint16 // what depth in mustDecode are we in now.
 
 	c containerState
-	_ [1]byte // padding
+
+	decByteState
 
 	// b is an always-available scratch buffer used by Decoder and decDrivers.
 	// By being always-available, it can be used for one-off things without
@@ -1156,20 +1204,25 @@ func NewDecoderBytes(in []byte, h Handle) *Decoder {
 	return d
 }
 
+func NewDecoderString(s string, h Handle) *Decoder {
+	return NewDecoderBytes(bytesView(s), h)
+}
+
 func (d *Decoder) r() *decRd {
 	return &d.decRd
 }
 
 func (d *Decoder) init(h Handle) {
+	initHandle(h)
 	d.bytes = true
 	d.err = errDecoderNotInitialized
-	d.h = basicHandle(h)
+	d.h = h.getBasicHandle()
 	d.hh = h
 	d.be = h.isBinary()
-	// NOTE: do not initialize d.n here. It is lazily initialized in d.naked()
-	if d.h.InternString {
-		d.is = make(map[string]string, 32)
+	if d.h.InternString && d.is == nil {
+		d.is.init()
 	}
+	// NOTE: do not initialize d.n here. It is lazily initialized in d.naked()
 }
 
 func (d *Decoder) resetCommon() {
@@ -1177,13 +1230,15 @@ func (d *Decoder) resetCommon() {
 	d.err = nil
 	d.depth = 0
 	d.calls = 0
-	d.maxdepth = d.h.MaxDepth
-	if d.maxdepth <= 0 {
-		d.maxdepth = decDefMaxDepth
+	d.maxdepth = decDefMaxDepth
+	if d.h.MaxDepth > 0 {
+		d.maxdepth = d.h.MaxDepth
 	}
 	// reset all things which were cached from the Handle, but could change
-	d.mtid, d.stid = 0, 0
-	d.mtr, d.str = false, false
+	d.mtid = 0
+	d.stid = 0
+	d.mtr = false
+	d.str = false
 	if d.h.MapType != nil {
 		d.mtid = rt2id(d.h.MapType)
 		d.mtr = fastpathAvIndex(d.mtid) != -1
@@ -1198,7 +1253,7 @@ func (d *Decoder) resetCommon() {
 // clearing all state from last run(s).
 func (d *Decoder) Reset(r io.Reader) {
 	if r == nil {
-		return
+		r = &eofReader
 	}
 	d.bytes = false
 	if d.h.ReaderBufferSize > 0 {
@@ -1223,13 +1278,17 @@ func (d *Decoder) Reset(r io.Reader) {
 // clearing all state from last run(s).
 func (d *Decoder) ResetBytes(in []byte) {
 	if in == nil {
-		return
+		in = []byte{}
 	}
 	d.bufio = false
 	d.bytes = true
 	d.decReader = &d.rb
 	d.rb.reset(in)
 	d.resetCommon()
+}
+
+func (d *Decoder) ResetString(s string) {
+	d.ResetBytes(bytesView(s))
 }
 
 func (d *Decoder) naked() *fauxUnion {
@@ -1301,32 +1360,27 @@ func (d *Decoder) Decode(v interface{}) (err error) {
 	// tried to use closure, as runtime optimizes defer with no params.
 	// This seemed to be causing weird issues (like circular reference found, unexpected panic, etc).
 	// Also, see https://github.com/golang/go/issues/14939#issuecomment-417836139
-	if d.err != nil {
-		return d.err
-	}
 	defer func() {
 		if x := recover(); x != nil {
-			panicValToErr(d, x, &err)
-			d.err = err
+			panicValToErr(d, x, &d.err)
+			err = d.err
 		}
 	}()
 
-	d.mustDecode(v)
+	d.MustDecode(v)
 	return
 }
 
 // MustDecode is like Decode, but panics if unable to Decode.
-// This provides insight to the code location that triggered the error.
+//
+// Note: This provides insight to the code location that triggered the error.
 func (d *Decoder) MustDecode(v interface{}) {
 	halt.onerror(d.err)
-	d.mustDecode(v)
-}
+	if d.hh == nil {
+		halt.onerror(errNoFormatHandle)
+	}
 
-// MustDecode is like Decode, but panics if unable to Decode.
-// This provides insight to the code location that triggered the error.
-func (d *Decoder) mustDecode(v interface{}) {
 	// Top-level: v is a pointer and not nil.
-
 	d.calls++
 	d.decode(v)
 	d.calls--
@@ -1452,7 +1506,7 @@ func (d *Decoder) decode(iv interface{}) {
 		}
 		d.decodeValue(v, nil)
 	case *string:
-		*v = string(d.d.DecodeStringAsBytes())
+		*v = d.stringZC(d.d.DecodeStringAsBytes())
 	case *bool:
 		*v = d.d.DecodeBool()
 	case *int:
@@ -1480,10 +1534,10 @@ func (d *Decoder) decode(iv interface{}) {
 	case *float64:
 		*v = d.d.DecodeFloat64()
 	case *[]byte:
-		*v = d.d.DecodeBytes(*v, false)
+		*v = d.decodeBytesInto(*v)
 	case []byte:
 		// not addressable byte slice, so do not decode into it past the length
-		b := d.d.DecodeBytes(v[:len(v):len(v)], false)
+		b := d.decodeBytesInto(v[:len(v):len(v)])
 		if !(len(b) > 0 && len(b) == len(v) && &b[0] == &v[0]) { // not same slice
 			copy(v, b)
 		}
@@ -1575,26 +1629,6 @@ func (d *Decoder) arrayCannotExpand(sliceLen, streamLen int) {
 	}
 }
 
-// isDecodeable checks if value can be decoded into
-//
-// decode can take any reflect.Value that is a inherently addressable i.e.
-//   - array
-//   - non-nil chan    (we will SEND to it)
-//   - non-nil slice   (we will set its elements)
-//   - non-nil map     (we will put into it)
-//   - non-nil pointer (we can "update" it)
-func isDecodeable(rv reflect.Value) (canDecode bool) {
-	switch rv.Kind() {
-	case reflect.Array:
-		canDecode = rv.CanAddr()
-	case reflect.Ptr, reflect.Slice, reflect.Chan, reflect.Map:
-		if !rvIsNil(rv) {
-			canDecode = true
-		}
-	}
-	return
-}
-
 // func (d *Decoder) ensureDecodeable(rv reflect.Value) {
 // 	if !isDecodeable(rv) {
 // 		d.haltAsNotDecodeable(rv)
@@ -1622,23 +1656,36 @@ func (d *Decoder) depthDecr() {
 	d.depth--
 }
 
-// Possibly get an interned version of a string
+// Possibly get an interned version of a string, iff InternString=true and decoding a map key.
 //
 // This should mostly be used for map keys, where the key type is string.
 // This is because keys of a map/struct are typically reused across many objects.
 func (d *Decoder) string(v []byte) (s string) {
-	if v == nil {
-		return
-	}
-	if d.is == nil {
+	if d.is == nil || d.c != containerMapKey || len(v) < 2 || len(v) > internMaxStrLen {
 		return string(v)
 	}
-	s, ok := d.is[string(v)] // no allocation here, per go implementation
-	if !ok {
-		s = string(v) // new allocation here
-		d.is[s] = s
+	return d.is.string(v)
+}
+
+func (d *Decoder) stringZC(v []byte) (s string) {
+	if !safeMode && d.decByteState == decByteStateZerocopy && d.h.ZeroCopy {
+		return stringView(v)
 	}
-	return
+	return d.string(v)
+}
+
+func (d *Decoder) zerocopy() bool {
+	return d.bytes && d.h.ZeroCopy
+}
+
+// decodeBytesInto is a convenience delegate function to decDriver.DecodeBytes.
+// It ensures that `in` is not a nil byte, before calling decDriver.DecodeBytes,
+// as decDriver.DecodeBytes treats a nil as a hint to use its internal scratch buffer.
+func (d *Decoder) decodeBytesInto(in []byte) (v []byte) {
+	if in == nil {
+		in = []byte{}
+	}
+	return d.d.DecodeBytes(in)
 }
 
 func (d *Decoder) rawBytes() (v []byte) {
@@ -1648,7 +1695,7 @@ func (d *Decoder) rawBytes() (v []byte) {
 }
 
 func (d *Decoder) wrapErr(v error, err *error) {
-	*err = decodeError{codecError: codecError{name: d.hh.Name(), err: v}, pos: d.NumBytesRead()}
+	*err = wrapCodecErr(v, d.hh.Name(), d.NumBytesRead(), false)
 }
 
 // NumBytesRead returns the number of bytes read
@@ -1677,9 +1724,8 @@ func (d *Decoder) mapNext(j, containerLen int, hasLen bool) bool {
 	// return (hasLen && j < containerLen) || !(hasLen || slh.d.checkBreak())
 	if hasLen {
 		return j < containerLen
-	} else {
-		return !d.checkBreak()
 	}
+	return !d.checkBreak()
 }
 
 func (d *Decoder) mapStart() (v int) {
@@ -1774,6 +1820,17 @@ func (d *Decoder) sideDecode(v interface{}, bs []byte) {
 	NewDecoderBytes(bs, d.hh).decodeValue(rv, d.h.fnNoExt(rvType(rv)))
 }
 
+func (d *Decoder) fauxUnionReadRawBytes(asString bool) {
+	if asString || d.h.RawToString {
+		d.n.v = valueTypeString
+		// fauxUnion is only used within DecodeNaked calls; consequently, we should try to intern.
+		d.n.s = d.stringZC(d.d.DecodeBytes(nil))
+	} else {
+		d.n.v = valueTypeBytes
+		d.n.l = d.d.DecodeBytes([]byte{})
+	}
+}
+
 // --------------------------------------------------
 
 // decSliceHelper assists when decoding into a slice, from a map or an array in the stream.
@@ -1826,6 +1883,26 @@ func (x decSliceHelper) ElemContainerState(index int) {
 	}
 }
 
+// isDecodeable checks if value can be decoded into
+//
+// decode can take any reflect.Value that is a inherently addressable i.e.
+//   - array
+//   - non-nil chan    (we will SEND to it)
+//   - non-nil slice   (we will set its elements)
+//   - non-nil map     (we will put into it)
+//   - non-nil pointer (we can "update" it)
+func isDecodeable(rv reflect.Value) (canDecode bool) {
+	switch rv.Kind() {
+	case reflect.Array:
+		canDecode = rv.CanAddr()
+	case reflect.Ptr, reflect.Slice, reflect.Chan, reflect.Map:
+		if !rvIsNil(rv) {
+			canDecode = true
+		}
+	}
+	return
+}
+
 func decByteSlice(r *decRd, clen, maxInitLen int, bs []byte) (bsOut []byte) {
 	if clen == 0 {
 		return zeroByteSlice
@@ -1847,33 +1924,6 @@ func decByteSlice(r *decRd, clen, maxInitLen int, bs []byte) (bsOut []byte) {
 			len2 += len3
 		}
 	}
-	return
-}
-
-// detachZeroCopyBytes will copy the in bytes into dest,
-// or create a new one if not large enough.
-//
-// It is used to ensure that the []byte returned is not
-// part of the input stream or input stream buffers.
-func detachZeroCopyBytes(isBytesReader bool, dest []byte, in []byte) (out []byte) {
-	if len(in) == 0 {
-		return in
-	}
-	// if isBytesReader || len(in) <= scratchByteArrayLen {
-	// 	if cap(dest) >= len(in) {
-	// 		out = dest[:len(in)]
-	// 	} else {
-	// 		out = make([]byte, len(in))
-	// 	}
-	// 	copy(out, in)
-	// 	return
-	// }
-	if cap(dest) >= len(in) {
-		out = dest[:len(in)]
-	} else {
-		out = make([]byte, len(in))
-	}
-	copy(out, in)
 	return
 }
 
@@ -1922,16 +1972,6 @@ func decInferLen(clen, maxlen, unit int) (rvlen int) {
 		rvlen = clen
 	}
 	return
-}
-
-func fauxUnionReadRawBytes(dr decDriver, d *Decoder, n *fauxUnion, rawToString bool) {
-	if rawToString {
-		n.v = valueTypeString
-		n.s = string(dr.DecodeBytes(d.b[:], true))
-	} else {
-		n.v = valueTypeBytes
-		n.l = dr.DecodeBytes(nil, false)
-	}
 }
 
 func decArrayCannotExpand(slh decSliceHelper, hasLen bool, lenv, j, containerLenS int) {
