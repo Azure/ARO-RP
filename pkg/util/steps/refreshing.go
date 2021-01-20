@@ -5,6 +5,7 @@ package steps
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
+
+var ErrWantRefresh = errors.New("want refresh")
 
 // AuthorizationRefreshingAction returns a wrapper Step which will refresh
 // `authorizer` if the step returns an Azure AuthenticationError and rerun it.
@@ -68,7 +71,8 @@ func (s authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.
 		// Don't refresh if we have timed out
 		if timeoutCtx.Err() == nil &&
 			(azureerrors.HasAuthorizationFailedError(err) ||
-				azureerrors.HasLinkedAuthorizationFailedError(err)) {
+				azureerrors.HasLinkedAuthorizationFailedError(err) ||
+				err == ErrWantRefresh) {
 			log.Print(err)
 			// Try refreshing auth.
 			if s.authorizer == nil {

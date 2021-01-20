@@ -39,8 +39,9 @@ type ClusterSpec struct {
 	Location        string              `json:"location,omitempty"`
 	GenevaLogging   GenevaLoggingSpec   `json:"genevaLogging,omitempty"`
 	InternetChecker InternetCheckerSpec `json:"internetChecker,omitempty"`
-	VNetID          string              `json:"vnetId,omitempty"`
-	Features        FeaturesSpec        `json:"features,omitempty"`
+	VnetID          string              `json:"vnetId,omitempty"`
+
+	Features FeaturesSpec `json:"features,omitempty"`
 }
 
 // FeaturesSpec defines ARO operator feature gates

@@ -167,7 +167,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 				ACRDomain:     o.env.ACRDomain(),
 				AZEnvironment: o.env.Environment().Name,
 				Location:      o.env.Location(),
-				VNetID:        vnetID,
+				VnetID:        vnetID,
 				GenevaLogging: arov1alpha1.GenevaLoggingSpec{
 					ConfigVersion:            o.env.ClustersGenevaLoggingConfigVersion(),
 					MonitoringGCSEnvironment: o.env.ClustersGenevaLoggingEnvironment(),

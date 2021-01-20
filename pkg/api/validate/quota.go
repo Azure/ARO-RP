@@ -101,7 +101,7 @@ func NewAzureQuotaValidator(ctx context.Context, log *logrus.Entry, env env.Inte
 		return nil, err
 	}
 
-	spAuthorizer, err := validateServicePrincipalProfile(ctx, log, &oc.Properties.ServicePrincipalProfile, subscriptionDoc.Subscription.Properties.TenantID, env.Environment().ResourceManagerEndpoint)
+	spAuthorizer, err := validateServicePrincipalProfile(ctx, log, env, oc, subscriptionDoc)
 	if err != nil {
 		return nil, err
 	}
