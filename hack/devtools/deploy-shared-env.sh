@@ -145,11 +145,12 @@ import_certs_secrets() {
 }
 
 update_parent_domain_dns_zone() {
-    echo "########## Creating NS record to DNS Zone $RESOURCEGROUP in $PARENT_DOMAIN_NAME | RG $PARENT_DOMAIN_RESOURCEGROUP ##########"
+    CHILD_DOMAIN_PREFIX="$(cut -d. -f1 <<<$DOMAIN_NAME)"
+    echo "########## Creating NS record to DNS Zone $CHILD_DOMAIN_PREFIX ##########"
     az network dns record-set ns create \
         --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \
         --zone "$PARENT_DOMAIN_NAME" \
-        --name "$RESOURCEGROUP" >/dev/null
+        --name "$CHILD_DOMAIN_PREFIX" >/dev/null
     for ns in $(az network dns zone show \
         --resource-group "$RESOURCEGROUP" \
         --name "$DOMAIN_NAME" \
@@ -157,7 +158,7 @@ update_parent_domain_dns_zone() {
         az network dns record-set ns add-record \
           --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \
           --zone "$PARENT_DOMAIN_NAME" \
-          --record-set-name "$RESOURCEGROUP" \
+          --record-set-name "$CHILD_DOMAIN_PREFIX" \
           --nsdname "$ns" >/dev/null
       done
 }
