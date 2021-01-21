@@ -13,7 +13,6 @@ import (
 	azgraphrbac "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -29,7 +28,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/bootstraplogging"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -149,37 +147,9 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
 		Resources: []*arm.Resource{
-			{
-				Resource: &mgmtstorage.Account{
-					Sku: &mgmtstorage.Sku{
-						Name: "Standard_LRS",
-					},
-					Name:     to.StringPtr("cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix),
-					Location: &installConfig.Config.Azure.Region,
-					Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
-				},
-				APIVersion: azureclient.APIVersion("Microsoft.Storage"),
-			},
-			{
-				Resource: &mgmtstorage.BlobContainer{
-					Name: to.StringPtr("cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/ignition"),
-					Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
-				},
-				APIVersion: azureclient.APIVersion("Microsoft.Storage"),
-				DependsOn: []string{
-					"Microsoft.Storage/storageAccounts/cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix,
-				},
-			},
-			{
-				Resource: &mgmtstorage.BlobContainer{
-					Name: to.StringPtr("cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/aro"),
-					Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
-				},
-				APIVersion: azureclient.APIVersion("Microsoft.Storage"),
-				DependsOn: []string{
-					"Microsoft.Storage/storageAccounts/cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix,
-				},
-			},
+			m.clusterStorageAccount(installConfig.Config.Azure.Region),
+			m.clusterStorageAccountBlob("ignition"),
+			m.clusterStorageAccountBlob("aro"),
 			m.clusterNSG(infraID, installConfig.Config.Azure.Region),
 			m.clusterServicePrincipalRBAC(clusterSPObjectID),
 		},

@@ -1,11 +1,17 @@
 package cluster
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
+	"github.com/Azure/go-autorest/autorest/to"
+
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
-	"github.com/Azure/go-autorest/autorest/to"
 )
 
 var extraDenyAssignmentExclusions = map[string][]string{
@@ -76,4 +82,31 @@ func (m *manager) clusterServicePrincipalRBAC(clusterSPObjectID string) *arm.Res
 		"'"+clusterSPObjectID+"'",
 		"guid(resourceGroup().id, 'SP / Contributor')",
 	)
+}
+
+func (m *manager) clusterStorageAccount(region string) *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtstorage.Account{
+			Sku: &mgmtstorage.Sku{
+				Name: "Standard_LRS",
+			},
+			Name:     to.StringPtr("cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix),
+			Location: &region,
+			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
+	}
+}
+
+func (m *manager) clusterStorageAccountBlob(name string) *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtstorage.BlobContainer{
+			Name: to.StringPtr("cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/" + name),
+			Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
+		DependsOn: []string{
+			"Microsoft.Storage/storageAccounts/cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix,
+		},
+	}
 }
