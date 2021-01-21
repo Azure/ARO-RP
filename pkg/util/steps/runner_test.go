@@ -34,6 +34,8 @@ func failsWithAzureError(ctx context.Context) error {
 		},
 	}
 }
+func conditionalTrue(context.Context) bool               { return true }
+func conditionalFalse(context.Context) bool              { return false }
 func alwaysFalseCondition(context.Context) (bool, error) { return false, nil }
 func alwaysTrueCondition(context.Context) (bool, error)  { return true, nil }
 func timingOutCondition(ctx context.Context) (bool, error) {
@@ -289,6 +291,55 @@ func TestStepRunner(t *testing.T) {
 				},
 			},
 			wantErr: "timed out waiting for the condition",
+		},
+		{
+			name: "A ConditionalAction is not executed",
+			steps: func(controller *gomock.Controller) []Step {
+				return []Step{
+					Action(successfulFunc),
+					ConditionalAction(conditionalFalse, Action(failingFunc)),
+					Action(successfulFunc),
+				}
+			},
+			wantEntries: []map[string]types.GomegaMatcher{
+				{
+					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("running step [ConditionalActionStep [Action github.com/Azure/ARO-RP/pkg/util/steps.failingFunc]]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+			},
+		},
+		{
+			name: "A ConditionalAction is executed",
+			steps: func(controller *gomock.Controller) []Step {
+				return []Step{
+					Action(successfulFunc),
+					ConditionalAction(conditionalTrue, Action(failingFunc)),
+					Action(successfulFunc),
+				}
+			},
+			wantEntries: []map[string]types.GomegaMatcher{
+				{
+					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("running step [ConditionalActionStep [Action github.com/Azure/ARO-RP/pkg/util/steps.failingFunc]]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("step [ConditionalActionStep [Action github.com/Azure/ARO-RP/pkg/util/steps.failingFunc]] encountered error: oh no!"),
+					"level": gomega.Equal(logrus.ErrorLevel),
+				},
+			},
+			wantErr: `oh no!`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

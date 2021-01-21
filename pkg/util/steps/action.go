@@ -31,3 +31,32 @@ func (s actionStep) run(ctx context.Context, log *logrus.Entry) error {
 func (s actionStep) String() string {
 	return fmt.Sprintf("[Action %s]", friendlyName(s.f))
 }
+
+// conditionalActionFunction is a function that takes a context and returns boolean.
+//
+// Suitable for condition based actions to prevent unnecessary execution
+type conditionalActionFunction func(context.Context) bool
+
+// ConditionalAction returns a wrapper Step which will execute
+// `step` if the conditional function returns true
+func ConditionalAction(f conditionalActionFunction, step Step) conditionalActionStep {
+	return conditionalActionStep{
+		step: step,
+		f:    f,
+	}
+}
+
+type conditionalActionStep struct {
+	step Step
+	f    conditionalActionFunction
+}
+
+func (s conditionalActionStep) run(ctx context.Context, log *logrus.Entry) error {
+	if s.f(ctx) {
+		return s.step.run(ctx, log)
+	}
+	return nil
+}
+func (s conditionalActionStep) String() string {
+	return fmt.Sprintf("[ConditionalActionStep %s]", s.step)
+}
