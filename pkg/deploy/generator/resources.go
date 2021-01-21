@@ -819,7 +819,7 @@ gpgcheck=yes
 EOF
 
 for attempt in {1..5}; do
-yum -y install azsec-clamav azsec-monitor azure-cli-2.10.1 azure-mdsd azure-security docker td-agent-bit && break
+yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install azsec-clamav azsec-monitor azure-cli-2.10.1 azure-mdsd azure-security docker openssl-perl td-agent-bit && break
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
@@ -1146,8 +1146,6 @@ cat >/etc/default/mdsd <<EOF
 MDSD_ROLE_PREFIX=/var/run/mdsd/default
 MDSD_OPTIONS="-A -d -r \$MDSD_ROLE_PREFIX"
 
-export SSL_CERT_FILE=/etc/pki/tls/certs/ca-bundle.crt
-
 export MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
 export MONITORING_GCS_ACCOUNT=ARORPLogs
 export MONITORING_GCS_REGION='$LOCATION'
@@ -1161,6 +1159,12 @@ export MONITORING_TENANT='$LOCATION'
 export MONITORING_ROLE=rp
 export MONITORING_ROLE_INSTANCE='$(hostname)'
 EOF
+
+# setting MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault seems to have caused mdsd not
+# to honour SSL_CERT_FILE any more, heaven only knows why.
+mkdir -p /usr/lib/ssl/certs
+csplit -f /usr/lib/ssl/certs/cert- -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 {*} >/dev/null
+c_rehash /usr/lib/ssl/certs
 
 for service in aro-monitor aro-portal aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-agent-bit; do
   systemctl enable $service.service
