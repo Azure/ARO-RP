@@ -483,10 +483,16 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, appID string) error
 	}
 
 	for _, roleAssignment := range roleAssignments {
-		c.log.Infof("deleting role assignment %s", *roleAssignment.Name)
-		_, err = c.roleassignments.Delete(ctx, *roleAssignment.Scope, *roleAssignment.Name)
-		if err != nil {
-			return err
+		if strings.HasPrefix(
+			strings.ToLower(*roleAssignment.Scope),
+			strings.ToLower("/subscriptions/"+c.env.SubscriptionID()+"/resourceGroups/"+c.env.ResourceGroup()),
+		) {
+			// Don't delete inherited role assignments, only those resource group level or below
+			c.log.Infof("deleting role assignment %s", *roleAssignment.Name)
+			_, err = c.roleassignments.Delete(ctx, *roleAssignment.Scope, *roleAssignment.Name)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
