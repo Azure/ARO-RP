@@ -8,7 +8,7 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
-from azure.cli.core.azclierror import ResourceNotFoundError, UnauthorizedError
+from azure.cli.core.azclierror import ResourceNotFoundError, UnauthorizedError, InvalidArgumentValueError
 from azure.graphrbac.models import GraphErrorException
 from msrestazure.azure_exceptions import CloudError
 from msrestazure.tools import resource_id, parse_resource_id
@@ -301,41 +301,71 @@ def get_network_resources(cli_ctx, subnets, vnet):
 
     return resources
 
-def service_principal_update(cti_ctx, oc, client_id=None, client_secret=None):
+# service_principal_update manages cluster service principal update
+# 1. If called without parameters it should be best-effort
+# 2. If called with parameters it fails if something is not possible
+# 2.1. If client_id is provided, we expect expect secret to be provided too
+#      If only secret is provided - we are updating secret
+#      In any case we will try to verify and update rbac
+# 2.2. TODO: refresh-cluster-service-principal is provided
+def service_principal_update(cli_ctx, oc, client_id=None, client_secret=None):
     rp_client_sp = None
     client_sp = None
     resources = set()
 
-    try:
-        # Get cluster resources we need to assign network contributor on
-        resources = get_cluster_network_resources(cli_ctx, oc)
-    except (CloudError, HttpOperationError) as e:
-        logger.info(e.message)
+    # if any of these are set - we expect users to have access to fix rbac so we fail
+    fail = client_id is not None or client_secret is not None
 
-    aad = AADManager(cli_ctx)
+    # update client_id without providing secret is not valid.
+    # this acts as dynamic validator
+    if client_id is not None:
+          if client_id != oc.service_principal_profile.client_id and client_secret == None:
+              raise InvalidArgumentValueError("Must specify --client-id with --client-secret.")
+
+    # if only secret is provided, we assume we re-use existing application
+    # it is users responsibility to vet it.
+    if client_id is None:
+        client_id = oc.service_principal_profile.client_id
 
     if rp_mode_production():
         rp_client_id = FP_CLIENT_ID
     else:
         rp_client_id = os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
 
-    # Best effort - assume the role assignments on the SP exist if exception raised
+    try:
+        # Get cluster resources we need to assign network contributor on
+        resources = get_cluster_network_resources(cli_ctx, oc)
+    except (CloudError, HttpOperationError) as e:
+        raise logger.error(e.message) if fail else logger.info(e.message)
+
+    aad = AADManager(cli_ctx)
+
+    # check if we can see if RP service principal exists
     try:
         rp_client_sp = aad.get_service_principal(rp_client_id)
         if not rp_client_sp:
             raise ResourceNotFoundError("RP service principal not found.")
     except GraphErrorException as e:
-        logger.info(e.message)
+        raise logger.error(e.message) if fail else logger.info(e.message)
 
-    client_id = oc.service_principal_profile.client_id
+    try:
+        application = aad.get_application_by_client_id(client_id)
+        if not application:
+            raise ResourceNotFoundError("Cluster application not found.")
+    except GraphErrorException as e:
+       raise logger.error(e.message) if fail else logger.info(e.message)
 
-    # Best effort - assume the role assignments on the SP exist if exception raised
+    # attempt to get/create SP if one was not found.
     try:
         client_sp = aad.get_service_principal(client_id)
-        if not client_sp:
-            raise ResourceNotFoundError("Cluster service principal not found.")
+        if not client_sp and fail: # if we are in hard fail - attempt to re-create
+            logger.info("Cluster service principal not found. Will attempt to re-create")
+            client_sp = aad.create_service_principal(client_id)
+            if not client_sp:
+                e = ResourceNotFoundError("Cluster service principal creation failed")
+                raise logger.error(e.message) if fail else logger.info(e.message)
     except GraphErrorException as e:
-        logger.info(e.message)
+        raise logger.error(e.message) if fail else logger.info(e.message)
 
     # Drop any None service principal objects
     sp_obj_ids = [sp.object_id for sp in [rp_client_sp, client_sp] if sp]

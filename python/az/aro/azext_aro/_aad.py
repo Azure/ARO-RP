@@ -58,6 +58,13 @@ class AADManager:
             return sps[0]
         return None
 
+    def get_application_by_client_id(self, client_id):
+        apps = list(self.client.applications.list(
+            filter="appId eq '%s'" % client_id))
+        if apps:
+            return apps[0]
+        return None
+
     def create_service_principal(self, app_id):
         max_retries = 3
         retries = 0
