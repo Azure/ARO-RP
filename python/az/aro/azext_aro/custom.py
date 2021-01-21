@@ -254,6 +254,7 @@ def generate_random_id():
                          for _ in range(7)))
     return random_id
 
+
 def get_route_tables_from_subnets(cli_ctx, subnets):
     network_client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_NETWORK)
 
@@ -301,6 +302,7 @@ def get_network_resources(cli_ctx, subnets, vnet):
 
     return resources
 
+
 # service_principal_update manages cluster service principal update
 # 1. If called without parameters it should be best-effort
 # 2. If called with parameters it fails if something is not possible
@@ -319,8 +321,8 @@ def service_principal_update(cli_ctx, oc, client_id=None, client_secret=None):
     # update client_id without providing secret is not valid.
     # this acts as dynamic validator
     if client_id is not None:
-          if client_id != oc.service_principal_profile.client_id and client_secret == None:
-              raise InvalidArgumentValueError("Must specify --client-id with --client-secret.")
+        if client_id != oc.service_principal_profile.client_id and client_secret is None:
+            raise InvalidArgumentValueError("Must specify --client-id with --client-secret.")
 
     # if only secret is provided, we assume we re-use existing application
     # it is users responsibility to vet it.
@@ -353,17 +355,17 @@ def service_principal_update(cli_ctx, oc, client_id=None, client_secret=None):
         if not application:
             raise ResourceNotFoundError("Cluster application not found.")
     except GraphErrorException as e:
-       raise logger.error(e.message) if fail else logger.info(e.message)
+        raise logger.error(e.message) if fail else logger.info(e.message)
 
     # attempt to get/create SP if one was not found.
     try:
         client_sp = aad.get_service_principal(client_id)
-        if not client_sp and fail: # if we are in hard fail - attempt to re-create
+        if not client_sp and fail:  # if we are in hard fail - attempt to re-create
             logger.info("Cluster service principal not found. Will attempt to re-create")
             client_sp = aad.create_service_principal(client_id)
             if not client_sp:
                 e = ResourceNotFoundError("Cluster service principal creation failed")
-                raise logger.error(e.message) if fail else logger.info(e.message)
+                raise logger.error(e) if fail else logger.info(e)
     except GraphErrorException as e:
         raise logger.error(e.message) if fail else logger.info(e.message)
 

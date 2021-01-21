@@ -40,6 +40,7 @@ def validate_client_id(namespace):
         except ValueError:
             raise InvalidArgumentValueError("Invalid --client-id '%s'." % namespace.client_id)
 
+
 def validate_cluster_resource_group(cmd, namespace):
     if namespace.cluster_resource_group is not None:
         client = get_mgmt_service_client(
