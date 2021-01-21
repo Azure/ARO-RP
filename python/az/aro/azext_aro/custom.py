@@ -211,65 +211,28 @@ def aro_list_credentials(client, resource_group_name, resource_name):
     return client.list_credentials(resource_group_name, resource_name)
 
 
-def aro_update(cmd, client, resource_group_name, resource_name, no_wait=False):
-    rp_client_sp = None
-    client_sp = None
-    resources = set()
+def aro_update(cmd,
+               client,
+               resource_group_name,
+               resource_name,
+               client_id=None,
+               client_secret=None,
+               no_wait=False):
+    # if we can't read cluster spec, we will not be able to do much. Fail.
+    oc = client.get(resource_group_name, resource_name)
 
-    try:
-        oc = client.get(resource_group_name, resource_name)
+    client_id, client_secret = service_principal_update(cmd.cli_ctx, oc, client_id, client_secret)
 
-        # Get cluster resources we need to assign network contributor on
-        resources = get_cluster_network_resources(cmd.cli_ctx, oc)
-    except (CloudError, HttpOperationError) as e:
-        logger.info(e.message)
+    # construct update payload
+    oc = openshiftcluster.OpenShiftClusterUpdate(
+        service_principal_profile=openshiftcluster.ServicePrincipalProfile(),
+    )
 
-    aad = AADManager(cmd.cli_ctx)
+    if not client_secret:
+        oc.service_principal_profile.client_secret = client_secret
 
-    if rp_mode_production():
-        rp_client_id = FP_CLIENT_ID
-    else:
-        rp_client_id = os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
-
-    # Best effort - assume the role assignments on the SP exist if exception raised
-    try:
-        rp_client_sp = aad.get_service_principal(rp_client_id)
-        if not rp_client_sp:
-            raise ResourceNotFoundError("RP service principal not found.")
-    except GraphErrorException as e:
-        logger.info(e.message)
-
-    client_id = oc.service_principal_profile.client_id
-
-    # Best effort - assume the role assignments on the SP exist if exception raised
-    try:
-        client_sp = aad.get_service_principal(client_id)
-        if not client_sp:
-            raise ResourceNotFoundError("Cluster service principal not found.")
-    except GraphErrorException as e:
-        logger.info(e.message)
-
-    # Drop any None service principal objects
-    sp_obj_ids = [sp.object_id for sp in [rp_client_sp, client_sp] if sp]
-
-    # Customers frequently remove the Cluster or RP's service principal permissions.
-    # Attempt to fix this before performing any action against the cluster
-    for sp_id in sp_obj_ids:
-        for resource in sorted(resources):
-            # Create the role assignment if it doesn't exist
-            # Assume that the role assignment exists if we fail to look it up
-            resource_contributor_exists = True
-
-            try:
-                resource_contributor_exists = has_network_contributor_on_resource(cmd.cli_ctx, resource, sp_id)
-            except CloudError as e:
-                logger.info(e.message)
-                continue
-
-            if not resource_contributor_exists:
-                assign_network_contributor_to_resource(cmd.cli_ctx, resource, sp_id)
-
-    oc = openshiftcluster.OpenShiftClusterUpdate()
+    if not client_id:
+        oc.service_principal_profile.client_id = client_id
 
     return sdk_no_wait(no_wait, client.update,
                        resource_group_name=resource_group_name,
@@ -290,7 +253,6 @@ def generate_random_id():
                  ''.join(random.choice('abcdefghijklmnopqrstuvwxyz1234567890')
                          for _ in range(7)))
     return random_id
-
 
 def get_route_tables_from_subnets(cli_ctx, subnets):
     network_client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_NETWORK)
@@ -338,3 +300,61 @@ def get_network_resources(cli_ctx, subnets, vnet):
     resources.update(route_tables)
 
     return resources
+
+def service_principal_update(cti_ctx, oc, client_id=None, client_secret=None):
+    rp_client_sp = None
+    client_sp = None
+    resources = set()
+
+    try:
+        # Get cluster resources we need to assign network contributor on
+        resources = get_cluster_network_resources(cli_ctx, oc)
+    except (CloudError, HttpOperationError) as e:
+        logger.info(e.message)
+
+    aad = AADManager(cli_ctx)
+
+    if rp_mode_production():
+        rp_client_id = FP_CLIENT_ID
+    else:
+        rp_client_id = os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
+
+    # Best effort - assume the role assignments on the SP exist if exception raised
+    try:
+        rp_client_sp = aad.get_service_principal(rp_client_id)
+        if not rp_client_sp:
+            raise ResourceNotFoundError("RP service principal not found.")
+    except GraphErrorException as e:
+        logger.info(e.message)
+
+    client_id = oc.service_principal_profile.client_id
+
+    # Best effort - assume the role assignments on the SP exist if exception raised
+    try:
+        client_sp = aad.get_service_principal(client_id)
+        if not client_sp:
+            raise ResourceNotFoundError("Cluster service principal not found.")
+    except GraphErrorException as e:
+        logger.info(e.message)
+
+    # Drop any None service principal objects
+    sp_obj_ids = [sp.object_id for sp in [rp_client_sp, client_sp] if sp]
+
+    # Customers frequently remove the Cluster or RP's service principal permissions.
+    # Attempt to fix this before performing any action against the cluster
+    for sp_id in sp_obj_ids:
+        for resource in sorted(resources):
+            # Create the role assignment if it doesn't exist
+            # Assume that the role assignment exists if we fail to look it up
+            resource_contributor_exists = True
+
+            try:
+                resource_contributor_exists = has_network_contributor_on_resource(cli_ctx, resource, sp_id)
+            except CloudError as e:
+                logger.info(e.message)
+                continue
+
+            if not resource_contributor_exists:
+                assign_network_contributor_to_resource(cli_ctx, resource, sp_id)
+
+    return client_id, client_secret

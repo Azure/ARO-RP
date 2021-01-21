@@ -3,7 +3,6 @@
 
 from azext_aro._validators import validate_cidr
 from azext_aro._validators import validate_client_id
-from azext_aro._validators import validate_client_secret
 from azext_aro._validators import validate_cluster_resource_group
 from azext_aro._validators import validate_domain
 from azext_aro._validators import validate_pull_secret
@@ -44,8 +43,7 @@ def load_arguments(self, _):
                    help='Client ID of cluster service principal.',
                    validator=validate_client_id)
         c.argument('client_secret',
-                   help='Client secret of cluster service principal.',
-                   validator=validate_client_secret)
+                   help='Client secret of cluster service principal.')
 
         c.argument('pod_cidr',
                    help='CIDR of pod network.',
