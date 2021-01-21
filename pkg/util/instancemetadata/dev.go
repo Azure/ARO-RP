@@ -17,6 +17,7 @@ func NewDev(checkEnv bool) (InstanceMetadata, error) {
 			"AZURE_TENANT_ID",
 			"LOCATION",
 			"RESOURCEGROUP",
+			"CLUSTER_RESOURCEGROUP",
 		} {
 			if _, found := os.LookupEnv(key); !found {
 				return nil, fmt.Errorf("environment variable %q unset (development mode)", key)
@@ -38,12 +39,21 @@ func NewDev(checkEnv bool) (InstanceMetadata, error) {
 		return nil, err
 	}
 
+	// awful heuristics, remove when the value of CLUSTER_RESOURCEGROUP in the
+	// pipelines has been updated to the cluster's RG and we can assume
+	// RESOURCEGROUP is the CI environment. We don't get here in a dev situation
+	// (where we require CLUSTER_RESOURCEGROUP).
+	clusterRG, exists := os.LookupEnv("CLUSTER_RESOURCEGROUP")
+	if !exists {
+		clusterRG = os.Getenv("CLUSTER")
+	}
+
 	return &instanceMetadata{
 		hostname:       hostname,
 		tenantID:       os.Getenv("AZURE_TENANT_ID"),
 		subscriptionID: os.Getenv("AZURE_SUBSCRIPTION_ID"),
 		location:       os.Getenv("LOCATION"),
-		resourceGroup:  os.Getenv("RESOURCEGROUP"),
+		resourceGroup:  clusterRG,
 		environment:    &environment,
 	}, nil
 }

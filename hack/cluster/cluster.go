@@ -31,6 +31,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
+	// assume they're the same unless passed in explicitly
+	_, found := os.LookupEnv("CLUSTER_RESOURCEGROUP")
+	if !found {
+		os.Setenv("CLUSTER_RESOURCEGROUP", os.Getenv("CLUSTER"))
+	}
+
 	env, err := env.NewCore(ctx, log)
 	if err != nil {
 		return err
