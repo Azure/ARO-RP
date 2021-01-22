@@ -17,6 +17,9 @@
         "databaseAccountName": {
             "type": "string"
         },
+        "encryptionAtHost": {
+            "type": "bool"
+        },
         "extraCosmosDBIPs": {
             "type": "string",
             "defaultValue": ""
@@ -303,6 +306,9 @@
                             }
                         ]
                     },
+                    "securityProfile": {
+                        "encryptionAtHost": "[parameters('encryptionAtHost')]"
+                    },
                     "diagnosticsProfile": {
                         "bootDiagnostics": {
                             "enabled": true,
@@ -338,7 +344,7 @@
             "name": "[concat('rp-vmss-', parameters('vmssName'))]",
             "type": "Microsoft.Compute/virtualMachineScaleSets",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-03-01",
+            "apiVersion": "2020-06-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
                 "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",

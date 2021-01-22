@@ -6,13 +6,13 @@ package compute
 import (
 	"context"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 )
 
 // VirtualMachinesClientAddons contains addons for VirtualMachinesClient
 type VirtualMachinesClientAddons interface {
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, VMName string, parameters mgmtcompute.VirtualMachine) error
-	DeleteAndWait(ctx context.Context, resourceGroupName string, VMName string) error
+	DeleteAndWait(ctx context.Context, resourceGroupName string, VMName string, forceDeletion *bool) error
 	RedeployAndWait(ctx context.Context, resourceGroupName string, VMName string) error
 	StartAndWait(ctx context.Context, resourceGroupName string, VMName string) error
 	List(ctx context.Context, resourceGroupName string) (result []mgmtcompute.VirtualMachine, err error)
@@ -27,8 +27,8 @@ func (c *virtualMachinesClient) CreateOrUpdateAndWait(ctx context.Context, resou
 	return future.WaitForCompletionRef(ctx, c.Client)
 }
 
-func (c *virtualMachinesClient) DeleteAndWait(ctx context.Context, resourceGroupName string, VMName string) error {
-	future, err := c.Delete(ctx, resourceGroupName, VMName)
+func (c *virtualMachinesClient) DeleteAndWait(ctx context.Context, resourceGroupName string, VMName string, forceDeletion *bool) error {
+	future, err := c.Delete(ctx, resourceGroupName, VMName, forceDeletion)
 	if err != nil {
 		return err
 	}

@@ -17,6 +17,9 @@
         "databaseAccountName": {
             "value": ""
         },
+        "encryptionAtHost": {
+            "value": ""
+        },
         "extraCosmosDBIPs": {
             "value": ""
         },

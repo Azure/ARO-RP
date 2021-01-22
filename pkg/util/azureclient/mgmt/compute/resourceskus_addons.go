@@ -6,7 +6,7 @@ package compute
 import (
 	"context"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 )
 
 // ResourceSkusClientAddons contains addons for ResourceSkusClient

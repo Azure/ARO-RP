@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -125,17 +125,17 @@ func (mr *MockVirtualMachinesClientMockRecorder) CreateOrUpdateAndWait(arg0, arg
 }
 
 // DeleteAndWait mocks base method
-func (m *MockVirtualMachinesClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockVirtualMachinesClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string, arg3 *bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAndWait indicates an expected call of DeleteAndWait
-func (mr *MockVirtualMachinesClientMockRecorder) DeleteAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockVirtualMachinesClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).DeleteAndWait), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3)
 }
 
 // Get mocks base method
