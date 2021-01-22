@@ -54,10 +54,11 @@ type clientSet struct {
 }
 
 var (
-	log         *logrus.Entry
-	_env        env.Core
-	clusterName string
-	clients     *clientSet
+	log               *logrus.Entry
+	_env              env.Core
+	vnetResourceGroup string
+	clusterName       string
+	clients           *clientSet
 )
 
 func skipIfNotInDevelopmentEnv() {
@@ -69,7 +70,7 @@ func skipIfNotInDevelopmentEnv() {
 func resourceIDFromEnv() string {
 	return fmt.Sprintf(
 		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
-		_env.SubscriptionID(), _env.ResourceGroup(), clusterName)
+		_env.SubscriptionID(), vnetResourceGroup, clusterName)
 }
 
 func newClientSet(ctx context.Context) (*clientSet, error) {
@@ -143,7 +144,6 @@ func setup(ctx context.Context) error {
 		"AZURE_TENANT_ID",
 		"CLUSTER",
 		"LOCATION",
-		"RESOURCEGROUP",
 	} {
 		if _, found := os.LookupEnv(key); !found {
 			return fmt.Errorf("environment variable %q unset", key)
@@ -156,6 +156,7 @@ func setup(ctx context.Context) error {
 		return err
 	}
 
+	vnetResourceGroup = os.Getenv("CLUSTER")
 	clusterName = os.Getenv("CLUSTER")
 
 	if os.Getenv("CI") != "" { // always create cluster in CI
@@ -164,7 +165,7 @@ func setup(ctx context.Context) error {
 			return err
 		}
 
-		err = cluster.Create(ctx, clusterName)
+		err = cluster.Create(ctx, vnetResourceGroup, clusterName)
 		if err != nil {
 			return err
 		}
@@ -186,7 +187,7 @@ func done(ctx context.Context) error {
 			return err
 		}
 
-		err = cluster.Delete(ctx, clusterName)
+		err = cluster.Delete(ctx, vnetResourceGroup, clusterName)
 		if err != nil {
 			return err
 		}

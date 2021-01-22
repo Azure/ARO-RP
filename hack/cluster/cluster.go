@@ -36,6 +36,9 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	vnetResourceGroup := os.Getenv("CLUSTER")
+	clusterName := os.Getenv("CLUSTER")
+
 	c, err := cluster.New(log, env, os.Getenv("CI") != "")
 	if err != nil {
 		return err
@@ -43,9 +46,9 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	switch strings.ToLower(os.Args[1]) {
 	case "create":
-		return c.Create(ctx, os.Getenv("CLUSTER"))
+		return c.Create(ctx, vnetResourceGroup, clusterName)
 	case "delete":
-		return c.Delete(ctx, os.Getenv("CLUSTER"))
+		return c.Delete(ctx, vnetResourceGroup, clusterName)
 	default:
 		return fmt.Errorf("invalid command %s", os.Args[1])
 	}
