@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -101,6 +102,10 @@ func (k *kubeconfig) cli(ctx context.Context, resourceID string, elevated bool) 
 	kc := openShiftDoc.OpenShiftCluster.Properties.AROSREKubeconfig
 	if elevated {
 		kc = openShiftDoc.OpenShiftCluster.Properties.AROServiceKubeconfig
+	}
+
+	if len(kc) == 0 {
+		return nil, fmt.Errorf("kubeconfig is nil")
 	}
 
 	var kubeconfig *v1.Config
