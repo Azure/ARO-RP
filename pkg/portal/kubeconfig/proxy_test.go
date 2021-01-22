@@ -319,6 +319,37 @@ func TestProxy(t *testing.T) {
 			wantStatusCode: http.StatusInternalServerError,
 			wantBody:       "Internal Server Error\n",
 		},
+		{
+			name: "nil kubeconfig",
+			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, openShiftClustersClient *cosmosdb.FakeOpenShiftClusterDocumentClient, portalClient *cosmosdb.FakePortalDocumentClient) {
+				portalDocument := &api.PortalDocument{
+					ID:  token,
+					TTL: 21600,
+					Portal: &api.Portal{
+						Username:   username,
+						ID:         resourceID,
+						Kubeconfig: &api.Kubeconfig{},
+					},
+				}
+				fixture.AddPortalDocuments(portalDocument)
+				checker.AddPortalDocuments(portalDocument)
+				openShiftClusterDocument := &api.OpenShiftClusterDocument{
+					ID:  resourceID,
+					Key: resourceID,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						Properties: api.OpenShiftClusterProperties{
+							NetworkProfile: api.NetworkProfile{
+								PrivateEndpointIP: privateEndpointIP,
+							},
+						},
+					},
+				}
+				fixture.AddOpenShiftClusterDocuments(openShiftClusterDocument)
+				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
+			},
+			wantStatusCode: http.StatusInternalServerError,
+			wantBody:       "Internal Server Error\n",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			dbPortal, portalClient := testdatabase.NewFakePortal()
