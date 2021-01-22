@@ -44,6 +44,7 @@ func NewBestEffortEnricher(log *logrus.Entry, dialer proxy.Dialer, m metrics.Int
 			newClusterVersionEnricherTask,
 			newWorkerProfilesEnricherTask,
 			newClusterServicePrincipalEnricherTask,
+			newIngressProfileEnricherTask,
 		},
 	}
 }
