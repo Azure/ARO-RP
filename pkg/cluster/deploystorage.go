@@ -12,9 +12,7 @@ import (
 
 	azgraphrbac "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -30,11 +28,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/bootstraplogging"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
-	"github.com/Azure/ARO-RP/pkg/util/feature"
-	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -152,43 +147,11 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
 		Resources: []*arm.Resource{
-			rbac.ResourceGroupRoleAssignmentWithName(
-				rbac.RoleContributor,
-				"'"+clusterSPObjectID+"'",
-				"guid(resourceGroup().id, 'SP / Contributor')",
-			),
-			{
-				Resource: &mgmtstorage.Account{
-					Sku: &mgmtstorage.Sku{
-						Name: "Standard_LRS",
-					},
-					Name:     to.StringPtr("cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix),
-					Location: &installConfig.Config.Azure.Region,
-					Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
-				},
-				APIVersion: azureclient.APIVersion("Microsoft.Storage"),
-			},
-			{
-				Resource: &mgmtstorage.BlobContainer{
-					Name: to.StringPtr("cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/ignition"),
-					Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
-				},
-				APIVersion: azureclient.APIVersion("Microsoft.Storage"),
-				DependsOn: []string{
-					"Microsoft.Storage/storageAccounts/cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix,
-				},
-			},
-			{
-				Resource: &mgmtstorage.BlobContainer{
-					Name: to.StringPtr("cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/aro"),
-					Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
-				},
-				APIVersion: azureclient.APIVersion("Microsoft.Storage"),
-				DependsOn: []string{
-					"Microsoft.Storage/storageAccounts/cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix,
-				},
-			},
+			m.clusterStorageAccount(installConfig.Config.Azure.Region),
+			m.clusterStorageAccountBlob("ignition"),
+			m.clusterStorageAccountBlob("aro"),
 			m.clusterNSG(infraID, installConfig.Config.Azure.Region),
+			m.clusterServicePrincipalRBAC(clusterSPObjectID),
 		},
 	}
 
@@ -228,68 +191,6 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 
 	// the graph is quite big so we store it in a storage account instead of in cosmosdb
 	return m.saveGraph(ctx, g)
-}
-
-var extraDenyAssignmentExclusions = map[string][]string{
-	"Microsoft.RedHatOpenShift/RedHatEngineering": {
-		"Microsoft.Network/networkInterfaces/effectiveRouteTable/action",
-	},
-}
-
-func (m *manager) denyAssignments(clusterSPObjectID string) *arm.Resource {
-	notActions := []string{
-		"Microsoft.Network/networkSecurityGroups/join/action",
-		"Microsoft.Compute/disks/beginGetAccess/action",
-		"Microsoft.Compute/disks/endGetAccess/action",
-		"Microsoft.Compute/disks/write",
-		"Microsoft.Compute/snapshots/beginGetAccess/action",
-		"Microsoft.Compute/snapshots/endGetAccess/action",
-		"Microsoft.Compute/snapshots/write",
-		"Microsoft.Compute/snapshots/delete",
-	}
-
-	var props = m.subscriptionDoc.Subscription.Properties
-
-	for flag, exclusions := range extraDenyAssignmentExclusions {
-		if feature.IsRegisteredForFeature(props, flag) {
-			notActions = append(notActions, exclusions...)
-		}
-	}
-
-	return &arm.Resource{
-		Resource: &mgmtauthorization.DenyAssignment{
-			Name: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
-			Type: to.StringPtr("Microsoft.Authorization/denyAssignments"),
-			DenyAssignmentProperties: &mgmtauthorization.DenyAssignmentProperties{
-				DenyAssignmentName: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
-				Permissions: &[]mgmtauthorization.DenyAssignmentPermission{
-					{
-						Actions: &[]string{
-							"*/action",
-							"*/delete",
-							"*/write",
-						},
-						NotActions: &notActions,
-					},
-				},
-				Scope: &m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID,
-				Principals: &[]mgmtauthorization.Principal{
-					{
-						ID:   to.StringPtr("00000000-0000-0000-0000-000000000000"),
-						Type: to.StringPtr("SystemDefined"),
-					},
-				},
-				ExcludePrincipals: &[]mgmtauthorization.Principal{
-					{
-						ID:   &clusterSPObjectID,
-						Type: to.StringPtr("ServicePrincipal"),
-					},
-				},
-				IsSystemProtected: to.BoolPtr(true),
-			},
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Authorization/denyAssignments"),
-	}
 }
 
 func (m *manager) deploySnapshotUpgradeTemplate(ctx context.Context) error {
