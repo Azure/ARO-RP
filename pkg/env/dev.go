@@ -56,7 +56,14 @@ func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		return nil, err
 	}
 
-	armAuthorizer, err := auth.NewClientCredentialsConfig(os.Getenv("AZURE_ARM_CLIENT_ID"), os.Getenv("AZURE_ARM_CLIENT_SECRET"), d.TenantID()).Authorizer()
+	ccc := auth.ClientCredentialsConfig{
+		ClientID:     os.Getenv("AZURE_ARM_CLIENT_ID"),
+		ClientSecret: os.Getenv("AZURE_ARM_CLIENT_SECRET"),
+		TenantID:     d.TenantID(),
+		Resource:     d.Environment().ResourceManagerEndpoint,
+		AADEndpoint:  d.Environment().ActiveDirectoryEndpoint,
+	}
+	armAuthorizer, err := ccc.Authorizer()
 	if err != nil {
 		return nil, err
 	}
