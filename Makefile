@@ -77,14 +77,16 @@ pyenv:
 
 secrets:
 	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
-	rm -rf secrets
+	@[ "${SECRETS}" ] || ( echo ">> SECRETS is not set"; exit 1 )
+	rm -rf ${SECRETS}
 	az storage blob download -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
-	tar -xzf secrets.tar.gz
+	mkdir ${SECRETS} && tar -xzf secrets.tar.gz -C ${SECRETS}
 	rm secrets.tar.gz
 
 secrets-update:
 	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
-	tar -czf secrets.tar.gz secrets
+	@[ "${SECRETS}" ] || ( echo ">> SECRETS is not set"; exit 1 )
+	tar -czf secrets.tar.gz -C ${SECRETS} .
 	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
 	rm secrets.tar.gz
 
