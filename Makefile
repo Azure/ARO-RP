@@ -75,15 +75,17 @@ pyenv:
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
 
 secrets:
+# update target dir of 'secrets' symlink if present, otherwise create/update 'secrets' dir
 	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
-	rm -rf secrets
+	rm -rf secrets/*
 	az storage blob download -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
-	tar -xzf secrets.tar.gz
+	tar -h -xzf secrets.tar.gz
 	rm secrets.tar.gz
 
 secrets-update:
+# tar target dir of 'secrets' symlink if present, otherwise tar 'secrets' dir
 	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
-	tar -czf secrets.tar.gz secrets
+	tar -h -czf secrets.tar.gz secrets
 	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
 	rm secrets.tar.gz
 
