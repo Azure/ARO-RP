@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -107,6 +108,10 @@ func (k *kubeconfig) cli(ctx context.Context, resourceID string, elevated bool) 
 	err = yaml.Unmarshal(kc, &kubeconfig)
 	if err != nil {
 		return nil, err
+	}
+
+	if kubeconfig == nil || kubeconfig.AuthInfos == nil {
+		return nil, fmt.Errorf("cluster needs updating before using kubeconfig")
 	}
 
 	var b []byte
