@@ -14,7 +14,7 @@ import (
 func CertAsBytes(certs ...*x509.Certificate) (b []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			b, err = nil, fmt.Errorf("%v", r)
+			b, err = nil, fmt.Errorf("CertAsBytes: %v", r)
 		}
 	}()
 
@@ -32,7 +32,7 @@ func CertAsBytes(certs ...*x509.Certificate) (b []byte, err error) {
 func PrivateKeyAsBytes(key *rsa.PrivateKey) (b []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			b, err = nil, fmt.Errorf("%v", r)
+			b, err = nil, fmt.Errorf("PrivateKeyAsBytes: %v", r)
 		}
 	}()
 

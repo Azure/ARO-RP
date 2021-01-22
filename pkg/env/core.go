@@ -45,6 +45,7 @@ func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Infof("running on %s", im.Environment().Name)
 
 	rpauthorizer, err := rpauthorizer.New(deploymentMode, im)
 	if err != nil {
