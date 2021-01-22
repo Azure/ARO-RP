@@ -39,7 +39,7 @@ var _ = Describe("[Admin API] List clusters action", func() {
 		ctx := context.Background()
 		resourceID := resourceIDFromEnv()
 
-		path := fmt.Sprintf("/subscriptions/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters", _env.SubscriptionID())
+		path := fmt.Sprintf("/subscriptions/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters", clusterEnv.SubscriptionID())
 		testAdminClustersList(ctx, path, resourceID)
 	})
 
@@ -47,7 +47,7 @@ var _ = Describe("[Admin API] List clusters action", func() {
 		ctx := context.Background()
 		resourceID := resourceIDFromEnv()
 
-		path := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters", _env.SubscriptionID(), _env.ResourceGroup())
+		path := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters", clusterEnv.SubscriptionID(), clusterEnv.ResourceGroup())
 		testAdminClustersList(ctx, path, resourceID)
 	})
 })

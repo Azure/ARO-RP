@@ -55,13 +55,14 @@ type clientSet struct {
 
 var (
 	log         *logrus.Entry
-	_env        env.Core
+	localEnv    env.Core
+	clusterEnv  env.Core
 	clusterName string
 	clients     *clientSet
 )
 
 func skipIfNotInDevelopmentEnv() {
-	if _env.DeploymentMode() != deployment.Development {
+	if clusterEnv.DeploymentMode() != deployment.Development {
 		Skip("skipping tests in non-development environment")
 	}
 }
@@ -69,7 +70,7 @@ func skipIfNotInDevelopmentEnv() {
 func resourceIDFromEnv() string {
 	return fmt.Sprintf(
 		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
-		_env.SubscriptionID(), _env.ResourceGroup(), clusterName)
+		clusterEnv.SubscriptionID(), clusterEnv.ResourceGroup(), clusterName)
 }
 
 func newClientSet(ctx context.Context) (*clientSet, error) {
@@ -78,7 +79,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	configv1, err := kubeadminkubeconfig.Get(ctx, log, _env, authorizer, resourceIDFromEnv())
+	configv1, err := kubeadminkubeconfig.Get(ctx, log, localEnv, authorizer, resourceIDFromEnv())
 	if err != nil {
 		return nil, err
 	}
@@ -117,15 +118,15 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}
 
 	return &clientSet{
-		OpenshiftClustersv20200430:        openshiftclustersv20200430.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Operationsv20200430:               openshiftclustersv20200430.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		OpenshiftClustersv20210131preview: openshiftclustersv20210131preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Operationsv20210131preview:        openshiftclustersv20210131preview.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClustersv20200430:        openshiftclustersv20200430.NewOpenShiftClustersClient(localEnv.Environment(), localEnv.SubscriptionID(), authorizer),
+		Operationsv20200430:               openshiftclustersv20200430.NewOperationsClient(localEnv.Environment(), localEnv.SubscriptionID(), authorizer),
+		OpenshiftClustersv20210131preview: openshiftclustersv20210131preview.NewOpenShiftClustersClient(localEnv.Environment(), localEnv.SubscriptionID(), authorizer),
+		Operationsv20210131preview:        openshiftclustersv20210131preview.NewOperationsClient(localEnv.Environment(), localEnv.SubscriptionID(), authorizer),
 
-		VirtualMachines: compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Resources:       features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		ActivityLogs:    insights.NewActivityLogsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		VirtualNetworks: network.NewVirtualNetworksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		VirtualMachines: compute.NewVirtualMachinesClient(localEnv.Environment(), localEnv.SubscriptionID(), authorizer),
+		Resources:       features.NewResourcesClient(localEnv.Environment(), localEnv.SubscriptionID(), authorizer),
+		ActivityLogs:    insights.NewActivityLogsClient(localEnv.Environment(), localEnv.SubscriptionID(), authorizer),
+		VirtualNetworks: network.NewVirtualNetworksClient(localEnv.Environment(), localEnv.SubscriptionID(), authorizer),
 
 		RestConfig:  restconfig,
 		Kubernetes:  cli,
@@ -151,15 +152,16 @@ func setup(ctx context.Context) error {
 	}
 
 	var err error
-	_env, err = env.NewCoreForCI(ctx, log)
+	localEnv, err = env.NewCoreForCI(ctx, log)
 	if err != nil {
 		return err
 	}
 
+	clusterEnv = env.DeriveCoreForCluster(localEnv)
 	clusterName = os.Getenv("CLUSTER")
 
 	if os.Getenv("CI") != "" { // always create cluster in CI
-		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
+		cluster, err := cluster.New(log, localEnv, clusterEnv, os.Getenv("CI") != "")
 		if err != nil {
 			return err
 		}
@@ -181,7 +183,7 @@ func setup(ctx context.Context) error {
 func done(ctx context.Context) error {
 	// terminate early if delete flag is set to false
 	if os.Getenv("CI") != "" && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
-		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
+		cluster, err := cluster.New(log, localEnv, clusterEnv, os.Getenv("CI") != "")
 		if err != nil {
 			return err
 		}

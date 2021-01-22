@@ -84,6 +84,15 @@ func NewCoreForCI(ctx context.Context, log *logrus.Entry) (Core, error) {
 	}, nil
 }
 
+func DeriveCoreForCluster(env Core) Core {
+	_core := env.(*core)
+
+	return &core{
+		InstanceMetadata: instancemetadata.NewClusterMetadata(_core.InstanceMetadata),
+		deploymentMode:   _core.deploymentMode,
+	}
+}
+
 func validateCloudEnvironment(name string) error {
 	switch name {
 	case azure.PublicCloud.Name, azure.USGovernmentCloud.Name:

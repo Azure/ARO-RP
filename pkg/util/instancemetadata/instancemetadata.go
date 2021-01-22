@@ -5,6 +5,7 @@ package instancemetadata
 
 import (
 	"context"
+	"os"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 
@@ -59,4 +60,23 @@ func New(ctx context.Context, deploymentMode deployment.Mode) (InstanceMetadata,
 	}
 
 	return newProd(ctx)
+}
+
+func NewClusterMetadata(env InstanceMetadata) InstanceMetadata {
+	// awful heuristics, remove when the value of CLUSTER_RESOURCEGROUP in the
+	// pipelines has been updated to the cluster's RG and we can assume
+	// RESOURCEGROUP is the CI environment.
+	clusterRG, exists := os.LookupEnv("CLUSTER_RESOURCEGROUP")
+	if !exists {
+		clusterRG = os.Getenv("CLUSTER")
+	}
+
+	return &instanceMetadata{
+		hostname:       env.Hostname(),
+		tenantID:       env.TenantID(),
+		subscriptionID: env.SubscriptionID(),
+		location:       env.Location(),
+		resourceGroup:  clusterRG,
+		environment:    env.Environment(),
+	}
 }

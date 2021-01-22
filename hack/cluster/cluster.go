@@ -37,12 +37,14 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		os.Setenv("CLUSTER_RESOURCEGROUP", os.Getenv("CLUSTER"))
 	}
 
-	env, err := env.NewCore(ctx, log)
+	localEnv, err := env.NewCore(ctx, log)
 	if err != nil {
 		return err
 	}
 
-	c, err := cluster.New(log, env, os.Getenv("CI") != "")
+	clusterEnv := env.DeriveCoreForCluster(localEnv)
+
+	c, err := cluster.New(log, localEnv, clusterEnv, os.Getenv("CI") != "")
 	if err != nil {
 		return err
 	}

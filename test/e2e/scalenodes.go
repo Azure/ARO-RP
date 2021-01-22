@@ -24,7 +24,7 @@ var _ = Describe("Scale nodes", func() {
 	Specify("node count should match the cluster resource and nodes should be ready", func() {
 		ctx := context.Background()
 
-		oc, err := clients.OpenshiftClustersv20200430.Get(ctx, _env.ResourceGroup(), clusterName)
+		oc, err := clients.OpenshiftClustersv20200430.Get(ctx, clusterEnv.ResourceGroup(), clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
 		expectedNodeCount := 3 // for masters
