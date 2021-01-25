@@ -291,7 +291,7 @@ func (dv *openShiftClusterDynamicValidator) validateProviders(ctx context.Contex
 func validateServicePrincipalProfile(ctx context.Context, log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, sub *api.SubscriptionDocument) (refreshable.Authorizer, error) {
 	log.Print("validateServicePrincipalProfile")
 
-	token, err := aad.GetToken(ctx, log, oc, sub, env.Environment().ResourceManagerEndpoint)
+	token, err := aad.GetToken(ctx, log, oc, sub, env.Environment().ActiveDirectoryEndpoint, env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
