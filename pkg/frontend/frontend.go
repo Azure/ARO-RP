@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -37,11 +38,11 @@ func (err statusCodeError) Error() string {
 	return fmt.Sprintf("%d", err)
 }
 
-type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
-	*api.SubscriptionDocument) (adminactions.KubeActions, error)
+type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.KubeActions, error)
 
-type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
-	*api.SubscriptionDocument) (adminactions.AzureActions, error)
+type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error)
+
+type ocEnricherFactory func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Interface) clusterdata.OpenShiftClusterEnricher
 
 type frontend struct {
 	baseLog *logrus.Entry
@@ -55,9 +56,9 @@ type frontend struct {
 	m    metrics.Interface
 	aead encryption.AEAD
 
-	ocEnricher          clusterdata.OpenShiftClusterEnricher
 	kubeActionsFactory  kubeActionsFactory
 	azureActionsFactory azureActionsFactory
+	ocEnricherFactory   ocEnricherFactory
 
 	l net.Listener
 	s *http.Server
@@ -86,7 +87,8 @@ func NewFrontend(ctx context.Context,
 	m metrics.Interface,
 	aead encryption.AEAD,
 	kubeActionsFactory kubeActionsFactory,
-	azureActionsFactory azureActionsFactory) (Runnable, error) {
+	azureActionsFactory azureActionsFactory,
+	ocEnricherFactory ocEnricherFactory) (Runnable, error) {
 	f := &frontend{
 		baseLog:             baseLog,
 		env:                 _env,
@@ -98,8 +100,7 @@ func NewFrontend(ctx context.Context,
 		aead:                aead,
 		kubeActionsFactory:  kubeActionsFactory,
 		azureActionsFactory: azureActionsFactory,
-
-		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env, m),
+		ocEnricherFactory:   ocEnricherFactory,
 
 		bucketAllocator: &bucket.Random{},
 

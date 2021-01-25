@@ -174,10 +174,9 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
-				*api.SubscriptionDocument) (adminactions.KubeActions, error) {
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.KubeActions, error) {
 				return k, nil
-			}, nil)
+			}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -369,10 +368,9 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
-				*api.SubscriptionDocument) (adminactions.KubeActions, error) {
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.KubeActions, error) {
 				return k, nil
-			}, nil)
+			}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

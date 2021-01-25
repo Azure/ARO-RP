@@ -33,14 +33,14 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	var b []byte
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchOpenShiftCluster(ctx, r, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter(), f.apis[vars["api-version"]].OpenShiftClusterStaticValidator(f.env.Location(), f.env.Domain(), f.env.DeploymentMode(), r.URL.Path))
+		b, err = f._putOrPatchOpenShiftCluster(ctx, log, r, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter(), f.apis[vars["api-version"]].OpenShiftClusterStaticValidator(f.env.Location(), f.env.Domain(), f.env.DeploymentMode(), r.URL.Path))
 		return err
 	})
 
 	reply(log, w, header, b, err)
 }
 
-func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Request, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator) ([]byte, error) {
+func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, r *http.Request, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 
@@ -109,7 +109,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 	if !isCreate {
 		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
-		f.ocEnricher.Enrich(timeoutCtx, doc.OpenShiftCluster)
+
+		ocEnricher := f.ocEnricherFactory(log, f.env, f.m)
+		ocEnricher.Enrich(timeoutCtx, doc.OpenShiftCluster)
 	}
 
 	var ext interface{}
