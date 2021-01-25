@@ -6,11 +6,14 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	mgmtgraphrbac "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/date"
 	uuid "github.com/satori/go.uuid"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 func (c *Cluster) getServicePrincipal(ctx context.Context, appID string) (string, error) {
@@ -53,9 +56,35 @@ func (c *Cluster) createApplication(ctx context.Context, displayName string) (st
 }
 
 func (c *Cluster) createServicePrincipal(ctx context.Context, appID string) (string, error) {
-	sp, err := c.serviceprincipals.Create(ctx, mgmtgraphrbac.ServicePrincipalCreateParameters{
-		AppID: &appID,
-	})
+	var sp mgmtgraphrbac.ServicePrincipal
+	var err error
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+
+	// NOTE: Do not override err with the error returned by
+	// wait.PollImmediateUntil. Doing this will not propagate the latest error
+	// to the user in case when wait exceeds the timeout
+	_ = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		sp, err = c.serviceprincipals.Create(ctx, mgmtgraphrbac.ServicePrincipalCreateParameters{
+			AppID: &appID,
+		})
+		if detailedErr, ok := err.(autorest.DetailedError); ok &&
+			detailedErr.StatusCode == http.StatusForbidden {
+			// goal is to retry the following error:
+			// graphrbac.ServicePrincipalsClient#Create: Failure responding to
+			// request: StatusCode=403 -- Original Error: autorest/azure:
+			// Service returned an error. Status=403 Code="Unknown"
+			// Message="Unknown service error"
+			// Details=[{"odata.error":{"code":"Authorization_RequestDenied","date":"yyyy-mm-ddThh:mm:ss","message":{"lang":"en","value":"When
+			// using this permission, the backing application of the service
+			// principal being created must in the local
+			// tenant"},"requestId":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"}}]
+
+			return false, nil
+		}
+		return err == nil, err
+	}, timeoutCtx.Done())
 	if err != nil {
 		return "", err
 	}
