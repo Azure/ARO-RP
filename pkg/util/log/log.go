@@ -44,9 +44,11 @@ func getBaseLogger() *logrus.Logger {
 	return logger
 }
 
-// GetLogger returns a consistently configured audit log entry
-func GetAuditLogger() *logrus.Entry {
-	return audit.NewEntry(getBaseLogger())
+// GetAuditEntry returns a consistently configured audit log entry
+func GetAuditEntry() *logrus.Entry {
+	auditLogger := getBaseLogger()
+	audit.AddHook(auditLogger)
+	return logrus.NewEntry(auditLogger)
 }
 
 // GetLogger returns a consistently configured log entry

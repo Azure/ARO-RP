@@ -33,6 +33,7 @@ import (
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testclusterdata "github.com/Azure/ARO-RP/test/util/clusterdata"
 	"github.com/Azure/ARO-RP/test/util/listener"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
@@ -62,6 +63,7 @@ type testInfra struct {
 	l          net.Listener
 	cli        *http.Client
 	enricher   testclusterdata.TestEnricher
+	audit      *logrus.Entry
 	log        *logrus.Entry
 	fixture    *testdatabase.Fixture
 	checker    *testdatabase.Checker
@@ -98,6 +100,7 @@ func newTestInfra(t *testing.T) *testInfra {
 	_env.EXPECT().Domain().AnyTimes().Return("")
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 
+	_, auditEntry := testlog.NewAudit()
 	log := logrus.NewEntry(logrus.StandardLogger())
 
 	fixture := testdatabase.NewFixture()
@@ -112,6 +115,7 @@ func newTestInfra(t *testing.T) *testInfra {
 		enricher:   testclusterdata.NewTestEnricher(),
 		fixture:    fixture,
 		checker:    checker,
+		audit:      auditEntry,
 		log:        log,
 		cli: &http.Client{
 			Transport: &http.Transport{

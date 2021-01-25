@@ -17,10 +17,13 @@ const (
 	// see pkg/deploy/generator/resources.go#L901
 	CloudRoleRP = "rp"
 
+	DefaultLogMessage = "audit event"
+
 	MetadataCreatedTime    = "createdTime"
 	MetadataPayload        = "payload"
 	MetadataLogKind        = "logKind"
 	MetadataAdminOperation = "adminOp"
+	MetadataSource         = "source"
 
 	SourceAdminPortal = "aro-admin"
 	SourceRP          = "aro-rp"
@@ -36,8 +39,6 @@ const (
 	EnvKeyIKey                = "envIKey"
 	EnvKeyLocation            = "envLocation"
 
-	UnknownValue = "unknown"
-
 	PayloadKeyCallerIdentities = "payloadCallerIdentities"
 	PayloadKeyCategory         = "payloadCategory"
 	PayloadKeyNCloud           = "payloadNCloud"
@@ -46,9 +47,9 @@ const (
 	PayloadKeyRequestID        = "payloadRequestID"
 	PayloadKeyTargetResources  = "payloadTargetResources"
 
-	ifxAuditCloudVer = 1.0
-	ifxAuditName     = "#Ifx.AuditSchema"
-	ifxAuditVersion  = 2.1
+	IFXAuditCloudVer = 1.0
+	IFXAuditName     = "#Ifx.AuditSchema"
+	IFXAuditVersion  = 2.1
 	IFXAuditLogKind  = "ifxaudit"
 
 	// ifxAuditFlags is a collection of values bit-packed into a 64-bit integer.
@@ -70,19 +71,17 @@ var (
 	seqNumMutex sync.Mutex
 )
 
-// NewEntry returns a log entry that embeds the provided logger. It has a hook
-// that knows how to hydrate an IFxAudit log payload before logging it.
-func NewEntry(logger *logrus.Logger) *logrus.Entry {
+// AddHook modifies logger by adding the payload hook to its list of hooks.
+func AddHook(logger *logrus.Logger) {
 	logger.AddHook(&payloadHook{
-		payload: &payload{},
+		payload: &Payload{},
 	})
-	return logrus.NewEntry(logger)
 }
 
 // payloadHook, when fires, hydrates an IFxAudit log payload using data in a log
 // entry.
 type payloadHook struct {
-	payload *payload
+	payload *Payload
 }
 
 func (payloadHook) Levels() []logrus.Level {
@@ -90,11 +89,11 @@ func (payloadHook) Levels() []logrus.Level {
 }
 
 func (h *payloadHook) Fire(entry *logrus.Entry) error {
-	h.payload = &payload{}
+	h.payload = &Payload{}
 
 	// Part-A
-	h.payload.EnvVer = ifxAuditVersion
-	h.payload.EnvName = ifxAuditName
+	h.payload.EnvVer = IFXAuditVersion
+	h.payload.EnvName = IFXAuditName
 
 	logTime := entry.Time.UTC().Format(time.RFC3339)
 	h.payload.EnvTime = logTime
@@ -155,7 +154,7 @@ func (h *payloadHook) Fire(entry *logrus.Entry) error {
 		delete(entry.Data, EnvKeyCloudDeploymentUnit)
 	}
 
-	h.payload.EnvCloudVer = ifxAuditCloudVer
+	h.payload.EnvCloudVer = IFXAuditCloudVer
 
 	// Part-B
 	if ids, ok := entry.Data[PayloadKeyCallerIdentities].([]CallerIdentity); ok {
@@ -198,13 +197,13 @@ func (h *payloadHook) Fire(entry *logrus.Entry) error {
 	// add non-IFxAudit metadata for our own use
 	entry.Data[MetadataCreatedTime] = logTime
 	entry.Data[MetadataLogKind] = IFXAuditLogKind
+	entry.Data[MetadataSource] = h.payload.EnvAppID
 
 	adminOp := false
 	if strings.Contains(h.payload.OperationName, "/admin") {
 		adminOp = true
 	}
 	entry.Data[MetadataAdminOperation] = adminOp
-
 	return nil
 }
 

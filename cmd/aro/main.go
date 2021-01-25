@@ -37,7 +37,7 @@ func main() {
 	flag.Parse()
 
 	ctx := context.Background()
-	audit := utillog.GetAuditLogger()
+	audit := utillog.GetAuditEntry()
 	log := utillog.GetLogger()
 
 	go func() {
