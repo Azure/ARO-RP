@@ -32,7 +32,10 @@ type openShiftClusterStaticValidator struct {
 
 // Validate validates an OpenShift cluster
 func (sv *openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.OpenShiftCluster) error {
-	oc := _oc.(*OpenShiftCluster)
+	oc, ok := _oc.(*OpenShiftCluster)
+	if !ok {
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+	}
 
 	var current *OpenShiftCluster
 	if _current != nil {

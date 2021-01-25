@@ -6,6 +6,7 @@ package admin
 import (
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -528,6 +529,38 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 
 				validate.CloudError(t, err)
+			}
+		})
+	}
+}
+
+func TestStatic(t *testing.T) {
+	tests := []struct {
+		name    string
+		oc      func() interface{}
+		wantErr error
+	}{
+		{
+			name: "valid",
+			oc: func() interface{} {
+				return &OpenShiftCluster{}
+			},
+		},
+		{
+			name: "nil",
+			oc: func() interface{} {
+				return nil
+			},
+			wantErr: api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error."),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			current := &api.OpenShiftCluster{}
+			err := (&openShiftClusterStaticValidator{}).Static(tt.oc(), current)
+			if err != nil && !reflect.DeepEqual(err, tt.wantErr) {
+				t.Error(err)
 			}
 		})
 	}

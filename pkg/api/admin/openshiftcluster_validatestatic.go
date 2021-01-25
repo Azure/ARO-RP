@@ -18,14 +18,20 @@ func (sv *openShiftClusterStaticValidator) Static(_oc interface{}, _current *api
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Admin API does not allow cluster creation.")
 	}
 
-	oc := _oc.(*OpenShiftCluster)
+	oc, ok := _oc.(*OpenShiftCluster)
+	if !ok {
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+	}
 	return sv.validateDelta(oc, (&openShiftClusterConverter{}).ToExternal(_current).(*OpenShiftCluster))
 }
 
 func (sv *openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCluster) error {
 	err := immutable.Validate("", oc, current)
 	if err != nil {
-		err := err.(*immutable.ValidationError)
+		err, ok := err.(*immutable.ValidationError)
+		if !ok {
+			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+		}
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, err.Message)
 	}
 
