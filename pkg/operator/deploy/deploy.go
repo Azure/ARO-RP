@@ -277,20 +277,6 @@ func (o *operator) IsReady(ctx context.Context) (bool, error) {
 		return ok, err
 	}
 
-	// wait for conditions to appear
-	cluster, err := o.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
-	if err != nil {
-		return false, err
-	}
-	for _, ct := range arov1alpha1.AllConditionTypes() {
-		cond := cluster.Status.Conditions.GetCondition(ct)
-		if cond == nil {
-			return false, nil
-		}
-		if cond.Status != corev1.ConditionTrue {
-			return false, nil
-		}
-	}
 	return true, nil
 }
 
