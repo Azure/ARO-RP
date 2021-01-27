@@ -41,8 +41,9 @@ func GetToken(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
-	// NOTE: Do not override err with the error returned by wait.PollImmediateUntil.
-	// Doing this will not propagate the latest error to the user in case when wait exceeds the timeout
+	// NOTE: Do not override err with the error returned by
+	// wait.PollImmediateUntil. Doing this will not propagate the latest error
+	// to the user in case when wait exceeds the timeout
 	_ = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		var done bool
 		done, err = authorizer.RefreshWithContext(ctx, log)
