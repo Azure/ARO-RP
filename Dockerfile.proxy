@@ -1,6 +1,16 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal
+ARG RP_IMAGE_ACR=arointsvc
+FROM ${RP_IMAGE_ACR}.azurecr.io/aro-builder:1.14 AS builder
+ENV GOOS=linux \
+    GOPATH=/go/
+WORKDIR ${GOPATH}/src/github.com/Azure/ARO-RP
+USER root
+RUN yum update -y
+COPY . ${GOPATH}/src/github.com/Azure/ARO-RP/
+RUN make proxy
+
+FROM registry.access.redhat.com/ubi7/ubi-minimal
 RUN microdnf update && microdnf clean all
-COPY proxy /usr/local/bin
+COPY --from=builder /go/src/github.com/Azure/ARO-RP/proxy /usr/local/bin
 ENTRYPOINT ["proxy"]
 EXPOSE 8443/tcp
 USER 1000

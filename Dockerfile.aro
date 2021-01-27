@@ -1,14 +1,14 @@
-FROM registry.access.redhat.com/ubi8/go-toolset:1.14.12 AS builder
+ARG RP_IMAGE_ACR=arointsvc
+FROM ${RP_IMAGE_ACR}.azurecr.io/aro-builder:1.14 AS builder
 ENV GOOS=linux \
     GOPATH=/go/
 WORKDIR ${GOPATH}/src/github.com/Azure/ARO-RP
 USER root
-RUN dnf update -y && \
-    dnf install gpgme-devel libassuan-devel openssl -y
+RUN yum update -y
 COPY . ${GOPATH}/src/github.com/Azure/ARO-RP/
 RUN make aro && make e2e.test
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal
+FROM registry.access.redhat.com/ubi7/ubi-minimal
 RUN microdnf update && microdnf clean all
 COPY --from=builder /go/src/github.com/Azure/ARO-RP/aro /go/src/github.com/Azure/ARO-RP/e2e.test /usr/local/bin/
 ENTRYPOINT ["aro"]

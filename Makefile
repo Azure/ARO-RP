@@ -1,9 +1,15 @@
 SHELL = /bin/bash
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
+COMMAND = docker
+
+ifeq ($(RP_IMAGE_ACR),)
+	RP_IMAGE_ACR := arointsvc
+endif
 
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
+	COMMAND = podman
 endif
 
 aro: generate
@@ -33,36 +39,39 @@ generate:
 	go generate ./...
 
 image-aro:
-	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
+	$(COMMAND) build --no-cache -f Dockerfile.aro --build-arg RP_IMAGE_ACR=${RP_IMAGE_ACR} -t $(ARO_IMAGE) .
+
+image-builder:
+	$(COMMAND) build --no-cache -f Dockerfile.builder -t ${RP_IMAGE_ACR}.azurecr.io/aro-builder:1.14
 
 image-fluentbit:
-	docker build --no-cache --build-arg VERSION=1.6.10-1 \
+	$(COMMAND) build --no-cache --build-arg VERSION=1.6.10-1 \
 	  -f Dockerfile.fluentbit -t ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.6.10-1 .
 
 image-proxy: proxy
-	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build --no-cache -f Dockerfile.proxy -t ${RP_IMAGE_ACR}.azurecr.io/proxy:latest .
+	$(COMMAND) build --no-cache -f Dockerfile.proxy --build-arg RP_IMAGE_ACR=${RP_IMAGE_ACR} -t ${RP_IMAGE_ACR}.azurecr.io/proxy:latest .
 
 image-routefix:
-	docker pull registry.access.redhat.com/ubi8/ubi
-	docker build --no-cache -f Dockerfile.routefix -t ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT) .
+    $(COMMAND) build --no-cache -f Dockerfile.routefix -t ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT) .
 
 publish-image-aro: image-aro
-	docker push $(ARO_IMAGE)
+	$(COMMAND) push $(ARO_IMAGE)
 ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
-		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
-		docker push arointsvc.azurecr.io/aro:latest
+		$(COMMAND) tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
+		$(COMMAND) push arointsvc.azurecr.io/aro:latest
 endif
 
+publish-image-builder: image-builder
+	$(COMMAND) push ${RP_IMAGE_ACR}.azurecr.io/aro-builder:1.14
+
 publish-image-fluentbit: image-fluentbit
-	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.6.10-1
+	$(COMMAND) push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.6.10-1
 
 publish-image-proxy: image-proxy
-	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
+	$(COMMAND) push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
 
 publish-image-routefix: image-routefix
-	docker push ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT)
+    $(COMMAND) push ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT)
 
 proxy:
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./hack/proxy
@@ -125,4 +134,4 @@ vendor:
 	# https://groups.google.com/forum/#!topic/golang-nuts/51-D_YFC78k
 	hack/update-go-module-dependencies.sh
 
-.PHONY: admin.kubeconfig aro az clean client discoverycache generate image-aro image-fluentbit image-proxy image-routefix lint-go proxy publish-image-aro publish-image-fluentbit publish-image-proxy publish-image-routefix secrets secrets-update e2e.test test-e2e test-go test-python vendor
+.PHONY: admin.kubeconfig aro az clean client discoverycache generate image-aro image-builder image-fluentbit image-proxy image-routefix lint-go proxy publish-image-aro publish-image-builder publish-image-fluentbit publish-image-proxy publish-image-routefix publish-image-routefix secrets secrets-update e2e.test test-e2e test-go test-python vendor
