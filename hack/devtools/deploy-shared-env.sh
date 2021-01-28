@@ -92,10 +92,6 @@ import_certs_secrets() {
     echo "########## Import certificates to $KEYVAULT_PREFIX-svc KV ##########"
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
-        --name rp-firstparty \
-        --file secrets/firstparty.pem >/dev/null
-    az keyvault certificate import \
-        --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-server \
         --file secrets/localhost.pem >/dev/null
     az keyvault certificate import \
@@ -106,10 +102,6 @@ import_certs_secrets() {
         --vault-name "$KEYVAULT_PREFIX-por" \
         --name portal-client \
         --file secrets/portal-client.pem >/dev/null
-    az keyvault certificate import \
-        --vault-name "$KEYVAULT_PREFIX-svc" \
-        --name cluster-mdsd \
-        --file secrets/cluster-logging-int.pem >/dev/null
     az keyvault secret list \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --query '[].name' \
