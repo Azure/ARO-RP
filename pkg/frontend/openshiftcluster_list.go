@@ -24,7 +24,7 @@ func (f *frontend) getOpenShiftClusters(w http.ResponseWriter, r *http.Request) 
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	b, err := f._getOpenShiftClusters(ctx, r, f.apis[vars["api-version"]].OpenShiftClusterConverter(), func(skipToken string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
+	b, err := f._getOpenShiftClusters(ctx, log, r, f.apis[vars["api-version"]].OpenShiftClusterConverter(), func(skipToken string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
 		prefix := "/subscriptions/" + vars["subscriptionId"] + "/"
 		if vars["resourceGroupName"] != "" {
 			prefix += "resourcegroups/" + vars["resourceGroupName"] + "/"
@@ -36,7 +36,7 @@ func (f *frontend) getOpenShiftClusters(w http.ResponseWriter, r *http.Request) 
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getOpenShiftClusters(ctx context.Context, r *http.Request, converter api.OpenShiftClusterConverter, lister func(string) (cosmosdb.OpenShiftClusterDocumentIterator, error)) ([]byte, error) {
+func (f *frontend) _getOpenShiftClusters(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.OpenShiftClusterConverter, lister func(string) (cosmosdb.OpenShiftClusterDocumentIterator, error)) ([]byte, error) {
 	skipToken, err := f.parseSkipToken(r.URL.String())
 	if err != nil {
 		return nil, err
@@ -61,7 +61,9 @@ func (f *frontend) _getOpenShiftClusters(ctx context.Context, r *http.Request, c
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	f.ocEnricher.Enrich(timeoutCtx, ocs...)
+
+	ocEnricher := f.ocEnricherFactory(log, f.env, f.m)
+	ocEnricher.Enrich(timeoutCtx, ocs...)
 
 	for i := range ocs {
 		ocs[i].Properties.ClusterProfile.PullSecret = ""

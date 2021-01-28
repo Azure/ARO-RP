@@ -22,12 +22,12 @@ func (f *frontend) getOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	b, err := f._getOpenShiftCluster(ctx, r, f.apis[vars["api-version"]].OpenShiftClusterConverter())
+	b, err := f._getOpenShiftCluster(ctx, log, r, f.apis[vars["api-version"]].OpenShiftClusterConverter())
 
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getOpenShiftCluster(ctx context.Context, r *http.Request, converter api.OpenShiftClusterConverter) ([]byte, error) {
+func (f *frontend) _getOpenShiftCluster(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.OpenShiftClusterConverter) ([]byte, error) {
 	vars := mux.Vars(r)
 
 	doc, err := f.dbOpenShiftClusters.Get(ctx, r.URL.Path)
@@ -40,7 +40,9 @@ func (f *frontend) _getOpenShiftCluster(ctx context.Context, r *http.Request, co
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	f.ocEnricher.Enrich(timeoutCtx, doc.OpenShiftCluster)
+
+	ocEnricher := f.ocEnricherFactory(log, f.env, f.m)
+	ocEnricher.Enrich(timeoutCtx, doc.OpenShiftCluster)
 
 	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""

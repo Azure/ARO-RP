@@ -11,10 +11,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	admin "github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -118,11 +123,12 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 				ti.openShiftClustersClient.SetError(tt.throwsError)
 			}
 
-			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, aead, nil, nil)
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, aead, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Interface) clusterdata.OpenShiftClusterEnricher {
+				return ti.enricher
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			f.(*frontend).ocEnricher = ti.enricher
 
 			go f.Run(ctx, nil, nil)
 
