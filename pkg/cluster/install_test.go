@@ -27,7 +27,9 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -147,9 +149,16 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().DeploymentMode().Return(deployment.Production)
+
 			h, log := testlog.New()
 			m := &manager{
 				log:           log,
+				env:           env,
 				kubernetescli: tt.kubernetescli,
 				configcli:     tt.configcli,
 				operatorcli:   tt.operatorcli,
