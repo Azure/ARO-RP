@@ -45,7 +45,7 @@ func (lw *logrWrapper) Info(msg string, keysAndValues ...interface{}) {
 	lw.withKeysAndValues(keysAndValues).Info(msg)
 }
 
-func (lw *logrWrapper) V(level int) logr.InfoLogger {
+func (lw *logrWrapper) V(level int) logr.Logger {
 	return &logrWrapper{
 		entry: lw.entry,
 		level: level,
