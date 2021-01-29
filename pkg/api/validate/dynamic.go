@@ -30,7 +30,7 @@ import (
 type SlimDynamic interface {
 	ValidateVnetPermissions(ctx context.Context, code string, typ string) error
 	ValidateRouteTablesPermissions(ctx context.Context, code string, typ string) error
-	ValidateVnetDNS(ctx context.Context, code string, typ string) error
+	ValidateVnetDNS(ctx context.Context) error
 	// etc
 	// does Quota code go in here too?
 }
