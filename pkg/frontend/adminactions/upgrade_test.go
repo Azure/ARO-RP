@@ -239,7 +239,7 @@ func TestCheckCustomDNS(t *testing.T) {
 						},
 					}, nil)
 			},
-			wantErr: "not upgrading: custom DNS is set",
+			wantErr: "500: InternalServerError: : Not upgrading: custom DNS is set.",
 		},
 	}
 	for _, tt := range tests {

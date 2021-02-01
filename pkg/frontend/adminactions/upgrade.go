@@ -5,7 +5,6 @@ package adminactions
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -92,7 +91,7 @@ func checkCustomDNS(ctx context.Context, oc *api.OpenShiftCluster, vnet network.
 	if v.VirtualNetworkPropertiesFormat.DhcpOptions != nil &&
 		v.VirtualNetworkPropertiesFormat.DhcpOptions.DNSServers != nil &&
 		len(*v.VirtualNetworkPropertiesFormat.DhcpOptions.DNSServers) > 0 {
-		return fmt.Errorf("not upgrading: custom DNS is set")
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Not upgrading: custom DNS is set.")
 	}
 
 	return nil
