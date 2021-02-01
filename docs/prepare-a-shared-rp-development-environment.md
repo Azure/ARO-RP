@@ -167,6 +167,19 @@ locations.
    * `Contributor`  on your subscription.
    * `User Access Administrator` on your subscription.
 
+   You must also manually grant this application the `Microsoft.Graph/Application.ReadWrite.OwnedBy` permission, which requires admin access, in order for AAD applications to be created/deleted on a per-cluster basis.
+
+   * Go into the Azure Portal
+   * Go to Azure Active Directory
+   * Navigate to the `aro-v4-tooling-shared` app page
+   * Click 'API permissions' in the left side pane
+   * Click 'Microsoft Graph'
+   * Click 'Add a permission'.
+   * Select 'Application permissions'
+   * Search for 'Application' and select `Application.ReadWrite.OwnedBy`
+   * Click 'Add permissions'
+   * This request will need to be approved by a tenant administrator. If you are one, you can click the `Grant admin consent for <name>` button to the right of the `Add a permission` button on the app page
+
 1. Set up the RP role definitions and subscription role assignments in your
    Azure subscription. This mimics the RBAC that ARM sets up.  With at least
    `User Access Administrator` permissions on your subscription, do:
@@ -301,7 +314,8 @@ locations.
    ADMIN_OBJECT_ID='$ADMIN_OBJECT_ID'
    PARENT_DOMAIN_NAME='$PARENT_DOMAIN_NAME'
    PARENT_DOMAIN_RESOURCEGROUP='$PARENT_DOMAIN_RESOURCEGROUP'
-   export DOMAIN_NAME="\$RESOURCEGROUP.\$PARENT_DOMAIN_NAME"
+   export DOMAIN_NAME="\$LOCATION.\$PARENT_DOMAIN_NAME"
+   export AZURE_ENVIRONMENT='AzurePublicCloud'
    EOF
    ```
 
@@ -354,9 +368,10 @@ each of the bash functions below.
    import_certs_secrets
    ```
 
-   Note: in production, two additional keys/certificates (rp-mdm and rp-mdsd)
-   are also required in the $KEYVAULT_PREFIX-svc key vault.  These are client
-   certificates for RP metric and log forwarding (respectively) to Geneva.
+   Note: in production, three additional keys/certificates (rp-mdm, rp-mdsd, and
+   cluster-mdsd) are also required in the $KEYVAULT_PREFIX-svc key vault.  These
+   are client certificates for RP metric and log forwarding (respectively) to
+   Geneva.
 
    If you need them in development:
 
@@ -371,7 +386,16 @@ each of the bash functions below.
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-mdsd \
         --file secrets/rp-logging-int.pem
+   az keyvault certificate import \
+        --vault-name "$KEYVAULT_PREFIX-svc" \
+        --name cluster-mdsd \
+        --file secrets/cluster-logging-int.pem
    ```
+
+   Note: in development, if you don't have valid certs for these, you can just
+   upload `localhost.pem` as a placeholder for each of these. This will avoid an
+   error stemming from them not existing, but it will result in logging pods
+   crash looping in any clusters you make.
 
 1. In pre-production (int, e2e) certain certificates are provisioned via keyvault
 integration. These should be rotated and generated in the keyvault itself:
