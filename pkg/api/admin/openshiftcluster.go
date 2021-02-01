@@ -33,6 +33,7 @@ type OpenShiftClusterProperties struct {
 	LastProvisioningState   ProvisioningState       `json:"lastProvisioningState,omitempty"`
 	FailedProvisioningState ProvisioningState       `json:"failedProvisioningState,omitempty"`
 	LastAdminUpdateError    string                  `json:"lastAdminUpdateError,omitempty"`
+	CreatedAt               time.Time               `json:"createdAt,omitempty"`
 	CreatedBy               string                  `json:"createdBy,omitempty"`
 	ProvisionedBy           string                  `json:"provisionedBy,omitempty"`
 	ClusterProfile          ClusterProfile          `json:"clusterProfile,omitempty"`
