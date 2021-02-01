@@ -29,11 +29,30 @@ const (
 	Time_Format %Y-%m-%dT%H:%M:%S.%L
 `
 
-	journalConf = `
+	fluentConf = `
+[SERVICE]
+	Parsers_File /etc/td-agent-bit/parsers.conf
+
 [INPUT]
 	Name systemd
 	Tag journald
 	DB /var/lib/fluent/journald
+
+[INPUT]
+	Name tail
+	Tag containers
+	Path /var/log/containers/*
+	Path_Key path
+	DB /var/lib/fluent/containers
+	Parser crio
+
+[INPUT]
+	Name tail
+	Tag audit
+	Path /var/log/kube-apiserver/audit*
+	Path_Key path
+	DB /var/lib/fluent/audit
+	Parser audit
 
 [FILTER]
 	Name modify
@@ -41,23 +60,6 @@ const (
 	Remove_wildcard _
 	Remove TIMESTAMP
 	Remove SYSLOG_FACILITY
-
-[OUTPUT]
-	Name forward
-	Port 24224
-`
-
-	containersConf = `
-[SERVICE]
-	Parsers_File /etc/td-agent-bit/parsers.conf
-
-[INPUT]
-	Name tail
-	Path /var/log/containers/*
-	Path_Key path
-	Tag containers
-	DB /var/lib/fluent/containers
-	Parser crio
 
 [FILTER]
 	Name parser
@@ -71,53 +73,37 @@ const (
 	Match containers
 	Regex NAMESPACE ^(?:default|kube-.*|openshift|openshift-.*)$
 
-[OUTPUT]
-	Name forward
-	Port 24224
-`
-
-	auditConf = `
-[SERVICE]
-	Parsers_File /etc/td-agent-bit/parsers.conf
-
-[INPUT]
-	Name tail
-	Path /var/log/kube-apiserver/audit*
-	Path_Key path
-	Tag audit
-	DB /var/lib/fluent/audit
-	Parser audit
-
 [FILTER]
 	Name nest
-	Match *
+	Match audit
 	Operation lift
 	Nested_under user
 	Add_prefix user_
 
 [FILTER]
 	Name nest
-	Match *
+	Match audit
 	Operation lift
 	Nested_under impersonatedUser
 	Add_prefix impersonatedUser_
 
 [FILTER]
 	Name nest
-	Match *
+	Match audit
 	Operation lift
 	Nested_under responseStatus
 	Add_prefix responseStatus_
 
 [FILTER]
 	Name nest
-	Match *
+	Match audit
 	Operation lift
 	Nested_under objectRef
 	Add_prefix objectRef_
 
 [OUTPUT]
 	Name forward
+	Match *
 	Port 24224
 `
 )

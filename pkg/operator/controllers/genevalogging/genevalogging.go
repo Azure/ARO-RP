@@ -118,88 +118,14 @@ func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*apps
 					},
 					Containers: []v1.Container{
 						{
-							Name:  "fluentbit-journal",
+							Name:  "fluentbit",
 							Image: version.FluentbitImage(cluster.Spec.ACRDomain),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
 							Args: []string{
 								"-c",
-								"/etc/td-agent-bit/journal.conf",
-							},
-							// TODO: specify requests/limits
-							SecurityContext: &v1.SecurityContext{
-								Privileged: to.BoolPtr(true),
-								RunAsUser:  to.Int64Ptr(0),
-							},
-							VolumeMounts: []v1.VolumeMount{
-								{
-									Name:      "fluent-config",
-									ReadOnly:  true,
-									MountPath: "/etc/td-agent-bit",
-								},
-								{
-									Name:      "machine-id",
-									ReadOnly:  true,
-									MountPath: "/etc/machine-id",
-								},
-								{
-									Name:      "log",
-									ReadOnly:  true,
-									MountPath: "/var/log",
-								},
-								{
-									Name:      "fluent",
-									MountPath: "/var/lib/fluent",
-								},
-							},
-						},
-						{
-							Name:  "fluentbit-containers",
-							Image: version.FluentbitImage(cluster.Spec.ACRDomain),
-							Command: []string{
-								"/opt/td-agent-bit/bin/td-agent-bit",
-							},
-							Args: []string{
-								"-c",
-								"/etc/td-agent-bit/containers.conf",
-							},
-							// TODO: specify requests/limits
-							SecurityContext: &v1.SecurityContext{
-								Privileged: to.BoolPtr(true),
-								RunAsUser:  to.Int64Ptr(0),
-							},
-							VolumeMounts: []v1.VolumeMount{
-								{
-									Name:      "fluent-config",
-									ReadOnly:  true,
-									MountPath: "/etc/td-agent-bit",
-								},
-								{
-									Name:      "machine-id",
-									ReadOnly:  true,
-									MountPath: "/etc/machine-id",
-								},
-								{
-									Name:      "log",
-									ReadOnly:  true,
-									MountPath: "/var/log",
-								},
-								{
-									Name:      "fluent",
-									MountPath: "/var/lib/fluent",
-								},
-							},
-						},
-						{
-							Name:  "fluentbit-audit",
-							Image: version.FluentbitImage(cluster.Spec.ACRDomain),
-							Command: []string{
-								"/opt/td-agent-bit/bin/td-agent-bit",
-							},
-							Args: []string{
-								"-c",
-								"/etc/td-agent-bit/audit.conf",
+								"/etc/td-agent-bit/fluent.conf",
 							},
 							// TODO: specify requests/limits
 							SecurityContext: &v1.SecurityContext{
@@ -371,10 +297,8 @@ func (g *GenevaloggingReconciler) resources(ctx context.Context, cluster *arov1a
 				Namespace: kubeNamespace,
 			},
 			Data: map[string]string{
-				"audit.conf":      auditConf,
-				"containers.conf": containersConf,
-				"journal.conf":    journalConf,
-				"parsers.conf":    parsersConf,
+				"fluent.conf":  fluentConf,
+				"parsers.conf": parsersConf,
 			},
 		},
 		&v1.ServiceAccount{
