@@ -36,7 +36,10 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	vnetResourceGroup := os.Getenv("CLUSTER")
+	vnetResourceGroup := os.Getenv("RESOURCEGROUP") // TODO: remove this when we deploy and peer a vnet per cluster create
+	if os.Getenv("CI") != "" {
+		vnetResourceGroup = os.Getenv("CLUSTER")
+	}
 	clusterName := os.Getenv("CLUSTER")
 
 	c, err := cluster.New(log, env, os.Getenv("CI") != "")
