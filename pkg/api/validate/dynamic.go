@@ -67,6 +67,18 @@ func NewValidator(log *logrus.Entry, azEnv *azure.Environment, masterSubnetID st
 	}, nil
 }
 
+func NewSlimDynamicValidator(log *logrus.Entry, azEnv *azure.Environment, vnetResource azure.Resource, masterSubnetID string, workerSubnetsIDs []string, subscriptionID string, authorizer refreshable.Authorizer) SlimDynamic {
+
+	return &dynamic{
+		log:             log,
+		vnetr:           &vnetResource,
+		masterSubnetID:  masterSubnetID,
+		workerSubnetIDs: workerSubnetsIDs,
+		permissions:     authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer),
+		virtualNetworks: newVirtualNetworksCache(network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer)),
+	}
+
+}
 func (dv *dynamic) ValidateVnetPermissions(ctx context.Context, code string, typ string) error {
 	dv.log.Printf("ValidateVnetPermissions (%s)", typ)
 

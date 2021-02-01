@@ -78,10 +78,12 @@ func (d *DNSChecker) Check(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	checker, err := validate.NewValidator(d.log, &azEnv, *masterSubnet, nil, resource.SubscriptionID, authorizer)
+
+	vnetResource, err := azure.ParseResourceID(instance.Spec.VnetID)
 	if err != nil {
 		return err
 	}
+	checker := validate.NewSlimDynamicValidator(d.log, &azEnv, vnetResource, masterSubnet, nil, resource.SubscriptionID, authorizer)
 
 	var condition *status.Condition
 

@@ -13,24 +13,24 @@ import (
 	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 )
 
-func masterSubnetId(ctx context.Context, clustercli maoclient.Interface, vnetID string) (*string, error) {
+func masterSubnetId(ctx context.Context, clustercli maoclient.Interface, vnetID string) (string, error) {
+	var masterSubnet string
+
 	machines, err := clustercli.MachineV1beta1().Machines(machineSetsNamespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, err
+		return masterSubnet, err
 	}
-
-	var masterSubnet string
 
 	for _, machine := range machines.Items {
 		if isMaster, err := isMasterRole(&machine); err != nil && isMaster {
 			o, _, err := scheme.Codecs.UniversalDeserializer().Decode(machine.Spec.ProviderSpec.Value.Raw, nil, nil)
 			if err != nil {
-				return nil, err
+				return masterSubnet, err
 			}
 
 			machineProviderSpec, ok := o.(*azureproviderv1beta1.AzureMachineProviderSpec)
 			if !ok {
-				return nil, fmt.Errorf("machine %s: failed to read provider spec: %T", machine.Name, o)
+				return masterSubnet, fmt.Errorf("machine %s: failed to read provider spec: %T", machine.Name, o)
 			}
 			masterSubnet = machineProviderSpec.Subnet
 			break
@@ -38,5 +38,5 @@ func masterSubnetId(ctx context.Context, clustercli maoclient.Interface, vnetID 
 	}
 	result := fmt.Sprintf("%s/subnets/%s", vnetID, masterSubnet)
 
-	return &result, nil
+	return result, nil
 }
