@@ -319,6 +319,9 @@ locations.
    EOF
    ```
 
+After creating this file, run `make secrets-update` to upload it to your
+storage account so other people on your team can access it via `make secrets`.
+
 ## Deploy shared RP development environment (once per location)
 
 Look at the [helper file](../hack/devtools/deploy-shared-env.sh) to understand
