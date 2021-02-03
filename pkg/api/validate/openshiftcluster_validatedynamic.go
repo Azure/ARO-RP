@@ -87,10 +87,17 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	// SP validation
-	spAuthorizer, err := validateServicePrincipalProfile(ctx, dv.log, dv.env, dv.oc, dv.subscriptionDoc)
+	err = validateServicePrincipalProfile(ctx, dv.log, dv.env, dv.oc, dv.subscriptionDoc)
 	if err != nil {
 		return err
 	}
+
+	token, err := aad.GetToken(ctx, dv.log, dv.oc, dv.subscriptionDoc, dv.env.Environment().ActiveDirectoryEndpoint, dv.env.Environment().ResourceManagerEndpoint)
+	if err != nil {
+		return err
+	}
+
+	spAuthorizer := refreshable.NewAuthorizer(token)
 
 	spDynamic, err := NewValidator(dv.log, dv.env, mSubnetID, wSubnetIDs, dv.subscriptionDoc.ID, spAuthorizer, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
 	if err != nil {
@@ -288,28 +295,30 @@ func (dv *openShiftClusterDynamicValidator) validateProviders(ctx context.Contex
 	return nil
 }
 
-func validateServicePrincipalProfile(ctx context.Context, log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, sub *api.SubscriptionDocument) (refreshable.Authorizer, error) {
+func validateServicePrincipalProfile(ctx context.Context, log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, sub *api.SubscriptionDocument) error {
+	// TODO: once aad.GetToken is mockable, write a unit test for this function
+
 	log.Print("validateServicePrincipalProfile")
 
-	token, err := aad.GetToken(ctx, log, oc, sub, env.Environment().ActiveDirectoryEndpoint, env.Environment().ResourceManagerEndpoint)
+	token, err := aad.GetToken(ctx, log, oc, sub, env.Environment().ActiveDirectoryEndpoint, env.Environment().GraphEndpoint)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	p := &jwt.Parser{}
 	c := &azureClaim{}
 	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, role := range c.Roles {
 		if role == "Application.ReadWrite.OwnedBy" {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal must not have the Application.ReadWrite.OwnedBy permission.")
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal must not have the Application.ReadWrite.OwnedBy permission.")
 		}
 	}
 
-	return refreshable.NewAuthorizer(token), nil
+	return nil
 }
 
 func findSubnet(vnet *mgmtnetwork.VirtualNetwork, subnetID string) *mgmtnetwork.Subnet {
