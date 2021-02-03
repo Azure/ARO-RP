@@ -35,6 +35,8 @@ type SlimDynamic interface {
 	// does Quota code go in here too?
 }
 
+var _ SlimDynamic = (*dynamic)(nil)
+
 type dynamic struct {
 	log             *logrus.Entry
 	vnetr           *azure.Resource
