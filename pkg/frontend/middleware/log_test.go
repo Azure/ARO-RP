@@ -118,3 +118,30 @@ func TestAuditTargetResourceData(t *testing.T) {
 		}
 	}
 }
+
+func TestIsAdminOp(t *testing.T) {
+	var testCases = []struct {
+		url      string
+		expected bool
+	}{
+		{url: "", expected: false},
+		{url: "/", expected: false},
+		{url: "/foo", expected: false},
+		{url: "/foo/bar", expected: false},
+		{url: "/admin", expected: true},
+		{url: "/admin/foo", expected: true},
+	}
+
+	for _, tc := range testCases {
+		parsedURL, err := url.Parse(tc.url)
+		if err != nil {
+			t.Fatal("unexpected error: ", err)
+		}
+
+		r := &http.Request{URL: parsedURL}
+		if actual := isAdminOp(r); tc.expected != actual {
+			t.Errorf("%s: expected: %t, actual: %t", tc.url, tc.expected, actual)
+		}
+	}
+
+}

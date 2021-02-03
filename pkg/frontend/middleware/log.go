@@ -69,8 +69,7 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 				RequestTime:     t,
 			}
 
-			if vars["api-version"] == admin.APIVersion ||
-				strings.HasPrefix(r.URL.Path, "/admin") {
+			if vars["api-version"] == admin.APIVersion || isAdminOp(r) {
 				correlationData.ClientPrincipalName = r.Header.Get("X-Ms-Client-Principal-Name")
 			}
 
@@ -110,7 +109,17 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 				auditCallerType = audit.CallerIdentityTypeObjectID
 			}
 
+			var (
+				adminOp       = isAdminOp(r)
+				logTime       = time.Now().UTC().Format(time.RFC3339)
+				operationName = fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+			)
+
 			auditEntry := auditLog.WithFields(logrus.Fields{
+				audit.MetadataCreatedTime:     logTime,
+				audit.MetadataLogKind:         audit.IFXAuditLogKind,
+				audit.MetadataSource:          audit.SourceRP,
+				audit.MetadataAdminOperation:  adminOp,
 				audit.EnvKeyAppID:             audit.SourceRP,
 				audit.EnvKeyCloudRole:         audit.CloudRoleRP,
 				audit.EnvKeyCorrelationID:     correlationData.CorrelationID,
@@ -118,7 +127,7 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 				audit.EnvKeyHostname:          env.Hostname(),
 				audit.EnvKeyLocation:          env.Location(),
 				audit.PayloadKeyCategory:      audit.CategoryResourceManagement,
-				audit.PayloadKeyOperationName: fmt.Sprintf("%s %s", r.Method, r.URL.Path),
+				audit.PayloadKeyOperationName: operationName,
 				audit.PayloadKeyRequestID:     correlationData.RequestID,
 				audit.PayloadKeyCallerIdentities: []audit.CallerIdentity{
 					{
@@ -181,4 +190,8 @@ func auditTargetResourceData(r *http.Request) (string, string) {
 	}
 
 	return "", ""
+}
+
+func isAdminOp(r *http.Request) bool {
+	return strings.HasPrefix(r.URL.Path, "/admin")
 }

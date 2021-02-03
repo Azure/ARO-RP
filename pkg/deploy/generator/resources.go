@@ -849,7 +849,6 @@ cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 	Name rewrite_tag
 	Match journald
 	Rule $LOGKIND ifxaudit ifxaudit false
-	Emitter_Name ifxaudit
 
 [OUTPUT]
 	Name forward

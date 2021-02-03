@@ -5,9 +5,7 @@ package audit
 
 import (
 	"encoding/json"
-	"strings"
 	"sync"
-	"time"
 
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
@@ -95,8 +93,9 @@ func (h *payloadHook) Fire(entry *logrus.Entry) error {
 	h.payload.EnvVer = IFXAuditVersion
 	h.payload.EnvName = IFXAuditName
 
-	logTime := entry.Time.UTC().Format(time.RFC3339)
-	h.payload.EnvTime = logTime
+	if v, ok := entry.Data[MetadataCreatedTime].(string); ok {
+		h.payload.EnvTime = v
+	}
 
 	h.payload.EnvEpoch = epoch
 	h.payload.EnvSeqNum = nextSeqNum()
@@ -194,16 +193,6 @@ func (h *payloadHook) Fire(entry *logrus.Entry) error {
 	}
 	entry.Data[MetadataPayload] = string(b)
 
-	// add non-IFxAudit metadata for our own use
-	entry.Data[MetadataCreatedTime] = logTime
-	entry.Data[MetadataLogKind] = IFXAuditLogKind
-	entry.Data[MetadataSource] = h.payload.EnvAppID
-
-	adminOp := false
-	if strings.Contains(h.payload.OperationName, "/admin") {
-		adminOp = true
-	}
-	entry.Data[MetadataAdminOperation] = adminOp
 	return nil
 }
 

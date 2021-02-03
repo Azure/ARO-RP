@@ -28,10 +28,10 @@ var (
 	loglevel = flag.String("loglevel", "info", "{panic,fatal,error,warning,info,debug,trace}")
 
 	// matches URLs that look like /subscriptions/%s/providers/%s/%s
-	RXProviderResourceKind = regexp.MustCompile(`/subscriptions/([^/]+)/providers/([^/]+)/([^/]+)$`)
+	RXProviderResourceKind = regexp.MustCompile(`^/subscriptions/([^/]+)/providers/([^/]+)/([^/]+)$`)
 
 	// matches URLs that look like /admin/providers/%s/%s
-	RXAdminProvider = regexp.MustCompile(`/admin/providers/([^/]+)/([^/]+)`)
+	RXAdminProvider = regexp.MustCompile(`^/admin/providers/([^/]+)/([^/]+)$`)
 
 	RXTolerantResourceID = regexp.MustCompile(`(?i)^(?:/admin)?/subscriptions/([^/]+)(?:/resourceGroups/([^/]+)(?:/providers/([^/]+)/([^/]+)(?:/([^/]+))?)?)?`)
 )
