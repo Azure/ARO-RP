@@ -43,12 +43,12 @@ func FluentbitImage(acrDomain string) string {
 
 // MdmImage contains the location of the MDM container image
 func MdmImage(acrDomain string) string {
-	return acrDomain + "/genevamdm:master_52"
+	return acrDomain + "/genevamdm:master_20210201.2"
 }
 
 // MdsdImage contains the location of the MDSD container image
 func MdsdImage(acrDomain string) string {
-	return acrDomain + "/genevamdsd:master_20201121.1"
+	return acrDomain + "/genevamdsd:master_20210201.2"
 }
 
 func RouteFixImage(acrDomain string) string {
