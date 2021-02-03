@@ -360,6 +360,8 @@ each of the bash functions below.
 
    If you need them in development:
 
+   ! DO NOT RUN THIS IN E2E, INT! !
+
    ```bash
    az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
@@ -370,6 +372,19 @@ each of the bash functions below.
         --name rp-mdsd \
         --file secrets/rp-logging-int.pem
    ```
+
+1. In pre-production (int, e2e) certain certificates are provisioned via keyvault
+integration. These should be rotated and generated in the keyvault itself:
+
+```
+Vault Name: "$KEYVAULT_PREFIX-svc"
+Certificate: rp-firstparty
+Development value: secrets/firstparty.pem
+
+Vault Name: "$KEYVAULT_PREFIX-svc"
+Certificate: cluster-mdsd
+Development value: secrets/cluster-logging-int.pem
+```
 
 1. Create nameserver records in the parent DNS zone:
 
