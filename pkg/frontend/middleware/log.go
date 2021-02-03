@@ -163,11 +163,22 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 }
 
 func auditTargetResourceData(r *http.Request) (string, string) {
-	matches := utillog.RXTolerantResourceID.FindStringSubmatch(r.URL.Path)
-	if matches == nil {
-		return "", ""
+	if matches := utillog.RXProviderResourceKind.FindStringSubmatch(r.URL.Path); matches != nil {
+		if resourceKind := matches[len(matches)-1]; resourceKind != "" {
+			return resourceKind, ""
+		}
 	}
 
-	// resourceKind, resourceName
-	return matches[3], matches[5]
+	if matches := utillog.RXAdminProvider.FindStringSubmatch(r.URL.Path); matches != nil {
+		if resourceKind := matches[len(matches)-1]; resourceKind != "" {
+			return resourceKind, ""
+		}
+	}
+
+	if matches := utillog.RXTolerantResourceID.FindStringSubmatch(r.URL.Path); matches != nil {
+		resourceKind, resourceName := matches[len(matches)-2], matches[len(matches)-1]
+		return resourceKind, resourceName
+	}
+
+	return "", ""
 }

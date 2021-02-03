@@ -1,0 +1,120 @@
+package middleware
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
+import (
+	"fmt"
+	"net/http"
+	"net/url"
+	"testing"
+)
+
+func TestAuditTargetResourceData(t *testing.T) {
+	var (
+		location                  = "test-location"
+		resourceGroupName         = "test-resource-group-name"
+		resourceProviderNamespace = "test-resource-provider-namespace"
+		resourceName              = "test-resource-name"
+		resourceType              = "test-resource-type"
+		subscriptionID            = "test-subscription"
+		operationID               = "test-operation-id"
+	)
+
+	var testCases = []struct {
+		url          string
+		expectedKind string
+		expectedName string
+	}{
+		{
+			url:          "/healthz/ready",
+			expectedKind: "",
+			expectedName: "",
+		},
+		{
+			url:          fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
+			expectedKind: resourceType,
+			expectedName: resourceName,
+		},
+		{
+			url:          fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/%s/%s", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType),
+			expectedKind: resourceType,
+		},
+		{
+			url:          fmt.Sprintf("/subscriptions/%s/providers/%s/%s", subscriptionID, resourceProviderNamespace, resourceType),
+			expectedKind: resourceType,
+		},
+		{
+			url:          fmt.Sprintf("/subscriptions/%s/providers/%s/locations/%s/operationsstatus/%s", subscriptionID, resourceProviderNamespace, location, operationID),
+			expectedKind: "",
+			expectedName: "",
+		},
+		{
+			url:          fmt.Sprintf("/subscriptions/%s/providers/%s/locations/%s/operationresults/%s", subscriptionID, resourceProviderNamespace, location, operationID),
+			expectedKind: "",
+			expectedName: "",
+		},
+		{
+			url:          fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/listcredentials", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
+			expectedKind: resourceType,
+			expectedName: resourceName,
+		},
+		{
+			url:          fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/kubernetesobjects", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
+			expectedKind: resourceType,
+			expectedName: resourceName,
+		},
+		{
+			url:          fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/resources", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
+			expectedKind: resourceType,
+			expectedName: resourceName,
+		},
+		{
+			url:          fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/serialconsole", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
+			expectedKind: resourceType,
+			expectedName: resourceName,
+		},
+		{
+			url:          fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/redeployvm", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
+			expectedKind: resourceType,
+			expectedName: resourceName,
+		},
+		{
+			url:          fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/upgrade", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
+			expectedKind: resourceType,
+			expectedName: resourceName,
+		},
+		{
+			url:          fmt.Sprintf("/admin/providers/%s/%s", resourceProviderNamespace, resourceType),
+			expectedKind: resourceType,
+			expectedName: "",
+		},
+		{
+			url:          fmt.Sprintf("/providers/%s/operations", resourceProviderNamespace),
+			expectedKind: "",
+			expectedName: "",
+		},
+		{
+			url:          fmt.Sprintf("/subscriptions/%s", subscriptionID),
+			expectedKind: "",
+			expectedName: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		parsedURL, err := url.Parse(tc.url)
+		if err != nil {
+			t.Fatal("unexpected error: ", err)
+		}
+
+		request := &http.Request{URL: parsedURL}
+		actualKind, actualName := auditTargetResourceData(request)
+		if tc.expectedKind != actualKind {
+			t.Errorf("%s: expected %s, actual: %s", tc.url, tc.expectedKind, actualKind)
+		}
+
+		if tc.expectedName != actualName {
+			t.Errorf("%s: expected %s, actual: %s", tc.url, tc.expectedName, actualName)
+		}
+	}
+}
