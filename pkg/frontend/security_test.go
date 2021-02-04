@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
@@ -20,10 +21,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestSecurity(t *testing.T) {
@@ -55,6 +58,9 @@ func TestSecurity(t *testing.T) {
 
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+	_env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+	_env.EXPECT().Hostname().AnyTimes().Return("testhost")
+	_env.EXPECT().Location().AnyTimes().Return("eastus")
 	_env.EXPECT().ServiceKeyvault().AnyTimes().Return(keyvault)
 	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validclientcerts[0].Raw))
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validadminclientcerts[0].Raw))
@@ -68,7 +74,9 @@ func TestSecurity(t *testing.T) {
 	pool := x509.NewCertPool()
 	pool.AddCert(servercerts[0])
 
-	f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, nil, nil, nil, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
+	log := logrus.NewEntry(logrus.StandardLogger())
+	auditHook, auditEntry := testlog.NewAudit()
+	f, err := NewFrontend(ctx, auditEntry, log, _env, nil, nil, nil, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,11 +85,12 @@ func TestSecurity(t *testing.T) {
 	go f.Run(ctx, nil, nil)
 
 	for _, tt := range []struct {
-		name           string
-		url            string
-		key            *rsa.PrivateKey
-		cert           *x509.Certificate
-		wantStatusCode int
+		name              string
+		url               string
+		key               *rsa.PrivateKey
+		cert              *x509.Certificate
+		wantStatusCode    int
+		wantAuditPayloads []*audit.Payload
 	}{
 		{
 			name:           "empty url, no client certificate",
@@ -97,16 +106,118 @@ func TestSecurity(t *testing.T) {
 			name:           "operations url, no client certificate",
 			url:            "https://server/providers/Microsoft.RedHatOpenShift/operations?api-version=2020-04-30",
 			wantStatusCode: http.StatusForbidden,
+			wantAuditPayloads: []*audit.Payload{
+				{
+					EnvVer:               audit.IFXAuditVersion,
+					EnvName:              audit.IFXAuditName,
+					EnvFlags:             257,
+					EnvAppID:             audit.SourceRP,
+					EnvCloudName:         _env.Environment().Name,
+					EnvCloudRole:         audit.CloudRoleRP,
+					EnvCloudRoleInstance: _env.Hostname(),
+					EnvCloudEnvironment:  _env.Environment().Name,
+					EnvCloudLocation:     _env.Location(),
+					EnvCloudVer:          audit.IFXAuditCloudVer,
+					CallerIdentities: []audit.CallerIdentity{
+						{
+							CallerDisplayName:   "",
+							CallerIdentityType:  "ApplicationID",
+							CallerIdentityValue: "Go-http-client/1.1",
+							CallerIPAddress:     "bufferedpipe",
+						},
+					},
+					Category:      "ResourceManagement",
+					OperationName: "GET /providers/microsoft.redhatopenshift/operations",
+					Result: audit.Result{
+						ResultType:        "Fail",
+						ResultDescription: "Status code: 403",
+					},
+					TargetResources: []audit.TargetResource{
+						{
+							TargetResourceType: "",
+							TargetResourceName: "",
+						},
+					},
+				},
+			},
 		},
 		{
 			name:           "admin operations url, no client certificate",
 			url:            "https://server/providers/Microsoft.RedHatOpenShift/operations?api-version=admin",
 			wantStatusCode: http.StatusForbidden,
+			wantAuditPayloads: []*audit.Payload{
+				{
+					EnvVer:               audit.IFXAuditVersion,
+					EnvName:              audit.IFXAuditName,
+					EnvFlags:             257,
+					EnvAppID:             audit.SourceRP,
+					EnvCloudName:         _env.Environment().Name,
+					EnvCloudRole:         audit.CloudRoleRP,
+					EnvCloudRoleInstance: _env.Hostname(),
+					EnvCloudEnvironment:  _env.Environment().Name,
+					EnvCloudLocation:     _env.Location(),
+					EnvCloudVer:          audit.IFXAuditCloudVer,
+					CallerIdentities: []audit.CallerIdentity{
+						{
+							CallerDisplayName:   "",
+							CallerIdentityType:  "ApplicationID",
+							CallerIdentityValue: "Go-http-client/1.1",
+							CallerIPAddress:     "bufferedpipe",
+						},
+					},
+					Category:      "ResourceManagement",
+					OperationName: "GET /providers/microsoft.redhatopenshift/operations",
+					Result: audit.Result{
+						ResultType:        "Fail",
+						ResultDescription: "Status code: 403",
+					},
+					TargetResources: []audit.TargetResource{
+						{
+							TargetResourceType: "",
+							TargetResourceName: "",
+						},
+					},
+				},
+			},
 		},
 		{
 			name:           "ready url, no client certificate",
 			url:            "https://server/healthz/ready",
 			wantStatusCode: http.StatusOK,
+			wantAuditPayloads: []*audit.Payload{
+				{
+					EnvVer:               audit.IFXAuditVersion,
+					EnvName:              audit.IFXAuditName,
+					EnvFlags:             257,
+					EnvAppID:             audit.SourceRP,
+					EnvCloudName:         _env.Environment().Name,
+					EnvCloudRole:         audit.CloudRoleRP,
+					EnvCloudRoleInstance: _env.Hostname(),
+					EnvCloudEnvironment:  _env.Environment().Name,
+					EnvCloudLocation:     _env.Location(),
+					EnvCloudVer:          audit.IFXAuditCloudVer,
+					CallerIdentities: []audit.CallerIdentity{
+						{
+							CallerDisplayName:   "",
+							CallerIdentityType:  "ApplicationID",
+							CallerIdentityValue: "Go-http-client/1.1",
+							CallerIPAddress:     "bufferedpipe",
+						},
+					},
+					Category:      "ResourceManagement",
+					OperationName: "GET /healthz/ready",
+					Result: audit.Result{
+						ResultType:        "Success",
+						ResultDescription: "Status code: 200",
+					},
+					TargetResources: []audit.TargetResource{
+						{
+							TargetResourceType: "",
+							TargetResourceName: "",
+						},
+					},
+				},
+			},
 		},
 		{
 			name:           "empty url, invalid certificate",
@@ -128,6 +239,40 @@ func TestSecurity(t *testing.T) {
 			key:            invalidclientkey,
 			cert:           invalidclientcerts[0],
 			wantStatusCode: http.StatusForbidden,
+			wantAuditPayloads: []*audit.Payload{
+				{
+					EnvVer:               audit.IFXAuditVersion,
+					EnvName:              audit.IFXAuditName,
+					EnvFlags:             257,
+					EnvAppID:             audit.SourceRP,
+					EnvCloudName:         _env.Environment().Name,
+					EnvCloudRole:         audit.CloudRoleRP,
+					EnvCloudRoleInstance: _env.Hostname(),
+					EnvCloudEnvironment:  _env.Environment().Name,
+					EnvCloudLocation:     _env.Location(),
+					EnvCloudVer:          audit.IFXAuditCloudVer,
+					CallerIdentities: []audit.CallerIdentity{
+						{
+							CallerDisplayName:   "",
+							CallerIdentityType:  "ApplicationID",
+							CallerIdentityValue: "Go-http-client/1.1",
+							CallerIPAddress:     "bufferedpipe",
+						},
+					},
+					Category:      "ResourceManagement",
+					OperationName: "GET /providers/microsoft.redhatopenshift/operations",
+					Result: audit.Result{
+						ResultType:        "Fail",
+						ResultDescription: "Status code: 403",
+					},
+					TargetResources: []audit.TargetResource{
+						{
+							TargetResourceType: "",
+							TargetResourceName: "",
+						},
+					},
+				},
+			},
 		},
 		{
 			name:           "admin operations url, invalid certificate",
@@ -135,6 +280,40 @@ func TestSecurity(t *testing.T) {
 			key:            invalidclientkey,
 			cert:           invalidclientcerts[0],
 			wantStatusCode: http.StatusForbidden,
+			wantAuditPayloads: []*audit.Payload{
+				{
+					EnvVer:               audit.IFXAuditVersion,
+					EnvName:              audit.IFXAuditName,
+					EnvFlags:             257,
+					EnvAppID:             audit.SourceRP,
+					EnvCloudName:         _env.Environment().Name,
+					EnvCloudRole:         audit.CloudRoleRP,
+					EnvCloudRoleInstance: _env.Hostname(),
+					EnvCloudEnvironment:  _env.Environment().Name,
+					EnvCloudLocation:     _env.Location(),
+					EnvCloudVer:          audit.IFXAuditCloudVer,
+					CallerIdentities: []audit.CallerIdentity{
+						{
+							CallerDisplayName:   "",
+							CallerIdentityType:  "ApplicationID",
+							CallerIdentityValue: "Go-http-client/1.1",
+							CallerIPAddress:     "bufferedpipe",
+						},
+					},
+					Category:      "ResourceManagement",
+					OperationName: "GET /providers/microsoft.redhatopenshift/operations",
+					Result: audit.Result{
+						ResultType:        "Fail",
+						ResultDescription: "Status code: 403",
+					},
+					TargetResources: []audit.TargetResource{
+						{
+							TargetResourceType: "",
+							TargetResourceName: "",
+						},
+					},
+				},
+			},
 		},
 		{
 			name:           "ready url, invalid certificate",
@@ -142,6 +321,40 @@ func TestSecurity(t *testing.T) {
 			key:            invalidclientkey,
 			cert:           invalidclientcerts[0],
 			wantStatusCode: http.StatusOK,
+			wantAuditPayloads: []*audit.Payload{
+				{
+					EnvVer:               audit.IFXAuditVersion,
+					EnvName:              audit.IFXAuditName,
+					EnvFlags:             257,
+					EnvAppID:             audit.SourceRP,
+					EnvCloudName:         _env.Environment().Name,
+					EnvCloudRole:         audit.CloudRoleRP,
+					EnvCloudRoleInstance: _env.Hostname(),
+					EnvCloudEnvironment:  _env.Environment().Name,
+					EnvCloudLocation:     _env.Location(),
+					EnvCloudVer:          audit.IFXAuditCloudVer,
+					CallerIdentities: []audit.CallerIdentity{
+						{
+							CallerDisplayName:   "",
+							CallerIdentityType:  "ApplicationID",
+							CallerIdentityValue: "Go-http-client/1.1",
+							CallerIPAddress:     "bufferedpipe",
+						},
+					},
+					Category:      "ResourceManagement",
+					OperationName: "GET /healthz/ready",
+					Result: audit.Result{
+						ResultType:        "Success",
+						ResultDescription: "Status code: 200",
+					},
+					TargetResources: []audit.TargetResource{
+						{
+							TargetResourceType: "",
+							TargetResourceName: "",
+						},
+					},
+				},
+			},
 		},
 		{
 			name:           "empty url, valid certificate",
@@ -177,6 +390,40 @@ func TestSecurity(t *testing.T) {
 			key:            validclientkey,
 			cert:           validclientcerts[0],
 			wantStatusCode: http.StatusOK,
+			wantAuditPayloads: []*audit.Payload{
+				{
+					EnvVer:               audit.IFXAuditVersion,
+					EnvName:              audit.IFXAuditName,
+					EnvFlags:             257,
+					EnvAppID:             audit.SourceRP,
+					EnvCloudName:         _env.Environment().Name,
+					EnvCloudRole:         audit.CloudRoleRP,
+					EnvCloudRoleInstance: _env.Hostname(),
+					EnvCloudEnvironment:  _env.Environment().Name,
+					EnvCloudLocation:     _env.Location(),
+					EnvCloudVer:          audit.IFXAuditCloudVer,
+					CallerIdentities: []audit.CallerIdentity{
+						{
+							CallerDisplayName:   "",
+							CallerIdentityType:  "ApplicationID",
+							CallerIdentityValue: "Go-http-client/1.1",
+							CallerIPAddress:     "bufferedpipe",
+						},
+					},
+					Category:      "ResourceManagement",
+					OperationName: "GET /providers/microsoft.redhatopenshift/operations",
+					Result: audit.Result{
+						ResultType:        "Success",
+						ResultDescription: "Status code: 200",
+					},
+					TargetResources: []audit.TargetResource{
+						{
+							TargetResourceType: "",
+							TargetResourceName: "",
+						},
+					},
+				},
+			},
 		},
 		{
 			name:           "operations url, valid admin certificate",
@@ -184,6 +431,40 @@ func TestSecurity(t *testing.T) {
 			key:            validadminclientkey,
 			cert:           validadminclientcerts[0],
 			wantStatusCode: http.StatusForbidden,
+			wantAuditPayloads: []*audit.Payload{
+				{
+					EnvVer:               audit.IFXAuditVersion,
+					EnvName:              audit.IFXAuditName,
+					EnvFlags:             257,
+					EnvAppID:             audit.SourceRP,
+					EnvCloudName:         _env.Environment().Name,
+					EnvCloudRole:         audit.CloudRoleRP,
+					EnvCloudRoleInstance: _env.Hostname(),
+					EnvCloudEnvironment:  _env.Environment().Name,
+					EnvCloudLocation:     _env.Location(),
+					EnvCloudVer:          audit.IFXAuditCloudVer,
+					CallerIdentities: []audit.CallerIdentity{
+						{
+							CallerDisplayName:   "",
+							CallerIdentityType:  "ApplicationID",
+							CallerIdentityValue: "Go-http-client/1.1",
+							CallerIPAddress:     "bufferedpipe",
+						},
+					},
+					Category:      "ResourceManagement",
+					OperationName: "GET /providers/microsoft.redhatopenshift/operations",
+					Result: audit.Result{
+						ResultType:        "Fail",
+						ResultDescription: "Status code: 403",
+					},
+					TargetResources: []audit.TargetResource{
+						{
+							TargetResourceType: "",
+							TargetResourceName: "",
+						},
+					},
+				},
+			},
 		},
 		{
 			name:           "admin operations url, valid admin certificate",
@@ -191,6 +472,40 @@ func TestSecurity(t *testing.T) {
 			key:            validadminclientkey,
 			cert:           validadminclientcerts[0],
 			wantStatusCode: http.StatusOK,
+			wantAuditPayloads: []*audit.Payload{
+				{
+					EnvVer:               audit.IFXAuditVersion,
+					EnvName:              audit.IFXAuditName,
+					EnvFlags:             257,
+					EnvAppID:             audit.SourceRP,
+					EnvCloudName:         _env.Environment().Name,
+					EnvCloudRole:         audit.CloudRoleRP,
+					EnvCloudRoleInstance: _env.Hostname(),
+					EnvCloudEnvironment:  _env.Environment().Name,
+					EnvCloudLocation:     _env.Location(),
+					EnvCloudVer:          audit.IFXAuditCloudVer,
+					CallerIdentities: []audit.CallerIdentity{
+						{
+							CallerDisplayName:   "",
+							CallerIdentityType:  "ApplicationID",
+							CallerIdentityValue: "Go-http-client/1.1",
+							CallerIPAddress:     "bufferedpipe",
+						},
+					},
+					Category:      "ResourceManagement",
+					OperationName: "GET /providers/microsoft.redhatopenshift/operations",
+					Result: audit.Result{
+						ResultType:        "Success",
+						ResultDescription: "Status code: 200",
+					},
+					TargetResources: []audit.TargetResource{
+						{
+							TargetResourceType: "",
+							TargetResourceName: "",
+						},
+					},
+				},
+			},
 		},
 		{
 			name:           "admin operations url, valid non-admin certificate",
@@ -198,6 +513,40 @@ func TestSecurity(t *testing.T) {
 			key:            validclientkey,
 			cert:           validclientcerts[0],
 			wantStatusCode: http.StatusForbidden,
+			wantAuditPayloads: []*audit.Payload{
+				{
+					EnvVer:               audit.IFXAuditVersion,
+					EnvName:              audit.IFXAuditName,
+					EnvFlags:             257,
+					EnvAppID:             audit.SourceRP,
+					EnvCloudName:         _env.Environment().Name,
+					EnvCloudRole:         audit.CloudRoleRP,
+					EnvCloudRoleInstance: _env.Hostname(),
+					EnvCloudEnvironment:  _env.Environment().Name,
+					EnvCloudLocation:     _env.Location(),
+					EnvCloudVer:          audit.IFXAuditCloudVer,
+					CallerIdentities: []audit.CallerIdentity{
+						{
+							CallerDisplayName:   "",
+							CallerIdentityType:  "ApplicationID",
+							CallerIdentityValue: "Go-http-client/1.1",
+							CallerIPAddress:     "bufferedpipe",
+						},
+					},
+					Category:      "ResourceManagement",
+					OperationName: "GET /providers/microsoft.redhatopenshift/operations",
+					Result: audit.Result{
+						ResultType:        "Fail",
+						ResultDescription: "Status code: 403",
+					},
+					TargetResources: []audit.TargetResource{
+						{
+							TargetResourceType: "",
+							TargetResourceName: "",
+						},
+					},
+				},
+			},
 		},
 		{
 			name:           "ready url, valid certificate",
@@ -205,6 +554,40 @@ func TestSecurity(t *testing.T) {
 			key:            validclientkey,
 			cert:           validclientcerts[0],
 			wantStatusCode: http.StatusOK,
+			wantAuditPayloads: []*audit.Payload{
+				{
+					EnvVer:               audit.IFXAuditVersion,
+					EnvName:              audit.IFXAuditName,
+					EnvFlags:             257,
+					EnvAppID:             audit.SourceRP,
+					EnvCloudName:         _env.Environment().Name,
+					EnvCloudRole:         audit.CloudRoleRP,
+					EnvCloudRoleInstance: _env.Hostname(),
+					EnvCloudEnvironment:  _env.Environment().Name,
+					EnvCloudLocation:     _env.Location(),
+					EnvCloudVer:          audit.IFXAuditCloudVer,
+					CallerIdentities: []audit.CallerIdentity{
+						{
+							CallerDisplayName:   "",
+							CallerIdentityType:  "ApplicationID",
+							CallerIdentityValue: "Go-http-client/1.1",
+							CallerIPAddress:     "bufferedpipe",
+						},
+					},
+					Category:      "ResourceManagement",
+					OperationName: "GET /healthz/ready",
+					Result: audit.Result{
+						ResultType:        "Success",
+						ResultDescription: "Status code: 200",
+					},
+					TargetResources: []audit.TargetResource{
+						{
+							TargetResourceType: "",
+							TargetResourceName: "",
+						},
+					},
+				},
+			},
 		},
 		{
 			name:           "ready url, valid admin certificate",
@@ -212,6 +595,40 @@ func TestSecurity(t *testing.T) {
 			key:            validadminclientkey,
 			cert:           validadminclientcerts[0],
 			wantStatusCode: http.StatusOK,
+			wantAuditPayloads: []*audit.Payload{
+				{
+					EnvVer:               audit.IFXAuditVersion,
+					EnvName:              audit.IFXAuditName,
+					EnvFlags:             257,
+					EnvAppID:             audit.SourceRP,
+					EnvCloudName:         _env.Environment().Name,
+					EnvCloudRole:         audit.CloudRoleRP,
+					EnvCloudRoleInstance: _env.Hostname(),
+					EnvCloudEnvironment:  _env.Environment().Name,
+					EnvCloudLocation:     _env.Location(),
+					EnvCloudVer:          audit.IFXAuditCloudVer,
+					CallerIdentities: []audit.CallerIdentity{
+						{
+							CallerDisplayName:   "",
+							CallerIdentityType:  "ApplicationID",
+							CallerIdentityValue: "Go-http-client/1.1",
+							CallerIPAddress:     "bufferedpipe",
+						},
+					},
+					Category:      "ResourceManagement",
+					OperationName: "GET /healthz/ready",
+					Result: audit.Result{
+						ResultType:        "Success",
+						ResultDescription: "Status code: 200",
+					},
+					TargetResources: []audit.TargetResource{
+						{
+							TargetResourceType: "",
+							TargetResourceName: "",
+						},
+					},
+				},
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -245,6 +662,9 @@ func TestSecurity(t *testing.T) {
 			if resp.StatusCode != tt.wantStatusCode {
 				t.Error(resp.StatusCode)
 			}
+
+			testlog.AssertAuditPayloads(t, auditHook, tt.wantAuditPayloads)
+			auditHook.Entries = []logrus.Entry{}
 		})
 	}
 }

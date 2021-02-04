@@ -5,6 +5,7 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -16,7 +17,9 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
+	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 )
 
 type logResponseWriter struct {
@@ -49,7 +52,7 @@ func (rc *logReadCloser) Read(b []byte) (int, error) {
 	return n, err
 }
 
-func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
+func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t := time.Now()
@@ -66,8 +69,7 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 				RequestTime:     t,
 			}
 
-			if vars["api-version"] == admin.APIVersion ||
-				strings.HasPrefix(r.URL.Path, "/admin") {
+			if vars["api-version"] == admin.APIVersion || isAdminOp(r) {
 				correlationData.ClientPrincipalName = r.Header.Get("X-Ms-Client-Principal-Name")
 			}
 
@@ -96,16 +98,100 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 			})
 			log.Print("read request")
 
+			var (
+				auditCallerIdentity                              = r.UserAgent()
+				auditCallerType                                  = audit.CallerIdentityTypeApplicationID
+				auditTargetResourceName, auditTargetResourceType = auditTargetResourceData(r)
+			)
+
+			if correlationData.ClientPrincipalName != "" {
+				auditCallerIdentity = correlationData.ClientPrincipalName
+				auditCallerType = audit.CallerIdentityTypeObjectID
+			}
+
+			var (
+				adminOp       = isAdminOp(r)
+				logTime       = time.Now().UTC().Format(time.RFC3339)
+				operationName = fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+			)
+
+			auditEntry := auditLog.WithFields(logrus.Fields{
+				audit.MetadataCreatedTime:     logTime,
+				audit.MetadataLogKind:         audit.IFXAuditLogKind,
+				audit.MetadataSource:          audit.SourceRP,
+				audit.MetadataAdminOperation:  adminOp,
+				audit.EnvKeyAppID:             audit.SourceRP,
+				audit.EnvKeyCloudRole:         audit.CloudRoleRP,
+				audit.EnvKeyCorrelationID:     correlationData.CorrelationID,
+				audit.EnvKeyEnvironment:       env.Environment().Name,
+				audit.EnvKeyHostname:          env.Hostname(),
+				audit.EnvKeyLocation:          env.Location(),
+				audit.PayloadKeyCategory:      audit.CategoryResourceManagement,
+				audit.PayloadKeyOperationName: operationName,
+				audit.PayloadKeyRequestID:     correlationData.RequestID,
+				audit.PayloadKeyCallerIdentities: []audit.CallerIdentity{
+					{
+						CallerIdentityType:  auditCallerType,
+						CallerIdentityValue: auditCallerIdentity,
+						CallerIPAddress:     r.RemoteAddr,
+					},
+				},
+				audit.PayloadKeyTargetResources: []audit.TargetResource{
+					{
+						TargetResourceName: auditTargetResourceName,
+						TargetResourceType: auditTargetResourceType,
+					},
+				},
+			})
+
 			defer func() {
+				statusCode := w.(*logResponseWriter).statusCode
 				log.WithFields(logrus.Fields{
 					"body_read_bytes":      r.Body.(*logReadCloser).bytes,
 					"body_written_bytes":   w.(*logResponseWriter).bytes,
 					"duration":             time.Since(t).Seconds(),
-					"response_status_code": w.(*logResponseWriter).statusCode,
+					"response_status_code": statusCode,
 				}).Print("sent response")
+
+				resultType := audit.ResultTypeSuccess
+				if statusCode >= http.StatusBadRequest {
+					resultType = audit.ResultTypeFail
+				}
+
+				auditEntry.WithFields(logrus.Fields{
+					audit.PayloadKeyResult: audit.Result{
+						ResultType:        resultType,
+						ResultDescription: fmt.Sprintf("Status code: %d", statusCode),
+					},
+				}).Info(audit.DefaultLogMessage)
 			}()
 
 			h.ServeHTTP(w, r)
 		})
 	}
+}
+
+func auditTargetResourceData(r *http.Request) (string, string) {
+	if matches := utillog.RXProviderResourceKind.FindStringSubmatch(r.URL.Path); matches != nil {
+		if resourceKind := matches[len(matches)-1]; resourceKind != "" {
+			return resourceKind, ""
+		}
+	}
+
+	if matches := utillog.RXAdminProvider.FindStringSubmatch(r.URL.Path); matches != nil {
+		if resourceKind := matches[len(matches)-1]; resourceKind != "" {
+			return resourceKind, ""
+		}
+	}
+
+	if matches := utillog.RXTolerantResourceID.FindStringSubmatch(r.URL.Path); matches != nil {
+		resourceKind, resourceName := matches[len(matches)-2], matches[len(matches)-1]
+		return resourceKind, resourceName
+	}
+
+	return "", ""
+}
+
+func isAdminOp(r *http.Request) bool {
+	return strings.HasPrefix(r.URL.Path, "/admin")
 }

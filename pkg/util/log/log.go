@@ -16,6 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -26,10 +27,16 @@ var (
 
 	loglevel = flag.String("loglevel", "info", "{panic,fatal,error,warning,info,debug,trace}")
 
-	rxTolerantResourceID = regexp.MustCompile(`(?i)^(?:/admin)?/subscriptions/([^/]+)(?:/resourceGroups/([^/]+)(?:/providers/([^/]+)/([^/]+)(?:/([^/]+))?)?)?`)
+	// matches URLs that look like /subscriptions/%s/providers/%s/%s
+	RXProviderResourceKind = regexp.MustCompile(`^/subscriptions/([^/]+)/providers/([^/]+)/([^/]+)$`)
+
+	// matches URLs that look like /admin/providers/%s/%s
+	RXAdminProvider = regexp.MustCompile(`^/admin/providers/([^/]+)/([^/]+)$`)
+
+	RXTolerantResourceID = regexp.MustCompile(`(?i)^(?:/admin)?/subscriptions/([^/]+)(?:/resourceGroups/([^/]+)(?:/providers/([^/]+)/([^/]+)(?:/([^/]+))?)?)?`)
 )
 
-func GetBaseLogger() *logrus.Logger {
+func getBaseLogger() *logrus.Logger {
 	logger := logrus.New()
 
 	logger.SetFormatter(&logrus.TextFormatter{
@@ -43,9 +50,16 @@ func GetBaseLogger() *logrus.Logger {
 	return logger
 }
 
+// GetAuditEntry returns a consistently configured audit log entry
+func GetAuditEntry() *logrus.Entry {
+	auditLogger := getBaseLogger()
+	audit.AddHook(auditLogger)
+	return logrus.NewEntry(auditLogger)
+}
+
 // GetLogger returns a consistently configured log entry
 func GetLogger() *logrus.Entry {
-	logger := GetBaseLogger()
+	logger := getBaseLogger()
 
 	logger.SetReportCaller(true)
 	logger.SetFormatter(&logrus.TextFormatter{
@@ -70,7 +84,7 @@ func GetLogger() *logrus.Entry {
 // EnrichWithPath parses the URL path for part or all of an Azure resource ID
 // and sets log fields accordingly
 func EnrichWithPath(log *logrus.Entry, path string) *logrus.Entry {
-	m := rxTolerantResourceID.FindStringSubmatch(path)
+	m := RXTolerantResourceID.FindStringSubmatch(path)
 	if m == nil {
 		return log
 	}

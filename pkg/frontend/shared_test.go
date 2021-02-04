@@ -16,6 +16,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
@@ -32,6 +33,7 @@ import (
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testclusterdata "github.com/Azure/ARO-RP/test/util/clusterdata"
 	"github.com/Azure/ARO-RP/test/util/listener"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
@@ -61,6 +63,7 @@ type testInfra struct {
 	l          net.Listener
 	cli        *http.Client
 	enricher   testclusterdata.TestEnricher
+	audit      *logrus.Entry
 	log        *logrus.Entry
 	fixture    *testdatabase.Fixture
 	checker    *testdatabase.Checker
@@ -88,6 +91,8 @@ func newTestInfra(t *testing.T) *testInfra {
 
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+	_env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+	_env.EXPECT().Hostname().AnyTimes().Return("testhost")
 	_env.EXPECT().Location().AnyTimes().Return("eastus")
 	_env.EXPECT().ServiceKeyvault().AnyTimes().Return(keyvault)
 	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
@@ -95,6 +100,7 @@ func newTestInfra(t *testing.T) *testInfra {
 	_env.EXPECT().Domain().AnyTimes().Return("")
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 
+	_, auditEntry := testlog.NewAudit()
 	log := logrus.NewEntry(logrus.StandardLogger())
 
 	fixture := testdatabase.NewFixture()
@@ -109,6 +115,7 @@ func newTestInfra(t *testing.T) *testInfra {
 		enricher:   testclusterdata.NewTestEnricher(),
 		fixture:    fixture,
 		checker:    checker,
+		audit:      auditEntry,
 		log:        log,
 		cli: &http.Client{
 			Transport: &http.Transport{
