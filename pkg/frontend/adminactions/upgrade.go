@@ -7,7 +7,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
@@ -15,18 +14,11 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/status"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func (k *kubeActions) Upgrade(ctx context.Context, upgradeY bool) error {
-	err := preUpgradeChecks(ctx, k.oc, k.virtualNetworks)
-	if err != nil {
-		return err
-	}
-
 	return upgrade(ctx, k.log, k.configcli, version.Streams, upgradeY)
 }
 
@@ -64,35 +56,4 @@ func upgrade(ctx context.Context, log *logrus.Entry, configcli configclient.Inte
 		_, err = configcli.ConfigV1().ClusterVersions().Update(ctx, cv, metav1.UpdateOptions{})
 		return err
 	})
-}
-
-func preUpgradeChecks(ctx context.Context, oc *api.OpenShiftCluster, virtualNetworks network.VirtualNetworksClient) error {
-	return checkCustomDNS(ctx, oc, virtualNetworks)
-}
-
-// checkCustomDNS checks if customer has custom DNS configured on VNET.
-// This would cause nodes to rotate and render cluster inoperable
-func checkCustomDNS(ctx context.Context, oc *api.OpenShiftCluster, vnet network.VirtualNetworksClient) error {
-	vnetID, _, err := subnet.Split(oc.Properties.MasterProfile.SubnetID)
-	if err != nil {
-		return err
-	}
-
-	r, err := azure.ParseResourceID(vnetID)
-	if err != nil {
-		return err
-	}
-
-	v, err := vnet.Get(ctx, r.ResourceGroup, r.ResourceName, "")
-	if err != nil {
-		return err
-	}
-
-	if v.VirtualNetworkPropertiesFormat.DhcpOptions != nil &&
-		v.VirtualNetworkPropertiesFormat.DhcpOptions.DNSServers != nil &&
-		len(*v.VirtualNetworkPropertiesFormat.DhcpOptions.DNSServers) > 0 {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Not upgrading: custom DNS is set.")
-	}
-
-	return nil
 }

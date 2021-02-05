@@ -42,12 +42,7 @@ func (f *frontend) _postAdminOpenShiftUpgrade(ctx context.Context, r *http.Reque
 		return err
 	}
 
-	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
-	if err != nil {
-		return err
-	}
-
-	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}

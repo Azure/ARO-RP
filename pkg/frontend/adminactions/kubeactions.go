@@ -12,7 +12,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
@@ -31,14 +30,10 @@ type kubeActions struct {
 	oc        *api.OpenShiftCluster
 	dh        dynamichelper.Interface
 	configcli configclient.Interface
-
-	virtualNetworks network.VirtualNetworksClient
 }
 
 // NewKubeActions returns a kubeActions
-func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster,
-	subscriptionDoc *api.SubscriptionDocument) (KubeActions, error) {
-
+func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster) (KubeActions, error) {
 	restConfig, err := restconfig.RestConfig(env, oc)
 	if err != nil {
 		return nil, err
@@ -54,19 +49,11 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 		return nil, err
 	}
 
-	fpAuth, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID,
-		env.Environment().ResourceManagerEndpoint)
-	if err != nil {
-		return nil, err
-	}
-
 	return &kubeActions{
 		log:       log,
 		oc:        oc,
 		dh:        dh,
 		configcli: configcli,
-
-		virtualNetworks: network.NewVirtualNetworksClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 	}, nil
 }
 
