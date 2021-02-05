@@ -6,11 +6,13 @@ package subnet
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/apparentlymart/go-cidr/cidr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -19,6 +21,7 @@ import (
 
 type Manager interface {
 	Get(ctx context.Context, subnetID string) (*mgmtnetwork.Subnet, error)
+	GetHighestFreeIP(ctx context.Context, subnetID string) (string, error)
 	CreateOrUpdate(ctx context.Context, subnetID string, subnet *mgmtnetwork.Subnet) error
 }
 
@@ -34,6 +37,10 @@ func NewManager(env env.Core, subscriptionID string, spAuthorizer autorest.Autho
 
 // Get retrieves the linked subnet
 func (m *manager) Get(ctx context.Context, subnetID string) (*mgmtnetwork.Subnet, error) {
+	return m.get(ctx, subnetID, "")
+}
+
+func (m *manager) get(ctx context.Context, subnetID, expand string) (*mgmtnetwork.Subnet, error) {
 	vnetID, subnetName, err := Split(subnetID)
 	if err != nil {
 		return nil, err
@@ -44,12 +51,53 @@ func (m *manager) Get(ctx context.Context, subnetID string) (*mgmtnetwork.Subnet
 		return nil, err
 	}
 
-	subnet, err := m.subnets.Get(ctx, r.ResourceGroup, r.ResourceName, subnetName, "")
+	subnet, err := m.subnets.Get(ctx, r.ResourceGroup, r.ResourceName, subnetName, expand)
 	if err != nil {
 		return nil, err
 	}
 
 	return &subnet, nil
+}
+
+func (m *manager) GetHighestFreeIP(ctx context.Context, subnetID string) (string, error) {
+	// Probably anyone who calls this function has a race condition.
+
+	subnet, err := m.get(ctx, subnetID, "ipConfigurations")
+	if err != nil {
+		return "", err
+	}
+
+	_, subnetCIDR, err := net.ParseCIDR(*subnet.AddressPrefix)
+	if err != nil {
+		return "", err
+	}
+
+	bottom, top := cidr.AddressRange(subnetCIDR)
+
+	allocated := map[string]struct{}{}
+
+	// first four addresses and the broadcast address are reserved:
+	// https://docs.microsoft.com/en-us/azure/virtual-network/private-ip-addresses#allocation-method
+	for i, ip := 0, bottom; i < 4 && !ip.Equal(top); i, ip = i+1, cidr.Inc(ip) {
+		allocated[ip.String()] = struct{}{}
+	}
+	allocated[top.String()] = struct{}{}
+
+	if subnet.IPConfigurations != nil {
+		for _, ipconfig := range *subnet.IPConfigurations {
+			if ipconfig.PrivateIPAddress != nil {
+				allocated[*ipconfig.PrivateIPAddress] = struct{}{}
+			}
+		}
+	}
+
+	for ip := top; !ip.Equal(cidr.Dec(bottom)); ip = cidr.Dec(ip) {
+		if _, ok := allocated[ip.String()]; !ok {
+			return ip.String(), nil
+		}
+	}
+
+	return "", nil
 }
 
 // CreateOrUpdate updates the linked subnet

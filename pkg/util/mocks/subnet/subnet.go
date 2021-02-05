@@ -63,3 +63,18 @@ func (mr *MockManagerMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockManager)(nil).Get), arg0, arg1)
 }
+
+// GetHighestFreeIP mocks base method
+func (m *MockManager) GetHighestFreeIP(arg0 context.Context, arg1 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHighestFreeIP", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetHighestFreeIP indicates an expected call of GetHighestFreeIP
+func (mr *MockManagerMockRecorder) GetHighestFreeIP(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHighestFreeIP", reflect.TypeOf((*MockManager)(nil).GetHighestFreeIP), arg0, arg1)
+}
