@@ -34,7 +34,6 @@ jobs:
   - template: ./templates/template-mirror-images.yml
     parameters:
       dstAuth: $(acr-push-auth)
-      srcAuthGeneva: $(acr-geneva-pull-auth)
       srcAuthQuay: $(quay-pull-auth)
       srcAuthRedhat: $(redhat-pull-auth)
       dstACRName: $(dst-acr-name)
