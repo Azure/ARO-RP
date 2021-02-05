@@ -45,6 +45,7 @@ var (
 		&bootkube.EtcdMetricServingCAConfigMap{},
 		&bootkube.OpenshiftConfigSecretPullSecret{},
 		&bootkube.AROWorkerRegistries{},
+		&bootkube.AROIngressService{},
 		&openshift.CloudCredsSecret{},
 		&openshift.KubeadminPasswordSecret{},
 		&openshift.RoleCloudCredsSecretReader{},

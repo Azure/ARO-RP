@@ -7,6 +7,8 @@ import (
 
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
+	"github.com/openshift/installer/pkg/asset/templates/content/bootkube"
+	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
 	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
 	ovirttypes "github.com/openshift/installer/pkg/types/ovirt"
@@ -27,6 +29,7 @@ func (a *MCSCertKey) Dependencies() []asset.Asset {
 	return []asset.Asset{
 		&RootCA{},
 		&installconfig.InstallConfig{},
+		&bootkube.ARODNSConfig{},
 	}
 }
 
@@ -34,7 +37,8 @@ func (a *MCSCertKey) Dependencies() []asset.Asset {
 func (a *MCSCertKey) Generate(dependencies asset.Parents) error {
 	ca := &RootCA{}
 	installConfig := &installconfig.InstallConfig{}
-	dependencies.Get(ca, installConfig)
+	aroDNSConfig := &bootkube.ARODNSConfig{}
+	dependencies.Get(ca, installConfig, aroDNSConfig)
 
 	hostname := internalAPIAddress(installConfig.Config)
 
@@ -45,6 +49,13 @@ func (a *MCSCertKey) Generate(dependencies asset.Parents) error {
 	}
 
 	switch installConfig.Config.Platform.Name() {
+	case azuretypes.Name:
+		if installConfig.Config.Azure.ARO {
+			cfg.IPAddresses = []net.IP{net.ParseIP(aroDNSConfig.APIIntIP)}
+			cfg.DNSNames = []string{hostname, aroDNSConfig.APIIntIP}
+		} else {
+			cfg.DNSNames = []string{hostname}
+		}
 	case baremetaltypes.Name:
 		cfg.IPAddresses = []net.IP{net.ParseIP(installConfig.Config.BareMetal.APIVIP)}
 		cfg.DNSNames = []string{hostname, installConfig.Config.BareMetal.APIVIP}
