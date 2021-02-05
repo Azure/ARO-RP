@@ -14,7 +14,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 func (m *manager) deployResourceTemplate(ctx context.Context) error {
@@ -33,11 +32,6 @@ func (m *manager) deployResourceTemplate(ctx context.Context) error {
 		return err
 	}
 
-	vnetID, _, err := subnet.Split(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
-	if err != nil {
-		return err
-	}
-
 	zones, err := zones(installConfig)
 	if err != nil {
 		return err
@@ -52,10 +46,6 @@ func (m *manager) deployResourceTemplate(ctx context.Context) error {
 			},
 		},
 		Resources: []*arm.Resource{
-			m.dnsPrivateZone(installConfig),
-			m.dnsPrivateRecordAPIINT(installConfig),
-			m.dnsPrivateRecordAPI(installConfig),
-			m.dnsVirtualNetworkLink(installConfig, vnetID),
 			m.networkBootstrapNIC(installConfig),
 			m.networkMasterNICs(installConfig),
 			m.computeBootstrapVM(installConfig),

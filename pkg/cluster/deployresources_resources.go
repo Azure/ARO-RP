@@ -9,7 +9,6 @@ import (
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
-	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -17,79 +16,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
-
-func (m *manager) dnsPrivateZone(installConfig *installconfig.InstallConfig) *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtprivatedns.PrivateZone{
-			Name:     to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain),
-			Type:     to.StringPtr("Microsoft.Network/privateDnsZones"),
-			Location: to.StringPtr("global"),
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Network/privateDnsZones"),
-	}
-}
-
-func (m *manager) dnsPrivateRecordAPIINT(installConfig *installconfig.InstallConfig) *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtprivatedns.RecordSet{
-			Name: to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/api-int"),
-			Type: to.StringPtr("Microsoft.Network/privateDnsZones/A"),
-			RecordSetProperties: &mgmtprivatedns.RecordSetProperties{
-				TTL: to.Int64Ptr(300),
-				ARecords: &[]mgmtprivatedns.ARecord{
-					{
-						Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/%s-internal', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", m.doc.OpenShiftCluster.Properties.InfraID, azureclient.APIVersion("Microsoft.Network"))),
-					},
-				},
-			},
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Network/privateDnsZones"),
-		DependsOn: []string{
-			"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
-		},
-	}
-}
-
-func (m *manager) dnsPrivateRecordAPI(installConfig *installconfig.InstallConfig) *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtprivatedns.RecordSet{
-			Name: to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/api"),
-			Type: to.StringPtr("Microsoft.Network/privateDnsZones/A"),
-			RecordSetProperties: &mgmtprivatedns.RecordSetProperties{
-				TTL: to.Int64Ptr(300),
-				ARecords: &[]mgmtprivatedns.ARecord{
-					{
-						Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/%s-internal', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", m.doc.OpenShiftCluster.Properties.InfraID, azureclient.APIVersion("Microsoft.Network"))),
-					},
-				},
-			},
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Network/privateDnsZones"),
-		DependsOn: []string{
-			"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
-		},
-	}
-}
-
-func (m *manager) dnsVirtualNetworkLink(installConfig *installconfig.InstallConfig, vnetID string) *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtprivatedns.VirtualNetworkLink{
-			VirtualNetworkLinkProperties: &mgmtprivatedns.VirtualNetworkLinkProperties{
-				VirtualNetwork: &mgmtprivatedns.SubResource{
-					ID: to.StringPtr(vnetID),
-				},
-				RegistrationEnabled: to.BoolPtr(false),
-			},
-			Name:     to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/" + installConfig.Config.ObjectMeta.Name + "-network-link"),
-			Type:     to.StringPtr("Microsoft.Network/privateDnsZones/virtualNetworkLinks"),
-			Location: to.StringPtr("global"),
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Network/privateDnsZones"),
-		DependsOn: []string{
-			"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
-		},
-	}
-}
 
 func (m *manager) networkBootstrapNIC(installConfig *installconfig.InstallConfig) *arm.Resource {
 	return &arm.Resource{
@@ -214,7 +140,6 @@ func (m *manager) computeBootstrapVM(installConfig *installconfig.InstallConfig)
 		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 		DependsOn: []string{
 			"Microsoft.Network/networkInterfaces/" + m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-nic",
-			"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
 		},
 	}
 }
@@ -278,7 +203,6 @@ func (m *manager) computeMasterVMs(installConfig *installconfig.InstallConfig, z
 		},
 		DependsOn: []string{
 			"[concat('Microsoft.Network/networkInterfaces/" + m.doc.OpenShiftCluster.Properties.InfraID + "-master', copyIndex(), '-nic')]",
-			"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
 		},
 	}
 }
