@@ -109,6 +109,10 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 			m.clusterStorageAccountBlob("aro"),
 			m.clusterNSG(infraID, installConfig.Config.Azure.Region),
 			m.clusterServicePrincipalRBAC(),
+			m.networkPrivateLinkService(installConfig),
+			m.networkPublicIPAddress(installConfig, m.doc.OpenShiftCluster.Properties.InfraID+"-pip-v4"),
+			m.networkInternalLoadBalancer(installConfig),
+			m.networkPublicLoadBalancer(installConfig),
 		},
 	}
 

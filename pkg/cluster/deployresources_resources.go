@@ -46,7 +46,6 @@ func (m *manager) dnsPrivateRecordAPIINT(installConfig *installconfig.InstallCon
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network/privateDnsZones"),
 		DependsOn: []string{
-			"Microsoft.Network/loadBalancers/" + m.doc.OpenShiftCluster.Properties.InfraID + "-internal",
 			"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 		},
 	}
@@ -68,7 +67,6 @@ func (m *manager) dnsPrivateRecordAPI(installConfig *installconfig.InstallConfig
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network/privateDnsZones"),
 		DependsOn: []string{
-			"Microsoft.Network/loadBalancers/" + m.doc.OpenShiftCluster.Properties.InfraID + "-internal",
 			"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 		},
 	}
@@ -442,10 +440,6 @@ func (m *manager) networkBootstrapNIC(installConfig *installconfig.InstallConfig
 			Location: &installConfig.Config.Azure.Region,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
-		DependsOn: []string{
-			"Microsoft.Network/loadBalancers/" + m.doc.OpenShiftCluster.Properties.InfraID + "-internal",
-			"Microsoft.Network/loadBalancers/" + m.doc.OpenShiftCluster.Properties.InfraID,
-		},
 	}
 }
 
@@ -483,10 +477,6 @@ func (m *manager) networkMasterNICs(installConfig *installconfig.InstallConfig) 
 		Copy: &arm.Copy{
 			Name:  "networkcopy",
 			Count: int(*installConfig.Config.ControlPlane.Replicas),
-		},
-		DependsOn: []string{
-			"Microsoft.Network/loadBalancers/" + m.doc.OpenShiftCluster.Properties.InfraID + "-internal",
-			"Microsoft.Network/loadBalancers/" + m.doc.OpenShiftCluster.Properties.InfraID,
 		},
 	}
 }
