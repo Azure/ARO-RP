@@ -57,7 +57,7 @@ func (m *manager) deployResourceTemplate(ctx context.Context) error {
 			m.dnsPrivateRecordAPI(installConfig),
 			m.dnsVirtualNetworkLink(installConfig, vnetID),
 			m.networkPrivateLinkService(installConfig),
-			m.networkPublicIPAddress(installConfig),
+			m.networkPublicIPAddress(installConfig, m.doc.OpenShiftCluster.Properties.InfraID+"-pip-v4"),
 			m.networkInternalLoadBalancer(installConfig),
 			m.networkPublicLoadBalancer(installConfig),
 			m.networkBootstrapNIC(installConfig),

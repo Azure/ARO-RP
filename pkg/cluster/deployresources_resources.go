@@ -135,7 +135,7 @@ func (m *manager) networkPrivateLinkService(installConfig *installconfig.Install
 	}
 }
 
-func (m *manager) networkPublicIPAddress(installConfig *installconfig.InstallConfig) *arm.Resource {
+func (m *manager) networkPublicIPAddress(installConfig *installconfig.InstallConfig, name string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.PublicIPAddress{
 			Sku: &mgmtnetwork.PublicIPAddressSku{
@@ -144,7 +144,7 @@ func (m *manager) networkPublicIPAddress(installConfig *installconfig.InstallCon
 			PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
 				PublicIPAllocationMethod: mgmtnetwork.Static,
 			},
-			Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pip-v4"),
+			Name:     &name,
 			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 			Location: &installConfig.Config.Azure.Region,
 		},
