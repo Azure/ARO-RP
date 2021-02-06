@@ -18,6 +18,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/openshift/installer/pkg/asset/targets"
+	"github.com/openshift/installer/pkg/asset/templates/content/bootkube"
 	"github.com/openshift/installer/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -100,20 +101,28 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		return err
 	}
 
+	resources := []*arm.Resource{
+		m.clusterStorageAccount(installConfig.Config.Azure.Region),
+		m.clusterStorageAccountBlob("ignition"),
+		m.clusterStorageAccountBlob("aro"),
+		m.clusterNSG(infraID, installConfig.Config.Azure.Region),
+		m.clusterServicePrincipalRBAC(),
+		m.networkPrivateLinkService(installConfig),
+		m.networkPublicIPAddress(installConfig, m.doc.OpenShiftCluster.Properties.InfraID+"-pip-v4"),
+		m.networkInternalLoadBalancer(installConfig),
+		m.networkPublicLoadBalancer(installConfig),
+	}
+
+	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPublic {
+		resources = append(resources,
+			m.networkPublicIPAddress(installConfig, m.doc.OpenShiftCluster.Properties.InfraID+"-default-v4"),
+		)
+	}
+
 	t := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
-		Resources: []*arm.Resource{
-			m.clusterStorageAccount(installConfig.Config.Azure.Region),
-			m.clusterStorageAccountBlob("ignition"),
-			m.clusterStorageAccountBlob("aro"),
-			m.clusterNSG(infraID, installConfig.Config.Azure.Region),
-			m.clusterServicePrincipalRBAC(),
-			m.networkPrivateLinkService(installConfig),
-			m.networkPublicIPAddress(installConfig, m.doc.OpenShiftCluster.Properties.InfraID+"-pip-v4"),
-			m.networkInternalLoadBalancer(installConfig),
-			m.networkPublicLoadBalancer(installConfig),
-		},
+		Resources:      resources,
 	}
 
 	if m.env.DeploymentMode() == deployment.Production {
@@ -144,8 +153,13 @@ func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.
 		return err
 	}
 
+	dnsConfig := &bootkube.ARODNSConfig{
+		APIIntIP:  m.doc.OpenShiftCluster.Properties.APIServerProfile.IntIP,
+		IngressIP: m.doc.OpenShiftCluster.Properties.IngressProfiles[0].IP,
+	}
+
 	g := graph.Graph{}
-	g.Set(installConfig, image, clusterID, bootstrapLoggingConfig)
+	g.Set(installConfig, image, clusterID, bootstrapLoggingConfig, dnsConfig)
 
 	m.log.Print("resolving graph")
 	for _, a := range targets.Cluster {

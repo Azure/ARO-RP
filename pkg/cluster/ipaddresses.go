@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/password"
@@ -55,6 +56,46 @@ func (m *manager) createOrUpdateRouterIPFromCluster(ctx context.Context) error {
 	ipAddress := svc.Status.LoadBalancer.Ingress[0].IP
 
 	err = m.dns.CreateOrUpdateRouter(ctx, m.doc.OpenShiftCluster, ipAddress)
+	if err != nil {
+		return err
+	}
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = ipAddress
+		return nil
+	})
+	return err
+}
+
+func (m *manager) createOrUpdateRouterIPEarly(ctx context.Context) error {
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
+
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	var ipAddress string
+	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPublic {
+		ip, err := m.publicIPAddresses.Get(ctx, resourceGroup, infraID+"-default-v4", "")
+		if err != nil {
+			return err
+		}
+		ipAddress = *ip.IPAddress
+	} else {
+		// there's no way to reserve private IPs in Azure, so we pick the
+		// highest free address in the subnet (i.e., there's a race here). Azure
+		// specifically documents that dynamic allocation proceeds from the
+		// bottom of the subnet, so there's a good chance that we'll get away
+		// with this.
+		// https://docs.microsoft.com/en-us/azure/virtual-network/private-ip-addresses#allocation-method
+		var err error
+		ipAddress, err = m.subnet.GetHighestFreeIP(ctx, m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID)
+		if err != nil {
+			return err
+		}
+		if ipAddress == "" {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The subnet '%s' has no remaining IP addresses.", m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+		}
+	}
+
+	err := m.dns.CreateOrUpdateRouter(ctx, m.doc.OpenShiftCluster, ipAddress)
 	if err != nil {
 		return err
 	}
