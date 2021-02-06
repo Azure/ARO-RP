@@ -40,7 +40,7 @@ func (m *manager) updateClusterData(ctx context.Context) error {
 	return err
 }
 
-func (m *manager) createOrUpdateRouterIP(ctx context.Context) error {
+func (m *manager) createOrUpdateRouterIPFromCluster(ctx context.Context) error {
 	svc, err := m.kubernetescli.CoreV1().Services("openshift-ingress").Get(ctx, "router-default", metav1.GetOptions{})
 	// default ingress must be present in the cluster
 	if err != nil {

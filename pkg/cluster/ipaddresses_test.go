@@ -19,7 +19,7 @@ import (
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
-func TestUpdateOrCreateRouterIP(t *testing.T) {
+func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
 	ctx := context.Background()
 
 	const (
@@ -120,7 +120,7 @@ func TestUpdateOrCreateRouterIP(t *testing.T) {
 				kubernetescli: tt.kubernetescli,
 			}
 
-			err = m.createOrUpdateRouterIP(ctx)
+			err = m.createOrUpdateRouterIPFromCluster(ctx)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
