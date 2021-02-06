@@ -82,6 +82,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
 				return m.deployStorageTemplate(ctx, installConfig, image)
 			})),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.updateAPIIP)),
 			steps.Action(func(ctx context.Context) error {
 				return m.ensureGraph(ctx, installConfig, image)
 			}),
@@ -89,7 +90,6 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.ensureBillingRecord),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.deployResourceTemplate)),
 			steps.Action(m.createPrivateEndpoint),
-			steps.Action(m.updateAPIIP),
 			steps.Action(m.createCertificates),
 			steps.Action(m.initializeKubernetesClients),
 			steps.Condition(m.bootstrapConfigMapReady, 30*time.Minute),
