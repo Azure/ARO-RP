@@ -52,15 +52,15 @@ func (m *manager) createOrUpdateRouterIPFromCluster(ctx context.Context) error {
 		return fmt.Errorf("routerIP not found")
 	}
 
-	routerIP := svc.Status.LoadBalancer.Ingress[0].IP
+	ipAddress := svc.Status.LoadBalancer.Ingress[0].IP
 
-	err = m.dns.CreateOrUpdateRouter(ctx, m.doc.OpenShiftCluster, routerIP)
+	err = m.dns.CreateOrUpdateRouter(ctx, m.doc.OpenShiftCluster, ipAddress)
 	if err != nil {
 		return err
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = routerIP
+		doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = ipAddress
 		return nil
 	})
 	return err
