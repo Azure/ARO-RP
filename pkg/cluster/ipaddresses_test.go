@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +17,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_dns "github.com/Azure/ARO-RP/pkg/util/mocks/dns"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -121,6 +124,168 @@ func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
 			}
 
 			err = m.createOrUpdateRouterIPFromCluster(ctx)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+
+			for _, err = range checker.CheckOpenShiftClusters(dbClient) {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestUpdateAPIIP(t *testing.T) {
+	ctx := context.Background()
+
+	const (
+		key             = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
+		resourceGroupID = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterResourceGroup"
+	)
+
+	for _, tt := range []struct {
+		name           string
+		fixtureChecker func(*testdatabase.Fixture, *testdatabase.Checker, *cosmosdb.FakeOpenShiftClusterDocumentClient)
+		mocks          func(*mock_network.MockLoadBalancersClient, *mock_network.MockPublicIPAddressesClient, *mock_dns.MockManager)
+		wantErr        string
+	}{
+		{
+			name: "public",
+			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
+				doc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: key,
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: resourceGroupID,
+							},
+							APIServerProfile: api.APIServerProfile{
+								Visibility: api.VisibilityPublic,
+							},
+							ProvisioningState: api.ProvisioningStateCreating,
+							InfraID:           "infra",
+						},
+					},
+				}
+				fixture.AddOpenShiftClusterDocuments(doc)
+
+				doc.Dequeues = 1
+				doc.OpenShiftCluster.Properties.APIServerProfile.IP = "1.2.3.4"
+				doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = "10.0.0.1"
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
+			mocks: func(loadBalancers *mock_network.MockLoadBalancersClient, publicIPAddresses *mock_network.MockPublicIPAddressesClient, dns *mock_dns.MockManager) {
+				loadBalancers.EXPECT().
+					Get(gomock.Any(), "clusterResourceGroup", "infra-internal", "").
+					Return(mgmtnetwork.LoadBalancer{
+						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+								{
+									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+										PrivateIPAddress: to.StringPtr("10.0.0.1"),
+									},
+								},
+							},
+						},
+					}, nil)
+				publicIPAddresses.EXPECT().
+					Get(gomock.Any(), "clusterResourceGroup", "infra-pip-v4", "").
+					Return(mgmtnetwork.PublicIPAddress{
+						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
+							IPAddress: to.StringPtr("1.2.3.4"),
+						},
+					}, nil)
+				dns.EXPECT().
+					Update(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+		},
+		{
+			name: "private",
+			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
+				doc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: key,
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: resourceGroupID,
+							},
+							APIServerProfile: api.APIServerProfile{
+								Visibility: api.VisibilityPrivate,
+							},
+							ProvisioningState: api.ProvisioningStateCreating,
+							InfraID:           "infra",
+						},
+					},
+				}
+				fixture.AddOpenShiftClusterDocuments(doc)
+
+				doc.Dequeues = 1
+				doc.OpenShiftCluster.Properties.APIServerProfile.IP = "10.0.0.1"
+				doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = "10.0.0.1"
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
+			mocks: func(loadBalancers *mock_network.MockLoadBalancersClient, publicIPAddresses *mock_network.MockPublicIPAddressesClient, dns *mock_dns.MockManager) {
+				loadBalancers.EXPECT().
+					Get(gomock.Any(), "clusterResourceGroup", "infra-internal", "").
+					Return(mgmtnetwork.LoadBalancer{
+						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+								{
+									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+										PrivateIPAddress: to.StringPtr("10.0.0.1"),
+									},
+								},
+							},
+						},
+					}, nil)
+				dns.EXPECT().
+					Update(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			loadBalancers := mock_network.NewMockLoadBalancersClient(controller)
+			publicIPAddresses := mock_network.NewMockPublicIPAddressesClient(controller)
+			dns := mock_dns.NewMockManager(controller)
+			if tt.mocks != nil {
+				tt.mocks(loadBalancers, publicIPAddresses, dns)
+			}
+
+			dbOpenShiftClusters, dbClient := testdatabase.NewFakeOpenShiftClusters()
+			fixture := testdatabase.NewFixture().WithOpenShiftClusters(dbOpenShiftClusters)
+			checker := testdatabase.NewChecker()
+
+			if tt.fixtureChecker != nil {
+				tt.fixtureChecker(fixture, checker, dbClient)
+			}
+
+			err := fixture.Create()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			doc, err := dbOpenShiftClusters.Dequeue(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			m := &manager{
+				doc:               doc,
+				db:                dbOpenShiftClusters,
+				publicIPAddresses: publicIPAddresses,
+				loadBalancers:     loadBalancers,
+				dns:               dns,
+			}
+
+			err = m.updateAPIIP(ctx)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

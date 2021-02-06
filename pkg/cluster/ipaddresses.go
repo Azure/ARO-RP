@@ -70,28 +70,30 @@ func (m *manager) updateAPIIP(ctx context.Context) error {
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	var ipAddress string
+
+	lb, err := m.loadBalancers.Get(ctx, resourceGroup, infraID+"-internal", "")
+	if err != nil {
+		return err
+	}
+	intIPAddress := *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
+
+	ipAddress := intIPAddress
 	if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
 		ip, err := m.publicIPAddresses.Get(ctx, resourceGroup, infraID+"-pip-v4", "")
 		if err != nil {
 			return err
 		}
 		ipAddress = *ip.IPAddress
-	} else {
-		lb, err := m.loadBalancers.Get(ctx, resourceGroup, infraID+"-internal", "")
-		if err != nil {
-			return err
-		}
-		ipAddress = *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
 	}
 
-	err := m.dns.Update(ctx, m.doc.OpenShiftCluster, ipAddress)
+	err = m.dns.Update(ctx, m.doc.OpenShiftCluster, ipAddress)
 	if err != nil {
 		return err
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.APIServerProfile.IP = ipAddress
+		doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = intIPAddress
 		return nil
 	})
 	return err

@@ -224,6 +224,7 @@ type APIServerProfile struct {
 	Visibility Visibility `json:"visibility,omitempty"`
 	URL        string     `json:"url,omitempty"`
 	IP         string     `json:"ip,omitempty"`
+	IntIP      string     `json:"intIp,omitempty"`
 }
 
 // Visibility represents visibility.
