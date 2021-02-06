@@ -64,7 +64,6 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 
 	m.log.Print("creating resource group")
 	group := mgmtfeatures.ResourceGroup{
@@ -117,15 +116,19 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		t.Resources = append(t.Resources, m.denyAssignments())
 	}
 
-	err = m.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
-	if err != nil {
-		return err
-	}
+	return m.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
+}
+
+func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.InstallConfig, image *releaseimage.Image) error {
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 
 	exists, err := m.graph.Exists(ctx, resourceGroup, account)
 	if err != nil || exists {
 		return err
 	}
+
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
 	clusterID := &installconfig.ClusterID{
 		UUID:    m.doc.ID,

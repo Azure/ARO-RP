@@ -82,6 +82,9 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
 				return m.deployStorageTemplate(ctx, installConfig, image)
 			})),
+			steps.Action(func(ctx context.Context) error {
+				return m.ensureGraph(ctx, installConfig, image)
+			}),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGsAndPatch)),
 			steps.Action(m.ensureBillingRecord),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.deployResourceTemplate)),
