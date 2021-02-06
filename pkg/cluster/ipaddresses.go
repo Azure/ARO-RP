@@ -90,13 +90,7 @@ func (m *manager) updateAPIIP(ctx context.Context) error {
 		return err
 	}
 
-	privateEndpointIP, err := m.privateendpoint.GetIP(ctx, m.doc)
-	if err != nil {
-		return err
-	}
-
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.NetworkProfile.PrivateEndpointIP = privateEndpointIP
 		doc.OpenShiftCluster.Properties.APIServerProfile.IP = ipAddress
 		return nil
 	})
@@ -104,5 +98,19 @@ func (m *manager) updateAPIIP(ctx context.Context) error {
 }
 
 func (m *manager) createPrivateEndpoint(ctx context.Context) error {
-	return m.privateendpoint.Create(ctx, m.doc)
+	err := m.privateendpoint.Create(ctx, m.doc)
+	if err != nil {
+		return err
+	}
+
+	privateEndpointIP, err := m.privateendpoint.GetIP(ctx, m.doc)
+	if err != nil {
+		return err
+	}
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.NetworkProfile.PrivateEndpointIP = privateEndpointIP
+		return nil
+	})
+	return err
 }
