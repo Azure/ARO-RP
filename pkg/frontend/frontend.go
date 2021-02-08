@@ -66,8 +66,7 @@ type frontend struct {
 
 	bucketAllocator bucket.Allocator
 
-	startTime time.Time
-	ready     atomic.Value
+	ready atomic.Value
 
 	now func() time.Time
 }
@@ -106,8 +105,6 @@ func NewFrontend(ctx context.Context,
 		ocEnricherFactory:   ocEnricherFactory,
 
 		bucketAllocator: &bucket.Random{},
-
-		startTime: time.Now(),
 
 		now: time.Now,
 	}
