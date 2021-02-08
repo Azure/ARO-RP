@@ -24,6 +24,8 @@ $(document).ready(function () {
             $.each(clusters, function (i, cluster) {
                 $("#selResourceId").append($("<option>").text(cluster));
             });
+
+            $("#selResourceId").selectpicker();
         },
         dataType: "json",
     });
