@@ -115,6 +115,8 @@ func NewDialer(deploymentMode deployment.Mode) (Dialer, error) {
 		return &prod{}, nil
 	}
 
+	secretsDir := os.Getenv("SECRETS")
+
 	d := &dev{}
 
 	// This assumes we are running from an ARO-RP checkout in development
@@ -124,7 +126,7 @@ func NewDialer(deploymentMode deployment.Mode) (Dialer, error) {
 		return nil, err
 	}
 
-	b, err := ioutil.ReadFile(path.Join(basepath, "secrets/proxy.crt"))
+	b, err := ioutil.ReadFile(path.Join(basepath, secretsDir+"/proxy.crt"))
 	if err != nil {
 		return nil, err
 	}
@@ -137,12 +139,12 @@ func NewDialer(deploymentMode deployment.Mode) (Dialer, error) {
 	d.proxyPool = x509.NewCertPool()
 	d.proxyPool.AddCert(cert)
 
-	d.proxyClientCert, err = ioutil.ReadFile(path.Join(basepath, "secrets/proxy-client.crt"))
+	d.proxyClientCert, err = ioutil.ReadFile(path.Join(basepath, secretsDir+"/proxy-client.crt"))
 	if err != nil {
 		return nil, err
 	}
 
-	b, err = ioutil.ReadFile(path.Join(basepath, "secrets/proxy-client.key"))
+	b, err = ioutil.ReadFile(path.Join(basepath, secretsDir+"/proxy-client.key"))
 	if err != nil {
 		return nil, err
 	}

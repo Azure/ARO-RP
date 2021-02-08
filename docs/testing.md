@@ -41,7 +41,7 @@ below.
 
 ```bash
 # source your environment file
-. ./secrets/env
+. ./$SECRETS/env
 
 # source the e2e helper file
 . ./hack/e2e/run-rp-and-e2e.sh

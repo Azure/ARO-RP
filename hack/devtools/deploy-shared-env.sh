@@ -42,14 +42,14 @@ deploy_env_dev_ci() {
             "ciAzpToken=$AZPTOKEN" \
             "ciCapacity=6" \
             "ciPoolName=ARO-CI" \
-            "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
-            "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
+            "proxyCert=$(base64 -w0 <$SECRETS/proxy.crt)" \
+            "proxyClientCert=$(base64 -w0 <$SECRETS/proxy-client.crt)" \
             "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
             "proxyImage=arointsvc.azurecr.io/proxy:latest" \
             "proxyImageAuth=$(jq -r '.auths["arointsvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
-            "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
-            "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
-            "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
+            "proxyKey=$(base64 -w0 <$SECRETS/proxy.key)" \
+            "sshPublicKey=$(<$SECRETS/proxy_id_rsa.pub)" \
+            "vpnCACertificate=$(base64 -w0 <$SECRETS/vpn-ca.crt)" >/dev/null
 }
 
 deploy_env_dev() {
@@ -59,14 +59,14 @@ deploy_env_dev() {
         -n env-development \
         --template-file deploy/env-development.json \
         --parameters \
-            "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
-            "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
+            "proxyCert=$(base64 -w0 <$SECRETS/proxy.crt)" \
+            "proxyClientCert=$(base64 -w0 <$SECRETS/proxy-client.crt)" \
             "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
             "proxyImage=arointsvc.azurecr.io/proxy:latest" \
             "proxyImageAuth=$(jq -r '.auths["arointsvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
-            "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
-            "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
-            "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
+            "proxyKey=$(base64 -w0 <$SECRETS/proxy.key)" \
+            "sshPublicKey=$(<$SECRETS/proxy_id_rsa.pub)" \
+            "vpnCACertificate=$(base64 -w0 <$SECRETS/vpn-ca.crt)" >/dev/null
 }
 
 deploy_env_dev_override() {
@@ -76,14 +76,14 @@ deploy_env_dev_override() {
         -n env-development \
         --template-file deploy/env-development.json \
         --parameters \
-            "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
-            "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
+            "proxyCert=$(base64 -w0 <$SECRETS/proxy.crt)" \
+            "proxyClientCert=$(base64 -w0 <$SECRETS/proxy-client.crt)" \
             "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
             "proxyImage=arointsvc.azurecr.io/proxy:latest" \
             "proxyImageAuth=$(jq -r '.auths["arointsvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
-            "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
-            "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
-            "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" \
+            "proxyKey=$(base64 -w0 <$SECRETS/proxy.key)" \
+            "sshPublicKey=$(<$SECRETS/proxy_id_rsa.pub)" \
+            "vpnCACertificate=$(base64 -w0 <$SECRETS/vpn-ca.crt)" \
             "publicIPAddressSkuName=Basic" \
             "publicIPAddressAllocationMethod=Dynamic" >/dev/null
 }
@@ -93,15 +93,15 @@ import_certs_secrets() {
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-server \
-        --file secrets/localhost.pem >/dev/null
+        --file $SECRETS/localhost.pem >/dev/null
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-por" \
         --name portal-server \
-        --file secrets/localhost.pem >/dev/null
+        --file $SECRETS/localhost.pem >/dev/null
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-por" \
         --name portal-client \
-        --file secrets/portal-client.pem >/dev/null
+        --file $SECRETS/portal-client.pem >/dev/null
     az keyvault secret list \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --query '[].name' \
@@ -161,11 +161,11 @@ vpn_configuration() {
         -g "$RESOURCEGROUP" \
         -n dev-vpn \
         -o tsv)"
-    export CLIENTCERTIFICATE="$(openssl x509 -inform der -in secrets/vpn-client.crt)"
-    export PRIVATEKEY="$(openssl rsa -inform der -in secrets/vpn-client.key)"
+    export CLIENTCERTIFICATE="$(openssl x509 -inform der -in $SECRETS/vpn-client.crt)"
+    export PRIVATEKEY="$(openssl rsa -inform der -in $SECRETS/vpn-client.key)"
     unzip -qc vpnclientconfiguration.zip 'OpenVPN\\vpnconfig.ovpn' \
         | envsubst \
-        | grep -v '^log ' >"secrets/vpn-$LOCATION.ovpn"
+        | grep -v '^log ' >"$SECRETS/vpn-$LOCATION.ovpn"
     rm vpnclientconfiguration.zip
 }
 
@@ -219,14 +219,14 @@ echo
 echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
 echo "######################################"
 
-[ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; exit 128 )
-[ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set please validate your ./secrets/env"; exit 128 )
-[ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set please validate your ./secrets/env"; exit 128 )
-[ "$DATABASE_ACCOUNT_NAME" ] || ( echo ">> DATABASE_ACCOUNT_NAME is not set please validate your ./secrets/env"; exit 128 )
-[ "$ADMIN_OBJECT_ID" ] || ( echo ">> ADMIN_OBJECT_ID is not set please validate your ./secrets/env"; exit 128 )
-[ "$PARENT_DOMAIN_NAME" ] || ( echo ">> PARENT_DOMAIN_NAME is not set please validate your ./secrets/env"; exit 128 )
-[ "$AZURE_FP_CLIENT_ID" ] || ( echo ">> AZURE_FP_CLIENT_ID is not set please validate your ./secrets/env"; exit 128 )
-[ "$KEYVAULT_PREFIX" ] || ( echo ">> KEYVAULT_PREFIX is not set please validate your ./secrets/env"; exit 128 )
-[ "$AZURE_RP_CLIENT_ID" ] || ( echo ">> AZURE_RP_CLIENT_ID is not set please validate your ./secrets/env"; exit 128 )
-[ "$PULL_SECRET" ] || ( echo ">> PULL_SECRET is not set please validate your ./secrets/env"; exit 128 )
-[ "$PARENT_DOMAIN_RESOURCEGROUP" ] || ( echo ">> PARENT_DOMAIN_RESOURCEGROUP is not set please validate your ./secrets/env"; exit 128 )
+[ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate ./$SECRETS/env"; exit 128 )
+[ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set please validate ./$SECRETS/env"; exit 128 )
+[ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set please validate ./$SECRETS/env"; exit 128 )
+[ "$DATABASE_ACCOUNT_NAME" ] || ( echo ">> DATABASE_ACCOUNT_NAME is not set please validate ./$SECRETS/env"; exit 128 )
+[ "$ADMIN_OBJECT_ID" ] || ( echo ">> ADMIN_OBJECT_ID is not set please validate ./$SECRETS/env"; exit 128 )
+[ "$PARENT_DOMAIN_NAME" ] || ( echo ">> PARENT_DOMAIN_NAME is not set please validate ./$SECRETS/env"; exit 128 )
+[ "$AZURE_FP_CLIENT_ID" ] || ( echo ">> AZURE_FP_CLIENT_ID is not set please validate ./$SECRETS/env"; exit 128 )
+[ "$KEYVAULT_PREFIX" ] || ( echo ">> KEYVAULT_PREFIX is not set please validate ./$SECRETS/env"; exit 128 )
+[ "$AZURE_RP_CLIENT_ID" ] || ( echo ">> AZURE_RP_CLIENT_ID is not set please validate ./$SECRETS/env"; exit 128 )
+[ "$PULL_SECRET" ] || ( echo ">> PULL_SECRET is not set please validate ./$SECRETS/env"; exit 128 )
+[ "$PARENT_DOMAIN_RESOURCEGROUP" ] || ( echo ">> PARENT_DOMAIN_RESOURCEGROUP is not set please validate ./$SECRETS/env"; exit 128 )

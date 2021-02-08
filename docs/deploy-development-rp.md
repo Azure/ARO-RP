@@ -83,26 +83,40 @@
    follow [prepare a shared RP development
    environment](prepare-a-shared-rp-development-environment.md).
 
-1. Set SECRET_SA_ACCOUNT_NAME to the name of the storage account containing your
-   shared development environment secrets and save them in `secrets`:
-
-   ```bash
-   SECRET_SA_ACCOUNT_NAME=rharosecrets make secrets
-   ```
 
 1. Copy, edit (if necessary) and source your environment file.  The required
    environment variable configuration is documented immediately below:
 
    ```bash
-   cp env.example env
-   vi env
-   . ./env
+   cp env.example env.public
+   vi env.public
    ```
+
+   (If you plan on using multiple subscriptions, make a separate environment
+   file for each.)
 
    * `LOCATION`: Location of the shared RP development environment (default:
      `eastus`).
    * `RP_MODE`: Set to `development` to use a development RP running at
      https://localhost:8443/.
+   * `SECRETS`: Set to the relative path in which to store secrets. Must begin
+     with `secrets*`. Example: `secrets/public` (for a public cloud
+     subscription)
+
+1. Source the environment file. Ignore the `No such file or directory` error;
+   you are about to create that directory.
+
+   ```bash
+   . ./env.public
+   ```
+
+1. Set `SECRET_SA_ACCOUNT_NAME` to the name of the storage account containing
+   your shared development environment secrets, and run `make secrets` to save
+   them in `$SECRETS`:
+
+   ```bash
+   SECRETS=secrets/public SECRET_SA_ACCOUNT_NAME=rharosecrets make secrets
+   ```
 
 1. Create your own RP database:
 
@@ -191,7 +205,7 @@
 * SSH to the bootstrap node:
 > __NOTE:__ If you have a password-based `sudo` command, you must first authenticate before running `sudo` in the background
   ```bash
-  sudo openvpn secrets/vpn-$LOCATION.ovpn &
+  sudo openvpn $SECRETS/vpn-$LOCATION.ovpn &
   CLUSTER=cluster hack/ssh-agent.sh bootstrap
   ```
 

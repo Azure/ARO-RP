@@ -99,14 +99,14 @@ then
 fi
 echo "######################################"
 
-[ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; exit 128 )
+[ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate ./$SECRETS/env"; exit 128 )
 if [ "$RP_MODE" = "development" ]
 then
-    [ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set; please validate your ./secrets/env"; exit 128 )
-    [ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set; please validate your ./secrets/env"; exit 128 )
-    [ "$DATABASE_ACCOUNT_NAME" ] || ( echo ">> DATABASE_ACCOUNT_NAME is not set; please validate your ./secrets/env"; exit 128 )
-    [ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set; please validate your ./secrets/env"; exit 128 )
+    [ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set; please validate ./$SECRETS/env"; exit 128 )
+    [ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set; please validate ./$SECRETS/env"; exit 128 )
+    [ "$DATABASE_ACCOUNT_NAME" ] || ( echo ">> DATABASE_ACCOUNT_NAME is not set; please validate ./$SECRETS/env"; exit 128 )
+    [ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set; please validate ./$SECRETS/env"; exit 128 )
 fi
-[ "$AZURE_SUBSCRIPTION_ID" ] || ( echo ">> AZURE_SUBSCRIPTION_ID is not set; please validate your ./secrets/env"; exit 128 )
+[ "$AZURE_SUBSCRIPTION_ID" ] || ( echo ">> AZURE_SUBSCRIPTION_ID is not set; please validate ./$SECRETS/env"; exit 128 )
 
 az account set -s $AZURE_SUBSCRIPTION_ID >/dev/null

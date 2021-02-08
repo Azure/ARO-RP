@@ -13,8 +13,9 @@ jobs:
       azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
   - script: |
       export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
+      export SECRETS=$(SECRETS)
       make secrets
-      . secrets/env
+      . $SECRETS/env
       echo "##vso[task.setvariable variable=RP_MODE]$RP_MODE"
     displayName: 🔑 Downloading certificates and secrets from storage account
     name: setEnv
@@ -25,7 +26,7 @@ jobs:
       set -e
       set -o pipefail
 
-      . secrets/env
+      . $SECRETS/env
 
       az account set -s $AZURE_SUBSCRIPTION_ID
 

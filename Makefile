@@ -80,7 +80,7 @@ secrets:
 	@[ "${SECRETS}" ] || ( echo ">> SECRETS is not set"; exit 1 )
 	rm -rf ${SECRETS}
 	az storage blob download -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
-	mkdir ${SECRETS} && tar -xzf secrets.tar.gz -C ${SECRETS}
+	mkdir -p ${SECRETS} && tar -xzf secrets.tar.gz -C ${SECRETS}
 	rm secrets.tar.gz
 
 secrets-update:

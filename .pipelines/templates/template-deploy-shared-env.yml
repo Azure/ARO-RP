@@ -6,7 +6,7 @@ steps:
 - script: |
     set -e
 
-    . secrets/env
+    . $SECRETS/env
     . ./hack/devtools/deploy-shared-env.sh
     trap 'rm -f devops-spn.json' EXIT
     base64 -d >devops-spn.json <<<${{ parameters.azureDevOpsJSONSPN }}

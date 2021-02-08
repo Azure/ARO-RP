@@ -67,10 +67,12 @@ locations.
    cd ${GOPATH:-$HOME/go}/src/github.com/Azure/ARO-RP
    ```
 
-1. Prepare the secrets directory:
+1. Set the secrets directory environment variable to a value beginning in
+   `secrets` and create the directory:
 
    ```bash
-   mkdir -p secrets
+   export SECRETS=secrets/public
+   mkdir -p $SECRETS
    ```
 
 
@@ -103,7 +105,7 @@ locations.
 
    ```bash
    go run ./hack/genkey -client firstparty
-   mv firstparty.* secrets
+   mv firstparty.* $SECRETS
    ```
 
    Now create the application:
@@ -116,7 +118,7 @@ locations.
      -o tsv)"
    az ad app credential reset \
      --id "$AZURE_FP_CLIENT_ID" \
-     --cert "$(base64 -w0 <secrets/firstparty.crt)" >/dev/null
+     --cert "$(base64 -w0 <$SECRETS/firstparty.crt)" >/dev/null
    az ad sp create --id "$AZURE_FP_CLIENT_ID" >/dev/null
    ```
 
@@ -203,7 +205,7 @@ locations.
 
    ```bash
    go run ./hack/genkey -client portal-client
-   mv portal-client.* secrets
+   mv portal-client.* $SECRETS
    ```
 
    ```bash
@@ -215,7 +217,7 @@ locations.
      -o tsv)"
    az ad app credential reset \
      --id "$AZURE_PORTAL_CLIENT_ID" \
-     --cert "$(base64 -w0 <secrets/portal-client.crt)" >/dev/null
+     --cert "$(base64 -w0 <$SECRETS/portal-client.crt)" >/dev/null
    ```
 
    TODO: more steps are needed to configure aro-v4-portal-shared.
@@ -228,15 +230,15 @@ locations.
 
    ```bash
    go run ./hack/genkey -ca vpn-ca
-   mv vpn-ca.* secrets
+   mv vpn-ca.* $SECRETS
    ```
 
 1. Create the VPN client key/certificate.  A suitable key/certificate file can be
    generated using the following helper utility:
 
    ```bash
-   go run ./hack/genkey -client -keyFile secrets/vpn-ca.key -certFile secrets/vpn-ca.crt vpn-client
-   mv vpn-client.* secrets
+   go run ./hack/genkey -client -keyFile $SECRETS/vpn-ca.key -certFile $SECRETS/vpn-ca.crt vpn-client
+   mv vpn-client.* $SECRETS
    ```
 
 1. Create the proxy serving key/certificate.  A suitable key/certificate file
@@ -244,7 +246,7 @@ locations.
 
    ```bash
    go run ./hack/genkey proxy
-   mv proxy.* secrets
+   mv proxy.* $SECRETS
    ```
 
 1. Create the proxy client key/certificate.  A suitable key/certificate file can
@@ -252,14 +254,14 @@ locations.
 
    ```bash
    go run ./hack/genkey -client proxy-client
-   mv proxy-client.* secrets
+   mv proxy-client.* $SECRETS
    ```
 
 1. Create the proxy ssh key/certificate.  A suitable key/certificate file can
    be generated using the following helper utility:
 
    ```bash
-   ssh-keygen -f secrets/proxy_id_rsa -N ''
+   ssh-keygen -f $SECRETS/proxy_id_rsa -N ''
    ```
 
 1. Create an RP serving key/certificate.  A suitable key/certificate file
@@ -267,7 +269,7 @@ locations.
 
    ```bash
    go run ./hack/genkey localhost
-   mv localhost.* secrets
+   mv localhost.* $SECRETS
    ```
 
 
@@ -287,10 +289,10 @@ locations.
    PROXY_DOMAIN_NAME_LABEL=aroproxy
    ```
 
-1. Create the secrets/env file:
+1. Create the $SECRETS/env file:
 
    ```bash
-   cat >secrets/env <<EOF
+   cat >$SECRETS/env <<EOF
    export AZURE_TENANT_ID='$AZURE_TENANT_ID'
    export AZURE_SUBSCRIPTION_ID='$AZURE_SUBSCRIPTION_ID'
    export AZURE_ARM_CLIENT_ID='$AZURE_ARM_CLIENT_ID'
@@ -384,15 +386,15 @@ each of the bash functions below.
    az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-mdm \
-        --file secrets/rp-metrics-int.pem
+        --file $SECRETS/rp-metrics-int.pem
    az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-mdsd \
-        --file secrets/rp-logging-int.pem
+        --file $SECRETS/rp-logging-int.pem
    az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name cluster-mdsd \
-        --file secrets/cluster-logging-int.pem
+        --file $SECRETS/cluster-logging-int.pem
    ```
 
    Note: in development, if you don't have valid certs for these, you can just
@@ -406,11 +408,11 @@ integration. These should be rotated and generated in the keyvault itself:
 ```
 Vault Name: "$KEYVAULT_PREFIX-svc"
 Certificate: rp-firstparty
-Development value: secrets/firstparty.pem
+Development value: $SECRETS/firstparty.pem
 
 Vault Name: "$KEYVAULT_PREFIX-svc"
 Certificate: cluster-mdsd
-Development value: secrets/cluster-logging-int.pem
+Development value: $SECRETS/cluster-logging-int.pem
 ```
 
 1. Create nameserver records in the parent DNS zone:
