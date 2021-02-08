@@ -13,7 +13,9 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, count int) error {
@@ -101,10 +103,17 @@ func NewAzureQuotaValidator(ctx context.Context, log *logrus.Entry, env env.Inte
 		return nil, err
 	}
 
-	spAuthorizer, err := validateServicePrincipalProfile(ctx, log, env, oc, subscriptionDoc)
+	err = validateServicePrincipalProfile(ctx, log, env, oc, subscriptionDoc)
 	if err != nil {
 		return nil, err
 	}
+
+	token, err := aad.GetToken(ctx, log, oc, subscriptionDoc, env.Environment().ActiveDirectoryEndpoint, env.Environment().ResourceManagerEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	spAuthorizer := refreshable.NewAuthorizer(token)
 
 	validator := &quotaValidator{
 		log: log,
