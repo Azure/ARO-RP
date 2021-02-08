@@ -35,7 +35,6 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	for _, key := range []string{
 		"DST_AUTH",
 		"DST_ACR_NAME",
-		"SRC_AUTH_GENEVA",
 		"SRC_AUTH_QUAY",
 		"SRC_AUTH_REDHAT",
 	} {
@@ -57,11 +56,6 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	dstAcr, _ := os.LookupEnv("DST_ACR_NAME")
-
-	srcAuthGeneva, err := getAuth("SRC_AUTH_GENEVA")
-	if err != nil {
-		return err
-	}
 
 	srcAuthQuay, err := getAuth("SRC_AUTH_QUAY")
 	if err != nil {
@@ -105,7 +99,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 			version.MdmImage("linuxgeneva-microsoft" + acrDomainSuffix),
 		} {
 			log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
-			err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
+			err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, nil)
 			if err != nil {
 				log.Errorf("%s: %s\n", ref, err)
 				errorOccurred = true

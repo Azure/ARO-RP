@@ -2,7 +2,6 @@ parameters:
   deployerDirectory: ''
   dstAuth: ''
   dstACRName: ''
-  srcAuthGeneva: ''
   srcAuthQuay: ''
   srcAuthRedhat: ''
 
@@ -12,7 +11,6 @@ steps:
 
     export DST_AUTH=${{ parameters.dstAuth }}
     export DST_ACR_NAME=${{ parameters.dstACRName }}
-    export SRC_AUTH_GENEVA=${{ parameters.srcAuthGeneva }}
     export SRC_AUTH_QUAY=${{ parameters.srcAuthQuay }}
     export SRC_AUTH_REDHAT=${{ parameters.srcAuthRedhat }}
 
