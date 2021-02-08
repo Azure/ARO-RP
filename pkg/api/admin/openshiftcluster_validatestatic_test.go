@@ -467,6 +467,20 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			wantErr: "400: PropertyChangeNotAllowed: properties.storageSuffix: Changing property 'properties.storageSuffix' is not allowed.",
 		},
 		{
+			name: "createdAt change is not allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						CreatedAt: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.CreatedAt = time.Date(1970, 1, 1, 0, 0, 0, 1, time.UTC)
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.createdAt.wall: Changing property 'properties.createdAt.wall' is not allowed.",
+		},
+		{
 			name: "createdBy change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
