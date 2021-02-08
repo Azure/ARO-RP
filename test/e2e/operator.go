@@ -183,7 +183,7 @@ var _ = Describe("ARO Operator - Routefix Daemonset", func() {
 })
 
 var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
-	Specify("cluster monitoring configmap should have persistent volume config", func() {
+	Specify("cluster monitoring configmap should not have persistent volume config", func() {
 		var cm *v1.ConfigMap
 		var err error
 		configMapExists := func() (bool, error) {
@@ -206,8 +206,8 @@ var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
 			log.Warn(err)
 		}
 
-		Expect(configData.PrometheusK8s.Retention).To(Equal("15d"))
-		Expect(configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage).To(Equal("100Gi"))
+		Expect(configData.PrometheusK8s.Retention).To(Equal(""))
+		Expect(configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage).To(Equal(""))
 	})
 
 	Specify("cluster monitoring configmap should be restored if deleted", func() {
