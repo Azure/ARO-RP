@@ -1971,7 +1971,7 @@ GO_VERSION=1.14.9
 curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz | tar -C /usr/local -xz
 ln -s /usr/local/go/bin/* /usr/local/bin
 
-VSTS_AGENT_VERSION=2.175.2
+VSTS_AGENT_VERSION=2.181.1
 mkdir /home/cloud-user/agent
 pushd /home/cloud-user/agent
 curl https://vstsagentpackage.azureedge.net/agent/${VSTS_AGENT_VERSION}/vsts-agent-linux-x64-${VSTS_AGENT_VERSION}.tar.gz | tar -xz
