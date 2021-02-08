@@ -181,7 +181,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 					},
 				},
 				Features: arov1alpha1.FeaturesSpec{
-					PersistentPrometheus: true,
+					PersistentPrometheus: false,
 				},
 			},
 		},
