@@ -188,7 +188,8 @@ func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actio
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
-	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+	return wait.PollImmediateUntil(20*time.Second, func() (bool, error) {
+		dv.log.Debug("retry validateActions")
 		permissions, err := dv.permissions.ListForResource(ctx, r.ResourceGroup, r.Provider, "", r.ResourceType, r.ResourceName)
 
 		if detailedErr, ok := err.(autorest.DetailedError); ok &&
