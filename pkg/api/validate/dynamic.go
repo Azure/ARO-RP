@@ -185,7 +185,7 @@ func (dv *dynamic) ValidateVnetDNS(ctx context.Context) error {
 }
 
 func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actions []string) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
