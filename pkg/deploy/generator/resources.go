@@ -846,9 +846,9 @@ cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 	Remove TIMESTAMP
 
 [FILTER]
-	Name rewrite_tag
+	Name grep
 	Match journald
-	Rule $LOGKIND ifxaudit ifxaudit false
+	Exclude LOGKIND ifxaudit
 
 [OUTPUT]
 	Name forward
