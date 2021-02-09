@@ -27,11 +27,6 @@ func TestAuditTargetResourceData(t *testing.T) {
 		expectedName string
 	}{
 		{
-			url:          "/healthz/ready",
-			expectedKind: "",
-			expectedName: "",
-		},
-		{
 			url:          fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 			expectedKind: resourceType,
 			expectedName: resourceName,

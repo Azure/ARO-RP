@@ -145,6 +145,10 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 			})
 
 			defer func() {
+				if r.URL.Path == "/healthz/ready" {
+					return
+				}
+
 				statusCode := w.(*logResponseWriter).statusCode
 				log.WithFields(logrus.Fields{
 					"body_read_bytes":      r.Body.(*logReadCloser).bytes,
