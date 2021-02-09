@@ -3,13 +3,6 @@ package generator
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// Deployment constants
-const (
-	ClustersKeyvaultSuffix = "-cls"
-	PortalKeyvaultSuffix   = "-por"
-	ServiceKeyvaultSuffix  = "-svc"
-)
-
 // Template file constants
 const (
 	FileRPProductionManagedIdentity      = "rp-production-managed-identity.json"

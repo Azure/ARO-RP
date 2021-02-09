@@ -15,7 +15,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
-	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	pkgportal "github.com/Azure/ARO-RP/pkg/portal"
@@ -72,7 +71,7 @@ func portal(ctx context.Context, log *logrus.Entry) error {
 	m := statsd.New(ctx, log.WithField("component", "portal"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
 
 	// TODO: should not be using the service keyvault here
-	serviceKeyvaultURI, err := keyvault.URI(_env, generator.ServiceKeyvaultSuffix)
+	serviceKeyvaultURI, err := keyvault.URI(_env, env.ServiceKeyvaultSuffix)
 	if err != nil {
 		return err
 	}
@@ -104,7 +103,7 @@ func portal(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	portalKeyvaultURI, err := keyvault.URI(_env, generator.PortalKeyvaultSuffix)
+	portalKeyvaultURI, err := keyvault.URI(_env, env.PortalKeyvaultSuffix)
 	if err != nil {
 		return err
 	}
