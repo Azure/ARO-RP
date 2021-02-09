@@ -76,7 +76,7 @@ func (r *AlertWebhookReconciler) setAlertManagerWebhook(ctx context.Context, add
 				continue
 			}
 
-			if name, ok := r["name"].(string); !ok || name != "null" {
+			if name, ok := r["name"].(string); !ok || (name != "null" && name != "Default") {
 				continue
 			}
 
