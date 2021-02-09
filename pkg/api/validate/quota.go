@@ -91,13 +91,13 @@ type AzureQuotaValidator interface {
 
 type quotaValidator struct {
 	log *logrus.Entry
-	env env.Interface
+	env env.Core
 
 	oc      *api.OpenShiftCluster
 	spUsage compute.UsageClient
 }
 
-func NewAzureQuotaValidator(ctx context.Context, log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument) (AzureQuotaValidator, error) {
+func NewAzureQuotaValidator(ctx context.Context, log *logrus.Entry, env env.Core, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument) (AzureQuotaValidator, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err

@@ -30,7 +30,7 @@ type OpenShiftClusterDynamicValidator interface {
 }
 
 // NewOpenShiftClusterDynamicValidator creates a new OpenShiftClusterDynamicValidator
-func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, fpAuthorizer refreshable.Authorizer) OpenShiftClusterDynamicValidator {
+func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Core, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, fpAuthorizer refreshable.Authorizer) OpenShiftClusterDynamicValidator {
 	return &openShiftClusterDynamicValidator{
 		log: log,
 		env: env,
@@ -52,7 +52,7 @@ func (*azureClaim) Valid() error {
 
 type openShiftClusterDynamicValidator struct {
 	log *logrus.Entry
-	env env.Interface
+	env env.Core
 
 	oc              *api.OpenShiftCluster
 	subscriptionDoc *api.SubscriptionDocument
@@ -295,7 +295,7 @@ func (dv *openShiftClusterDynamicValidator) validateProviders(ctx context.Contex
 	return nil
 }
 
-func validateServicePrincipalProfile(ctx context.Context, log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, sub *api.SubscriptionDocument) error {
+func validateServicePrincipalProfile(ctx context.Context, log *logrus.Entry, env env.Core, oc *api.OpenShiftCluster, sub *api.SubscriptionDocument) error {
 	// TODO: once aad.GetToken is mockable, write a unit test for this function
 
 	log.Print("validateServicePrincipalProfile")

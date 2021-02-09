@@ -49,7 +49,7 @@ type dynamic struct {
 	virtualNetworks virtualNetworksGetClient
 }
 
-func NewValidator(log *logrus.Entry, env env.Interface, masterSubnetID string, workerSubnetIDs []string, subscriptionID string, authorizer refreshable.Authorizer, code string, typ string) (*dynamic, error) {
+func NewValidator(log *logrus.Entry, env env.Core, masterSubnetID string, workerSubnetIDs []string, subscriptionID string, authorizer refreshable.Authorizer, code string, typ string) (*dynamic, error) {
 	vnetID, _, err := subnet.Split(masterSubnetID)
 	if err != nil {
 		return nil, err
