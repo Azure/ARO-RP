@@ -182,40 +182,6 @@ func TestSecurity(t *testing.T) {
 			name:           "ready url, no client certificate",
 			url:            "https://server/healthz/ready",
 			wantStatusCode: http.StatusOK,
-			wantAuditPayloads: []*audit.Payload{
-				{
-					EnvVer:               audit.IFXAuditVersion,
-					EnvName:              audit.IFXAuditName,
-					EnvFlags:             257,
-					EnvAppID:             audit.SourceRP,
-					EnvCloudName:         _env.Environment().Name,
-					EnvCloudRole:         audit.CloudRoleRP,
-					EnvCloudRoleInstance: _env.Hostname(),
-					EnvCloudEnvironment:  _env.Environment().Name,
-					EnvCloudLocation:     _env.Location(),
-					EnvCloudVer:          audit.IFXAuditCloudVer,
-					CallerIdentities: []audit.CallerIdentity{
-						{
-							CallerDisplayName:   "",
-							CallerIdentityType:  "ApplicationID",
-							CallerIdentityValue: "Go-http-client/1.1",
-							CallerIPAddress:     "bufferedpipe",
-						},
-					},
-					Category:      "ResourceManagement",
-					OperationName: "GET /healthz/ready",
-					Result: audit.Result{
-						ResultType:        "Success",
-						ResultDescription: "Status code: 200",
-					},
-					TargetResources: []audit.TargetResource{
-						{
-							TargetResourceType: "",
-							TargetResourceName: "",
-						},
-					},
-				},
-			},
 		},
 		{
 			name:           "empty url, invalid certificate",
@@ -319,40 +285,6 @@ func TestSecurity(t *testing.T) {
 			key:            invalidclientkey,
 			cert:           invalidclientcerts[0],
 			wantStatusCode: http.StatusOK,
-			wantAuditPayloads: []*audit.Payload{
-				{
-					EnvVer:               audit.IFXAuditVersion,
-					EnvName:              audit.IFXAuditName,
-					EnvFlags:             257,
-					EnvAppID:             audit.SourceRP,
-					EnvCloudName:         _env.Environment().Name,
-					EnvCloudRole:         audit.CloudRoleRP,
-					EnvCloudRoleInstance: _env.Hostname(),
-					EnvCloudEnvironment:  _env.Environment().Name,
-					EnvCloudLocation:     _env.Location(),
-					EnvCloudVer:          audit.IFXAuditCloudVer,
-					CallerIdentities: []audit.CallerIdentity{
-						{
-							CallerDisplayName:   "",
-							CallerIdentityType:  "ApplicationID",
-							CallerIdentityValue: "Go-http-client/1.1",
-							CallerIPAddress:     "bufferedpipe",
-						},
-					},
-					Category:      "ResourceManagement",
-					OperationName: "GET /healthz/ready",
-					Result: audit.Result{
-						ResultType:        "Success",
-						ResultDescription: "Status code: 200",
-					},
-					TargetResources: []audit.TargetResource{
-						{
-							TargetResourceType: "",
-							TargetResourceName: "",
-						},
-					},
-				},
-			},
 		},
 		{
 			name:           "empty url, valid certificate",
@@ -552,40 +484,6 @@ func TestSecurity(t *testing.T) {
 			key:            validclientkey,
 			cert:           validclientcerts[0],
 			wantStatusCode: http.StatusOK,
-			wantAuditPayloads: []*audit.Payload{
-				{
-					EnvVer:               audit.IFXAuditVersion,
-					EnvName:              audit.IFXAuditName,
-					EnvFlags:             257,
-					EnvAppID:             audit.SourceRP,
-					EnvCloudName:         _env.Environment().Name,
-					EnvCloudRole:         audit.CloudRoleRP,
-					EnvCloudRoleInstance: _env.Hostname(),
-					EnvCloudEnvironment:  _env.Environment().Name,
-					EnvCloudLocation:     _env.Location(),
-					EnvCloudVer:          audit.IFXAuditCloudVer,
-					CallerIdentities: []audit.CallerIdentity{
-						{
-							CallerDisplayName:   "",
-							CallerIdentityType:  "ApplicationID",
-							CallerIdentityValue: "Go-http-client/1.1",
-							CallerIPAddress:     "bufferedpipe",
-						},
-					},
-					Category:      "ResourceManagement",
-					OperationName: "GET /healthz/ready",
-					Result: audit.Result{
-						ResultType:        "Success",
-						ResultDescription: "Status code: 200",
-					},
-					TargetResources: []audit.TargetResource{
-						{
-							TargetResourceType: "",
-							TargetResourceName: "",
-						},
-					},
-				},
-			},
 		},
 		{
 			name:           "ready url, valid admin certificate",
@@ -593,40 +491,6 @@ func TestSecurity(t *testing.T) {
 			key:            validadminclientkey,
 			cert:           validadminclientcerts[0],
 			wantStatusCode: http.StatusOK,
-			wantAuditPayloads: []*audit.Payload{
-				{
-					EnvVer:               audit.IFXAuditVersion,
-					EnvName:              audit.IFXAuditName,
-					EnvFlags:             257,
-					EnvAppID:             audit.SourceRP,
-					EnvCloudName:         _env.Environment().Name,
-					EnvCloudRole:         audit.CloudRoleRP,
-					EnvCloudRoleInstance: _env.Hostname(),
-					EnvCloudEnvironment:  _env.Environment().Name,
-					EnvCloudLocation:     _env.Location(),
-					EnvCloudVer:          audit.IFXAuditCloudVer,
-					CallerIdentities: []audit.CallerIdentity{
-						{
-							CallerDisplayName:   "",
-							CallerIdentityType:  "ApplicationID",
-							CallerIdentityValue: "Go-http-client/1.1",
-							CallerIPAddress:     "bufferedpipe",
-						},
-					},
-					Category:      "ResourceManagement",
-					OperationName: "GET /healthz/ready",
-					Result: audit.Result{
-						ResultType:        "Success",
-						ResultDescription: "Status code: 200",
-					},
-					TargetResources: []audit.TargetResource{
-						{
-							TargetResourceType: "",
-							TargetResourceName: "",
-						},
-					},
-				},
-			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
