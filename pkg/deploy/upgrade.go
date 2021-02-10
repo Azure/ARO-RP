@@ -12,7 +12,6 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/to"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -132,7 +131,7 @@ func (d *deployer) saveRPVersion(ctx context.Context) error {
 	}
 
 	blobClient := azstorage.NewAccountSASClient(
-		*d.config.Configuration.RPVersionStorageAccountName, v, azure.PublicCloud).GetBlobService()
+		*d.config.Configuration.RPVersionStorageAccountName, v, *d.env.Environment()).GetBlobService()
 
 	containerRef := blobClient.GetContainerReference("rpversion")
 

@@ -131,7 +131,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		}
 		p.acrDomain = acrResource.ResourceName + "." + p.Environment().ContainerRegistryDNSSuffix
 	} else {
-		p.acrDomain = "arointsvc" + "." + p.Environment().ContainerRegistryDNSSuffix
+		p.acrDomain = "arointsvc" + "." + azure.PublicCloud.ContainerRegistryDNSSuffix // TODO: make cloud aware once this is set up for US Gov Cloud
 	}
 
 	return p, nil

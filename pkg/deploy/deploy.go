@@ -39,6 +39,7 @@ type Deployer interface {
 
 type deployer struct {
 	log *logrus.Entry
+	env env.Core
 
 	globaldeployments      features.DeploymentsClient
 	globalgroups           features.ResourceGroupsClient
@@ -81,6 +82,7 @@ func New(ctx context.Context, log *logrus.Entry, env env.Core, config *RPConfig,
 
 	return &deployer{
 		log: log,
+		env: env,
 
 		globaldeployments:      features.NewDeploymentsClient(env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
 		globalgroups:           features.NewResourceGroupsClient(env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
