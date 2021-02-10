@@ -236,7 +236,7 @@ systemctl enable proxy.service
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
 							Sku:       to.StringPtr("7-LVM"),
-							Version:   to.StringPtr("7.9.2020100116"),
+							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
 							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
@@ -1218,7 +1218,7 @@ done
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
 							Sku:       to.StringPtr("7-LVM"),
-							Version:   to.StringPtr("7.9.2020100116"),
+							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
 							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
@@ -2045,7 +2045,7 @@ chmod +x /etc/cron.hourly/tmpwatch
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
 							Sku:       to.StringPtr("7-LVM"),
-							Version:   to.StringPtr("7.9.2020100116"),
+							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
 							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
