@@ -814,7 +814,7 @@ EOF
 cat >/etc/yum.repos.d/td-agent-bit.repo <<'EOF'
 [td-agent-bit]
 name=td-agent-bit
-baseurl=https://packages.fluentbit.io/centos/7
+baseurl=https://packages.fluentbit.io/centos/7/$basearch
 enabled=yes
 gpgcheck=yes
 EOF
@@ -847,9 +847,9 @@ cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 	Remove TIMESTAMP
 
 [FILTER]
-	Name grep
+	Name rewrite_tag
 	Match journald
-	Exclude LOGKIND ifxaudit
+	Rule $LOGKIND ifxaudit ifxaudit false
 
 [OUTPUT]
 	Name forward

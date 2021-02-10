@@ -1,7 +1,7 @@
 FROM registry.access.redhat.com/rhel7:latest
 ARG VERSION
 RUN \
-  echo -e '[td-agent-bit]\nbaseurl=https://packages.fluentbit.io/centos/7' >/etc/yum.repos.d/td-agent-bit.repo && \
+  echo -e '[td-agent-bit]\nbaseurl=https://packages.fluentbit.io/centos/7/$basearch' >/etc/yum.repos.d/td-agent-bit.repo && \
   rpm --import https://packages.fluentbit.io/fluentbit.key && \
   yum -y update && \
   yum -y install td-agent-bit-$VERSION && \

@@ -37,8 +37,8 @@ image-aro: aro e2e.test
 	docker build --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
 
 image-fluentbit:
-	docker build --no-cache --build-arg VERSION=1.3.9-1 \
-	  -f Dockerfile.fluentbit -t ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.3.9-1 .
+	docker build --no-cache --build-arg VERSION=1.6.10-1 \
+	  -f Dockerfile.fluentbit -t ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.6.10-1 .
 
 image-proxy: proxy
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
@@ -56,7 +56,7 @@ ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
 endif
 
 publish-image-fluentbit: image-fluentbit
-	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.3.9-1
+	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.6.10-1
 
 publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
