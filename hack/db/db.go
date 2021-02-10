@@ -13,7 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
-	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -36,7 +35,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	serviceKeyvaultURI, err := keyvault.URI(_env, generator.ServiceKeyvaultSuffix)
+	serviceKeyvaultURI, err := keyvault.URI(_env, env.ServiceKeyvaultSuffix)
 	if err != nil {
 		return err
 	}

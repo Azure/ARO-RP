@@ -17,7 +17,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
@@ -90,12 +89,12 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
-	clustersKeyvaultURI, err := keyvault.URI(p, generator.ClustersKeyvaultSuffix)
+	clustersKeyvaultURI, err := keyvault.URI(p, ClustersKeyvaultSuffix)
 	if err != nil {
 		return nil, err
 	}
 
-	serviceKeyvaultURI, err := keyvault.URI(p, generator.ServiceKeyvaultSuffix)
+	serviceKeyvaultURI, err := keyvault.URI(p, ServiceKeyvaultSuffix)
 	if err != nil {
 		return nil, err
 	}

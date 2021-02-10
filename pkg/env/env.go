@@ -30,6 +30,9 @@ const (
 	PortalServerClientSecretName     = "portal-client"
 	PortalServerSessionKeySecretName = "portal-session-key"
 	PortalServerSSHKeySecretName     = "portal-sshkey"
+	ClustersKeyvaultSuffix           = "-cls"
+	PortalKeyvaultSuffix             = "-por"
+	ServiceKeyvaultSuffix            = "-svc"
 )
 
 type Interface interface {

@@ -13,7 +13,6 @@ import (
 	"k8s.io/client-go/tools/metrics"
 
 	"github.com/Azure/ARO-RP/pkg/database"
-	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
@@ -61,7 +60,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	// TODO: should not be using the service keyvault here
-	serviceKeyvaultURI, err := keyvault.URI(_env, generator.ServiceKeyvaultSuffix)
+	serviceKeyvaultURI, err := keyvault.URI(_env, env.ServiceKeyvaultSuffix)
 	if err != nil {
 		return err
 	}

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
 
@@ -325,7 +326,7 @@ func (g *generator) preDeployTemplate() *arm.Template {
 			p.Type = "array"
 			p.DefaultValue = []string{}
 		case "keyvaultPrefix":
-			p.MaxLength = 24 - max(len(ClustersKeyvaultSuffix), len(ServiceKeyvaultSuffix))
+			p.MaxLength = 24 - max(len(env.ClustersKeyvaultSuffix), len(env.ServiceKeyvaultSuffix), len(env.PortalKeyvaultSuffix))
 		}
 		t.Parameters[param] = p
 	}
@@ -407,11 +408,14 @@ func (g *generator) sharedDevelopmentEnvTemplate() *arm.Template {
 	return t
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
+func max(is ...int) int {
+	max := is[0]
+	for _, i := range is {
+		if max < i {
+			max = i
+		}
 	}
-	return b
+	return max
 }
 
 func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
