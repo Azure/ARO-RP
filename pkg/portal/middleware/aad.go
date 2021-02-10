@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/coreos/go-oidc"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -24,6 +23,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/microsoft"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 )
@@ -69,8 +69,8 @@ type oidctoken interface {
 	Claims(interface{}) error
 }
 
-func NewVerifier(ctx context.Context, tenantID, clientID string) (Verifier, error) {
-	provider, err := oidc.NewProvider(ctx, "https://login.microsoftonline.com/"+tenantID+"/v2.0")
+func NewVerifier(ctx context.Context, env env.Core, clientID string) (Verifier, error) {
+	provider, err := oidc.NewProvider(ctx, env.Environment().ActiveDirectoryEndpoint+env.TenantID()+"/v2.0")
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +90,7 @@ type claims struct {
 type aad struct {
 	deploymentMode deployment.Mode
 	log            *logrus.Entry
+	env            env.Core
 	now            func() time.Time
 	rt             http.RoundTripper
 
@@ -106,12 +107,11 @@ type aad struct {
 	sessionTimeout time.Duration
 }
 
-func NewAAD(deploymentMode deployment.Mode,
-	log *logrus.Entry,
+func NewAAD(log *logrus.Entry,
+	env env.Core,
 	baseAccessLog *logrus.Entry,
 	hostname string,
 	sessionKey []byte,
-	tenantID string,
 	clientID string,
 	clientKey *rsa.PrivateKey,
 	clientCerts []*x509.Certificate,
@@ -123,19 +123,20 @@ func NewAAD(deploymentMode deployment.Mode,
 	}
 
 	a := &aad{
-		deploymentMode: deploymentMode,
+		deploymentMode: env.DeploymentMode(),
 		log:            log,
+		env:            env,
 		now:            time.Now,
 		rt:             http.DefaultTransport,
 
-		tenantID:    tenantID,
+		tenantID:    env.TenantID(),
 		clientID:    clientID,
 		clientKey:   clientKey,
 		clientCerts: clientCerts,
 		store:       sessions.NewCookieStore(sessionKey),
 		oauther: &oauth2.Config{
 			ClientID:    clientID,
-			Endpoint:    microsoft.AzureADEndpoint(tenantID),
+			Endpoint:    microsoft.AzureADEndpoint(env.TenantID()),
 			RedirectURL: "https://" + hostname + "/callback",
 			Scopes: []string{
 				"openid",
@@ -344,7 +345,7 @@ func (a *aad) callback(w http.ResponseWriter, r *http.Request) {
 // Treating this as a RoundTripper is more hackery -- this is because the
 // underlying oauth2 library is a little unextensible.
 func (a *aad) clientAssertion(req *http.Request) (*http.Response, error) {
-	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, a.tenantID)
+	oauthConfig, err := adal.NewOAuthConfig(a.env.Environment().ActiveDirectoryEndpoint, a.tenantID)
 	if err != nil {
 		return nil, err
 	}

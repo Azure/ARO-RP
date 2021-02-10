@@ -17,7 +17,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/form3tech-oss/jwt-go"
+	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
 	uuid "github.com/satori/go.uuid"
@@ -25,6 +27,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 )
@@ -79,7 +82,7 @@ func (c noopClaims) Claims(v interface{}) error {
 }
 
 func TestNewAAD(t *testing.T) {
-	_, err := NewAAD(deployment.Production, nil, nil, "", nil, "", "", nil, nil, nil, nil, nil)
+	_, err := NewAAD(nil, nil, nil, "", nil, "", nil, nil, nil, nil, nil)
 	if err.Error() != "invalid sessionKey" {
 		t.Error(err)
 	}
@@ -154,7 +157,13 @@ func TestAAD(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			a, err := NewAAD(deployment.Production, logrus.NewEntry(logrus.StandardLogger()), logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), "", "", nil, nil, nil, mux.NewRouter(), nil)
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+			env.EXPECT().TenantID().AnyTimes().Return("")
+
+			a, err := NewAAD(logrus.NewEntry(logrus.StandardLogger()), env, logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -244,7 +253,13 @@ func TestRedirect(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			a, err := NewAAD(deployment.Production, logrus.NewEntry(logrus.StandardLogger()), logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), "", "", nil, nil, nil, mux.NewRouter(), nil)
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+			env.EXPECT().TenantID().AnyTimes().Return("")
+
+			a, err := NewAAD(logrus.NewEntry(logrus.StandardLogger()), env, logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -354,7 +369,13 @@ func TestLogout(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			a, err := NewAAD(deployment.Production, logrus.NewEntry(logrus.StandardLogger()), logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), "", "", nil, nil, nil, mux.NewRouter(), nil)
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+			env.EXPECT().TenantID().AnyTimes().Return("")
+
+			a, err := NewAAD(logrus.NewEntry(logrus.StandardLogger()), env, logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -702,7 +723,13 @@ func TestCallback(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			a, err := NewAAD(deployment.Production, logrus.NewEntry(logrus.StandardLogger()), logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), "", clientID, clientkey, clientcerts, groups, mux.NewRouter(), tt.verifier)
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+			env.EXPECT().TenantID().AnyTimes().Return("")
+
+			a, err := NewAAD(logrus.NewEntry(logrus.StandardLogger()), env, logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), clientID, clientkey, clientcerts, groups, mux.NewRouter(), tt.verifier)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -812,9 +839,16 @@ func TestCallback(t *testing.T) {
 }
 
 func TestClientAssertion(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+	env := mock_env.NewMockInterface(controller)
+	env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+	env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+	env.EXPECT().TenantID().AnyTimes().Return("")
+
 	clientID := "00000000-0000-0000-0000-000000000000"
 
-	a, err := NewAAD(deployment.Production, logrus.NewEntry(logrus.StandardLogger()), logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), "", clientID, clientkey, clientcerts, nil, mux.NewRouter(), nil)
+	a, err := NewAAD(logrus.NewEntry(logrus.StandardLogger()), env, logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), clientID, clientkey, clientcerts, nil, mux.NewRouter(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

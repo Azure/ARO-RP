@@ -142,7 +142,7 @@ func portal(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	clientID := os.Getenv("AZURE_PORTAL_CLIENT_ID")
-	verifier, err := middleware.NewVerifier(ctx, _env.TenantID(), clientID)
+	verifier, err := middleware.NewVerifier(ctx, _env, clientID)
 	if err != nil {
 		return err
 	}
