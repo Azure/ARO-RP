@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
@@ -402,7 +403,17 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 }
 
 func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName string) error {
-	nsgs, err := c.securitygroups.List(ctx, "aro-"+clusterName)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
+	// very occasionally c.securitygroups.List returns an empty list in
+	// production.  No idea why.  Let's try retrying it...
+	var nsgs []mgmtnetwork.SecurityGroup
+	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		var err error
+		nsgs, err = c.securitygroups.List(ctx, "aro-"+clusterName)
+		return len(nsgs) > 0, err
+	}, timeoutCtx.Done())
 	if err != nil {
 		return err
 	}
