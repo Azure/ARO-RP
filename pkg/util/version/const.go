@@ -26,8 +26,8 @@ var (
 			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:48859a33222e306c8077b7d898d07241fd6d6dcf731d0b7cfc9ebf533b2fefa9",
 		},
 		{
-			Version:  NewVersion(4, 4, 32),
-			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:fcffc8b6c05f9cadd1ab96b134fcc4de28bcd8e11dd8aadb3a040baf54a0a072",
+			Version:  NewVersion(4, 4, 33),
+			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:a035dddd8a5e5c99484138951ef4aba021799b77eb9046f683a5466c23717738",
 		},
 		{
 			Version:  NewVersion(4, 3, 40),
