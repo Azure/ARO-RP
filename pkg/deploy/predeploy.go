@@ -123,6 +123,7 @@ func (d *deployer) enableEncryptionAtHostSubscriptionFeatureFlag(ctx context.Con
 		return nil
 	}
 
+	d.log.Print("registering Microsoft.Compute/EncryptionAtHost feature")
 	_, err = d.features.Register(ctx, "Microsoft.Compute", "EncryptionAtHost")
 	if err != nil {
 		return err
