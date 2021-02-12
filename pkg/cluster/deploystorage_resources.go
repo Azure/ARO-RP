@@ -90,19 +90,22 @@ func (m *manager) clusterServicePrincipalRBAC() []*arm.Resource {
 				[]mgmtauthorization.Permission{
 					{
 						Actions: &[]string{
+							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/applicationsecuritygroups
 							"Microsoft.Network/applicationSecurityGroups/read",
 							"Microsoft.Network/applicationSecurityGroups/write",
 							"Microsoft.Network/applicationSecurityGroups/delete",
 							"Microsoft.Network/applicationSecurityGroups/listIpConfigurations/action",
 
+							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/disks
 							"Microsoft.Compute/disks/read",
 							"Microsoft.Compute/disks/write",
 							"Microsoft.Compute/disks/delete",
 
+							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/internalloadbalancers
+							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/publicloadbalancers
 							"Microsoft.Network/loadBalancers/read",
 							"Microsoft.Network/loadBalancers/write",
 							"Microsoft.Network/loadBalancers/delete",
-
 							"Microsoft.Network/loadBalancers/backendAddressPools/read",
 							"Microsoft.Network/loadBalancers/backendAddressPools/write",
 							"Microsoft.Network/loadBalancers/backendAddressPools/delete",
@@ -112,17 +115,20 @@ func (m *manager) clusterServicePrincipalRBAC() []*arm.Resource {
 							"Microsoft.Network/loadBalancers/inboundNatRules/write",
 							"Microsoft.Network/loadBalancers/probes/join/action",
 
+							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/networkinterfaces
 							"Microsoft.Network/networkInterfaces/read",
 							"Microsoft.Network/networkInterfaces/write",
 							"Microsoft.Network/networkInterfaces/join/action",
 							"Microsoft.Network/networkInterfaces/delete",
 							"Microsoft.Network/networkInterfaces/ipconfigurations/join/action",
 
+							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/publicips
 							"Microsoft.Network/publicIPAddresses/read",
 							"Microsoft.Network/publicIPAddresses/write",
 							"Microsoft.Network/publicIPAddresses/delete",
 							"Microsoft.Network/publicIPAddresses/join/action",
 
+							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/routetables
 							"Microsoft.Network/routeTables/read",
 							"Microsoft.Network/routeTables/write",
 							"Microsoft.Network/routeTables/delete",
@@ -131,6 +137,7 @@ func (m *manager) clusterServicePrincipalRBAC() []*arm.Resource {
 							"Microsoft.Network/routeTables/routes/write",
 							"Microsoft.Network/routeTables/routes/delete",
 
+							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/securitygroups
 							"Microsoft.Network/networkSecurityGroups/read",
 							"Microsoft.Network/networkSecurityGroups/write",
 							"Microsoft.Network/networkSecurityGroups/delete",
@@ -139,28 +146,34 @@ func (m *manager) clusterServicePrincipalRBAC() []*arm.Resource {
 							"Microsoft.Network/networkSecurityGroups/securityRules/write",
 							"Microsoft.Network/networkSecurityGroups/securityRules/delete",
 
+							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/subnets
 							"Microsoft.Network/virtualNetworks/subnets/read",
 							"Microsoft.Network/virtualNetworks/subnets/write",
 							"Microsoft.Network/virtualNetworks/subnets/delete",
 							"Microsoft.Network/virtualNetworks/subnets/joinLoadBalancer/action",
 							"Microsoft.Network/virtualNetworks/subnets/join/action",
 
+							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/virtualnetworks
 							"Microsoft.Network/virtualNetworks/read",
 							"Microsoft.Network/virtualNetworks/write",
 							"Microsoft.Network/virtualNetworks/delete",
 							"Microsoft.Network/virtualNetworks/joinLoadBalancer/action",
 							"Microsoft.Network/virtualNetworks/join/action",
 
+							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/virtualmachines
 							"Microsoft.Compute/virtualMachines/read",
 							"Microsoft.Compute/virtualMachines/write",
 							"Microsoft.Compute/virtualMachines/delete",
 							"Microsoft.Compute/virtualMachines/redeploy/action",
 							"Microsoft.Compute/virtualMachines/restart/action",
 							"Microsoft.Compute/virtualMachines/start/action",
+
+							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/virtualmachineextensions
 							"Microsoft.Compute/virtualMachines/extensions/read",
 							"Microsoft.Compute/virtualMachines/extensions/write",
 							"Microsoft.Compute/virtualMachines/extensions/delete",
 
+							//based on openshift/cluster-insgress-operator /pkg/dns/azure/client
 							"Microsoft.Network/dnszones/A/read",
 							"Microsoft.Network/dnszones/A/write",
 							"Microsoft.Network/dnszones/A/delete",
@@ -171,6 +184,7 @@ func (m *manager) clusterServicePrincipalRBAC() []*arm.Resource {
 							"Microsoft.Network/dnszones/CNAME/write",
 							"Microsoft.Network/dnszones/CNAME/delete",
 
+							//based on openshift/cluster-insgress-operator /pkg/dns/azure/client
 							"Microsoft.Network/privateDnsZones/A/read",
 							"Microsoft.Network/privateDnsZones/A/write",
 							"Microsoft.Network/privateDnsZones/A/delete",
@@ -189,6 +203,7 @@ func (m *manager) clusterServicePrincipalRBAC() []*arm.Resource {
 							"Microsoft.ClassicStorage/storageAccounts/disks/write",
 							"Microsoft.ClassicStorage/storageAccounts/disks/delete",
 
+							//based on openshift/cluster-image-registry-operator /pkg/storage/azure
 							"Microsoft.Storage/storageAccounts/updateInternalProperties/action",
 							"Microsoft.Storage/storageAccounts/listkeys/action",
 							"Microsoft.Storage/storageAccounts/delete",
