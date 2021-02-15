@@ -10,10 +10,8 @@ import (
 	"strings"
 	"time"
 
-	azgraphrbac "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -22,13 +20,10 @@ import (
 	"github.com/openshift/installer/pkg/asset/targets"
 	"github.com/openshift/installer/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/bootstraplogging"
-	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -36,43 +31,6 @@ import (
 
 func (m *manager) createDNS(ctx context.Context) error {
 	return m.dns.Create(ctx, m.doc.OpenShiftCluster)
-}
-
-func (m *manager) clusterSPObjectID(ctx context.Context) (string, error) {
-	var clusterSPObjectID string
-	spp := &m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-
-	token, err := aad.GetToken(ctx, m.log, m.doc.OpenShiftCluster, m.subscriptionDoc, m.env.Environment().ActiveDirectoryEndpoint, m.env.Environment().GraphEndpoint)
-	if err != nil {
-		return "", err
-	}
-
-	spGraphAuthorizer := autorest.NewBearerAuthorizer(token)
-
-	applications := graphrbac.NewApplicationsClient(m.env.Environment(), m.subscriptionDoc.Subscription.Properties.TenantID, spGraphAuthorizer)
-
-	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-
-	// NOTE: Do not override err with the error returned by
-	// wait.PollImmediateUntil. Doing this will not propagate the latest error
-	// to the user in case when wait exceeds the timeout
-	_ = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		var res azgraphrbac.ServicePrincipalObjectResult
-		res, err = applications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
-		if err != nil {
-			if strings.Contains(err.Error(), "Authorization_IdentityNotFound") {
-				m.log.Info(err)
-				return false, nil
-			}
-			return false, err
-		}
-
-		clusterSPObjectID = *res.Value
-		return true, nil
-	}, timeoutCtx.Done())
-
-	return clusterSPObjectID, err
 }
 
 func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, image *releaseimage.Image) error {
