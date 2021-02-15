@@ -16,13 +16,17 @@ import (
 )
 
 func (m *manager) updateClusterData(ctx context.Context) error {
-	g, err := m.loadGraph(ctx)
+	pg, err := m.loadPersistedGraph(ctx)
 	if err != nil {
 		return err
 	}
 
-	installConfig := g.get(&installconfig.InstallConfig{}).(*installconfig.InstallConfig)
-	kubeadminPassword := g.get(&password.KubeadminPassword{}).(*password.KubeadminPassword)
+	var installConfig *installconfig.InstallConfig
+	var kubeadminPassword *password.KubeadminPassword
+	err = pg.get(&installConfig, &kubeadminPassword)
+	if err != nil {
+		return err
+	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.APIServerProfile.URL = "https://api." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + ":6443/"
