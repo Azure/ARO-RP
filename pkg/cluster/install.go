@@ -29,6 +29,7 @@ import (
 func (m *manager) AdminUpdate(ctx context.Context) error {
 	steps := []steps.Step{
 		steps.Action(m.initializeKubernetesClients), // must be first
+		steps.Action(m.fixupClusterSPObjectID),
 		steps.Action(m.deploySnapshotUpgradeTemplate),
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute),
@@ -75,6 +76,7 @@ func (m *manager) Install(ctx context.Context) error {
 				return err
 			}),
 			steps.Action(m.createDNS),
+			steps.Action(m.clusterSPObjectID),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
 				return m.deployStorageTemplate(ctx, installConfig, image)
 			})),

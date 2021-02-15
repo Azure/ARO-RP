@@ -98,11 +98,6 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		return err
 	}
 
-	clusterSPObjectID, err := m.clusterSPObjectID(ctx)
-	if err != nil {
-		return err
-	}
-
 	t := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
@@ -111,12 +106,12 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 			m.clusterStorageAccountBlob("ignition"),
 			m.clusterStorageAccountBlob("aro"),
 			m.clusterNSG(infraID, installConfig.Config.Azure.Region),
-			m.clusterServicePrincipalRBAC(clusterSPObjectID),
+			m.clusterServicePrincipalRBAC(),
 		},
 	}
 
 	if m.env.DeploymentMode() == deployment.Production {
-		t.Resources = append(t.Resources, m.denyAssignments(clusterSPObjectID))
+		t.Resources = append(t.Resources, m.denyAssignments())
 	}
 
 	err = m.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
@@ -159,17 +154,17 @@ func (m *manager) deploySnapshotUpgradeTemplate(ctx context.Context) error {
 		return nil
 	}
 
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-
-	clusterSPObjectID, err := m.clusterSPObjectID(ctx)
-	if err != nil {
-		return err
+	if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID == "" {
+		m.log.Print("skipping deploySnapshotUpgradeTemplate: SPObjectID is empty")
+		return nil
 	}
+
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	t := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
-		Resources:      []*arm.Resource{m.denyAssignments(clusterSPObjectID)},
+		Resources:      []*arm.Resource{m.denyAssignments()},
 	}
 
 	return m.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)

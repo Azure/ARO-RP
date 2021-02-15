@@ -20,7 +20,7 @@ var extraDenyAssignmentExclusions = map[string][]string{
 	},
 }
 
-func (m *manager) denyAssignments(clusterSPObjectID string) *arm.Resource {
+func (m *manager) denyAssignments() *arm.Resource {
 	notActions := []string{
 		"Microsoft.Network/networkSecurityGroups/join/action",
 		"Microsoft.Compute/disks/beginGetAccess/action",
@@ -65,7 +65,7 @@ func (m *manager) denyAssignments(clusterSPObjectID string) *arm.Resource {
 				},
 				ExcludePrincipals: &[]mgmtauthorization.Principal{
 					{
-						ID:   &clusterSPObjectID,
+						ID:   &m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID,
 						Type: to.StringPtr("ServicePrincipal"),
 					},
 				},
@@ -76,10 +76,10 @@ func (m *manager) denyAssignments(clusterSPObjectID string) *arm.Resource {
 	}
 }
 
-func (m *manager) clusterServicePrincipalRBAC(clusterSPObjectID string) *arm.Resource {
+func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 	return rbac.ResourceGroupRoleAssignmentWithName(
 		rbac.RoleContributor,
-		"'"+clusterSPObjectID+"'",
+		"'"+m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID+"'",
 		"guid(resourceGroup().id, 'SP / Contributor')",
 	)
 }

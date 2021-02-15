@@ -12,17 +12,18 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 )
 
-func (m *manager) clusterSPObjectID(ctx context.Context) (string, error) {
+func (m *manager) clusterSPObjectID(ctx context.Context) error {
 	var clusterSPObjectID string
 	spp := &m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 
 	token, err := aad.GetToken(ctx, m.log, m.doc.OpenShiftCluster, m.subscriptionDoc, m.env.Environment().ActiveDirectoryEndpoint, m.env.Environment().GraphEndpoint)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	spGraphAuthorizer := autorest.NewBearerAuthorizer(token)
@@ -49,6 +50,26 @@ func (m *manager) clusterSPObjectID(ctx context.Context) (string, error) {
 		clusterSPObjectID = *res.Value
 		return true, nil
 	}, timeoutCtx.Done())
+	if err != nil {
+		return err
+	}
 
-	return clusterSPObjectID, err
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID = clusterSPObjectID
+		return nil
+	})
+	return err
+}
+
+func (m *manager) fixupClusterSPObjectID(ctx context.Context) error {
+	if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID != "" {
+		return nil
+	}
+
+	err := m.clusterSPObjectID(ctx)
+	if err != nil {
+		m.log.Print(err)
+	}
+
+	return nil
 }

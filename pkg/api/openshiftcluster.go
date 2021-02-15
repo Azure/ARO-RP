@@ -156,6 +156,7 @@ type ServicePrincipalProfile struct {
 
 	ClientID     string       `json:"clientId,omitempty"`
 	ClientSecret SecureString `json:"clientSecret,omitempty"`
+	SPObjectID   string       `json:"spObjectId,omitempty"`
 }
 
 // NetworkProfile represents a network profile
