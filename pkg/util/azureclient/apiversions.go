@@ -14,6 +14,7 @@ var apiVersions = map[string]string{
 	"microsoft.authorization/roledefinitions": "2018-01-01-preview",
 	"microsoft.compute":                       "2020-06-01",
 	"microsoft.compute/disks":                 "2019-03-01", // 2020-06-01 doesn't exist for Microsoft.Compute/disks; needed in delete path
+	"microsoft.compute/snapshots":             "2020-05-01", // 2020-06-01 doesn't exist for Microsoft.Compute/snapshots; needed in list resources see https://github.com/Azure/ARO-RP/issues/1313
 	"microsoft.containerregistry":             "2019-05-01",
 	"microsoft.documentdb":                    "2019-08-01",
 	"microsoft.insights":                      "2018-03-01",
