@@ -853,6 +853,7 @@ cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 
 [OUTPUT]
 	Name forward
+	Match *
 	Port 29230
 EOF
 
