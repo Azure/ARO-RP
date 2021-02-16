@@ -4,6 +4,7 @@ ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
 
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
+    COMMAND = podman
 endif
 
 aro: generate
@@ -33,36 +34,36 @@ generate:
 	go generate ./...
 
 image-aro: aro e2e.test
-	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
+	$(COMMAND) pull registry.access.redhat.com/ubi8/ubi-minimal
+	$(COMMAND) build --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
 
 image-fluentbit:
-	docker build --no-cache --build-arg VERSION=1.6.10-1 \
+	$(COMMAND) build --no-cache --build-arg VERSION=1.6.10-1 \
 	  -f Dockerfile.fluentbit -t ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.6.10-1 .
 
 image-proxy: proxy
-	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build --no-cache -f Dockerfile.proxy -t ${RP_IMAGE_ACR}.azurecr.io/proxy:latest .
+	$(COMMAND) pull registry.access.redhat.com/ubi8/ubi-minimal
+	$(COMMAND) build --no-cache -f Dockerfile.proxy -t ${RP_IMAGE_ACR}.azurecr.io/proxy:latest .
 
 image-routefix:
-	docker pull registry.access.redhat.com/ubi8/ubi
-	docker build --no-cache -f Dockerfile.routefix -t ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT) .
+	$(COMMAND) pull registry.access.redhat.com/ubi8/ubi
+	$(COMMAND) build --no-cache -f Dockerfile.routefix -t ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT) .
 
 publish-image-aro: image-aro
-	docker push $(ARO_IMAGE)
+	$(COMMAND) push $(ARO_IMAGE)
 ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
-		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
-		docker push arointsvc.azurecr.io/aro:latest
+		$(COMMAND) tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
+		$(COMMAND) push arointsvc.azurecr.io/aro:latest
 endif
 
 publish-image-fluentbit: image-fluentbit
-	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.6.10-1
+	$(COMMAND) push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.6.10-1
 
 publish-image-proxy: image-proxy
-	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
+	$(COMMAND) push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
 
 publish-image-routefix: image-routefix
-	docker push ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT)
+	$(COMMAND) push ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT)
 
 proxy:
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./hack/proxy
