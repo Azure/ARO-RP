@@ -108,7 +108,9 @@ func NewAzureQuotaValidator(ctx context.Context, log *logrus.Entry, env env.Core
 		return nil, err
 	}
 
-	token, err := aad.GetToken(ctx, log, oc, subscriptionDoc, env.Environment().ActiveDirectoryEndpoint, env.Environment().ResourceManagerEndpoint)
+	am := aad.NewManager(log, env.Environment(), subscriptionDoc.Subscription.Properties.TenantID, oc.Properties.ServicePrincipalProfile.ClientID, string(oc.Properties.ServicePrincipalProfile.ClientSecret))
+
+	token, err := am.GetToken(ctx, env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
