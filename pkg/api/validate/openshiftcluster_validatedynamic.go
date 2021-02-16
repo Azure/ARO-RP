@@ -92,7 +92,8 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	token, err := aad.GetToken(ctx, dv.log, dv.oc, dv.subscriptionDoc, dv.env.Environment().ActiveDirectoryEndpoint, dv.env.Environment().ResourceManagerEndpoint)
+	spp := dv.oc.Properties.ServicePrincipalProfile
+	token, err := aad.GetToken(ctx, dv.log, spp.ClientID, string(spp.ClientSecret), dv.subscriptionDoc.Subscription.Properties.TenantID, dv.env.Environment().ActiveDirectoryEndpoint, dv.env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return err
 	}
@@ -300,7 +301,8 @@ func validateServicePrincipalProfile(ctx context.Context, log *logrus.Entry, env
 
 	log.Print("validateServicePrincipalProfile")
 
-	token, err := aad.GetToken(ctx, log, oc, sub, env.Environment().ActiveDirectoryEndpoint, env.Environment().GraphEndpoint)
+	spp := oc.Properties.ServicePrincipalProfile
+	token, err := aad.GetToken(ctx, log, spp.ClientID, string(spp.ClientSecret), sub.Subscription.Properties.TenantID, env.Environment().ActiveDirectoryEndpoint, env.Environment().GraphEndpoint)
 	if err != nil {
 		return err
 	}

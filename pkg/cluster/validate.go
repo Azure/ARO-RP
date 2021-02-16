@@ -25,6 +25,7 @@ func (m *manager) validateQuota(ctx context.Context) error {
 		return nil
 	}
 
+	// TODO: remove this with validator refactor
 	qv, err := validate.NewAzureQuotaValidator(ctx, m.log, m.env, m.doc.OpenShiftCluster, m.subscriptionDoc)
 	if err != nil {
 		return err
