@@ -3,7 +3,7 @@ parameters:
 steps:
 - script: |
     set -e
-    trap 'set +e; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af ; rm -rf ~/.docker/config.json' EXIT
+    trap 'set +e; for c in $(podman ps -aq); do podman rm -f $c; done; podman image prune -af ; rm -rf ~/.docker/config.json' EXIT
 
     export RP_IMAGE_ACR=${{ parameters.rpImageACR }}
 
