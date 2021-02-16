@@ -316,6 +316,7 @@ func (g *generator) devVpnPip() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
+		Condition:  "[equals(parameters('ciCapacity'), 0)]", // TODO(mj): Refactor g.conditionStanza for better usage
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
@@ -398,6 +399,7 @@ func (g *generator) devVPN() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/virtualNetworkGateways"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
+		Condition:  "[equals(parameters('ciCapacity'), 0)]", // TODO(mj): Refactor g.conditionStanza for better usage
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]",

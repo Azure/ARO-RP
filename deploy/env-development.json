@@ -44,7 +44,8 @@
             "type": "string"
         },
         "vpnCACertificate": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": ""
         }
     },
     "resources": [
@@ -58,6 +59,7 @@
             "name": "dev-vpn-pip",
             "type": "Microsoft.Network/publicIPAddresses",
             "location": "[resourceGroup().location]",
+            "condition": "[equals(parameters('ciCapacity'), 0)]",
             "apiVersion": "2019-07-01"
         },
         {
@@ -133,6 +135,7 @@
             "name": "dev-vpn",
             "type": "Microsoft.Network/virtualNetworkGateways",
             "location": "[resourceGroup().location]",
+            "condition": "[equals(parameters('ciCapacity'), 0)]",
             "apiVersion": "2019-07-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]",
