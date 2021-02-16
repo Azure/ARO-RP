@@ -2110,7 +2110,7 @@ chmod +x /etc/cron.hourly/tmpwatch
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
-		Condition:  "[greater(parameters('ciCapacity'),0)]", // TODO(mj): Refactor g.conditionStanza for better usage
+		Condition:  "[greater(parameters('ciCapacity'), 0)]", // TODO(mj): Refactor g.conditionStanza for better usage
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
 		},
