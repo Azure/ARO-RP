@@ -18,18 +18,24 @@ import (
 // generateAROServiceKubeconfig generates additional admin credentials and a
 // kubeconfig for the ARO service, based on the admin kubeconfig found in the
 // graph.
-func (m *manager) generateAROServiceKubeconfig(g graph) (*kubeconfig.AdminInternalClient, error) {
-	return generateKubeconfig(g, "system:aro-service", []string{"system:masters"})
+func (m *manager) generateAROServiceKubeconfig(pg persistedGraph) (*kubeconfig.AdminInternalClient, error) {
+	return generateKubeconfig(pg, "system:aro-service", []string{"system:masters"})
 }
 
 // generateAROSREKubeconfig generates additional admin credentials and a
 // kubeconfig for ARO SREs, based on the admin kubeconfig found in the graph.
-func (m *manager) generateAROSREKubeconfig(g graph) (*kubeconfig.AdminInternalClient, error) {
-	return generateKubeconfig(g, "system:aro-sre", nil)
+func (m *manager) generateAROSREKubeconfig(pg persistedGraph) (*kubeconfig.AdminInternalClient, error) {
+	return generateKubeconfig(pg, "system:aro-sre", nil)
 }
 
-func generateKubeconfig(g graph, commonName string, organization []string) (*kubeconfig.AdminInternalClient, error) {
-	ca := g.get(&tls.AdminKubeConfigSignerCertKey{}).(*tls.AdminKubeConfigSignerCertKey)
+func generateKubeconfig(pg persistedGraph, commonName string, organization []string) (*kubeconfig.AdminInternalClient, error) {
+	var ca *tls.AdminKubeConfigSignerCertKey
+	var adminInternalClient *kubeconfig.AdminInternalClient
+	err := pg.get(&ca, &adminInternalClient)
+	if err != nil {
+		return nil, err
+	}
+
 	cfg := &tls.CertCfg{
 		Subject:      pkix.Name{CommonName: commonName, Organization: organization},
 		KeyUsages:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
@@ -39,13 +45,12 @@ func generateKubeconfig(g graph, commonName string, organization []string) (*kub
 
 	var clientCertKey tls.AdminKubeConfigClientCertKey
 
-	err := clientCertKey.SignedCertKey.Generate(cfg, ca, strings.ReplaceAll(commonName, ":", "-"), tls.DoNotAppendParent)
+	err = clientCertKey.SignedCertKey.Generate(cfg, ca, strings.ReplaceAll(commonName, ":", "-"), tls.DoNotAppendParent)
 	if err != nil {
 		return nil, err
 	}
 
 	// create a Config for the new service kubeconfig based on the generated cluster admin Config
-	adminInternalClient := g.get(&kubeconfig.AdminInternalClient{}).(*kubeconfig.AdminInternalClient)
 	aroInternalClient := kubeconfig.AdminInternalClient{}
 	aroInternalClient.Config = &clientcmd.Config{
 		Clusters: adminInternalClient.Config.Clusters,

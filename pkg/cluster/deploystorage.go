@@ -77,7 +77,8 @@ func (m *manager) clusterSPObjectID(ctx context.Context) (string, error) {
 
 func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, image *releaseimage.Image) error {
 	if m.doc.OpenShiftCluster.Properties.InfraID == "" {
-		g := newGraph(&installconfig.InstallConfig{
+		g := graph{}
+		g.set(&installconfig.InstallConfig{
 			Config: &types.InstallConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: strings.ToLower(m.doc.OpenShiftCluster.Name),
@@ -181,7 +182,8 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		return err
 	}
 
-	g := newGraph(installConfig, image, clusterID, bootstrapLoggingConfig)
+	g := graph{}
+	g.set(installConfig, image, clusterID, bootstrapLoggingConfig)
 
 	m.log.Print("resolving graph")
 	for _, a := range targets.Cluster {
@@ -218,7 +220,7 @@ func (m *manager) deploySnapshotUpgradeTemplate(ctx context.Context) error {
 }
 
 func (m *manager) attachNSGsAndPatch(ctx context.Context) error {
-	g, err := m.loadGraph(ctx)
+	pg, err := m.loadPersistedGraph(ctx)
 	if err != nil {
 		return err
 	}
@@ -267,12 +269,17 @@ func (m *manager) attachNSGsAndPatch(ctx context.Context) error {
 		}
 	}
 
-	adminInternalClient := g.get(&kubeconfig.AdminInternalClient{}).(*kubeconfig.AdminInternalClient)
-	aroServiceInternalClient, err := m.generateAROServiceKubeconfig(g)
+	var adminInternalClient *kubeconfig.AdminInternalClient
+	err = pg.get(&adminInternalClient)
 	if err != nil {
 		return err
 	}
-	aroSREInternalClient, err := m.generateAROSREKubeconfig(g)
+
+	aroServiceInternalClient, err := m.generateAROServiceKubeconfig(pg)
+	if err != nil {
+		return err
+	}
+	aroSREInternalClient, err := m.generateAROSREKubeconfig(pg)
 	if err != nil {
 		return err
 	}

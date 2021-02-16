@@ -14,12 +14,12 @@ func (m *manager) fixSREKubeconfig(ctx context.Context) error {
 		return nil
 	}
 
-	g, err := m.loadGraph(ctx)
+	pg, err := m.loadPersistedGraph(ctx)
 	if err != nil {
 		return err
 	}
 
-	aroSREInternalClient, err := m.generateAROSREKubeconfig(g)
+	aroSREInternalClient, err := m.generateAROSREKubeconfig(pg)
 	if err != nil {
 		return err
 	}

@@ -18,13 +18,17 @@ import (
 )
 
 func (m *manager) deployResourceTemplate(ctx context.Context) error {
-	g, err := m.loadGraph(ctx)
+	pg, err := m.loadPersistedGraph(ctx)
 	if err != nil {
 		return err
 	}
 
-	installConfig := g.get(&installconfig.InstallConfig{}).(*installconfig.InstallConfig)
-	machineMaster := g.get(&machine.Master{}).(*machine.Master)
+	var installConfig *installconfig.InstallConfig
+	var machineMaster *machine.Master
+	err = pg.get(&installConfig, &machineMaster)
+	if err != nil {
+		return err
+	}
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
