@@ -40,10 +40,5 @@ jobs:
       register_sub
 
       export CI=true
-
-      # Don't override RESOURCEGROUP more widely because clean_e2e_db depends
-      # on the original value
-      # TODO(jminter 22/1/2021): remove RESOURCEGROUP=$ARO_RESOURCEGROUP below
-      # as well as all references to ARO_RESOURCEGROUP after next RP deployment
-      RESOURCEGROUP=$ARO_RESOURCEGROUP make test-e2e
+      make test-e2e
   - template: ./templates/template-az-cli-logout.yml

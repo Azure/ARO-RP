@@ -57,6 +57,7 @@ type Cluster struct {
 	subnets                           network.SubnetsClient
 	routetables                       network.RouteTablesClient
 	roleassignments                   authorization.RoleAssignmentsClient
+	peerings                          network.VirtualNetworkPeeringsClient
 }
 
 const (
@@ -113,6 +114,7 @@ func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
 		subnets:                           network.NewSubnetsClient(env.Environment(), env.SubscriptionID(), authorizer),
 		routetables:                       network.NewRouteTablesClient(env.Environment(), env.SubscriptionID(), authorizer),
 		roleassignments:                   authorization.NewRoleAssignmentsClient(env.Environment(), env.SubscriptionID(), authorizer),
+		peerings:                          network.NewVirtualNetworkPeeringsClient(env.Environment(), env.SubscriptionID(), authorizer),
 	}, nil
 }
 
@@ -258,6 +260,12 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		if err != nil {
 			return err
 		}
+
+		c.log.Info("peering subnets to CI infra")
+		err = c.peerSubnetsToCI(ctx, vnetResourceGroup, clusterName)
+		if err != nil {
+			return err
+		}
 	}
 
 	c.log.Info("done")
@@ -308,6 +316,12 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			if err != nil {
 				errs = append(errs, err)
 			}
+		}
+
+		// Do a best-effort attempt at deleting the network peering.
+		err = c.peerings.DeleteAndWait(ctx, c.env.ResourceGroup(), "dev-vnet", vnetResourceGroup+"-peer")
+		if err != nil {
+			c.log.Info("Couldn't delete network peering:", err)
 		}
 	} else {
 		// Deleting the deployment does not clean up the associated resources
@@ -377,12 +391,12 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				},
 			},
 			APIServerProfile: api.APIServerProfile{
-				Visibility: api.VisibilityPublic,
+				Visibility: api.VisibilityPrivate,
 			},
 			IngressProfiles: []api.IngressProfile{
 				{
 					Name:       "default",
-					Visibility: api.VisibilityPublic,
+					Visibility: api.VisibilityPrivate,
 				},
 			},
 		},
@@ -455,6 +469,40 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 	}
 
 	return nil
+}
+
+func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup, clusterName string) error {
+	rp := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.env.SubscriptionID(), c.env.ResourceGroup())
+	cluster := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.env.SubscriptionID(), vnetResourceGroup)
+
+	clusterProp := &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
+		RemoteVirtualNetwork: &mgmtnetwork.SubResource{
+			ID: &rp,
+		},
+		AllowVirtualNetworkAccess: to.BoolPtr(true),
+		AllowForwardedTraffic:     to.BoolPtr(true),
+	}
+	rpProp := &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
+		RemoteVirtualNetwork: &mgmtnetwork.SubResource{
+			ID: &cluster,
+		},
+		AllowVirtualNetworkAccess: to.BoolPtr(true),
+		AllowForwardedTraffic:     to.BoolPtr(true),
+	}
+
+	c.log.Infof("making peering from %s to %s", rp, cluster)
+
+	err := c.peerings.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", c.env.ResourceGroup()+"-peer", mgmtnetwork.VirtualNetworkPeering{VirtualNetworkPeeringPropertiesFormat: clusterProp})
+	if err != nil {
+		return err
+	}
+
+	err = c.peerings.CreateOrUpdateAndWait(ctx, c.env.ResourceGroup(), "dev-vnet", vnetResourceGroup+"-peer", mgmtnetwork.VirtualNetworkPeering{VirtualNetworkPeeringPropertiesFormat: rpProp})
+	if err != nil {
+		return err
+	}
+
+	return err
 }
 
 func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, appID string) error {
