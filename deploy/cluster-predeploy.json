@@ -18,6 +18,9 @@
         "masterAddressPrefix": {
             "type": "string"
         },
+        "vnetAddressPrefix": {
+            "type": "string"
+        },
         "workerAddressPrefix": {
             "type": "string"
         }
@@ -27,7 +30,7 @@
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
-                        "10.0.0.0/9"
+                        "[parameters('vnetAddressPrefix')]"
                     ]
                 }
             },

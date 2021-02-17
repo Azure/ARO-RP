@@ -19,6 +19,7 @@ func (g *generator) clusterPredeploy() *arm.Template {
 		"clusterServicePrincipalId",
 		"fpServicePrincipalId",
 		"fullDeploy",
+		"vnetAddressPrefix",
 		"masterAddressPrefix",
 		"workerAddressPrefix",
 	}

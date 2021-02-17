@@ -173,13 +173,19 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return err
 	}
 
+	addressPrefix, masterSubnet, workerSubnet := c.generateSubnets()
+	if err != nil {
+		return err
+	}
+
 	parameters := map[string]*arm.ParametersParameter{
 		"clusterName":               {Value: clusterName},
+		"fullDeploy":                {Value: c.ci},
 		"clusterServicePrincipalId": {Value: spID},
 		"fpServicePrincipalId":      {Value: fpSPID},
-		"fullDeploy":                {Value: c.ci},
-		"masterAddressPrefix":       {Value: fmt.Sprintf("10.%d.%d.0/24", rand.Intn(128), rand.Intn(256))},
-		"workerAddressPrefix":       {Value: fmt.Sprintf("10.%d.%d.0/24", rand.Intn(128), rand.Intn(256))},
+		"vnetAddressPrefix":         {Value: addressPrefix},
+		"masterAddressPrefix":       {Value: masterSubnet},
+		"workerAddressPrefix":       {Value: workerSubnet},
 	}
 
 	armctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
@@ -256,6 +262,20 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 
 	c.log.Info("done")
 	return nil
+}
+
+func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, workerSubnet string) {
+	// pick a random /23 in the range [10.0.2.0, 10.128.0.0).  10.0.0.0 is used
+	// by dev-vnet to host CI; 10.128.0.0+ is used for pods.
+	var x, y int
+	for x == 0 && y == 0 {
+		x, y = rand.Intn(128), 2*rand.Intn(128)
+	}
+
+	vnetPrefix = fmt.Sprintf("10.%d.%d.0/23", x, y)
+	masterSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y)
+	workerSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y+1)
+	return
 }
 
 func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName string) error {
