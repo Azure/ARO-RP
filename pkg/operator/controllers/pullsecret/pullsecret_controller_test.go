@@ -8,6 +8,9 @@ import (
 	"reflect"
 	"testing"
 
+	operatorv1 "github.com/openshift/api/operator/v1"
+	samplesV1 "github.com/openshift/api/samples/v1"
+	samplesFake "github.com/openshift/client-go/samples/clientset/versioned/fake"
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
@@ -49,23 +52,42 @@ func TestPullSecretReconciler(t *testing.T) {
 
 	baseCluster := newFakeAro(&arov1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: "cluster"}, Status: arov1alpha1.ClusterStatus{}})
 
+	newFakeSamples := func(c *samplesV1.Config) *samplesFake.Clientset {
+		cli := samplesFake.NewSimpleClientset(c)
+		return cli
+	}
+
 	tests := []struct {
 		name        string
 		request     ctrl.Request
 		fakecli     *fake.Clientset
 		arocli      *aroFake.Clientset
+		samplecli   *samplesFake.Clientset
 		wantErr     bool
 		want        string
 		wantCreated bool
 		wantDeleted bool
 		wantUpdated bool
+		wantConfig  samplesV1.Config
 	}{
 		{
 			name: "deleted pull secret",
 			fakecli: newFakecli(nil, &v1.Secret{Data: map[string][]byte{
 				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
-			arocli:      baseCluster,
+			arocli: baseCluster,
+			samplecli: newFakeSamples(
+				&samplesV1.Config{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster",
+					},
+				},
+			),
+			wantConfig: samplesV1.Config{
+				Spec: samplesV1.ConfigSpec{
+					ManagementState: operatorv1.Removed,
+				},
+			},
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantCreated: true,
 		},
@@ -74,6 +96,16 @@ func TestPullSecretReconciler(t *testing.T) {
 			fakecli: newFakecli(&v1.Secret{}, &v1.Secret{Data: map[string][]byte{
 				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			samplecli: newFakeSamples(&samplesV1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
+			wantConfig: samplesV1.Config{
+				Spec: samplesV1.ConfigSpec{
+					ManagementState: operatorv1.Removed,
+				},
+			},
 			arocli:      baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantUpdated: true,
@@ -88,6 +120,16 @@ func TestPullSecretReconciler(t *testing.T) {
 				Data: map[string][]byte{
 					v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 				}}),
+			samplecli: newFakeSamples(&samplesV1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
+			wantConfig: samplesV1.Config{
+				Spec: samplesV1.ConfigSpec{
+					ManagementState: operatorv1.Removed,
+				},
+			},
 			arocli:      baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantUpdated: true,
@@ -101,6 +143,16 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &v1.Secret{Data: map[string][]byte{
 				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			samplecli: newFakeSamples(&samplesV1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
+			wantConfig: samplesV1.Config{
+				Spec: samplesV1.ConfigSpec{
+					ManagementState: operatorv1.Removed,
+				},
+			},
 			arocli:      baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantUpdated: true,
@@ -112,6 +164,16 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &v1.Secret{Data: map[string][]byte{
 				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			samplecli: newFakeSamples(&samplesV1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
+			wantConfig: samplesV1.Config{
+				Spec: samplesV1.ConfigSpec{
+					ManagementState: operatorv1.Removed,
+				},
+			},
 			arocli:      baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantCreated: true,
@@ -126,8 +188,40 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &v1.Secret{Data: map[string][]byte{
 				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			samplecli: newFakeSamples(&samplesV1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
+			wantConfig: samplesV1.Config{
+				Spec: samplesV1.ConfigSpec{
+					ManagementState: operatorv1.Removed,
+				},
+			},
 			arocli: baseCluster,
 			want:   `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+		},
+		{
+			name: "valid RH key present",
+			fakecli: newFakecli(&v1.Secret{
+				Data: map[string][]byte{
+					v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				},
+			}, &v1.Secret{Data: map[string][]byte{
+				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+			}}),
+			samplecli: newFakeSamples(&samplesV1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
+			wantConfig: samplesV1.Config{
+				Spec: samplesV1.ConfigSpec{
+					ManagementState: operatorv1.Managed,
+				},
+			},
+			arocli: baseCluster,
+			want:   `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 		},
 	}
 	for _, tt := range tests {
@@ -149,10 +243,24 @@ func TestPullSecretReconciler(t *testing.T) {
 				return false, nil, nil
 			})
 
+			tt.samplecli.PrependReactor("update", "configs", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+
+				resource := action.(ktesting.UpdateAction)
+				config := resource.GetObject().(*samplesV1.Config)
+
+				// do testing here
+				if config.Spec.ManagementState != tt.wantConfig.Spec.ManagementState {
+					t.Errorf("Changed config does not match expectations: %v", &tt.wantConfig.Spec.ManagementState)
+				}
+
+				return false, nil, nil
+			})
+
 			r := &PullSecretReconciler{
 				kubernetescli: tt.fakecli,
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 				arocli:        tt.arocli.AroV1alpha1(),
+				samplescli:    tt.samplecli,
 			}
 			if tt.request.Name == "" {
 				tt.request.NamespacedName = pullSecretName
