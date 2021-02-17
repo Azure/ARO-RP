@@ -44,7 +44,7 @@ Rich Feature Set includes:
     (struct, slice, map, primitives, pointers, interface{}, etc)
   - Extensions to support efficient encoding/decoding of any named types
   - Support encoding.(Binary|Text)(M|Unm)arshaler interfaces
-  - Support IsZero() bool to determine if a value is a zero value.
+  - Support using existence of `IsZero() bool` to determine if a value is a zero value.
     Analogous to time.Time.IsZero() bool.
   - Decoding without a schema (into a interface{}).
     Includes Options to configure what specific map or slice type to use
@@ -246,7 +246,7 @@ some caveats. See Encode documentation.
 
 ```go
 const CborStreamBytes byte = 0x5f ...
-const GenVersion = 21
+const GenVersion = 23
 var SelfExt = &extFailWrapper{}
 var GoRpc goRpc
 var MsgpackSpecRpc msgpackSpecRpc
