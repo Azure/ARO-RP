@@ -285,6 +285,170 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 	}
 }
 
+func TestPopulateDatabaseIntIP(t *testing.T) {
+	ctx := context.Background()
+
+	const (
+		key             = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
+		resourceGroupID = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterResourceGroup"
+	)
+
+	for _, tt := range []struct {
+		name           string
+		fixtureChecker func(*testdatabase.Fixture, *testdatabase.Checker, *cosmosdb.FakeOpenShiftClusterDocumentClient)
+		mocks          func(*mock_network.MockLoadBalancersClient)
+		wantErr        string
+	}{
+		{
+			name: "v1",
+			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
+				doc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: key,
+						Properties: api.OpenShiftClusterProperties{
+							ArchitectureVersion: api.ArchitectureVersionV1,
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: resourceGroupID,
+							},
+							ProvisioningState: api.ProvisioningStateCreating,
+							InfraID:           "infra",
+						},
+					},
+				}
+				fixture.AddOpenShiftClusterDocuments(doc)
+
+				doc.Dequeues = 1
+				doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = "10.0.0.1"
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
+			mocks: func(loadBalancers *mock_network.MockLoadBalancersClient) {
+				loadBalancers.EXPECT().
+					Get(gomock.Any(), "clusterResourceGroup", "infra-internal-lb", "").
+					Return(mgmtnetwork.LoadBalancer{
+						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+								{
+									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+										PrivateIPAddress: to.StringPtr("10.0.0.1"),
+									},
+								},
+							},
+						},
+					}, nil)
+			},
+		},
+		{
+			name: "v2",
+			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
+				doc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: key,
+						Properties: api.OpenShiftClusterProperties{
+							ArchitectureVersion: api.ArchitectureVersionV2,
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: resourceGroupID,
+							},
+							ProvisioningState: api.ProvisioningStateCreating,
+							InfraID:           "infra",
+						},
+					},
+				}
+				fixture.AddOpenShiftClusterDocuments(doc)
+
+				doc.Dequeues = 1
+				doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = "10.0.0.1"
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
+			mocks: func(loadBalancers *mock_network.MockLoadBalancersClient) {
+				loadBalancers.EXPECT().
+					Get(gomock.Any(), "clusterResourceGroup", "infra-internal", "").
+					Return(mgmtnetwork.LoadBalancer{
+						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+								{
+									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+										PrivateIPAddress: to.StringPtr("10.0.0.1"),
+									},
+								},
+							},
+						},
+					}, nil)
+			},
+		},
+		{
+			name: "noop",
+			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
+				doc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: key,
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: resourceGroupID,
+							},
+							APIServerProfile: api.APIServerProfile{
+								IntIP: "10.0.0.1",
+							},
+							ProvisioningState: api.ProvisioningStateCreating,
+							InfraID:           "infra",
+						},
+					},
+				}
+				fixture.AddOpenShiftClusterDocuments(doc)
+
+				doc.Dequeues = 1
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			loadBalancers := mock_network.NewMockLoadBalancersClient(controller)
+			if tt.mocks != nil {
+				tt.mocks(loadBalancers)
+			}
+
+			dbOpenShiftClusters, dbClient := testdatabase.NewFakeOpenShiftClusters()
+			fixture := testdatabase.NewFixture().WithOpenShiftClusters(dbOpenShiftClusters)
+			checker := testdatabase.NewChecker()
+
+			if tt.fixtureChecker != nil {
+				tt.fixtureChecker(fixture, checker, dbClient)
+			}
+
+			err := fixture.Create()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			doc, err := dbOpenShiftClusters.Dequeue(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			m := &manager{
+				doc:           doc,
+				db:            dbOpenShiftClusters,
+				loadBalancers: loadBalancers,
+			}
+
+			err = m.populateDatabaseIntIP(ctx)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+
+			for _, err = range checker.CheckOpenShiftClusters(dbClient) {
+				t.Error(err)
+			}
+		})
+	}
+}
+
 func TestUpdateAPIIPEarly(t *testing.T) {
 	ctx := context.Background()
 

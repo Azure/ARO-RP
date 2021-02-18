@@ -107,6 +107,37 @@ func (m *manager) createOrUpdateRouterIPEarly(ctx context.Context) error {
 	return err
 }
 
+func (m *manager) populateDatabaseIntIP(ctx context.Context) error {
+	if m.doc.OpenShiftCluster.Properties.APIServerProfile.IntIP != "" {
+		return nil
+	}
+
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
+
+	var lbName string
+	switch m.doc.OpenShiftCluster.Properties.ArchitectureVersion {
+	case api.ArchitectureVersionV1:
+		lbName = infraID + "-internal-lb"
+	case api.ArchitectureVersionV2:
+		lbName = infraID + "-internal"
+	default:
+		return fmt.Errorf("unknown architecture version %d", m.doc.OpenShiftCluster.Properties.ArchitectureVersion)
+	}
+
+	lb, err := m.loadBalancers.Get(ctx, resourceGroup, lbName, "")
+	if err != nil {
+		return err
+	}
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
+		return nil
+	})
+	return err
+}
+
 // this function can only be called on create - not on update - because it
 // refers to -pip-v4, which doesn't exist on pre-DNS change clusters.
 func (m *manager) updateAPIIPEarly(ctx context.Context) error {

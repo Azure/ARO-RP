@@ -38,6 +38,7 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 		steps.Action(m.populateCreatedAt), // TODO(mikalai): Remove after a round of admin updates
 		steps.Action(m.fixSREKubeconfig),
 		steps.Action(m.createOrUpdateRouterIPFromCluster),
+		steps.Action(m.populateDatabaseIntIP),
 		steps.Action(m.ensureAROOperator),
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute),
 		steps.Action(m.configureAPIServerCertificate),
