@@ -74,7 +74,7 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		return reconcile.Result{}, err
 	}
 
-	// check feature gates and if set to false remove any persistence
+	// cluster object is needed, controller changes its state based on RH pull secret presence
 	cluster, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
@@ -104,13 +104,14 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 
 		keyCondition := r.keyCondition(failed, foundKey)
 
+		// update condition based on the rh pull secret presence
 		err = controllers.SetCondition(ctx, r.arocli, keyCondition, operator.RoleMaster)
 		if err != nil {
 			return err
 		}
 
 		if cluster.Spec.Features.ManageSamplesOperator {
-			// if foundKey enable samples operator, else disable
+			// disable samples operator when rh pull secret is missing
 			updated, err := r.switchSamples(ctx, foundKey)
 			if err != nil {
 				return err
@@ -231,6 +232,13 @@ func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithEventFilter(isPullSecret).
 		Named(controllers.PullSecretControllerName).
 		Complete(r)
+}
+
+// updateGlobalPullSecret checks the state of the pull secrets, in case of missing or broken ARO pull secret
+// it replaces it with working one from controller Secret
+func (r *PullSecretReconciler) updateGlobalPullSecret(ctx context.Context) error {
+
+	return nil
 }
 
 func (r *PullSecretReconciler) unmarshalSecretData(ps *v1.Secret) (*serializedAuthMap, error) {
