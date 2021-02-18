@@ -649,3 +649,18 @@ func (mr *MockVirtualNetworkPeeringsClientMockRecorder) DeleteAndWait(arg0, arg1
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockVirtualNetworkPeeringsClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3)
 }
+
+// Get mocks base method
+func (m *MockVirtualNetworkPeeringsClient) Get(arg0 context.Context, arg1, arg2, arg3 string) (network.VirtualNetworkPeering, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(network.VirtualNetworkPeering)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get
+func (mr *MockVirtualNetworkPeeringsClientMockRecorder) Get(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockVirtualNetworkPeeringsClient)(nil).Get), arg0, arg1, arg2, arg3)
+}

@@ -154,6 +154,8 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return err
 	}
 
+	visibility := api.VisibilityPublic
+
 	if c.ci {
 		c.log.Infof("creating resource group")
 		_, err = c.groups.CreateOrUpdate(ctx, vnetResourceGroup, mgmtfeatures.ResourceGroup{
@@ -162,6 +164,8 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		if err != nil {
 			return err
 		}
+
+		visibility = api.VisibilityPrivate
 	}
 
 	b, err := deploy.Asset(generator.FileClusterPredeploy)
@@ -249,7 +253,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	c.log.Info("creating cluster")
-	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appID, appSecret)
+	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appID, appSecret, visibility)
 	if err != nil {
 		return err
 	}
@@ -318,10 +322,12 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			}
 		}
 
-		// Do a best-effort attempt at deleting the network peering.
-		err = c.peerings.DeleteAndWait(ctx, c.env.ResourceGroup(), "dev-vnet", vnetResourceGroup+"-peer")
-		if err != nil {
-			c.log.Info("Couldn't delete network peering:", err)
+		_, err = c.peerings.Get(ctx, c.env.ResourceGroup(), "dev-vnet", vnetResourceGroup+"-peer")
+		if err == nil {
+			err = c.peerings.DeleteAndWait(ctx, c.env.ResourceGroup(), "dev-vnet", vnetResourceGroup+"-peer")
+			if err != nil {
+				errs = append(errs, err)
+			}
 		}
 	} else {
 		// Deleting the deployment does not clean up the associated resources
@@ -361,7 +367,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 // createCluster created new clusters, based on where it is running.
 // development - using preview api
 // production - using stable GA api
-func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret string) error {
+func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret string, visibility api.Visibility) error {
 	// using internal representation for "singe source" of options
 	oc := api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
@@ -391,12 +397,12 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				},
 			},
 			APIServerProfile: api.APIServerProfile{
-				Visibility: api.VisibilityPrivate,
+				Visibility: visibility,
 			},
 			IngressProfiles: []api.IngressProfile{
 				{
 					Name:       "default",
-					Visibility: api.VisibilityPrivate,
+					Visibility: visibility,
 				},
 			},
 		},
@@ -489,8 +495,6 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup, cluste
 		AllowVirtualNetworkAccess: to.BoolPtr(true),
 		AllowForwardedTraffic:     to.BoolPtr(true),
 	}
-
-	c.log.Infof("making peering from %s to %s", rp, cluster)
 
 	err := c.peerings.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", c.env.ResourceGroup()+"-peer", mgmtnetwork.VirtualNetworkPeering{VirtualNetworkPeeringPropertiesFormat: clusterProp})
 	if err != nil {

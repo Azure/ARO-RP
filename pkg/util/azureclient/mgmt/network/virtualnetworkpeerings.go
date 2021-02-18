@@ -13,6 +13,7 @@ import (
 
 type VirtualNetworkPeeringsClient interface {
 	CreateOrUpdate(ctx context.Context, resourceGroupName string, virtualNetworkName string, virtualNetworkPeeringName string, virtualNetworkPeeringParameters mgmtnetwork.VirtualNetworkPeering) (result mgmtnetwork.VirtualNetworkPeeringsCreateOrUpdateFuture, err error)
+	Get(ctx context.Context, resourceGroupName string, virtualNetworkName string, virtualNetworkPeeringName string) (result mgmtnetwork.VirtualNetworkPeering, err error)
 	Delete(ctx context.Context, resourceGroupName string, virtualNetworkName string, virtualNetworkPeeringName string) (result mgmtnetwork.VirtualNetworkPeeringsDeleteFuture, err error)
 	VirtualNetworkPeeringsAddons
 }
