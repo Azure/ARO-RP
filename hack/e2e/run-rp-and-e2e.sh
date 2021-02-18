@@ -67,11 +67,10 @@ clean_e2e_db(){
         --resource-group $RESOURCEGROUP >/dev/null
 }
 
-# TODO: CLUSTER and ARO_RESOURCEGROUP are also recalculated in multiple places
+# TODO: CLUSTER and is also recalculated in multiple places
 # in the billing pipelines :-(
 export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
 export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-export ARO_RESOURCEGROUP="v4-e2e-V$BUILD_BUILDID-$LOCATION"
 
 echo "######################################"
 echo "##### ARO V4 E2e helper sourced ######"
@@ -91,7 +90,6 @@ then
 fi
 echo
 echo "CLUSTER=$CLUSTER"
-echo "ARO_RESOURCEGROUP=$ARO_RESOURCEGROUP"
 if [ "$RP_MODE" = "development" ]
 then
     echo

@@ -57,6 +57,7 @@ type Cluster struct {
 	subnets                           network.SubnetsClient
 	routetables                       network.RouteTablesClient
 	roleassignments                   authorization.RoleAssignmentsClient
+	peerings                          network.VirtualNetworkPeeringsClient
 }
 
 const (
@@ -113,6 +114,7 @@ func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
 		subnets:                           network.NewSubnetsClient(env.Environment(), env.SubscriptionID(), authorizer),
 		routetables:                       network.NewRouteTablesClient(env.Environment(), env.SubscriptionID(), authorizer),
 		roleassignments:                   authorization.NewRoleAssignmentsClient(env.Environment(), env.SubscriptionID(), authorizer),
+		peerings:                          network.NewVirtualNetworkPeeringsClient(env.Environment(), env.SubscriptionID(), authorizer),
 	}, nil
 }
 
@@ -152,6 +154,8 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return err
 	}
 
+	visibility := api.VisibilityPublic
+
 	if c.ci {
 		c.log.Infof("creating resource group")
 		_, err = c.groups.CreateOrUpdate(ctx, vnetResourceGroup, mgmtfeatures.ResourceGroup{
@@ -160,6 +164,8 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		if err != nil {
 			return err
 		}
+
+		visibility = api.VisibilityPrivate
 	}
 
 	b, err := deploy.Asset(generator.FileClusterPredeploy)
@@ -173,13 +179,19 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return err
 	}
 
+	addressPrefix, masterSubnet, workerSubnet := c.generateSubnets()
+	if err != nil {
+		return err
+	}
+
 	parameters := map[string]*arm.ParametersParameter{
 		"clusterName":               {Value: clusterName},
+		"fullDeploy":                {Value: c.ci},
 		"clusterServicePrincipalId": {Value: spID},
 		"fpServicePrincipalId":      {Value: fpSPID},
-		"fullDeploy":                {Value: c.ci},
-		"masterAddressPrefix":       {Value: fmt.Sprintf("10.%d.%d.0/24", rand.Intn(128), rand.Intn(256))},
-		"workerAddressPrefix":       {Value: fmt.Sprintf("10.%d.%d.0/24", rand.Intn(128), rand.Intn(256))},
+		"vnetAddressPrefix":         {Value: addressPrefix},
+		"masterAddressPrefix":       {Value: masterSubnet},
+		"workerAddressPrefix":       {Value: workerSubnet},
 	}
 
 	armctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
@@ -241,7 +253,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	c.log.Info("creating cluster")
-	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appID, appSecret)
+	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appID, appSecret, visibility)
 	if err != nil {
 		return err
 	}
@@ -252,10 +264,30 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		if err != nil {
 			return err
 		}
+
+		c.log.Info("peering subnets to CI infra")
+		err = c.peerSubnetsToCI(ctx, vnetResourceGroup, clusterName)
+		if err != nil {
+			return err
+		}
 	}
 
 	c.log.Info("done")
 	return nil
+}
+
+func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, workerSubnet string) {
+	// pick a random /23 in the range [10.0.2.0, 10.128.0.0).  10.0.0.0 is used
+	// by dev-vnet to host CI; 10.128.0.0+ is used for pods.
+	var x, y int
+	for x == 0 && y == 0 {
+		x, y = rand.Intn(128), 2*rand.Intn(128)
+	}
+
+	vnetPrefix = fmt.Sprintf("10.%d.%d.0/23", x, y)
+	masterSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y)
+	workerSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y+1)
+	return
 }
 
 func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName string) error {
@@ -285,6 +317,14 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 		if err == nil {
 			c.log.Print("deleting resource group")
 			err = c.groups.DeleteAndWait(ctx, vnetResourceGroup)
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+
+		_, err = c.peerings.Get(ctx, c.env.ResourceGroup(), "dev-vnet", vnetResourceGroup+"-peer")
+		if err == nil {
+			err = c.peerings.DeleteAndWait(ctx, c.env.ResourceGroup(), "dev-vnet", vnetResourceGroup+"-peer")
 			if err != nil {
 				errs = append(errs, err)
 			}
@@ -327,7 +367,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 // createCluster created new clusters, based on where it is running.
 // development - using preview api
 // production - using stable GA api
-func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret string) error {
+func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret string, visibility api.Visibility) error {
 	// using internal representation for "singe source" of options
 	oc := api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
@@ -357,12 +397,12 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				},
 			},
 			APIServerProfile: api.APIServerProfile{
-				Visibility: api.VisibilityPublic,
+				Visibility: visibility,
 			},
 			IngressProfiles: []api.IngressProfile{
 				{
 					Name:       "default",
-					Visibility: api.VisibilityPublic,
+					Visibility: visibility,
 				},
 			},
 		},
@@ -435,6 +475,38 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 	}
 
 	return nil
+}
+
+func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup, clusterName string) error {
+	rp := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.env.SubscriptionID(), c.env.ResourceGroup())
+	cluster := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.env.SubscriptionID(), vnetResourceGroup)
+
+	clusterProp := &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
+		RemoteVirtualNetwork: &mgmtnetwork.SubResource{
+			ID: &rp,
+		},
+		AllowVirtualNetworkAccess: to.BoolPtr(true),
+		AllowForwardedTraffic:     to.BoolPtr(true),
+	}
+	rpProp := &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
+		RemoteVirtualNetwork: &mgmtnetwork.SubResource{
+			ID: &cluster,
+		},
+		AllowVirtualNetworkAccess: to.BoolPtr(true),
+		AllowForwardedTraffic:     to.BoolPtr(true),
+	}
+
+	err := c.peerings.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", c.env.ResourceGroup()+"-peer", mgmtnetwork.VirtualNetworkPeering{VirtualNetworkPeeringPropertiesFormat: clusterProp})
+	if err != nil {
+		return err
+	}
+
+	err = c.peerings.CreateOrUpdateAndWait(ctx, c.env.ResourceGroup(), "dev-vnet", vnetResourceGroup+"-peer", mgmtnetwork.VirtualNetworkPeering{VirtualNetworkPeeringPropertiesFormat: rpProp})
+	if err != nil {
+		return err
+	}
+
+	return err
 }
 
 func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, appID string) error {

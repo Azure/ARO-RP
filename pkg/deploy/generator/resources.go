@@ -326,7 +326,7 @@ func (g *generator) devVnet() *arm.Resource {
 			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
 				AddressSpace: &mgmtnetwork.AddressSpace{
 					AddressPrefixes: &[]string{
-						"10.0.0.0/9",
+						"10.0.0.0/23",
 					},
 				},
 				Subnets: &[]mgmtnetwork.Subnet{

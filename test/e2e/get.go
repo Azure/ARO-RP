@@ -23,7 +23,7 @@ var _ = Describe("Get cluster", func() {
 		Expect(*oc.IngressProfiles).To(HaveLen(1))
 		ingressProfile := (*oc.IngressProfiles)[0]
 		Expect(*ingressProfile.Name).To(Equal("default"))
-		Expect(ingressProfile.Visibility).To(Equal(redhatopenshift.Visibility1Public))
+		Expect(ingressProfile.Visibility).To(Equal(redhatopenshift.Visibility1Private))
 
 		// Check we retrieve Cluster version
 		clusterProfile := oc.ClusterProfile
