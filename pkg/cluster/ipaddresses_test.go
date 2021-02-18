@@ -285,7 +285,7 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 	}
 }
 
-func TestUpdateAPIIP(t *testing.T) {
+func TestUpdateAPIIPEarly(t *testing.T) {
 	ctx := context.Background()
 
 	const (
@@ -434,7 +434,7 @@ func TestUpdateAPIIP(t *testing.T) {
 				dns:               dns,
 			}
 
-			err = m.updateAPIIP(ctx)
+			err = m.updateAPIIPEarly(ctx)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

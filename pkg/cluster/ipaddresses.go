@@ -107,7 +107,9 @@ func (m *manager) createOrUpdateRouterIPEarly(ctx context.Context) error {
 	return err
 }
 
-func (m *manager) updateAPIIP(ctx context.Context) error {
+// this function can only be called on create - not on update - because it
+// refers to -pip-v4, which doesn't exist on pre-DNS change clusters.
+func (m *manager) updateAPIIPEarly(ctx context.Context) error {
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
