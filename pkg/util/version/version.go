@@ -17,7 +17,7 @@ type Version struct {
 }
 
 func (v *Version) String() string {
-	return fmt.Sprintf("%d.%d.%d%s", v.V[0], v.V[1], v.V[2], v.Suffix)
+	return fmt.Sprintf("%d.%d.%d", v.V[0], v.V[1], v.V[2])
 }
 
 func NewVersion(vs ...uint32) *Version {
