@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/alertwebhook"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checker"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/pullsecret"
@@ -125,6 +126,21 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", controllers.RBACControllerName),
 			arocli, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller RBAC: %v", err)
+		}
+		if err = (dnsmasq.NewClusterReconciler(
+			log.WithField("controller", controllers.DnsmasqClusterControllerName),
+			arocli, mcocli, dh)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller DnsmasqCluster: %v", err)
+		}
+		if err = (dnsmasq.NewMachineConfigReconciler(
+			log.WithField("controller", controllers.DnsmasqMachineConfigControllerName),
+			arocli, mcocli, dh)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller DnsmasqMachineConfig: %v", err)
+		}
+		if err = (dnsmasq.NewMachineConfigPoolReconciler(
+			log.WithField("controller", controllers.DnsmasqMachineConfigPoolControllerName),
+			arocli, mcocli, dh)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller DnsmasqMachineConfigPool: %v", err)
 		}
 	}
 
