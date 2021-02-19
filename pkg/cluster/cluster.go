@@ -11,6 +11,7 @@ import (
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
+	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
@@ -72,6 +73,7 @@ type manager struct {
 
 	kubernetescli kubernetes.Interface
 	extensionscli extensionsclient.Interface
+	maocli        maoclient.Interface
 	operatorcli   operatorclient.Interface
 	configcli     configclient.Interface
 	samplescli    samplesclient.Interface

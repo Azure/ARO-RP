@@ -14,6 +14,7 @@ import (
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
+	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
 
@@ -40,6 +41,7 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 		steps.Action(m.createOrUpdateRouterIPFromCluster),
 		steps.Action(m.populateDatabaseIntIP),
 		steps.Action(m.fixMCSCert),
+		steps.Action(m.fixMCSUserData),
 		steps.Action(m.ensureAROOperator),
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute),
 		steps.Action(m.configureAPIServerCertificate),
@@ -184,6 +186,11 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	m.extensionscli, err = extensionsclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	m.maocli, err = maoclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
