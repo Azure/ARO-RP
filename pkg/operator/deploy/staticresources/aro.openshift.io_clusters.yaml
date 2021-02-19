@@ -38,7 +38,11 @@ spec:
           properties:
             acrDomain:
               type: string
+            apiIntIP:
+              type: string
             azEnvironment:
+              type: string
+            domain:
               type: string
             features:
               description: FeaturesSpec defines ARO operator feature gates
@@ -57,6 +61,8 @@ spec:
                   - Test
                   type: string
               type: object
+            ingressIP:
+              type: string
             internetChecker:
               properties:
                 urls:
