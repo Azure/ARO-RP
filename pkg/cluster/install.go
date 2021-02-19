@@ -37,11 +37,11 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 		steps.Action(m.fixSSH),
 		steps.Action(m.populateCreatedAt), // TODO(mikalai): Remove after a round of admin updates
 		steps.Action(m.fixSREKubeconfig),
+		steps.Action(m.createOrUpdateRouterIPFromCluster),
 		steps.Action(m.ensureAROOperator),
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
-		steps.Action(m.createOrUpdateRouterIPFromCluster),
 		steps.Action(m.updateProvisionedBy), // Run this last so we capture the resource provider only once the upgrade has been fully performed
 	}
 
