@@ -76,6 +76,7 @@ func DeploymentIsReady(d *appsv1.Deployment) bool {
 
 	return specReplicas == d.Status.AvailableReplicas &&
 		specReplicas == d.Status.UpdatedReplicas &&
+		specReplicas == d.Status.Replicas &&
 		d.Generation == d.Status.ObservedGeneration
 }
 
