@@ -12,6 +12,7 @@ import (
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
+	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
@@ -63,6 +64,7 @@ type manager struct {
 	deployments         features.DeploymentsClient
 	resourceGroups      features.ResourceGroupsClient
 	resources           features.ResourcesClient
+	privateZones        privatedns.PrivateZonesClient
 	virtualNetworkLinks privatedns.VirtualNetworkLinksClient
 
 	dns             dns.Manager
@@ -74,6 +76,7 @@ type manager struct {
 	kubernetescli kubernetes.Interface
 	extensionscli extensionsclient.Interface
 	maocli        maoclient.Interface
+	mcocli        mcoclient.Interface
 	operatorcli   operatorclient.Interface
 	configcli     configclient.Interface
 	samplescli    samplesclient.Interface
@@ -122,6 +125,7 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.
 		deployments:         features.NewDeploymentsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 		resourceGroups:      features.NewResourceGroupsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 		resources:           features.NewResourcesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
+		privateZones:        privatedns.NewPrivateZonesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 		virtualNetworkLinks: privatedns.NewVirtualNetworkLinksClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 
 		dns:             dns.NewManager(env, localFPAuthorizer),

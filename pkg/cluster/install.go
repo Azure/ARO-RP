@@ -15,6 +15,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
+	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
 
@@ -46,6 +47,7 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
+		steps.Action(m.removePrivateDNSZone),
 		steps.Action(m.updateProvisionedBy), // Run this last so we capture the resource provider only once the upgrade has been fully performed
 	}
 
@@ -191,6 +193,11 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	m.maocli, err = maoclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	m.mcocli, err = mcoclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
