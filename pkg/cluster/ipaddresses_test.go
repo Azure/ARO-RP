@@ -14,25 +14,50 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	mock_dnsmanager "github.com/Azure/ARO-RP/pkg/util/mocks/dns"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	mock_dns "github.com/Azure/ARO-RP/pkg/util/mocks/dns"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 func TestUpdateOrCreateRouterIP(t *testing.T) {
 	ctx := context.Background()
 
-	type test struct {
-		name          string
-		kubernetescli *fake.Clientset
-		mocks         func(*mock_dnsmanager.MockManager)
-		wantErr       string
-	}
+	const (
+		key = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
+	)
 
-	for _, tt := range []*test{
+	for _, tt := range []struct {
+		name           string
+		kubernetescli  *fake.Clientset
+		fixtureChecker func(*testdatabase.Fixture, *testdatabase.Checker, *cosmosdb.FakeOpenShiftClusterDocumentClient)
+		mocks          func(*mock_dns.MockManager)
+		wantErr        string
+	}{
 		{
 			name: "create/update success",
-			mocks: func(dm *mock_dnsmanager.MockManager) {
-				dm.EXPECT().
+			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
+				doc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: key,
+						Properties: api.OpenShiftClusterProperties{
+							IngressProfiles: []api.IngressProfile{
+								{
+									Visibility: api.VisibilityPublic,
+								},
+							},
+							ProvisioningState: api.ProvisioningStateCreating,
+						},
+					},
+				}
+				fixture.AddOpenShiftClusterDocuments(doc)
+
+				doc.Dequeues = 1
+				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = "1.2.3.4"
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
+			mocks: func(dns *mock_dns.MockManager) {
+				dns.EXPECT().
 					CreateOrUpdateRouter(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
 			},
@@ -65,49 +90,43 @@ func TestUpdateOrCreateRouterIP(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			dm := mock_dnsmanager.NewMockManager(controller)
+			dns := mock_dns.NewMockManager(controller)
 			if tt.mocks != nil {
-				tt.mocks(dm)
+				tt.mocks(dns)
 			}
 
-			key := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
+			dbOpenShiftClusters, dbClient := testdatabase.NewFakeOpenShiftClusters()
+			fixture := testdatabase.NewFixture().WithOpenShiftClusters(dbOpenShiftClusters)
+			checker := testdatabase.NewChecker()
 
-			openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
-			fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
-			fixture.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-				Key: strings.ToLower(key),
-				OpenShiftCluster: &api.OpenShiftCluster{
-					ID: key,
-					Properties: api.OpenShiftClusterProperties{
-						IngressProfiles: []api.IngressProfile{
-							{
-								Visibility: api.VisibilityPublic,
-							},
-						},
-						ProvisioningState: api.ProvisioningStateCreating,
-					},
-				},
-			})
+			if tt.fixtureChecker != nil {
+				tt.fixtureChecker(fixture, checker, dbClient)
+			}
+
 			err := fixture.Create()
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			clusterdoc, err := openShiftClustersDatabase.Dequeue(ctx)
+			doc, err := dbOpenShiftClusters.Dequeue(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			m := &manager{
+				doc:           doc,
+				db:            dbOpenShiftClusters,
+				dns:           dns,
 				kubernetescli: tt.kubernetescli,
-				dns:           dm,
-				db:            openShiftClustersDatabase,
-				doc:           clusterdoc,
 			}
 
 			err = m.createOrUpdateRouterIP(ctx)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+
+			for _, err = range checker.CheckOpenShiftClusters(dbClient) {
 				t.Error(err)
 			}
 		})
