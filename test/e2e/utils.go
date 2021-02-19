@@ -1,11 +1,15 @@
 package e2e
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
 	"fmt"
 	"regexp"
 	"strings"
 
+	"github.com/davecgh/go-spew/spew"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -35,4 +39,16 @@ func updatedObjects(ctx context.Context, nsfilter string) ([]string, error) {
 	}
 
 	return result, nil
+}
+
+func dumpEvents(ctx context.Context, namespace string) error {
+	events, err := clients.Kubernetes.EventsV1().Events(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	for _, event := range events.Items {
+		spew.Dump(event)
+	}
+	return nil
 }

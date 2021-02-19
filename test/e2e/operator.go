@@ -5,16 +5,12 @@ package e2e
 
 import (
 	"context"
-	"fmt"
-	"regexp"
-	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/ugorji/go/codec"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -105,7 +101,9 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 
 		err := wait.PollImmediate(30*time.Second, 15*time.Minute, mdsdReady)
 		if err != nil {
-			clients.Kubernetes.EventsV1().
+			// TODO: Remove dump once reason for flakes is clear
+			err := dumpEvents(context.Background(), "openshift-azure-monitoring")
+			Expect(err).NotTo(HaveOccurred())
 		}
 		initial, err := updatedObjects(context.Background(), "openshift-azure-logging")
 		Expect(err).NotTo(HaveOccurred())
