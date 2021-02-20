@@ -1,15 +1,13 @@
 SHELL = /bin/bash
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
-COMMAND = docker
 
 ifeq ($(RP_IMAGE_ACR),)
 	RP_IMAGE_ACR := arointsvc
 endif
 
 ifneq ($(shell uname -s),Darwin)
-    export CGO_CFLAGS=-Dgpgme_off_t=off_t
-	COMMAND = podman
+	export CGO_CFLAGS=-Dgpgme_off_t=off_t
 endif
 
 aro: generate
@@ -39,39 +37,39 @@ generate:
 	go generate ./...
 
 image-aro:
-	$(COMMAND) build --no-cache -f Dockerfile.aro --build-arg RP_IMAGE_ACR=${RP_IMAGE_ACR} -t $(ARO_IMAGE) .
+	docker build --no-cache -f Dockerfile.aro --build-arg RP_IMAGE_ACR=${RP_IMAGE_ACR} -t $(ARO_IMAGE) .
 
 image-builder:
-	$(COMMAND) build --no-cache -f Dockerfile.builder -t ${RP_IMAGE_ACR}.azurecr.io/aro-builder:1.14
+	docker build --no-cache -f Dockerfile.builder -t ${RP_IMAGE_ACR}.azurecr.io/aro-builder:1.14 .
 
 image-fluentbit:
-	$(COMMAND) build --no-cache --build-arg VERSION=1.6.10-1 \
+	docker build --no-cache --build-arg VERSION=1.6.10-1 \
 	  -f Dockerfile.fluentbit -t ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.6.10-1 .
 
 image-proxy: proxy
-	$(COMMAND) build --no-cache -f Dockerfile.proxy --build-arg RP_IMAGE_ACR=${RP_IMAGE_ACR} -t ${RP_IMAGE_ACR}.azurecr.io/proxy:latest .
+	docker build --no-cache -f Dockerfile.proxy --build-arg RP_IMAGE_ACR=${RP_IMAGE_ACR} -t ${RP_IMAGE_ACR}.azurecr.io/proxy:latest .
 
 image-routefix:
-    $(COMMAND) build --no-cache -f Dockerfile.routefix -t ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT) .
+	docker build --no-cache -f Dockerfile.routefix -t ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT) .
 
 publish-image-aro: image-aro
-	$(COMMAND) push $(ARO_IMAGE)
+	docker push $(ARO_IMAGE)
 ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
-		$(COMMAND) tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
-		$(COMMAND) push arointsvc.azurecr.io/aro:latest
+		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
+		docker push arointsvc.azurecr.io/aro:latest
 endif
 
 publish-image-builder: image-builder
-	$(COMMAND) push ${RP_IMAGE_ACR}.azurecr.io/aro-builder:1.14
+	docker push ${RP_IMAGE_ACR}.azurecr.io/aro-builder:1.14
 
 publish-image-fluentbit: image-fluentbit
-	$(COMMAND) push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.6.10-1
+	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.6.10-1
 
 publish-image-proxy: image-proxy
-	$(COMMAND) push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
+	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
 
 publish-image-routefix: image-routefix
-    $(COMMAND) push ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT)
+	docker push ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT)
 
 proxy:
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./hack/proxy
