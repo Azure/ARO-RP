@@ -62,13 +62,22 @@ func (m *manager) disableOperatorHubSources(ctx context.Context) error {
 				Disabled: true,
 			},
 			{
+				Name:     "community-operators",
+				Disabled: true,
+			},
+			{
+				Name:     "redhat-marketplace",
+				Disabled: true,
+			},
+			{
 				Name:     "redhat-operators",
 				Disabled: true,
 			},
 		}
 		for _, s := range c.Spec.Sources {
 			switch s.Name {
-			case "certified-operators", "redhat-operators":
+			case "certified-operators", "community-operators",
+				"redhat-marketplace", "redhat-operators":
 			default:
 				sources = append(sources, s)
 			}
