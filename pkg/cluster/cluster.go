@@ -24,12 +24,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
+	"github.com/Azure/ARO-RP/pkg/util/storage"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -63,10 +63,10 @@ type manager struct {
 	resourceGroups      features.ResourceGroupsClient
 	resources           features.ResourcesClient
 	virtualNetworkLinks privatedns.VirtualNetworkLinksClient
-	storageAccounts     storage.AccountsClient
 
 	dns             dns.Manager
 	privateendpoint privateendpoint.Manager
+	storage         storage.Manager
 	subnet          subnet.Manager
 
 	kubernetescli kubernetes.Interface
@@ -119,10 +119,10 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.
 		resourceGroups:      features.NewResourceGroupsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 		resources:           features.NewResourcesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 		virtualNetworkLinks: privatedns.NewVirtualNetworkLinksClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
-		storageAccounts:     storage.NewAccountsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 
 		dns:             dns.NewManager(env, localFPAuthorizer),
 		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
+		storage:         storage.NewManager(env, r.SubscriptionID, fpAuthorizer),
 		subnet:          subnet.NewManager(env, r.SubscriptionID, fpAuthorizer),
 	}, nil
 }

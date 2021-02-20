@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"reflect"
 
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
@@ -59,7 +60,10 @@ func (g graph) resolve(a asset.Asset) error {
 func (m *manager) graphExists(ctx context.Context) (bool, error) {
 	m.log.Print("checking if graph exists")
 
-	blobService, err := m.getBlobService(ctx, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+
+	blobService, err := m.storage.BlobService(ctx, resourceGroup, account, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
 	if err != nil {
 		return false, err
 	}
@@ -73,7 +77,10 @@ func (m *manager) graphExists(ctx context.Context) (bool, error) {
 func (m *manager) saveGraph(ctx context.Context, g graph) error {
 	m.log.Print("save graph")
 
-	blobService, err := m.getBlobService(ctx, mgmtstorage.Permissions("cw"), mgmtstorage.SignedResourceTypesO)
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+
+	blobService, err := m.storage.BlobService(ctx, resourceGroup, account, mgmtstorage.Permissions("cw"), mgmtstorage.SignedResourceTypesO)
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"reflect"
 
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 )
 
@@ -52,7 +53,10 @@ func (pg persistedGraph) set(is ...interface{}) (err error) {
 func (m *manager) loadPersistedGraph(ctx context.Context) (persistedGraph, error) {
 	m.log.Print("load persisted graph")
 
-	blobService, err := m.getBlobService(ctx, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+
+	blobService, err := m.storage.BlobService(ctx, resourceGroup, account, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
 	if err != nil {
 		return nil, err
 	}
