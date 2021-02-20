@@ -22,7 +22,7 @@ function generate_golang() {
   local API_VERSION=$1
   local FOLDER=$2
 
-  sudo ${COMMAND} run \
+  sudo docker run \
 		--rm \
 		-v $PWD/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
 		-v $PWD/swagger:/swagger:z \
@@ -42,7 +42,7 @@ function generate_python() {
   local API_VERSION=$1
   local FOLDER=$2
 
-  sudo ${COMMAND} run \
+  sudo docker run \
 		--rm \
 		-v $PWD/python/client:/python/client:z \
 		-v $PWD/swagger:/swagger:z \
@@ -60,11 +60,6 @@ function generate_python() {
   >python/client/__init__.py
 }
 
-# Set command to podman or docker
-COMMAND=podman
-if ! command -v podman &> /dev/null; then
-  COMMAND=docker
-fi
 
 rm -f .sha256sum
 

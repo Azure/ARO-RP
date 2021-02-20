@@ -150,7 +150,7 @@ func (g *generator) proxyVmss() *arm.Resource {
 	}
 
 	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
-yum -y install podman --enablerepo rhel-7-server-extras-rpms
+yum -y install podman podman-docker --enablerepo rhel-7-server-extras-rpms
 
 # https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html/managing_containers/running_containers_as_systemd_services_with_podman
 # Need to set this if SELinux is enabled
@@ -169,7 +169,7 @@ cat >/root/.docker/config.json <<EOF
 	}
 }
 EOF
-podman pull "$PROXYIMAGE"
+docker pull "$PROXYIMAGE"
 
 mkdir /etc/proxy
 base64 -d <<<"$PROXYCERT" >/etc/proxy/proxy.crt
@@ -188,9 +188,9 @@ Description=Proxy container
 
 [Service]
 EnvironmentFile=/etc/sysconfig/proxy
-ExecStartPre=-/usr/bin/podman rm -f %n
-ExecStart=/usr/bin/podman run --rm --name %n -p 443:8443 -v /etc/proxy:/secrets $PROXY_IMAGE
-ExecStop=/usr/bin/podman stop %n
+ExecStartPre=-/usr/bin/docker rm -f %n
+ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -v /etc/proxy:/secrets $PROXY_IMAGE
+ExecStop=/usr/bin/docker stop %n
 Restart=always
 RestartSec=1
 StartLimitInterval=0
@@ -828,7 +828,7 @@ gpgcheck=yes
 EOF
 
 for attempt in {1..5}; do
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms --enablerepo=rhel-7-server-extras-rpms -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security podman openssl-perl td-agent-bit && break
+yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms --enablerepo=rhel-7-server-extras-rpms -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security podman podman-docker openssl-perl td-agent-bit && break
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
@@ -872,8 +872,8 @@ az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
 MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
 
-podman pull "$MDMIMAGE"
-podman pull "$RPIMAGE"
+docker pull "$MDMIMAGE"
+docker pull "$RPIMAGE"
 
 az logout
 
@@ -896,8 +896,8 @@ Description=MDM Service
 
 [Service]
 EnvironmentFile=/etc/sysconfig/mdm
-ExecStartPre=-/usr/bin/podman rm -f %N
-ExecStart=/usr/bin/podman run \
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStart=/usr/bin/docker run \
   --entrypoint /usr/sbin/MetricsExtension \
   --hostname %H \
   --name %N \
@@ -914,7 +914,7 @@ ExecStart=/usr/bin/podman run \
   -SourceEnvironment $MDMSOURCEENVIRONMENT \
   -SourceRole $MDMSOURCEROLE \
   -SourceRoleInstance $MDMSOURCEROLEINSTANCE
-ExecStop=/usr/bin/podman stop %N
+ExecStop=/usr/bin/docker stop %N
 Restart=always
 RestartSec=1
 StartLimitInterval=0
@@ -941,8 +941,8 @@ Description=RP Service
 
 [Service]
 EnvironmentFile=/etc/sysconfig/aro-rp
-ExecStartPre=-/usr/bin/podman rm -f %N
-ExecStart=/usr/bin/podman run \
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
@@ -961,7 +961,7 @@ ExecStart=/usr/bin/podman run \
   -v /var/etw:/var/etw:z \
   $RPIMAGE \
   rp
-ExecStop=/usr/bin/podman stop -t 3600 %N
+ExecStop=/usr/bin/docker stop -t 3600 %N
 TimeoutStopSec=3600
 Restart=always
 RestartSec=1
@@ -988,8 +988,8 @@ Description=ARO Monitor Service
 
 [Service]
 EnvironmentFile=/etc/sysconfig/aro-monitor
-ExecStartPre=-/usr/bin/podman rm -f %N
-ExecStart=/usr/bin/podman run \
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
@@ -1032,8 +1032,8 @@ StartLimitInterval=0
 
 [Service]
 EnvironmentFile=/etc/sysconfig/aro-portal
-ExecStartPre=-/usr/bin/podman rm -f %N
-ExecStart=/usr/bin/podman run \
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
@@ -1970,7 +1970,7 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms --enablerepo=rhel-7-server-extras-rpms -y install azure-cli podman jq libassuan-devel gcc gpgme-devel rh-git29 rh-python36 tmpwatch
+yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms --enablerepo=rhel-7-server-extras-rpms -y install azure-cli podman podman-docker jq libassuan-devel gcc gpgme-devel rh-git29 rh-python36 tmpwatch
 
 GO_VERSION=1.14.9
 curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz | tar -C /usr/local -xz

@@ -11,7 +11,7 @@ steps:
     export LOCATION=${{ parameters.location }}
     export AZURE_SUBSCRIPTION_ID=${{ parameters.subscription }}
 
-    trap 'set +e; rm -f devops-spn.json ; for c in $(podman ps -aq); do podman rm -f $c; done; podman image prune -af; rm -rf ~/.docker/config.json' EXIT
+    trap 'set +e; rm -f devops-spn.json ; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af; rm -rf ~/.docker/config.json' EXIT
     base64 -d >devops-spn.json <<<${{ parameters.azureDevOpsE2EJSONSPN }}
     export AZURE_CLIENT_ID=$(jq -r .clientId <devops-spn.json)
     export AZURE_CLIENT_SECRET=$(jq -r .clientSecret <devops-spn.json)
@@ -21,7 +21,7 @@ steps:
     # TODO: read RP config and derive $IMAGE from it. This would also need the
     # AZURE_CLIENT_ID identity to be able to pull from non-INT ACR.
     export IMAGE=arointsvc.azurecr.io/aro
-    podman login $IMAGE -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET
+    docker login $IMAGE -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET
 
     set -x
 
@@ -35,7 +35,7 @@ steps:
 
     # TODO: e2e.test arguments need to move inside the container somehow.  Maybe
     # a short script inside the container?  :-|
-    podman run \
+    docker run \
       --rm \
       --env CI=true \
       --env RP_MODE=${{ parameters.rpMode }} \
