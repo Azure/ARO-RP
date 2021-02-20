@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
@@ -48,7 +49,6 @@ type manager struct {
 	billing           billing.Manager
 	doc               *api.OpenShiftClusterDocument
 	subscriptionDoc   *api.SubscriptionDocument
-	aead              encryption.AEAD
 	fpAuthorizer      refreshable.Authorizer
 	localFpAuthorizer refreshable.Authorizer
 
@@ -68,6 +68,7 @@ type manager struct {
 	privateendpoint privateendpoint.Manager
 	storage         storage.Manager
 	subnet          subnet.Manager
+	graph           graph.Manager
 
 	kubernetescli kubernetes.Interface
 	extensionscli extensionsclient.Interface
@@ -98,6 +99,8 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.
 		return nil, err
 	}
 
+	storage := storage.NewManager(env, r.SubscriptionID, fpAuthorizer)
+
 	return &manager{
 		log:               log,
 		env:               env,
@@ -105,7 +108,6 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.
 		billing:           billing,
 		doc:               doc,
 		subscriptionDoc:   subscriptionDoc,
-		aead:              aead,
 		fpAuthorizer:      fpAuthorizer,
 		localFpAuthorizer: localFPAuthorizer,
 
@@ -122,7 +124,8 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.
 
 		dns:             dns.NewManager(env, localFPAuthorizer),
 		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
-		storage:         storage.NewManager(env, r.SubscriptionID, fpAuthorizer),
+		storage:         storage,
 		subnet:          subnet.NewManager(env, r.SubscriptionID, fpAuthorizer),
+		graph:           graph.NewManager(log, aead, storage),
 	}, nil
 }

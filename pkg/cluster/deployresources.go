@@ -18,19 +18,20 @@ import (
 )
 
 func (m *manager) deployResourceTemplate(ctx context.Context) error {
-	pg, err := m.loadPersistedGraph(ctx)
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+
+	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
 	if err != nil {
 		return err
 	}
 
 	var installConfig *installconfig.InstallConfig
 	var machineMaster *machine.Master
-	err = pg.get(&installConfig, &machineMaster)
+	err = pg.Get(&installConfig, &machineMaster)
 	if err != nil {
 		return err
 	}
-
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	vnetID, _, err := subnet.Split(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
 	if err != nil {

@@ -16,14 +16,17 @@ import (
 )
 
 func (m *manager) updateClusterData(ctx context.Context) error {
-	pg, err := m.loadPersistedGraph(ctx)
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+
+	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
 	if err != nil {
 		return err
 	}
 
 	var installConfig *installconfig.InstallConfig
 	var kubeadminPassword *password.KubeadminPassword
-	err = pg.get(&installConfig, &kubeadminPassword)
+	err = pg.Get(&installConfig, &kubeadminPassword)
 	if err != nil {
 		return err
 	}

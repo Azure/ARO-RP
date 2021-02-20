@@ -13,25 +13,27 @@ import (
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/tls"
 	clientcmd "k8s.io/client-go/tools/clientcmd/api/v1"
+
+	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 )
 
 // generateAROServiceKubeconfig generates additional admin credentials and a
 // kubeconfig for the ARO service, based on the admin kubeconfig found in the
 // graph.
-func (m *manager) generateAROServiceKubeconfig(pg persistedGraph) (*kubeconfig.AdminInternalClient, error) {
+func (m *manager) generateAROServiceKubeconfig(pg graph.PersistedGraph) (*kubeconfig.AdminInternalClient, error) {
 	return generateKubeconfig(pg, "system:aro-service", []string{"system:masters"})
 }
 
 // generateAROSREKubeconfig generates additional admin credentials and a
 // kubeconfig for ARO SREs, based on the admin kubeconfig found in the graph.
-func (m *manager) generateAROSREKubeconfig(pg persistedGraph) (*kubeconfig.AdminInternalClient, error) {
+func (m *manager) generateAROSREKubeconfig(pg graph.PersistedGraph) (*kubeconfig.AdminInternalClient, error) {
 	return generateKubeconfig(pg, "system:aro-sre", nil)
 }
 
-func generateKubeconfig(pg persistedGraph, commonName string, organization []string) (*kubeconfig.AdminInternalClient, error) {
+func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization []string) (*kubeconfig.AdminInternalClient, error) {
 	var ca *tls.AdminKubeConfigSignerCertKey
 	var adminInternalClient *kubeconfig.AdminInternalClient
-	err := pg.get(&ca, &adminInternalClient)
+	err := pg.Get(&ca, &adminInternalClient)
 	if err != nil {
 		return nil, err
 	}

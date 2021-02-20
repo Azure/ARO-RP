@@ -23,6 +23,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/bootstraplogging"
+	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -35,8 +36,8 @@ func (m *manager) createDNS(ctx context.Context) error {
 
 func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, image *releaseimage.Image) error {
 	if m.doc.OpenShiftCluster.Properties.InfraID == "" {
-		g := graph{}
-		g.set(&installconfig.InstallConfig{
+		g := graph.Graph{}
+		g.Set(&installconfig.InstallConfig{
 			Config: &types.InstallConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: strings.ToLower(m.doc.OpenShiftCluster.Name),
@@ -44,12 +45,12 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 			},
 		})
 
-		err := g.resolve(&installconfig.ClusterID{})
+		err := g.Resolve(&installconfig.ClusterID{})
 		if err != nil {
 			return err
 		}
 
-		clusterID := g.get(&installconfig.ClusterID{}).(*installconfig.ClusterID)
+		clusterID := g.Get(&installconfig.ClusterID{}).(*installconfig.ClusterID)
 
 		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 			doc.OpenShiftCluster.Properties.InfraID = clusterID.InfraID
@@ -63,6 +64,7 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 
 	m.log.Print("creating resource group")
 	group := mgmtfeatures.ResourceGroup{
@@ -120,7 +122,7 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		return err
 	}
 
-	exists, err := m.graphExists(ctx)
+	exists, err := m.graph.Exists(ctx, resourceGroup, account)
 	if err != nil || exists {
 		return err
 	}
@@ -135,19 +137,19 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		return err
 	}
 
-	g := graph{}
-	g.set(installConfig, image, clusterID, bootstrapLoggingConfig)
+	g := graph.Graph{}
+	g.Set(installConfig, image, clusterID, bootstrapLoggingConfig)
 
 	m.log.Print("resolving graph")
 	for _, a := range targets.Cluster {
-		err = g.resolve(a)
+		err = g.Resolve(a)
 		if err != nil {
 			return err
 		}
 	}
 
 	// the graph is quite big so we store it in a storage account instead of in cosmosdb
-	return m.saveGraph(ctx, g)
+	return m.graph.Save(ctx, resourceGroup, account, g)
 }
 
 func (m *manager) deploySnapshotUpgradeTemplate(ctx context.Context) error {
@@ -173,7 +175,10 @@ func (m *manager) deploySnapshotUpgradeTemplate(ctx context.Context) error {
 }
 
 func (m *manager) attachNSGsAndPatch(ctx context.Context) error {
-	pg, err := m.loadPersistedGraph(ctx)
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+
+	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
 	if err != nil {
 		return err
 	}
@@ -223,7 +228,7 @@ func (m *manager) attachNSGsAndPatch(ctx context.Context) error {
 	}
 
 	var adminInternalClient *kubeconfig.AdminInternalClient
-	err = pg.get(&adminInternalClient)
+	err = pg.Get(&adminInternalClient)
 	if err != nil {
 		return err
 	}
