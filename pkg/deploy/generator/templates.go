@@ -399,6 +399,8 @@ func (g *generator) sharedDevelopmentEnvTemplate() *arm.Template {
 			defaultValue = "Static"
 		case "publicIPAddressSkuName":
 			defaultValue = "Standard"
+		case "vpnCACertificate":
+			defaultValue = ""
 		}
 		t.Parameters[param] = &arm.TemplateParameter{
 			Type:         typ,
