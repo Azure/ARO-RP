@@ -51,7 +51,7 @@ func (r *MachineConfigPoolReconciler) Reconcile(request ctrl.Request) (ctrl.Resu
 		return reconcile.Result{}, err
 	}
 
-	err = reconcileRoles(ctx, r.arocli, r.dh, request.Name)
+	err = reconcileMachineConfigs(ctx, r.arocli, r.dh, request.Name)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err

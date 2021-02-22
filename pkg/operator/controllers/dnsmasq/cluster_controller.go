@@ -57,7 +57,7 @@ func (r *ClusterReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error)
 		roles = append(roles, mcp.Name)
 	}
 
-	err = reconcileRoles(ctx, r.arocli, r.dh, roles...)
+	err = reconcileMachineConfigs(ctx, r.arocli, r.dh, roles...)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
@@ -74,7 +74,7 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func reconcileRoles(ctx context.Context, arocli aroclient.Interface, dh dynamichelper.Interface, roles ...string) error {
+func reconcileMachineConfigs(ctx context.Context, arocli aroclient.Interface, dh dynamichelper.Interface, roles ...string) error {
 	instance, err := arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return err
