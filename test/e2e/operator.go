@@ -54,6 +54,18 @@ func updatedObjects(ctx context.Context, nsfilter string) ([]string, error) {
 	return result, nil
 }
 
+func dumpEvents(ctx context.Context, namespace string) error {
+	events, err := clients.Kubernetes.EventsV1().Events(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	for _, event := range events.Items {
+		log.Debugf("%s. %s. %s", event.Action, event.Reason, event.Note)
+	}
+	return nil
+}
+
 var _ = Describe("ARO Operator - Internet checking", func() {
 	var originalURLs []string
 	BeforeEach(func() {
@@ -131,7 +143,13 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 		}
 
 		err := wait.PollImmediate(30*time.Second, 15*time.Minute, mdsdReady)
+		if err != nil {
+			// TODO: Remove dump once reason for flakes is clear
+			err := dumpEvents(context.Background(), "openshift-azure-monitoring")
+			Expect(err).NotTo(HaveOccurred())
+		}
 		Expect(err).NotTo(HaveOccurred())
+
 		initial, err := updatedObjects(context.Background(), "openshift-azure-logging")
 		Expect(err).NotTo(HaveOccurred())
 
