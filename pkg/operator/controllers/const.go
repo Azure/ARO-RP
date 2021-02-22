@@ -5,6 +5,7 @@ package controllers
 
 const (
 	AlertwebhookControllerName             = "Alertwebhook"
+	ClusterOperatorAROName                 = "ClusterOperatorARO"
 	GenevaLoggingControllerName            = "GenevaLogging"
 	PullSecretControllerName               = "PullSecret"
 	WorkaroundControllerName               = "Workaround"
