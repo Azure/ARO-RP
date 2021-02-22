@@ -150,7 +150,12 @@ func (g *generator) proxyVmss() *arm.Resource {
 	}
 
 	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
-yum -y install docker
+yum -y install podman podman-docker --enablerepo rhel-7-server-extras-rpms
+
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html/managing_containers/running_containers_as_systemd_services_with_podman
+# Need to set this if SELinux is enabled
+setsebool -P container_manage_cgroup on
+
 
 firewall-cmd --add-port=443/tcp --permanent
 
@@ -164,7 +169,6 @@ cat >/root/.docker/config.json <<EOF
 	}
 }
 EOF
-systemctl start docker.service
 docker pull "$PROXYIMAGE"
 
 mkdir /etc/proxy
@@ -180,8 +184,7 @@ EOF
 
 cat >/etc/systemd/system/proxy.service <<'EOF'
 [Unit]
-After=docker.service
-Requires=docker.service
+Description=Proxy container
 
 [Service]
 EnvironmentFile=/etc/sysconfig/proxy
@@ -781,6 +784,9 @@ func (g *generator) vmss() *arm.Resource {
 	trailer := base64.StdEncoding.EncodeToString([]byte(`
 yum -y update -x WALinuxAgent
 
+# Allow systemd to run containers
+setsebool -P container_manage_cgroup on
+
 lvextend -l +50%FREE /dev/rootvg/rootlv
 xfs_growfs /
 
@@ -822,7 +828,7 @@ gpgcheck=yes
 EOF
 
 for attempt in {1..5}; do
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security docker openssl-perl td-agent-bit && break
+yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms --enablerepo=rhel-7-server-extras-rpms -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security podman podman-docker openssl-perl td-agent-bit && break
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
@@ -862,10 +868,10 @@ EOF
 az login -i
 az account set -s "$SUBSCRIPTIONID"
 
-systemctl start docker.service
 az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
 MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
+
 docker pull "$MDMIMAGE"
 docker pull "$RPIMAGE"
 
@@ -886,8 +892,7 @@ EOF
 mkdir /var/etw
 cat >/etc/systemd/system/mdm.service <<'EOF'
 [Unit]
-After=docker.service
-Requires=docker.service
+Description=MDM Service
 
 [Service]
 EnvironmentFile=/etc/sysconfig/mdm
@@ -932,8 +937,7 @@ EOF
 
 cat >/etc/systemd/system/aro-rp.service <<'EOF'
 [Unit]
-After=docker.service
-Requires=docker.service
+Description=RP Service
 
 [Service]
 EnvironmentFile=/etc/sysconfig/aro-rp
@@ -980,8 +984,7 @@ EOF
 
 cat >/etc/systemd/system/aro-monitor.service <<'EOF'
 [Unit]
-After=docker.service
-Requires=docker.service
+Description=ARO Monitor Service
 
 [Service]
 EnvironmentFile=/etc/sysconfig/aro-monitor
@@ -1025,8 +1028,6 @@ EOF
 
 cat >/etc/systemd/system/aro-portal.service <<'EOF'
 [Unit]
-After=docker.service
-Requires=docker.service
 StartLimitInterval=0
 
 [Service]
@@ -1969,7 +1970,7 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install azure-cli docker jq libassuan-devel gcc gpgme-devel rh-git29 rh-python36 tmpwatch
+yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms --enablerepo=rhel-7-server-extras-rpms -y install azure-cli podman podman-docker jq libassuan-devel gcc gpgme-devel rh-git29 rh-python36 tmpwatch
 
 GO_VERSION=1.14.9
 curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz | tar -C /usr/local -xz
@@ -1998,10 +1999,6 @@ PERL5LIB=/opt/rh/rh-git29/root/usr/share/perl5/vendor_perl
 PKG_CONFIG_PATH=/opt/rh/rh-python36/root/usr/lib64/pkgconfig
 XDG_DATA_DIRS=/opt/rh/rh-python36/root/usr/share:/usr/local/share:/usr/share
 EOF
-
-sed -i -e 's/^OPTIONS='\''/OPTIONS='\''-G cloud-user /' /etc/sysconfig/docker
-
-systemctl enable docker
 
 cat >/etc/cron.hourly/tmpwatch <<'EOF'
 #!/bin/bash
