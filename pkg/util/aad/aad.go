@@ -20,13 +20,11 @@ import (
 
 // GetToken authenticates in the customer's tenant as the cluster service
 // principal and returns a token.
-func GetToken(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, aadEndpoint, resource string) (*adal.ServicePrincipalToken, error) {
-	spp := &oc.Properties.ServicePrincipalProfile
-
+func GetToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, tenantID string, aadEndpoint, resource string) (*adal.ServicePrincipalToken, error) {
 	conf := auth.ClientCredentialsConfig{
-		ClientID:     spp.ClientID,
-		ClientSecret: string(spp.ClientSecret),
-		TenantID:     subscriptionDoc.Subscription.Properties.TenantID,
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		TenantID:     tenantID,
 		Resource:     resource,
 		AADEndpoint:  aadEndpoint,
 	}

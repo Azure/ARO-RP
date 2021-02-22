@@ -17,18 +17,25 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 )
 
-func (m *manager) clusterSPObjectID(ctx context.Context) error {
-	var clusterSPObjectID string
-	spp := &m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-
-	token, err := aad.GetToken(ctx, m.log, m.doc.OpenShiftCluster, m.subscriptionDoc, m.env.Environment().ActiveDirectoryEndpoint, m.env.Environment().GraphEndpoint)
+// initializeClusterSPClients initialized clients, based on cluster service principal
+func (m *manager) initializeClusterSPClients(ctx context.Context) error {
+	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
+	token, err := aad.GetToken(ctx, m.log, spp.ClientID, string(spp.ClientSecret), m.subscriptionDoc.Subscription.Properties.TenantID, m.env.Environment().ActiveDirectoryEndpoint, m.env.Environment().GraphEndpoint)
 	if err != nil {
 		return err
 	}
 
 	spGraphAuthorizer := autorest.NewBearerAuthorizer(token)
 
-	applications := graphrbac.NewApplicationsClient(m.env.Environment(), m.subscriptionDoc.Subscription.Properties.TenantID, spGraphAuthorizer)
+	m.spApplications = graphrbac.NewApplicationsClient(m.env.Environment(), m.subscriptionDoc.Subscription.Properties.TenantID, spGraphAuthorizer)
+	return nil
+}
+
+func (m *manager) clusterSPObjectID(ctx context.Context) error {
+	var clusterSPObjectID string
+	var err error
+
+	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
@@ -38,7 +45,7 @@ func (m *manager) clusterSPObjectID(ctx context.Context) error {
 	// to the user in case when wait exceeds the timeout
 	_ = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		var res azgraphrbac.ServicePrincipalObjectResult
-		res, err = applications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
+		res, err = m.spApplications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
 		if err != nil {
 			if strings.Contains(err.Error(), "Authorization_IdentityNotFound") {
 				m.log.Info(err)
@@ -66,7 +73,13 @@ func (m *manager) fixupClusterSPObjectID(ctx context.Context) error {
 		return nil
 	}
 
-	err := m.clusterSPObjectID(ctx)
+	err := m.initializeClusterSPClients(ctx)
+	if err != nil {
+		m.log.Print(err)
+		return nil
+	}
+
+	err = m.clusterSPObjectID(ctx)
 	if err != nil {
 		m.log.Print(err)
 	}

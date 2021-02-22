@@ -51,6 +51,7 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 func (m *manager) Update(ctx context.Context) error {
 	steps := []steps.Step{
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
+		steps.Action(m.initializeClusterSPClients),
 	}
 
 	return m.runSteps(ctx, steps)
@@ -76,6 +77,7 @@ func (m *manager) Install(ctx context.Context) error {
 				return err
 			}),
 			steps.Action(m.createDNS),
+			steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
 			steps.Action(m.clusterSPObjectID),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
 				return m.deployStorageTemplate(ctx, installConfig, image)
