@@ -49,6 +49,7 @@ stages:
       - australiasoutheast
       - centralindia
       - eastasia
+      - indiasouth
       - japaneast
       - japanwest
       - koreacentral
@@ -138,6 +139,7 @@ stages:
       aroVersionStorageAccount: $(aro-version-storage-account)
       locations:
       - brazilsouth
+      - brazilsoutheast
       - southeastasia
       - southafricanorth
       - uaenorth
