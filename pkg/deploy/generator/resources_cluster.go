@@ -25,7 +25,7 @@ func clusterVnet() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		Condition:  "[parameters('fullDeploy')]",
+		Condition:  "[parameters('ci')]",
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }

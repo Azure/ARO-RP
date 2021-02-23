@@ -18,7 +18,7 @@ func (g *generator) clusterPredeploy() *arm.Template {
 		"clusterName",
 		"clusterServicePrincipalId",
 		"fpServicePrincipalId",
-		"fullDeploy",
+		"ci",
 		"vnetAddressPrefix",
 		"masterAddressPrefix",
 		"workerAddressPrefix",
@@ -27,7 +27,7 @@ func (g *generator) clusterPredeploy() *arm.Template {
 	for _, param := range params {
 		p := &arm.TemplateParameter{Type: "string"}
 		switch param {
-		case "fullDeploy":
+		case "ci":
 			p.Type = "bool"
 			p.DefaultValue = false
 		}
