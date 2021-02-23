@@ -869,7 +869,9 @@ EOF
 az login -i
 az account set -s "$SUBSCRIPTIONID"
 
-az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+>/etc/containers/nodocker  # podman stderr output confuses az acr login
+mkdir -p /root/.docker
+REGISTRY_AUTH_FILE=/root/.docker/config.json az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
 MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
 
