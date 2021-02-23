@@ -327,7 +327,7 @@ func (g *generator) preDeployTemplate() *arm.Template {
 			p.Type = "array"
 			p.DefaultValue = []string{}
 		case "keyvaultPrefix":
-			p.MaxLength = 24 - max(len(env.ClustersKeyvaultSuffix), len(env.ServiceKeyvaultSuffix), len(env.PortalKeyvaultSuffix))
+			p.MaxLength = 24 - max(len(env.ClusterKeyvaultSuffix), len(env.ServiceKeyvaultSuffix), len(env.PortalKeyvaultSuffix))
 		}
 		t.Parameters[param] = p
 	}
@@ -335,9 +335,9 @@ func (g *generator) preDeployTemplate() *arm.Template {
 	t.Resources = append(t.Resources,
 		g.securityGroupRP(),
 		g.securityGroupPE(),
-		// clustersKeyvault, portalKeyvault and serviceKeyvault must be in this
+		// clusterKeyvault, portalKeyvault and serviceKeyvault must be in this
 		// order due to terrible bytes.Replace in templateFixup
-		g.clustersKeyvault(),
+		g.clusterKeyvault(),
 		g.portalKeyvault(),
 		g.serviceKeyvault(),
 	)

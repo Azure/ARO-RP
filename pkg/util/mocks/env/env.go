@@ -250,6 +250,20 @@ func (mr *MockInterfaceMockRecorder) ArmClientAuthorizer() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArmClientAuthorizer", reflect.TypeOf((*MockInterface)(nil).ArmClientAuthorizer))
 }
 
+// ClusterKeyvault mocks base method
+func (m *MockInterface) ClusterKeyvault() keyvault.Manager {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClusterKeyvault")
+	ret0, _ := ret[0].(keyvault.Manager)
+	return ret0
+}
+
+// ClusterKeyvault indicates an expected call of ClusterKeyvault
+func (mr *MockInterfaceMockRecorder) ClusterKeyvault() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterKeyvault", reflect.TypeOf((*MockInterface)(nil).ClusterKeyvault))
+}
+
 // ClustersGenevaLoggingConfigVersion mocks base method
 func (m *MockInterface) ClustersGenevaLoggingConfigVersion() string {
 	m.ctrl.T.Helper()
@@ -291,20 +305,6 @@ func (m *MockInterface) ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Ce
 func (mr *MockInterfaceMockRecorder) ClustersGenevaLoggingSecret() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClustersGenevaLoggingSecret", reflect.TypeOf((*MockInterface)(nil).ClustersGenevaLoggingSecret))
-}
-
-// ClustersKeyvault mocks base method
-func (m *MockInterface) ClustersKeyvault() keyvault.Manager {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClustersKeyvault")
-	ret0, _ := ret[0].(keyvault.Manager)
-	return ret0
-}
-
-// ClustersKeyvault indicates an expected call of ClustersKeyvault
-func (mr *MockInterfaceMockRecorder) ClustersKeyvault() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClustersKeyvault", reflect.TypeOf((*MockInterface)(nil).ClustersKeyvault))
 }
 
 // CreateARMResourceGroupRoleAssignment mocks base method

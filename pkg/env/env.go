@@ -30,7 +30,7 @@ const (
 	PortalServerClientSecretName     = "portal-client"
 	PortalServerSessionKeySecretName = "portal-session-key"
 	PortalServerSSHKeySecretName     = "portal-sshkey"
-	ClustersKeyvaultSuffix           = "-cls"
+	ClusterKeyvaultSuffix            = "-cls"
 	PortalKeyvaultSuffix             = "-por"
 	ServiceKeyvaultSuffix            = "-svc"
 )
@@ -46,7 +46,7 @@ type Interface interface {
 	ClustersGenevaLoggingConfigVersion() string
 	ClustersGenevaLoggingEnvironment() string
 	ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
-	ClustersKeyvault() keyvault.Manager
+	ClusterKeyvault() keyvault.Manager
 	Domain() string
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
 	Listen() (net.Listener, error)

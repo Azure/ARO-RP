@@ -39,8 +39,8 @@ type prod struct {
 	fpPrivateKey  *rsa.PrivateKey
 	fpClientID    string
 
-	clustersKeyvault keyvault.Manager
-	serviceKeyvault  keyvault.Manager
+	clusterKeyvault keyvault.Manager
+	serviceKeyvault keyvault.Manager
 
 	clustersGenevaLoggingCertificate   *x509.Certificate
 	clustersGenevaLoggingPrivateKey    *rsa.PrivateKey
@@ -89,7 +89,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
-	clustersKeyvaultURI, err := keyvault.URI(p, ClustersKeyvaultSuffix)
+	clusterKeyvaultURI, err := keyvault.URI(p, ClusterKeyvaultSuffix)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
-	p.clustersKeyvault = keyvault.NewManager(rpKVAuthorizer, clustersKeyvaultURI)
+	p.clusterKeyvault = keyvault.NewManager(rpKVAuthorizer, clusterKeyvaultURI)
 	p.serviceKeyvault = keyvault.NewManager(rpKVAuthorizer, serviceKeyvaultURI)
 
 	err = p.populateZones(ctx, rpAuthorizer)
@@ -211,8 +211,8 @@ func (p *prod) ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate
 	return p.clustersGenevaLoggingPrivateKey, p.clustersGenevaLoggingCertificate
 }
 
-func (p *prod) ClustersKeyvault() keyvault.Manager {
-	return p.clustersKeyvault
+func (p *prod) ClusterKeyvault() keyvault.Manager {
+	return p.clusterKeyvault
 }
 
 func (p *prod) Domain() string {
