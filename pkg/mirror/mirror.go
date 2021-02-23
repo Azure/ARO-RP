@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/containers/image/v5/copy"
 	"github.com/containers/image/v5/docker"
@@ -79,11 +80,12 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 			for w := range ch {
 				log.Printf("mirroring %s", w.tag)
 				var err error
-				for retry := 0; retry < 3; retry++ {
+				for retry := 0; retry < 6; retry++ {
 					err = Copy(ctx, w.dstreference, w.srcreference, w.dstauth, w.srcauth)
 					if err == nil {
 						break
 					}
+					time.Sleep(10 * time.Second)
 				}
 				if err != nil {
 					log.Errorf("%s: %s\n", w.tag, err)
