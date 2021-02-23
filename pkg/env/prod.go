@@ -42,10 +42,10 @@ type prod struct {
 	clusterKeyvault keyvault.Manager
 	serviceKeyvault keyvault.Manager
 
-	clustersGenevaLoggingCertificate   *x509.Certificate
-	clustersGenevaLoggingPrivateKey    *rsa.PrivateKey
-	clustersGenevaLoggingConfigVersion string
-	clustersGenevaLoggingEnvironment   string
+	clusterGenevaLoggingCertificate   *x509.Certificate
+	clusterGenevaLoggingPrivateKey    *rsa.PrivateKey
+	clusterGenevaLoggingConfigVersion string
+	clusterGenevaLoggingEnvironment   string
 
 	log *logrus.Entry
 }
@@ -73,8 +73,8 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		Core:   core,
 		Dialer: dialer,
 
-		clustersGenevaLoggingEnvironment:   "DiagnosticsProd",
-		clustersGenevaLoggingConfigVersion: "2.2",
+		clusterGenevaLoggingEnvironment:   "DiagnosticsProd",
+		clusterGenevaLoggingConfigVersion: "2.2",
 
 		log: log,
 	}
@@ -116,13 +116,13 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	p.fpCertificate = fpCertificates[0]
 	p.fpClientID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
 
-	clustersGenevaLoggingPrivateKey, clustersGenevaLoggingCertificates, err := p.serviceKeyvault.GetCertificateSecret(ctx, ClusterLoggingSecretName)
+	clusterGenevaLoggingPrivateKey, clusterGenevaLoggingCertificates, err := p.serviceKeyvault.GetCertificateSecret(ctx, ClusterLoggingSecretName)
 	if err != nil {
 		return nil, err
 	}
 
-	p.clustersGenevaLoggingPrivateKey = clustersGenevaLoggingPrivateKey
-	p.clustersGenevaLoggingCertificate = clustersGenevaLoggingCertificates[0]
+	p.clusterGenevaLoggingPrivateKey = clusterGenevaLoggingPrivateKey
+	p.clusterGenevaLoggingCertificate = clusterGenevaLoggingCertificates[0]
 
 	if p.ACRResourceID() != "" { // TODO: ugh!
 		acrResource, err := azure.ParseResourceID(p.ACRResourceID())
@@ -199,16 +199,16 @@ func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authoriz
 	return nil
 }
 
-func (p *prod) ClustersGenevaLoggingConfigVersion() string {
-	return p.clustersGenevaLoggingConfigVersion
+func (p *prod) ClusterGenevaLoggingConfigVersion() string {
+	return p.clusterGenevaLoggingConfigVersion
 }
 
-func (p *prod) ClustersGenevaLoggingEnvironment() string {
-	return p.clustersGenevaLoggingEnvironment
+func (p *prod) ClusterGenevaLoggingEnvironment() string {
+	return p.clusterGenevaLoggingEnvironment
 }
 
-func (p *prod) ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate) {
-	return p.clustersGenevaLoggingPrivateKey, p.clustersGenevaLoggingCertificate
+func (p *prod) ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate) {
+	return p.clusterGenevaLoggingPrivateKey, p.clusterGenevaLoggingCertificate
 }
 
 func (p *prod) ClusterKeyvault() keyvault.Manager {

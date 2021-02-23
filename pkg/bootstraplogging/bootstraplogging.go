@@ -22,7 +22,7 @@ func GetConfig(env env.Interface, doc *api.OpenShiftClusterDocument) (*bootstrap
 		return nil, err
 	}
 
-	key, cert := env.ClustersGenevaLoggingSecret()
+	key, cert := env.ClusterGenevaLoggingSecret()
 
 	gcsKeyBytes, err := tls.PrivateKeyAsBytes(key)
 	if err != nil {
@@ -38,8 +38,8 @@ func GetConfig(env env.Interface, doc *api.OpenShiftClusterDocument) (*bootstrap
 		Certificate:       string(gcsCertBytes),
 		Key:               string(gcsKeyBytes),
 		Namespace:         genevalogging.ClusterLogsNamespace,
-		Environment:       env.ClustersGenevaLoggingEnvironment(),
-		ConfigVersion:     env.ClustersGenevaLoggingConfigVersion(),
+		Environment:       env.ClusterGenevaLoggingEnvironment(),
+		ConfigVersion:     env.ClusterGenevaLoggingConfigVersion(),
 		Region:            env.Location(),
 		ResourceID:        doc.OpenShiftCluster.ID,
 		SubscriptionID:    r.SubscriptionID,
