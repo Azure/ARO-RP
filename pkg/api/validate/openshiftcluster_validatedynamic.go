@@ -116,11 +116,6 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	// Additional checks - use any dynamic because they both have the correct permissions
-	err = spDynamic.ValidateVnetDNS(ctx)
-	if err != nil {
-		return err
-	}
-
 	vnet, err := spDynamic.virtualNetworks.Get(ctx, spDynamic.vnetr.ResourceGroup, spDynamic.vnetr.ResourceName, "")
 	if err != nil {
 		return err

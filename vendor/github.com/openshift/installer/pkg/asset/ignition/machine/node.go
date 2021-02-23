@@ -9,7 +9,9 @@ import (
 	igntypes "github.com/coreos/ignition/v2/config/v3_1/types"
 	"github.com/vincent-petithory/dataurl"
 
+	"github.com/openshift/installer/pkg/asset/templates/content/bootkube"
 	"github.com/openshift/installer/pkg/types"
+	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
 	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
 	ovirttypes "github.com/openshift/installer/pkg/types/ovirt"
@@ -18,12 +20,16 @@ import (
 
 // pointerIgnitionConfig generates a config which references the remote config
 // served by the machine config server.
-func pointerIgnitionConfig(installConfig *types.InstallConfig, rootCA []byte, role string) *igntypes.Config {
+func pointerIgnitionConfig(installConfig *types.InstallConfig, aroDNSConfig *bootkube.ARODNSConfig, rootCA []byte, role string) *igntypes.Config {
 	var ignitionHost string
 	// Default platform independent ignitionHost
 	ignitionHost = fmt.Sprintf("api-int.%s:22623", installConfig.ClusterDomain())
 	// Update ignitionHost as necessary for platform
 	switch installConfig.Platform.Name() {
+	case azuretypes.Name:
+		if installConfig.Azure.ARO {
+			ignitionHost = net.JoinHostPort(aroDNSConfig.APIIntIP, "22623")
+		}
 	case baremetaltypes.Name:
 		// Baremetal needs to point directly at the VIP because we don't have a
 		// way to configure DNS before Ignition runs.

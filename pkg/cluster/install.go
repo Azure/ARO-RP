@@ -14,6 +14,8 @@ import (
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
+	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
+	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
 
@@ -37,11 +39,15 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 		steps.Action(m.fixSSH),
 		steps.Action(m.populateCreatedAt), // TODO(mikalai): Remove after a round of admin updates
 		steps.Action(m.fixSREKubeconfig),
+		steps.Action(m.createOrUpdateRouterIPFromCluster),
+		steps.Action(m.populateDatabaseIntIP),
+		steps.Action(m.fixMCSCert),
+		steps.Action(m.fixMCSUserData),
 		steps.Action(m.ensureAROOperator),
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
-		steps.Action(m.createOrUpdateRouterIP),
+		steps.Action(m.removePrivateDNSZone),
 		steps.Action(m.updateProvisionedBy), // Run this last so we capture the resource provider only once the upgrade has been fully performed
 	}
 
@@ -82,11 +88,15 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
 				return m.deployStorageTemplate(ctx, installConfig, image)
 			})),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.updateAPIIPEarly)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.createOrUpdateRouterIPEarly)),
+			steps.Action(func(ctx context.Context) error {
+				return m.ensureGraph(ctx, installConfig, image)
+			}),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGsAndPatch)),
 			steps.Action(m.ensureBillingRecord),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.deployResourceTemplate)),
 			steps.Action(m.createPrivateEndpoint),
-			steps.Action(m.updateAPIIP),
 			steps.Action(m.createCertificates),
 			steps.Action(m.initializeKubernetesClients),
 			steps.Condition(m.bootstrapConfigMapReady, 30*time.Minute),
@@ -108,7 +118,6 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.disableUpdates),
 			steps.Action(m.disableSamples),
 			steps.Action(m.disableOperatorHubSources),
-			steps.Action(m.createOrUpdateRouterIP),
 			steps.Action(m.updateClusterData),
 			steps.Action(m.configureIngressCertificate),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute),
@@ -179,6 +188,16 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	m.extensionscli, err = extensionsclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	m.maocli, err = maoclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	m.mcocli, err = mcoclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}

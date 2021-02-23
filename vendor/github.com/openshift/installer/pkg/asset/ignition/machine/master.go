@@ -10,6 +10,7 @@ import (
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/ignition"
 	"github.com/openshift/installer/pkg/asset/installconfig"
+	"github.com/openshift/installer/pkg/asset/templates/content/bootkube"
 	"github.com/openshift/installer/pkg/asset/tls"
 )
 
@@ -30,6 +31,7 @@ func (a *Master) Dependencies() []asset.Asset {
 	return []asset.Asset{
 		&installconfig.InstallConfig{},
 		&tls.RootCA{},
+		&bootkube.ARODNSConfig{},
 	}
 }
 
@@ -37,9 +39,10 @@ func (a *Master) Dependencies() []asset.Asset {
 func (a *Master) Generate(dependencies asset.Parents) error {
 	installConfig := &installconfig.InstallConfig{}
 	rootCA := &tls.RootCA{}
-	dependencies.Get(installConfig, rootCA)
+	aroDNSConfig := &bootkube.ARODNSConfig{}
+	dependencies.Get(installConfig, rootCA, aroDNSConfig)
 
-	a.Config = pointerIgnitionConfig(installConfig.Config, rootCA.Cert(), "master")
+	a.Config = pointerIgnitionConfig(installConfig.Config, aroDNSConfig, rootCA.Cert(), "master")
 
 	data, err := ignition.Marshal(a.Config)
 	if err != nil {

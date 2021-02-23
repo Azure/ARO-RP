@@ -126,7 +126,7 @@ replace (
 	github.com/openshift/cluster-api-provider-libvirt => github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20200919090150-1ca52adab176
 	github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20210210114935-91f12f3f7dee
 	github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20210116095614-7fd78a283616
-	github.com/openshift/installer => github.com/jim-minter/installer v0.9.0-master.0.20210128115533-6feac498cb32
+	github.com/openshift/installer => github.com/jim-minter/installer v0.9.0-master.0.20210221211908-aaebddb9dcf1
 	github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20210212025836-cb508cd8777d
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20210211205336-14a2b82d9f4c
 	github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.19.4

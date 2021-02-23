@@ -6,6 +6,7 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -144,6 +145,11 @@ func (o *operator) resources() ([]runtime.Object, error) {
 		return nil, err
 	}
 
+	domain := o.oc.Properties.ClusterProfile.Domain
+	if !strings.ContainsRune(domain, '.') {
+		domain += "." + o.env.Domain()
+	}
+
 	// create a secret here for genevalogging, later we will copy it to
 	// the genevalogging namespace.
 	return append(results,
@@ -164,6 +170,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 			},
 			Spec: arov1alpha1.ClusterSpec{
 				ResourceID:    o.oc.ID,
+				Domain:        domain,
 				ACRDomain:     o.env.ACRDomain(),
 				AZEnvironment: o.env.Environment().Name,
 				Location:      o.env.Location(),
@@ -180,6 +187,8 @@ func (o *operator) resources() ([]runtime.Object, error) {
 						monitoringEndpoint,
 					},
 				},
+				APIIntIP:  o.oc.Properties.APIServerProfile.IntIP,
+				IngressIP: o.oc.Properties.IngressProfiles[0].IP,
 				Features: arov1alpha1.FeaturesSpec{
 					PersistentPrometheus: false,
 				},

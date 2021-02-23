@@ -36,8 +36,8 @@ type OpenShiftClusterDocument struct {
 
 	Bucket int `json:"bucket,omitempty"`
 
-	LeaseOwner   string `json:"leaseOwner,omitempty"`
-	LeaseExpires int    `json:"leaseExpires,omitempty"`
+	LeaseOwner   string `json:"leaseOwner,omitempty" deep:"-"`
+	LeaseExpires int    `json:"leaseExpires,omitempty" deep:"-"`
 	Dequeues     int    `json:"dequeues,omitempty"`
 
 	AsyncOperationID string `json:"asyncOperationId,omitempty" deep:"-"`

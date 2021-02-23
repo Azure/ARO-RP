@@ -31,7 +31,6 @@ import (
 type SlimDynamic interface {
 	ValidateVnetPermissions(ctx context.Context) error
 	ValidateRouteTablesPermissions(ctx context.Context) error
-	ValidateVnetDns(ctx context.Context) error
 	// etc
 	// does Quota code go in here too?
 }
@@ -165,23 +164,6 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, rtID strin
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedRouteTable, "", "The route table '%s' could not be found.", rtID)
 	}
 	return err
-}
-
-func (dv *dynamic) ValidateVnetDNS(ctx context.Context) error {
-	dv.log.Print("validateVnetDns")
-
-	vnet, err := dv.virtualNetworks.Get(ctx, dv.vnetr.ResourceGroup, dv.vnetr.ResourceName, "")
-	if err != nil {
-		return err
-	}
-
-	if vnet.DhcpOptions != nil &&
-		vnet.DhcpOptions.DNSServers != nil &&
-		len(*vnet.DhcpOptions.DNSServers) > 0 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided vnet '%s' is invalid: custom DNS servers are not supported.", *vnet.ID)
-	}
-
-	return nil
 }
 
 func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actions []string) error {

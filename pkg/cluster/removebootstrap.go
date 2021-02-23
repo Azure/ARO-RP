@@ -35,7 +35,10 @@ func (m *manager) removeBootstrap(ctx context.Context) error {
 func (m *manager) removeBootstrapIgnition(ctx context.Context) error {
 	m.log.Print("remove ignition config")
 
-	blobService, err := m.getBlobService(ctx, mgmtstorage.Permissions("d"), mgmtstorage.SignedResourceTypesC)
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+
+	blobService, err := m.storage.BlobService(ctx, resourceGroup, account, mgmtstorage.Permissions("d"), mgmtstorage.SignedResourceTypesC)
 	if err != nil {
 		return err
 	}

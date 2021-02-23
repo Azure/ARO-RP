@@ -100,15 +100,16 @@ func (d *DNS) Generate(dependencies asset.Parents) error {
 			return err
 		}
 
-		if !installConfig.Config.Azure.ARO &&
-			installConfig.Config.Publish == types.ExternalPublishingStrategy {
-			//currently, this guesses the azure resource IDs from known parameter.
-			config.Spec.PublicZone = &configv1.DNSZone{
-				ID: dnsConfig.GetDNSZoneID(installConfig.Config.Azure.BaseDomainResourceGroupName, installConfig.Config.BaseDomain),
+		if !installConfig.Config.Azure.ARO {
+			if installConfig.Config.Publish == types.ExternalPublishingStrategy {
+				//currently, this guesses the azure resource IDs from known parameter.
+				config.Spec.PublicZone = &configv1.DNSZone{
+					ID: dnsConfig.GetDNSZoneID(installConfig.Config.Azure.BaseDomainResourceGroupName, installConfig.Config.BaseDomain),
+				}
 			}
-		}
-		config.Spec.PrivateZone = &configv1.DNSZone{
-			ID: dnsConfig.GetPrivateDNSZoneID(installConfig.Config.Azure.ClusterResourceGroupName(clusterID.InfraID), installConfig.Config.ClusterDomain()),
+			config.Spec.PrivateZone = &configv1.DNSZone{
+				ID: dnsConfig.GetPrivateDNSZoneID(installConfig.Config.Azure.ClusterResourceGroupName(clusterID.InfraID), installConfig.Config.ClusterDomain()),
+			}
 		}
 	case gcptypes.Name:
 		if installConfig.Config.Publish == types.ExternalPublishingStrategy {

@@ -11,11 +11,14 @@ import (
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
+	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
+	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
@@ -24,12 +27,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
+	"github.com/Azure/ARO-RP/pkg/util/storage"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -48,7 +51,6 @@ type manager struct {
 	billing           billing.Manager
 	doc               *api.OpenShiftClusterDocument
 	subscriptionDoc   *api.SubscriptionDocument
-	aead              encryption.AEAD
 	fpAuthorizer      refreshable.Authorizer
 	localFpAuthorizer refreshable.Authorizer
 
@@ -62,15 +64,19 @@ type manager struct {
 	deployments         features.DeploymentsClient
 	resourceGroups      features.ResourceGroupsClient
 	resources           features.ResourcesClient
+	privateZones        privatedns.PrivateZonesClient
 	virtualNetworkLinks privatedns.VirtualNetworkLinksClient
-	storageAccounts     storage.AccountsClient
 
 	dns             dns.Manager
 	privateendpoint privateendpoint.Manager
+	storage         storage.Manager
 	subnet          subnet.Manager
+	graph           graph.Manager
 
 	kubernetescli kubernetes.Interface
 	extensionscli extensionsclient.Interface
+	maocli        maoclient.Interface
+	mcocli        mcoclient.Interface
 	operatorcli   operatorclient.Interface
 	configcli     configclient.Interface
 	samplescli    samplesclient.Interface
@@ -98,6 +104,8 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.
 		return nil, err
 	}
 
+	storage := storage.NewManager(env, r.SubscriptionID, fpAuthorizer)
+
 	return &manager{
 		log:               log,
 		env:               env,
@@ -105,7 +113,6 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.
 		billing:           billing,
 		doc:               doc,
 		subscriptionDoc:   subscriptionDoc,
-		aead:              aead,
 		fpAuthorizer:      fpAuthorizer,
 		localFpAuthorizer: localFPAuthorizer,
 
@@ -118,11 +125,13 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.
 		deployments:         features.NewDeploymentsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 		resourceGroups:      features.NewResourceGroupsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 		resources:           features.NewResourcesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
+		privateZones:        privatedns.NewPrivateZonesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 		virtualNetworkLinks: privatedns.NewVirtualNetworkLinksClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
-		storageAccounts:     storage.NewAccountsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 
 		dns:             dns.NewManager(env, localFPAuthorizer),
 		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
+		storage:         storage,
 		subnet:          subnet.NewManager(env, r.SubscriptionID, fpAuthorizer),
+		graph:           graph.NewManager(log, aead, storage),
 	}, nil
 }

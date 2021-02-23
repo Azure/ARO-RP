@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 func (m *manager) fixSREKubeconfig(ctx context.Context) error {
@@ -14,7 +15,10 @@ func (m *manager) fixSREKubeconfig(ctx context.Context) error {
 		return nil
 	}
 
-	pg, err := m.loadPersistedGraph(ctx)
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+
+	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
 	if err != nil {
 		return err
 	}

@@ -14,25 +14,20 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 func (m *manager) deployResourceTemplate(ctx context.Context) error {
-	pg, err := m.loadPersistedGraph(ctx)
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+
+	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
 	if err != nil {
 		return err
 	}
 
 	var installConfig *installconfig.InstallConfig
 	var machineMaster *machine.Master
-	err = pg.get(&installConfig, &machineMaster)
-	if err != nil {
-		return err
-	}
-
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-
-	vnetID, _, err := subnet.Split(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+	err = pg.Get(&installConfig, &machineMaster)
 	if err != nil {
 		return err
 	}
@@ -51,14 +46,6 @@ func (m *manager) deployResourceTemplate(ctx context.Context) error {
 			},
 		},
 		Resources: []*arm.Resource{
-			m.dnsPrivateZone(installConfig),
-			m.dnsPrivateRecordAPIINT(installConfig),
-			m.dnsPrivateRecordAPI(installConfig),
-			m.dnsVirtualNetworkLink(installConfig, vnetID),
-			m.networkPrivateLinkService(installConfig),
-			m.networkPublicIPAddress(installConfig),
-			m.networkInternalLoadBalancer(installConfig),
-			m.networkPublicLoadBalancer(installConfig),
 			m.networkBootstrapNIC(installConfig),
 			m.networkMasterNICs(installConfig),
 			m.computeBootstrapVM(installConfig),

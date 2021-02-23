@@ -34,12 +34,15 @@ type InternetCheckerSpec struct {
 type ClusterSpec struct {
 	// ResourceID is the Azure resourceId of the cluster
 	ResourceID      string              `json:"resourceId,omitempty"`
+	Domain          string              `json:"domain,omitempty"`
 	ACRDomain       string              `json:"acrDomain,omitempty"`
 	AZEnvironment   string              `json:"azEnvironment,omitempty"`
 	Location        string              `json:"location,omitempty"`
 	GenevaLogging   GenevaLoggingSpec   `json:"genevaLogging,omitempty"`
 	InternetChecker InternetCheckerSpec `json:"internetChecker,omitempty"`
 	VnetID          string              `json:"vnetId,omitempty"`
+	APIIntIP        string              `json:"apiIntIP,omitempty"`
+	IngressIP       string              `json:"ingressIP,omitempty"`
 
 	Features FeaturesSpec `json:"features,omitempty"`
 }

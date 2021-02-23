@@ -7,6 +7,8 @@ import (
 	"context"
 	"net"
 
+	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	machineconfigurationv1 "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -76,6 +78,7 @@ func DeploymentIsReady(d *appsv1.Deployment) bool {
 
 	return specReplicas == d.Status.AvailableReplicas &&
 		specReplicas == d.Status.UpdatedReplicas &&
+		specReplicas == d.Status.Replicas &&
 		d.Generation == d.Status.ObservedGeneration
 }
 
@@ -141,5 +144,29 @@ func CheckStatefulSetIsReady(ctx context.Context, cli appsv1client.StatefulSetIn
 		}
 
 		return StatefulSetIsReady(s), nil
+	}
+}
+
+// MachineConfigPoolIsReady returns true if a MachineConfigPool is considered
+// ready
+func MachineConfigPoolIsReady(s *mcv1.MachineConfigPool) bool {
+	return s.Status.MachineCount == s.Status.UpdatedMachineCount &&
+		s.Status.MachineCount == s.Status.ReadyMachineCount &&
+		s.Generation == s.Status.ObservedGeneration
+}
+
+// CheckMachineConfigPoolIsReady returns a function which polls a
+// MachineConfigPool and returns its readiness
+func CheckMachineConfigPoolIsReady(ctx context.Context, cli machineconfigurationv1.MachineConfigPoolInterface, name string) func() (bool, error) {
+	return func() (bool, error) {
+		s, err := cli.Get(ctx, name, metav1.GetOptions{})
+		switch {
+		case errors.IsNotFound(err):
+			return false, nil
+		case err != nil:
+			return false, err
+		}
+
+		return MachineConfigPoolIsReady(s), nil
 	}
 }

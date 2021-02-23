@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/password"
@@ -16,14 +17,17 @@ import (
 )
 
 func (m *manager) updateClusterData(ctx context.Context) error {
-	pg, err := m.loadPersistedGraph(ctx)
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+
+	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
 	if err != nil {
 		return err
 	}
 
 	var installConfig *installconfig.InstallConfig
 	var kubeadminPassword *password.KubeadminPassword
-	err = pg.get(&installConfig, &kubeadminPassword)
+	err = pg.Get(&installConfig, &kubeadminPassword)
 	if err != nil {
 		return err
 	}
@@ -37,7 +41,7 @@ func (m *manager) updateClusterData(ctx context.Context) error {
 	return err
 }
 
-func (m *manager) createOrUpdateRouterIP(ctx context.Context) error {
+func (m *manager) createOrUpdateRouterIPFromCluster(ctx context.Context) error {
 	svc, err := m.kubernetescli.CoreV1().Services("openshift-ingress").Get(ctx, "router-default", metav1.GetOptions{})
 	// default ingress must be present in the cluster
 	if err != nil {
@@ -49,40 +53,128 @@ func (m *manager) createOrUpdateRouterIP(ctx context.Context) error {
 		return fmt.Errorf("routerIP not found")
 	}
 
-	routerIP := svc.Status.LoadBalancer.Ingress[0].IP
+	ipAddress := svc.Status.LoadBalancer.Ingress[0].IP
 
-	err = m.dns.CreateOrUpdateRouter(ctx, m.doc.OpenShiftCluster, routerIP)
+	err = m.dns.CreateOrUpdateRouter(ctx, m.doc.OpenShiftCluster, ipAddress)
 	if err != nil {
 		return err
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = routerIP
+		doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = ipAddress
 		return nil
 	})
 	return err
 }
 
-func (m *manager) updateAPIIP(ctx context.Context) error {
+func (m *manager) createOrUpdateRouterIPEarly(ctx context.Context) error {
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	var ipAddress string
+	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPublic {
+		ip, err := m.publicIPAddresses.Get(ctx, resourceGroup, infraID+"-default-v4", "")
+		if err != nil {
+			return err
+		}
+		ipAddress = *ip.IPAddress
+	} else {
+		// there's no way to reserve private IPs in Azure, so we pick the
+		// highest free address in the subnet (i.e., there's a race here). Azure
+		// specifically documents that dynamic allocation proceeds from the
+		// bottom of the subnet, so there's a good chance that we'll get away
+		// with this.
+		// https://docs.microsoft.com/en-us/azure/virtual-network/private-ip-addresses#allocation-method
+		var err error
+		ipAddress, err = m.subnet.GetHighestFreeIP(ctx, m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID)
+		if err != nil {
+			return err
+		}
+		if ipAddress == "" {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The subnet '%s' has no remaining IP addresses.", m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+		}
+	}
+
+	err := m.dns.CreateOrUpdateRouter(ctx, m.doc.OpenShiftCluster, ipAddress)
+	if err != nil {
+		return err
+	}
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = ipAddress
+		return nil
+	})
+	return err
+}
+
+func (m *manager) populateDatabaseIntIP(ctx context.Context) error {
+	if m.doc.OpenShiftCluster.Properties.APIServerProfile.IntIP != "" {
+		return nil
+	}
+
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
+
+	var lbName string
+	switch m.doc.OpenShiftCluster.Properties.ArchitectureVersion {
+	case api.ArchitectureVersionV1:
+		lbName = infraID + "-internal-lb"
+	case api.ArchitectureVersionV2:
+		lbName = infraID + "-internal"
+	default:
+		return fmt.Errorf("unknown architecture version %d", m.doc.OpenShiftCluster.Properties.ArchitectureVersion)
+	}
+
+	lb, err := m.loadBalancers.Get(ctx, resourceGroup, lbName, "")
+	if err != nil {
+		return err
+	}
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
+		return nil
+	})
+	return err
+}
+
+// this function can only be called on create - not on update - because it
+// refers to -pip-v4, which doesn't exist on pre-DNS change clusters.
+func (m *manager) updateAPIIPEarly(ctx context.Context) error {
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
+
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	lb, err := m.loadBalancers.Get(ctx, resourceGroup, infraID+"-internal", "")
+	if err != nil {
+		return err
+	}
+	intIPAddress := *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
+
+	ipAddress := intIPAddress
 	if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
 		ip, err := m.publicIPAddresses.Get(ctx, resourceGroup, infraID+"-pip-v4", "")
 		if err != nil {
 			return err
 		}
 		ipAddress = *ip.IPAddress
-	} else {
-		lb, err := m.loadBalancers.Get(ctx, resourceGroup, infraID+"-internal", "")
-		if err != nil {
-			return err
-		}
-		ipAddress = *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
 	}
 
-	err := m.dns.Update(ctx, m.doc.OpenShiftCluster, ipAddress)
+	err = m.dns.Update(ctx, m.doc.OpenShiftCluster, ipAddress)
+	if err != nil {
+		return err
+	}
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.APIServerProfile.IP = ipAddress
+		doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = intIPAddress
+		return nil
+	})
+	return err
+}
+
+func (m *manager) createPrivateEndpoint(ctx context.Context) error {
+	err := m.privateendpoint.Create(ctx, m.doc)
 	if err != nil {
 		return err
 	}
@@ -94,12 +186,7 @@ func (m *manager) updateAPIIP(ctx context.Context) error {
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.NetworkProfile.PrivateEndpointIP = privateEndpointIP
-		doc.OpenShiftCluster.Properties.APIServerProfile.IP = ipAddress
 		return nil
 	})
 	return err
-}
-
-func (m *manager) createPrivateEndpoint(ctx context.Context) error {
-	return m.privateendpoint.Create(ctx, m.doc)
 }

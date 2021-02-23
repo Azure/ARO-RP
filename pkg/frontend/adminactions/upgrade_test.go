@@ -5,11 +5,8 @@ package adminactions
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
-	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/client-go/config/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
@@ -17,8 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ktesting "k8s.io/client-go/testing"
 
-	"github.com/Azure/ARO-RP/pkg/api"
-	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -200,75 +195,6 @@ func TestUpgradeCluster(t *testing.T) {
 				if cv.Spec.DesiredUpdate.Version != tt.desiredVersion {
 					t.Error(cv.Spec.DesiredUpdate.Version)
 				}
-			}
-		})
-	}
-}
-
-func TestCheckCustomDNS(t *testing.T) {
-	ctx := context.Background()
-	subscriptionID := "af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1"
-
-	tests := []struct {
-		name    string
-		mocks   func(*mock_network.MockVirtualNetworksClient)
-		wantErr string
-	}{
-		{
-			name: "default dns",
-			mocks: func(vnetc *mock_network.MockVirtualNetworksClient) {
-				vnetc.EXPECT().Get(gomock.Any(), "test-cluster", "test-vnet", "").Return(
-					mgmtnetwork.VirtualNetwork{
-						VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-							DhcpOptions: &mgmtnetwork.DhcpOptions{
-								DNSServers: &[]string{},
-							},
-						},
-					}, nil)
-			},
-		},
-		{
-			name: "custom dns",
-			mocks: func(vnetc *mock_network.MockVirtualNetworksClient) {
-				vnetc.EXPECT().Get(gomock.Any(), "test-cluster", "test-vnet", "").Return(
-					mgmtnetwork.VirtualNetwork{
-						VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-							DhcpOptions: &mgmtnetwork.DhcpOptions{
-								DNSServers: &[]string{"1.1.1.1"},
-							},
-						},
-					}, nil)
-			},
-			wantErr: "500: InternalServerError: : Not upgrading: custom DNS is set.",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			virtualNetworks := mock_network.NewMockVirtualNetworksClient(controller)
-			if tt.mocks != nil {
-				tt.mocks(virtualNetworks)
-			}
-
-			k := &kubeActions{
-				log:             logrus.NewEntry(logrus.StandardLogger()),
-				virtualNetworks: virtualNetworks,
-			}
-
-			oc := &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					MasterProfile: api.MasterProfile{
-						SubnetID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID),
-					},
-				},
-			}
-
-			err := checkCustomDNS(ctx, oc, k.virtualNetworks)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
 			}
 		})
 	}

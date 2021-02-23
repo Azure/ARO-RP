@@ -14,6 +14,14 @@ import (
 )
 
 func GenerateKeyAndCertificate(commonName string, parentKey *rsa.PrivateKey, parentCert *x509.Certificate, isCA bool, isClient bool) (*rsa.PrivateKey, []*x509.Certificate, error) {
+	return generateKeyAndCertificate(commonName, parentKey, parentCert, isCA, isClient, nil)
+}
+
+func GenerateTestKeyAndCertificate(commonName string, parentKey *rsa.PrivateKey, parentCert *x509.Certificate, isCA bool, isClient bool, tweakTemplate func(*x509.Certificate)) (*rsa.PrivateKey, []*x509.Certificate, error) {
+	return generateKeyAndCertificate(commonName, parentKey, parentCert, isCA, isClient, tweakTemplate)
+}
+
+func generateKeyAndCertificate(commonName string, parentKey *rsa.PrivateKey, parentCert *x509.Certificate, isCA bool, isClient bool, tweakTemplate func(*x509.Certificate)) (*rsa.PrivateKey, []*x509.Certificate, error) {
 	if isCA && isClient {
 		return nil, nil, fmt.Errorf("cannot generate CA client certificate")
 	}
@@ -44,6 +52,10 @@ func GenerateKeyAndCertificate(commonName string, parentKey *rsa.PrivateKey, par
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		IsCA:                  isCA,
 		DNSNames:              []string{commonName},
+	}
+
+	if tweakTemplate != nil {
+		tweakTemplate(template)
 	}
 
 	if isCA {

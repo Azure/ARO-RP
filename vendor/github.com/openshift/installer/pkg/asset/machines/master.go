@@ -31,6 +31,7 @@ import (
 	openstackapi "sigs.k8s.io/cluster-api-provider-openstack/pkg/apis"
 	openstackprovider "sigs.k8s.io/cluster-api-provider-openstack/pkg/apis/openstackproviderconfig/v1alpha1"
 
+	"github.com/openshift/installer/pkg/aro/dnsmasq"
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -44,6 +45,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/machines/ovirt"
 	"github.com/openshift/installer/pkg/asset/machines/vsphere"
 	"github.com/openshift/installer/pkg/asset/rhcos"
+	"github.com/openshift/installer/pkg/asset/templates/content/bootkube"
 	rhcosutils "github.com/openshift/installer/pkg/rhcos"
 	"github.com/openshift/installer/pkg/types"
 	awstypes "github.com/openshift/installer/pkg/types/aws"
@@ -120,6 +122,7 @@ func (m *Master) Dependencies() []asset.Asset {
 		&installconfig.InstallConfig{},
 		new(rhcos.Image),
 		&machine.Master{},
+		&bootkube.ARODNSConfig{},
 	}
 }
 
@@ -139,7 +142,8 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 	installConfig := &installconfig.InstallConfig{}
 	rhcosImage := new(rhcos.Image)
 	mign := &machine.Master{}
-	dependencies.Get(clusterID, installConfig, rhcosImage, mign)
+	aroDNSConfig := &bootkube.ARODNSConfig{}
+	dependencies.Get(clusterID, installConfig, rhcosImage, mign, aroDNSConfig)
 
 	ic := installConfig.Config
 
@@ -386,6 +390,11 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		}
 		machineConfigs = append(machineConfigs, ignFIPS)
 	}
+	ignARODNS, err := dnsmasq.MachineConfig(installConfig.Config.ClusterDomain(), aroDNSConfig.APIIntIP, aroDNSConfig.IngressIP, "master")
+	if err != nil {
+		return errors.Wrap(err, "failed to create ignition for ARO DNS for master machines")
+	}
+	machineConfigs = append(machineConfigs, ignARODNS)
 
 	m.MachineConfigFiles, err = machineconfig.Manifests(machineConfigs, "master", directory)
 	if err != nil {

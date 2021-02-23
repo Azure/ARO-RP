@@ -14,6 +14,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/tls"
 	clientcmd "k8s.io/client-go/tools/clientcmd/api/v1"
 
+	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 )
@@ -62,9 +63,9 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 		CurrentContext: serviceName,
 	}
 
-	pg := persistedGraph{}
+	pg := graph.PersistedGraph{}
 
-	err = pg.set(ca, adminInternalClient)
+	err = pg.Set(ca, adminInternalClient)
 	if err != nil {
 		t.Fatal(err)
 	}

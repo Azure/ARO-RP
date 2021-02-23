@@ -49,12 +49,7 @@ func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Reque
 		return nil, err
 	}
 
-	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
-	if err != nil {
-		return nil, err
-	}
-
-	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
 		return nil, err
 	}
@@ -95,12 +90,7 @@ func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Re
 		return err
 	}
 
-	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
-	if err != nil {
-		return err
-	}
-
-	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}
@@ -149,12 +139,7 @@ func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Requ
 		return err
 	}
 
-	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
-	if err != nil {
-		return err
-	}
-
-	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}
