@@ -150,7 +150,7 @@ func (g *generator) proxyVmss() *arm.Resource {
 	}
 
 	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
-yum -y install podman podman-docker --enablerepo rhel-7-server-extras-rpms
+yum -y install podman podman-docker --enablerepo rhui-rhel-7-server-rhui-extras-rpms
 
 # https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html/managing_containers/running_containers_as_systemd_services_with_podman
 # Need to set this if SELinux is enabled
@@ -784,9 +784,6 @@ func (g *generator) vmss() *arm.Resource {
 	trailer := base64.StdEncoding.EncodeToString([]byte(`
 yum -y update -x WALinuxAgent
 
-# Allow systemd to run containers
-setsebool -P container_manage_cgroup on
-
 lvextend -l +50%FREE /dev/rootvg/rootlv
 xfs_growfs /
 
@@ -828,9 +825,13 @@ gpgcheck=yes
 EOF
 
 for attempt in {1..5}; do
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms --enablerepo=rhel-7-server-extras-rpms -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security podman podman-docker openssl-perl td-agent-bit && break
+yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms --enablerepo=rhui-rhel-7-server-rhui-extras-rpms -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security podman podman-docker openssl-perl td-agent-bit && break
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
+
+
+# Allow systemd to run containers
+setsebool -P container_manage_cgroup on
 
 rpm -e $(rpm -qa | grep ^abrt-)
 cat >/etc/sysctl.d/01-disable-core.conf <<'EOF'
@@ -1970,7 +1971,7 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms --enablerepo=rhel-7-server-extras-rpms -y install azure-cli podman podman-docker jq libassuan-devel gcc gpgme-devel rh-git29 rh-python36 tmpwatch
+yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms --enablerepo=rhui-rhel-7-server-rhui-extras-rpms -y install azure-cli podman podman-docker jq libassuan-devel gcc gpgme-devel rh-git29 rh-python36 tmpwatch
 
 GO_VERSION=1.14.9
 curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz | tar -C /usr/local -xz
