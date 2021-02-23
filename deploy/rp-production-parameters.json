@@ -26,9 +26,6 @@
         "fpServicePrincipalId": {
             "value": ""
         },
-        "fullDeploy": {
-            "value": false
-        },
         "keyvaultPrefix": {
             "value": ""
         },

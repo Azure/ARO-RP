@@ -47,20 +47,6 @@ func (g *generator) clusterPredeploy() *arm.Template {
 func (g *generator) managedIdentityTemplate() *arm.Template {
 	t := templateStanza()
 
-	params := []string{
-		"fullDeploy",
-	}
-
-	for _, param := range params {
-		p := &arm.TemplateParameter{Type: "string"}
-		switch param {
-		case "fullDeploy":
-			p.Type = "bool"
-			p.DefaultValue = false
-		}
-		t.Parameters[param] = p
-	}
-
 	t.Resources = append(t.Resources,
 		g.managedIdentity(),
 	)
@@ -84,7 +70,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"adminApiClientCertCommonName",
 			"encryptionAtHost",
 			"extraCosmosDBIPs",
-			"fullDeploy",
 			"keyvaultPrefix",
 			"mdmFrontendUrl",
 			"mdsdConfigVersion",
@@ -110,9 +95,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			p.Type = "bool"
 		case "extraCosmosDBIPs", "rpMode":
 			p.DefaultValue = ""
-		case "fullDeploy":
-			p.Type = "bool"
-			p.DefaultValue = false
 		case "vmSize":
 			p.DefaultValue = "Standard_D2s_v3"
 		}
@@ -148,20 +130,13 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 
 	params := []string{
 		"acrResourceId",
-		"fullDeploy",
 		"fpServicePrincipalId",
 		"rpServicePrincipalId",
 		"rpVersionStorageAccountName",
 	}
 
 	for _, param := range params {
-		p := &arm.TemplateParameter{Type: "string"}
-		switch param {
-		case "fullDeploy":
-			p.Type = "bool"
-			p.DefaultValue = false
-		}
-		t.Parameters[param] = p
+		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
 	}
 	t.Resources = append(t.Resources,
 		g.acrRbac()...,
@@ -178,18 +153,11 @@ func (g *generator) rpGlobalACRReplicationTemplate() *arm.Template {
 
 	params := []string{
 		"acrResourceId",
-		"fullDeploy",
 		"location",
 	}
 
 	for _, param := range params {
-		p := &arm.TemplateParameter{Type: "string"}
-		switch param {
-		case "fullDeploy":
-			p.Type = "bool"
-			p.DefaultValue = false
-		}
-		t.Parameters[param] = p
+		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
 	}
 	t.Resources = append(t.Resources,
 		g.acrReplica(),
@@ -201,20 +169,6 @@ func (g *generator) rpGlobalACRReplicationTemplate() *arm.Template {
 func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 	t := templateStanza()
 
-	params := []string{
-		"fullDeploy",
-	}
-
-	for _, param := range params {
-		p := &arm.TemplateParameter{Type: "string"}
-		switch param {
-		case "fullDeploy":
-			p.Type = "bool"
-			p.DefaultValue = false
-		}
-		t.Parameters[param] = p
-	}
-
 	t.Resources = append(t.Resources,
 		g.roleDefinitionTokenContributor(),
 	)
@@ -224,20 +178,6 @@ func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 
 func (g *generator) rpSubscriptionTemplate() *arm.Template {
 	t := templateStanza()
-
-	params := []string{
-		"fullDeploy",
-	}
-
-	for _, param := range params {
-		p := &arm.TemplateParameter{Type: "string"}
-		switch param {
-		case "fullDeploy":
-			p.Type = "bool"
-			p.DefaultValue = false
-		}
-		t.Parameters[param] = p
-	}
 
 	t.Resources = append(t.Resources, g.actionGroup("rp-health-ag", "rphealth"))
 
@@ -300,7 +240,6 @@ func (g *generator) preDeployTemplate() *arm.Template {
 			"extraClusterKeyvaultAccessPolicies",
 			"extraPortalKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies",
-			"fullDeploy",
 			"rpNsgSourceAddressPrefixes",
 		)
 	} else {
@@ -320,9 +259,6 @@ func (g *generator) preDeployTemplate() *arm.Template {
 			"extraServiceKeyvaultAccessPolicies":
 			p.Type = "array"
 			p.DefaultValue = []interface{}{}
-		case "fullDeploy":
-			p.Type = "bool"
-			p.DefaultValue = false
 		case "rpNsgSourceAddressPrefixes":
 			p.Type = "array"
 			p.DefaultValue = []string{}

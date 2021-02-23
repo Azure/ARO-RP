@@ -77,10 +77,6 @@
         "fpServicePrincipalId": {
             "type": "string"
         },
-        "fullDeploy": {
-            "type": "bool",
-            "defaultValue": false
-        },
         "keyvaultPrefix": {
             "type": "string",
             "maxLength": 20
@@ -152,7 +148,6 @@
             "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
-            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2016-10-01"
         },
         {
@@ -168,7 +163,6 @@
             "name": "[concat(parameters('keyvaultPrefix'), '-por')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
-            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2016-10-01"
         },
         {
@@ -184,7 +178,6 @@
             "name": "[concat(parameters('keyvaultPrefix'), '-svc')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
-            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2016-10-01"
         }
     ]

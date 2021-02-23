@@ -3,7 +3,6 @@ parameters:
   configDirectory: ''
   configFileName: ''
   deployerDirectory: ''
-  fullDeploy: ''
   location: ''
 
 steps:
@@ -17,10 +16,6 @@ steps:
     export AZURE_TENANT_ID=$(jq -r .tenantId <devops-spn.json)
 
     export AZURE_SUBSCRIPTION_ID="${{ parameters.subscriptionId }}"
-
-    if [[ "${{ parameters.fullDeploy }}" == "True" ]]; then
-      export FULL_DEPLOY=true
-    fi
 
     chmod +x ${{ parameters.deployerDirectory }}/aro
     ${{ parameters.deployerDirectory }}/aro deploy ${{ parameters.configDirectory }}/${{ parameters.configFileName }} ${{ parameters.location }}

@@ -8,7 +8,6 @@ parameters:
   configFileName: ''
   e2eSubscription: ''
   environment: ''
-  fullDeploy: ''
   locations: []
   rpMode: ''
   vsoProjectID: ''
@@ -64,7 +63,6 @@ jobs:
               configFileName: ${{ parameters.configFileName }}
               location: ${{ location }}
               azureDevOpsJSONSPN: ${{ parameters.azureDevOpsJSONSPN }}
-              fullDeploy: ${{ parameters.fullDeploy }}
   - job: RP_E2E_${{ location }}
     dependsOn: Deploy_${{ location }}
     variables:

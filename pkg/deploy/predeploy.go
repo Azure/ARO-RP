@@ -28,43 +28,39 @@ import (
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
 func (d *deployer) PreDeploy(ctx context.Context) error {
-	if d.fullDeploy {
-		err := d.enableEncryptionAtHostSubscriptionFeatureFlag(ctx)
-		if err != nil {
-			return err
-		}
-	}
-
-	// deploy global rbac
-	err := d.deployGlobalSubscription(ctx)
+	err := d.enableEncryptionAtHostSubscriptionFeatureFlag(ctx)
 	if err != nil {
 		return err
 	}
 
-	if d.fullDeploy {
-		d.log.Infof("deploying rg %s in %s", *d.config.Configuration.SubscriptionResourceGroupName, *d.config.Configuration.SubscriptionResourceGroupLocation)
-		_, err = d.groups.CreateOrUpdate(ctx, *d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
-			Location: d.config.Configuration.SubscriptionResourceGroupLocation,
-		})
-		if err != nil {
-			return err
-		}
+	// deploy global rbac
+	err = d.deployGlobalSubscription(ctx)
+	if err != nil {
+		return err
+	}
 
-		d.log.Infof("deploying rg %s in %s", *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalResourceGroupLocation)
-		_, err = d.globalgroups.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, mgmtfeatures.ResourceGroup{
-			Location: d.config.Configuration.GlobalResourceGroupLocation,
-		})
-		if err != nil {
-			return err
-		}
+	d.log.Infof("deploying rg %s in %s", *d.config.Configuration.SubscriptionResourceGroupName, *d.config.Configuration.SubscriptionResourceGroupLocation)
+	_, err = d.groups.CreateOrUpdate(ctx, *d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
+		Location: d.config.Configuration.SubscriptionResourceGroupLocation,
+	})
+	if err != nil {
+		return err
+	}
 
-		d.log.Infof("deploying rg %s in %s", d.config.ResourceGroupName, d.config.Location)
-		_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtfeatures.ResourceGroup{
-			Location: &d.config.Location,
-		})
-		if err != nil {
-			return err
-		}
+	d.log.Infof("deploying rg %s in %s", *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalResourceGroupLocation)
+	_, err = d.globalgroups.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, mgmtfeatures.ResourceGroup{
+		Location: d.config.Configuration.GlobalResourceGroupLocation,
+	})
+	if err != nil {
+		return err
+	}
+
+	d.log.Infof("deploying rg %s in %s", d.config.ResourceGroupName, d.config.Location)
+	_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtfeatures.ResourceGroup{
+		Location: &d.config.Location,
+	})
+	if err != nil {
+		return err
 	}
 
 	err = d.deploySubscription(ctx)
@@ -84,7 +80,6 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 
 	// Due to https://github.com/Azure/azure-resource-manager-schemas/issues/1067
 	// we can't use conditions to define ACR replication object deployment.
-	// We use ACRReplicaDisabled in the same way as we use fullDeploy.
 	if d.config.Configuration.ACRReplicaDisabled != nil && !*d.config.Configuration.ACRReplicaDisabled {
 		err = d.deployGloalACRReplication(ctx)
 		if err != nil {
@@ -103,11 +98,9 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
-	if d.fullDeploy {
-		err = d.configureServiceSecrets(ctx)
-		if err != nil {
-			return err
-		}
+	err = d.configureServiceSecrets(ctx)
+	if err != nil {
+		return err
 	}
 
 	return nil

@@ -1,12 +1,6 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
-    "parameters": {
-        "fullDeploy": {
-            "type": "bool",
-            "defaultValue": false
-        }
-    },
     "resources": [
         {
             "name": "48983534-3d06-4dcb-a566-08a694eb1279",
@@ -29,7 +23,6 @@
                     "[subscription().id]"
                 ]
             },
-            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2018-01-01-preview"
         }
     ]
