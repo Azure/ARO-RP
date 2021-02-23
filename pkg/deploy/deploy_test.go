@@ -83,7 +83,7 @@ func TestGetParameters(t *testing.T) {
 			},
 		},
 		{
-			name: "when malformed paramater is present, it is skipped",
+			name: "when malformed parameter is present, it is skipped",
 			ps: map[string]interface{}{
 				"dutabaseAccountName": nil,
 			},
