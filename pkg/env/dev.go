@@ -69,8 +69,8 @@ func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	}
 
 	d.roleassignments = authorization.NewRoleAssignmentsClient(d.Environment(), d.SubscriptionID(), armAuthorizer)
-	d.prod.clustersGenevaLoggingEnvironment = "Test"
-	d.prod.clustersGenevaLoggingConfigVersion = "2.3"
+	d.prod.clusterGenevaLoggingEnvironment = "Test"
+	d.prod.clusterGenevaLoggingConfigVersion = "2.3"
 
 	fpGraphAuthorizer, err := d.FPAuthorizer(d.TenantID(), d.Environment().GraphEndpoint)
 	if err != nil {

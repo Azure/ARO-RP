@@ -114,7 +114,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 		results = append(results, obj)
 	}
 	// then dynamic resources
-	key, cert := o.env.ClustersGenevaLoggingSecret()
+	key, cert := o.env.ClusterGenevaLoggingSecret()
 	gcsKeyBytes, err := tls.PrivateKeyAsBytes(key)
 	if err != nil {
 		return nil, err
@@ -176,8 +176,8 @@ func (o *operator) resources() ([]runtime.Object, error) {
 				Location:      o.env.Location(),
 				VnetID:        vnetID,
 				GenevaLogging: arov1alpha1.GenevaLoggingSpec{
-					ConfigVersion:            o.env.ClustersGenevaLoggingConfigVersion(),
-					MonitoringGCSEnvironment: o.env.ClustersGenevaLoggingEnvironment(),
+					ConfigVersion:            o.env.ClusterGenevaLoggingConfigVersion(),
+					MonitoringGCSEnvironment: o.env.ClusterGenevaLoggingEnvironment(),
 				},
 				InternetChecker: arov1alpha1.InternetCheckerSpec{
 					URLs: []string{

@@ -30,7 +30,7 @@ const (
 	PortalServerClientSecretName     = "portal-client"
 	PortalServerSessionKeySecretName = "portal-session-key"
 	PortalServerSSHKeySecretName     = "portal-sshkey"
-	ClustersKeyvaultSuffix           = "-cls"
+	ClusterKeyvaultSuffix            = "-cls"
 	PortalKeyvaultSuffix             = "-por"
 	ServiceKeyvaultSuffix            = "-svc"
 )
@@ -43,10 +43,10 @@ type Interface interface {
 	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
 	AdminClientAuthorizer() clientauthorizer.ClientAuthorizer
 	CreateARMResourceGroupRoleAssignment(context.Context, refreshable.Authorizer, string) error
-	ClustersGenevaLoggingConfigVersion() string
-	ClustersGenevaLoggingEnvironment() string
-	ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
-	ClustersKeyvault() keyvault.Manager
+	ClusterGenevaLoggingConfigVersion() string
+	ClusterGenevaLoggingEnvironment() string
+	ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
+	ClusterKeyvault() keyvault.Manager
 	Domain() string
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
 	Listen() (net.Listener, error)

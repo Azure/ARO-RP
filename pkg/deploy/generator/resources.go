@@ -1389,7 +1389,7 @@ func (g *generator) serviceKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyE
 	}
 }
 
-func (g *generator) clustersKeyvault() *arm.Resource {
+func (g *generator) clusterKeyvault() *arm.Resource {
 	vault := &mgmtkeyvault.Vault{
 		Properties: &mgmtkeyvault.VaultProperties{
 			EnableSoftDelete: to.BoolPtr(true),
@@ -1400,7 +1400,7 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 			},
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
 		},
-		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + env.ClustersKeyvaultSuffix + "')]"),
+		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + env.ClusterKeyvaultSuffix + "')]"),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
 		Location: to.StringPtr("[resourceGroup().location]"),
 	}

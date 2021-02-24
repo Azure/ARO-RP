@@ -250,61 +250,61 @@ func (mr *MockInterfaceMockRecorder) ArmClientAuthorizer() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArmClientAuthorizer", reflect.TypeOf((*MockInterface)(nil).ArmClientAuthorizer))
 }
 
-// ClustersGenevaLoggingConfigVersion mocks base method
-func (m *MockInterface) ClustersGenevaLoggingConfigVersion() string {
+// ClusterGenevaLoggingConfigVersion mocks base method
+func (m *MockInterface) ClusterGenevaLoggingConfigVersion() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClustersGenevaLoggingConfigVersion")
+	ret := m.ctrl.Call(m, "ClusterGenevaLoggingConfigVersion")
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
-// ClustersGenevaLoggingConfigVersion indicates an expected call of ClustersGenevaLoggingConfigVersion
-func (mr *MockInterfaceMockRecorder) ClustersGenevaLoggingConfigVersion() *gomock.Call {
+// ClusterGenevaLoggingConfigVersion indicates an expected call of ClusterGenevaLoggingConfigVersion
+func (mr *MockInterfaceMockRecorder) ClusterGenevaLoggingConfigVersion() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClustersGenevaLoggingConfigVersion", reflect.TypeOf((*MockInterface)(nil).ClustersGenevaLoggingConfigVersion))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterGenevaLoggingConfigVersion", reflect.TypeOf((*MockInterface)(nil).ClusterGenevaLoggingConfigVersion))
 }
 
-// ClustersGenevaLoggingEnvironment mocks base method
-func (m *MockInterface) ClustersGenevaLoggingEnvironment() string {
+// ClusterGenevaLoggingEnvironment mocks base method
+func (m *MockInterface) ClusterGenevaLoggingEnvironment() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClustersGenevaLoggingEnvironment")
+	ret := m.ctrl.Call(m, "ClusterGenevaLoggingEnvironment")
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
-// ClustersGenevaLoggingEnvironment indicates an expected call of ClustersGenevaLoggingEnvironment
-func (mr *MockInterfaceMockRecorder) ClustersGenevaLoggingEnvironment() *gomock.Call {
+// ClusterGenevaLoggingEnvironment indicates an expected call of ClusterGenevaLoggingEnvironment
+func (mr *MockInterfaceMockRecorder) ClusterGenevaLoggingEnvironment() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClustersGenevaLoggingEnvironment", reflect.TypeOf((*MockInterface)(nil).ClustersGenevaLoggingEnvironment))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterGenevaLoggingEnvironment", reflect.TypeOf((*MockInterface)(nil).ClusterGenevaLoggingEnvironment))
 }
 
-// ClustersGenevaLoggingSecret mocks base method
-func (m *MockInterface) ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate) {
+// ClusterGenevaLoggingSecret mocks base method
+func (m *MockInterface) ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClustersGenevaLoggingSecret")
+	ret := m.ctrl.Call(m, "ClusterGenevaLoggingSecret")
 	ret0, _ := ret[0].(*rsa.PrivateKey)
 	ret1, _ := ret[1].(*x509.Certificate)
 	return ret0, ret1
 }
 
-// ClustersGenevaLoggingSecret indicates an expected call of ClustersGenevaLoggingSecret
-func (mr *MockInterfaceMockRecorder) ClustersGenevaLoggingSecret() *gomock.Call {
+// ClusterGenevaLoggingSecret indicates an expected call of ClusterGenevaLoggingSecret
+func (mr *MockInterfaceMockRecorder) ClusterGenevaLoggingSecret() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClustersGenevaLoggingSecret", reflect.TypeOf((*MockInterface)(nil).ClustersGenevaLoggingSecret))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterGenevaLoggingSecret", reflect.TypeOf((*MockInterface)(nil).ClusterGenevaLoggingSecret))
 }
 
-// ClustersKeyvault mocks base method
-func (m *MockInterface) ClustersKeyvault() keyvault.Manager {
+// ClusterKeyvault mocks base method
+func (m *MockInterface) ClusterKeyvault() keyvault.Manager {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClustersKeyvault")
+	ret := m.ctrl.Call(m, "ClusterKeyvault")
 	ret0, _ := ret[0].(keyvault.Manager)
 	return ret0
 }
 
-// ClustersKeyvault indicates an expected call of ClustersKeyvault
-func (mr *MockInterfaceMockRecorder) ClustersKeyvault() *gomock.Call {
+// ClusterKeyvault indicates an expected call of ClusterKeyvault
+func (mr *MockInterfaceMockRecorder) ClusterKeyvault() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClustersKeyvault", reflect.TypeOf((*MockInterface)(nil).ClustersKeyvault))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterKeyvault", reflect.TypeOf((*MockInterface)(nil).ClusterKeyvault))
 }
 
 // CreateARMResourceGroupRoleAssignment mocks base method
