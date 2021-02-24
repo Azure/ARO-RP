@@ -126,7 +126,7 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 	}
 
 	if m.env.DeploymentMode() == deployment.Production {
-		t.Resources = append(t.Resources, m.denyAssignments())
+		t.Resources = append(t.Resources, m.denyAssignment())
 	}
 
 	return m.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
@@ -171,28 +171,6 @@ func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.
 
 	// the graph is quite big so we store it in a storage account instead of in cosmosdb
 	return m.graph.Save(ctx, resourceGroup, account, g)
-}
-
-func (m *manager) deploySnapshotUpgradeTemplate(ctx context.Context) error {
-	if m.env.DeploymentMode() != deployment.Production {
-		// only need this upgrade in production, where there are DenyAssignments
-		return nil
-	}
-
-	if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID == "" {
-		m.log.Print("skipping deploySnapshotUpgradeTemplate: SPObjectID is empty")
-		return nil
-	}
-
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-
-	t := &arm.Template{
-		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-		ContentVersion: "1.0.0.0",
-		Resources:      []*arm.Resource{m.denyAssignments()},
-	}
-
-	return m.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
 }
 
 func (m *manager) attachNSGsAndPatch(ctx context.Context) error {

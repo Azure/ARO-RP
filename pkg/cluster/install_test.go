@@ -9,9 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -22,13 +19,10 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
-	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -172,109 +166,6 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 
 			err = testlog.AssertLoggingOutput(h, tt.wantEntries)
 			if err != nil {
-				t.Error(err)
-			}
-		})
-	}
-}
-
-func TestDeployARMTemplate(t *testing.T) {
-	ctx := context.Background()
-
-	resourceGroup := "fakeResourceGroup"
-
-	armTemplate := &arm.Template{}
-	params := map[string]interface{}{}
-
-	deployment := mgmtfeatures.Deployment{
-		Properties: &mgmtfeatures.DeploymentProperties{
-			Template:   armTemplate,
-			Parameters: params,
-			Mode:       mgmtfeatures.Incremental,
-		},
-	}
-
-	activeErr := autorest.NewErrorWithError(azure.RequestError{
-		ServiceError: &azure.ServiceError{Code: "DeploymentActive"},
-	}, "", "", nil, "")
-
-	for _, tt := range []struct {
-		name    string
-		mocks   func(*mock_features.MockDeploymentsClient)
-		wantErr string
-	}{
-		{
-			name: "Deployment successful with no errors",
-			mocks: func(dc *mock_features.MockDeploymentsClient) {
-				dc.EXPECT().
-					CreateOrUpdateAndWait(ctx, resourceGroup, deploymentName, deployment).
-					Return(nil)
-			},
-		},
-		{
-			name: "Deployment active error, then wait successfully",
-			mocks: func(dc *mock_features.MockDeploymentsClient) {
-				dc.EXPECT().
-					CreateOrUpdateAndWait(ctx, resourceGroup, deploymentName, deployment).
-					Return(activeErr)
-				dc.EXPECT().
-					Wait(ctx, resourceGroup, deploymentName).
-					Return(nil)
-			},
-		},
-		{
-			name: "Deployment active error, then timeout",
-			mocks: func(dc *mock_features.MockDeploymentsClient) {
-				dc.EXPECT().
-					CreateOrUpdateAndWait(ctx, resourceGroup, deploymentName, deployment).
-					Return(activeErr)
-				dc.EXPECT().
-					Wait(ctx, resourceGroup, deploymentName).
-					Return(wait.ErrWaitTimeout)
-			},
-			wantErr: "timed out waiting for the condition",
-		},
-		{
-			name: "DetailedError which should be returned to user",
-			mocks: func(dc *mock_features.MockDeploymentsClient) {
-				dc.EXPECT().
-					CreateOrUpdateAndWait(ctx, resourceGroup, deploymentName, deployment).
-					Return(autorest.DetailedError{
-						Original: &azure.ServiceError{
-							Code: "AccountIsDisabled",
-						},
-					})
-			},
-			wantErr: `400: DeploymentFailed: : Deployment failed. Details: : : {"code":"AccountIsDisabled","message":"","target":null,"details":null,"innererror":null,"additionalInfo":null}`,
-		},
-		{
-			name: "ServiceError which should be returned to user",
-			mocks: func(dc *mock_features.MockDeploymentsClient) {
-				dc.EXPECT().
-					CreateOrUpdateAndWait(ctx, resourceGroup, deploymentName, deployment).
-					Return(&azure.ServiceError{
-						Code: "AccountIsDisabled",
-					})
-			},
-			wantErr: `400: DeploymentFailed: : Deployment failed. Details: : : {"code":"AccountIsDisabled","message":"","target":null,"details":null,"innererror":null,"additionalInfo":null}`,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			deploymentsClient := mock_features.NewMockDeploymentsClient(controller)
-			tt.mocks(deploymentsClient)
-
-			m := &manager{
-				log:         logrus.NewEntry(logrus.StandardLogger()),
-				deployments: deploymentsClient,
-			}
-
-			err := m.deployARMTemplate(ctx, resourceGroup, "test", armTemplate, params)
-
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
 				t.Error(err)
 			}
 		})
