@@ -17,6 +17,7 @@ import (
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	uuid "github.com/satori/go.uuid"
@@ -43,9 +44,10 @@ import (
 )
 
 type Cluster struct {
-	log *logrus.Entry
-	env env.Core
-	ci  bool
+	log          *logrus.Entry
+	env          env.Core
+	ci           bool
+	ciParentVnet string
 
 	deployments                       features.DeploymentsClient
 	groups                            features.ResourceGroupsClient
@@ -58,6 +60,7 @@ type Cluster struct {
 	routetables                       network.RouteTablesClient
 	roleassignments                   authorization.RoleAssignmentsClient
 	peerings                          network.VirtualNetworkPeeringsClient
+	ciParentVnetPeerings              network.VirtualNetworkPeeringsClient
 }
 
 const (
@@ -99,7 +102,7 @@ func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
 		return nil, err
 	}
 
-	return &Cluster{
+	c := &Cluster{
 		log: log,
 		env: env,
 		ci:  ci,
@@ -115,7 +118,24 @@ func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
 		routetables:                       network.NewRouteTablesClient(env.Environment(), env.SubscriptionID(), authorizer),
 		roleassignments:                   authorization.NewRoleAssignmentsClient(env.Environment(), env.SubscriptionID(), authorizer),
 		peerings:                          network.NewVirtualNetworkPeeringsClient(env.Environment(), env.SubscriptionID(), authorizer),
-	}, nil
+	}
+
+	if ci {
+		if env.DeploymentMode() == deployment.Development {
+			c.ciParentVnet = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.env.SubscriptionID(), c.env.ResourceGroup())
+		} else {
+			c.ciParentVnet = "/subscriptions/46626fc5-476d-41ad-8c76-2ec49c6994eb/resourceGroups/e2einfra-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet"
+		}
+
+		r, err := azure.ParseResourceID(c.ciParentVnet)
+		if err != nil {
+			return nil, err
+		}
+
+		c.ciParentVnetPeerings = network.NewVirtualNetworkPeeringsClient(env.Environment(), r.SubscriptionID, authorizer)
+	}
+
+	return c, nil
 }
 
 func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string) error {
@@ -322,13 +342,14 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			}
 		}
 
-		_, err = c.peerings.Get(ctx, c.env.ResourceGroup(), "dev-vnet", vnetResourceGroup+"-peer")
+		r, err := azure.ParseResourceID(c.ciParentVnet)
 		if err == nil {
-			err = c.peerings.DeleteAndWait(ctx, c.env.ResourceGroup(), "dev-vnet", vnetResourceGroup+"-peer")
-			if err != nil {
-				errs = append(errs, err)
-			}
+			err = c.ciParentVnetPeerings.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, vnetResourceGroup+"-peer")
 		}
+		if err != nil {
+			errs = append(errs, err)
+		}
+
 	} else {
 		// Deleting the deployment does not clean up the associated resources
 		c.log.Info("deleting deployment")
@@ -478,12 +499,16 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 }
 
 func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup, clusterName string) error {
-	rp := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.env.SubscriptionID(), c.env.ResourceGroup())
 	cluster := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.env.SubscriptionID(), vnetResourceGroup)
+
+	r, err := azure.ParseResourceID(c.ciParentVnet)
+	if err != nil {
+		return err
+	}
 
 	clusterProp := &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
 		RemoteVirtualNetwork: &mgmtnetwork.SubResource{
-			ID: &rp,
+			ID: &c.ciParentVnet,
 		},
 		AllowVirtualNetworkAccess: to.BoolPtr(true),
 		AllowForwardedTraffic:     to.BoolPtr(true),
@@ -496,12 +521,12 @@ func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup, cluste
 		AllowForwardedTraffic:     to.BoolPtr(true),
 	}
 
-	err := c.peerings.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", c.env.ResourceGroup()+"-peer", mgmtnetwork.VirtualNetworkPeering{VirtualNetworkPeeringPropertiesFormat: clusterProp})
+	err = c.peerings.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", r.ResourceGroup+"-peer", mgmtnetwork.VirtualNetworkPeering{VirtualNetworkPeeringPropertiesFormat: clusterProp})
 	if err != nil {
 		return err
 	}
 
-	err = c.peerings.CreateOrUpdateAndWait(ctx, c.env.ResourceGroup(), "dev-vnet", vnetResourceGroup+"-peer", mgmtnetwork.VirtualNetworkPeering{VirtualNetworkPeeringPropertiesFormat: rpProp})
+	err = c.ciParentVnetPeerings.CreateOrUpdateAndWait(ctx, r.ResourceGroup, r.ResourceName, vnetResourceGroup+"-peer", mgmtnetwork.VirtualNetworkPeering{VirtualNetworkPeeringPropertiesFormat: rpProp})
 	if err != nil {
 		return err
 	}
@@ -526,7 +551,7 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, 
 	for _, roleAssignment := range roleAssignments {
 		if strings.HasPrefix(
 			strings.ToLower(*roleAssignment.Scope),
-			strings.ToLower("/subscriptions/"+c.env.SubscriptionID()+"/resourceGroups/"+c.env.ResourceGroup()),
+			strings.ToLower("/subscriptions/"+c.env.SubscriptionID()+"/resourceGroups/"+vnetResourceGroup),
 		) {
 			// Don't delete inherited role assignments, only those resource group level or below
 			c.log.Infof("deleting role assignment %s", *roleAssignment.Name)

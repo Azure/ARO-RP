@@ -27,11 +27,7 @@ steps:
 
     VERSION=$(curl -sf "https://${{ parameters.aroVersionStorageAccount }}.blob.core.windows.net/rpversion/$LOCATION")
 
-    # TODO: consider removing E2E_CREATE_CLUSTER, E2E_DELETE_CLUSTER below after next RP
-    # deployment.
-
-    # TODO: Remove AZURE_FP_CLIENT_ID once RP is deployed in INT
-    export AZURE_FP_CLIENT_ID="71cfb175-ea3a-444e-8c03-b119b2752ce4"
+    # TODO: remove --env RESOURCEGROUP after next RP deployment.
 
     # TODO: e2e.test arguments need to move inside the container somehow.  Maybe
     # a short script inside the container?  :-|
@@ -39,9 +35,6 @@ steps:
       --rm \
       --env CI=true \
       --env RP_MODE=${{ parameters.rpMode }} \
-      --env E2E_CREATE_CLUSTER=true \
-      --env AZURE_FP_CLIENT_ID \
-      --env E2E_DELETE_CLUSTER=true \
       --env AZURE_CLIENT_ID \
       --env AZURE_CLIENT_SECRET \
       --env AZURE_TENANT_ID \
