@@ -69,8 +69,9 @@ func (m *manager) createOrUpdateClusterServicePrincipalRBAC(ctx context.Context)
 }
 
 func (m *manager) updateAROSecret(ctx context.Context) error {
+	var changed bool
 	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		//data:
 		// cloud-config: <base64 map[string]string with keys 'aadClientId' and 'aadClientSecret'>
 		secret, err := m.kubernetescli.CoreV1().Secrets("kube-system").Get(ctx, "azure-cloud-provider", metav1.GetOptions{})
@@ -82,7 +83,6 @@ func (m *manager) updateAROSecret(ctx context.Context) error {
 		}
 
 		var cf map[string]interface{}
-		var changed bool
 		if secret != nil && secret.Data != nil {
 			err = yaml.Unmarshal(secret.Data["cloud-config"], &cf)
 			if err != nil {
@@ -113,46 +113,59 @@ func (m *manager) updateAROSecret(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-
-			// If secret change we need to trigger kube-api-server and kube-controller-manager restarts
-			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				kAPIServer, err := m.operatorcli.OperatorV1().KubeAPIServers().Get(ctx, "cluster", metav1.GetOptions{})
-				if err != nil {
-					return err
-				}
-				kAPIServer.Spec.ForceRedeploymentReason = "Credential rotation " + time.Now().Format("2006-01-02 3:4:5")
-
-				_, err = m.operatorcli.OperatorV1().KubeAPIServers().Update(ctx, kAPIServer, metav1.UpdateOptions{})
-				if err != nil {
-					return err
-				}
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-
-			return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				kManager, err := m.operatorcli.OperatorV1().KubeControllerManagers().Get(ctx, "cluster", metav1.GetOptions{})
-				if err != nil {
-					return err
-				}
-				kManager.Spec.ForceRedeploymentReason = "Credential rotation " + time.Now().Format("2006-01-02 3:4:5")
-
-				_, err = m.operatorcli.OperatorV1().KubeControllerManagers().Update(ctx, kManager, metav1.UpdateOptions{})
-				if err != nil {
-					return err
-				}
-				return nil
-			})
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	// return early if not changed
+	if !changed {
+		return nil
+	}
+
+	// If secret change we need to trigger kube-api-server and kube-controller-manager restarts
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		kAPIServer, err := m.operatorcli.OperatorV1().KubeAPIServers().Get(ctx, "cluster", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		kAPIServer.Spec.ForceRedeploymentReason = "Credential rotation " + time.Now().UTC().String()
+
+		_, err = m.operatorcli.OperatorV1().KubeAPIServers().Update(ctx, kAPIServer, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		m.log.Error(err)
+	}
+
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		kManager, err := m.operatorcli.OperatorV1().KubeControllerManagers().Get(ctx, "cluster", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		kManager.Spec.ForceRedeploymentReason = "Credential rotation " + time.Now().UTC().String()
+
+		_, err = m.operatorcli.OperatorV1().KubeControllerManagers().Update(ctx, kManager, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		m.log.Error(err)
+	}
+	return nil
 }
 
 func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
+	var changed bool
 	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		//data:
 		// azure_client_id: secret_id
 		// azure_client_secret: secret_value
@@ -162,7 +175,6 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 			return err
 		}
 
-		var changed bool
 		if string(secret.Data["azure_client_id"]) != spp.ClientID {
 			secret.Data["azure_client_id"] = []byte(spp.ClientID)
 			changed = true
@@ -183,16 +195,24 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-
-			// restart cloud credentials operator to trigger rotation
-			return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				return m.kubernetescli.CoreV1().Pods("openshift-cloud-credential-operator").DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
-					LabelSelector: "app=cloud-credential-operator",
-				})
-			})
-
 		}
-
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	// return early if not changed
+	if !changed {
+		return nil
+	}
+
+	// restart cloud credentials operator to trigger rotation
+	err = m.kubernetescli.CoreV1().Pods("openshift-cloud-credential-operator").DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
+		LabelSelector: "app=cloud-credential-operator",
+	})
+	if err != nil {
+		m.log.Error(err)
+	}
+	return nil
 }
