@@ -27,6 +27,7 @@ stages:
     - australiasoutheast
     - centralindia
     - eastasia
+    - indiasouth
     - japaneast
     - japanwest
     - koreacentral
@@ -105,6 +106,7 @@ stages:
     billing_e2e_branch_name: $(billing_e2e_branch_name)
     locations:
     - brazilsouth
+    - brazilsoutheast
     - southeastasia
     - southafricanorth
     - uaenorth
