@@ -213,15 +213,12 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 		return err
 	}
 
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
-
 	d.log.Infof("deploying %s", deploymentName)
 	for i := 0; i < 5; i++ {
 		err = d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
 			Properties: &mgmtfeatures.DeploymentProperties{
-				Template:   template,
-				Mode:       mgmtfeatures.Incremental,
-				Parameters: parameters.Parameters,
+				Template: template,
+				Mode:     mgmtfeatures.Incremental,
 			},
 			Location: to.StringPtr("centralus"),
 		})
@@ -256,14 +253,11 @@ func (d *deployer) deploySubscription(ctx context.Context) error {
 		return err
 	}
 
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
-
 	d.log.Infof("deploying %s", deploymentName)
 	return d.deployments.CreateOrUpdateAndWait(ctx, *d.config.Configuration.SubscriptionResourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
-			Template:   template,
-			Mode:       mgmtfeatures.Incremental,
-			Parameters: parameters.Parameters,
+			Template: template,
+			Mode:     mgmtfeatures.Incremental,
 		},
 	})
 }
@@ -282,14 +276,11 @@ func (d *deployer) deployManagedIdentity(ctx context.Context) error {
 		return err
 	}
 
-	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
-
 	d.log.Infof("deploying %s", deploymentName)
 	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
-			Template:   template,
-			Mode:       mgmtfeatures.Incremental,
-			Parameters: parameters.Parameters,
+			Template: template,
+			Mode:     mgmtfeatures.Incremental,
 		},
 	})
 }
