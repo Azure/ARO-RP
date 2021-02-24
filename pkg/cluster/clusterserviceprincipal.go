@@ -140,6 +140,9 @@ func (m *manager) updateAROSecret(ctx context.Context) error {
 		return nil
 	})
 	if err != nil {
+		// Log the error and continue.  This code is inherently edge triggered;
+		// if we fail and the user retries, we won't re-trigger this code anyway,
+		// so it doesn't really help anyone to make this a hard failure
 		m.log.Error(err)
 	}
 
@@ -212,6 +215,9 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 		LabelSelector: "app=cloud-credential-operator",
 	})
 	if err != nil {
+		// Log the error and continue.  This code is inherently edge triggered;
+		// if we fail and the user retries, we won't re-trigger this code anyway,
+		// so it doesn't really help anyone to make this a hard failure
 		m.log.Error(err)
 	}
 	return nil
