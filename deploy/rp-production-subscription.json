@@ -1,12 +1,6 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
-    "parameters": {
-        "fullDeploy": {
-            "type": "bool",
-            "defaultValue": false
-        }
-    },
     "resources": [
         {
             "properties": {
@@ -16,7 +10,6 @@
             "name": "rp-health-ag",
             "type": "Microsoft.Insights/actionGroups",
             "location": "Global",
-            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2018-03-01"
         }
     ]

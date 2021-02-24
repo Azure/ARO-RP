@@ -206,7 +206,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 
 	parameters := map[string]*arm.ParametersParameter{
 		"clusterName":               {Value: clusterName},
-		"fullDeploy":                {Value: c.ci},
+		"ci":                        {Value: c.ci},
 		"clusterServicePrincipalId": {Value: spID},
 		"fpServicePrincipalId":      {Value: fpSPID},
 		"vnetAddressPrefix":         {Value: addressPrefix},

@@ -46,7 +46,6 @@ func (g *generator) managedIdentity() *arm.Resource {
 			Name:     to.StringPtr("[concat('aro-rp-', resourceGroup().location)]"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.ManagedIdentity"),
 	}
 }
@@ -423,7 +422,6 @@ func (g *generator) halfPeering(vnetA string, vnetB string) *arm.Resource {
 			},
 			Name: to.StringPtr(fmt.Sprintf("%s/peering-%s", vnetA, vnetB)),
 		},
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
 			fmt.Sprintf("[resourceId('Microsoft.Network/virtualNetworks', '%s')]", vnetA),
@@ -474,7 +472,6 @@ func (g *generator) rpvnet() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
@@ -505,7 +502,6 @@ func (g *generator) pevnet() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
@@ -523,7 +519,6 @@ func (g *generator) pip(name string) *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
@@ -647,7 +642,6 @@ func (g *generator) lb() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]",
@@ -667,7 +661,6 @@ func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Insights/actionGroups"),
 			Location: to.StringPtr("Global"),
 		},
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.Insights"),
 	}
 }
@@ -710,7 +703,6 @@ func (g *generator) lbAlert(threshold float64, severity int32, name string, eval
 			Type:     to.StringPtr("Microsoft.Insights/metricAlerts"),
 			Location: to.StringPtr("global"),
 		},
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.Insights"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
@@ -1320,7 +1312,6 @@ func (g *generator) zone() *arm.Resource {
 			Type:           to.StringPtr("Microsoft.Network/dnsZones"),
 			Location:       to.StringPtr("global"),
 		},
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.Network/dnsZones"),
 	}
 }
@@ -1422,7 +1413,6 @@ func (g *generator) clusterKeyvault() *arm.Resource {
 
 	return &arm.Resource{
 		Resource:   vault,
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
 	}
 }
@@ -1466,7 +1456,6 @@ func (g *generator) portalKeyvault() *arm.Resource {
 
 	return &arm.Resource{
 		Resource:   vault,
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
 	}
 }
@@ -1510,7 +1499,6 @@ func (g *generator) serviceKeyvault() *arm.Resource {
 
 	return &arm.Resource{
 		Resource:   vault,
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
 	}
 }
@@ -1539,7 +1527,6 @@ func (g *generator) cosmosdb() []*arm.Resource {
 
 	r := &arm.Resource{
 		Resource:   cosmosdb,
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 	}
 
@@ -1587,7 +1574,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
@@ -1613,7 +1599,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
-			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 		},
 		{
@@ -1635,7 +1620,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
-			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
@@ -1659,7 +1643,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
-			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
@@ -1684,7 +1667,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
-			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
@@ -1727,7 +1709,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
-			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
@@ -1752,7 +1733,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
-			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
@@ -1793,7 +1773,6 @@ func (g *generator) roleDefinitionTokenContributor() *arm.Resource {
 				},
 			},
 		},
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.Authorization/roleDefinitions"),
 	}
 }
@@ -1804,13 +1783,11 @@ func (g *generator) rbac() []*arm.Resource {
 			rbac.RoleReader,
 			"parameters('rpServicePrincipalId')",
 			"guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader')",
-			g.conditionStanza("fullDeploy"),
 		),
 		rbac.ResourceGroupRoleAssignmentWithName(
 			rbac.RoleNetworkContributor,
 			"parameters('fpServicePrincipalId')",
 			"guid(resourceGroup().id, 'FP / Network Contributor')",
-			g.conditionStanza("fullDeploy"),
 		),
 		rbac.ResourceRoleAssignmentWithName(
 			rbac.RoleDocumentDBAccountContributor,
@@ -1818,7 +1795,6 @@ func (g *generator) rbac() []*arm.Resource {
 			"Microsoft.DocumentDB/databaseAccounts",
 			"parameters('databaseAccountName')",
 			"concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('rpServicePrincipalId'), 'RP / DocumentDB Account Contributor'))",
-			g.conditionStanza("fullDeploy"),
 		),
 		rbac.ResourceRoleAssignmentWithName(
 			rbac.RoleDNSZoneContributor,
@@ -1826,7 +1802,6 @@ func (g *generator) rbac() []*arm.Resource {
 			"Microsoft.Network/dnsZones",
 			"concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))",
 			"concat(resourceGroup().location, '.', parameters('clusterParentDomainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))), 'FP / DNS Zone Contributor'))",
-			g.conditionStanza("fullDeploy"),
 		),
 	}
 }
@@ -1839,7 +1814,6 @@ func (g *generator) billingContributorRbac() []*arm.Resource {
 			"Microsoft.DocumentDB/databaseAccounts",
 			"parameters('databaseAccountName')",
 			"concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), '"+billingSPID+"' , 'Billing / DocumentDB Account Contributor'))",
-			g.conditionStanza("fullDeploy"),
 		),
 	}
 }
@@ -1851,7 +1825,6 @@ func (g *generator) acrReplica() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.ContainerRegistry/registries/replications"),
 			Location: to.StringPtr("[parameters('location')]"),
 		},
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.ContainerRegistry"),
 	}
 }
@@ -1864,7 +1837,6 @@ func (g *generator) acrRbac() []*arm.Resource {
 			"Microsoft.ContainerRegistry/registries",
 			"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",
 			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull')))",
-			g.conditionStanza("fullDeploy"),
 		),
 		rbac.ResourceRoleAssignmentWithName(
 			"48983534-3d06-4dcb-a566-08a694eb1279", // ARO v4 ContainerRegistry Token Contributor
@@ -1872,7 +1844,6 @@ func (g *generator) acrRbac() []*arm.Resource {
 			"Microsoft.ContainerRegistry/registries",
 			"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",
 			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))",
-			g.conditionStanza("fullDeploy"),
 		),
 	}
 
@@ -1897,7 +1868,6 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 					Name: "Standard_LRS",
 				},
 			},
-			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 		},
 		{
@@ -1909,7 +1879,6 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 				},
 			},
 			APIVersion: azureclient.APIVersion("Microsoft.Storage"),
-			Condition:  g.conditionStanza("fullDeploy"),
 			DependsOn: []string{
 				"[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]",
 			},
@@ -1927,7 +1896,6 @@ func (g *generator) storageAccount() *arm.Resource {
 				Name: "Standard_LRS",
 			},
 		},
-		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 	}
 }

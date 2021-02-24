@@ -5,10 +5,6 @@
         "acrResourceId": {
             "type": "string"
         },
-        "fullDeploy": {
-            "type": "bool",
-            "defaultValue": false
-        },
         "location": {
             "type": "string"
         }
@@ -18,7 +14,6 @@
             "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', parameters('location'))]",
             "type": "Microsoft.ContainerRegistry/registries/replications",
             "location": "[parameters('location')]",
-            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-05-01"
         }
     ]

@@ -58,13 +58,12 @@ type deployer struct {
 	portalKeyvault         keyvault.Manager
 	serviceKeyvault        keyvault.Manager
 
-	fullDeploy bool
-	config     *RPConfig
-	version    string
+	config  *RPConfig
+	version string
 }
 
 // New initiates new deploy utility object
-func New(ctx context.Context, log *logrus.Entry, env env.Core, config *RPConfig, version string, fullDeploy bool) (Deployer, error) {
+func New(ctx context.Context, log *logrus.Entry, env env.Core, config *RPConfig, version string) (Deployer, error) {
 	err := config.validate()
 	if err != nil {
 		return nil, err
@@ -101,9 +100,8 @@ func New(ctx context.Context, log *logrus.Entry, env env.Core, config *RPConfig,
 		portalKeyvault:         keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+"-por."+env.Environment().KeyVaultDNSSuffix+"/"),
 		serviceKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+"-svc."+env.Environment().KeyVaultDNSSuffix+"/"),
 
-		fullDeploy: fullDeploy,
-		config:     config,
-		version:    version,
+		config:  config,
+		version: version,
 	}, nil
 }
 
@@ -165,7 +163,6 @@ func (d *deployer) Deploy(ctx context.Context) error {
 		})
 		if serviceErr, ok := err.(*azure.ServiceError); ok &&
 			serviceErr.Code == "DeploymentFailed" &&
-			d.fullDeploy &&
 			i < 1 {
 			// on new RP deployments, we get a spurious DeploymentFailed error
 			// from the Microsoft.Insights/metricAlerts resources indicating
@@ -182,14 +179,7 @@ func (d *deployer) Deploy(ctx context.Context) error {
 		break
 	}
 
-	if d.fullDeploy {
-		err = d.configureDNS(ctx)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return d.configureDNS(ctx)
 }
 
 func (d *deployer) configureDNS(ctx context.Context) error {
@@ -286,10 +276,6 @@ func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
 		parameters.Parameters[p] = &arm.ParametersParameter{
 			Value: v,
 		}
-	}
-
-	parameters.Parameters["fullDeploy"] = &arm.ParametersParameter{
-		Value: d.fullDeploy,
 	}
 
 	return parameters

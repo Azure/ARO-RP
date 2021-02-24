@@ -25,11 +25,7 @@ func TestGetParameters(t *testing.T) {
 		{
 			name: "when no parameters are present only default is returned",
 			want: arm.Parameters{
-				Parameters: map[string]*arm.ParametersParameter{
-					"fullDeploy": {
-						Value: false,
-					},
-				},
+				Parameters: map[string]*arm.ParametersParameter{},
 			},
 		},
 		{
@@ -55,9 +51,6 @@ func TestGetParameters(t *testing.T) {
 					"adminApiCaBundle": {
 						Value: adminApiCaBundle,
 					},
-					"fullDeploy": {
-						Value: false,
-					},
 				},
 			},
 		},
@@ -76,9 +69,6 @@ func TestGetParameters(t *testing.T) {
 					"databaseAccountName": {
 						Value: databaseAccountName,
 					},
-					"fullDeploy": {
-						Value: false,
-					},
 				},
 			},
 		},
@@ -89,15 +79,11 @@ func TestGetParameters(t *testing.T) {
 			},
 			config: Configuration{},
 			want: arm.Parameters{
-				Parameters: map[string]*arm.ParametersParameter{
-					"fullDeploy": {
-						Value: false,
-					},
-				},
+				Parameters: map[string]*arm.ParametersParameter{},
 			},
 		},
 		{
-			name: "when malformed paramater is present, it is skipped",
+			name: "when malformed parameter is present, it is skipped",
 			ps: map[string]interface{}{
 				"dutabaseAccountName": nil,
 			},
@@ -105,11 +91,7 @@ func TestGetParameters(t *testing.T) {
 				DatabaseAccountName: databaseAccountName,
 			},
 			want: arm.Parameters{
-				Parameters: map[string]*arm.ParametersParameter{
-					"fullDeploy": {
-						Value: false,
-					},
-				},
+				Parameters: map[string]*arm.ParametersParameter{},
 			},
 		},
 	} {

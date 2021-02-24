@@ -50,7 +50,6 @@ func ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, na
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
 		},
-		Condition:  condition,
 		APIVersion: azureclient.APIVersion("Microsoft.Authorization"),
 		DependsOn: []string{
 			"[" + resourceID + "]",
