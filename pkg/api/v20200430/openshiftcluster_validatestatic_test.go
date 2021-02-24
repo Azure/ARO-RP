@@ -729,14 +729,12 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles['default'].ip: Changing property 'properties.ingressProfiles['default'].ip' is not allowed.",
 		},
 		{
-			name:    "clientId change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientID = uuid.NewV4().String() },
-			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.clientId: Changing property 'properties.servicePrincipalProfile.clientId' is not allowed.",
+			name:   "clientId change",
+			modify: func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientID = uuid.NewV4().String() },
 		},
 		{
-			name:    "clientSecret change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientSecret = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.clientSecret: Changing property 'properties.servicePrincipalProfile.clientSecret' is not allowed.",
+			name:   "clientSecret change",
+			modify: func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientSecret = "invalid" },
 		},
 		{
 			name:    "podCidr change",
