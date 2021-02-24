@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -66,6 +67,8 @@ type manager struct {
 	resources           features.ResourcesClient
 	privateZones        privatedns.PrivateZonesClient
 	virtualNetworkLinks privatedns.VirtualNetworkLinksClient
+	roleAssignments     authorization.RoleAssignmentsClient
+	denyAssignments     authorization.DenyAssignmentClient
 
 	dns             dns.Manager
 	privateendpoint privateendpoint.Manager
@@ -83,8 +86,6 @@ type manager struct {
 	securitycli   securityclient.Interface
 	arocli        aroclient.Interface
 }
-
-const deploymentName = "azuredeploy"
 
 // New returns a cluster manager
 func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, aead encryption.AEAD,
@@ -127,6 +128,8 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.
 		resources:           features.NewResourcesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 		privateZones:        privatedns.NewPrivateZonesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 		virtualNetworkLinks: privatedns.NewVirtualNetworkLinksClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
+		roleAssignments:     authorization.NewRoleAssignmentsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
+		denyAssignments:     authorization.NewDenyAssignmentsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 
 		dns:             dns.NewManager(env, localFPAuthorizer),
 		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
