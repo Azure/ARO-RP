@@ -32,7 +32,7 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 	steps := []steps.Step{
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.fixupClusterSPObjectID),
-		steps.Action(m.deploySnapshotUpgradeTemplate),
+		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute),
 		steps.Action(m.ensureBillingRecord), // belt and braces
@@ -56,8 +56,15 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 
 func (m *manager) Update(ctx context.Context) error {
 	steps := []steps.Step{
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
+		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.initializeClusterSPClients),
+		steps.Action(m.clusterSPObjectID),
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
+		// credentials rotation flow steps
+		steps.Action(m.createOrUpdateClusterServicePrincipalRBAC),
+		steps.Action(m.createOrUpdateDenyAssignment),
+		steps.Action(m.updateAROSecret),
+		steps.Action(m.updateOpenShiftSecret),
 	}
 
 	return m.runSteps(ctx, steps)

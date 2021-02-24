@@ -25,7 +25,7 @@ var extraDenyAssignmentExclusions = map[string][]string{
 	},
 }
 
-func (m *manager) denyAssignments() *arm.Resource {
+func (m *manager) denyAssignment() *arm.Resource {
 	notActions := []string{
 		"Microsoft.Network/networkSecurityGroups/join/action",
 		"Microsoft.Compute/disks/beginGetAccess/action",
