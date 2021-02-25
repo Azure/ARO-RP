@@ -28,7 +28,7 @@ const (
 func ResourceRoleAssignment(roleID, spID, resourceType, resourceName string, condition ...interface{}) *arm.Resource {
 	resourceID := "resourceId('" + resourceType + "', " + resourceName + ")"
 
-	return ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, "concat("+resourceName+", '/Microsoft.Authorization/', guid("+resourceID+", "+spID+", '"+roleID+"'))", condition)
+	return ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, "concat("+resourceName+", '/Microsoft.Authorization/', guid("+resourceID+", "+spID+", '"+roleID+"'))", condition...)
 }
 
 // ResourceRoleAssignmentWithName returns a Resource granting roleID on the
@@ -67,7 +67,34 @@ func ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, na
 // resource group to spID.  Argument spID must be a valid ARM expression, e.g.
 // "'foo'" or "concat('foo')".  Use this function in new ARM templates.
 func ResourceGroupRoleAssignment(roleID, spID string, condition ...interface{}) *arm.Resource {
-	return ResourceGroupRoleAssignmentWithName(roleID, spID, "guid(resourceGroup().id, '"+spID+"', '"+roleID+"')", condition)
+	return ResourceGroupRoleAssignmentWithName(roleID, spID, "guid(resourceGroup().id, '"+spID+"', '"+roleID+"')", condition...)
+}
+
+func resourceGroupRoleAssignmentWithDetails(roleID, spID string, name string, dependsOn []string, subscriptionScope bool, condition ...interface{}) *arm.Resource {
+	resourceIDFunction := "resourceId"
+	if subscriptionScope {
+		resourceIDFunction = "subscriptionResourceId"
+	}
+	r := &arm.Resource{
+		Resource: mgmtauthorization.RoleAssignment{
+			Name: to.StringPtr("[" + name + "]"),
+			Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
+			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+				Scope:            to.StringPtr("[resourceGroup().id]"),
+				RoleDefinitionID: to.StringPtr("[" + resourceIDFunction + "('Microsoft.Authorization/roleDefinitions', " + roleID + ")]"),
+				PrincipalID:      to.StringPtr("[" + spID + "]"),
+				PrincipalType:    mgmtauthorization.ServicePrincipal,
+			},
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Authorization"),
+		DependsOn:  dependsOn,
+	}
+
+	if len(condition) > 0 {
+		r.Condition = condition[0]
+	}
+
+	return r
 }
 
 // ResourceGroupRoleAssignmentWithName returns a Resource granting roleID on the
@@ -76,22 +103,45 @@ func ResourceGroupRoleAssignment(roleID, spID string, condition ...interface{}) 
 // templates which have already been deployed, to preserve the name and avoid a
 // RoleAssignmentExists error.
 func ResourceGroupRoleAssignmentWithName(roleID, spID string, name string, condition ...interface{}) *arm.Resource {
-	r := &arm.Resource{
-		Resource: mgmtauthorization.RoleAssignment{
-			Name: to.StringPtr("[" + name + "]"),
-			Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
-			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            to.StringPtr("[resourceGroup().id]"),
-				RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '" + roleID + "')]"),
-				PrincipalID:      to.StringPtr("[" + spID + "]"),
-				PrincipalType:    mgmtauthorization.ServicePrincipal,
-			},
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Authorization"),
+	return resourceGroupRoleAssignmentWithDetails("'"+roleID+"'", spID, name, nil, true, condition...)
+}
+
+func CustomRoleDefinitionName(name string) string {
+	return "guid(resourceGroup().id, '" + name + "')"
+}
+
+// ResourceGroupCustomRoleAssignment returns a Resource granting roleID on the
+// current resource group to spID.  Arguments roleID, spID and name must be
+// valid ARM expressions, e.g. "'foo'" or "concat('foo')".  Additionally a
+// dependency is added on the role definition; use this function when the role
+// definition is declared in the same ARM template at non-subscription scope.
+func ResourceGroupCustomRoleAssignment(roleID, spID string, condition ...interface{}) *arm.Resource {
+	dependsOn := []string{
+		"[resourceId('Microsoft.Authorization/roleDefinitions', " + roleID + ")]",
 	}
 
-	if len(condition) > 0 {
-		r.Condition = condition[0]
+	return resourceGroupRoleAssignmentWithDetails(roleID, spID, "guid(resourceGroup().id, "+spID+", "+roleID+")", dependsOn, false, condition...)
+}
+
+// CustomRoleDefinition returns a Resource defining a role granting the required
+// actions and dataActions, forbidding notActions and notDataActions.
+func CustomRoleDefinition(name string, permissions []mgmtauthorization.Permission) *arm.Resource {
+	r := &arm.Resource{
+		Resource: mgmtauthorization.RoleDefinition{
+			Name: to.StringPtr("[" + CustomRoleDefinitionName(name) + "]"),
+			Type: to.StringPtr("Microsoft.Authorization/roleDefinitions"),
+			RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
+				RoleName:    &name,
+				Description: &name,
+				RoleType:    to.StringPtr("CustomRole"),
+				Permissions: &permissions,
+				//the roles defined here can only be assigned inside the cluster resourceGroup
+				AssignableScopes: &[]string{
+					"[resourceGroup().id]",
+				},
+			},
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Authorization/roleDefinitions"),
 	}
 
 	return r
