@@ -76,7 +76,8 @@ type ConsoleProfile struct {
 
 // ServicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {
-	ClientID string `json:"clientId,omitempty"`
+	ClientID   string `json:"clientId,omitempty"`
+	SPObjectID string `json:"spObjectId,omitempty"`
 }
 
 // NetworkProfile represents a network profile.
@@ -135,6 +136,7 @@ type APIServerProfile struct {
 	Visibility Visibility `json:"visibility,omitempty"`
 	URL        string     `json:"url,omitempty"`
 	IP         string     `json:"ip,omitempty"`
+	IntIP      string     `json:"intIp,omitempty"`
 }
 
 // Visibility represents visibility.

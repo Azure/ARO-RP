@@ -37,7 +37,8 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				URL: oc.Properties.ConsoleProfile.URL,
 			},
 			ServicePrincipalProfile: ServicePrincipalProfile{
-				ClientID: oc.Properties.ServicePrincipalProfile.ClientID,
+				ClientID:   oc.Properties.ServicePrincipalProfile.ClientID,
+				SPObjectID: oc.Properties.ServicePrincipalProfile.SPObjectID,
 			},
 			NetworkProfile: NetworkProfile{
 				PodCIDR:           oc.Properties.NetworkProfile.PodCIDR,
@@ -52,6 +53,7 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				Visibility: Visibility(oc.Properties.APIServerProfile.Visibility),
 				URL:        oc.Properties.APIServerProfile.URL,
 				IP:         oc.Properties.APIServerProfile.IP,
+				IntIP:      oc.Properties.APIServerProfile.IntIP,
 			},
 			StorageSuffix: oc.Properties.StorageSuffix,
 		},
@@ -151,6 +153,7 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.ClusterProfile.ResourceGroupID = oc.Properties.ClusterProfile.ResourceGroupID
 	out.Properties.ConsoleProfile.URL = oc.Properties.ConsoleProfile.URL
 	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
+	out.Properties.ServicePrincipalProfile.SPObjectID = oc.Properties.ServicePrincipalProfile.SPObjectID
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
 	out.Properties.NetworkProfile.PrivateEndpointIP = oc.Properties.NetworkProfile.PrivateEndpointIP
@@ -171,6 +174,7 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.APIServerProfile.Visibility = api.Visibility(oc.Properties.APIServerProfile.Visibility)
 	out.Properties.APIServerProfile.URL = oc.Properties.APIServerProfile.URL
 	out.Properties.APIServerProfile.IP = oc.Properties.APIServerProfile.IP
+	out.Properties.APIServerProfile.IntIP = oc.Properties.APIServerProfile.IntIP
 	out.Properties.IngressProfiles = nil
 	if oc.Properties.IngressProfiles != nil {
 		out.Properties.IngressProfiles = make([]api.IngressProfile, len(oc.Properties.IngressProfiles))
