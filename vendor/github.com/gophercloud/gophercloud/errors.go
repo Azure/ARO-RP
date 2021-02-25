@@ -2,7 +2,6 @@ package gophercloud
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 )
 
@@ -78,12 +77,11 @@ func (e ErrMissingAnyoneOfEnvironmentVariables) Error() string {
 // those listed in OkCodes is encountered.
 type ErrUnexpectedResponseCode struct {
 	BaseError
-	URL            string
-	Method         string
-	Expected       []int
-	Actual         int
-	Body           []byte
-	ResponseHeader http.Header
+	URL      string
+	Method   string
+	Expected []int
+	Actual   int
+	Body     []byte
 }
 
 func (e ErrUnexpectedResponseCode) Error() string {

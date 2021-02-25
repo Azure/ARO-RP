@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/internal"
 	"github.com/gophercloud/gophercloud/pagination"
 )
 
@@ -53,9 +53,6 @@ type Image struct {
 	// Visibility defines who can see/use the image.
 	Visibility ImageVisibility `json:"visibility"`
 
-	// Hidden is whether the image is listed in default image list or not.
-	Hidden bool `json:"os_hidden"`
-
 	// Checksum is the checksum of the data that's associated with the image.
 	Checksum string `json:"checksum"`
 
@@ -89,22 +86,13 @@ type Image struct {
 
 	// VirtualSize is the virtual size of the image
 	VirtualSize int64 `json:"virtual_size"`
-
-	// OpenStackImageImportMethods is a slice listing the types of import
-	// methods available in the cloud.
-	OpenStackImageImportMethods []string `json:"-"`
-	// OpenStackImageStoreIDs is a slice listing the store IDs available in
-	// the cloud.
-	OpenStackImageStoreIDs []string `json:"-"`
 }
 
 func (r *Image) UnmarshalJSON(b []byte) error {
 	type tmp Image
 	var s struct {
 		tmp
-		SizeBytes                   interface{} `json:"size"`
-		OpenStackImageImportMethods string      `json:"openstack-image-import-methods"`
-		OpenStackImageStoreIDs      string      `json:"openstack-image-store-ids"`
+		SizeBytes interface{} `json:"size"`
 	}
 	err := json.Unmarshal(b, &s)
 	if err != nil {
@@ -132,16 +120,7 @@ func (r *Image) UnmarshalJSON(b []byte) error {
 	if resultMap, ok := result.(map[string]interface{}); ok {
 		delete(resultMap, "self")
 		delete(resultMap, "size")
-		delete(resultMap, "openstack-image-import-methods")
-		delete(resultMap, "openstack-image-store-ids")
-		r.Properties = gophercloud.RemainingKeys(Image{}, resultMap)
-	}
-
-	if v := strings.FieldsFunc(strings.TrimSpace(s.OpenStackImageImportMethods), splitFunc); len(v) > 0 {
-		r.OpenStackImageImportMethods = v
-	}
-	if v := strings.FieldsFunc(strings.TrimSpace(s.OpenStackImageStoreIDs), splitFunc); len(v) > 0 {
-		r.OpenStackImageStoreIDs = v
+		r.Properties = internal.RemainingKeys(Image{}, resultMap)
 	}
 
 	return err
@@ -154,20 +133,6 @@ type commonResult struct {
 // Extract interprets any commonResult as an Image.
 func (r commonResult) Extract() (*Image, error) {
 	var s *Image
-	if v, ok := r.Body.(map[string]interface{}); ok {
-		for k, h := range r.Header {
-			if strings.ToLower(k) == "openstack-image-import-methods" {
-				for _, s := range h {
-					v["openstack-image-import-methods"] = s
-				}
-			}
-			if strings.ToLower(k) == "openstack-image-store-ids" {
-				for _, s := range h {
-					v["openstack-image-store-ids"] = s
-				}
-			}
-		}
-	}
 	err := r.ExtractInto(&s)
 	return s, err
 }
@@ -234,9 +199,4 @@ func ExtractImages(r pagination.Page) ([]Image, error) {
 	}
 	err := (r.(ImagePage)).ExtractInto(&s)
 	return s.Images, err
-}
-
-// splitFunc is a helper function used to avoid a slice of empty strings.
-func splitFunc(c rune) bool {
-	return c == ','
 }

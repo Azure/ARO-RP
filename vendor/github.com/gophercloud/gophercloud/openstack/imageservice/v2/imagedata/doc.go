@@ -40,9 +40,6 @@ Example to Download Image Data
 		panic(err)
 	}
 
-	// close the reader, when reading has finished
-	defer image.Close()
-
 	imageData, err := ioutil.ReadAll(image)
 	if err != nil {
 		panic(err)

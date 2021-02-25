@@ -1,6 +1,7 @@
 package imagedata
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/gophercloud/gophercloud"
@@ -22,13 +23,12 @@ type StageResult struct {
 // method to gain access to the image data.
 type DownloadResult struct {
 	gophercloud.Result
-	Body io.ReadCloser
 }
 
 // Extract builds images model from io.Reader
-func (r DownloadResult) Extract() (io.ReadCloser, error) {
-	if r.Err != nil {
-		return nil, r.Err
+func (r DownloadResult) Extract() (io.Reader, error) {
+	if r, ok := r.Body.(io.Reader); ok {
+		return r, nil
 	}
-	return r.Body, nil
+	return nil, fmt.Errorf("Expected io.Reader but got: %T(%#v)", r.Body, r.Body)
 }
