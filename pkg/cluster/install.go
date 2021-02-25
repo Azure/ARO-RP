@@ -56,15 +56,15 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 
 func (m *manager) Update(ctx context.Context) error {
 	steps := []steps.Step{
-		steps.Action(m.initializeKubernetesClients), // must be first
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
+		steps.Action(m.initializeKubernetesClients), // All init steps are first
 		steps.Action(m.initializeClusterSPClients),
 		steps.Action(m.clusterSPObjectID),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
 		// credentials rotation flow steps
 		steps.Action(m.createOrUpdateClusterServicePrincipalRBAC),
 		steps.Action(m.createOrUpdateDenyAssignment),
-		steps.Action(m.updateAROSecret),
 		steps.Action(m.updateOpenShiftSecret),
+		steps.Action(m.updateAROSecret),
 	}
 
 	return m.runSteps(ctx, steps)
