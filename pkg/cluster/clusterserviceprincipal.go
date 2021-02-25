@@ -29,13 +29,12 @@ func (m *manager) createOrUpdateClusterServicePrincipalRBAC(ctx context.Context)
 		return err
 	}
 
-	// If we have Contributor RBAC role for Cluster SP on the resource group in question
 	// We are interested in Resource group scope only (inherited are returned too).
 	var toDelete []mgmtauthorization.RoleAssignment
 	var found bool
 	for _, assignment := range roleAssignments {
-		// Contributor assignments only!
-		if strings.EqualFold(*assignment.Scope, resourceGroupID) && strings.HasSuffix(strings.ToLower(*assignment.RoleDefinitionID), rbac.RoleContributor) {
+		if strings.EqualFold(*assignment.Scope, resourceGroupID) &&
+			!strings.HasSuffix(strings.ToLower(*assignment.RoleDefinitionID), strings.ToLower(rbac.RoleOwner)) /* should only matter in development */ {
 			if strings.EqualFold(*assignment.PrincipalID, clusterSPObjectID) {
 				found = true
 			} else {
@@ -45,7 +44,7 @@ func (m *manager) createOrUpdateClusterServicePrincipalRBAC(ctx context.Context)
 	}
 
 	for _, assignment := range toDelete {
-		m.log.Infof("Deleting Contributor roleAssignment %s", *assignment.Name)
+		m.log.Infof("deleting role assignment %s", *assignment.Name)
 		_, err := m.roleAssignments.Delete(ctx, *assignment.Scope, *assignment.Name)
 		if err != nil {
 			return err
@@ -53,11 +52,11 @@ func (m *manager) createOrUpdateClusterServicePrincipalRBAC(ctx context.Context)
 	}
 
 	if !found {
-		m.log.Info("Contributor roleAssignment not found for cluster service principal. Creating")
+		m.log.Info("creating cluster service principal role assignment")
 		t := &arm.Template{
 			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 			ContentVersion: "1.0.0.0",
-			Resources:      []*arm.Resource{m.clusterServicePrincipalRBAC()},
+			Resources:      m.clusterServicePrincipalRBAC(),
 		}
 		err = m.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
 		if err != nil {
