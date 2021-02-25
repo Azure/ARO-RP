@@ -6,6 +6,7 @@ package pullsecret
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -42,6 +43,15 @@ type PullSecretReconciler struct {
 	samplescli    samplesclient.Interface
 	log           *logrus.Entry
 }
+
+type PullSecretAction int
+
+const (
+	NoAction           PullSecretAction = iota
+	CreatePullSecret   PullSecretAction = iota
+	RecreatePullSecret PullSecretAction = iota
+	UpdatePullSecret   PullSecretAction = iota
+)
 
 func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.Interface, samplescli samplesclient.Interface) *PullSecretReconciler {
 	return &PullSecretReconciler{
@@ -81,109 +91,56 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	}
 
 	return reconcile.Result{}, retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ps, isCreate, err := r.pullsecret(ctx)
+		ps, err := r.pullsecret(ctx)
 		if err != nil {
 			return err
 		}
 
-		if ps.Data == nil {
-			ps.Data = map[string][]byte{}
-		}
-
-		// parse keys and validate JSON
-		parsedKeys, err := r.unmarshalSecretData(ps)
-		foundKey := false
-		failed := false
+		// fix pull secret if its broken to have at least the ARO pull secret
+		secret, action, err := r.updateGlobalPullSecret(mysec, ps)
 		if err != nil {
-			r.log.Info("pull secret is not valid json - recreating")
-			delete(ps.Data, v1.DockerConfigJsonKey)
-			failed = true
-		} else {
-			foundKey = r.checkRHRegistryKeys(parsedKeys)
+			return err
+		}
+		err = r.emitGlobalPullSecretChange(ctx, secret, action)
+		if err != nil {
+			return err
 		}
 
-		keyCondition := r.keyCondition(failed, foundKey)
-
-		// update condition based on the rh pull secret presence
-		err = controllers.SetCondition(ctx, r.arocli, keyCondition, operator.RoleMaster)
+		// change the condition of the operator based on the Red Hat key presence
+		redHatKeyCondition, err := r.updateRedHatKeyCondition(secret)
+		if err != nil {
+			return err
+		}
+		err = controllers.SetCondition(ctx, r.arocli, redHatKeyCondition, operator.RoleMaster)
 		if err != nil {
 			return err
 		}
 
 		if cluster.Spec.Features.ManageSamplesOperator {
-			// disable samples operator when rh pull secret is missing
-			updated, err := r.switchSamples(ctx, foundKey)
+
+			updatedSamplesOperator, err := r.emitSamplesControllerChange(ctx, redHatKeyCondition)
+			if err != nil {
+				return nil
+			}
+			err = controllers.SetCondition(ctx, r.arocli, updatedSamplesOperator, operator.RoleMaster)
 			if err != nil {
 				return err
 			}
 
-			samplesCondition := r.samplesCondition(updated, foundKey)
-			err = controllers.SetCondition(ctx, r.arocli, samplesCondition, operator.RoleMaster)
-			if err != nil {
-				return err
-			}
 		}
-
-		pullsec, changed, err := pullsecret.Merge(string(ps.Data[v1.DockerConfigJsonKey]), string(mysec.Data[v1.DockerConfigJsonKey]))
-		if err != nil {
-			return err
-		}
-
-		// repair Secret type
-		if ps.Type != v1.SecretTypeDockerConfigJson {
-			ps = &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      pullSecretName.Name,
-					Namespace: pullSecretName.Namespace,
-				},
-				Type: v1.SecretTypeDockerConfigJson,
-				Data: map[string][]byte{},
-			}
-			isCreate = true
-			r.log.Info("pull secret has the wrong type - recreating")
-
-			// unfortunately the type field is immutable.
-			err = r.kubernetescli.CoreV1().Secrets(ps.Namespace).Delete(ctx, ps.Name, metav1.DeleteOptions{})
-			if err != nil {
-				return err
-			}
-
-			// there is a small risk of crashing here: if that happens, we will
-			// restart, create a new pull secret, and will have dropped the rest
-			// of the customer's pull secret on the floor :-(
-		}
-		if !isCreate && !changed {
-			return nil
-		}
-
-		ps.Data[v1.DockerConfigJsonKey] = []byte(pullsec)
-
-		if isCreate {
-			r.log.Info("re-creating pull secret")
-			_, err = r.kubernetescli.CoreV1().Secrets(ps.Namespace).Create(ctx, ps, metav1.CreateOptions{})
-		} else {
-			r.log.Info("updating pull secret")
-			_, err = r.kubernetescli.CoreV1().Secrets(ps.Namespace).Update(ctx, ps, metav1.UpdateOptions{})
-		}
-		return err
+		return nil
 	})
 }
 
-func (r *PullSecretReconciler) pullsecret(ctx context.Context) (*v1.Secret, bool, error) {
+func (r *PullSecretReconciler) pullsecret(ctx context.Context) (*v1.Secret, error) {
 	ps, err := r.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Get(ctx, pullSecretName.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
-		return &v1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      pullSecretName.Name,
-				Namespace: pullSecretName.Namespace,
-			},
-			Type: v1.SecretTypeDockerConfigJson,
-		}, true, nil
+		return nil, nil
 	}
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
-	return ps, false, nil
+	return ps, nil
 }
 
 func triggerReconcile(secret *v1.Secret) bool {
@@ -236,25 +193,159 @@ func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // updateGlobalPullSecret checks the state of the pull secrets, in case of missing or broken ARO pull secret
 // it replaces it with working one from controller Secret
-func (r *PullSecretReconciler) updateGlobalPullSecret(ctx context.Context) error {
+func (r *PullSecretReconciler) updateGlobalPullSecret(operatorSecret, userSecret *v1.Secret) (updatedSecret *v1.Secret, action PullSecretAction, err error) {
+	if operatorSecret == nil {
+		return nil, NoAction, errors.New("Nil operator secret, cannot verify userData integrity")
+	}
 
-	return nil
+	operatorData, err := pullsecret.UnmarshalSecretData(operatorSecret)
+	if err != nil {
+		// no reference data cannot verify integrity of the data
+		return nil, NoAction, errors.New("Cannot parse operatorSecret, cannot verify userSecret integrity")
+	}
+
+	var secret *v1.Secret
+	create := false
+
+	if userSecret == nil {
+		action = CreatePullSecret
+		create = true
+	}
+
+	// userSecret can happen to have broken type, which means it have to be recreated
+	// with proper type
+	if userSecret != nil && userSecret.Type != v1.SecretTypeDockerConfigJson {
+		action = RecreatePullSecret
+		create = true
+	}
+
+	if create {
+		secret = &v1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pullSecretName.Name,
+				Namespace: pullSecretName.Namespace,
+			},
+			Type: v1.SecretTypeDockerConfigJson,
+		}
+	} else {
+		secret = userSecret.DeepCopy()
+	}
+
+	userData, err := pullsecret.UnmarshalSecretData(secret)
+	if err != nil || userData == nil {
+		// cannot parse data it is broken, recreate the ARO content
+		userData = &pullsecret.SerializedAuthMap{}
+		secret.Data = make(map[string][]byte)
+	}
+
+	fixedData, update := pullsecret.FixPullSecretData(operatorData, userData)
+
+	if !create && !update {
+		return secret, NoAction, nil
+	}
+
+	if !create && update {
+		action = UpdatePullSecret
+	}
+
+	rawFixedData, err := json.Marshal(fixedData)
+	if err != nil {
+		return nil, NoAction, err
+	}
+
+	secret.Data[v1.DockerConfigJsonKey] = rawFixedData
+	return secret, action, nil
 }
 
-func (r *PullSecretReconciler) unmarshalSecretData(ps *v1.Secret) (*serializedAuthMap, error) {
-	var pullSecretData *serializedAuthMap
-	if data := ps.Data[v1.DockerConfigJsonKey]; len(data) > 0 {
-		if err := json.Unmarshal(data, &pullSecretData); err != nil {
-			return nil, err
+// emitGlobalPullSecretChange performs update of the secret when the user pull secret is broken or require recreation
+func (r *PullSecretReconciler) emitGlobalPullSecretChange(ctx context.Context, secret *v1.Secret, action PullSecretAction) error {
+	if action == NoAction {
+		// no action required
+		return nil
+	}
+
+	if action == RecreatePullSecret {
+		// unfortunately the type field is immutable.
+		err := r.kubernetescli.CoreV1().Secrets(secret.Namespace).Delete(ctx, secret.Name, metav1.DeleteOptions{})
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
 		}
 	}
-	return pullSecretData, nil
+
+	if action == CreatePullSecret || action == RecreatePullSecret {
+		r.log.Info("re-creating pull secret")
+		_, err := r.kubernetescli.CoreV1().Secrets(secret.Namespace).Create(ctx, secret, metav1.CreateOptions{})
+
+		return err
+	}
+
+	r.log.Info("updating pull secret")
+	_, err := r.kubernetescli.CoreV1().Secrets(secret.Namespace).Update(ctx, secret, metav1.UpdateOptions{})
+	return err
+}
+
+func (r *PullSecretReconciler) updateRedHatKeyCondition(secret *v1.Secret) (*status.Condition, error) {
+	// parse keys and validate JSON
+	parsedKeys, err := pullsecret.UnmarshalSecretData(secret)
+	foundKey := false
+	failed := false
+	if err != nil {
+		r.log.Info("pull secret is not valid json - recreating")
+		delete(secret.Data, v1.DockerConfigJsonKey)
+		failed = true
+	} else {
+		foundKey = r.checkRHRegistryKeys(parsedKeys)
+	}
+
+	keyCondition := r.keyCondition(failed, foundKey)
+	return keyCondition, nil
+}
+
+func (r *PullSecretReconciler) emitSamplesControllerChange(ctx context.Context, state *status.Condition) (*status.Condition, error) {
+	updated := false
+	enable := false
+	if state.Type == aro.RedHatKeyPresent && state.IsTrue() {
+		enable = true
+	}
+
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		c, err := r.samplescli.SamplesV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if c.Spec.SamplesRegistry != "" {
+			// if the samples registry point elsewhere no action
+			return nil
+		}
+
+		oldManagementState := c.Spec.ManagementState
+
+		if enable {
+			c.Spec.ManagementState = operatorv1.Managed
+		} else {
+			c.Spec.ManagementState = operatorv1.Removed
+		}
+
+		if oldManagementState == c.Spec.ManagementState {
+			return nil
+		}
+
+		_, err = r.samplescli.SamplesV1().Configs().Update(ctx, c, metav1.UpdateOptions{})
+		if err == nil {
+			updated = true
+		}
+		return err
+	})
+
+	samplesCondition := r.samplesCondition(updated, enable)
+	return samplesCondition, err
 }
 
 // checkRHRegistryKeys checks whether the rhRegistry keys:
 //   - redhat.registry.io
 // are present in the pullSecret
-func (r *PullSecretReconciler) checkRHRegistryKeys(psData *serializedAuthMap) (foundKey bool) {
+func (r *PullSecretReconciler) checkRHRegistryKeys(psData *pullsecret.SerializedAuthMap) (foundKey bool) {
 	rhKeys := []string{
 		"registry.redhat.io",
 	}
@@ -265,7 +356,6 @@ func (r *PullSecretReconciler) checkRHRegistryKeys(psData *serializedAuthMap) (f
 
 	for _, key := range rhKeys {
 		if auth, ok := psData.Auths[key]; ok && len(auth.Auth) > 0 {
-			r.log.Infof("Found token: %s\n", key)
 			foundKey = true
 		}
 	}
@@ -325,48 +415,4 @@ func (r *PullSecretReconciler) samplesCondition(updated bool, foundKey bool) *st
 	samplesCondition.Message = sb.String()
 
 	return samplesCondition
-}
-
-// switchSamples enables/disables the samples if there's no appropriate pull secret
-func (r *PullSecretReconciler) switchSamples(ctx context.Context, enable bool) (bool, error) {
-	updated := false
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		c, err := r.samplescli.SamplesV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		if c.Spec.SamplesRegistry != "" {
-			// if the samples registry point elsewhere no action
-			return nil
-		}
-
-		oldManagementState := c.Spec.ManagementState
-
-		if enable {
-			c.Spec.ManagementState = operatorv1.Managed
-		} else {
-			c.Spec.ManagementState = operatorv1.Removed
-		}
-
-		if oldManagementState == c.Spec.ManagementState {
-			return nil
-		}
-
-		_, err = r.samplescli.SamplesV1().Configs().Update(ctx, c, metav1.UpdateOptions{})
-		if err == nil {
-			updated = true
-		}
-		return err
-	})
-
-	return updated, err
-}
-
-type serializedAuthMap struct {
-	Auths map[string]serializedAuth `json:"auths"`
-}
-
-type serializedAuth struct {
-	Auth string `json:"auth"`
 }

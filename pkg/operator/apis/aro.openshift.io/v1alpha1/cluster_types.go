@@ -18,7 +18,7 @@ const (
 )
 
 func AllConditionTypes() []status.ConditionType {
-	return []status.ConditionType{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid}
+	return []status.ConditionType{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid, RedHatKeyPresent, SamplesOperatorEnabled}
 }
 
 type GenevaLoggingSpec struct {
