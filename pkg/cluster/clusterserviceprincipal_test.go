@@ -24,10 +24,8 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	mock_authz "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
 
@@ -51,11 +49,6 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 						SPObjectID: fakeClusterSPObjectId,
 					},
 				},
-			},
-		},
-		subscriptionDoc: &api.SubscriptionDocument{ // TODO: can remove after the feature flag is removed
-			Subscription: &api.Subscription{
-				Properties: &api.SubscriptionProperties{},
 			},
 		},
 	}
@@ -141,12 +134,6 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
-
-			// TODO: can remove after the feature flag is removed
-			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
-
-			m.env = env
 
 			raClient := mock_authz.NewMockRoleAssignmentsClient(controller)
 			deployments := mock_features.NewMockDeploymentsClient(controller)

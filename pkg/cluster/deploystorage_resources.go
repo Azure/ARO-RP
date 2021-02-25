@@ -15,7 +15,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
@@ -83,65 +82,49 @@ func (m *manager) denyAssignment() *arm.Resource {
 }
 
 func (m *manager) clusterServicePrincipalRBAC() []*arm.Resource {
-	if m.env.DeploymentMode() != deployment.Production ||
-		feature.IsRegisteredForFeature(m.subscriptionDoc.Subscription.Properties, "Microsoft.RedHatOpenShift/RedHatEngineering") {
-		// new behaviour is behind a feature flag for now in PROD
-		m.log.Print("using custom role definition")
-
-		return []*arm.Resource{
-			rbac.CustomRoleDefinition("Azure Red Hat OpenShift Cluster",
-				[]mgmtauthorization.Permission{
-					{
-						Actions: &[]string{
-							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/disks
-							"Microsoft.Compute/disks/*",
-
-							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/internalloadbalancers
-							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/publicloadbalancers
-							"Microsoft.Network/loadBalancers/*",
-
-							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/networkinterfaces
-							"Microsoft.Network/networkInterfaces/*",
-
-							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/publicips
-							"Microsoft.Network/publicIPAddresses/*",
-
-							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/securitygroups
-							"Microsoft.Network/networkSecurityGroups/*",
-
-							//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/virtualmachines
-							"Microsoft.Compute/virtualMachines/*",
-
-							//based on openshift/cluster-insgress-operator /pkg/dns/azure/client
-							"Microsoft.Network/privateDnsZones/A/*",
-
-							//based on openshift/cluster-image-registry-operator /pkg/storage/azure
-							"Microsoft.Storage/storageAccounts/*",
-						},
-						NotActions: &[]string{
-							"Microsoft.Compute/virtualMachines/powerOff/action",
-							"Microsoft.Compute/virtualMachines/deallocate/action",
-							"Microsoft.Compute/virtualMachines/generalize/action",
-							"Microsoft.Compute/virtualMachines/capture/action",
-							"Microsoft.Compute/virtualMachines/performMaintenance/action",
-							"Microsoft.Network/networkSecurityGroups/delete",
-						},
-					},
-				}),
-			rbac.ResourceGroupCustomRoleAssignment(
-				rbac.CustomRoleDefinitionName("Azure Red Hat OpenShift Cluster"),
-				"'"+m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID+"'"),
-		}
-	}
-
-	//prod flow
-	m.log.Print("using Contributor role definition")
 	return []*arm.Resource{
-		rbac.ResourceGroupRoleAssignmentWithName(
-			rbac.RoleContributor,
-			"'"+m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID+"'",
-			"guid(resourceGroup().id, 'SP / Contributor')",
-		),
+		rbac.CustomRoleDefinition("Azure Red Hat OpenShift Cluster",
+			[]mgmtauthorization.Permission{
+				{
+					Actions: &[]string{
+						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/disks
+						"Microsoft.Compute/disks/*",
+
+						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/internalloadbalancers
+						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/publicloadbalancers
+						"Microsoft.Network/loadBalancers/*",
+
+						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/networkinterfaces
+						"Microsoft.Network/networkInterfaces/*",
+
+						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/publicips
+						"Microsoft.Network/publicIPAddresses/*",
+
+						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/securitygroups
+						"Microsoft.Network/networkSecurityGroups/*",
+
+						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/virtualmachines
+						"Microsoft.Compute/virtualMachines/*",
+
+						//based on openshift/cluster-insgress-operator /pkg/dns/azure/client
+						"Microsoft.Network/privateDnsZones/A/*",
+
+						//based on openshift/cluster-image-registry-operator /pkg/storage/azure
+						"Microsoft.Storage/storageAccounts/*",
+					},
+					NotActions: &[]string{
+						"Microsoft.Compute/virtualMachines/powerOff/action",
+						"Microsoft.Compute/virtualMachines/deallocate/action",
+						"Microsoft.Compute/virtualMachines/generalize/action",
+						"Microsoft.Compute/virtualMachines/capture/action",
+						"Microsoft.Compute/virtualMachines/performMaintenance/action",
+						"Microsoft.Network/networkSecurityGroups/delete",
+					},
+				},
+			}),
+		rbac.ResourceGroupCustomRoleAssignment(
+			rbac.CustomRoleDefinitionName("Azure Red Hat OpenShift Cluster"),
+			"'"+m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID+"'"),
 	}
 }
 
