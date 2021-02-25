@@ -231,6 +231,20 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.ip: Changing property 'properties.apiserverProfile.ip' is not allowed.",
 		},
 		{
+			name: "apiServer intIp change is not allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						APIServerProfile: APIServerProfile{
+							IntIP: "1.2.3.4",
+						},
+					},
+				}
+			},
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.APIServerProfile.IntIP = "2.3.4.5" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.intIp: Changing property 'properties.apiserverProfile.intIp' is not allowed.",
+		},
+		{
 			name: "ingress private change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
@@ -279,6 +293,20 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientID = uuid.NewV4().String() },
 			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.clientId: Changing property 'properties.servicePrincipalProfile.clientId' is not allowed.",
+		},
+		{
+			name: "spObjectId change is not allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						ServicePrincipalProfile: ServicePrincipalProfile{
+							SPObjectID: "clientId",
+						},
+					},
+				}
+			},
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.SPObjectID = uuid.NewV4().String() },
+			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.spObjectId: Changing property 'properties.servicePrincipalProfile.spObjectId' is not allowed.",
 		},
 		{
 			name: "podCidr change is not allowed",
