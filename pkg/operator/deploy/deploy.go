@@ -228,7 +228,7 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 				return err
 			}
 
-			err = o.dh.RefreshAPIResources()
+			err = o.dh.Refresh()
 			if err != nil {
 				return err
 			}

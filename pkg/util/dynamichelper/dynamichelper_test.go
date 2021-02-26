@@ -5,7 +5,6 @@ package dynamichelper
 
 import (
 	"context"
-	"net/http"
 	"reflect"
 	"testing"
 
@@ -13,148 +12,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/fake"
 	ktesting "k8s.io/client-go/testing"
-
-	"github.com/Azure/ARO-RP/pkg/api"
 )
-
-func TestFindGVR(t *testing.T) {
-	tests := []struct {
-		name      string
-		resources []*metav1.APIResourceList
-		kind      string
-		want      *schema.GroupVersionResource
-		wantErr   error
-	}{
-		{
-			name: "find one",
-			resources: []*metav1.APIResourceList{
-				{
-					GroupVersion: "v1",
-					APIResources: []metav1.APIResource{
-						{
-							Name: "configmaps",
-							Kind: "ConfigMap",
-						},
-					},
-				},
-			},
-			kind: "configmap",
-			want: &schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"},
-		},
-		{
-			name: "find best version",
-			resources: []*metav1.APIResourceList{
-				{
-					GroupVersion: "v1",
-					APIResources: []metav1.APIResource{
-						{
-							Name: "configmaps",
-							Kind: "ConfigMap",
-						},
-					},
-				},
-				{
-					GroupVersion: "v1beta1",
-					APIResources: []metav1.APIResource{
-						{
-							Name: "configmaps",
-							Kind: "ConfigMap",
-						},
-					},
-				},
-			},
-			kind: "configmap",
-			want: &schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"},
-		},
-		{
-			name: "find full group.resource",
-			resources: []*metav1.APIResourceList{
-				{
-					GroupVersion: "metal3.io/v1alpha1",
-					APIResources: []metav1.APIResource{
-						{
-							Name: "baremetalhosts",
-							Kind: "BareMetalHost",
-						},
-					},
-				},
-			},
-			kind: "baremetalhost.metal3.io",
-			want: &schema.GroupVersionResource{Group: "metal3.io", Version: "v1alpha1", Resource: "baremetalhosts"},
-		},
-		{
-			name: "no sub.resources",
-			resources: []*metav1.APIResourceList{
-				{
-					GroupVersion: "metal3.io/v1alpha1",
-					APIResources: []metav1.APIResource{
-						{
-							Name: "baremetalhosts/status",
-							Kind: "BareMetalHost",
-						},
-					},
-				},
-			},
-			kind: "baremetalhost/status",
-			wantErr: api.NewCloudError(
-				http.StatusBadRequest, api.CloudErrorCodeNotFound,
-				"", "The groupKind '%s' was not found.", "baremetalhost/status"),
-		},
-		{
-			name:      "empty resources",
-			resources: []*metav1.APIResourceList{},
-			kind:      "configmap",
-			wantErr: api.NewCloudError(
-				http.StatusBadRequest, api.CloudErrorCodeNotFound,
-				"", "The groupKind '%s' was not found.", "configmap"),
-		},
-		{
-			name: "find all kinds",
-			resources: []*metav1.APIResourceList{
-				{
-					GroupVersion: "metal3.io/v1alpha1",
-					APIResources: []metav1.APIResource{
-						{
-							Name: "baremetalhosts",
-							Kind: "BareMetalHost",
-						},
-					},
-				},
-				{
-					GroupVersion: "plastic.io/v1alpha1",
-					APIResources: []metav1.APIResource{
-						{
-							Name: "plastichosts",
-							Kind: "BareMetalHost",
-						},
-					},
-				},
-			},
-			kind: "baremetalhost",
-			want: nil,
-			wantErr: api.NewCloudError(
-				http.StatusBadRequest, api.CloudErrorCodeInvalidParameter,
-				"", "The groupKind '%s' matched multiple groupKinds (baremetalhost.metal3.io, baremetalhost.plastic.io).", "baremetalhost"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			dh := &dynamicHelper{apiresources: tt.resources}
-
-			got, err := dh.findGVR(tt.kind, "")
-			if !reflect.DeepEqual(err, tt.wantErr) {
-				t.Error(err)
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Error(got)
-			}
-		})
-	}
-}
 
 func TestEnsure(t *testing.T) {
 	tests := []struct {
@@ -290,19 +150,21 @@ func TestEnsure(t *testing.T) {
 			})
 
 			dh := &dynamicHelper{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-				dyn: fakeDyn,
-				apiresources: []*metav1.APIResourceList{
-					{
-						GroupVersion: "v1",
-						APIResources: []metav1.APIResource{
-							{
-								Name: "configmaps",
-								Kind: "ConfigMap",
+				GVRResolver: &gvrResolver{
+					apiresources: []*metav1.APIResourceList{
+						{
+							GroupVersion: "v1",
+							APIResources: []metav1.APIResource{
+								{
+									Name: "configmaps",
+									Kind: "ConfigMap",
+								},
 							},
 						},
 					},
 				},
+				log: logrus.NewEntry(logrus.StandardLogger()),
+				dyn: fakeDyn,
 			}
 
 			err := dh.Ensure(context.Background(), tt.new)
