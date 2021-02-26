@@ -8,7 +8,6 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	configscheme "github.com/openshift/client-go/config/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
@@ -43,15 +42,8 @@ func (m *manager) disableOperatorHubSources(ctx context.Context) error {
 		return nil
 	}
 
-	// https://bugzilla.redhat.com/show_bug.cgi?id=1815649
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		c := &configv1.OperatorHub{}
-		err := m.configcli.ConfigV1().RESTClient().Get().
-			Resource("operatorhubs").
-			Name("cluster").
-			VersionedParams(&metav1.GetOptions{}, configscheme.ParameterCodec).
-			Do(ctx).
-			Into(c)
+		c, err := m.configcli.ConfigV1().OperatorHubs().Get(ctx, "cluster", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
