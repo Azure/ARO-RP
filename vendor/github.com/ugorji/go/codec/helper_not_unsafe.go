@@ -1,4 +1,4 @@
-// +build !go1.9 safe appengine
+// +build !go1.9 safe codec.safe appengine
 
 // Copyright (c) 2012-2020 Ugorji Nwoke. All rights reserved.
 // Use of this source code is governed by a MIT license found in the LICENSE file.
@@ -28,6 +28,10 @@ func bytesView(v string) []byte {
 
 func byteSliceSameData(v1 []byte, v2 []byte) bool {
 	return cap(v1) != 0 && cap(v2) != 0 && &(v1[:1][0]) == &(v2[:1][0])
+}
+
+func (x *BasicHandle) fnloadFastpathUnderlying(ti *typeInfo) (f *fastpathE, u reflect.Type) {
+	return fnloadFastpathUnderlying(ti)
 }
 
 // func copyBytes(dst []byte, src []byte) {
@@ -89,8 +93,8 @@ func rvZeroK(t reflect.Type, k reflect.Kind) reflect.Value {
 }
 
 func rvConvert(v reflect.Value, t reflect.Type) (rv reflect.Value) {
-	// reflect.Value.Convert(...) will make a copy if it is addressable.
-	// since we need to maintain references for decoding, we must check appropriately.
+	// Note that reflect.Value.Convert(...) will make a copy if it is addressable.
+	// Since we decode into the passed value, we must try to convert the addressable value..
 	if v.CanAddr() {
 		return v.Addr().Convert(reflect.PtrTo(t)).Elem()
 	}
@@ -435,7 +439,7 @@ func rvGetSlice4Array(rv reflect.Value, v interface{}) {
 	// reflect.ValueOf(v).Elem().Set(rv.Slice(0, rv.Len()))
 }
 
-func rvCopySlice(dest, src reflect.Value) {
+func rvCopySlice(dest, src reflect.Value, _ reflect.Type) {
 	reflect.Copy(dest, src)
 }
 

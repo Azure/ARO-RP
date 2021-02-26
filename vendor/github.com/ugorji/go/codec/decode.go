@@ -57,8 +57,8 @@ type decByteState uint8
 
 const (
 	decByteStateNone     decByteState = iota
-	decByteStateZerocopy              // view into the []byte that we are decoding from
-	decByteStateReuseBuf              // view into the transient buffer used internally by the decDriver
+	decByteStateZerocopy              // view into []byte that we are decoding from
+	decByteStateReuseBuf              // view into transient buffer used internally by decDriver
 	// decByteStateNewAlloc
 )
 
@@ -757,7 +757,7 @@ func (d *Decoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 
 	rtelem0Mut := !isImmutableKind(reflect.Kind(f.ti.elemkind))
 	rtelem := f.ti.elem
-	rtelemkind := rtelem.Kind()
+	rtelemkind := reflect.Kind(f.ti.elemkind)
 	for rtelemkind == reflect.Ptr {
 		rtelem = rtelem.Elem()
 		rtelemkind = rtelem.Kind()
@@ -795,7 +795,7 @@ func (d *Decoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 				d.errorf("cannot decode into non-settable slice")
 			}
 			if rvChanged && oldRvlenGtZero && rtelem0Mut {
-				rvCopySlice(rv, rv0) // only copy up to length NOT cap i.e. rv0.Slice(0, rvcap)
+				rvCopySlice(rv, rv0, rtelem) // only copy up to length NOT cap i.e. rv0.Slice(0, rvcap)
 			}
 		} else if containerLenS != rvlen {
 			if rvCanset {
@@ -1361,6 +1361,13 @@ func NewDecoderBytes(in []byte, h Handle) *Decoder {
 	return d
 }
 
+// NewDecoderString returns a Decoder which efficiently decodes directly
+// from a string with zero copying.
+//
+// It is a convenience function that calls NewDecoderBytes with a
+// []byte view into the string.
+//
+// This can be an efficient zero-copy if using default mode i.e. without codec.safe tag.
 func NewDecoderString(s string, h Handle) *Decoder {
 	return NewDecoderBytes(bytesView(s), h)
 }
@@ -1444,6 +1451,13 @@ func (d *Decoder) ResetBytes(in []byte) {
 	d.resetCommon()
 }
 
+// ResetString resets the Decoder with a new string to decode from,
+// clearing all state from last run(s).
+//
+// It is a convenience function that calls ResetBytes with a
+// []byte view into the string.
+//
+// This can be an efficient zero-copy if using default mode i.e. without codec.safe tag.
 func (d *Decoder) ResetString(s string) {
 	d.ResetBytes(bytesView(s))
 }
@@ -1623,6 +1637,10 @@ func setZero(iv interface{}) {
 	case *float32:
 		*v = 0
 	case *float64:
+		*v = 0
+	case *complex64:
+		*v = 0
+	case *complex128:
 		*v = 0
 	case *[]byte:
 		*v = nil

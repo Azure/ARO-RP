@@ -1,4 +1,5 @@
 // +build !safe
+// +build !codec.safe
 // +build !appengine
 // +build go1.9
 
@@ -136,6 +137,31 @@ func bytesView(v string) (b []byte) {
 
 func byteSliceSameData(v1 []byte, v2 []byte) bool {
 	return (*unsafeSlice)(unsafe.Pointer(&v1)).Data == (*unsafeSlice)(unsafe.Pointer(&v2)).Data
+}
+
+// fnloadFastpathUnderlying returns a fastpathE and underlying type
+// for use in BasicHandle.fnload calls.
+func (x *BasicHandle) fnloadFastpathUnderlying(ti *typeInfo) (f *fastpathE, u reflect.Type) {
+	// MARKER: in unsafe mode, we can convert between types with same shape,
+	// even if this is forbidden in normal go code.
+	//
+	// For map kind: check key and value (elem)
+	// for slice or array kind: check elem
+	// check is as below:
+	//   if no-custom-static-implement && no-registered-extension && type-is-scalar-or-byteslice &&
+	//   fastpath-to-deep-underlying-slice-or-map-exists, then use deep underlying.
+	//
+	// Concern is that the checks can be expensive, as we need to look up typeInfo for elem
+	// (and key if a map), and then look up whether extensions are registered for them, and then
+	// use reflect to create deep underlying type, and then check if a fastpath exists for it.
+	//
+	// The gain here is in the rare case where you have a custom type that has defined elem type
+	// which wraps a builtin type that we have a fastpath for.
+	// The gain doesn't justify the cost.
+	//
+	// Leae here in case the cost-analysis changes in the future.
+
+	return fnloadFastpathUnderlying(ti)
 }
 
 // isNil says whether the value v is nil.
@@ -302,12 +328,12 @@ func rvZeroK(t reflect.Type, k reflect.Kind) (rv reflect.Value) {
 	urv.typ = ((*unsafeIntf)(unsafe.Pointer(&t))).ptr
 	if refBitset.isset(byte(k)) {
 		urv.flag = uintptr(k)
-	} else if (k == reflect.Struct || k == reflect.Array) && rtsize2(urv.typ) > uintptr(len(unsafeZeroArr)) {
-		urv.flag = uintptr(k) | unsafeFlagIndir | unsafeFlagAddr
-		urv.ptr = unsafe_New(urv.typ)
-	} else {
+	} else if rtsize2(urv.typ) <= uintptr(len(unsafeZeroArr)) {
 		urv.flag = uintptr(k) | unsafeFlagIndir
 		urv.ptr = unsafeZeroAddr
+	} else { // meaning struct or array
+		urv.flag = uintptr(k) | unsafeFlagIndir | unsafeFlagAddr
+		urv.ptr = unsafe_New(urv.typ)
 	}
 	return
 }
@@ -372,6 +398,22 @@ func unsafeCmpZero(ptr unsafe.Pointer, size int) bool {
 	}
 	return *(*string)(unsafe.Pointer(&s1)) == *(*string)(unsafe.Pointer(&s2)) // memcmp
 }
+
+// MARKER: using builtins do not affect cost of an operation, while explicitly calling the
+// readlink'ed function is a function call that prevents inlining.
+//
+// func unsafeCmpZero(ptr unsafe.Pointer, size int) bool {
+// 	if size > len(unsafeZeroArr) {
+// 		return unsafeCmpZeroAlloc(ptr, size)
+// 	}
+// 	return *(*string)(unsafe.Pointer(&unsafeString{ptr, size})) ==
+// 		*(*string)(unsafe.Pointer(&unsafeString{unsafeZeroAddr, size}))
+// }
+//
+// func unsafeCmpZeroAlloc(ptr unsafe.Pointer, size int) bool {
+// 	return *(*string)(unsafe.Pointer(&unsafeString{ptr, size})) ==
+// 		*(*string)(unsafe.Pointer(&unsafeString{mallocgc(uintptr(size), nil, true), size}))
+// }
 
 func isEmptyValue(v reflect.Value, tinfos *TypeInfos, recursive bool) bool {
 	urv := (*unsafeReflectValue)(unsafe.Pointer(&v))
@@ -855,16 +897,12 @@ func rvGetSlice4Array(rv reflect.Value, v interface{}) {
 	s.Data = urv.ptr
 	s.Len = rv.Len()
 	s.Cap = s.Len
-	return
 }
 
-func rvCopySlice(dest, src reflect.Value) {
-	t := rvType(dest).Elem()
-	urv := (*unsafeReflectValue)(unsafe.Pointer(&dest))
-	destPtr := urv.ptr
-	urv = (*unsafeReflectValue)(unsafe.Pointer(&src))
-	typedslicecopy((*unsafeIntf)(unsafe.Pointer(&t)).ptr,
-		*(*unsafeSlice)(destPtr), *(*unsafeSlice)(urv.ptr))
+func rvCopySlice(dest, src reflect.Value, elemType reflect.Type) {
+	typedslicecopy((*unsafeIntf)(unsafe.Pointer(&elemType)).ptr,
+		*(*unsafeSlice)((*unsafeReflectValue)(unsafe.Pointer(&dest)).ptr),
+		*(*unsafeSlice)((*unsafeReflectValue)(unsafe.Pointer(&src)).ptr))
 }
 
 // ------------
@@ -1300,7 +1338,7 @@ func len_chan(m unsafe.Pointer) int {
 // as only maplen, chanlen and mapaccess are small enough to get inlined.
 //
 //   We checked this by going into $GOROOT/src/runtime and running:
-//   $ go build -tags notfastpath -gcflags "-m=2"
+//   $ go build -tags codec.notfastpath -gcflags "-m=2"
 //
 // Also, we link to the functions in reflect where possible, as opposed to those in runtime.
 // They are guaranteed to be safer for our use, even when they are just trampoline functions.
@@ -1382,6 +1420,10 @@ func typedmemclr(typ unsafe.Pointer, dst unsafe.Pointer)
 func growslice(typ unsafe.Pointer, old unsafeSlice, cap int) unsafeSlice
 
 /*
+
+//go:linkname mallocgc runtime.mallocgc
+//go:noescape
+func mallocgc(size uintptr, typ unsafe.Pointer, needzero bool) unsafe.Pointer
 
 //go:linkname maplen reflect.maplen
 //go:noescape
