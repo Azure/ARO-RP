@@ -12,11 +12,11 @@ import (
 	"strings"
 
 	"github.com/openshift/installer/pkg/asset/tls"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/Azure/ARO-RP/pkg/util/pem"
+	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -40,7 +40,7 @@ func (m *manager) fixMCSCert(ctx context.Context) error {
 			return err
 		}
 
-		_, certs, err := pem.Parse(s.Data[v1.TLSCertKey])
+		_, certs, err := utilpem.Parse(s.Data[corev1.TLSCertKey])
 		if err != nil {
 			return err
 		}
@@ -82,8 +82,8 @@ func (m *manager) fixMCSCert(ctx context.Context) error {
 			return err
 		}
 
-		s.Data[v1.TLSCertKey] = mcsCertKey.CertRaw
-		s.Data[v1.TLSPrivateKeyKey] = mcsCertKey.KeyRaw
+		s.Data[corev1.TLSCertKey] = mcsCertKey.CertRaw
+		s.Data[corev1.TLSPrivateKeyKey] = mcsCertKey.KeyRaw
 
 		_, err = m.kubernetescli.CoreV1().Secrets("openshift-machine-config-operator").Update(ctx, s, metav1.UpdateOptions{})
 		return err

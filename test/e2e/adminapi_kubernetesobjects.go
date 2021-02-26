@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -36,7 +36,7 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 				By("deleting the config map via Kubernetes API")
 				err := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Delete(context.Background(), objName, metav1.DeleteOptions{})
 				// On successfully we expect NotFound error
-				if !errors.IsNotFound(err) {
+				if !kerrors.IsNotFound(err) {
 					Expect(err).NotTo(HaveOccurred())
 				}
 			}()
@@ -71,7 +71,7 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 				By("waiting for the test customer namespace to be deleted")
 				err = wait.PollImmediate(10*time.Second, 5*time.Minute, func() (bool, error) {
 					_, err := clients.Kubernetes.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
-					if errors.IsNotFound(err) {
+					if kerrors.IsNotFound(err) {
 						return true, nil
 					}
 					if err != nil {
@@ -244,7 +244,7 @@ func testConfigMapDeleteOK(objName, namespace string) {
 	By("waiting for the configmap to be deleted")
 	err = wait.PollImmediate(10*time.Second, time.Minute, func() (bool, error) {
 		_, err = clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get(context.Background(), objName, metav1.GetOptions{})
-		if errors.IsNotFound(err) {
+		if kerrors.IsNotFound(err) {
 			return true, nil
 		}
 		if err != nil {

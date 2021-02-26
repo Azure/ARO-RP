@@ -13,7 +13,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/openshift/installer/pkg/asset/tls"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
@@ -68,13 +68,13 @@ func TestFixMCSCert(t *testing.T) {
 				graph := mock_graph.NewMockManager(controller)
 				graph.EXPECT().LoadPersisted(ctx, "", "cluster").Return(pg, nil)
 
-				kubernetescli := fake.NewSimpleClientset(&v1.Secret{
+				kubernetescli := fake.NewSimpleClientset(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "machine-config-server-tls",
 						Namespace: "openshift-machine-config-operator",
 					},
 					Data: map[string][]byte{
-						v1.TLSCertKey: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCerts[0].Raw}),
+						corev1.TLSCertKey: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCerts[0].Raw}),
 					},
 				})
 				kubernetescli.AddReactor("delete-collection", "pods", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
@@ -130,14 +130,14 @@ func TestFixMCSCert(t *testing.T) {
 							},
 						},
 					},
-					kubernetescli: fake.NewSimpleClientset(&v1.Secret{
+					kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "machine-config-server-tls",
 							Namespace: "openshift-machine-config-operator",
 						},
 						Data: map[string][]byte{
-							v1.TLSCertKey:       pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCerts[0].Raw}),
-							v1.TLSPrivateKeyKey: pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: b}),
+							corev1.TLSCertKey:       pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCerts[0].Raw}),
+							corev1.TLSPrivateKeyKey: pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: b}),
 						},
 					}),
 				}, nil
@@ -169,8 +169,8 @@ func TestFixMCSCert(t *testing.T) {
 			}
 
 			var pemdata []byte
-			pemdata = append(pemdata, s.Data[v1.TLSCertKey]...)
-			pemdata = append(pemdata, s.Data[v1.TLSPrivateKeyKey]...)
+			pemdata = append(pemdata, s.Data[corev1.TLSCertKey]...)
+			pemdata = append(pemdata, s.Data[corev1.TLSPrivateKeyKey]...)
 
 			key, certs, err := utilpem.Parse(pemdata)
 			if err != nil {

@@ -7,25 +7,25 @@ import (
 	"net/url"
 	"time"
 
-	k8smetrics "k8s.io/client-go/tools/metrics"
+	kmetrics "k8s.io/client-go/tools/metrics"
 
 	"github.com/Azure/ARO-RP/pkg/metrics"
 )
 
-var _ k8smetrics.LatencyMetric = (*tracer)(nil)
-var _ k8smetrics.ResultMetric = (*tracer)(nil)
+var _ kmetrics.LatencyMetric = (*tracer)(nil)
+var _ kmetrics.ResultMetric = (*tracer)(nil)
 
 type tracer struct {
 	m metrics.Interface
 }
 
-func NewLatency(m metrics.Interface) k8smetrics.LatencyMetric {
+func NewLatency(m metrics.Interface) kmetrics.LatencyMetric {
 	return &tracer{
 		m: m,
 	}
 }
 
-func NewResult(m metrics.Interface) k8smetrics.ResultMetric {
+func NewResult(m metrics.Interface) kmetrics.ResultMetric {
 	return &tracer{
 		m: m,
 	}

@@ -12,7 +12,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -51,9 +51,9 @@ func genRBAC(restconfig *rest.Config) error {
 		Verbs:           []string{"get"},
 	})
 
-	serializer := json.NewSerializerWithOptions(
-		json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme,
-		json.SerializerOptions{Yaml: true},
+	serializer := kjson.NewSerializerWithOptions(
+		kjson.DefaultMetaFactory, scheme.Scheme, scheme.Scheme,
+		kjson.SerializerOptions{Yaml: true},
 	)
 
 	yaml := scheme.Codecs.CodecForVersions(serializer, nil, schema.GroupVersions(scheme.Scheme.PrioritizedVersionsAllGroups()), nil)

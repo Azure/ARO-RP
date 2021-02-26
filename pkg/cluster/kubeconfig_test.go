@@ -12,7 +12,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/tls"
-	clientcmd "k8s.io/client-go/tools/clientcmd/api/v1"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
@@ -40,21 +40,21 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	serviceName := "system:aro-service"
 
 	adminInternalClient := &kubeconfig.AdminInternalClient{}
-	adminInternalClient.Config = &clientcmd.Config{
-		Clusters: []clientcmd.NamedCluster{
+	adminInternalClient.Config = &clientcmdv1.Config{
+		Clusters: []clientcmdv1.NamedCluster{
 			{
 				Name: clusterName,
-				Cluster: clientcmd.Cluster{
+				Cluster: clientcmdv1.Cluster{
 					Server:                   apiserverURL,
 					CertificateAuthorityData: nil,
 				},
 			},
 		},
-		AuthInfos: []clientcmd.NamedAuthInfo{},
-		Contexts: []clientcmd.NamedContext{
+		AuthInfos: []clientcmdv1.NamedAuthInfo{},
+		Contexts: []clientcmdv1.NamedContext{
 			{
 				Name: serviceName,
-				Context: clientcmd.Context{
+				Context: clientcmdv1.Context{
 					Cluster:  clusterName,
 					AuthInfo: serviceName,
 				},
@@ -77,7 +77,7 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var got *clientcmd.Config
+	var got *clientcmdv1.Config
 	err = yaml.Unmarshal(aroServiceInternalClient.File.Data, &got)
 	if err != nil {
 		t.Fatal(err)
@@ -123,7 +123,7 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	}
 
 	// validate the rest of the struct
-	got.AuthInfos = []clientcmd.NamedAuthInfo{}
+	got.AuthInfos = []clientcmdv1.NamedAuthInfo{}
 	want := adminInternalClient.Config
 
 	if !reflect.DeepEqual(got, want) {

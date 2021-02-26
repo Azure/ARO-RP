@@ -12,7 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sfake "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -100,7 +100,7 @@ func TestPopulateCreatedAt(t *testing.T) {
 
 			m := &manager{
 				log:           logrus.NewEntry(logrus.StandardLogger()),
-				kubernetescli: k8sfake.NewSimpleClientset(tt.ns),
+				kubernetescli: fake.NewSimpleClientset(tt.ns),
 				doc:           clusterdoc,
 				db:            fakeOpenShiftClustersDatabase,
 			}

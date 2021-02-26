@@ -13,7 +13,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	pkgnamespace "github.com/Azure/ARO-RP/pkg/util/namespace"
+	utilnamespace "github.com/Azure/ARO-RP/pkg/util/namespace"
 )
 
 func validateTerminalProvisioningState(state api.ProvisioningState) error {
@@ -77,7 +77,7 @@ func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.Open
 var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9.]{0,255}$`)
 
 func validateAdminKubernetesObjectsNonCustomer(method, groupKind, namespace, name string) error {
-	if !pkgnamespace.IsOpenShift(namespace) {
+	if !utilnamespace.IsOpenShift(namespace) {
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to the provided namespace '%s' is forbidden.", namespace)
 	}
 

@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
+	azkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -22,7 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	utilkeyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
@@ -346,7 +346,7 @@ func (d *deployer) configureServiceSecrets(ctx context.Context) error {
 	return d.ensureSecretKey(ctx, d.portalKeyvault, env.PortalServerSSHKeySecretName)
 }
 
-func (d *deployer) ensureSecret(ctx context.Context, kv utilkeyvault.Manager, secretName string) error {
+func (d *deployer) ensureSecret(ctx context.Context, kv keyvault.Manager, secretName string) error {
 	existingSecrets, err := kv.GetSecrets(ctx)
 	if err != nil {
 		return err
@@ -365,12 +365,12 @@ func (d *deployer) ensureSecret(ctx context.Context, kv utilkeyvault.Manager, se
 	}
 
 	d.log.Infof("setting %s", secretName)
-	return kv.SetSecret(ctx, secretName, keyvault.SecretSetParameters{
+	return kv.SetSecret(ctx, secretName, azkeyvault.SecretSetParameters{
 		Value: to.StringPtr(base64.StdEncoding.EncodeToString(key)),
 	})
 }
 
-func (d *deployer) ensureSecretKey(ctx context.Context, kv utilkeyvault.Manager, secretName string) error {
+func (d *deployer) ensureSecretKey(ctx context.Context, kv keyvault.Manager, secretName string) error {
 	existingSecrets, err := kv.GetSecrets(ctx)
 	if err != nil {
 		return err
@@ -388,7 +388,7 @@ func (d *deployer) ensureSecretKey(ctx context.Context, kv utilkeyvault.Manager,
 	}
 
 	d.log.Infof("setting %s", secretName)
-	return kv.SetSecret(ctx, secretName, keyvault.SecretSetParameters{
+	return kv.SetSecret(ctx, secretName, azkeyvault.SecretSetParameters{
 		Value: to.StringPtr(base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(key))),
 	})
 }

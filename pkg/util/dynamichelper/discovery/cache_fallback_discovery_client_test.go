@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kversion "k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
-	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/rest"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -161,7 +161,7 @@ type fakeDiscoveryClient struct {
 
 var _ discovery.DiscoveryInterface = &fakeDiscoveryClient{}
 
-func (c *fakeDiscoveryClient) RESTClient() restclient.Interface {
+func (c *fakeDiscoveryClient) RESTClient() rest.Interface {
 	return nil
 }
 

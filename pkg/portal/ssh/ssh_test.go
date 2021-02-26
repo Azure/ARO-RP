@@ -22,7 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/portal/util/responsewriter"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/tls"
+	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -33,7 +33,7 @@ func TestNew(t *testing.T) {
 	password := "password"
 	master := 0
 
-	hostKey, _, err := tls.GenerateKeyAndCertificate("proxy", nil, nil, false, false)
+	hostKey, _, err := utiltls.GenerateKeyAndCertificate("proxy", nil, nil, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -6,7 +6,7 @@ package graphrbac
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
+	azgraphrbac "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 )
@@ -14,18 +14,18 @@ import (
 // ServicePrincipalClient is a minimal interface for azure ApplicationsClient
 type ServicePrincipalClient interface {
 	ServicePrincipalClientAddons
-	Create(ctx context.Context, parameters graphrbac.ServicePrincipalCreateParameters) (result graphrbac.ServicePrincipal, err error)
+	Create(ctx context.Context, parameters azgraphrbac.ServicePrincipalCreateParameters) (result azgraphrbac.ServicePrincipal, err error)
 }
 
 type servicePrincipalClient struct {
-	graphrbac.ServicePrincipalsClient
+	azgraphrbac.ServicePrincipalsClient
 }
 
 var _ ServicePrincipalClient = &servicePrincipalClient{}
 
 // NewServicePrincipalClient creates a new ServicePrincipalClient
 func NewServicePrincipalClient(environment *azure.Environment, tenantID string, authorizer autorest.Authorizer) ServicePrincipalClient {
-	client := graphrbac.NewServicePrincipalsClientWithBaseURI(environment.GraphEndpoint, tenantID)
+	client := azgraphrbac.NewServicePrincipalsClientWithBaseURI(environment.GraphEndpoint, tenantID)
 	client.Authorizer = authorizer
 
 	return &servicePrincipalClient{

@@ -26,7 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/apimachinery/pkg/util/httpstream/spdy"
-	v1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -136,15 +136,15 @@ func fakeServer(cacerts []*x509.Certificate, serverkey *rsa.PrivateKey, serverce
 }
 
 func testKubeconfig(cacerts []*x509.Certificate, clientkey *rsa.PrivateKey, clientcerts []*x509.Certificate) ([]byte, error) {
-	kc := &v1.Config{
-		Clusters: []v1.NamedCluster{
+	kc := &clientcmdv1.Config{
+		Clusters: []clientcmdv1.NamedCluster{
 			{
-				Cluster: v1.Cluster{
+				Cluster: clientcmdv1.Cluster{
 					Server: "https://kubernetes:6443",
 				},
 			},
 		},
-		AuthInfos: []v1.NamedAuthInfo{
+		AuthInfos: []clientcmdv1.NamedAuthInfo{
 			{},
 		},
 	}

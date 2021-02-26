@@ -14,13 +14,13 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
-	v1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/portal/util/responsewriter"
-	"github.com/Azure/ARO-RP/pkg/util/pem"
+	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
@@ -108,7 +108,7 @@ func (k *kubeconfig) cli(ctx context.Context, resourceID string, elevated bool) 
 		return nil, fmt.Errorf("kubeconfig is nil")
 	}
 
-	var kubeconfig *v1.Config
+	var kubeconfig *clientcmdv1.Config
 	err = yaml.Unmarshal(kc, &kubeconfig)
 	if err != nil {
 		return nil, err
@@ -118,12 +118,12 @@ func (k *kubeconfig) cli(ctx context.Context, resourceID string, elevated bool) 
 	b = append(b, kubeconfig.AuthInfos[0].AuthInfo.ClientKeyData...)
 	b = append(b, kubeconfig.AuthInfos[0].AuthInfo.ClientCertificateData...)
 
-	clientKey, clientCerts, err := pem.Parse(b)
+	clientKey, clientCerts, err := utilpem.Parse(b)
 	if err != nil {
 		return nil, err
 	}
 
-	_, caCerts, err := pem.Parse(kubeconfig.Clusters[0].Cluster.CertificateAuthorityData)
+	_, caCerts, err := utilpem.Parse(kubeconfig.Clusters[0].Cluster.CertificateAuthorityData)
 	if err != nil {
 		return nil, err
 	}

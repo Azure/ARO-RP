@@ -10,7 +10,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
-	"github.com/Azure/ARO-RP/pkg/util/tls"
+	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -24,12 +24,12 @@ func GetConfig(env env.Interface, doc *api.OpenShiftClusterDocument) (*bootstrap
 
 	key, cert := env.ClusterGenevaLoggingSecret()
 
-	gcsKeyBytes, err := tls.PrivateKeyAsBytes(key)
+	gcsKeyBytes, err := utiltls.PrivateKeyAsBytes(key)
 	if err != nil {
 		return nil, err
 	}
 
-	gcsCertBytes, err := tls.CertAsBytes(cert)
+	gcsCertBytes, err := utiltls.CertAsBytes(cert)
 	if err != nil {
 		return nil, err
 	}

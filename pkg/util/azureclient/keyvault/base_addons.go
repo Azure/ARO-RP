@@ -6,15 +6,15 @@ package keyvault
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
+	azkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 )
 
 // BaseClientAddons contains addons for BaseClient
 type BaseClientAddons interface {
-	GetSecrets(ctx context.Context, vaultBaseURL string, maxresults *int32) (secrets []keyvault.SecretItem, err error)
+	GetSecrets(ctx context.Context, vaultBaseURL string, maxresults *int32) (secrets []azkeyvault.SecretItem, err error)
 }
 
-func (c *baseClient) GetSecrets(ctx context.Context, vaultBaseURL string, maxresults *int32) (secrets []keyvault.SecretItem, err error) {
+func (c *baseClient) GetSecrets(ctx context.Context, vaultBaseURL string, maxresults *int32) (secrets []azkeyvault.SecretItem, err error) {
 	page, err := c.BaseClient.GetSecrets(ctx, vaultBaseURL, maxresults)
 	if err != nil {
 		return nil, err

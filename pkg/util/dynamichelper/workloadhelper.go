@@ -10,7 +10,7 @@ import (
 	"sort"
 
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -48,7 +48,7 @@ func Prepare(resources []runtime.Object) error {
 	return nil
 }
 
-func addWorkloadHashes(o *metav1.ObjectMeta, t *v1.PodTemplateSpec, configToHash map[string]string) {
+func addWorkloadHashes(o *metav1.ObjectMeta, t *corev1.PodTemplateSpec, configToHash map[string]string) {
 	for _, v := range t.Spec.Volumes {
 		if v.Secret != nil {
 			if hash, found := configToHash[keyFunc(schema.GroupKind{Kind: "Secret"}, o.Namespace, v.Secret.SecretName)]; found {
@@ -78,9 +78,9 @@ func hashWorkloadConfigs(resources []runtime.Object) error {
 	configToHash := map[string]string{}
 	for _, o := range resources {
 		switch o := o.(type) {
-		case *v1.Secret:
+		case *corev1.Secret:
 			configToHash[keyFunc(schema.GroupKind{Kind: "Secret"}, o.Namespace, o.Name)] = getHashSecret(o)
-		case *v1.ConfigMap:
+		case *corev1.ConfigMap:
 			configToHash[keyFunc(schema.GroupKind{Kind: "ConfigMap"}, o.Namespace, o.Name)] = getHashConfigMap(o)
 		}
 	}
@@ -104,7 +104,7 @@ func hashWorkloadConfigs(resources []runtime.Object) error {
 	return nil
 }
 
-func getHashSecret(o *v1.Secret) string {
+func getHashSecret(o *corev1.Secret) string {
 	keys := make([]string, 0, len(o.Data))
 	for key := range o.Data {
 		keys = append(keys, key)
@@ -119,7 +119,7 @@ func getHashSecret(o *v1.Secret) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func getHashConfigMap(o *v1.ConfigMap) string {
+func getHashConfigMap(o *corev1.ConfigMap) string {
 	keys := make([]string, 0, len(o.Data))
 	for key := range o.Data {
 		keys = append(keys, key)

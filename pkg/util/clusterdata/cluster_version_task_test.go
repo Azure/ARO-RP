@@ -10,7 +10,7 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	"github.com/openshift/client-go/config/clientset/versioned/fake"
+	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -29,7 +29,7 @@ func TestClusterVersionEnricherTask(t *testing.T) {
 	}{
 		{
 			name: "version object exists",
-			client: fake.NewSimpleClientset(&configv1.ClusterVersion{
+			client: configfake.NewSimpleClientset(&configv1.ClusterVersion{
 				ObjectMeta: metav1.ObjectMeta{Name: "version"},
 				Status: configv1.ClusterVersionStatus{
 					Desired: configv1.Release{Version: "1.2.3"},
@@ -45,14 +45,14 @@ func TestClusterVersionEnricherTask(t *testing.T) {
 		},
 		{
 			name: "version object exists, but desired version is not set",
-			client: fake.NewSimpleClientset(&configv1.ClusterVersion{
+			client: configfake.NewSimpleClientset(&configv1.ClusterVersion{
 				ObjectMeta: metav1.ObjectMeta{Name: "version"},
 			}),
 			wantOc: &api.OpenShiftCluster{},
 		},
 		{
 			name:    "version object does not exist",
-			client:  fake.NewSimpleClientset(),
+			client:  configfake.NewSimpleClientset(),
 			wantOc:  &api.OpenShiftCluster{},
 			wantErr: `clusterversions.config.openshift.io "version" not found`,
 		},

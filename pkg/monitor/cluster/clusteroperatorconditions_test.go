@@ -9,7 +9,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
-	"github.com/openshift/client-go/config/clientset/versioned/fake"
+	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
@@ -18,7 +18,7 @@ import (
 func TestEmitClusterOperatorConditions(t *testing.T) {
 	ctx := context.Background()
 
-	configcli := fake.NewSimpleClientset(&configv1.ClusterOperator{
+	configcli := configfake.NewSimpleClientset(&configv1.ClusterOperator{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "console",
 		},

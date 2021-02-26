@@ -10,7 +10,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -43,7 +43,7 @@ func TestReconcileMonitoringConfig(t *testing.T) {
 							},
 						},
 					}),
-					kubernetescli: fake.NewSimpleClientset(&v1.ConfigMap{}),
+					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{}),
 					log:           log,
 					jsonHandle:    new(codec.JsonHandle),
 				}
@@ -70,7 +70,7 @@ prometheusK8s:
 							},
 						},
 					}),
-					kubernetescli: fake.NewSimpleClientset(&v1.ConfigMap{
+					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
 						ObjectMeta: cmMetadata,
 					}),
 					log:        log,
@@ -99,7 +99,7 @@ prometheusK8s:
 							},
 						},
 					}),
-					kubernetescli: fake.NewSimpleClientset(&v1.ConfigMap{
+					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
 						ObjectMeta: cmMetadata,
 						Data: map[string]string{
 							"config.yaml": ``,
@@ -131,7 +131,7 @@ prometheusK8s:
 							},
 						},
 					}),
-					kubernetescli: fake.NewSimpleClientset(&v1.ConfigMap{
+					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
 						ObjectMeta: cmMetadata,
 						Data: map[string]string{
 							"config.yaml": `
@@ -175,7 +175,7 @@ prometheusK8s:
 							},
 						},
 					}),
-					kubernetescli: fake.NewSimpleClientset(&v1.ConfigMap{
+					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
 						ObjectMeta: cmMetadata,
 						Data: map[string]string{
 							"config.yaml": `
@@ -214,7 +214,7 @@ prometheusK8s:
 							},
 						},
 					}),
-					kubernetescli: fake.NewSimpleClientset(&v1.ConfigMap{
+					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
 						ObjectMeta: cmMetadata,
 						Data: map[string]string{
 							"config.yaml": `

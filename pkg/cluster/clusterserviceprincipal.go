@@ -10,7 +10,7 @@ import (
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/ghodss/yaml"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
@@ -75,7 +75,7 @@ func (m *manager) updateAROSecret(ctx context.Context) error {
 		// cloud-config: <base64 map[string]string with keys 'aadClientId' and 'aadClientSecret'>
 		secret, err := m.kubernetescli.CoreV1().Secrets("kube-system").Get(ctx, "azure-cloud-provider", metav1.GetOptions{})
 		if err != nil {
-			if apierrors.IsNotFound(err) { // we are not in control if secret is not present
+			if kerrors.IsNotFound(err) { // we are not in control if secret is not present
 				return nil
 			}
 			return err

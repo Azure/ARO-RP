@@ -12,28 +12,28 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 
-	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
+	mgmtredhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 // OpenShiftClustersClient is a minimal interface for azure OpenshiftClustersClient
 type OpenShiftClustersClient interface {
-	ListCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.OpenShiftClusterCredentials, err error)
-	Get(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.OpenShiftCluster, err error)
+	ListCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result mgmtredhatopenshift20200430.OpenShiftClusterCredentials, err error)
+	Get(ctx context.Context, resourceGroupName string, resourceName string) (result mgmtredhatopenshift20200430.OpenShiftCluster, err error)
 	OpenShiftClustersClientAddons
 }
 
 type openShiftClustersClient struct {
-	redhatopenshift.OpenShiftClustersClient
+	mgmtredhatopenshift20200430.OpenShiftClustersClient
 }
 
 var _ OpenShiftClustersClient = &openShiftClustersClient{}
 
 // NewOpenShiftClustersClient creates a new OpenShiftClustersClient
 func NewOpenShiftClustersClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) OpenShiftClustersClient {
-	var client redhatopenshift.OpenShiftClustersClient
+	var client mgmtredhatopenshift20200430.OpenShiftClustersClient
 	if deployment.NewMode() == deployment.Development {
-		client = redhatopenshift.NewOpenShiftClustersClientWithBaseURI("https://localhost:8443", subscriptionID)
+		client = mgmtredhatopenshift20200430.NewOpenShiftClustersClientWithBaseURI("https://localhost:8443", subscriptionID)
 		client.Sender = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -42,7 +42,7 @@ func NewOpenShiftClustersClient(environment *azure.Environment, subscriptionID s
 			},
 		}
 	} else {
-		client = redhatopenshift.NewOpenShiftClustersClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
+		client = mgmtredhatopenshift20200430.NewOpenShiftClustersClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 		client.Authorizer = authorizer
 	}
 	client.PollingDelay = 10 * time.Second

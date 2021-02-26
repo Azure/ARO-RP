@@ -11,7 +11,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
-	fakeconfigclient "github.com/openshift/client-go/config/clientset/versioned/fake"
+	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -80,7 +80,7 @@ func TestWorkaroundReconciler(t *testing.T) {
 
 			mwa := mock_workaround.NewMockWorkaround(controller)
 			r := &WorkaroundReconciler{
-				configcli:   fakeconfigclient.NewSimpleClientset(clusterVersion("4.4.10")),
+				configcli:   configfake.NewSimpleClientset(clusterVersion("4.4.10")),
 				workarounds: []Workaround{mwa},
 				log:         utillog.GetLogger(),
 			}

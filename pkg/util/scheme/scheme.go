@@ -10,8 +10,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	"k8s.io/apimachinery/pkg/util/runtime"
+	extensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	appsv1defaults "k8s.io/kubernetes/pkg/apis/apps/v1"
 	corev1defaults "k8s.io/kubernetes/pkg/apis/core/v1"
@@ -22,16 +22,16 @@ import (
 )
 
 func init() {
-	runtime.Must(apiextensions.AddToScheme(scheme.Scheme))
-	runtime.Must(securityv1.AddToScheme(scheme.Scheme))
-	runtime.Must(arov1alpha1.AddToScheme(scheme.Scheme))
-	runtime.Must(azureproviderv1beta1.SchemeBuilder.AddToScheme(scheme.Scheme))
-	runtime.Must(mcv1.AddToScheme(scheme.Scheme))
-	runtime.Must(corev1.AddToScheme(scheme.Scheme))
-	runtime.Must(corev1defaults.RegisterDefaults(scheme.Scheme))
-	runtime.Must(appsv1.AddToScheme(scheme.Scheme))
-	runtime.Must(appsv1defaults.RegisterDefaults(scheme.Scheme))
-	runtime.Must(rbacv1.AddToScheme(scheme.Scheme))
-	runtime.Must(rbacv1defaults.RegisterDefaults(scheme.Scheme))
-	runtime.Must(machinev1beta1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(extensionsv1beta1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(securityv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(arov1alpha1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(azureproviderv1beta1.SchemeBuilder.AddToScheme(scheme.Scheme))
+	utilruntime.Must(mcv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(corev1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(corev1defaults.RegisterDefaults(scheme.Scheme))
+	utilruntime.Must(appsv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(appsv1defaults.RegisterDefaults(scheme.Scheme))
+	utilruntime.Must(rbacv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(rbacv1defaults.RegisterDefaults(scheme.Scheme))
+	utilruntime.Must(machinev1beta1.AddToScheme(scheme.Scheme))
 }

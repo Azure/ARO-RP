@@ -6,15 +6,15 @@ package redhatopenshift
 import (
 	"context"
 
-	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2021-01-31-preview/redhatopenshift"
+	mgmtredhatopenshift20210131preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2021-01-31-preview/redhatopenshift"
 )
 
 // OperationsClientAddons contains addons for OperationsClient
 type OperationsClientAddons interface {
-	List(ctx context.Context) (operations []redhatopenshift.Operation, err error)
+	List(ctx context.Context) (operations []mgmtredhatopenshift20210131preview.Operation, err error)
 }
 
-func (c *operationsClient) List(ctx context.Context) (operations []redhatopenshift.Operation, err error) {
+func (c *operationsClient) List(ctx context.Context) (operations []mgmtredhatopenshift20210131preview.Operation, err error) {
 	page, err := c.OperationsClient.List(ctx)
 	if err != nil {
 		return nil, err

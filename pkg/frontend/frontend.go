@@ -15,7 +15,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -324,7 +324,7 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 }
 
 func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
-	if apiErr, ok := err.(errors.APIStatus); ok {
+	if apiErr, ok := err.(kerrors.APIStatus); ok {
 		status := apiErr.Status()
 
 		var target string

@@ -9,8 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -76,24 +75,24 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		}
 
 		// validate
-		if !json.Valid(ps.Data[v1.DockerConfigJsonKey]) {
+		if !json.Valid(ps.Data[corev1.DockerConfigJsonKey]) {
 			r.log.Info("pull secret is not valid json - recreating")
-			delete(ps.Data, v1.DockerConfigJsonKey)
+			delete(ps.Data, corev1.DockerConfigJsonKey)
 		}
 
-		pullsec, changed, err := pullsecret.Merge(string(ps.Data[corev1.DockerConfigJsonKey]), string(mysec.Data[v1.DockerConfigJsonKey]))
+		pullsec, changed, err := pullsecret.Merge(string(ps.Data[corev1.DockerConfigJsonKey]), string(mysec.Data[corev1.DockerConfigJsonKey]))
 		if err != nil {
 			return err
 		}
 
 		// repair Secret type
-		if ps.Type != v1.SecretTypeDockerConfigJson {
-			ps = &v1.Secret{
+		if ps.Type != corev1.SecretTypeDockerConfigJson {
+			ps = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      pullSecretName.Name,
 					Namespace: pullSecretName.Namespace,
 				},
-				Type: v1.SecretTypeDockerConfigJson,
+				Type: corev1.SecretTypeDockerConfigJson,
 				Data: map[string][]byte{},
 			}
 			isCreate = true
@@ -126,15 +125,15 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	})
 }
 
-func (r *PullSecretReconciler) pullsecret(ctx context.Context) (*v1.Secret, bool, error) {
+func (r *PullSecretReconciler) pullsecret(ctx context.Context) (*corev1.Secret, bool, error) {
 	ps, err := r.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Get(ctx, pullSecretName.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		return &v1.Secret{
+	if kerrors.IsNotFound(err) {
+		return &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      pullSecretName.Name,
 				Namespace: pullSecretName.Namespace,
 			},
-			Type: v1.SecretTypeDockerConfigJson,
+			Type: corev1.SecretTypeDockerConfigJson,
 		}, true, nil
 	}
 	if err != nil {
@@ -184,8 +183,8 @@ func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}).
 		// https://github.com/kubernetes-sigs/controller-runtime/issues/1173
 		// equivalent to For(&v1.Secret{})., but can't call For multiple times on one builder
-		Watches(&source.Kind{Type: &v1.Secret{}}, &handler.EnqueueRequestForObject{}).
-		Owns(&v1.Secret{}).
+		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}).
+		Owns(&corev1.Secret{}).
 		WithEventFilter(isPullSecret).
 		Named(controllers.PullSecretControllerName).
 		Complete(r)

@@ -12,7 +12,7 @@ import (
 	projectv1 "github.com/openshift/api/project/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -55,34 +55,34 @@ func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*apps
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{"app": "mdsd"},
 			},
-			Template: v1.PodTemplateSpec{
+			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      map[string]string{"app": "mdsd"},
 					Annotations: map[string]string{"scheduler.alpha.kubernetes.io/critical-pod": ""},
 				},
-				Spec: v1.PodSpec{
-					Volumes: []v1.Volume{
+				Spec: corev1.PodSpec{
+					Volumes: []corev1.Volume{
 						{
 							Name: "log",
-							VolumeSource: v1.VolumeSource{
-								HostPath: &v1.HostPathVolumeSource{
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
 									Path: "/var/log",
 								},
 							},
 						},
 						{
 							Name: "fluent",
-							VolumeSource: v1.VolumeSource{
-								HostPath: &v1.HostPathVolumeSource{
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
 									Path: "/var/lib/fluent",
 								},
 							},
 						},
 						{
 							Name: "fluent-config",
-							VolumeSource: v1.VolumeSource{
-								ConfigMap: &v1.ConfigMapVolumeSource{
-									LocalObjectReference: v1.LocalObjectReference{
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
 										Name: "fluent-config",
 									},
 								},
@@ -90,16 +90,16 @@ func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*apps
 						},
 						{
 							Name: "machine-id",
-							VolumeSource: v1.VolumeSource{
-								HostPath: &v1.HostPathVolumeSource{
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
 									Path: "/etc/machine-id",
 								},
 							},
 						},
 						{
 							Name: "certificates",
-							VolumeSource: v1.VolumeSource{
-								Secret: &v1.SecretVolumeSource{
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
 									SecretName: certificatesSecretName,
 								},
 							},
@@ -107,17 +107,17 @@ func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*apps
 					},
 					ServiceAccountName:       "geneva",
 					DeprecatedServiceAccount: "geneva",
-					Tolerations: []v1.Toleration{
+					Tolerations: []corev1.Toleration{
 						{
-							Effect:   v1.TaintEffectNoExecute,
-							Operator: v1.TolerationOpExists,
+							Effect:   corev1.TaintEffectNoExecute,
+							Operator: corev1.TolerationOpExists,
 						},
 						{
-							Effect:   v1.TaintEffectNoSchedule,
-							Operator: v1.TolerationOpExists,
+							Effect:   corev1.TaintEffectNoSchedule,
+							Operator: corev1.TolerationOpExists,
 						},
 					},
-					Containers: []v1.Container{
+					Containers: []corev1.Container{
 						{
 							Name:  "fluentbit",
 							Image: version.FluentbitImage(cluster.Spec.ACRDomain),
@@ -129,11 +129,11 @@ func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*apps
 								"/etc/td-agent-bit/fluent.conf",
 							},
 							// TODO: specify requests/limits
-							SecurityContext: &v1.SecurityContext{
+							SecurityContext: &corev1.SecurityContext{
 								Privileged: to.BoolPtr(true),
 								RunAsUser:  to.Int64Ptr(0),
 							},
-							VolumeMounts: []v1.VolumeMount{
+							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "fluent-config",
 									ReadOnly:  true,
@@ -169,7 +169,7 @@ func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*apps
 								"-r",
 								"/var/run/mdsd/default",
 							},
-							Env: []v1.EnvVar{
+							Env: []corev1.EnvVar{
 								{
 									Name:  "MONITORING_GCS_ENVIRONMENT",
 									Value: cluster.Spec.GenevaLogging.MonitoringGCSEnvironment,
@@ -212,8 +212,8 @@ func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*apps
 								},
 								{
 									Name: "MONITORING_ROLE_INSTANCE",
-									ValueFrom: &v1.EnvVarSource{
-										FieldRef: &v1.ObjectFieldSelector{
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
 											APIVersion: "v1",
 											FieldPath:  "spec.nodeName",
 										},
@@ -236,21 +236,21 @@ func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*apps
 									Value: strings.ToLower(r.ResourceName),
 								},
 							},
-							Resources: v1.ResourceRequirements{
-								Limits: v1.ResourceList{
-									v1.ResourceCPU:    resource.MustParse("200m"),
-									v1.ResourceMemory: resource.MustParse("1000Mi"),
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("200m"),
+									corev1.ResourceMemory: resource.MustParse("1000Mi"),
 								},
-								Requests: v1.ResourceList{
-									v1.ResourceCPU:    resource.MustParse("10m"),
-									v1.ResourceMemory: resource.MustParse("100Mi"),
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("10m"),
+									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
 							},
-							SecurityContext: &v1.SecurityContext{
+							SecurityContext: &corev1.SecurityContext{
 								Privileged: to.BoolPtr(true),
 								RunAsUser:  to.Int64Ptr(0),
 							},
-							VolumeMounts: []v1.VolumeMount{
+							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "certificates",
 									MountPath: "/etc/mdsd.d/secret",
@@ -276,13 +276,13 @@ func (g *GenevaloggingReconciler) resources(ctx context.Context, cluster *arov1a
 	}
 
 	return []runtime.Object{
-		&v1.Namespace{
+		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        kubeNamespace,
 				Annotations: map[string]string{projectv1.ProjectNodeSelector: ""},
 			},
 		},
-		&v1.Secret{
+		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      certificatesSecretName,
 				Namespace: kubeNamespace,
@@ -292,7 +292,7 @@ func (g *GenevaloggingReconciler) resources(ctx context.Context, cluster *arov1a
 				GenevaKeyName:  gcskey,
 			},
 		},
-		&v1.ConfigMap{
+		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "fluent-config",
 				Namespace: kubeNamespace,
@@ -302,7 +302,7 @@ func (g *GenevaloggingReconciler) resources(ctx context.Context, cluster *arov1a
 				"parsers.conf": parsersConf,
 			},
 		},
-		&v1.ServiceAccount{
+		&corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "geneva",
 				Namespace: kubeNamespace,

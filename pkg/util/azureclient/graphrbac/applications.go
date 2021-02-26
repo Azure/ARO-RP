@@ -6,7 +6,7 @@ package graphrbac
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
+	azgraphrbac "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 )
@@ -14,20 +14,20 @@ import (
 // ApplicationsClient is a minimal interface for azure ApplicationsClient
 type ApplicationsClient interface {
 	ApplicationsClientAddons
-	Create(ctx context.Context, parameters graphrbac.ApplicationCreateParameters) (result graphrbac.Application, err error)
-	GetServicePrincipalsIDByAppID(ctx context.Context, applicationID string) (result graphrbac.ServicePrincipalObjectResult, err error)
+	Create(ctx context.Context, parameters azgraphrbac.ApplicationCreateParameters) (result azgraphrbac.Application, err error)
+	GetServicePrincipalsIDByAppID(ctx context.Context, applicationID string) (result azgraphrbac.ServicePrincipalObjectResult, err error)
 	Delete(ctx context.Context, applicationObjectID string) (result autorest.Response, err error)
 }
 
 type applicationsClient struct {
-	graphrbac.ApplicationsClient
+	azgraphrbac.ApplicationsClient
 }
 
 var _ ApplicationsClient = &applicationsClient{}
 
 // NewApplicationsClient creates a new ApplicationsClient
 func NewApplicationsClient(environment *azure.Environment, tenantID string, authorizer autorest.Authorizer) ApplicationsClient {
-	client := graphrbac.NewApplicationsClientWithBaseURI(environment.GraphEndpoint, tenantID)
+	client := azgraphrbac.NewApplicationsClientWithBaseURI(environment.GraphEndpoint, tenantID)
 	client.Authorizer = authorizer
 
 	return &applicationsClient{

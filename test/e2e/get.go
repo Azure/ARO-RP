@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
+	mgmtredhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
 )
 
 var _ = Describe("Get cluster", func() {
@@ -23,7 +23,7 @@ var _ = Describe("Get cluster", func() {
 		Expect(*oc.IngressProfiles).To(HaveLen(1))
 		ingressProfile := (*oc.IngressProfiles)[0]
 		Expect(*ingressProfile.Name).To(Equal("default"))
-		Expect(ingressProfile.Visibility).To(Equal(redhatopenshift.Visibility1Private))
+		Expect(ingressProfile.Visibility).To(Equal(mgmtredhatopenshift20200430.Visibility1Private))
 		Expect(ingressProfile.IP).NotTo(BeNil())
 
 		// Check we retrieve Cluster version

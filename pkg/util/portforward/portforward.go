@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 )
 
@@ -22,9 +22,9 @@ func DialContext(ctx context.Context, log *logrus.Entry, restconfig *rest.Config
 
 	// Connect the error stream, r/o
 	errorStream, err := spdyConn.CreateStream(http.Header{
-		v1.StreamType:                 []string{v1.StreamTypeError},
-		v1.PortHeader:                 []string{port},
-		v1.PortForwardRequestIDHeader: []string{"0"},
+		corev1.StreamType:                 []string{corev1.StreamTypeError},
+		corev1.PortHeader:                 []string{port},
+		corev1.PortForwardRequestIDHeader: []string{"0"},
 	})
 	if err != nil {
 		spdyConn.Close()
@@ -34,9 +34,9 @@ func DialContext(ctx context.Context, log *logrus.Entry, restconfig *rest.Config
 
 	// Connect the data stream, r/w
 	dataStream, err := spdyConn.CreateStream(http.Header{
-		v1.StreamType:                 []string{v1.StreamTypeData},
-		v1.PortHeader:                 []string{port},
-		v1.PortForwardRequestIDHeader: []string{"0"},
+		corev1.StreamType:                 []string{corev1.StreamTypeData},
+		corev1.PortHeader:                 []string{port},
+		corev1.PortForwardRequestIDHeader: []string{"0"},
 	})
 	if err != nil {
 		spdyConn.Close()

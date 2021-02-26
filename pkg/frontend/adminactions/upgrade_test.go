@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	configv1 "github.com/openshift/api/config/v1"
-	"github.com/openshift/client-go/config/clientset/versioned/fake"
+	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -30,8 +30,8 @@ func TestUpgradeCluster(t *testing.T) {
 		Version: version.NewVersion(4, 5, 3),
 	}
 
-	newFakecli := func(status configv1.ClusterVersionStatus) *fake.Clientset {
-		return fake.NewSimpleClientset(&configv1.ClusterVersion{
+	newFakecli := func(status configv1.ClusterVersionStatus) *configfake.Clientset {
+		return configfake.NewSimpleClientset(&configv1.ClusterVersion{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "version",
 			},
@@ -44,7 +44,7 @@ func TestUpgradeCluster(t *testing.T) {
 
 	for _, tt := range []struct {
 		name    string
-		fakecli *fake.Clientset
+		fakecli *configfake.Clientset
 
 		desiredVersion string
 		upgradeY       bool

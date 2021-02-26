@@ -13,14 +13,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
+	azkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	basekeyvault "github.com/Azure/ARO-RP/pkg/util/azureclient/keyvault"
-	"github.com/Azure/ARO-RP/pkg/util/pem"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/keyvault"
+	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
 type Eku string
@@ -41,14 +41,14 @@ type Manager interface {
 	EnsureCertificateDeleted(context.Context, string) error
 	GetBase64Secret(context.Context, string) ([]byte, error)
 	GetCertificateSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
-	GetSecret(context.Context, string) (keyvault.SecretBundle, error)
-	GetSecrets(context.Context) ([]keyvault.SecretItem, error)
-	SetSecret(context.Context, string, keyvault.SecretSetParameters) error
+	GetSecret(context.Context, string) (azkeyvault.SecretBundle, error)
+	GetSecrets(context.Context) ([]azkeyvault.SecretItem, error)
+	SetSecret(context.Context, string, azkeyvault.SecretSetParameters) error
 	WaitForCertificateOperation(context.Context, string) error
 }
 
 type manager struct {
-	kv          basekeyvault.BaseClient
+	kv          keyvault.BaseClient
 	keyvaultURI string
 }
 
@@ -57,7 +57,7 @@ type manager struct {
 // access a key vault.
 func NewManager(kvAuthorizer autorest.Authorizer, keyvaultURI string) Manager {
 	return &manager{
-		kv:          basekeyvault.New(kvAuthorizer),
+		kv:          keyvault.New(kvAuthorizer),
 		keyvaultURI: keyvaultURI,
 	}
 }
@@ -75,43 +75,43 @@ func (m *manager) CreateSignedCertificate(ctx context.Context, issuer Issuer, ce
 		shortCommonName = "reserved.aroapp.io"
 	}
 
-	op, err := m.kv.CreateCertificate(ctx, m.keyvaultURI, certificateName, keyvault.CertificateCreateParameters{
-		CertificatePolicy: &keyvault.CertificatePolicy{
-			KeyProperties: &keyvault.KeyProperties{
+	op, err := m.kv.CreateCertificate(ctx, m.keyvaultURI, certificateName, azkeyvault.CertificateCreateParameters{
+		CertificatePolicy: &azkeyvault.CertificatePolicy{
+			KeyProperties: &azkeyvault.KeyProperties{
 				Exportable: to.BoolPtr(true),
-				KeyType:    keyvault.RSA,
+				KeyType:    azkeyvault.RSA,
 				KeySize:    to.Int32Ptr(2048),
 			},
-			SecretProperties: &keyvault.SecretProperties{
+			SecretProperties: &azkeyvault.SecretProperties{
 				ContentType: to.StringPtr("application/x-pem-file"),
 			},
-			X509CertificateProperties: &keyvault.X509CertificateProperties{
+			X509CertificateProperties: &azkeyvault.X509CertificateProperties{
 				Subject: to.StringPtr(pkix.Name{CommonName: shortCommonName}.String()),
 				Ekus: &[]string{
 					string(eku),
 				},
-				SubjectAlternativeNames: &keyvault.SubjectAlternativeNames{
+				SubjectAlternativeNames: &azkeyvault.SubjectAlternativeNames{
 					DNSNames: &[]string{
 						commonName,
 					},
 				},
-				KeyUsage: &[]keyvault.KeyUsageType{
-					keyvault.DigitalSignature,
-					keyvault.KeyEncipherment,
+				KeyUsage: &[]azkeyvault.KeyUsageType{
+					azkeyvault.DigitalSignature,
+					azkeyvault.KeyEncipherment,
 				},
 				ValidityInMonths: to.Int32Ptr(12),
 			},
-			LifetimeActions: &[]keyvault.LifetimeAction{
+			LifetimeActions: &[]azkeyvault.LifetimeAction{
 				{
-					Trigger: &keyvault.Trigger{
+					Trigger: &azkeyvault.Trigger{
 						DaysBeforeExpiry: to.Int32Ptr(365 - 90),
 					},
-					Action: &keyvault.Action{
-						ActionType: keyvault.AutoRenew,
+					Action: &azkeyvault.Action{
+						ActionType: azkeyvault.AutoRenew,
 					},
 				},
 			},
-			IssuerParameters: &keyvault.IssuerParameters{
+			IssuerParameters: &azkeyvault.IssuerParameters{
 				Name: to.StringPtr(string(issuer)),
 			},
 		},
@@ -152,7 +152,7 @@ func (m *manager) GetCertificateSecret(ctx context.Context, secretName string) (
 		return nil, nil, err
 	}
 
-	key, certs, err := pem.Parse([]byte(*bundle.Value))
+	key, certs, err := utilpem.Parse([]byte(*bundle.Value))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -168,15 +168,15 @@ func (m *manager) GetCertificateSecret(ctx context.Context, secretName string) (
 	return key, certs, nil
 }
 
-func (m *manager) GetSecret(ctx context.Context, secretName string) (keyvault.SecretBundle, error) {
+func (m *manager) GetSecret(ctx context.Context, secretName string) (azkeyvault.SecretBundle, error) {
 	return m.kv.GetSecret(ctx, m.keyvaultURI, secretName, "")
 }
 
-func (m *manager) GetSecrets(ctx context.Context) ([]keyvault.SecretItem, error) {
+func (m *manager) GetSecrets(ctx context.Context) ([]azkeyvault.SecretItem, error) {
 	return m.kv.GetSecrets(ctx, m.keyvaultURI, nil)
 }
 
-func (m *manager) SetSecret(ctx context.Context, secretName string, parameters keyvault.SecretSetParameters) error {
+func (m *manager) SetSecret(ctx context.Context, secretName string, parameters azkeyvault.SecretSetParameters) error {
 	_, err := m.kv.SetSecret(ctx, m.keyvaultURI, secretName, parameters)
 	return err
 }
@@ -196,7 +196,7 @@ func (m *manager) WaitForCertificateOperation(ctx context.Context, certificateNa
 	return err
 }
 
-func keyvaultError(err *keyvault.Error) string {
+func keyvaultError(err *azkeyvault.Error) string {
 	if err == nil {
 		return ""
 	}
@@ -225,7 +225,7 @@ func keyvaultError(err *keyvault.Error) string {
 	return sb.String()
 }
 
-func checkOperation(op *keyvault.CertificateOperation) (bool, error) {
+func checkOperation(op *azkeyvault.CertificateOperation) (bool, error) {
 	switch *op.Status {
 	case "inProgress":
 		return false, nil

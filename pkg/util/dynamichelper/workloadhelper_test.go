@@ -8,13 +8,13 @@ import (
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func TestHashWorkloadConfigs(t *testing.T) {
-	sec := &v1.Secret{
+	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "certificates",
 			Namespace: "openshift-azure-logging",
@@ -23,7 +23,7 @@ func TestHashWorkloadConfigs(t *testing.T) {
 			"stuff": []byte("9485958"),
 		},
 	}
-	cm := &v1.ConfigMap{
+	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "fluent-config",
 			Namespace: "openshift-azure-logging",
@@ -41,33 +41,33 @@ func TestHashWorkloadConfigs(t *testing.T) {
 			Namespace: "openshift-azure-logging",
 		},
 		Spec: appsv1.DaemonSetSpec{
-			Template: v1.PodTemplateSpec{
-				Spec: v1.PodSpec{
-					Volumes: []v1.Volume{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Volumes: []corev1.Volume{
 						{
 							Name: "certificates",
-							VolumeSource: v1.VolumeSource{
-								Secret: &v1.SecretVolumeSource{
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
 									SecretName: "certificates",
 								},
 							},
 						},
 						{
 							Name: "fluent-config",
-							VolumeSource: v1.VolumeSource{
-								ConfigMap: &v1.ConfigMapVolumeSource{
-									LocalObjectReference: v1.LocalObjectReference{
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
 										Name: "fluent-config",
 									},
 								},
 							},
 						},
 					},
-					Containers: []v1.Container{
+					Containers: []corev1.Container{
 						{
 							Name:  "fluentbit-audit",
 							Image: "fluentbitImage",
-							VolumeMounts: []v1.VolumeMount{
+							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "fluent-config",
 									ReadOnly:  true,
@@ -78,7 +78,7 @@ func TestHashWorkloadConfigs(t *testing.T) {
 						{
 							Name:  "mdsd",
 							Image: "mdsdImage",
-							VolumeMounts: []v1.VolumeMount{
+							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "certificates",
 									MountPath: "/etc/mdsd.d/secret",

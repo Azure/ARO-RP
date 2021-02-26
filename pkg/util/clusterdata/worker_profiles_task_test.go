@@ -13,11 +13,11 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
-	"github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
+	maofake "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	clientgotesting "k8s.io/client-go/testing"
+	ktesting "k8s.io/client-go/testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/test/util/cmp"
@@ -48,7 +48,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		{
 			name: "machine set objects exists - valid provider spec JSON",
 			client: func() maoclient.Interface {
-				return fake.NewSimpleClientset(
+				return maofake.NewSimpleClientset(
 					&machinev1beta1.MachineSet{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "fake-worker-profile-1",
@@ -135,7 +135,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		{
 			name: "machine set objects exists - invalid provider spec JSON",
 			client: func() maoclient.Interface {
-				return fake.NewSimpleClientset(
+				return maofake.NewSimpleClientset(
 					&machinev1beta1.MachineSet{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "fake-worker-profile-1",
@@ -165,7 +165,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		{
 			name: "machine set objects exists - provider spec is missing",
 			client: func() maoclient.Interface {
-				return fake.NewSimpleClientset(
+				return maofake.NewSimpleClientset(
 					&machinev1beta1.MachineSet{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "fake-worker-profile-1",
@@ -184,7 +184,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		{
 			name: "machine set objects exists - provider spec is missing raw value",
 			client: func() maoclient.Interface {
-				return fake.NewSimpleClientset(
+				return maofake.NewSimpleClientset(
 					&machinev1beta1.MachineSet{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "fake-worker-profile-1",
@@ -212,7 +212,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		{
 			name: "machine set objects do not exist",
 			client: func() maoclient.Interface {
-				return fake.NewSimpleClientset()
+				return maofake.NewSimpleClientset()
 			},
 			wantOc: &api.OpenShiftCluster{
 				ID: clusterID,
@@ -224,8 +224,8 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		{
 			name: "machine set list request failed",
 			client: func() maoclient.Interface {
-				client := fake.NewSimpleClientset()
-				client.PrependReactor("list", "machinesets", func(action clientgotesting.Action) (bool, runtime.Object, error) {
+				client := maofake.NewSimpleClientset()
+				client.PrependReactor("list", "machinesets", func(action ktesting.Action) (bool, runtime.Object, error) {
 					return true, nil, errors.New("fake list error")
 				})
 				return client
@@ -238,7 +238,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		{
 			name: "invalid cluster object",
 			client: func() maoclient.Interface {
-				return fake.NewSimpleClientset()
+				return maofake.NewSimpleClientset()
 			},
 			modifyOc: func(oc *api.OpenShiftCluster) {
 				oc.ID = "invalid"

@@ -17,7 +17,7 @@ import (
 	"github.com/gorilla/mux"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
-	v1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
@@ -145,13 +145,13 @@ func (k *kubeconfig) internalServerError(w http.ResponseWriter, err error) {
 }
 
 func (k *kubeconfig) makeKubeconfig(server, token string) ([]byte, error) {
-	return json.MarshalIndent(&v1.Config{
+	return json.MarshalIndent(&clientcmdv1.Config{
 		APIVersion: "v1",
 		Kind:       "Config",
-		Clusters: []v1.NamedCluster{
+		Clusters: []clientcmdv1.NamedCluster{
 			{
 				Name: "cluster",
-				Cluster: v1.Cluster{
+				Cluster: clientcmdv1.Cluster{
 					Server: server,
 					CertificateAuthorityData: pem.EncodeToMemory(&pem.Block{
 						Type:  "CERTIFICATE",
@@ -160,18 +160,18 @@ func (k *kubeconfig) makeKubeconfig(server, token string) ([]byte, error) {
 				},
 			},
 		},
-		AuthInfos: []v1.NamedAuthInfo{
+		AuthInfos: []clientcmdv1.NamedAuthInfo{
 			{
 				Name: "user",
-				AuthInfo: v1.AuthInfo{
+				AuthInfo: clientcmdv1.AuthInfo{
 					Token: token,
 				},
 			},
 		},
-		Contexts: []v1.NamedContext{
+		Contexts: []clientcmdv1.NamedContext{
 			{
 				Name: "context",
-				Context: v1.Context{
+				Context: clientcmdv1.Context{
 					Cluster:   "cluster",
 					Namespace: "default",
 					AuthInfo:  "user",

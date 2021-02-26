@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
-	"github.com/openshift/client-go/operator/clientset/versioned/fake"
+	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -20,7 +20,7 @@ func TestUpdateConsoleBranding(t *testing.T) {
 
 	m := &manager{
 		log: logrus.NewEntry(logrus.StandardLogger()),
-		operatorcli: fake.NewSimpleClientset(&operatorv1.Console{
+		operatorcli: operatorfake.NewSimpleClientset(&operatorv1.Console{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: consoleName,
 			},

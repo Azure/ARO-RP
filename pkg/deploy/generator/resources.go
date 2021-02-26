@@ -16,7 +16,7 @@ import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2019-06-01-preview/containerregistry"
-	mgmtmonitor "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
+	mgmtinsights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 	uuid "github.com/satori/go.uuid"
@@ -652,8 +652,8 @@ func (g *generator) lb() *arm.Resource {
 
 func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
 	return &arm.Resource{
-		Resource: mgmtmonitor.ActionGroupResource{
-			ActionGroup: &mgmtmonitor.ActionGroup{
+		Resource: mgmtinsights.ActionGroupResource{
+			ActionGroup: &mgmtinsights.ActionGroup{
 				Enabled:        to.BoolPtr(true),
 				GroupShortName: to.StringPtr(shortName),
 			},
@@ -668,9 +668,9 @@ func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
 // lbAlert generates an alert resource for the rp-lb healthprobe metric
 func (g *generator) lbAlert(threshold float64, severity int32, name string, evalFreq string, windowSize string, metric string) *arm.Resource {
 	return &arm.Resource{
-		Resource: mgmtmonitor.MetricAlertResource{
-			MetricAlertProperties: &mgmtmonitor.MetricAlertProperties{
-				Actions: &[]mgmtmonitor.MetricAlertAction{
+		Resource: mgmtinsights.MetricAlertResource{
+			MetricAlertProperties: &mgmtinsights.MetricAlertProperties{
+				Actions: &[]mgmtinsights.MetricAlertAction{
 					{
 						ActionGroupID: to.StringPtr("[resourceId(parameters('subscriptionResourceGroupName'), 'Microsoft.Insights/actionGroups', 'rp-health-ag')]"),
 					},
@@ -684,19 +684,19 @@ func (g *generator) lbAlert(threshold float64, severity int32, name string, eval
 				WindowSize:         to.StringPtr(windowSize),
 				TargetResourceType: to.StringPtr("Microsoft.Network/loadBalancers"),
 				AutoMitigate:       to.BoolPtr(true),
-				Criteria: mgmtmonitor.MetricAlertSingleResourceMultipleMetricCriteria{
-					AllOf: &[]mgmtmonitor.MetricCriteria{
+				Criteria: mgmtinsights.MetricAlertSingleResourceMultipleMetricCriteria{
+					AllOf: &[]mgmtinsights.MetricCriteria{
 						{
-							CriterionType:   mgmtmonitor.CriterionTypeStaticThresholdCriterion,
+							CriterionType:   mgmtinsights.CriterionTypeStaticThresholdCriterion,
 							MetricName:      to.StringPtr(metric),
 							MetricNamespace: to.StringPtr("microsoft.network/loadBalancers"),
 							Name:            to.StringPtr("HealthProbeCheck"),
-							Operator:        mgmtmonitor.OperatorLessThan,
+							Operator:        mgmtinsights.OperatorLessThan,
 							Threshold:       to.Float64Ptr(threshold),
-							TimeAggregation: mgmtmonitor.Average,
+							TimeAggregation: mgmtinsights.Average,
 						},
 					},
-					OdataType: mgmtmonitor.OdataTypeMicrosoftAzureMonitorSingleResourceMultipleMetricCriteria,
+					OdataType: mgmtinsights.OdataTypeMicrosoftAzureMonitorSingleResourceMultipleMetricCriteria,
 				},
 			},
 			Name:     to.StringPtr("[concat('" + name + "-', resourceGroup().location)]"),

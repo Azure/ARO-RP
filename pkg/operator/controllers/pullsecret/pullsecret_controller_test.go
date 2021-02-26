@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
@@ -19,12 +19,12 @@ import (
 )
 
 func TestPullSecretReconciler(t *testing.T) {
-	newFakecli := func(s *v1.Secret, c *v1.Secret) *fake.Clientset {
+	newFakecli := func(s *corev1.Secret, c *corev1.Secret) *fake.Clientset {
 		c.ObjectMeta = metav1.ObjectMeta{
 			Name:      operator.SecretName,
 			Namespace: operator.Namespace,
 		}
-		c.Type = v1.SecretTypeOpaque
+		c.Type = corev1.SecretTypeOpaque
 		if s == nil {
 			return fake.NewSimpleClientset(c)
 		}
@@ -34,7 +34,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			Namespace: "openshift-config",
 		}
 		if s.Type == "" {
-			s.Type = v1.SecretTypeDockerConfigJson
+			s.Type = corev1.SecretTypeDockerConfigJson
 		}
 		return fake.NewSimpleClientset(s, c)
 	}
@@ -50,51 +50,51 @@ func TestPullSecretReconciler(t *testing.T) {
 	}{
 		{
 			name: "deleted pull secret",
-			fakecli: newFakecli(nil, &v1.Secret{Data: map[string][]byte{
-				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+			fakecli: newFakecli(nil, &corev1.Secret{Data: map[string][]byte{
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantCreated: true,
 		},
 		{
 			name: "missing arosvc pull secret",
-			fakecli: newFakecli(&v1.Secret{}, &v1.Secret{Data: map[string][]byte{
-				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+			fakecli: newFakecli(&corev1.Secret{}, &corev1.Secret{Data: map[string][]byte{
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantUpdated: true,
 		},
 		{
 			name: "modified arosvc pull secret",
-			fakecli: newFakecli(&v1.Secret{
+			fakecli: newFakecli(&corev1.Secret{
 				Data: map[string][]byte{
-					v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":""}}}`),
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":""}}}`),
 				},
-			}, &v1.Secret{
+			}, &corev1.Secret{
 				Data: map[string][]byte{
-					v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 				}}),
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantUpdated: true,
 		},
 		{
 			name: "unparseable secret",
-			fakecli: newFakecli(&v1.Secret{
+			fakecli: newFakecli(&corev1.Secret{
 				Data: map[string][]byte{
-					v1.DockerConfigJsonKey: []byte(`bad`),
+					corev1.DockerConfigJsonKey: []byte(`bad`),
 				},
-			}, &v1.Secret{Data: map[string][]byte{
-				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+			}, &corev1.Secret{Data: map[string][]byte{
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantUpdated: true,
 		},
 		{
 			name: "wrong secret type",
-			fakecli: newFakecli(&v1.Secret{
-				Type: v1.SecretTypeOpaque,
-			}, &v1.Secret{Data: map[string][]byte{
-				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+			fakecli: newFakecli(&corev1.Secret{
+				Type: corev1.SecretTypeOpaque,
+			}, &corev1.Secret{Data: map[string][]byte{
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantCreated: true,
@@ -102,12 +102,12 @@ func TestPullSecretReconciler(t *testing.T) {
 		},
 		{
 			name: "no change",
-			fakecli: newFakecli(&v1.Secret{
+			fakecli: newFakecli(&corev1.Secret{
 				Data: map[string][]byte{
-					v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 				},
-			}, &v1.Secret{Data: map[string][]byte{
-				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+			}, &corev1.Secret{Data: map[string][]byte{
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
 			want: `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 		},
@@ -162,12 +162,12 @@ func TestPullSecretReconciler(t *testing.T) {
 				t.Error(err)
 			}
 
-			if s.Type != v1.SecretTypeDockerConfigJson {
+			if s.Type != corev1.SecretTypeDockerConfigJson {
 				t.Error(s.Type)
 			}
 
-			if string(s.Data[v1.DockerConfigJsonKey]) != tt.want {
-				t.Error(string(s.Data[v1.DockerConfigJsonKey]))
+			if string(s.Data[corev1.DockerConfigJsonKey]) != tt.want {
+				t.Error(string(s.Data[corev1.DockerConfigJsonKey]))
 			}
 		})
 	}

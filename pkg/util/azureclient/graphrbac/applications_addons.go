@@ -6,15 +6,15 @@ package graphrbac
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
+	azgraphrbac "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 )
 
 // ApplicationsClientAddons is a minimal interface for azure ApplicationsClient
 type ApplicationsClientAddons interface {
-	List(ctx context.Context, filter string) (result []graphrbac.Application, err error)
+	List(ctx context.Context, filter string) (result []azgraphrbac.Application, err error)
 }
 
-func (sc *applicationsClient) List(ctx context.Context, filter string) (result []graphrbac.Application, err error) {
+func (sc *applicationsClient) List(ctx context.Context, filter string) (result []azgraphrbac.Application, err error) {
 	page, err := sc.ApplicationsClient.List(ctx, filter)
 	if err != nil {
 		return nil, err

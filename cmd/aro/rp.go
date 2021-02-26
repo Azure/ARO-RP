@@ -12,7 +12,7 @@ import (
 
 	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/tools/metrics"
+	kmetrics "k8s.io/client-go/tools/metrics"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	_ "github.com/Azure/ARO-RP/pkg/api/admin"
@@ -69,7 +69,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	m := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
 
 	tracing.Register(azure.New(m))
-	metrics.Register(metrics.RegisterOpts{
+	kmetrics.Register(kmetrics.RegisterOpts{
 		RequestResult:  k8s.NewResult(m),
 		RequestLatency: k8s.NewLatency(m),
 	})

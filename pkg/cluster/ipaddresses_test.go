@@ -12,7 +12,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
@@ -67,14 +67,14 @@ func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
 					CreateOrUpdateRouter(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
 			},
-			kubernetescli: fake.NewSimpleClientset(&v1.Service{
+			kubernetescli: fake.NewSimpleClientset(&corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "router-default",
 					Namespace: "openshift-ingress",
 				},
-				Status: v1.ServiceStatus{
-					LoadBalancer: v1.LoadBalancerStatus{
-						Ingress: []v1.LoadBalancerIngress{{
+				Status: corev1.ServiceStatus{
+					LoadBalancer: corev1.LoadBalancerStatus{
+						Ingress: []corev1.LoadBalancerIngress{{
 							IP: "1.2.3.4",
 						}},
 					},
@@ -103,7 +103,7 @@ func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
 				doc.Dequeues = 1
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
-			kubernetescli: fake.NewSimpleClientset(&v1.Service{
+			kubernetescli: fake.NewSimpleClientset(&corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "router-default",
 					Namespace: "openshift-ingress",
