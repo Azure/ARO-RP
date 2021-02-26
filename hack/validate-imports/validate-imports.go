@@ -16,14 +16,6 @@ import (
 
 const local = "github.com/Azure/ARO-RP"
 
-type importSpecs []*ast.ImportSpec
-
-func (is importSpecs) Len() int           { return len(is) }
-func (is importSpecs) Less(i, j int) bool { return is[i].Path.Value < is[j].Path.Value }
-func (is importSpecs) Swap(i, j int)      { is[i], is[j] = is[j], is[i] }
-
-var _ sort.Interface = importSpecs{}
-
 type importType int
 
 // at most one import group of each type may exist in a validated source file,
@@ -94,7 +86,7 @@ func check(path string) (errs []error) {
 	var seenTypes importType
 
 	for groupnum, group := range groups {
-		if !sort.IsSorted(importSpecs(group)) {
+		if !sort.SliceIsSorted(group, func(i, j int) bool { return group[i].Path.Value < group[j].Path.Value }) {
 			errs = append(errs, fmt.Errorf("group %d: imports are not sorted", groupnum+1))
 		}
 
