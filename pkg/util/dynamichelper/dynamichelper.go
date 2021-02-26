@@ -21,13 +21,9 @@ import (
 )
 
 type Interface interface {
-	GVRResolver
-
-	CreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
-	Delete(ctx context.Context, groupKind, namespace, name string) error
+	Refresh() error
+	EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error
 	Ensure(ctx context.Context, objs ...*unstructured.Unstructured) error
-	Get(ctx context.Context, groupKind, namespace, name string) (*unstructured.Unstructured, error)
-	List(ctx context.Context, groupKind, namespace string) (*unstructured.UnstructuredList, error)
 }
 
 type dynamicHelper struct {
@@ -60,31 +56,17 @@ func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 	return dh, nil
 }
 
-// CreateOrUpdate does nothing more than an Update call (and a Create if that
-// call returned 404).  We don't add any fancy behaviour because this is called
-// from the Geneva Admin context and we don't want to get in the SRE's way.
-func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Unstructured) error {
-	gvr, err := dh.Resolve(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
-	if err != nil {
-		return err
-	}
-
-	_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Update(ctx, o, metav1.UpdateOptions{})
-	if !errors.IsNotFound(err) {
-		return err
-	}
-
-	_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Create(ctx, o, metav1.CreateOptions{})
-	return err
-}
-
-func (dh *dynamicHelper) Delete(ctx context.Context, groupKind, namespace, name string) error {
+func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error {
 	gvr, err := dh.Resolve(groupKind, "")
 	if err != nil {
 		return err
 	}
 
-	return dh.dyn.Resource(*gvr).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	err = dh.dyn.Resource(*gvr).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if errors.IsNotFound(err) {
+		err = nil
+	}
+	return err
 }
 
 // Ensure is called by the operator deploy tool and individual controllers.  It
@@ -129,24 +111,6 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, o *unstructured.Unstruct
 		_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Update(ctx, o, metav1.UpdateOptions{})
 		return err
 	})
-}
-
-func (dh *dynamicHelper) Get(ctx context.Context, groupKind, namespace, name string) (*unstructured.Unstructured, error) {
-	gvr, err := dh.Resolve(groupKind, "")
-	if err != nil {
-		return nil, err
-	}
-
-	return dh.dyn.Resource(*gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
-}
-
-func (dh *dynamicHelper) List(ctx context.Context, groupKind, namespace string) (*unstructured.UnstructuredList, error) {
-	gvr, err := dh.Resolve(groupKind, "")
-	if err != nil {
-		return nil, err
-	}
-
-	return dh.dyn.Resource(*gvr).Namespace(namespace).List(ctx, metav1.ListOptions{})
 }
 
 func diff(existing, o *unstructured.Unstructured) string {

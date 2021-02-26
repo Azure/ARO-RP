@@ -10,6 +10,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	schema "k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // MockInterface is a mock of Interface interface
@@ -35,34 +36,6 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 	return m.recorder
 }
 
-// CreateOrUpdate mocks base method
-func (m *MockInterface) CreateOrUpdate(arg0 context.Context, arg1 *unstructured.Unstructured) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CreateOrUpdate indicates an expected call of CreateOrUpdate
-func (mr *MockInterfaceMockRecorder) CreateOrUpdate(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockInterface)(nil).CreateOrUpdate), arg0, arg1)
-}
-
-// Delete mocks base method
-func (m *MockInterface) Delete(arg0 context.Context, arg1, arg2, arg3 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Delete indicates an expected call of Delete
-func (mr *MockInterfaceMockRecorder) Delete(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockInterface)(nil).Delete), arg0, arg1, arg2, arg3)
-}
-
 // Ensure mocks base method
 func (m *MockInterface) Ensure(arg0 context.Context, arg1 ...*unstructured.Unstructured) error {
 	m.ctrl.T.Helper()
@@ -82,46 +55,45 @@ func (mr *MockInterfaceMockRecorder) Ensure(arg0 interface{}, arg1 ...interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ensure", reflect.TypeOf((*MockInterface)(nil).Ensure), varargs...)
 }
 
-// Get mocks base method
-func (m *MockInterface) Get(arg0 context.Context, arg1, arg2, arg3 string) (*unstructured.Unstructured, error) {
+// EnsureDeleted mocks base method
+func (m *MockInterface) EnsureDeleted(arg0 context.Context, arg1, arg2, arg3 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(*unstructured.Unstructured)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Get indicates an expected call of Get
-func (mr *MockInterfaceMockRecorder) Get(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterface)(nil).Get), arg0, arg1, arg2, arg3)
-}
-
-// List mocks base method
-func (m *MockInterface) List(arg0 context.Context, arg1, arg2 string) (*unstructured.UnstructuredList, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*unstructured.UnstructuredList)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// List indicates an expected call of List
-func (mr *MockInterfaceMockRecorder) List(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockInterface)(nil).List), arg0, arg1, arg2)
-}
-
-// RefreshAPIResources mocks base method
-func (m *MockInterface) RefreshAPIResources() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RefreshAPIResources")
+	ret := m.ctrl.Call(m, "EnsureDeleted", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// RefreshAPIResources indicates an expected call of RefreshAPIResources
-func (mr *MockInterfaceMockRecorder) RefreshAPIResources() *gomock.Call {
+// EnsureDeleted indicates an expected call of EnsureDeleted
+func (mr *MockInterfaceMockRecorder) EnsureDeleted(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshAPIResources", reflect.TypeOf((*MockInterface)(nil).RefreshAPIResources))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureDeleted", reflect.TypeOf((*MockInterface)(nil).EnsureDeleted), arg0, arg1, arg2, arg3)
+}
+
+// Refresh mocks base method
+func (m *MockInterface) Refresh() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Refresh")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Refresh indicates an expected call of Refresh
+func (mr *MockInterfaceMockRecorder) Refresh() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Refresh", reflect.TypeOf((*MockInterface)(nil).Refresh))
+}
+
+// Resolve mocks base method
+func (m *MockInterface) Resolve(arg0, arg1 string) (*schema.GroupVersionResource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Resolve", arg0, arg1)
+	ret0, _ := ret[0].(*schema.GroupVersionResource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Resolve indicates an expected call of Resolve
+func (mr *MockInterfaceMockRecorder) Resolve(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resolve", reflect.TypeOf((*MockInterface)(nil).Resolve), arg0, arg1)
 }

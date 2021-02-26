@@ -144,5 +144,5 @@ func (sr *systemreserved) Remove(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return sr.dh.Delete(ctx, "KubeletConfig.machineconfiguration.openshift.io/v1", "", kubeletConfigName)
+	return sr.dh.EnsureDeleted(ctx, "KubeletConfig.machineconfiguration.openshift.io/v1", "", kubeletConfigName)
 }
