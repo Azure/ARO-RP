@@ -6,7 +6,6 @@ package main
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"sort"
 	"strings"
@@ -57,14 +56,7 @@ func validateImport(imp *ast.ImportSpec) (errs []error) {
 	return
 }
 
-func check(path string) (errs []error) {
-	var fset token.FileSet
-
-	f, err := parser.ParseFile(&fset, path, nil, parser.ImportsOnly)
-	if err != nil {
-		return []error{err}
-	}
-
+func validateGroups(path string, fset *token.FileSet, f *ast.File) (errs []error) {
 	var groups [][]*ast.ImportSpec
 
 	for i, imp := range f.Imports {
