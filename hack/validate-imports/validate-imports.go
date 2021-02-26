@@ -8,8 +8,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -109,27 +107,4 @@ func check(path string) (errs []error) {
 	}
 
 	return
-}
-
-func main() {
-	var rv int
-	for _, path := range os.Args[1:] {
-		if err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if !info.IsDir() && strings.HasSuffix(path, ".go") {
-				for _, err := range check(path) {
-					fmt.Printf("%s: %v\n", path, err)
-					rv = 1
-				}
-			}
-
-			return nil
-		}); err != nil {
-			panic(err)
-		}
-	}
-	os.Exit(rv)
 }
