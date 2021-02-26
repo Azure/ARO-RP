@@ -2,6 +2,7 @@ package dnsmasq
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"text/template"
 
@@ -114,6 +115,18 @@ func MachineConfig(clusterDomain, apiIntIP, ingressIP, role string) (*mcfgv1.Mac
 	}
 
 	rawExt, err := ignition.ConvertToRawExtension(*ignConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// canonicalise the machineconfig payload the same way as MCO
+	var i interface{}
+	err = json.Unmarshal(rawExt.Raw, &i)
+	if err != nil {
+		return nil, err
+	}
+
+	rawExt.Raw, err = json.Marshal(i)
 	if err != nil {
 		return nil, err
 	}
