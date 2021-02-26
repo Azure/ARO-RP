@@ -9,8 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 // MockInterface is a mock of Interface interface
@@ -37,7 +36,7 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 }
 
 // Ensure mocks base method
-func (m *MockInterface) Ensure(arg0 context.Context, arg1 ...*unstructured.Unstructured) error {
+func (m *MockInterface) Ensure(arg0 context.Context, arg1 ...runtime.Object) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0}
 	for _, a := range arg1 {
@@ -81,19 +80,4 @@ func (m *MockInterface) Refresh() error {
 func (mr *MockInterfaceMockRecorder) Refresh() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Refresh", reflect.TypeOf((*MockInterface)(nil).Refresh))
-}
-
-// Resolve mocks base method
-func (m *MockInterface) Resolve(arg0, arg1 string) (*schema.GroupVersionResource, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Resolve", arg0, arg1)
-	ret0, _ := ret[0].(*schema.GroupVersionResource)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Resolve indicates an expected call of Resolve
-func (mr *MockInterfaceMockRecorder) Resolve(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resolve", reflect.TypeOf((*MockInterface)(nil).Resolve), arg0, arg1)
 }

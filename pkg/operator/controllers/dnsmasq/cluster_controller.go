@@ -95,10 +95,10 @@ func reconcileMachineConfigs(ctx context.Context, arocli aroclient.Interface, dh
 		return err
 	}
 
-	uns, err := dynamichelper.Prepare(resources)
+	err = dynamichelper.Prepare(resources)
 	if err != nil {
 		return err
 	}
 
-	return dh.Ensure(ctx, uns...)
+	return dh.Ensure(ctx, resources...)
 }

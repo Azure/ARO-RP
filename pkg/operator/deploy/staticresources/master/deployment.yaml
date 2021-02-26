@@ -37,6 +37,7 @@ spec:
       nodeSelector:
         node-role.kubernetes.io/master: ""
       serviceAccountName: aro-operator-master
+      serviceAccount: aro-operator-master
       priorityClassName: system-cluster-critical
       tolerations:
       - key: node-role.kubernetes.io/master

@@ -17,6 +17,7 @@ import (
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -203,21 +204,31 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 		return err
 	}
 
-	uns, err := dynamichelper.Prepare(resources)
+	err = dynamichelper.Prepare(resources)
 	if err != nil {
 		return err
 	}
 
-	for _, un := range uns {
-		err = o.dh.Ensure(ctx, un)
+	for _, resource := range resources {
+		err = o.dh.Ensure(ctx, resource)
 		if err != nil {
 			return err
 		}
 
-		switch un.GroupVersionKind().GroupKind().String() {
+		gvks, _, err := scheme.Scheme.ObjectKinds(resource)
+		if err != nil {
+			return err
+		}
+
+		switch gvks[0].GroupKind().String() {
 		case "CustomResourceDefinition.apiextensions.k8s.io":
+			acc, err := meta.Accessor(resource)
+			if err != nil {
+				return err
+			}
+
 			err = wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
-				crd, err := o.extensionscli.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, un.GetName(), metav1.GetOptions{})
+				crd, err := o.extensionscli.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, acc.GetName(), metav1.GetOptions{})
 				if err != nil {
 					return false, err
 				}

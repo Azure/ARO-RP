@@ -5,15 +5,14 @@ package workaround
 
 import (
 	"context"
+	"encoding/json"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
@@ -60,8 +59,20 @@ func (sr *systemreserved) IsRequired(clusterVersion *version.Version) bool {
 	return clusterVersion.Lt(sr.versionFixed)
 }
 
-func (sr *systemreserved) kubeletConfig() (*unstructured.Unstructured, error) {
-	kc := &mcv1.KubeletConfig{
+func (sr *systemreserved) kubeletConfig() (*mcv1.KubeletConfig, error) {
+	b, err := json.Marshal(map[string]interface{}{
+		"systemReserved": map[string]interface{}{
+			"memory": memReserved,
+		},
+		"evictionHard": map[string]interface{}{
+			"memory.available": hardEviction,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &mcv1.KubeletConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   kubeletConfigName,
 			Labels: map[string]string{labelName: labelValue},
@@ -71,26 +82,10 @@ func (sr *systemreserved) kubeletConfig() (*unstructured.Unstructured, error) {
 				MatchLabels: map[string]string{labelName: labelValue},
 			},
 			KubeletConfig: &runtime.RawExtension{
-				Object: &unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"systemReserved": map[string]interface{}{
-							"memory": memReserved,
-						},
-						"evictionHard": map[string]interface{}{
-							"memory.available": hardEviction,
-						},
-					},
-				},
+				Raw: b,
 			},
 		},
-	}
-
-	un := &unstructured.Unstructured{}
-	err := scheme.Scheme.Convert(kc, un, nil)
-	if err != nil {
-		return nil, err
-	}
-	return un, nil
+	}, nil
 }
 
 func (sr *systemreserved) Ensure(ctx context.Context) error {
@@ -118,12 +113,12 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 	}
 
 	//   Step 2. Create KubeletConfig CRD with appropriate limits.
-	un, err := sr.kubeletConfig()
+	kc, err := sr.kubeletConfig()
 	if err != nil {
 		return err
 	}
 
-	return sr.dh.Ensure(ctx, un)
+	return sr.dh.Ensure(ctx, kc)
 }
 
 func (sr *systemreserved) Remove(ctx context.Context) error {

@@ -23,7 +23,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 func marshalAzureMachineProviderSpec(t *testing.T, spec *azureproviderv1beta1.AzureMachineProviderSpec) []byte {

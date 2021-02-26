@@ -13,7 +13,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -36,27 +35,17 @@ func SetControllerReferences(resources []runtime.Object, owner metav1.Object) er
 	return nil
 }
 
-func Prepare(resources []runtime.Object) ([]*unstructured.Unstructured, error) {
+func Prepare(resources []runtime.Object) error {
 	err := hashWorkloadConfigs(resources)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	uns := make([]*unstructured.Unstructured, 0, len(resources))
-	for _, resource := range resources {
-		un := &unstructured.Unstructured{}
-		err = scheme.Scheme.Convert(resource, un, nil)
-		if err != nil {
-			return nil, err
-		}
-		uns = append(uns, un)
-	}
-
-	sort.Slice(uns, func(i, j int) bool {
-		return createOrder(uns[i], uns[j])
+	sort.Slice(resources, func(i, j int) bool {
+		return createOrder(resources[i], resources[j])
 	})
 
-	return uns, nil
+	return nil
 }
 
 func addWorkloadHashes(o *metav1.ObjectMeta, t *v1.PodTemplateSpec, configToHash map[string]string) {
@@ -143,4 +132,14 @@ func getHashConfigMap(o *v1.ConfigMap) string {
 	}
 
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func keyFunc(gk schema.GroupKind, namespace, name string) string {
+	s := gk.String()
+	if namespace != "" {
+		s += "/" + namespace
+	}
+	s += "/" + name
+
+	return s
 }

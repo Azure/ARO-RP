@@ -5,50 +5,57 @@ package dynamichelper
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
+	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
-	"github.com/ugorji/go/codec"
-	"k8s.io/apimachinery/pkg/api/errors"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	extensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 type Interface interface {
 	Refresh() error
 	EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error
-	Ensure(ctx context.Context, objs ...*unstructured.Unstructured) error
+	Ensure(ctx context.Context, objs ...runtime.Object) error
 }
 
 type dynamicHelper struct {
 	GVRResolver
 
-	log *logrus.Entry
-
-	restconfig *rest.Config
-	dyn        dynamic.Interface
+	log     *logrus.Entry
+	restcli *rest.RESTClient
 }
 
 func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 	dh := &dynamicHelper{
-		log:        log,
-		restconfig: restconfig,
+		log: log,
 	}
 
 	var err error
-
 	dh.GVRResolver, err = NewGVRResolver(log, restconfig)
 	if err != nil {
 		return nil, err
 	}
 
-	dh.dyn, err = dynamic.NewForConfig(restconfig)
+	restconfig = rest.CopyConfig(restconfig)
+	restconfig.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+	restconfig.GroupVersion = &schema.GroupVersion{}
+
+	dh.restcli, err = rest.RESTClientFor(restconfig)
 	if err != nil {
 		return nil, err
 	}
@@ -62,18 +69,16 @@ func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace
 		return err
 	}
 
-	err = dh.dyn.Resource(*gvr).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-	if errors.IsNotFound(err) {
+	err = dh.restcli.Delete().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Error()
+	if kerrors.IsNotFound(err) {
 		err = nil
 	}
 	return err
 }
 
-// Ensure is called by the operator deploy tool and individual controllers.  It
-// is intended to ensure that an object matches a desired state.  It is tolerant
-// of unspecified fields in the desired state (e.g. it will leave typically
-// leave .status untouched).
-func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...*unstructured.Unstructured) error {
+// Ensure that one or more objects match their desired state.  Only update
+// objects that need to be updated.
+func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...runtime.Object) error {
 	for _, o := range objs {
 		err := dh.ensureOne(ctx, o)
 		if err != nil {
@@ -84,92 +89,159 @@ func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...*unstructured.Unstr
 	return nil
 }
 
-func (dh *dynamicHelper) ensureOne(ctx context.Context, o *unstructured.Unstructured) error {
-	gvr, err := dh.Resolve(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
+func (dh *dynamicHelper) ensureOne(ctx context.Context, new runtime.Object) error {
+	gvks, _, err := scheme.Scheme.ObjectKinds(new)
+	if err != nil {
+		return err
+	}
+
+	gvk := gvks[0]
+
+	gvr, err := dh.Resolve(gvk.GroupKind().String(), gvk.Version)
+	if err != nil {
+		return err
+	}
+
+	acc, err := meta.Accessor(new)
 	if err != nil {
 		return err
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		existing, err := dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Get(ctx, o.GetName(), metav1.GetOptions{})
-		if errors.IsNotFound(err) {
-			dh.log.Printf("Create %s", keyFuncO(o))
-			_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Create(ctx, o, metav1.CreateOptions{})
-			return err
+		old, err := dh.restcli.Get().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Do(ctx).Get()
+		if kerrors.IsNotFound(err) {
+			dh.log.Printf("Create %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()))
+			return dh.restcli.Post().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), "")...).Body(new).Do(ctx).Error()
 		}
 		if err != nil {
 			return err
 		}
 
-		o, changed, diff, err := merge(existing, o)
+		new, changed, diff, err := merge(old, new)
 		if err != nil || !changed {
 			return err
 		}
 
-		dh.log.Printf("Update %s: %s", keyFuncO(o), diff)
-
-		_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Update(ctx, o, metav1.UpdateOptions{})
-		return err
+		dh.log.Printf("Update %s: %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()), diff)
+		return dh.restcli.Put().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Body(new).Do(ctx).Error()
 	})
 }
 
-func diff(existing, o *unstructured.Unstructured) string {
-	if o.GroupVersionKind().GroupKind().String() == "Secret" { // Don't show a diff if kind is Secret
-		return ""
+// merge takes the existing (old) and desired (new) objects.  It compares them
+// to see if an update is necessary, fixes up the new object if needed, and
+// returns the difference for debugging purposes.
+func merge(old, new runtime.Object) (runtime.Object, bool, string, error) {
+	if reflect.TypeOf(old) != reflect.TypeOf(new) {
+		return nil, false, "", fmt.Errorf("types differ: %T %T", old, new)
 	}
 
-	return cmp.Diff(existing.Object, o.Object)
-}
+	// 1. Set defaults on new.  This gets rid of many false positive diffs.
+	scheme.Scheme.Default(new)
 
-// merge merges delta onto base using ugorji/go/codec semantics.  It returns the
-// newly merged object (the inputs are untouched) plus a flag indicating if a
-// change took place and a printable diff as appropriate
-func merge(base, delta *unstructured.Unstructured) (*unstructured.Unstructured, bool, string, error) {
-	copy := base.DeepCopy()
+	// 2. Copy immutable fields from old to new to avoid false positives.
+	oldtypemeta := old.GetObjectKind()
+	newtypemeta := new.GetObjectKind()
 
-	h := &codec.JsonHandle{
-		MapKeyAsString: true,
-	}
-
-	var b []byte
-	err := codec.NewEncoderBytes(&b, h).Encode(delta.Object)
+	oldobjectmeta, err := meta.Accessor(old)
 	if err != nil {
 		return nil, false, "", err
 	}
 
-	err = codec.NewDecoderBytes(b, h).Decode(&copy.Object)
+	newobjectmeta, err := meta.Accessor(new)
 	if err != nil {
 		return nil, false, "", err
 	}
 
-	// all new objects have a null creationTimestamp that causes every object to
-	// be updated.
-	copy.SetCreationTimestamp(base.GetCreationTimestamp())
+	newtypemeta.SetGroupVersionKind(oldtypemeta.GroupVersionKind())
 
-	status, found, err := unstructured.NestedMap(base.Object, "status")
-	if err == nil && found {
-		err = unstructured.SetNestedMap(copy.Object, status, "status")
-		if err != nil {
-			return nil, false, "", err
+	newobjectmeta.SetSelfLink(oldobjectmeta.GetSelfLink())
+	newobjectmeta.SetUID(oldobjectmeta.GetUID())
+	newobjectmeta.SetResourceVersion(oldobjectmeta.GetResourceVersion())
+	newobjectmeta.SetGeneration(oldobjectmeta.GetGeneration())
+	newobjectmeta.SetCreationTimestamp(oldobjectmeta.GetCreationTimestamp())
+	newobjectmeta.SetManagedFields(oldobjectmeta.GetManagedFields())
+
+	// 3. Do fix-ups on a per-Kind basis.
+	switch old.(type) {
+	case *corev1.Namespace:
+		old, new := old.(*corev1.Namespace), new.(*corev1.Namespace)
+		for _, name := range []string{
+			"openshift.io/sa.scc.mcs",
+			"openshift.io/sa.scc.supplemental-groups",
+			"openshift.io/sa.scc.uid-range",
+		} {
+			copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, name)
 		}
+		new.Spec.Finalizers = old.Spec.Finalizers
+		new.Status = old.Status
+
+	case *corev1.ServiceAccount:
+		old, new := old.(*corev1.ServiceAccount), new.(*corev1.ServiceAccount)
+		new.Secrets = old.Secrets
+		new.ImagePullSecrets = old.ImagePullSecrets
+
+	case *corev1.Service:
+		old, new := old.(*corev1.Service), new.(*corev1.Service)
+		new.Spec.ClusterIP = old.Spec.ClusterIP
+
+	case *appsv1.DaemonSet:
+		old, new := old.(*appsv1.DaemonSet), new.(*appsv1.DaemonSet)
+		copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, "deprecated.daemonset.template.generation")
+		new.Status = old.Status
+
+	case *appsv1.Deployment:
+		old, new := old.(*appsv1.Deployment), new.(*appsv1.Deployment)
+		copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, "deployment.kubernetes.io/revision")
+		new.Status = old.Status
+
+	case *mcv1.KubeletConfig:
+		old, new := old.(*mcv1.KubeletConfig), new.(*mcv1.KubeletConfig)
+		new.Status = old.Status
+
+	case *extensionsv1beta1.CustomResourceDefinition:
+		old, new := old.(*extensionsv1beta1.CustomResourceDefinition), new.(*extensionsv1beta1.CustomResourceDefinition)
+		new.Status = old.Status
+
+	case *arov1alpha1.Cluster:
+		old, new := old.(*arov1alpha1.Cluster), new.(*arov1alpha1.Cluster)
+		new.Status = old.Status
+	}
+
+	var diff string
+	if _, ok := old.(*corev1.Secret); !ok { // Don't show a diff if kind is Secret
+		diff = cmp.Diff(old, new)
+	}
+
+	return new, !reflect.DeepEqual(old, new), diff, nil
+}
+
+func copyAnnotation(dst, src *metav1.ObjectMeta, name string) {
+	if _, found := src.Annotations[name]; found {
+		if dst.Annotations == nil {
+			dst.Annotations = map[string]string{}
+		}
+		dst.Annotations[name] = src.Annotations[name]
+	}
+}
+
+func makeURLSegments(gvr *schema.GroupVersionResource, namespace, name string) (url []string) {
+	if gvr.Group == "" {
+		url = append(url, "api")
 	} else {
-		// prevent empty status objects from causing problems
-		unstructured.RemoveNestedField(copy.Object, "status")
+		url = append(url, "apis", gvr.Group)
 	}
 
-	return copy, !reflect.DeepEqual(base, copy), diff(base, copy), nil
-}
+	url = append(url, gvr.Version)
 
-func keyFuncO(o *unstructured.Unstructured) string {
-	return keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName())
-}
-
-func keyFunc(gk schema.GroupKind, namespace, name string) string {
-	s := gk.String()
 	if namespace != "" {
-		s += "/" + namespace
+		url = append(url, "namespaces", namespace)
 	}
-	s += "/" + name
 
-	return s
+	url = append(url, gvr.Resource)
+
+	if len(name) > 0 {
+		url = append(url, name)
+	}
+
+	return url
 }

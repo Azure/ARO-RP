@@ -17,6 +17,7 @@ import (
 	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 const (
