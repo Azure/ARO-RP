@@ -70,6 +70,7 @@ require (
 	github.com/openshift/cluster-api-provider-baremetal v0.0.0-20210126223742-4e254d08e0ad // indirect
 	github.com/openshift/console-operator v0.0.0-20210216151626-6e1cbc849915
 	github.com/openshift/installer v0.16.1
+	github.com/openshift/library-go v0.0.0-20200909173121-1d055d971916
 	github.com/openshift/machine-api-operator v0.2.1-0.20210104142355-8e6ae0acdfcf
 	github.com/openshift/machine-config-operator v4.2.0-alpha.0.0.20190917115525-033375cbe820+incompatible
 	github.com/operator-framework/operator-sdk v1.4.2
