@@ -39,23 +39,6 @@ func typeForImport(imp *ast.ImportSpec) importType {
 	}
 }
 
-func validateImport(imp *ast.ImportSpec) (errs []error) {
-	path := strings.Trim(imp.Path.Value, `"`)
-
-	switch typeForImport(imp) {
-	case importDot:
-		switch path {
-		case "github.com/onsi/ginkgo",
-			"github.com/onsi/gomega",
-			"github.com/onsi/gomega/gstruct":
-		default:
-			errs = append(errs, fmt.Errorf("invalid . import %s", imp.Path.Value))
-		}
-	}
-
-	return
-}
-
 func validateGroups(path string, fset *token.FileSet, f *ast.File) (errs []error) {
 	var groups [][]*ast.ImportSpec
 
@@ -85,10 +68,6 @@ func validateGroups(path string, fset *token.FileSet, f *ast.File) (errs []error
 			errs = append(errs, fmt.Errorf("group %d: duplicate group or invalid group ordering", groupnum+1))
 		}
 		seenTypes |= groupImportType<<1 - 1 // ...but set all trailing bits
-
-		for _, imp := range group {
-			errs = append(errs, validateImport(imp)...)
-		}
 
 		for _, imp := range group {
 			if typeForImport(imp) != groupImportType {

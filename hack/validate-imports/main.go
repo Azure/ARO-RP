@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
@@ -14,6 +15,7 @@ import (
 
 func main() {
 	var rv int
+
 	for _, path := range os.Args[1:] {
 		err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
@@ -31,9 +33,14 @@ func main() {
 				return err
 			}
 
-			for _, err := range validateGroups(path, fset, f) {
-				fmt.Printf("%s: %v\n", path, err)
-				rv = 1
+			for _, validator := range []func(string, *token.FileSet, *ast.File) []error{
+				validateGroups,
+				validateImports,
+			} {
+				for _, err := range validator(path, fset, f) {
+					fmt.Printf("%s: %v\n", path, err)
+					rv = 1
+				}
 			}
 
 			return nil
@@ -43,5 +50,6 @@ func main() {
 			rv = 1
 		}
 	}
+
 	os.Exit(rv)
 }
