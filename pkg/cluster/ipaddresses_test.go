@@ -11,6 +11,7 @@ import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
+	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -48,6 +49,7 @@ func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
 							IngressProfiles: []api.IngressProfile{
 								{
 									Visibility: api.VisibilityPublic,
+									Name:       "default",
 								},
 							},
 							ProvisioningState: api.ProvisioningStateCreating,
@@ -80,7 +82,27 @@ func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
 			}),
 		},
 		{
-			name: "create/update failed",
+			name: "create/update failed - router IP issue",
+			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
+				doc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: key,
+						Properties: api.OpenShiftClusterProperties{
+							IngressProfiles: []api.IngressProfile{
+								{
+									Name: "default",
+								},
+							},
+							ProvisioningState: api.ProvisioningStateCreating,
+						},
+					},
+				}
+				fixture.AddOpenShiftClusterDocuments(doc)
+
+				doc.Dequeues = 1
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
 			kubernetescli: fake.NewSimpleClientset(&v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "router-default",
@@ -88,6 +110,26 @@ func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
 				},
 			}),
 			wantErr: "routerIP not found",
+		},
+		{
+			name: "enrich failed - return early",
+			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
+				doc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: key,
+						Properties: api.OpenShiftClusterProperties{
+							IngressProfiles:   nil,
+							ProvisioningState: api.ProvisioningStateCreating,
+						},
+					},
+				}
+				fixture.AddOpenShiftClusterDocuments(doc)
+
+				doc.Dequeues = 1
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
+			kubernetescli: fake.NewSimpleClientset(),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -118,6 +160,7 @@ func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
 			}
 
 			m := &manager{
+				log:           logrus.NewEntry(logrus.StandardLogger()),
 				doc:           doc,
 				db:            dbOpenShiftClusters,
 				dns:           dns,
