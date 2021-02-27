@@ -82,8 +82,14 @@ func (m *manager) denyAssignment() *arm.Resource {
 }
 
 func (m *manager) clusterServicePrincipalRBAC() []*arm.Resource {
+	infraSuffix := m.doc.OpenShiftCluster.Properties.InfraID
+	if len(infraSuffix) > 5 {
+		infraSuffix = infraSuffix[:len(infraSuffix)-5]
+	}
+	name := fmt.Sprintf("Azure Red Hat OpenShift cluster (%s)", infraSuffix)
+
 	return []*arm.Resource{
-		rbac.CustomRoleDefinition("Azure Red Hat OpenShift Cluster",
+		rbac.CustomRoleDefinition(name,
 			[]mgmtauthorization.Permission{
 				{
 					Actions: &[]string{
@@ -123,7 +129,7 @@ func (m *manager) clusterServicePrincipalRBAC() []*arm.Resource {
 				},
 			}),
 		rbac.ResourceGroupCustomRoleAssignment(
-			rbac.CustomRoleDefinitionName("Azure Red Hat OpenShift Cluster"),
+			rbac.CustomRoleDefinitionName(name),
 			"'"+m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID+"'"),
 	}
 }
