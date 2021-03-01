@@ -1,4 +1,4 @@
-package validate
+package dynamic
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -31,6 +31,7 @@ import (
 type Dynamic interface {
 	ValidateVnetPermissions(ctx context.Context) error
 	ValidateRouteTablesPermissions(ctx context.Context) error
+
 	// etc
 	// does Quota code go in here too?
 }
@@ -208,4 +209,16 @@ func getRouteTableID(vnet *mgmtnetwork.VirtualNetwork, path, subnetID string) (s
 	}
 
 	return *s.RouteTable.ID, nil
+}
+
+func findSubnet(vnet *mgmtnetwork.VirtualNetwork, subnetID string) *mgmtnetwork.Subnet {
+	if vnet.Subnets != nil {
+		for _, s := range *vnet.Subnets {
+			if strings.EqualFold(*s.ID, subnetID) {
+				return &s
+			}
+		}
+	}
+
+	return nil
 }
