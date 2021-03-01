@@ -97,6 +97,11 @@ func acceptableNames(path string) []string {
 		return []string{m[1] + m[2]}
 	}
 
+	m = regexp.MustCompile(`^k8s.io/kubernetes/pkg/apis/[^/]+/v[^/]+$`).FindStringSubmatch(path)
+	if m != nil {
+		return nil
+	}
+
 	m = regexp.MustCompile(`^k8s.io/client-go/kubernetes/typed/([^/]+)/(v[^/]+)$`).FindStringSubmatch(path)
 	if m != nil {
 		return []string{m[1] + m[2] + "client"}
