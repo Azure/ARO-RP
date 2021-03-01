@@ -97,7 +97,7 @@ func (ef *workerProfilesEnricherTask) FetchData(ctx context.Context, callbacks c
 		)
 	}
 
-	sort.Sort(byName(workerProfiles))
+	sort.Slice(workerProfiles, func(i, j int) bool { return workerProfiles[i].Name < workerProfiles[j].Name })
 
 	callbacks <- func() {
 		ef.oc.Properties.WorkerProfiles = workerProfiles
@@ -107,10 +107,3 @@ func (ef *workerProfilesEnricherTask) FetchData(ctx context.Context, callbacks c
 func (ef *workerProfilesEnricherTask) SetDefaults() {
 	ef.oc.Properties.WorkerProfiles = nil
 }
-
-// byName implements sort.Interface for []api.WorkerProfile based on the Name field.
-type byName []api.WorkerProfile
-
-func (a byName) Len() int           { return len(a) }
-func (a byName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a byName) Less(i, j int) bool { return a[i].Name < a[j].Name }
