@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 // OpenShiftClusterDynamicValidator is the dynamic validator interface
@@ -47,25 +48,29 @@ type openShiftClusterDynamicValidator struct {
 // Dynamic validates an OpenShift cluster
 func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	// Get all subnets
-	mSubnetID := dv.oc.Properties.MasterProfile.SubnetID
-	wSubnetIDs := []string{}
+	subnetIDs := []string{dv.oc.Properties.MasterProfile.SubnetID}
 
 	for _, s := range dv.oc.Properties.WorkerProfiles {
-		wSubnetIDs = append(wSubnetIDs, s.SubnetID)
+		subnetIDs = append(subnetIDs, s.SubnetID)
+	}
+
+	vnetID, _, err := subnet.Split(subnetIDs[0])
+	if err != nil {
+		return err
 	}
 
 	// FP validation
-	fpDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.oc, dv.subscriptionDoc, mSubnetID, wSubnetIDs, dv.subscriptionDoc.ID, dv.fpAuthorizer, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+	fpDynamic, err := dynamic.NewValidator(dv.log, dv.env.Environment(), dv.subscriptionDoc.ID, dv.fpAuthorizer, dynamic.AuthorizerFirstParty)
 	if err != nil {
 		return err
 	}
 
-	err = fpDynamic.ValidateVnetPermissions(ctx)
+	err = fpDynamic.ValidateVnetPermissions(ctx, vnetID)
 	if err != nil {
 		return err
 	}
 
-	err = fpDynamic.ValidateRouteTablesPermissions(ctx)
+	err = fpDynamic.ValidateRouteTablesPermissions(ctx, subnetIDs)
 	if err != nil {
 		return err
 	}
@@ -78,29 +83,29 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 
 	spAuthorizer := refreshable.NewAuthorizer(token)
 
-	spDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.oc, dv.subscriptionDoc, mSubnetID, wSubnetIDs, dv.subscriptionDoc.ID, spAuthorizer, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
+	spDynamic, err := dynamic.NewValidator(dv.log, dv.env.Environment(), dv.subscriptionDoc.ID, spAuthorizer, dynamic.AuthorizerClusterServicePrincipal)
 	if err != nil {
 		return err
 	}
 
 	// SP validation
-	err = spDynamic.ValidateClusterServicePrincipalProfile(ctx)
+	err = spDynamic.ValidateClusterServicePrincipalProfile(ctx, spp.ClientID, string(spp.ClientSecret), dv.subscriptionDoc.Subscription.Properties.TenantID)
 	if err != nil {
 		return err
 	}
 
-	err = spDynamic.ValidateVnetPermissions(ctx)
+	err = spDynamic.ValidateVnetPermissions(ctx, vnetID)
 	if err != nil {
 		return err
 	}
 
-	err = spDynamic.ValidateRouteTablesPermissions(ctx)
+	err = spDynamic.ValidateRouteTablesPermissions(ctx, subnetIDs)
 	if err != nil {
 		return err
 	}
 
 	// Additional checks - use any dynamic because they both have the correct permissions
-	err = spDynamic.ValidateVnetLocation(ctx)
+	err = spDynamic.ValidateVnetLocation(ctx, vnetID, dv.oc.Location)
 	if err != nil {
 		return err
 	}

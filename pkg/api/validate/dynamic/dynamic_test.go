@@ -6,6 +6,7 @@ package dynamic
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -14,7 +15,6 @@ import (
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
@@ -81,7 +81,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 						nil,
 					)
 			},
-			wantErr: "400: InvalidResourceProviderPermissions: : The resource provider does not have Network Contributor permission on vnet '" + vnetID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on vnet '" + vnetID + "'.",
 		},
 		{
 			name: "fail: not found",
@@ -109,23 +109,15 @@ func TestValidateVnetPermissions(t *testing.T) {
 			tt.mocks(permissionsClient, cancel)
 
 			dv := &dynamic{
-				log:         logrus.NewEntry(logrus.StandardLogger()),
-				permissions: permissionsClient,
-				vnetr: &azure.Resource{
-					ResourceGroup:  resourceGroupName,
-					ResourceType:   resourceType,
-					Provider:       resourceProvider,
-					ResourceName:   vnetName,
-					SubscriptionID: subscriptionID,
-				},
-				code: "InvalidResourceProviderPermissions",
-				typ:  "resource provider",
+				authorizerType: AuthorizerClusterServicePrincipal,
+				log:            logrus.NewEntry(logrus.StandardLogger()),
+				permissions:    permissionsClient,
 			}
 
-			err := dv.ValidateVnetPermissions(ctx)
+			err := dv.ValidateVnetPermissions(ctx, vnetID)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
-				t.Error(err)
+				t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))
 			}
 		})
 	}
@@ -180,7 +172,7 @@ func TestGetRouteTableID(t *testing.T) {
 		}
 
 		// purposefully hardcoding path to "" so it is not needed in the wantErr message
-		_, err := getRouteTableID(vnet, "", genericSubnet)
+		_, err := getRouteTableID(vnet, genericSubnet)
 		if err != nil && err.Error() != tt.wantErr ||
 			err == nil && tt.wantErr != "" {
 			t.Error(err)
@@ -244,7 +236,7 @@ func TestValidateRouteTablePermissions(t *testing.T) {
 						},
 					}, nil)
 			},
-			wantErr: "400: InvalidResourceProviderPermissions: : The resource provider does not have Network Contributor permission on route table '" + routeTableID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on route table '" + routeTableID + "'.",
 		},
 		{
 			name: "fail: not found",
@@ -274,17 +266,16 @@ func TestValidateRouteTablePermissions(t *testing.T) {
 		}
 
 		dv := &dynamic{
-			log:         logrus.NewEntry(logrus.StandardLogger()),
-			permissions: permissionsClient,
-			code:        "InvalidResourceProviderPermissions",
-			typ:         "resource provider",
+			authorizerType: AuthorizerClusterServicePrincipal,
+			log:            logrus.NewEntry(logrus.StandardLogger()),
+			permissions:    permissionsClient,
 		}
 
 		// purposefully hardcoding path to "" so it is not needed in the wantErr message
-		err := dv.validateRouteTablePermissions(ctx, tt.rtID, "")
+		err := dv.validateRouteTablePermissions(ctx, tt.rtID)
 		if err != nil && err.Error() != tt.wantErr ||
 			err == nil && tt.wantErr != "" {
-			t.Error(err)
+			t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))
 		}
 	}
 }
@@ -328,7 +319,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The subnet '" + masterSubnet + "' could not be found.",
+			wantErr: "400: InvalidLinkedVNet: : The subnet '" + masterSubnet + "' could not be found.",
 		},
 		{
 			name: "fail: worker subnet ID doesn't exist",
@@ -338,7 +329,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: properties.workerProfiles[0].subnetId: The subnet '" + workerSubnet + "' could not be found.",
+			wantErr: "400: InvalidLinkedVNet: : The subnet '" + workerSubnet + "' could not be found.",
 		},
 		{
 			name: "fail: permissions don't exist",
@@ -363,7 +354,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 						nil,
 					)
 			},
-			wantErr: "400: InvalidResourceProviderPermissions: : The resource provider does not have Network Contributor permission on route table '" + strings.ToLower(masterRtID) + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on route table '" + strings.ToLower(masterRtID) + "'.",
 		},
 		{
 			name: "pass",
@@ -421,23 +412,10 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			}
 
 			dv := &dynamic{
+				authorizerType:  AuthorizerClusterServicePrincipal,
 				log:             logrus.NewEntry(logrus.StandardLogger()),
 				permissions:     permissionsClient,
 				virtualNetworks: vnetClient,
-
-				vnetr: &azure.Resource{
-					ResourceGroup:  resourceGroupName,
-					ResourceName:   vnetName,
-					SubscriptionID: subscriptionID,
-					Provider:       "Microsoft.Network",
-					ResourceType:   "virtualNetworks",
-				},
-
-				masterSubnetID:  masterSubnet,
-				workerSubnetIDs: []string{workerSubnet},
-
-				code: "InvalidResourceProviderPermissions",
-				typ:  "resource provider",
 			}
 
 			if tt.permissionMocks != nil {
@@ -448,10 +426,10 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 				tt.vnetMocks(vnetClient, *vnet)
 			}
 
-			err := dv.ValidateRouteTablesPermissions(ctx)
+			err := dv.ValidateRouteTablesPermissions(ctx, []string{masterSubnet, workerSubnet})
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
-				t.Error(err)
+				t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))
 			}
 		})
 	}
@@ -572,19 +550,12 @@ func TestValidateCIDRRanges(t *testing.T) {
 			tt.vnetMocks(vnetClient, vnet)
 		}
 
-		vnetr, err := azure.ParseResourceID(vnetID)
-		if err != nil {
-			t.Error(err)
-		}
-
 		dv := &dynamic{
-			oc:              oc,
-			vnetr:           &vnetr,
 			log:             logrus.NewEntry(logrus.StandardLogger()),
 			virtualNetworks: vnetClient,
 		}
 
-		err = dv.ValidateCIDRRanges(ctx)
+		err := dv.ValidateCIDRRanges(ctx, []string{masterSubnet, workerSubnet}, oc.Properties.NetworkProfile.PodCIDR, oc.Properties.NetworkProfile.ServiceCIDR)
 		if err != nil && err.Error() != tt.wantErr ||
 			err == nil && tt.wantErr != "" {
 			t.Error(err)
@@ -629,23 +600,12 @@ func TestValidateVnetLocation(t *testing.T) {
 				Get(gomock.Any(), resourceGroupName, vnetName, "").
 				Return(vnet, nil)
 
-			vnetr, err := azure.ParseResourceID(vnetID)
-			if err != nil {
-				t.Error(err)
-			}
-
-			oc := &api.OpenShiftCluster{
-				Location: "eastus",
-			}
-
 			dv := &dynamic{
-				oc:              oc,
-				vnetr:           &vnetr,
 				log:             logrus.NewEntry(logrus.StandardLogger()),
 				virtualNetworks: vnetClient,
 			}
 
-			err = dv.ValidateVnetLocation(ctx)
+			err := dv.ValidateVnetLocation(ctx, vnetID, "eastus")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -654,22 +614,32 @@ func TestValidateVnetLocation(t *testing.T) {
 	}
 }
 
-func TestValidateSubnet(t *testing.T) {
+func TestValidateSubnets(t *testing.T) {
 	ctx := context.Background()
 
-	resourceGroupID := "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup"
-	vnetID := resourceGroupID + "/providers/Microsoft.Network/virtualNetworks/testVnet"
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	resourceGroupName := "testGroup"
+	resourceGroupID := "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroupName
+	vnetName := "testVnet"
+	vnetID := "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroupName + "/providers/Microsoft.Network/virtualNetworks/" + vnetName
 	genericSubnet := vnetID + "/subnet/genericSubnet"
 	masterNSGv1 := resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg"
 
 	for _, tt := range []struct {
-		name       string
-		modifyOC   func(*api.OpenShiftCluster)
-		modifyVnet func(*mgmtnetwork.VirtualNetwork)
-		wantErr    string
+		name      string
+		modifyOC  func(*api.OpenShiftCluster)
+		vnetMocks func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
+		wantErr   string
 	}{
 		{
 			name: "pass",
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
 		},
 		{
 			name: "pass (master subnet)",
@@ -678,20 +648,31 @@ func TestValidateSubnet(t *testing.T) {
 					SubnetID: genericSubnet,
 				}
 			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
 		},
 		{
 			name: "pass (cluster in creating provisioning status)",
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.ProvisioningState = api.ProvisioningStateCreating
 			},
-			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[0].NetworkSecurityGroup = nil
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
 			},
 		},
 		{
 			name: "fail: subnet doe not exist on vnet",
-			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnet.Subnets = nil
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + genericSubnet + "' could not be found.",
 		},
@@ -702,22 +683,31 @@ func TestValidateSubnet(t *testing.T) {
 					SubnetID: genericSubnet,
 				}
 			},
-			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[0].PrivateLinkServiceNetworkPolicies = to.StringPtr("Enabled")
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + genericSubnet + "' is invalid: must have privateLinkServiceNetworkPolicies disabled.",
 		},
 		{
 			name: "fail: container registry endpoint doesn't exist",
-			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[0].ServiceEndpoints = nil
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + genericSubnet + "' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.",
 		},
 		{
 			name: "fail: network provisioning state not succeeded",
-			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*(*vnet.Subnets)[0].ServiceEndpoints)[0].ProvisioningState = mgmtnetwork.Failed
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + genericSubnet + "' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.",
 		},
@@ -726,6 +716,11 @@ func TestValidateSubnet(t *testing.T) {
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.ProvisioningState = api.ProvisioningStateCreating
 			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + genericSubnet + "' is invalid: must not have a network security group attached.",
 		},
 		{
@@ -733,79 +728,94 @@ func TestValidateSubnet(t *testing.T) {
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.ArchitectureVersion = 9001
 			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
 			wantErr: "unknown architecture version 9001",
 		},
 		{
 			name: "fail: nsg id doesn't match expected",
-			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[0].NetworkSecurityGroup.ID = to.StringPtr("not matching")
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + genericSubnet + "' is invalid: must have network security group '" + masterNSGv1 + "' attached.",
 		},
 		{
 			name: "fail: invalid subnet CIDR",
-			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[0].AddressPrefix = to.StringPtr("not-valid")
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
 			},
 			wantErr: "invalid CIDR address: not-valid",
 		},
 		{
 			name: "fail: too small subnet CIDR",
-			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[0].AddressPrefix = to.StringPtr("10.0.0.0/28")
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + genericSubnet + "' is invalid: must be /27 or larger.",
 		},
 	} {
-		oc := &api.OpenShiftCluster{
-			Properties: api.OpenShiftClusterProperties{
-				ClusterProfile: api.ClusterProfile{
-					ResourceGroupID: resourceGroupID,
+		t.Run(tt.name, func(t *testing.T) {
+			oc := &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
 				},
-			},
-		}
-		vnet := &mgmtnetwork.VirtualNetwork{
-			ID: &vnetID,
-			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-				Subnets: &[]mgmtnetwork.Subnet{
-					{
-						ID: &genericSubnet,
-						SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-							AddressPrefix: to.StringPtr("10.0.0.0/24"),
-							NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-								ID: &masterNSGv1,
-							},
-							ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
-								{
-									Service:           to.StringPtr("Microsoft.ContainerRegistry"),
-									ProvisioningState: mgmtnetwork.Succeeded,
+			}
+			vnet := mgmtnetwork.VirtualNetwork{
+				ID: &vnetID,
+				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
+					Subnets: &[]mgmtnetwork.Subnet{
+						{
+							ID: &genericSubnet,
+							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+								AddressPrefix: to.StringPtr("10.0.0.0/24"),
+								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+									ID: &masterNSGv1,
 								},
+								ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+									{
+										Service:           to.StringPtr("Microsoft.ContainerRegistry"),
+										ProvisioningState: mgmtnetwork.Succeeded,
+									},
+								},
+								PrivateLinkServiceNetworkPolicies: to.StringPtr("Disabled"),
 							},
-							PrivateLinkServiceNetworkPolicies: to.StringPtr("Disabled"),
 						},
 					},
 				},
-			},
-		}
+			}
 
-		if tt.modifyOC != nil {
-			tt.modifyOC(oc)
-		}
-		if tt.modifyVnet != nil {
-			tt.modifyVnet(vnet)
-		}
+			if tt.modifyOC != nil {
+				tt.modifyOC(oc)
+			}
+			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+			if tt.vnetMocks != nil {
+				tt.vnetMocks(vnetClient, vnet)
+			}
+			dv := &dynamic{
+				virtualNetworks: vnetClient,
+				log:             logrus.NewEntry(logrus.StandardLogger()),
+			}
 
-		dv := &dynamic{
-			log: logrus.NewEntry(logrus.StandardLogger()),
-			oc:  oc,
-		}
-
-		// purposefully hardcoding path to "" so it is not needed in the wantErr message
-		_, err := dv.validateSubnet(ctx, vnet, "", genericSubnet)
-		if err != nil && err.Error() != tt.wantErr ||
-			err == nil && tt.wantErr != "" {
-			t.Error(err)
-		}
+			err := dv.validateSubnets(ctx, oc, []string{genericSubnet})
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))
+			}
+		})
 	}
 }
 
