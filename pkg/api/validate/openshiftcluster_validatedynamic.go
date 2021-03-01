@@ -105,6 +105,11 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	// Additional checks - use any dynamic because they both have the correct permissions
+	err = spDynamic.ValidateCIDRRanges(ctx, subnetIDs, dv.oc.Properties.NetworkProfile.PodCIDR, dv.oc.Properties.NetworkProfile.ServiceCIDR)
+	if err != nil {
+		return err
+	}
+
 	err = spDynamic.ValidateVnetLocation(ctx, vnetID, dv.oc.Location)
 	if err != nil {
 		return err
