@@ -301,18 +301,41 @@ func (r *PullSecretReconciler) emitGlobalPullSecretChange(ctx context.Context, s
 
 func (r *PullSecretReconciler) updateRedHatKeyCondition(secret *v1.Secret) (*status.Condition, error) {
 	// parse keys and validate JSON
-	parsedKeys, err := pullsecret.UnmarshalSecretData(secret)
 	foundKey := false
-	failed := false
-	if err != nil {
-		r.log.Info("pull secret is not valid json - recreating")
-		delete(secret.Data, v1.DockerConfigJsonKey)
-		failed = true
-	} else {
-		foundKey = r.checkRHRegistryKeys(parsedKeys)
+	failed := true
+
+	if secret != nil {
+		parsedKeys, err := pullsecret.UnmarshalSecretData(secret)
+		if err != nil {
+			r.log.Info("pull secret is not valid json - recreating")
+			failed = true
+		} else {
+			foundKey = r.checkRHRegistryKeys(parsedKeys)
+		}
+		failed = false
 	}
 
-	keyCondition := r.keyCondition(failed, foundKey)
+	keyCondition := &status.Condition{
+		Type:   aro.RedHatKeyPresent,
+		Status: v1.ConditionFalse,
+		Reason: "CheckFailed",
+	}
+
+	if failed {
+		keyCondition.Message = "Cannot parse pull-secret"
+		return keyCondition, nil
+	}
+
+	keyCondition.Reason = "CheckDone"
+
+	if !foundKey {
+		keyCondition.Message = "No Red Hat key found in pull-secret"
+		return keyCondition, nil
+	}
+
+	keyCondition.Status = v1.ConditionTrue
+	keyCondition.Message = "Red Hat registry key present in pull-secret"
+
 	return keyCondition, nil
 }
 
@@ -337,35 +360,11 @@ func (r *PullSecretReconciler) checkRHRegistryKeys(psData *pullsecret.Serialized
 	return foundKey
 }
 
-func (r *PullSecretReconciler) keyCondition(failed bool, foundKey bool) *status.Condition {
-	keyCondition := &status.Condition{
-		Type:   aro.RedHatKeyPresent,
-		Status: v1.ConditionFalse,
-		Reason: "CheckFailed",
-	}
-
-	if failed {
-		keyCondition.Message = "Cannot parse pull-secret"
-		return keyCondition
-	}
-
-	keyCondition.Reason = "CheckDone"
-
-	if !foundKey {
-		keyCondition.Message = "No Red Hat key found in pull-secret"
-		return keyCondition
-	}
-
-	keyCondition.Status = v1.ConditionTrue
-	keyCondition.Message = "Red Hat registry key present in pull-secret"
-
-	return keyCondition
-}
-
 func (r *PullSecretReconciler) emitSamplesControllerChange(ctx context.Context, state *status.Condition) (*status.Condition, error) {
 	updated := false
 	enable := false
-	if state.Type == aro.RedHatKeyPresent && state.IsTrue() {
+
+	if state != nil && state.Type == aro.RedHatKeyPresent && state.IsTrue() {
 		enable = true
 	}
 

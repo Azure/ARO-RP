@@ -533,59 +533,6 @@ func TestCheckRHRegistryKeys(t *testing.T) {
 	}
 }
 
-func TestKeyCondition(t *testing.T) {
-	test := []struct {
-		name          string
-		failed        bool
-		keys          bool
-		wantCondition status.Condition
-		wantErr       string
-	}{
-		{
-			name:   "cannot parse keys",
-			failed: true,
-			keys:   false,
-			wantCondition: status.Condition{
-				Type:    arov1alpha1.RedHatKeyPresent,
-				Status:  v1.ConditionFalse,
-				Message: "Cannot parse pull-secret",
-				Reason:  "CheckFailed",
-			},
-		},
-		{
-			name: "no key found",
-			keys: false,
-			wantCondition: status.Condition{
-				Type:    arov1alpha1.RedHatKeyPresent,
-				Status:  v1.ConditionFalse,
-				Message: "No Red Hat key found in pull-secret",
-				Reason:  "CheckDone",
-			},
-		},
-		{
-			name: "keys found",
-			keys: true,
-			wantCondition: status.Condition{
-				Type:    arov1alpha1.RedHatKeyPresent,
-				Status:  v1.ConditionTrue,
-				Message: "Red Hat registry key present in pull-secret",
-				Reason:  "CheckDone",
-			},
-		},
-	}
-
-	for _, tt := range test {
-		t.Run(tt.name, func(t *testing.T) {
-			r := &PullSecretReconciler{}
-
-			out := r.keyCondition(tt.failed, tt.keys)
-			if !reflect.DeepEqual(out, &tt.wantCondition) {
-				t.Fatalf("Condition does not match. want: %v, got: %v", tt.wantCondition, out)
-			}
-		})
-	}
-}
-
 func TestSamplesCondition(t *testing.T) {
 	test := []struct {
 		name          string
@@ -655,12 +602,12 @@ func TestSamplesCondition(t *testing.T) {
 func TestUpdateRedHatKeyCondition(t *testing.T) {
 	test := []struct {
 		name          string
-		secret        v1.Secret
+		secret        *v1.Secret
 		wantCondition status.Condition
 	}{
 		{
 			name: "RH pull secret is present",
-			secret: v1.Secret{
+			secret: &v1.Secret{
 				Data: map[string][]byte{
 					v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 				},
@@ -674,7 +621,7 @@ func TestUpdateRedHatKeyCondition(t *testing.T) {
 		},
 		{
 			name: "RH pull secret is missing",
-			secret: v1.Secret{
+			secret: &v1.Secret{
 				Data: map[string][]byte{
 					v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 				},
@@ -686,13 +633,23 @@ func TestUpdateRedHatKeyCondition(t *testing.T) {
 				Message: "No Red Hat key found in pull-secret",
 			},
 		},
+		{
+			name:   "Secret is nil",
+			secret: nil,
+			wantCondition: status.Condition{
+				Type:    arov1alpha1.RedHatKeyPresent,
+				Status:  v1.ConditionFalse,
+				Reason:  "CheckFailed",
+				Message: "Cannot parse pull-secret",
+			},
+		},
 	}
 
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &PullSecretReconciler{}
 
-			out, err := r.updateRedHatKeyCondition(&tt.secret)
+			out, err := r.updateRedHatKeyCondition(tt.secret)
 			if err != nil {
 				t.Fatalf("Unexpected error")
 			}
