@@ -634,7 +634,12 @@ func TestValidateVnetLocation(t *testing.T) {
 				t.Error(err)
 			}
 
+			oc := &api.OpenShiftCluster{
+				Location: "eastus",
+			}
+
 			dv := &dynamic{
+				oc:              oc,
 				vnetr:           &vnetr,
 				log:             logrus.NewEntry(logrus.StandardLogger()),
 				virtualNetworks: vnetClient,

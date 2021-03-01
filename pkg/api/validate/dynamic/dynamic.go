@@ -6,6 +6,7 @@ package dynamic
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"sort"
@@ -17,11 +18,14 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/apparentlymart/go-cidr/cidr"
+	"github.com/form3tech-oss/jwt-go"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/aad"
+	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -38,6 +42,8 @@ type Dynamic interface {
 	ValidateCIDRRanges(ctx context.Context) error
 	ValidateVnetLocation(ctx context.Context) error
 	ValidateProviders(ctx context.Context) error
+	ValidateClusterServicePrincipalProfile(ctx context.Context) error
+
 	// etc
 	// does Quota code go in here too?
 }
@@ -45,6 +51,9 @@ type Dynamic interface {
 type dynamic struct {
 	log             *logrus.Entry
 	oc              *api.OpenShiftCluster
+	subscriptionDoc *api.SubscriptionDocument
+	env             env.Core
+
 	vnetr           *azure.Resource
 	masterSubnetID  string
 	workerSubnetIDs []string
@@ -57,7 +66,7 @@ type dynamic struct {
 	virtualNetworks virtualNetworksGetClient
 }
 
-func NewValidator(log *logrus.Entry, env env.Core, oc *api.OpenShiftCluster, masterSubnetID string, workerSubnetIDs []string, subscriptionID string, authorizer refreshable.Authorizer, code string, typ string) (*dynamic, error) {
+func NewValidator(log *logrus.Entry, env env.Core, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, masterSubnetID string, workerSubnetIDs []string, subscriptionID string, authorizer refreshable.Authorizer, code string, typ string) (*dynamic, error) {
 	vnetID, _, err := subnet.Split(masterSubnetID)
 	if err != nil {
 		return nil, err
@@ -71,6 +80,8 @@ func NewValidator(log *logrus.Entry, env env.Core, oc *api.OpenShiftCluster, mas
 	return &dynamic{
 		log:             log,
 		oc:              oc,
+		env:             env,
+		subscriptionDoc: subscriptionDoc,
 		vnetr:           &vnetr,
 		masterSubnetID:  masterSubnetID,
 		workerSubnetIDs: workerSubnetIDs,
@@ -364,6 +375,33 @@ func (dv *dynamic) ValidateProviders(ctx context.Context) error {
 		if providerMap[provider].RegistrationState == nil ||
 			*providerMap[provider].RegistrationState != "Registered" {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", provider)
+		}
+	}
+
+	return nil
+}
+
+func (dv *dynamic) ValidateClusterServicePrincipalProfile(ctx context.Context) error {
+	// TODO: once aad.GetToken is mockable, write a unit test for this function
+
+	log.Print("ValidateClusterServicePrincipalProfile")
+
+	spp := dv.oc.Properties.ServicePrincipalProfile
+	token, err := aad.GetToken(ctx, dv.log, spp.ClientID, string(spp.ClientSecret), dv.subscriptionDoc.Subscription.Properties.TenantID, dv.env.Environment().ActiveDirectoryEndpoint, dv.env.Environment().GraphEndpoint)
+	if err != nil {
+		return err
+	}
+
+	p := &jwt.Parser{}
+	c := &azureclaim.AzureClaim{}
+	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
+	if err != nil {
+		return err
+	}
+
+	for _, role := range c.Roles {
+		if role == "Application.ReadWrite.OwnedBy" {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal must not have the Application.ReadWrite.OwnedBy permission.")
 		}
 	}
 

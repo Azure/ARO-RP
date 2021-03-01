@@ -55,7 +55,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	// FP validation
-	fpDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.oc, mSubnetID, wSubnetIDs, dv.subscriptionDoc.ID, dv.fpAuthorizer, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+	fpDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.oc, dv.subscriptionDoc, mSubnetID, wSubnetIDs, dv.subscriptionDoc.ID, dv.fpAuthorizer, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 	if err != nil {
 		return err
 	}
@@ -70,12 +70,6 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	// SP validation
-	err = validateServicePrincipalProfile(ctx, dv.log, dv.env, dv.oc, dv.subscriptionDoc)
-	if err != nil {
-		return err
-	}
-
 	spp := dv.oc.Properties.ServicePrincipalProfile
 	token, err := aad.GetToken(ctx, dv.log, spp.ClientID, string(spp.ClientSecret), dv.subscriptionDoc.Subscription.Properties.TenantID, dv.env.Environment().ActiveDirectoryEndpoint, dv.env.Environment().ResourceManagerEndpoint)
 	if err != nil {
@@ -84,7 +78,13 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 
 	spAuthorizer := refreshable.NewAuthorizer(token)
 
-	spDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.oc, mSubnetID, wSubnetIDs, dv.subscriptionDoc.ID, spAuthorizer, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
+	spDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.oc, dv.subscriptionDoc, mSubnetID, wSubnetIDs, dv.subscriptionDoc.ID, spAuthorizer, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
+	if err != nil {
+		return err
+	}
+
+	// SP validation
+	err = spDynamic.ValidateClusterServicePrincipalProfile(ctx)
 	if err != nil {
 		return err
 	}
