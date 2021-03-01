@@ -18,6 +18,7 @@ type BaseClient interface {
 	GetSecret(ctx context.Context, vaultBaseURL string, secretName string, secretVersion string) (result azkeyvault.SecretBundle, err error)
 	GetCertificates(ctx context.Context, vaultBaseURL string, maxresults *int32, includePending *bool) (result azkeyvault.CertificateListResultPage, err error)
 	SetSecret(ctx context.Context, vaultBaseURL string, secretName string, parameters azkeyvault.SecretSetParameters) (result azkeyvault.SecretBundle, err error)
+	SetCertificateIssuer(ctx context.Context, vaultBaseURL string, issuerName string, parameter azkeyvault.CertificateIssuerSetParameters) (result azkeyvault.IssuerBundle, err error)
 	BaseClientAddons
 }
 
