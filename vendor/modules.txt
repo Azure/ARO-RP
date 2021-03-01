@@ -985,7 +985,7 @@ github.com/tomarrell/wrapcheck/wrapcheck
 github.com/tommy-muehle/go-mnd
 github.com/tommy-muehle/go-mnd/checks
 github.com/tommy-muehle/go-mnd/config
-# github.com/ugorji/go/codec v1.2.4
+# github.com/ugorji/go/codec v1.2.5-0.20210226122216-b5e6aedbb7b6
 ## explicit
 github.com/ugorji/go/codec
 # github.com/ulikunitz/xz v0.5.10

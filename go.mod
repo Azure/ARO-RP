@@ -82,7 +82,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.7.1
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
-	github.com/ugorji/go/codec v1.2.4
+	github.com/ugorji/go/codec v1.2.5-0.20210226122216-b5e6aedbb7b6
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/vmware/govmomi v0.24.0 // indirect
 	go.opencensus.io v0.22.6 // indirect
