@@ -52,6 +52,8 @@ type deployer struct {
 	vmss                   compute.VirtualMachineScaleSetsClient
 	vmssvms                compute.VirtualMachineScaleSetVMsClient
 	zones                  dns.ZonesClient
+	clusterKeyvault        keyvault.Manager
+	dbtokenKeyvault        keyvault.Manager
 	portalKeyvault         keyvault.Manager
 	serviceKeyvault        keyvault.Manager
 
@@ -96,6 +98,8 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		vmss:                   compute.NewVirtualMachineScaleSetsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		vmssvms:                compute.NewVirtualMachineScaleSetVMsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		zones:                  dns.NewZonesClient(_env.Environment(), config.SubscriptionID, authorizer),
+		clusterKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.ClusterKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
+		dbtokenKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.DBTokenKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
 		portalKeyvault:         keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.PortalKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
 		serviceKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.ServiceKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
 
