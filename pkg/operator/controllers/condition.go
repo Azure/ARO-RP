@@ -25,7 +25,8 @@ func SetCondition(ctx context.Context, arocli aroclient.Interface, cond *status.
 
 		changed := cluster.Status.Conditions.SetCondition(*cond)
 
-		if setStaticStatus(cluster, role) {
+		if role == operator.RoleMaster && cluster.Status.OperatorVersion != version.GitCommit {
+			cluster.Status.OperatorVersion = version.GitCommit
 			changed = true
 		}
 
@@ -36,31 +37,4 @@ func SetCondition(ctx context.Context, arocli aroclient.Interface, cond *status.
 		_, err = arocli.AroV1alpha1().Clusters().UpdateStatus(ctx, cluster, metav1.UpdateOptions{})
 		return err
 	})
-}
-
-func setStaticStatus(cluster *arov1alpha1.Cluster, role string) (changed bool) {
-	conditions := make(status.Conditions, 0, len(cluster.Status.Conditions))
-
-	// cleanup any old conditions
-	current := map[status.ConditionType]bool{}
-	for _, ct := range arov1alpha1.AllConditionTypes() {
-		current[ct] = true
-	}
-
-	for _, cond := range cluster.Status.Conditions {
-		if _, ok := current[cond.Type]; ok {
-			conditions = append(conditions, cond)
-		} else {
-			changed = true
-		}
-	}
-
-	cluster.Status.Conditions = conditions
-
-	if role == operator.RoleMaster && cluster.Status.OperatorVersion != version.GitCommit {
-		cluster.Status.OperatorVersion = version.GitCommit
-		changed = true
-	}
-
-	return
 }
