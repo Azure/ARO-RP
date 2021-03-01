@@ -115,6 +115,9 @@ func (dv *dynamic) ValidateRouteTablesPermissions(ctx context.Context, subnetIDs
 	}
 
 	vnetID, _, err := subnet.Split(subnetIDs[0])
+	if err != nil {
+		return err
+	}
 
 	vnetr, err := azure.ParseResourceID(vnetID)
 	if err != nil {
