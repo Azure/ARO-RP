@@ -7,7 +7,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 
+	operatorv1 "github.com/openshift/api/operator/v1"
+	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
@@ -37,6 +40,7 @@ var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "opens
 type PullSecretReconciler struct {
 	kubernetescli kubernetes.Interface
 	arocli        aroclient.Interface
+	samplescli    samplesclient.Interface
 	log           *logrus.Entry
 }
 
@@ -49,11 +53,12 @@ const (
 	UpdatePullSecret
 )
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.Interface) *PullSecretReconciler {
+func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.Interface, samplescli samplesclient.Interface) *PullSecretReconciler {
 	return &PullSecretReconciler{
 		log:           log,
 		kubernetescli: kubernetescli,
 		arocli:        arocli,
+		samplescli:    samplescli,
 	}
 }
 
@@ -80,6 +85,7 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	}
 
 	var userSecret *v1.Secret
+	var redHatKeyCondition *status.Condition
 
 	// reconcile global pull secret
 	// detects if the operator pull secret is broken, if yes, it tries to fix it
@@ -105,7 +111,7 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	// reconcile update aro operator key condition
 	// change the condition of the operator based on the Red Hat key presence
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		redHatKeyCondition, err := r.updateRedHatKeyCondition(userSecret)
+		redHatKeyCondition, err = r.updateRedHatKeyCondition(userSecret)
 		if err != nil {
 			return err
 		}
@@ -116,6 +122,28 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		return nil
 	})
 
+	// reconcile the samples operator state
+	// if `registry.redhat.io` pull secret key is missing set samples operator to unmanaged
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		aroCluster, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if aroCluster.Spec.Features.ManageSamplesOperator {
+			updatedSamplesOperator, err := r.emitSamplesControllerChange(ctx, redHatKeyCondition)
+			if err != nil {
+				return nil
+			}
+			err = controllers.SetCondition(ctx, r.arocli, updatedSamplesOperator, operator.RoleMaster)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+
+		return nil
+	})
 	return reconcile.Result{}, nil
 }
 
@@ -332,4 +360,74 @@ func (r *PullSecretReconciler) keyCondition(failed bool, foundKey bool) *status.
 	keyCondition.Message = "Red Hat registry key present in pull-secret"
 
 	return keyCondition
+}
+
+func (r *PullSecretReconciler) emitSamplesControllerChange(ctx context.Context, state *status.Condition) (*status.Condition, error) {
+	updated := false
+	enable := false
+	if state.Type == aro.RedHatKeyPresent && state.IsTrue() {
+		enable = true
+	}
+
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		c, err := r.samplescli.SamplesV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if c.Spec.SamplesRegistry != "" {
+			// if the samples registry point elsewhere no action
+			return nil
+		}
+
+		oldManagementState := c.Spec.ManagementState
+
+		if enable {
+			c.Spec.ManagementState = operatorv1.Managed
+		} else {
+			c.Spec.ManagementState = operatorv1.Removed
+		}
+
+		if oldManagementState == c.Spec.ManagementState {
+			return nil
+		}
+
+		_, err = r.samplescli.SamplesV1().Configs().Update(ctx, c, metav1.UpdateOptions{})
+		if err == nil {
+			updated = true
+		}
+		return err
+	})
+
+	samplesCondition := r.samplesCondition(updated, enable)
+	return samplesCondition, err
+}
+
+// samplesCondition indicates whether aroOperator modified state of the cluster-samples-operator
+func (r *PullSecretReconciler) samplesCondition(updated bool, foundKey bool) *status.Condition {
+	samplesCondition := &status.Condition{
+		Type:   aro.SamplesOperatorEnabled,
+		Status: v1.ConditionFalse,
+		Reason: "RedHatKey",
+	}
+	sb := strings.Builder{}
+	sb.WriteString("cluster-samples-operator ")
+
+	if updated {
+		sb.WriteString("updated to ")
+	} else {
+		sb.WriteString("in ")
+	}
+
+	if foundKey {
+		sb.WriteString("managed ")
+		samplesCondition.Status = v1.ConditionTrue
+	} else {
+		sb.WriteString("removed ")
+	}
+
+	sb.WriteString("state")
+	samplesCondition.Message = sb.String()
+
+	return samplesCondition
 }

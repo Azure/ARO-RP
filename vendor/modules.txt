@@ -706,7 +706,7 @@ github.com/openshift/api/operator/v1alpha1
 github.com/openshift/api/project/v1
 github.com/openshift/api/samples/v1
 github.com/openshift/api/security/v1
-# github.com/openshift/client-go v0.0.0-20200827190008-3062137373b5 => github.com/openshift/client-go v0.0.0-20200929181438-91d71ef2122c
+# github.com/openshift/client-go v0.0.0-20200929181438-91d71ef2122c => github.com/openshift/client-go v0.0.0-20200929181438-91d71ef2122c
 ## explicit
 github.com/openshift/client-go/config/clientset/versioned
 github.com/openshift/client-go/config/clientset/versioned/fake
@@ -724,8 +724,10 @@ github.com/openshift/client-go/project/clientset/versioned
 github.com/openshift/client-go/project/clientset/versioned/scheme
 github.com/openshift/client-go/project/clientset/versioned/typed/project/v1
 github.com/openshift/client-go/samples/clientset/versioned
+github.com/openshift/client-go/samples/clientset/versioned/fake
 github.com/openshift/client-go/samples/clientset/versioned/scheme
 github.com/openshift/client-go/samples/clientset/versioned/typed/samples/v1
+github.com/openshift/client-go/samples/clientset/versioned/typed/samples/v1/fake
 github.com/openshift/client-go/security/clientset/versioned
 github.com/openshift/client-go/security/clientset/versioned/scheme
 github.com/openshift/client-go/security/clientset/versioned/typed/security/v1

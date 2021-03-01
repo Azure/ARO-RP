@@ -14,6 +14,7 @@ const (
 	InternetReachableFromWorker status.ConditionType = "InternetReachableFromWorker"
 	MachineValid                status.ConditionType = "MachineValid"
 	RedHatKeyPresent            status.ConditionType = "RedHatKeyPresent"
+	SamplesOperatorEnabled      status.ConditionType = "SamplesOperatorEnabled"
 )
 
 func AllConditionTypes() []status.ConditionType {
@@ -50,7 +51,8 @@ type ClusterSpec struct {
 
 // FeaturesSpec defines ARO operator feature gates
 type FeaturesSpec struct {
-	PersistentPrometheus bool `json:"persistentPrometheus,omitempty"`
+	PersistentPrometheus  bool `json:"persistentPrometheus,omitempty"`
+	ManageSamplesOperator bool `json:"manageSamplesOperator,omitempty"`
 }
 
 // ClusterStatus defines the observed state of Cluster

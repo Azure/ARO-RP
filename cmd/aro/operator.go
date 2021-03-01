@@ -11,6 +11,7 @@ import (
 	"net/http"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
@@ -89,6 +90,10 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
+	samplescli, err := samplesclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
 
 	if role == pkgoperator.RoleMaster {
 		if err = (genevalogging.NewReconciler(
@@ -99,7 +104,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (pullsecret.NewReconciler(
 			log.WithField("controller", controllers.PullSecretControllerName),
-			kubernetescli, arocli)).SetupWithManager(mgr); err != nil {
+			kubernetescli, arocli, samplescli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller PullSecret: %v", err)
 		}
 		if err = (alertwebhook.NewReconciler(

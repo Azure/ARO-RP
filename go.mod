@@ -64,7 +64,7 @@ require (
 	github.com/onsi/ginkgo v1.15.0
 	github.com/onsi/gomega v1.10.5
 	github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible
-	github.com/openshift/client-go v0.0.0-20200827190008-3062137373b5
+	github.com/openshift/client-go v0.0.0-20200929181438-91d71ef2122c
 	github.com/openshift/cloud-credential-operator v0.0.0-20210217002926-dce99f70f22c // indirect
 	github.com/openshift/cluster-api-provider-baremetal v0.0.0-20210126223742-4e254d08e0ad // indirect
 	github.com/openshift/console-operator v0.0.0-20210216151626-6e1cbc849915
