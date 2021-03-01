@@ -5,16 +5,13 @@ package validate
 
 import (
 	"context"
-	"net/http"
 
-	"github.com/form3tech-oss/jwt-go"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate/dynamic"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
-	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -120,31 +117,9 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	return nil
-}
-
-func validateServicePrincipalProfile(ctx context.Context, log *logrus.Entry, env env.Core, oc *api.OpenShiftCluster, sub *api.SubscriptionDocument) error {
-	// TODO: once aad.GetToken is mockable, write a unit test for this function
-
-	log.Print("validateServicePrincipalProfile")
-
-	spp := oc.Properties.ServicePrincipalProfile
-	token, err := aad.GetToken(ctx, log, spp.ClientID, string(spp.ClientSecret), sub.Subscription.Properties.TenantID, env.Environment().ActiveDirectoryEndpoint, env.Environment().GraphEndpoint)
+	err = spDynamic.ValidateQuota(ctx, dv.oc)
 	if err != nil {
 		return err
-	}
-
-	p := &jwt.Parser{}
-	c := &azureclaim.AzureClaim{}
-	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
-	if err != nil {
-		return err
-	}
-
-	for _, role := range c.Roles {
-		if role == "Application.ReadWrite.OwnedBy" {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal must not have the Application.ReadWrite.OwnedBy permission.")
-		}
 	}
 
 	return nil

@@ -11,10 +11,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/form3tech-oss/jwt-go"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 )
 
 type ServicePrincipalToken interface {

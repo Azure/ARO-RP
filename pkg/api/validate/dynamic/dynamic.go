@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/permissions"
@@ -42,8 +43,7 @@ type Dynamic interface {
 	ValidateProviders(ctx context.Context) error
 	ValidateClusterServicePrincipalProfile(ctx context.Context, clientID, clientSecret, tenantID string) error
 
-	// etc
-	// does Quota code go in here too?
+	ValidateQuota(ctx context.Context, oc *api.OpenShiftCluster) error
 }
 
 type dynamic struct {
@@ -54,6 +54,7 @@ type dynamic struct {
 	permissions     authorization.PermissionsClient
 	providers       features.ProvidersClient
 	virtualNetworks virtualNetworksGetClient
+	spUsage         compute.UsageClient
 }
 
 type AuthorizerType string
@@ -69,6 +70,7 @@ func NewValidator(log *logrus.Entry, azEnv *azure.Environment, subscriptionID st
 
 		permissions:     authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer),
 		providers:       features.NewProvidersClient(azEnv, subscriptionID, authorizer),
+		spUsage:         compute.NewUsageClient(azEnv, subscriptionID, authorizer),
 		virtualNetworks: newVirtualNetworksCache(network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer)),
 	}, nil
 }
