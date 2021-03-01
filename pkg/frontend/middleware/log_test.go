@@ -29,70 +29,72 @@ func TestAuditTargetResourceData(t *testing.T) {
 		{
 			url:          fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 			expectedKind: resourceType,
-			expectedName: resourceName,
+			expectedName: fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 		},
 		{
 			url:          fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/%s/%s", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType),
 			expectedKind: resourceType,
+			expectedName: fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/%s/%s", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType),
 		},
 		{
 			url:          fmt.Sprintf("/subscriptions/%s/providers/%s/%s", subscriptionID, resourceProviderNamespace, resourceType),
 			expectedKind: resourceType,
+			expectedName: fmt.Sprintf("/subscriptions/%s/providers/%s/%s", subscriptionID, resourceProviderNamespace, resourceType),
 		},
 		{
 			url:          fmt.Sprintf("/subscriptions/%s/providers/%s/locations/%s/operationsstatus/%s", subscriptionID, resourceProviderNamespace, location, operationID),
 			expectedKind: "",
-			expectedName: "",
+			expectedName: fmt.Sprintf("/subscriptions/%s/providers/%s/locations/%s/operationsstatus/%s", subscriptionID, resourceProviderNamespace, location, operationID),
 		},
 		{
 			url:          fmt.Sprintf("/subscriptions/%s/providers/%s/locations/%s/operationresults/%s", subscriptionID, resourceProviderNamespace, location, operationID),
 			expectedKind: "",
-			expectedName: "",
+			expectedName: fmt.Sprintf("/subscriptions/%s/providers/%s/locations/%s/operationresults/%s", subscriptionID, resourceProviderNamespace, location, operationID),
 		},
 		{
 			url:          fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/listcredentials", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 			expectedKind: resourceType,
-			expectedName: resourceName,
+			expectedName: fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/listcredentials", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 		},
 		{
 			url:          fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/kubernetesobjects", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 			expectedKind: resourceType,
-			expectedName: resourceName,
+			expectedName: fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/kubernetesobjects", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 		},
 		{
 			url:          fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/resources", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 			expectedKind: resourceType,
-			expectedName: resourceName,
+			expectedName: fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/resources", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 		},
 		{
 			url:          fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/serialconsole", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 			expectedKind: resourceType,
-			expectedName: resourceName,
+			expectedName: fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/serialconsole", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 		},
 		{
 			url:          fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/redeployvm", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 			expectedKind: resourceType,
-			expectedName: resourceName,
+			expectedName: fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/redeployvm", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 		},
 		{
 			url:          fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/upgrade", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 			expectedKind: resourceType,
-			expectedName: resourceName,
+			expectedName: fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/upgrade", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 		},
 		{
 			url:          fmt.Sprintf("/admin/providers/%s/%s", resourceProviderNamespace, resourceType),
 			expectedKind: resourceType,
-			expectedName: "",
+			expectedName: fmt.Sprintf("/admin/providers/%s/%s", resourceProviderNamespace, resourceType),
 		},
 		{
 			url:          fmt.Sprintf("/providers/%s/operations", resourceProviderNamespace),
 			expectedKind: "",
-			expectedName: "",
+			expectedName: fmt.Sprintf("/providers/%s/operations", resourceProviderNamespace),
 		},
 		{
 			url:          fmt.Sprintf("/subscriptions/%s", subscriptionID),
 			expectedKind: "",
-			expectedName: "",
+			expectedName: fmt.Sprintf("/subscriptions/%s", subscriptionID),
 		},
 	}
 
