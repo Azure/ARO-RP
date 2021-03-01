@@ -27,8 +27,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-// SlimDynamic validate in the operator context.
-type SlimDynamic interface {
+// Dynamic validate in the operator context.
+type Dynamic interface {
 	ValidateVnetPermissions(ctx context.Context) error
 	ValidateRouteTablesPermissions(ctx context.Context) error
 	// etc
