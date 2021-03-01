@@ -30,14 +30,8 @@ const (
 	EkuClientAuth Eku = "1.3.6.1.5.5.7.3.2"
 )
 
-type Issuer string
-
-const (
-	IssuerDigicert Issuer = "digicert01"
-)
-
 type Manager interface {
-	CreateSignedCertificate(context.Context, Issuer, string, string, Eku) error
+	CreateSignedCertificate(context.Context, string, string, string, Eku) error
 	EnsureCertificateDeleted(context.Context, string) error
 	GetBase64Secret(context.Context, string) ([]byte, error)
 	GetCertificateSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
@@ -63,7 +57,7 @@ func NewManager(kvAuthorizer autorest.Authorizer, keyvaultURI string) Manager {
 	}
 }
 
-func (m *manager) CreateSignedCertificate(ctx context.Context, issuer Issuer, certificateName, commonName string, eku Eku) error {
+func (m *manager) CreateSignedCertificate(ctx context.Context, issuer string, certificateName, commonName string, eku Eku) error {
 	shortCommonName := commonName
 	if len(shortCommonName) > 64 {
 		// RFC 5280 requires that the common name be <= 64 characters.  Also see

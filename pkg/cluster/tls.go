@@ -51,7 +51,7 @@ func (m *manager) createCertificates(ctx context.Context) error {
 
 	for _, c := range certs {
 		m.log.Printf("creating certificate %s", c.certificateName)
-		err = m.env.ClusterKeyvault().CreateSignedCertificate(ctx, keyvault.IssuerDigicert, c.certificateName, c.commonName, keyvault.EkuServerAuth)
+		err = m.env.ClusterKeyvault().CreateSignedCertificate(ctx, "OneCertV2-PublicCA", c.certificateName, c.commonName, keyvault.EkuServerAuth)
 		if err != nil {
 			return err
 		}

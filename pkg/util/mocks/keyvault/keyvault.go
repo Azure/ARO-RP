@@ -40,7 +40,7 @@ func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 }
 
 // CreateSignedCertificate mocks base method
-func (m *MockManager) CreateSignedCertificate(arg0 context.Context, arg1 keyvault.Issuer, arg2, arg3 string, arg4 keyvault.Eku) error {
+func (m *MockManager) CreateSignedCertificate(arg0 context.Context, arg1, arg2, arg3 string, arg4 keyvault.Eku) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateSignedCertificate", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(error)
