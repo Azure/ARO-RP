@@ -75,13 +75,13 @@ func (r *RouteFixReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error
 		return reconcile.Result{}, err
 	}
 
-	uns, err := dynamichelper.Prepare(resources)
+	err = dynamichelper.Prepare(resources)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
 	}
 
-	err = dh.Ensure(ctx, uns...)
+	err = dh.Ensure(ctx, resources...)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err

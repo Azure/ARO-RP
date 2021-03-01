@@ -104,6 +104,7 @@ require (
 	k8s.io/code-generator v0.19.4
 	k8s.io/klog/v2 v2.5.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20210216185858-15cd8face8d6 // indirect
+	k8s.io/kubernetes v1.13.0
 	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009 // indirect
 	sigs.k8s.io/cluster-api-provider-aws v0.6.4 // indirect
 	sigs.k8s.io/cluster-api-provider-azure v0.4.12
@@ -126,7 +127,7 @@ replace (
 	github.com/openshift/cluster-api-provider-libvirt => github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20200919090150-1ca52adab176
 	github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20210210114935-91f12f3f7dee
 	github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20210116095614-7fd78a283616
-	github.com/openshift/installer => github.com/jim-minter/installer v0.9.0-master.0.20210221211908-aaebddb9dcf1
+	github.com/openshift/installer => github.com/jim-minter/installer v0.9.0-master.0.20210226185106-b14c765ead1a
 	github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20210212025836-cb508cd8777d
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20210211205336-14a2b82d9f4c
 	github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.19.4
@@ -136,10 +137,26 @@ replace (
 	k8s.io/api => k8s.io/api v0.19.0-rc.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.0-rc.2
 	k8s.io/apimachinery => k8s.io/apimachinery v0.19.0-rc.2
+	k8s.io/apiserver => k8s.io/apiserver v0.19.0-rc.2
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.19.0-rc.2
 	k8s.io/client-go => k8s.io/client-go v0.19.0-rc.2
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.19.0-rc.2
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.19.0-rc.2
 	k8s.io/code-generator => k8s.io/code-generator v0.19.0-rc.2
+	k8s.io/component-base => k8s.io/component-base v0.19.0-rc.2
+	k8s.io/cri-api => k8s.io/cri-api v0.19.0-rc.2
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.19.0-rc.2
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.19.0-rc.2
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.19.0-rc.2
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.19.0-rc.2
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.19.0-rc.2
 	k8s.io/kubectl => k8s.io/kubectl v0.19.0-rc.2
+	k8s.io/kubelet => k8s.io/kubelet v0.19.0-rc.2
+	k8s.io/kubernetes => k8s.io/kubernetes v1.19.0-rc.2
+	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.19.0-rc.2
+	k8s.io/metrics => k8s.io/metrics v0.19.0-rc.2
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.19.0-rc.2
 	sigs.k8s.io/cluster-api-provider-aws => github.com/openshift/cluster-api-provider-aws v0.2.1-0.20201002185235-b1a6ba661ed8
 	sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20201119004617-db9109863f2f
 	sigs.k8s.io/cluster-api-provider-gcp => github.com/openshift/cluster-api-provider-gcp v0.0.1-0.20201002153134-a0fc9aa4ce81

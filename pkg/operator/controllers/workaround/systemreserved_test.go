@@ -12,15 +12,12 @@ import (
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	fakemcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/scheme"
 	ktesting "k8s.io/client-go/testing"
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
-	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 func TestSystemreservedEnsure(t *testing.T) {
@@ -56,10 +53,6 @@ func TestSystemreservedEnsure(t *testing.T) {
 			},
 		},
 	}
-	err := mcv1.AddToScheme(scheme.Scheme)
-	if err != nil {
-		t.Error(err)
-	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
@@ -90,44 +83,27 @@ func TestSystemreservedEnsure(t *testing.T) {
 }
 
 func TestKubeletConfig(t *testing.T) {
-	err := mcv1.AddToScheme(scheme.Scheme)
-	if err != nil {
-		t.Error(err)
-	}
 	sr := &systemreserved{}
 	got, err := sr.kubeletConfig()
 	if err != nil {
 		t.Errorf("systemreserved.kubeletConfig() error = %v", err)
 		return
 	}
-	want := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "machineconfiguration.openshift.io/v1",
-			"kind":       "KubeletConfig",
-			"metadata": map[string]interface{}{
-				"creationTimestamp": nil,
-				"labels": map[string]interface{}{
+	want := &mcv1.KubeletConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "aro-limits",
+			Labels: map[string]string{
+				"aro.openshift.io/limits": "",
+			},
+		},
+		Spec: mcv1.KubeletConfigSpec{
+			MachineConfigPoolSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
 					"aro.openshift.io/limits": "",
 				},
-				"name": kubeletConfigName,
 			},
-			"spec": map[string]interface{}{
-				"kubeletConfig": map[string]interface{}{
-					"systemReserved": map[string]interface{}{
-						"memory": "2000Mi",
-					},
-					"evictionHard": map[string]interface{}{
-						"memory.available": "500Mi",
-					},
-				},
-				"machineConfigPoolSelector": map[string]interface{}{
-					"matchLabels": map[string]interface{}{
-						"aro.openshift.io/limits": "",
-					},
-				},
-			},
-			"status": map[string]interface{}{
-				"conditions": nil,
+			KubeletConfig: &runtime.RawExtension{
+				Raw: []byte(`{"evictionHard":{"memory.available":"500Mi"},"systemReserved":{"memory":"2000Mi"}}`),
 			},
 		},
 	}

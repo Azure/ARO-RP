@@ -20,7 +20,6 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/test/util/cmp"
 )
 

@@ -34,4 +34,5 @@ spec:
       nodeSelector:
         node-role.kubernetes.io/worker: ""
       serviceAccountName: aro-operator-worker
+      serviceAccount: aro-operator-worker
       priorityClassName: system-cluster-critical

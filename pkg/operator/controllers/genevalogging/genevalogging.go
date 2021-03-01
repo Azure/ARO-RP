@@ -105,7 +105,8 @@ func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*apps
 							},
 						},
 					},
-					ServiceAccountName: "geneva",
+					ServiceAccountName:       "geneva",
+					DeprecatedServiceAccount: "geneva",
 					Tolerations: []v1.Toleration{
 						{
 							Effect:   v1.TaintEffectNoExecute,

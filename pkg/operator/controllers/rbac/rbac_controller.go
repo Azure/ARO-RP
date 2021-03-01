@@ -71,13 +71,13 @@ func (r *RBACReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 		return reconcile.Result{}, err
 	}
 
-	uns, err := dynamichelper.Prepare(resources)
+	err = dynamichelper.Prepare(resources)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
 	}
 
-	err = r.dh.Ensure(ctx, uns...)
+	err = r.dh.Ensure(ctx, resources...)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
