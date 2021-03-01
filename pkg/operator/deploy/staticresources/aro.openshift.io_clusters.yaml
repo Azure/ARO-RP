@@ -47,6 +47,8 @@ spec:
             features:
               description: FeaturesSpec defines ARO operator feature gates
               properties:
+                manageSamplesOperator:
+                  type: boolean
                 persistentPrometheus:
                   type: boolean
               type: object

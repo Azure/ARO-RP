@@ -8,6 +8,9 @@ import (
 	"reflect"
 	"testing"
 
+	operatorv1 "github.com/openshift/api/operator/v1"
+	samplesv1 "github.com/openshift/api/samples/v1"
+	samplesfake "github.com/openshift/client-go/samples/clientset/versioned/fake"
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -50,20 +53,31 @@ func TestPullSecretReconciler(t *testing.T) {
 	baseCluster := newFakeAro(
 		&arov1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-			Status:     arov1alpha1.ClusterStatus{},
+			Spec: arov1alpha1.ClusterSpec{
+				Features: arov1alpha1.FeaturesSpec{
+					ManageSamplesOperator: true,
+				},
+			},
+			Status: arov1alpha1.ClusterStatus{},
 		})
 
+	newFakeSamples := func(c *samplesv1.Config) *samplesfake.Clientset {
+		cli := samplesfake.NewSimpleClientset(c)
+		return cli
+	}
 	tests := []struct {
 		name           string
 		request        ctrl.Request
 		fakecli        *fake.Clientset
 		arocli         *arofake.Clientset
+		samplecli      *samplesfake.Clientset
 		wantConditions []status.Condition
 		wantErr        bool
 		want           string
 		wantCreated    bool
 		wantDeleted    bool
 		wantUpdated    bool
+		wantConfig     samplesv1.Config
 	}{
 		{
 			name: "deleted pull secret",
@@ -71,9 +85,25 @@ func TestPullSecretReconciler(t *testing.T) {
 				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
 			arocli: baseCluster,
+			samplecli: newFakeSamples(
+				&samplesv1.Config{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster",
+					},
+				},
+			),
+			wantConfig: samplesv1.Config{
+				Spec: samplesv1.ConfigSpec{
+					ManagementState: operatorv1.Removed,
+				},
+			},
 			wantConditions: []status.Condition{
 				{
 					Type:   arov1alpha1.RedHatKeyPresent,
+					Status: corev1.ConditionFalse,
+				},
+				{
+					Type:   arov1alpha1.SamplesOperatorEnabled,
 					Status: corev1.ConditionFalse,
 				},
 			},
@@ -85,9 +115,23 @@ func TestPullSecretReconciler(t *testing.T) {
 			fakecli: newFakecli(&corev1.Secret{}, &corev1.Secret{Data: map[string][]byte{
 				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			samplecli: newFakeSamples(&samplesv1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
+			wantConfig: samplesv1.Config{
+				Spec: samplesv1.ConfigSpec{
+					ManagementState: operatorv1.Removed,
+				},
+			},
 			wantConditions: []status.Condition{
 				{
 					Type:   arov1alpha1.RedHatKeyPresent,
+					Status: corev1.ConditionFalse,
+				},
+				{
+					Type:   arov1alpha1.SamplesOperatorEnabled,
 					Status: corev1.ConditionFalse,
 				},
 			},
@@ -106,9 +150,23 @@ func TestPullSecretReconciler(t *testing.T) {
 				Data: map[string][]byte{
 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 				}}),
+			samplecli: newFakeSamples(&samplesv1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
+			wantConfig: samplesv1.Config{
+				Spec: samplesv1.ConfigSpec{
+					ManagementState: operatorv1.Removed,
+				},
+			},
 			wantConditions: []status.Condition{
 				{
 					Type:   arov1alpha1.RedHatKeyPresent,
+					Status: corev1.ConditionFalse,
+				},
+				{
+					Type:   arov1alpha1.SamplesOperatorEnabled,
 					Status: corev1.ConditionFalse,
 				},
 			},
@@ -125,9 +183,23 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &corev1.Secret{Data: map[string][]byte{
 				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			samplecli: newFakeSamples(&samplesv1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
+			wantConfig: samplesv1.Config{
+				Spec: samplesv1.ConfigSpec{
+					ManagementState: operatorv1.Removed,
+				},
+			},
 			wantConditions: []status.Condition{
 				{
 					Type:   arov1alpha1.RedHatKeyPresent,
+					Status: corev1.ConditionFalse,
+				},
+				{
+					Type:   arov1alpha1.SamplesOperatorEnabled,
 					Status: corev1.ConditionFalse,
 				},
 			},
@@ -142,9 +214,23 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &corev1.Secret{Data: map[string][]byte{
 				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			samplecli: newFakeSamples(&samplesv1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
+			wantConfig: samplesv1.Config{
+				Spec: samplesv1.ConfigSpec{
+					ManagementState: operatorv1.Removed,
+				},
+			},
 			wantConditions: []status.Condition{
 				{
 					Type:   arov1alpha1.RedHatKeyPresent,
+					Status: corev1.ConditionFalse,
+				},
+				{
+					Type:   arov1alpha1.SamplesOperatorEnabled,
 					Status: corev1.ConditionFalse,
 				},
 			},
@@ -162,9 +248,23 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &corev1.Secret{Data: map[string][]byte{
 				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			samplecli: newFakeSamples(&samplesv1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
+			wantConfig: samplesv1.Config{
+				Spec: samplesv1.ConfigSpec{
+					ManagementState: operatorv1.Removed,
+				},
+			},
 			wantConditions: []status.Condition{
 				{
 					Type:   arov1alpha1.RedHatKeyPresent,
+					Status: corev1.ConditionFalse,
+				},
+				{
+					Type:   arov1alpha1.SamplesOperatorEnabled,
 					Status: corev1.ConditionFalse,
 				},
 			},
@@ -180,9 +280,23 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &corev1.Secret{Data: map[string][]byte{
 				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.redhat.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			samplecli: newFakeSamples(&samplesv1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
+			wantConfig: samplesv1.Config{
+				Spec: samplesv1.ConfigSpec{
+					ManagementState: operatorv1.Managed,
+				},
+			},
 			wantConditions: []status.Condition{
 				{
 					Type:   arov1alpha1.RedHatKeyPresent,
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   arov1alpha1.SamplesOperatorEnabled,
 					Status: corev1.ConditionTrue,
 				},
 			},
@@ -198,6 +312,12 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &corev1.Secret{Data: map[string][]byte{
 				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			samplecli: newFakeSamples(&samplesv1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
+			wantConfig: samplesv1.Config{},
 			wantConditions: []status.Condition{
 				{
 					Type:   arov1alpha1.RedHatKeyPresent,
@@ -220,6 +340,12 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &corev1.Secret{Data: map[string][]byte{
 				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			samplecli: newFakeSamples(&samplesv1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
+			wantConfig: samplesv1.Config{},
 			wantConditions: []status.Condition{
 				{
 					Type:   arov1alpha1.RedHatKeyPresent,
@@ -253,10 +379,24 @@ func TestPullSecretReconciler(t *testing.T) {
 				return false, nil, nil
 			})
 
+			tt.samplecli.PrependReactor("update", "configs", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+
+				resource := action.(ktesting.UpdateAction)
+				config := resource.GetObject().(*samplesv1.Config)
+
+				// do testing here
+				if config.Spec.ManagementState != tt.wantConfig.Spec.ManagementState {
+					t.Errorf("Changed config does not match expectations: %v", &tt.wantConfig.Spec.ManagementState)
+				}
+
+				return false, nil, nil
+			})
+
 			r := &PullSecretReconciler{
 				kubernetescli: tt.fakecli,
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 				arocli:        tt.arocli,
+				samplescli:    tt.samplecli,
 			}
 			if tt.request.Name == "" {
 				tt.request.NamespacedName = pullSecretName
@@ -424,6 +564,72 @@ func TestKeyCondition(t *testing.T) {
 			r := &PullSecretReconciler{}
 
 			out := r.keyCondition(tt.failed, tt.keys)
+			if !reflect.DeepEqual(out, &tt.wantCondition) {
+				t.Fatalf("Condition does not match. want: %v, got: %v", tt.wantCondition, out)
+			}
+		})
+	}
+}
+
+func TestSamplesCondition(t *testing.T) {
+	test := []struct {
+		name          string
+		updated       bool
+		keys          bool
+		wantCondition status.Condition
+		wantErr       string
+	}{
+		{
+			name:    "no keys found and nothing updated",
+			updated: false,
+			keys:    false,
+			wantCondition: status.Condition{
+				Type:    arov1alpha1.SamplesOperatorEnabled,
+				Status:  corev1.ConditionFalse,
+				Message: "cluster-samples-operator in removed state",
+				Reason:  "RedHatKey",
+			},
+		},
+		{
+			name:    "no key found and operator updated",
+			updated: true,
+			keys:    false,
+			wantCondition: status.Condition{
+				Type:    arov1alpha1.SamplesOperatorEnabled,
+				Status:  corev1.ConditionFalse,
+				Message: "cluster-samples-operator updated to removed state",
+				Reason:  "RedHatKey",
+			},
+		},
+		{
+			name:    "keys found and nothing updated",
+			updated: false,
+			keys:    true,
+			wantCondition: status.Condition{
+				Type:    arov1alpha1.SamplesOperatorEnabled,
+				Status:  corev1.ConditionTrue,
+				Message: "cluster-samples-operator in managed state",
+				Reason:  "RedHatKey",
+			},
+		},
+		{
+			name:    "keys found and operator updated",
+			updated: true,
+			keys:    true,
+			wantCondition: status.Condition{
+				Type:    arov1alpha1.SamplesOperatorEnabled,
+				Status:  corev1.ConditionTrue,
+				Message: "cluster-samples-operator updated to managed state",
+				Reason:  "RedHatKey",
+			},
+		},
+	}
+
+	for _, tt := range test {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &PullSecretReconciler{}
+
+			out := r.buildSamplesCondition(tt.updated, tt.keys)
 			if !reflect.DeepEqual(out, &tt.wantCondition) {
 				t.Fatalf("Condition does not match. want: %v, got: %v", tt.wantCondition, out)
 			}
