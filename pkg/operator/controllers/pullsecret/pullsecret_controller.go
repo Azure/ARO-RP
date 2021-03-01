@@ -74,29 +74,38 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	mysec, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
+	operatorSecret, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ps, err := r.pullsecret(ctx)
+	var userSecret *v1.Secret
+
+	// reconcile global pull secret
+	// detects if the operator pull secret is broken, if yes, it tries to fix it
+	// by overwriting it with operator version
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		userSecret, err = r.pullsecret(ctx)
 		if err != nil {
 			return err
 		}
-
+		var action PullSecretAction
 		// fix pull secret if its broken to have at least the ARO pull secret
-		secret, action, err := r.updateGlobalPullSecret(mysec, ps)
+		userSecret, action, err = r.updateGlobalPullSecret(operatorSecret, userSecret)
 		if err != nil {
 			return err
 		}
-		err = r.emitGlobalPullSecretChange(ctx, secret, action)
+		err = r.emitGlobalPullSecretChange(ctx, userSecret, action)
 		if err != nil {
 			return err
 		}
+		return nil
+	})
 
-		// change the condition of the operator based on the Red Hat key presence
-		redHatKeyCondition, err := r.updateRedHatKeyCondition(secret)
+	// reconcile update aro operator key condition
+	// change the condition of the operator based on the Red Hat key presence
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		redHatKeyCondition, err := r.updateRedHatKeyCondition(userSecret)
 		if err != nil {
 			return err
 		}
@@ -104,9 +113,10 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		if err != nil {
 			return err
 		}
-
 		return nil
 	})
+
+	return reconcile.Result{}, nil
 }
 
 func (r *PullSecretReconciler) pullsecret(ctx context.Context) (*v1.Secret, error) {
