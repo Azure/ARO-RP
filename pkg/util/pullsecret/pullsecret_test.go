@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"testing"
 
+	v1 "k8s.io/api/core/v1"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
@@ -313,6 +315,257 @@ func TestMerge(t *testing.T) {
 			if !reflect.DeepEqual(got, tt.wantPS) {
 				t.Errorf("wrong ps: %s", ps)
 			}
+		})
+	}
+}
+
+func TestFixPullSecretData(t *testing.T) {
+
+	for _, tt := range []struct {
+		name          string
+		operatorData  SerializedAuthMap
+		userData      SerializedAuthMap
+		wantFixedData SerializedAuthMap
+		wantFixed     bool
+	}{
+		{
+			name: "both the same",
+			operatorData: SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"arosvc.azurecr.io": {
+						Auth: "x",
+					},
+					"registry.redhat.io": {
+						Auth: "y",
+					},
+				},
+			},
+			userData: SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"arosvc.azurecr.io": {
+						Auth: "x",
+					},
+					"registry.redhat.io": {
+						Auth: "y",
+					},
+				},
+			},
+			wantFixedData: SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"arosvc.azurecr.io": {
+						Auth: "x",
+					},
+					"registry.redhat.io": {
+						Auth: "y",
+					},
+				},
+			},
+			wantFixed: false,
+		},
+		{
+			name:         "operator empty",
+			operatorData: SerializedAuthMap{},
+			userData: SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"arosvc.azurecr.io": {
+						Auth: "x",
+					},
+					"registry.redhat.io": {
+						Auth: "y",
+					},
+				},
+			},
+			wantFixedData: SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"arosvc.azurecr.io": {
+						Auth: "x",
+					},
+					"registry.redhat.io": {
+						Auth: "y",
+					},
+				},
+			},
+			wantFixed: false,
+		},
+		{
+			name: "user empty",
+			operatorData: SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"arosvc.azurecr.io": {
+						Auth: "x",
+					},
+					"registry.redhat.io": {
+						Auth: "y",
+					},
+				},
+			},
+			userData: SerializedAuthMap{},
+			wantFixedData: SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"arosvc.azurecr.io": {
+						Auth: "x",
+					},
+					"registry.redhat.io": {
+						Auth: "y",
+					},
+				},
+			},
+			wantFixed: true,
+		},
+		{
+			name: "user add new auth",
+			operatorData: SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"arosvc.azurecr.io": {
+						Auth: "x",
+					},
+					"registry.redhat.io": {
+						Auth: "y",
+					},
+				},
+			},
+			userData: SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"arosvc.azurecr.io": {
+						Auth: "x",
+					},
+					"registry.redhat.io": {
+						Auth: "y",
+					},
+					"quay.io": {
+						Auth: "z",
+					},
+				},
+			},
+			wantFixedData: SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"arosvc.azurecr.io": {
+						Auth: "x",
+					},
+					"registry.redhat.io": {
+						Auth: "y",
+					},
+					"quay.io": {
+						Auth: "z",
+					},
+				},
+			},
+			wantFixed: false,
+		},
+		{
+			name: "user removed aro auth",
+			operatorData: SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"arosvc.azurecr.io": {
+						Auth: "x",
+					},
+				},
+			},
+			userData: SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"registry.redhat.io": {
+						Auth: "y",
+					},
+				},
+			},
+			wantFixedData: SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"arosvc.azurecr.io": {
+						Auth: "x",
+					},
+					"registry.redhat.io": {
+						Auth: "y",
+					},
+				},
+			},
+			wantFixed: true,
+		},
+		{
+			name: "user changed key",
+			operatorData: SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"arosvc.azurecr.io": {
+						Auth: "x",
+					},
+				},
+			},
+			userData: SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"registry.redhat.io": {
+						Auth: "y",
+					},
+					"arosvc.azurecr.io": {
+						Auth: "z",
+					},
+				},
+			},
+			wantFixedData: SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"arosvc.azurecr.io": {
+						Auth: "x",
+					},
+					"registry.redhat.io": {
+						Auth: "y",
+					},
+				},
+			},
+			wantFixed: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fixedData, fixed := FixPullSecretData(&tt.operatorData, &tt.userData)
+
+			if fixed != tt.wantFixed {
+				t.Errorf("Want changed: %t, got: %t", tt.wantFixed, fixed)
+			}
+
+			if !reflect.DeepEqual(*fixedData, tt.wantFixedData) {
+				t.Errorf("Result fixedData is not expected \ngot: %v\nwant:%v", fixedData, tt.wantFixedData)
+			}
+		})
+	}
+}
+
+func TestUnmarshalSecret(t *testing.T) {
+	test := []struct {
+		name      string
+		rawData   string
+		wantData  *SerializedAuthMap
+		wantError string
+	}{
+		{
+			name:    "can unmarshal valid data",
+			rawData: `{"auths":{"arosvc.azurecr.io":{"auth":"x"},"registry.redhat.io":{"auth":"y"}}}`,
+			wantData: &SerializedAuthMap{
+				Auths: map[string]SerializedAuth{
+					"arosvc.azurecr.io": {
+						Auth: "x",
+					},
+					"registry.redhat.io": {
+						Auth: "y",
+					},
+				},
+			},
+			wantError: "",
+		},
+		{
+			name:      "error when invalid data is present",
+			rawData:   `{"auths:{"arosvc.azurecr.io":{"auth":"x","registry.redhat.io"{"auth":"y"}}}`,
+			wantData:  nil,
+			wantError: "invalid character 'a' after object key",
+		},
+	}
+
+	for _, tt := range test {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := UnmarshalSecretData(&v1.Secret{Data: map[string][]byte{v1.DockerConfigJsonKey: []byte(tt.rawData)}})
+			if err != nil && err.Error() != tt.wantError {
+				t.Errorf("Unexpected error: %s", err.Error())
+			}
+			if !reflect.DeepEqual(result, tt.wantData) {
+				t.Errorf("Unexpected unmarshalled data: \ngot: %v\nwant: %v", result, tt.wantData)
+			}
+
 		})
 	}
 }
