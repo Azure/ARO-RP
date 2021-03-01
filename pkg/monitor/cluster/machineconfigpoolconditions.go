@@ -21,32 +21,40 @@ var machineConfigPoolConditionsExpected = map[v1.MachineConfigPoolConditionType]
 }
 
 func (mon *Monitor) emitMachineConfigPoolConditions(ctx context.Context) error {
-	mcps, err := mon.mcocli.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
+	var cont string
+	for {
+		mcps, err := mon.mcocli.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
+		if err != nil {
+			return err
+		}
 
-	for _, mcp := range mcps.Items {
-		for _, c := range mcp.Status.Conditions {
-			if c.Status == machineConfigPoolConditionsExpected[c.Type] {
-				continue
+		for _, mcp := range mcps.Items {
+			for _, c := range mcp.Status.Conditions {
+				if c.Status == machineConfigPoolConditionsExpected[c.Type] {
+					continue
+				}
+
+				mon.emitGauge("machineconfigpool.conditions", 1, map[string]string{
+					"name":   mcp.Name,
+					"status": string(c.Status),
+					"type":   string(c.Type),
+				})
+
+				if mon.hourlyRun {
+					mon.log.WithFields(logrus.Fields{
+						"metric":  "machineconfigpool.conditions",
+						"name":    mcp.Name,
+						"status":  c.Status,
+						"type":    c.Type,
+						"message": c.Message,
+					}).Print()
+				}
 			}
+		}
 
-			mon.emitGauge("machineconfigpool.conditions", 1, map[string]string{
-				"name":   mcp.Name,
-				"status": string(c.Status),
-				"type":   string(c.Type),
-			})
-
-			if mon.hourlyRun {
-				mon.log.WithFields(logrus.Fields{
-					"metric":  "machineconfigpool.conditions",
-					"name":    mcp.Name,
-					"status":  c.Status,
-					"type":    c.Type,
-					"message": c.Message,
-				}).Print()
-			}
+		cont = mcps.Continue
+		if cont == "" {
+			break
 		}
 	}
 

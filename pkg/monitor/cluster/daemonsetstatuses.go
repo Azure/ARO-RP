@@ -13,27 +13,34 @@ import (
 )
 
 func (mon *Monitor) emitDaemonsetStatuses(ctx context.Context) error {
-	dss, err := mon.cli.AppsV1().DaemonSets("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
-	for _, ds := range dss.Items {
-		if !namespace.IsOpenShift(ds.Namespace) {
-			continue
+	var cont string
+	for {
+		dss, err := mon.cli.AppsV1().DaemonSets("").List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
+		if err != nil {
+			return err
 		}
 
-		if ds.Status.DesiredNumberScheduled == ds.Status.NumberAvailable {
-			continue
+		for _, ds := range dss.Items {
+			if !namespace.IsOpenShift(ds.Namespace) {
+				continue
+			}
+
+			if ds.Status.DesiredNumberScheduled == ds.Status.NumberAvailable {
+				continue
+			}
+
+			mon.emitGauge("daemonset.statuses", 1, map[string]string{
+				"desiredNumberScheduled": strconv.Itoa(int(ds.Status.DesiredNumberScheduled)),
+				"name":                   ds.Name,
+				"namespace":              ds.Namespace,
+				"numberAvailable":        strconv.Itoa(int(ds.Status.NumberAvailable)),
+			})
 		}
 
-		mon.emitGauge("daemonset.statuses", 1, map[string]string{
-			"desiredNumberScheduled": strconv.Itoa(int(ds.Status.DesiredNumberScheduled)),
-			"name":                   ds.Name,
-			"namespace":              ds.Namespace,
-			"numberAvailable":        strconv.Itoa(int(ds.Status.NumberAvailable)),
-		})
+		cont = dss.Continue
+		if cont == "" {
+			break
+		}
 	}
-
 	return nil
 }

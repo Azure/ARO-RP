@@ -13,26 +13,34 @@ import (
 )
 
 func (mon *Monitor) emitReplicasetStatuses(ctx context.Context) error {
-	rss, err := mon.cli.AppsV1().ReplicaSets("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
-	for _, rs := range rss.Items {
-		if !namespace.IsOpenShift(rs.Namespace) {
-			continue
+	var cont string
+	for {
+		rss, err := mon.cli.AppsV1().ReplicaSets("").List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
+		if err != nil {
+			return err
 		}
 
-		if rs.Status.Replicas == rs.Status.AvailableReplicas {
-			continue
+		for _, rs := range rss.Items {
+			if !namespace.IsOpenShift(rs.Namespace) {
+				continue
+			}
+
+			if rs.Status.Replicas == rs.Status.AvailableReplicas {
+				continue
+			}
+
+			mon.emitGauge("replicaset.statuses", 1, map[string]string{
+				"availableReplicas": strconv.Itoa(int(rs.Status.AvailableReplicas)),
+				"name":              rs.Name,
+				"namespace":         rs.Namespace,
+				"replicas":          strconv.Itoa(int(rs.Status.Replicas)),
+			})
 		}
 
-		mon.emitGauge("replicaset.statuses", 1, map[string]string{
-			"availableReplicas": strconv.Itoa(int(rs.Status.AvailableReplicas)),
-			"name":              rs.Name,
-			"namespace":         rs.Namespace,
-			"replicas":          strconv.Itoa(int(rs.Status.Replicas)),
-		})
+		cont = rss.Continue
+		if cont == "" {
+			break
+		}
 	}
 
 	return nil
