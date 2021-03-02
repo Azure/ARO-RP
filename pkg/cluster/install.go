@@ -95,9 +95,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(func(ctx context.Context) error {
 				return m.ensureInfraID(ctx, installConfig)
 			}),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
-				return m.ensureResourceGroup(ctx, installConfig)
-			})),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
 				return m.deployStorageTemplate(ctx, installConfig)
 			})),

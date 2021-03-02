@@ -63,16 +63,17 @@ func (m *manager) ensureInfraID(ctx context.Context, installConfig *installconfi
 	return err
 }
 
-func (m *manager) ensureResourceGroup(ctx context.Context, installConfig *installconfig.InstallConfig) error {
+func (m *manager) ensureResourceGroup(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	group := mgmtfeatures.ResourceGroup{
-		Location:  &installConfig.Config.Azure.Region,
+		Location:  &m.doc.OpenShiftCluster.Location,
 		ManagedBy: to.StringPtr(m.doc.OpenShiftCluster.ID),
 	}
 	if m.env.DeploymentMode() == deployment.Development {
 		group.ManagedBy = nil
 	}
+
 	_, err := m.resourceGroups.CreateOrUpdate(ctx, resourceGroup, group)
 	if requestErr, ok := err.(*azure.RequestError); ok &&
 		requestErr.ServiceError != nil && requestErr.ServiceError.Code == "RequestDisallowedByPolicy" {
