@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
@@ -79,6 +80,7 @@ func TestSecurity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	f.(*frontend).startTime = time.Time{} // enable /healthz to return 200
 
 	go f.Run(ctx, nil, nil)
 
