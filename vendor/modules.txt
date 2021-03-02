@@ -227,10 +227,17 @@ github.com/containers/storage/pkg/unshare
 github.com/coreos/go-oidc
 # github.com/coreos/go-semver v0.3.0
 github.com/coreos/go-semver/semver
+# github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
+github.com/coreos/go-systemd/unit
 # github.com/coreos/go-systemd/v22 v22.1.0
 ## explicit
 github.com/coreos/go-systemd/v22/journal
 github.com/coreos/go-systemd/v22/unit
+# github.com/coreos/ignition v0.35.0
+github.com/coreos/ignition/config/shared/errors
+github.com/coreos/ignition/config/shared/validations
+github.com/coreos/ignition/config/v2_2/types
+github.com/coreos/ignition/config/validate/report
 # github.com/coreos/ignition/v2 v2.9.0
 ## explicit
 github.com/coreos/ignition/v2/config/shared/errors
@@ -752,7 +759,7 @@ github.com/openshift/cluster-api-provider-ovirt/pkg/apis/ovirtprovider/v1beta1
 # github.com/openshift/console-operator v0.0.0-20210216151626-6e1cbc849915 => github.com/openshift/console-operator v0.0.0-20210116095614-7fd78a283616
 ## explicit
 github.com/openshift/console-operator/pkg/api
-# github.com/openshift/installer v0.16.1 => github.com/jim-minter/installer v0.9.0-master.0.20210226185106-b14c765ead1a
+# github.com/openshift/installer v0.16.1 => github.com/jim-minter/installer v0.9.0-master.0.20210303004247-74b5bf8dae14
 ## explicit
 github.com/openshift/installer/data
 github.com/openshift/installer/pkg/aro/dnsmasq
@@ -1486,7 +1493,6 @@ k8s.io/client-go/discovery
 k8s.io/client-go/discovery/cached/disk
 k8s.io/client-go/discovery/fake
 k8s.io/client-go/dynamic
-k8s.io/client-go/dynamic/fake
 k8s.io/client-go/kubernetes
 k8s.io/client-go/kubernetes/fake
 k8s.io/client-go/kubernetes/scheme
@@ -1742,7 +1748,7 @@ sigs.k8s.io/yaml
 # github.com/openshift/cluster-api-provider-libvirt => github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20200919090150-1ca52adab176
 # github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20210210114935-91f12f3f7dee
 # github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20210116095614-7fd78a283616
-# github.com/openshift/installer => github.com/jim-minter/installer v0.9.0-master.0.20210226185106-b14c765ead1a
+# github.com/openshift/installer => github.com/jim-minter/installer v0.9.0-master.0.20210303004247-74b5bf8dae14
 # github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20210212025836-cb508cd8777d
 # github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20210211205336-14a2b82d9f4c
 # github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.19.4

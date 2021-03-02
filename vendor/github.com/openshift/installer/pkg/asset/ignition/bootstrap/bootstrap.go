@@ -200,7 +200,7 @@ func (a *Bootstrap) Generate(dependencies asset.Parents) error {
 		}},
 	)
 
-	dnsmasqIgnConfig, err := dnsmasq.IgnitionConfig(installConfig.Config.ClusterDomain(), aroDNSConfig.APIIntIP, aroDNSConfig.IngressIP)
+	dnsmasqIgnConfig, err := dnsmasq.Ignition3Config(installConfig.Config.ClusterDomain(), aroDNSConfig.APIIntIP, aroDNSConfig.IngressIP)
 	if err != nil {
 		return err
 	}
