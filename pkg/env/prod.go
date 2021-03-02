@@ -249,7 +249,7 @@ func (p *prod) Zones(vmSize string) ([]string, error) {
 	return zones, nil
 }
 
-func (d *prod) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer refreshable.Authorizer, resourceGroup string) error {
+func (d *prod) EnsureARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer refreshable.Authorizer, resourceGroup string) error {
 	// ARM ResourceGroup role assignments are not required in production.
 	return nil
 }

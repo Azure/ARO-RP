@@ -95,7 +95,7 @@ func (m *manager) ensureResourceGroup(ctx context.Context, installConfig *instal
 		return err
 	}
 
-	return m.env.CreateARMResourceGroupRoleAssignment(ctx, m.fpAuthorizer, resourceGroup)
+	return m.env.EnsureARMResourceGroupRoleAssignment(ctx, m.fpAuthorizer, resourceGroup)
 }
 
 func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig) error {

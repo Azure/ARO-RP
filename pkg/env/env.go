@@ -42,7 +42,7 @@ type Interface interface {
 	InitializeAuthorizers() error
 	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
 	AdminClientAuthorizer() clientauthorizer.ClientAuthorizer
-	CreateARMResourceGroupRoleAssignment(context.Context, refreshable.Authorizer, string) error
+	EnsureARMResourceGroupRoleAssignment(context.Context, refreshable.Authorizer, string) error
 	ClusterGenevaLoggingConfigVersion() string
 	ClusterGenevaLoggingEnvironment() string
 	ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)

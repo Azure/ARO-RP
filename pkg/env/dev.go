@@ -126,8 +126,8 @@ func (d *dev) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, e
 	return refreshable.NewAuthorizer(sp), nil
 }
 
-func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer refreshable.Authorizer, resourceGroup string) error {
-	d.log.Print("development mode: applying resource group role assignment")
+func (d *dev) EnsureARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer refreshable.Authorizer, resourceGroup string) error {
+	d.log.Print("development mode: ensuring resource group role assignment")
 
 	res, err := d.applications.GetServicePrincipalsIDByAppID(ctx, os.Getenv("AZURE_FP_CLIENT_ID"))
 	if err != nil {
