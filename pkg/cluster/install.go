@@ -32,6 +32,7 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 	steps := []steps.Step{
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.fixupClusterSPObjectID),
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)), // re-create RP RBAC if needed after tenant migration
 		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute),
