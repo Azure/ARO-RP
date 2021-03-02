@@ -35,38 +35,37 @@ func (m *manager) createDNS(ctx context.Context) error {
 	return m.dns.Create(ctx, m.doc.OpenShiftCluster)
 }
 
-func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, image *releaseimage.Image) error {
-	if m.doc.OpenShiftCluster.Properties.InfraID == "" {
-		g := graph.Graph{}
-		g.Set(&installconfig.InstallConfig{
-			Config: &types.InstallConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: strings.ToLower(m.doc.OpenShiftCluster.Name),
-				},
-			},
-		})
-
-		err := g.Resolve(&installconfig.ClusterID{})
-		if err != nil {
-			return err
-		}
-
-		clusterID := g.Get(&installconfig.ClusterID{}).(*installconfig.ClusterID)
-
-		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-			doc.OpenShiftCluster.Properties.InfraID = clusterID.InfraID
-			return nil
-		})
-		if err != nil {
-			return err
-		}
+func (m *manager) ensureInfraID(ctx context.Context, installConfig *installconfig.InstallConfig) error {
+	if m.doc.OpenShiftCluster.Properties.InfraID != "" {
+		return nil
 	}
 
-	infraID := m.doc.OpenShiftCluster.Properties.InfraID
+	g := graph.Graph{}
+	g.Set(&installconfig.InstallConfig{
+		Config: &types.InstallConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: strings.ToLower(m.doc.OpenShiftCluster.Name),
+			},
+		},
+	})
 
+	err := g.Resolve(&installconfig.ClusterID{})
+	if err != nil {
+		return err
+	}
+
+	clusterID := g.Get(&installconfig.ClusterID{}).(*installconfig.ClusterID)
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.InfraID = clusterID.InfraID
+		return nil
+	})
+	return err
+}
+
+func (m *manager) ensureResourceGroup(ctx context.Context, installConfig *installconfig.InstallConfig) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	m.log.Print("creating resource group")
 	group := mgmtfeatures.ResourceGroup{
 		Location:  &installConfig.Config.Azure.Region,
 		ManagedBy: to.StringPtr(m.doc.OpenShiftCluster.ID),
@@ -96,10 +95,12 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		return err
 	}
 
-	err = m.env.CreateARMResourceGroupRoleAssignment(ctx, m.fpAuthorizer, resourceGroup)
-	if err != nil {
-		return err
-	}
+	return m.env.CreateARMResourceGroupRoleAssignment(ctx, m.fpAuthorizer, resourceGroup)
+}
+
+func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig) error {
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
 	resources := []*arm.Resource{
 		m.clusterStorageAccount(installConfig.Config.Azure.Region),

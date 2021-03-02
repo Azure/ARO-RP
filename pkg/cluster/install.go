@@ -92,8 +92,14 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.createDNS),
 			steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
 			steps.Action(m.clusterSPObjectID),
+			steps.Action(func(ctx context.Context) error {
+				return m.ensureInfraID(ctx, installConfig)
+			}),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
-				return m.deployStorageTemplate(ctx, installConfig, image)
+				return m.ensureResourceGroup(ctx, installConfig)
+			})),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
+				return m.deployStorageTemplate(ctx, installConfig)
 			})),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.updateAPIIPEarly)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.createOrUpdateRouterIPEarly)),
