@@ -14,16 +14,12 @@ func (mon *Monitor) emitAroOperatorHeartbeat(ctx context.Context) error {
 		"aro-operator-master": false,
 		"aro-operator-worker": false}
 
-	aroDeployments, err := mon.listDeployments(ctx)
+	aroDeployments, err := mon.listARODeployments(ctx)
 	if err != nil {
 		return err
 	}
 
 	for _, d := range aroDeployments.Items {
-		if d.Namespace != "openshift-azure-operator" {
-			continue
-		}
-
 		_, present := aroOperatorDeploymentsReady[d.Name]
 		if present {
 			aroOperatorDeploymentsReady[d.Name] = ready.DeploymentIsReady(&d)

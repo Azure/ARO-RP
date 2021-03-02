@@ -19,35 +19,41 @@ var jobConditionsExpected = map[batchv1.JobConditionType]v1.ConditionStatus{
 }
 
 func (mon *Monitor) emitJobConditions(ctx context.Context) error {
-
-	jobs, err := mon.cli.BatchV1().Jobs("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
-	for _, job := range jobs.Items {
-		if !namespace.IsOpenShift(job.Namespace) {
-			continue
+	var cont string
+	for {
+		jobs, err := mon.cli.BatchV1().Jobs("").List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
+		if err != nil {
+			return err
 		}
 
-		if job.Status.Active > 0 {
-			// some pods are still active = job is still running, ignore
-			continue
-		}
-
-		for _, cond := range job.Status.Conditions {
-			if cond.Status == jobConditionsExpected[cond.Type] {
+		for _, job := range jobs.Items {
+			if !namespace.IsOpenShift(job.Namespace) {
 				continue
 			}
 
-			mon.emitGauge("job.conditions", 1, map[string]string{
-				"name":      job.Name,
-				"namespace": job.Namespace,
-				"type":      string(cond.Type),
-				"status":    string(cond.Status),
-			})
+			if job.Status.Active > 0 {
+				// some pods are still active = job is still running, ignore
+				continue
+			}
+
+			for _, cond := range job.Status.Conditions {
+				if cond.Status == jobConditionsExpected[cond.Type] {
+					continue
+				}
+
+				mon.emitGauge("job.conditions", 1, map[string]string{
+					"name":      job.Name,
+					"namespace": job.Namespace,
+					"type":      string(cond.Type),
+					"status":    string(cond.Status),
+				})
+			}
 		}
 
+		cont = jobs.Continue
+		if cont == "" {
+			break
+		}
 	}
 
 	return nil

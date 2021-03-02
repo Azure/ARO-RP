@@ -13,26 +13,34 @@ import (
 )
 
 func (mon *Monitor) emitStatefulsetStatuses(ctx context.Context) error {
-	sss, err := mon.cli.AppsV1().StatefulSets("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
-	for _, ss := range sss.Items {
-		if !namespace.IsOpenShift(ss.Namespace) {
-			continue
+	var cont string
+	for {
+		sss, err := mon.cli.AppsV1().StatefulSets("").List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
+		if err != nil {
+			return err
 		}
 
-		if ss.Status.Replicas == ss.Status.ReadyReplicas {
-			continue
+		for _, ss := range sss.Items {
+			if !namespace.IsOpenShift(ss.Namespace) {
+				continue
+			}
+
+			if ss.Status.Replicas == ss.Status.ReadyReplicas {
+				continue
+			}
+
+			mon.emitGauge("statefulset.statuses", 1, map[string]string{
+				"name":          ss.Name,
+				"namespace":     ss.Namespace,
+				"replicas":      strconv.Itoa(int(ss.Status.Replicas)),
+				"readyReplicas": strconv.Itoa(int(ss.Status.ReadyReplicas)),
+			})
 		}
 
-		mon.emitGauge("statefulset.statuses", 1, map[string]string{
-			"name":          ss.Name,
-			"namespace":     ss.Namespace,
-			"replicas":      strconv.Itoa(int(ss.Status.Replicas)),
-			"readyReplicas": strconv.Itoa(int(ss.Status.ReadyReplicas)),
-		})
+		cont = sss.Continue
+		if cont == "" {
+			break
+		}
 	}
 
 	return nil

@@ -7,30 +7,40 @@ import (
 	"context"
 	"strconv"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/Azure/ARO-RP/pkg/util/namespace"
 )
 
 func (mon *Monitor) emitDeploymentStatuses(ctx context.Context) error {
-	ds, err := mon.listDeployments(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, d := range ds.Items {
-		if !namespace.IsOpenShift(d.Namespace) {
-			continue
+	var cont string
+	for {
+		ds, err := mon.cli.AppsV1().Deployments("").List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
+		if err != nil {
+			return err
 		}
 
-		if d.Status.Replicas == d.Status.AvailableReplicas {
-			continue
+		for _, d := range ds.Items {
+			if !namespace.IsOpenShift(d.Namespace) {
+				continue
+			}
+
+			if d.Status.Replicas == d.Status.AvailableReplicas {
+				continue
+			}
+
+			mon.emitGauge("deployment.statuses", 1, map[string]string{
+				"availableReplicas": strconv.Itoa(int(d.Status.AvailableReplicas)),
+				"name":              d.Name,
+				"namespace":         d.Namespace,
+				"replicas":          strconv.Itoa(int(d.Status.Replicas)),
+			})
 		}
 
-		mon.emitGauge("deployment.statuses", 1, map[string]string{
-			"availableReplicas": strconv.Itoa(int(d.Status.AvailableReplicas)),
-			"name":              d.Name,
-			"namespace":         d.Namespace,
-			"replicas":          strconv.Itoa(int(d.Status.Replicas)),
-		})
+		cont = ds.Continue
+		if cont == "" {
+			break
+		}
 	}
 
 	return nil

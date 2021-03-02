@@ -5,6 +5,7 @@ package adminactions
 
 import (
 	"context"
+	"net/http"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
@@ -91,9 +92,16 @@ func (k *kubeActions) KubeList(ctx context.Context, groupKind, namespace string)
 		return nil, err
 	}
 
-	ul, err := k.dyn.Resource(*gvr).Namespace(namespace).List(ctx, metav1.ListOptions{})
+	// protect RP memory by not reading in more than 1000 items
+	ul, err := k.dyn.Resource(*gvr).Namespace(namespace).List(ctx, metav1.ListOptions{Limit: 1000})
 	if err != nil {
 		return nil, err
+	}
+
+	if ul.GetContinue() != "" {
+		return nil, api.NewCloudError(
+			http.StatusInternalServerError, api.CloudErrorCodeInternalServerError,
+			groupKind, "Too many items returned.")
 	}
 
 	return ul.MarshalJSON()

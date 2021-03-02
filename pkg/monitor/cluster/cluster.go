@@ -40,10 +40,10 @@ type Monitor struct {
 
 	// access below only via the helper functions in cache.go
 	cache struct {
-		cos *configv1.ClusterOperatorList
-		cv  *configv1.ClusterVersion
-		ns  *v1.NodeList
-		dl  *appsv1.DeploymentList
+		cos   *configv1.ClusterOperatorList
+		cv    *configv1.ClusterVersion
+		ns    *v1.NodeList
+		arodl *appsv1.DeploymentList
 	}
 }
 

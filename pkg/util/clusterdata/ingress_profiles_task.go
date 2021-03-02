@@ -5,6 +5,7 @@ package clusterdata
 
 import (
 	"context"
+	"sort"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
@@ -110,6 +111,8 @@ func (ef *ingressProfileEnricherTask) FetchData(ctx context.Context, callbacks c
 
 		ingressProfiles[i].Visibility = visibility
 	}
+
+	sort.Slice(ingressProfiles, func(i, j int) bool { return ingressProfiles[i].Name < ingressProfiles[j].Name })
 
 	callbacks <- func() {
 		ef.oc.Properties.IngressProfiles = ingressProfiles

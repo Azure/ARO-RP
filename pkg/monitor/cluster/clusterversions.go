@@ -8,7 +8,6 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 
-	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -18,14 +17,14 @@ func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
 		return err
 	}
 
-	dl, err := mon.listDeployments(ctx)
+	aroDeployments, err := mon.listARODeployments(ctx)
 	if err != nil {
 		return err
 	}
 
 	operatorVersion := "unknown" // TODO(mj): Once unknown is not present anymore, simplify this
-	for _, d := range dl.Items {
-		if d.Namespace == pkgoperator.Namespace && d.Name == "aro-operator-master" {
+	for _, d := range aroDeployments.Items {
+		if d.Name == "aro-operator-master" {
 			if d.Labels != nil {
 				if val, ok := d.Labels["version"]; ok {
 					operatorVersion = val
