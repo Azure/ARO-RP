@@ -105,7 +105,8 @@ func TestAuditTargetResourceData(t *testing.T) {
 		}
 
 		request := &http.Request{URL: parsedURL}
-		actualKind, actualName := auditTargetResourceData(request)
+		actualKind := auditTargetResourceType(request)
+		actualName := request.URL.Path
 		if tc.expectedKind != actualKind {
 			t.Errorf("%s: expected %s, actual: %s", tc.url, tc.expectedKind, actualKind)
 		}
