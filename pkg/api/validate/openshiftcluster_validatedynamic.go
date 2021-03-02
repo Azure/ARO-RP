@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -50,6 +51,12 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	for _, s := range dv.oc.Properties.WorkerProfiles {
 		subnetIDs = append(subnetIDs, s.SubnetID)
 	}
+
+	// its callers responsibility to provive unique values for validations
+	// if this is required. In this case on create worker pool profiles are
+	// not enriched. During cluster runtime they get enriched and contains multiple
+	// duplicate values for multiple worker pools
+	subnetIDs = stringutils.UniqueSlice(subnetIDs)
 
 	vnetID, _, err := subnet.Split(subnetIDs[0])
 	if err != nil {
