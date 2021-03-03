@@ -1,0 +1,34 @@
+package authorization
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
+import (
+	"context"
+
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
+)
+
+// RoleDefinitionsClient is a minimal interface for azure RoleDefinitionsClient
+type RoleDefinitionsClient interface {
+	Delete(ctx context.Context, scope string, roleDefinitionID string) (result mgmtauthorization.RoleDefinition, err error)
+	RoleDefinitionsClientAddons
+}
+
+type roleDefinitionsClient struct {
+	mgmtauthorization.RoleDefinitionsClient
+}
+
+var _ RoleDefinitionsClient = &roleDefinitionsClient{}
+
+// NewRoleDefinitionsClient creates a new RoleDefinitionsClient
+func NewRoleDefinitionsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) RoleDefinitionsClient {
+	client := mgmtauthorization.NewRoleDefinitionsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
+	client.Authorizer = authorizer
+
+	return &roleDefinitionsClient{
+		RoleDefinitionsClient: client,
+	}
+}

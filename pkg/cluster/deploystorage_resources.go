@@ -84,7 +84,7 @@ func (m *manager) denyAssignment() *arm.Resource {
 func (m *manager) clusterServicePrincipalRBAC() []*arm.Resource {
 	infraSuffix := m.doc.OpenShiftCluster.Properties.InfraID
 	if len(infraSuffix) > 5 {
-		infraSuffix = infraSuffix[:len(infraSuffix)-5]
+		infraSuffix = infraSuffix[len(infraSuffix)-5:]
 	}
 	name := fmt.Sprintf("Azure Red Hat OpenShift cluster (%s)", infraSuffix)
 
