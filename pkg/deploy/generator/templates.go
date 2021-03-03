@@ -245,6 +245,7 @@ func (g *generator) preDeployTemplate() *arm.Template {
 	} else {
 		params = append(params,
 			"adminObjectId",
+			"ciCapacity",
 		)
 	}
 
@@ -254,6 +255,9 @@ func (g *generator) preDeployTemplate() *arm.Template {
 		case "deployNSGs":
 			p.Type = "bool"
 			p.DefaultValue = false
+		case "ciCapacity":
+			p.Type = "int"
+			p.DefaultValue = 0
 		case "extraClusterKeyvaultAccessPolicies",
 			"extraPortalKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies":
@@ -271,6 +275,7 @@ func (g *generator) preDeployTemplate() *arm.Template {
 	t.Resources = append(t.Resources,
 		g.securityGroupRP(),
 		g.securityGroupPE(),
+		g.securityRulesRP(),
 		// clusterKeyvault, portalKeyvault and serviceKeyvault must be in this
 		// order due to terrible bytes.Replace in templateFixup
 		g.clusterKeyvault(),
@@ -303,6 +308,9 @@ func (g *generator) sharedDevelopmentEnvTemplate() *arm.Template {
 		g.devVpnPip(),
 		g.devVnet(),
 		g.devVPN(),
+		g.devDNS(),
+		g.devDNSLink("rp-vnet", true),
+		g.devDNSLink("dev-vnet", false),
 		g.devCIPool(),
 		g.proxyVmss())
 

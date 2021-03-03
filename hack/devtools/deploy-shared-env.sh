@@ -13,6 +13,7 @@ deploy_rp_dev_predeploy() {
         -n rp-development-predeploy \
         --template-file deploy/rp-development-predeploy.json \
         --parameters \
+            "ciCapacity=6" \
             "adminObjectId=$ADMIN_OBJECT_ID" \
             "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
             "keyvaultPrefix=$KEYVAULT_PREFIX" \

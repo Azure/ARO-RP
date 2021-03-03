@@ -98,19 +98,6 @@
                             "protocol": "Tcp",
                             "sourcePortRange": "*",
                             "destinationPortRange": "443",
-                            "sourceAddressPrefix": "AzureResourceManager",
-                            "destinationAddressPrefix": "*",
-                            "access": "Allow",
-                            "priority": 120,
-                            "direction": "Inbound"
-                        },
-                        "name": "rp_in_arm"
-                    },
-                    {
-                        "properties": {
-                            "protocol": "Tcp",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "443",
                             "sourceAddressPrefixes": "[parameters('rpNsgSourceAddressPrefixes')]",
                             "destinationAddressPrefix": "*",
                             "access": "Allow",
@@ -134,6 +121,25 @@
             "location": "[resourceGroup().location]",
             "condition": "[parameters('deployNSGs')]",
             "apiVersion": "2019-07-01"
+        },
+        {
+            "properties": {
+                "protocol": "Tcp",
+                "sourcePortRange": "*",
+                "destinationPortRange": "443",
+                "sourceAddressPrefix": "AzureResourceManager",
+                "destinationAddressPrefix": "*",
+                "access": "Allow",
+                "priority": 120,
+                "direction": "Inbound"
+            },
+            "name": "rp-nsg/rp_in_arm",
+            "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+            "condition": "[parameters('deployNSGs')]",
+            "apiVersion": "2019-07-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/NetworkSecurityGroups', 'rp-nsg')]"
+            ]
         },
         {
             "properties": {

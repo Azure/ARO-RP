@@ -66,19 +66,19 @@
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
-                        "10.0.0.0/23"
+                        "172.16.0.0/23"
                     ]
                 },
                 "subnets": [
                     {
                         "properties": {
-                            "addressPrefix": "10.0.0.0/24"
+                            "addressPrefix": "172.16.0.0/24"
                         },
                         "name": "GatewaySubnet"
                     },
                     {
                         "properties": {
-                            "addressPrefix": "10.0.1.0/24",
+                            "addressPrefix": "172.16.1.0/24",
                             "networkSecurityGroup": {
                                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]",
                                 "tags": null
@@ -139,6 +139,43 @@
             "apiVersion": "2019-07-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"
+            ]
+        },
+        {
+            "properties": {},
+            "location": "[resourceGroup().location]",
+            "name": "private.aroapp.io",
+            "type": "Microsoft.Network/privateDnsZones",
+            "apiVersion": "2018-09-01"
+        },
+        {
+            "properties": {
+                "virtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"
+                },
+                "registrationEnabled": true
+            },
+            "location": "[resourceGroup().location]",
+            "name": "link-rp-vnet",
+            "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+            "apiVersion": "2018-09-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"
+            ]
+        },
+        {
+            "properties": {
+                "virtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"
+                },
+                "registrationEnabled": false
+            },
+            "location": "[resourceGroup().location]",
+            "name": "link-dev-vnet",
+            "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+            "apiVersion": "2018-09-01",
+            "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"
             ]
         },

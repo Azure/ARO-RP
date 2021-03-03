@@ -17,6 +17,7 @@ import (
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 	mgmtmonitor "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
+	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 	uuid "github.com/satori/go.uuid"
@@ -51,48 +52,10 @@ func (g *generator) managedIdentity() *arm.Resource {
 }
 
 func (g *generator) securityGroupRP() *arm.Resource {
-	nsg := &mgmtnetwork.SecurityGroup{
-		SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
-			SecurityRules: &[]mgmtnetwork.SecurityRule{
-				{
-					SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-						Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-						SourcePortRange:          to.StringPtr("*"),
-						DestinationPortRange:     to.StringPtr("443"),
-						SourceAddressPrefix:      to.StringPtr("AzureResourceManager"),
-						DestinationAddressPrefix: to.StringPtr("*"),
-						Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-						Priority:                 to.Int32Ptr(120),
-						Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-					},
-					Name: to.StringPtr("rp_in_arm"),
-				},
-			},
-		},
-		Name:     to.StringPtr("rp-nsg"),
-		Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-		Location: to.StringPtr("[resourceGroup().location]"),
-	}
+	rules := make([]mgmtnetwork.SecurityRule, 0)
 
-	if !g.production {
-		// override production ARM flag for more open configuration in development
-		(*nsg.SecurityRules)[0].SecurityRulePropertiesFormat.SourceAddressPrefix = to.StringPtr("*")
-
-		*nsg.SecurityRules = append(*nsg.SecurityRules, mgmtnetwork.SecurityRule{
-			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-				SourcePortRange:          to.StringPtr("*"),
-				DestinationPortRange:     to.StringPtr("22"),
-				SourceAddressPrefix:      to.StringPtr("*"),
-				DestinationAddressPrefix: to.StringPtr("*"),
-				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-				Priority:                 to.Int32Ptr(125),
-				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-			},
-			Name: to.StringPtr("ssh_in"),
-		})
-	} else {
-		*nsg.SecurityRules = append(*nsg.SecurityRules, mgmtnetwork.SecurityRule{
+	if g.production {
+		rules = append(rules, mgmtnetwork.SecurityRule{
 			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
 				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
 				SourcePortRange:          to.StringPtr("*"),
@@ -105,6 +68,15 @@ func (g *generator) securityGroupRP() *arm.Resource {
 			},
 			Name: to.StringPtr("rp_in_geneva"),
 		})
+	}
+
+	nsg := &mgmtnetwork.SecurityGroup{
+		SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
+			SecurityRules: &rules,
+		},
+		Name:     to.StringPtr("rp-nsg"),
+		Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
+		Location: to.StringPtr("[resourceGroup().location]"),
 	}
 
 	return &arm.Resource{
@@ -124,6 +96,73 @@ func (g *generator) securityGroupPE() *arm.Resource {
 		},
 		Condition:  g.conditionStanza("deployNSGs"),
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
+	}
+}
+
+func (g *generator) securityRulesRP() *arm.Resource {
+	rule := &mgmtnetwork.SecurityRule{
+		SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+			Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+			SourcePortRange:          to.StringPtr("*"),
+			DestinationPortRange:     to.StringPtr("443"),
+			SourceAddressPrefix:      to.StringPtr("AzureResourceManager"),
+			DestinationAddressPrefix: to.StringPtr("*"),
+			Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+			Priority:                 to.Int32Ptr(120),
+			Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+		},
+		Name: to.StringPtr("rp-nsg/rp_in_arm"),
+	}
+
+	cond := g.conditionStanza("deployNSGs")
+
+	if !g.production {
+		// override production ARM flag for more open configuration in development
+		rule.SecurityRulePropertiesFormat.SourceAddressPrefix = to.StringPtr("*")
+
+		cond = "[equals(parameters('ciCapacity'), 0)]" // TODO(mj): Refactor g.conditionStanza for better usage
+	}
+
+	return &arm.Resource{
+		Resource:  rule,
+		Condition: cond,
+		DependsOn: []string{
+			"[resourceId('Microsoft.Network/NetworkSecurityGroups', 'rp-nsg')]",
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
+		Type:       "Microsoft.Network/networkSecurityGroups/securityRules",
+	}
+}
+
+func (g *generator) devDNS() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtprivatedns.PrivateZone{
+			Name:                  to.StringPtr("private.aroapp.io"),
+			PrivateZoneProperties: &mgmtprivatedns.PrivateZoneProperties{},
+			Location:              to.StringPtr("[resourceGroup().location]"),
+			Type:                  to.StringPtr("Microsoft.Network/privateDnsZones"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Network/privateDnsZones"),
+	}
+}
+
+func (g *generator) devDNSLink(vnet string, enableRegistration bool) *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtprivatedns.VirtualNetworkLink{
+			Name: to.StringPtr("link-" + vnet),
+			VirtualNetworkLinkProperties: &mgmtprivatedns.VirtualNetworkLinkProperties{
+				VirtualNetwork: &mgmtprivatedns.SubResource{
+					ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks', '" + vnet + "')]"),
+				},
+				RegistrationEnabled: to.BoolPtr(enableRegistration),
+			},
+			Location: to.StringPtr("[resourceGroup().location]"),
+			Type:     to.StringPtr("Microsoft.Network/privateDnsZones/virtualNetworkLinks"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Network/privateDnsZones"),
+		DependsOn: []string{
+			"[resourceId('Microsoft.Network/virtualNetworks', '" + vnet + "')]",
+		},
 	}
 }
 
@@ -298,7 +337,7 @@ systemctl enable proxy.service
 			Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
+		APIVersion: azureclient.APIVersion("Microsoft.Compute/virtualMachineScaleSets"),
 	}
 }
 
@@ -326,19 +365,19 @@ func (g *generator) devVnet() *arm.Resource {
 			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
 				AddressSpace: &mgmtnetwork.AddressSpace{
 					AddressPrefixes: &[]string{
-						"10.0.0.0/23",
+						"172.16.0.0/23",
 					},
 				},
 				Subnets: &[]mgmtnetwork.Subnet{
 					{
 						SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-							AddressPrefix: to.StringPtr("10.0.0.0/24"),
+							AddressPrefix: to.StringPtr("172.16.0.0/24"),
 						},
 						Name: to.StringPtr("GatewaySubnet"),
 					},
 					{
 						SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-							AddressPrefix: to.StringPtr("10.0.1.0/24"),
+							AddressPrefix: to.StringPtr("172.16.1.0/24"),
 							NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 								ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
 							},
@@ -1294,7 +1333,7 @@ done
 			Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
+		APIVersion: azureclient.APIVersion("Microsoft.Compute/virtualMachineScaleSets"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
 			"[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
