@@ -307,20 +307,6 @@ func (mr *MockInterfaceMockRecorder) ClusterKeyvault() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterKeyvault", reflect.TypeOf((*MockInterface)(nil).ClusterKeyvault))
 }
 
-// CreateARMResourceGroupRoleAssignment mocks base method
-func (m *MockInterface) CreateARMResourceGroupRoleAssignment(arg0 context.Context, arg1 refreshable.Authorizer, arg2 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateARMResourceGroupRoleAssignment", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CreateARMResourceGroupRoleAssignment indicates an expected call of CreateARMResourceGroupRoleAssignment
-func (mr *MockInterfaceMockRecorder) CreateARMResourceGroupRoleAssignment(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateARMResourceGroupRoleAssignment", reflect.TypeOf((*MockInterface)(nil).CreateARMResourceGroupRoleAssignment), arg0, arg1, arg2)
-}
-
 // DeploymentMode mocks base method
 func (m *MockInterface) DeploymentMode() deployment.Mode {
 	m.ctrl.T.Helper()
@@ -362,6 +348,20 @@ func (m *MockInterface) Domain() string {
 func (mr *MockInterfaceMockRecorder) Domain() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Domain", reflect.TypeOf((*MockInterface)(nil).Domain))
+}
+
+// EnsureARMResourceGroupRoleAssignment mocks base method
+func (m *MockInterface) EnsureARMResourceGroupRoleAssignment(arg0 context.Context, arg1 refreshable.Authorizer, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureARMResourceGroupRoleAssignment", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureARMResourceGroupRoleAssignment indicates an expected call of EnsureARMResourceGroupRoleAssignment
+func (mr *MockInterfaceMockRecorder) EnsureARMResourceGroupRoleAssignment(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureARMResourceGroupRoleAssignment", reflect.TypeOf((*MockInterface)(nil).EnsureARMResourceGroupRoleAssignment), arg0, arg1, arg2)
 }
 
 // Environment mocks base method

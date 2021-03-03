@@ -32,6 +32,7 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 	steps := []steps.Step{
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.fixupClusterSPObjectID),
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)), // re-create RP RBAC if needed after tenant migration
 		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute),
@@ -92,8 +93,12 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.createDNS),
 			steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
 			steps.Action(m.clusterSPObjectID),
+			steps.Action(func(ctx context.Context) error {
+				return m.ensureInfraID(ctx, installConfig)
+			}),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
-				return m.deployStorageTemplate(ctx, installConfig, image)
+				return m.deployStorageTemplate(ctx, installConfig)
 			})),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.updateAPIIPEarly)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.createOrUpdateRouterIPEarly)),
