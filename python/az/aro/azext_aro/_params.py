@@ -12,8 +12,9 @@ from azext_aro._validators import validate_vnet
 from azext_aro._validators import validate_vnet_resource_group_name
 from azext_aro._validators import validate_worker_count
 from azext_aro._validators import validate_worker_vm_disk_size_gb
+from azext_aro._validators import validate_refresh_cluster_service_principal
 from azure.cli.core.commands.parameters import name_type
-from azure.cli.core.commands.parameters import get_enum_type
+from azure.cli.core.commands.parameters import get_enum_type, get_three_state_flag
 from azure.cli.core.commands.parameters import resource_group_name_type
 from azure.cli.core.commands.parameters import tags_type
 from azure.cli.core.commands.validators import get_default_location_from_resource_group
@@ -44,6 +45,10 @@ def load_arguments(self, _):
                    validator=validate_client_id)
         c.argument('client_secret',
                    help='Client secret of cluster service principal.')
+        c.argument('refresh_cluster_service_principal',
+                   arg_type=get_three_state_flag(),
+                   help='Refresh cluster service principal.',
+                   validator=validate_refresh_cluster_service_principal)
 
         c.argument('pod_cidr',
                    help='CIDR of pod network.',

@@ -78,3 +78,31 @@ class AADManager:
                 retries += 1
                 logger.warning("%s; retry %d of %d", ex, retries, max_retries)
                 time.sleep(10)
+
+    def generate_secret_by_client_id(self, client_id):
+        password = uuid.uuid4()
+
+        application = self.get_application_by_client_id(client_id)
+
+        try:
+            end_date = datetime.datetime(2199, 12, 31, tzinfo=datetime.timezone.utc)
+        except AttributeError:
+            end_date = datetime.datetime(2199, 12, 31)
+
+        try:
+            response = self.client.applications.update_password_credentials(
+                application_object_id=application.object_id,
+                raw="true",
+                value=[
+                    PasswordCredential(
+                        custom_key_identifier=str(datetime.datetime.utcnow()).encode(),
+                        end_date=end_date,
+                        value=password,
+                    ),
+                ],
+            )
+
+        except GraphErrorException as e:
+            raise logger.error(e.message)
+
+        return password

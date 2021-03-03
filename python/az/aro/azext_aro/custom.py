@@ -215,29 +215,31 @@ def aro_update(cmd,
                client,
                resource_group_name,
                resource_name,
+               refresh_cluster_service_principal=None,
                client_id=None,
                client_secret=None,
                no_wait=False):
     # if we can't read cluster spec, we will not be able to do much. Fail.
     oc = client.get(resource_group_name, resource_name)
 
-    client_id, client_secret = service_principal_update(cmd.cli_ctx, oc, client_id, client_secret)
+    ocUpdate = openshiftcluster.OpenShiftClusterUpdate()
 
-    # construct update payload
-    oc = openshiftcluster.OpenShiftClusterUpdate(
-        service_principal_profile=openshiftcluster.ServicePrincipalProfile(),
-    )
+    client_id, client_secret = service_principal_update(cmd.cli_ctx, oc, client_id, client_secret, refresh_cluster_service_principal)
 
-    if not client_secret:
-        oc.service_principal_profile.client_secret = client_secret
+    if client_id is not None or client_secret is not None:
+        # construct update payload
+        ocUpdate.service_principal_profile=openshiftcluster.ServicePrincipalProfile()
 
-    if not client_id:
-        oc.service_principal_profile.client_id = client_id
+        if client_secret is not None:
+            ocUpdate.service_principal_profile.client_secret = client_secret
+
+        if client_id is not None:
+            ocUpdate.service_principal_profile.client_id = client_id
 
     return sdk_no_wait(no_wait, client.update,
                        resource_group_name=resource_group_name,
                        resource_name=resource_name,
-                       parameters=oc)
+                       parameters=ocUpdate)
 
 
 def rp_mode_development():
@@ -304,28 +306,39 @@ def get_network_resources(cli_ctx, subnets, vnet):
 
 
 # service_principal_update manages cluster service principal update
-# 1. If called without parameters it should be best-effort
-# 2. If called with parameters it fails if something is not possible
-# 2.1. If client_id is provided, we expect expect secret to be provided too
-#      If only secret is provided - we are updating secret
-#      In any case we will try to verify and update rbac
-# 2.2. TODO: refresh-cluster-service-principal is provided
-def service_principal_update(cli_ctx, oc, client_id=None, client_secret=None):
+# If called without parameters it should be best-effort
+# If called with parameters it fails if something is not possible
+# Flows:
+# 1. Manual mode where customer provides client_secret and optional client_id
+#      If client_id is provided, we expect expect secret to be provided too
+#      If only secret is provided - we are updating the secret
+# 2. Refresh-cluster-service-principal is provided. client_secret and client_id is not needed
+#      We validate in the validator code so client_id and client_secret is not provided
+#      Check if client_id for existing cluster SP exists for re-usability
+#      If client_id application do not exist - recreate
+#      If SP for client_id do not exist (if we created it in step above it will not) - create
+#  In any case (1,2) we will try to verify and update rbac
+
+def service_principal_update(cli_ctx, oc, client_id=None, client_secret=None, refresh_cluster_service_principal=None):
     rp_client_sp = None
     client_sp = None
+    random_id = generate_random_id()
     resources = set()
 
     # if any of these are set - we expect users to have access to fix rbac so we fail
-    fail = client_id is not None or client_secret is not None
+    # common for 1 and 2 flows
+    fail = client_id is not None or client_secret is not None or refresh_cluster_service_principal is not None
 
     # update client_id without providing secret is not valid.
     # this acts as dynamic validator
+    # skip in 2 flow
     if client_id is not None:
         if client_id != oc.service_principal_profile.client_id and client_secret is None:
             raise InvalidArgumentValueError("Must specify --client-id with --client-secret.")
 
     # if only secret is provided, we assume we re-use existing application
     # it is users responsibility to vet it.
+    # common for 1 and 2 flows
     if client_id is None:
         client_id = oc.service_principal_profile.client_id
 
@@ -350,14 +363,26 @@ def service_principal_update(cli_ctx, oc, client_id=None, client_secret=None):
     except GraphErrorException as e:
         raise logger.error(e.message) if fail else logger.info(e.message)
 
+
     try:
-        application = aad.get_application_by_client_id(client_id)
-        if not application:
-            raise ResourceNotFoundError("Cluster application not found.")
+        app = aad.get_application_by_client_id(client_id)
+        if not app:
+            # fail if we are not in 2 flow
+            if refresh_cluster_service_principal is None:
+                raise ResourceNotFoundError("Cluster application not found.")
+
+            # for 2 flow attemp to create an application if one does not exist
+            app, client_secret = aad.create_application(cluster_resource_group or 'aro-' + random_id)
+            client_id = app.app_id
+        else:
+            # TODO: Append here, not delete
+            # application exists so we need to generate new secret
+            client_secret = aad.generate_secret_by_client_id(app.app_id)
     except GraphErrorException as e:
         raise logger.error(e.message) if fail else logger.info(e.message)
 
     # attempt to get/create SP if one was not found.
+    # common for 1 and 2 flow
     try:
         client_sp = aad.get_service_principal(client_id)
         if not client_sp and fail:  # if we are in hard fail - attempt to re-create
@@ -374,6 +399,7 @@ def service_principal_update(cli_ctx, oc, client_id=None, client_secret=None):
 
     # Customers frequently remove the Cluster or RP's service principal permissions.
     # Attempt to fix this before performing any action against the cluster
+    # common for 1 and 2 flows
     for sp_id in sp_obj_ids:
         for resource in sorted(resources):
             # Create the role assignment if it doesn't exist

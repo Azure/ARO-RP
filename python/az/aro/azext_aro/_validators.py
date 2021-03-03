@@ -196,3 +196,9 @@ def validate_worker_vm_disk_size_gb(namespace):
     if namespace.worker_vm_disk_size_gb:
         if namespace.worker_vm_disk_size_gb < 128:
             raise InvalidArgumentValueError('--worker-vm-disk-size-gb must be greater than or equal to 128.')
+
+
+def validate_refresh_cluster_service_principal(namespace):
+    if namespace.refresh_cluster_service_principal is not None:
+        if namespace.client_secret is not None or namespace.client_id is not None:
+            raise RequiredArgumentMissingError('--client-id and --client-secret must be not set with --refresh-cluster-service-principal.')
