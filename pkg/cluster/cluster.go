@@ -68,6 +68,7 @@ type manager struct {
 	privateZones        privatedns.PrivateZonesClient
 	virtualNetworkLinks privatedns.VirtualNetworkLinksClient
 	roleAssignments     authorization.RoleAssignmentsClient
+	roleDefinitions     authorization.RoleDefinitionsClient
 	denyAssignments     authorization.DenyAssignmentClient
 
 	dns             dns.Manager
@@ -129,6 +130,7 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.
 		privateZones:        privatedns.NewPrivateZonesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 		virtualNetworkLinks: privatedns.NewVirtualNetworkLinksClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 		roleAssignments:     authorization.NewRoleAssignmentsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
+		roleDefinitions:     authorization.NewRoleDefinitionsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 		denyAssignments:     authorization.NewDenyAssignmentsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 
 		dns:             dns.NewManager(env, localFPAuthorizer),
