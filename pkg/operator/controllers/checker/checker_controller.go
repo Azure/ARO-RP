@@ -10,8 +10,12 @@ import (
 	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -70,7 +74,13 @@ func (r *CheckerController) Reconcile(request ctrl.Request) (ctrl.Result, error)
 
 // SetupWithManager setup our manager
 func (r *CheckerController) SetupWithManager(mgr ctrl.Manager) error {
-	builder := ctrl.NewControllerManagedBy(mgr).For(&arov1alpha1.Cluster{})
+	aroClusterPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
+		return meta.GetName() == arov1alpha1.SingletonClusterName
+	})
+
+	builder := ctrl.NewControllerManagedBy(mgr).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate))
+
 	if r.role == operator.RoleMaster {
 		// https://github.com/kubernetes-sigs/controller-runtime/issues/1173
 		// equivalent to builder = builder.For(&machinev1beta1.Machine{}), but can't call For multiple times on one builder

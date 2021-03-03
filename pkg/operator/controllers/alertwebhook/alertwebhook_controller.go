@@ -11,11 +11,12 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -41,10 +42,6 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface) *Alert
 func (r *AlertWebhookReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	// TODO(mj): controller-runtime master fixes the need for this (https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/reconcile/reconcile.go#L93) but it's not yet released.
 	ctx := context.Background()
-	if request.NamespacedName != alertManagerName {
-		return reconcile.Result{}, nil
-	}
-
 	return reconcile.Result{}, r.setAlertManagerWebhook(ctx, "http://aro-operator-master.openshift-azure-operator.svc.cluster.local:8080")
 }
 
@@ -103,28 +100,16 @@ func (r *AlertWebhookReconciler) setAlertManagerWebhook(ctx context.Context, add
 	})
 }
 
-func triggerAlertReconcile(secret *corev1.Secret) bool {
-	return secret.Name == alertManagerName.Name && secret.Namespace == alertManagerName.Namespace
-}
-
 // SetupWithManager setup our manager
 func (r *AlertWebhookReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.log.Info("starting alertmanager sink")
 
-	isAlertManager := predicate.Funcs{
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			secret, ok := e.ObjectOld.(*corev1.Secret)
-			return ok && triggerAlertReconcile(secret)
-		},
-		CreateFunc: func(e event.CreateEvent) bool {
-			secret, ok := e.Object.(*corev1.Secret)
-			return ok && triggerAlertReconcile(secret)
-		},
-	}
+	isAlertManagerPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
+		return meta.GetName() == alertManagerName.Name && meta.GetNamespace() == alertManagerName.Namespace
+	})
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1.Secret{}).
-		WithEventFilter(isAlertManager).
+		For(&corev1.Secret{}, builder.WithPredicates(isAlertManagerPredicate)).
 		Named(controllers.AlertwebhookControllerName).
 		Complete(r)
 }

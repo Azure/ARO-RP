@@ -11,11 +11,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -54,10 +55,6 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface) *PullS
 func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	// TODO(mj): controller-runtime master fixes the need for this (https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/reconcile/reconcile.go#L93) but it's not yet released.
 	ctx := context.Background()
-	if request.NamespacedName != pullSecretName &&
-		request.Name != arov1alpha1.SingletonClusterName {
-		return reconcile.Result{}, nil
-	}
 
 	mysec, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
 	if err != nil {
@@ -142,50 +139,26 @@ func (r *PullSecretReconciler) pullsecret(ctx context.Context) (*corev1.Secret, 
 	return ps, false, nil
 }
 
-func triggerReconcile(secret *corev1.Secret) bool {
-	return (secret.Name == pullSecretName.Name && secret.Namespace == pullSecretName.Namespace) ||
-		(secret.Name == operator.SecretName && secret.Namespace == operator.Namespace)
-}
-
 // SetupWithManager setup our manager
 func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	isPullSecret := predicate.Funcs{
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			_, ok := e.ObjectOld.(*arov1alpha1.Cluster)
-			if ok {
-				return true
-			}
+	pullSecretPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
+		return (meta.GetName() == pullSecretName.Name && meta.GetNamespace() == pullSecretName.Namespace) ||
+			(meta.GetName() == operator.SecretName && meta.GetNamespace() == operator.Namespace)
+	})
 
-			secret, ok := e.ObjectOld.(*corev1.Secret)
-			return ok && triggerReconcile(secret)
-		},
-		CreateFunc: func(e event.CreateEvent) bool {
-			_, ok := e.Object.(*arov1alpha1.Cluster)
-			if ok {
-				return true
-			}
-
-			secret, ok := e.Object.(*corev1.Secret)
-			return ok && triggerReconcile(secret)
-		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			_, ok := e.Object.(*arov1alpha1.Cluster)
-			if ok {
-				return true
-			}
-
-			secret, ok := e.Object.(*corev1.Secret)
-			return ok && triggerReconcile(secret)
-		},
-	}
+	aroClusterPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
+		return meta.GetName() == arov1alpha1.SingletonClusterName
+	})
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		// https://github.com/kubernetes-sigs/controller-runtime/issues/1173
 		// equivalent to For(&v1.Secret{})., but can't call For multiple times on one builder
-		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}).
-		Owns(&corev1.Secret{}).
-		WithEventFilter(isPullSecret).
+		Watches(
+			&source.Kind{Type: &corev1.Secret{}},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(pullSecretPredicate),
+		).
 		Named(controllers.PullSecretControllerName).
 		Complete(r)
 }
