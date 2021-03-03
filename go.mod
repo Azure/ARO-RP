@@ -111,7 +111,6 @@ require (
 	sigs.k8s.io/cluster-api-provider-openstack v0.3.3 // indirect
 	sigs.k8s.io/controller-runtime v0.8.2
 	sigs.k8s.io/controller-tools v0.3.1-0.20200617211605-651903477185
-	sigs.k8s.io/yaml v1.2.0
 )
 
 replace (

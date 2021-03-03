@@ -8,7 +8,7 @@ import (
 	"context"
 	"testing"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -142,7 +142,7 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 		{
 			name: "old cluster",
 			reconciler: &AlertWebhookReconciler{
-				kubernetescli: fake.NewSimpleClientset(&v1.Secret{
+				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "alertmanager-main",
 						Namespace: "openshift-monitoring",
@@ -157,7 +157,7 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 		{
 			name: "new cluster",
 			reconciler: &AlertWebhookReconciler{
-				kubernetescli: fake.NewSimpleClientset(&v1.Secret{
+				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "alertmanager-main",
 						Namespace: "openshift-monitoring",

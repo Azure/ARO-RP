@@ -12,7 +12,7 @@ import (
 
 	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	maofake "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -54,7 +54,7 @@ func marshal(t *testing.T, i interface{}) []byte {
 	return b
 }
 
-func userDataSecret(t *testing.T, namespace, name, appendSource, mergeSource string) *v1.Secret {
+func userDataSecret(t *testing.T, namespace, name, appendSource, mergeSource string) *corev1.Secret {
 	config := map[string]interface{}{
 		"extrakey": true,
 	}
@@ -77,7 +77,7 @@ func userDataSecret(t *testing.T, namespace, name, appendSource, mergeSource str
 		}
 	}
 
-	return &v1.Secret{
+	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -152,19 +152,19 @@ func TestFixMCSUserData(t *testing.T) {
 		),
 		maocli: maofake.NewSimpleClientset(
 			testMachineSet(t, "openshift-machine-api", "worker", &azureproviderv1beta1.AzureMachineProviderSpec{
-				UserDataSecret: &v1.SecretReference{
+				UserDataSecret: &corev1.SecretReference{
 					Name: "worker-user-data",
 				},
 			}),
 			testMachine(t, "openshift-machine-api", "master", &azureproviderv1beta1.AzureMachineProviderSpec{
-				UserDataSecret: &v1.SecretReference{
+				UserDataSecret: &corev1.SecretReference{
 					Name: "master-user-data",
 				},
 			}),
 		),
 	}
 
-	wantSecrets := []*v1.Secret{
+	wantSecrets := []*corev1.Secret{
 		userDataSecret(t, "openshift-machine-api", "master-user-data", "https://1.2.3.4:22623/config/master", ""),
 		userDataSecret(t, "openshift-machine-api", "worker-user-data", "", "https://1.2.3.4:22623/config/worker"),
 	}

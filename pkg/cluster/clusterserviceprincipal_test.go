@@ -18,13 +18,12 @@ import (
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	mock_authz "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
+	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
@@ -58,7 +57,7 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 		clusterSPObjectID string
 		roleAssignments   []mgmtauthorization.RoleAssignment
 		mocksDeployment   func(*mock_features.MockDeploymentsClient)
-		mocksAuthz        func(*mock_authz.MockRoleAssignmentsClient, interface{})
+		mocksAuthz        func(*mock_authorization.MockRoleAssignmentsClient, interface{})
 	}{
 		{
 
@@ -73,7 +72,7 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 					},
 				},
 			},
-			mocksAuthz: func(client *mock_authz.MockRoleAssignmentsClient, result interface{}) {
+			mocksAuthz: func(client *mock_authorization.MockRoleAssignmentsClient, result interface{}) {
 				client.EXPECT().ListForResourceGroup(gomock.Any(), gomock.Any(), gomock.Any()).Return(result, nil)
 			},
 		},
@@ -94,7 +93,7 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 					},
 				}).Return(nil)
 			},
-			mocksAuthz: func(client *mock_authz.MockRoleAssignmentsClient, result interface{}) {
+			mocksAuthz: func(client *mock_authorization.MockRoleAssignmentsClient, result interface{}) {
 				client.EXPECT().ListForResourceGroup(gomock.Any(), gomock.Any(), gomock.Any()).Return(result, nil)
 			},
 		},
@@ -125,7 +124,7 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 					},
 				}).Return(nil)
 			},
-			mocksAuthz: func(client *mock_authz.MockRoleAssignmentsClient, result interface{}) {
+			mocksAuthz: func(client *mock_authorization.MockRoleAssignmentsClient, result interface{}) {
 				client.EXPECT().ListForResourceGroup(gomock.Any(), gomock.Any(), gomock.Any()).Return(result, nil)
 				client.EXPECT().Delete(gomock.Any(), resourceGroupID, assignmentName)
 			},
@@ -135,7 +134,7 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			raClient := mock_authz.NewMockRoleAssignmentsClient(controller)
+			raClient := mock_authorization.NewMockRoleAssignmentsClient(controller)
 			deployments := mock_features.NewMockDeploymentsClient(controller)
 
 			if tt.mocksDeployment != nil {
@@ -168,7 +167,7 @@ func getFakeAROSecret(clientID, secret string) corev1.Secret {
 	if err != nil {
 		panic(err)
 	}
-	return v1.Secret{
+	return corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -296,7 +295,7 @@ func getFakeOpenShiftSecret() corev1.Secret {
 		"azure_client_secret": []byte("azure_client_secret_value"),
 		"azure_tenant_id":     []byte("azure_tenant_id_value"),
 	}
-	return v1.Secret{
+	return corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,

@@ -8,7 +8,7 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
@@ -39,7 +39,7 @@ func (mon *Monitor) listClusterOperators(ctx context.Context) (*configv1.Cluster
 }
 
 // TODO: remove this function and paginate
-func (mon *Monitor) listNodes(ctx context.Context) (*v1.NodeList, error) {
+func (mon *Monitor) listNodes(ctx context.Context) (*corev1.NodeList, error) {
 	if mon.cache.ns != nil {
 		return mon.cache.ns, nil
 	}

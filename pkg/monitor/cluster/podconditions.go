@@ -7,17 +7,17 @@ import (
 	"context"
 
 	"github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/namespace"
 )
 
-var podConditionsExpected = map[v1.PodConditionType]v1.ConditionStatus{
-	v1.ContainersReady: v1.ConditionTrue,
-	v1.PodInitialized:  v1.ConditionTrue,
-	v1.PodScheduled:    v1.ConditionTrue,
-	v1.PodReady:        v1.ConditionTrue,
+var podConditionsExpected = map[corev1.PodConditionType]corev1.ConditionStatus{
+	corev1.ContainersReady: corev1.ConditionTrue,
+	corev1.PodInitialized:  corev1.ConditionTrue,
+	corev1.PodScheduled:    corev1.ConditionTrue,
+	corev1.PodReady:        corev1.ConditionTrue,
 }
 
 func (mon *Monitor) emitPodConditions(ctx context.Context) error {
@@ -40,13 +40,13 @@ func (mon *Monitor) emitPodConditions(ctx context.Context) error {
 	return nil
 }
 
-func (mon *Monitor) _emitPodConditions(ps *v1.PodList) {
+func (mon *Monitor) _emitPodConditions(ps *corev1.PodList) {
 	for _, p := range ps.Items {
 		if !namespace.IsOpenShift(p.Namespace) {
 			continue
 		}
 
-		if p.Status.Phase == v1.PodSucceeded {
+		if p.Status.Phase == corev1.PodSucceeded {
 			continue
 		}
 
@@ -78,13 +78,13 @@ func (mon *Monitor) _emitPodConditions(ps *v1.PodList) {
 	}
 }
 
-func (mon *Monitor) _emitPodContainerStatuses(ps *v1.PodList) {
+func (mon *Monitor) _emitPodContainerStatuses(ps *corev1.PodList) {
 	for _, p := range ps.Items {
 		if !namespace.IsOpenShift(p.Namespace) {
 			continue
 		}
 
-		if p.Status.Phase == v1.PodSucceeded {
+		if p.Status.Phase == corev1.PodSucceeded {
 			continue
 		}
 

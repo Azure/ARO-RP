@@ -10,7 +10,7 @@ import (
 	projectv1 "github.com/openshift/api/project/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -51,7 +51,7 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 		return nil, err
 	}
 	return []runtime.Object{
-		&v1.Namespace{
+		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        kubeNamespace,
 				Annotations: map[string]string{projectv1.ProjectNodeSelector: ""},
@@ -67,12 +67,12 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"app": "routefix"},
 				},
-				Template: v1.PodTemplateSpec{
+				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{"app": "routefix"},
 					},
-					Spec: v1.PodSpec{
-						Containers: []v1.Container{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
 							{
 								Name:  kubeName,
 								Image: version.RouteFixImage(cluster.Spec.ACRDomain),
@@ -82,20 +82,20 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 									shellScript,
 								},
 								// TODO: specify requests/limits
-								SecurityContext: &v1.SecurityContext{
+								SecurityContext: &corev1.SecurityContext{
 									Privileged: to.BoolPtr(true),
 								},
 							},
 						},
 						HostNetwork: true,
-						Tolerations: []v1.Toleration{
+						Tolerations: []corev1.Toleration{
 							{
-								Effect:   v1.TaintEffectNoExecute,
-								Operator: v1.TolerationOpExists,
+								Effect:   corev1.TaintEffectNoExecute,
+								Operator: corev1.TolerationOpExists,
 							},
 							{
-								Effect:   v1.TaintEffectNoSchedule,
-								Operator: v1.TolerationOpExists,
+								Effect:   corev1.TaintEffectNoSchedule,
+								Operator: corev1.TolerationOpExists,
 							},
 						},
 					},

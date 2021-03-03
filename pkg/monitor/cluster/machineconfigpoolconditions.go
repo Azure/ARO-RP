@@ -6,18 +6,18 @@ package cluster
 import (
 	"context"
 
-	v1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var machineConfigPoolConditionsExpected = map[v1.MachineConfigPoolConditionType]corev1.ConditionStatus{
-	v1.MachineConfigPoolDegraded:       corev1.ConditionFalse,
-	v1.MachineConfigPoolNodeDegraded:   corev1.ConditionFalse,
-	v1.MachineConfigPoolRenderDegraded: corev1.ConditionFalse,
-	v1.MachineConfigPoolUpdated:        corev1.ConditionTrue,
-	v1.MachineConfigPoolUpdating:       corev1.ConditionFalse,
+var machineConfigPoolConditionsExpected = map[mcv1.MachineConfigPoolConditionType]corev1.ConditionStatus{
+	mcv1.MachineConfigPoolDegraded:       corev1.ConditionFalse,
+	mcv1.MachineConfigPoolNodeDegraded:   corev1.ConditionFalse,
+	mcv1.MachineConfigPoolRenderDegraded: corev1.ConditionFalse,
+	mcv1.MachineConfigPoolUpdated:        corev1.ConditionTrue,
+	mcv1.MachineConfigPoolUpdating:       corev1.ConditionFalse,
 }
 
 func (mon *Monitor) emitMachineConfigPoolConditions(ctx context.Context) error {

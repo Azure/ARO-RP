@@ -16,7 +16,6 @@ import (
 	"github.com/openshift/installer/pkg/types"
 	"github.com/sirupsen/logrus"
 
-	_ "github.com/Azure/ARO-RP/pkg/cluster"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"

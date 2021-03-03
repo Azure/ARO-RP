@@ -13,14 +13,13 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/ghodss/yaml"
 	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
-	"sigs.k8s.io/yaml"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
@@ -71,7 +70,7 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 	BeforeEach(func() {
 		// save the originalURLs
 		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(context.Background(), "cluster", metav1.GetOptions{})
-		if errors.IsNotFound(err) {
+		if kerrors.IsNotFound(err) {
 			Skip("skipping tests as aro-operator is not deployed")
 		}
 
@@ -202,7 +201,7 @@ var _ = Describe("ARO Operator - Routefix Daemonset", func() {
 
 var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
 	Specify("cluster monitoring configmap should not have persistent volume config", func() {
-		var cm *v1.ConfigMap
+		var cm *corev1.ConfigMap
 		var err error
 		configMapExists := func() (bool, error) {
 			cm, err = clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Get(context.Background(), "cluster-monitoring-config", metav1.GetOptions{})

@@ -7,8 +7,8 @@ import (
 	"context"
 	"testing"
 
-	v1 "github.com/openshift/api/config/v1"
-	"github.com/openshift/client-go/config/clientset/versioned/fake"
+	configv1 "github.com/openshift/api/config/v1"
+	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -18,11 +18,11 @@ func TestDisableUpdates(t *testing.T) {
 	versionName := "version"
 
 	m := &manager{
-		configcli: fake.NewSimpleClientset(&v1.ClusterVersion{
+		configcli: configfake.NewSimpleClientset(&configv1.ClusterVersion{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: versionName,
 			},
-			Spec: v1.ClusterVersionSpec{
+			Spec: configv1.ClusterVersionSpec{
 				Upstream: "RemoveMe",
 				Channel:  "RemoveMe",
 			},

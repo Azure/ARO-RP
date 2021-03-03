@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	pkgacrtoken "github.com/Azure/ARO-RP/pkg/util/acrtoken"
+	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
@@ -16,19 +16,19 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 		return nil
 	}
 
-	acrtoken, err := pkgacrtoken.NewManager(m.env, m.localFpAuthorizer)
+	token, err := acrtoken.NewManager(m.env, m.localFpAuthorizer)
 	if err != nil {
 		return err
 	}
 
-	rp := acrtoken.GetRegistryProfile(m.doc.OpenShiftCluster)
+	rp := token.GetRegistryProfile(m.doc.OpenShiftCluster)
 	if rp == nil {
 		// 1. choose a name and establish the intent to create a token with
 		// that name
-		rp = acrtoken.NewRegistryProfile(m.doc.OpenShiftCluster)
+		rp = token.NewRegistryProfile(m.doc.OpenShiftCluster)
 
 		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-			acrtoken.PutRegistryProfile(doc.OpenShiftCluster, rp)
+			token.PutRegistryProfile(doc.OpenShiftCluster, rp)
 			return nil
 		})
 		if err != nil {
@@ -39,7 +39,7 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 	if rp.Password == "" {
 		// 2. ensure a token with the chosen name exists, generate a
 		// password for it and store it in the database
-		password, err := acrtoken.EnsureTokenAndPassword(ctx, rp)
+		password, err := token.EnsureTokenAndPassword(ctx, rp)
 		if err != nil {
 			return err
 		}
@@ -47,7 +47,7 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 		rp.Password = api.SecureString(password)
 
 		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-			acrtoken.PutRegistryProfile(doc.OpenShiftCluster, rp)
+			token.PutRegistryProfile(doc.OpenShiftCluster, rp)
 			return nil
 		})
 		if err != nil {

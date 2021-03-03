@@ -12,7 +12,7 @@ import (
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/tls"
-	clientcmd "k8s.io/client-go/tools/clientcmd/api/v1"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 )
@@ -54,21 +54,21 @@ func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization
 
 	// create a Config for the new service kubeconfig based on the generated cluster admin Config
 	aroInternalClient := kubeconfig.AdminInternalClient{}
-	aroInternalClient.Config = &clientcmd.Config{
+	aroInternalClient.Config = &clientcmdv1.Config{
 		Clusters: adminInternalClient.Config.Clusters,
-		AuthInfos: []clientcmd.NamedAuthInfo{
+		AuthInfos: []clientcmdv1.NamedAuthInfo{
 			{
 				Name: commonName,
-				AuthInfo: clientcmd.AuthInfo{
+				AuthInfo: clientcmdv1.AuthInfo{
 					ClientCertificateData: clientCertKey.CertRaw,
 					ClientKeyData:         clientCertKey.KeyRaw,
 				},
 			},
 		},
-		Contexts: []clientcmd.NamedContext{
+		Contexts: []clientcmdv1.NamedContext{
 			{
 				Name: commonName,
-				Context: clientcmd.Context{
+				Context: clientcmdv1.Context{
 					Cluster:  adminInternalClient.Config.Contexts[0].Context.Cluster,
 					AuthInfo: commonName,
 				},

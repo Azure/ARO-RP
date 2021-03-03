@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -36,7 +36,7 @@ func (*ifReload) Ensure(ctx context.Context) error {
 
 func (i *ifReload) Remove(ctx context.Context) error {
 	err := i.cli.CoreV1().Namespaces().Delete(ctx, kubeNamespace, metav1.DeleteOptions{})
-	if errors.IsNotFound(err) {
+	if kerrors.IsNotFound(err) {
 		return nil
 	}
 	return err

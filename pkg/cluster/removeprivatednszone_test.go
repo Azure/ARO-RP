@@ -12,9 +12,9 @@ import (
 	"github.com/golang/mock/gomock"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
-	fakemcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
+	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -68,7 +68,7 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 						},
 					}, nil)
 			},
-			mcocli: fakemcoclient.NewSimpleClientset(
+			mcocli: mcofake.NewSimpleClientset(
 				&mcv1.MachineConfigPool{},
 			),
 		},
@@ -92,14 +92,14 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 						},
 					}, nil)
 			},
-			mcocli: fakemcoclient.NewSimpleClientset(
+			mcocli: mcofake.NewSimpleClientset(
 				&mcv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "master",
 					},
 					Status: mcv1.MachineConfigPoolStatus{
 						Configuration: mcv1.MachineConfigPoolStatusConfiguration{
-							Source: []v1.ObjectReference{
+							Source: []corev1.ObjectReference{
 								{
 									Name: "99-master-aro-dns",
 								},
@@ -146,14 +146,14 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 					DeleteAndWait(ctx, "testGroup", "zone1", "").
 					Return(nil)
 			},
-			mcocli: fakemcoclient.NewSimpleClientset(
+			mcocli: mcofake.NewSimpleClientset(
 				&mcv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "master",
 					},
 					Status: mcv1.MachineConfigPoolStatus{
 						Configuration: mcv1.MachineConfigPoolStatusConfiguration{
-							Source: []v1.ObjectReference{
+							Source: []corev1.ObjectReference{
 								{
 									Name: "99-master-aro-dns",
 								},

@@ -10,8 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -166,10 +165,10 @@ func (r *Reconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	})
 }
 
-func (r *Reconciler) monitoringConfigMap(ctx context.Context) (*v1.ConfigMap, bool, error) {
+func (r *Reconciler) monitoringConfigMap(ctx context.Context) (*corev1.ConfigMap, bool, error) {
 	cm, err := r.kubernetescli.CoreV1().ConfigMaps(monitoringName.Namespace).Get(ctx, monitoringName.Name, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		return &v1.ConfigMap{
+	if kerrors.IsNotFound(err) {
+		return &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      monitoringName.Name,
 				Namespace: monitoringName.Namespace,
@@ -227,7 +226,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}).
 		// https://github.com/kubernetes-sigs/controller-runtime/issues/1173
 		// equivalent to For(&v1.ConfigMap{})., but can't call For multiple times on one builder
-		Watches(&source.Kind{Type: &v1.ConfigMap{}}, &handler.EnqueueRequestForObject{}).
+		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForObject{}).
 		WithEventFilter(isMonitoringConfigMap).
 		Named(controllers.MonitoringControllerName).
 		Complete(r)

@@ -14,7 +14,7 @@ import (
 	consoleapi "github.com/openshift/console-operator/pkg/api"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sfake "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 const errMustBeNilMsg = "err must be nil; condition is retried until timeout"
@@ -50,7 +50,7 @@ func TestBootstrapConfigMapReady(t *testing.T) {
 		},
 	} {
 		m := &manager{
-			kubernetescli: k8sfake.NewSimpleClientset(&corev1.ConfigMap{
+			kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      tt.configMapName,
 					Namespace: tt.configMapNamespace,
@@ -191,7 +191,7 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 		},
 	} {
 		m := &manager{
-			kubernetescli: k8sfake.NewSimpleClientset(&corev1.NodeList{
+			kubernetescli: fake.NewSimpleClientset(&corev1.NodeList{
 				Items: []corev1.Node{
 					{
 						ObjectMeta: metav1.ObjectMeta{

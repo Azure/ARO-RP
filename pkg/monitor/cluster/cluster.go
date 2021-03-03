@@ -15,7 +15,7 @@ import (
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -42,7 +42,7 @@ type Monitor struct {
 	cache struct {
 		cos   *configv1.ClusterOperatorList
 		cv    *configv1.ClusterVersion
-		ns    *v1.NodeList
+		ns    *corev1.NodeList
 		arodl *appsv1.DeploymentList
 	}
 }

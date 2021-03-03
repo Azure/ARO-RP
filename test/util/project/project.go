@@ -10,7 +10,7 @@ import (
 	projectv1 "github.com/openshift/api/project/v1"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
 	authorizationv1 "k8s.io/api/authorization/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -59,7 +59,7 @@ func (p Project) Verify(ctx context.Context) error {
 	}
 
 	sa, err := p.cli.CoreV1().ServiceAccounts(p.name).Get(ctx, "default", metav1.GetOptions{})
-	if err != nil || errors.IsNotFound(err) {
+	if err != nil || kerrors.IsNotFound(err) {
 		return fmt.Errorf("Error retrieving default ServiceAccount")
 	}
 
@@ -82,7 +82,7 @@ func (p Project) Verify(ctx context.Context) error {
 // or if it encounters an error other than NotFound
 func (p Project) VerifyProjectIsDeleted(ctx context.Context) error {
 	_, err := p.projectClient.ProjectV1().Projects().Get(ctx, p.name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
+	if kerrors.IsNotFound(err) {
 		return nil
 	}
 

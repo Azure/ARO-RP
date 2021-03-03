@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	mgmtgraphrbac "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
+	azgraphrbac "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/date"
 	uuid "github.com/satori/go.uuid"
@@ -38,10 +38,10 @@ func (c *Cluster) getServicePrincipal(ctx context.Context, appID string) (string
 func (c *Cluster) createApplication(ctx context.Context, displayName string) (string, string, error) {
 	password := uuid.NewV4().String()
 
-	app, err := c.applications.Create(ctx, mgmtgraphrbac.ApplicationCreateParameters{
+	app, err := c.applications.Create(ctx, azgraphrbac.ApplicationCreateParameters{
 		DisplayName:    &displayName,
 		IdentifierUris: &[]string{"https://test.aro.azure.com/" + uuid.NewV4().String()},
-		PasswordCredentials: &[]mgmtgraphrbac.PasswordCredential{
+		PasswordCredentials: &[]azgraphrbac.PasswordCredential{
 			{
 				EndDate: &date.Time{Time: time.Now().AddDate(1, 0, 0)},
 				Value:   &password,
@@ -56,7 +56,7 @@ func (c *Cluster) createApplication(ctx context.Context, displayName string) (st
 }
 
 func (c *Cluster) createServicePrincipal(ctx context.Context, appID string) (string, error) {
-	var sp mgmtgraphrbac.ServicePrincipal
+	var sp azgraphrbac.ServicePrincipal
 	var err error
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
@@ -66,7 +66,7 @@ func (c *Cluster) createServicePrincipal(ctx context.Context, appID string) (str
 	// wait.PollImmediateUntil. Doing this will not propagate the latest error
 	// to the user in case when wait exceeds the timeout
 	_ = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		sp, err = c.serviceprincipals.Create(ctx, mgmtgraphrbac.ServicePrincipalCreateParameters{
+		sp, err = c.serviceprincipals.Create(ctx, azgraphrbac.ServicePrincipalCreateParameters{
 			AppID: &appID,
 		})
 		if detailedErr, ok := err.(autorest.DetailedError); ok &&

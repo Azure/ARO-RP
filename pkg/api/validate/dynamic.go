@@ -21,7 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
-	utilpermissions "github.com/Azure/ARO-RP/pkg/util/permissions"
+	"github.com/Azure/ARO-RP/pkg/util/permissions"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -172,7 +172,7 @@ func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actio
 
 	return wait.PollImmediateUntil(20*time.Second, func() (bool, error) {
 		dv.log.Debug("retry validateActions")
-		permissions, err := dv.permissions.ListForResource(ctx, r.ResourceGroup, r.Provider, "", r.ResourceType, r.ResourceName)
+		perms, err := dv.permissions.ListForResource(ctx, r.ResourceGroup, r.Provider, "", r.ResourceType, r.ResourceName)
 
 		if detailedErr, ok := err.(autorest.DetailedError); ok &&
 			detailedErr.StatusCode == http.StatusForbidden {
@@ -183,7 +183,7 @@ func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actio
 		}
 
 		for _, action := range actions {
-			ok, err := utilpermissions.CanDoAction(permissions, action)
+			ok, err := permissions.CanDoAction(perms, action)
 			if !ok || err != nil {
 				// TODO(jminter): I don't understand if there are genuinely
 				// cases where CanDoAction can return false then true shortly

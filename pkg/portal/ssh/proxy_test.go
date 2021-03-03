@@ -23,7 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	mock_proxy "github.com/Azure/ARO-RP/pkg/util/mocks/proxy"
-	"github.com/Azure/ARO-RP/pkg/util/tls"
+	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/bufferedpipe"
 	"github.com/Azure/ARO-RP/test/util/listener"
@@ -84,7 +84,7 @@ func fakeServer(clientKey *rsa.PublicKey) (*listener.Listener, error) {
 		},
 	}
 
-	key, _, err := tls.GenerateKeyAndCertificate("server", nil, nil, false, false)
+	key, _, err := utiltls.GenerateKeyAndCertificate("server", nil, nil, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -143,12 +143,12 @@ func TestProxy(t *testing.T) {
 	resourceID := "/subscriptions/" + subscriptionID + "/resourcegroups/" + resourceGroup + "/providers/microsoft.redhatopenshift/openshiftclusters/" + resourceName
 	privateEndpointIP := "1.2.3.4"
 
-	hostKey, _, err := tls.GenerateKeyAndCertificate("proxy", nil, nil, false, false)
+	hostKey, _, err := utiltls.GenerateKeyAndCertificate("proxy", nil, nil, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	clusterKey, _, err := tls.GenerateKeyAndCertificate("cluster", nil, nil, false, false)
+	clusterKey, _, err := utiltls.GenerateKeyAndCertificate("cluster", nil, nil, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}

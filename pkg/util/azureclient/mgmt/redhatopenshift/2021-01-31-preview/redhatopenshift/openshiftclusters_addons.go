@@ -6,18 +6,18 @@ package redhatopenshift
 import (
 	"context"
 
-	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2021-01-31-preview/redhatopenshift"
+	mgmtredhatopenshift20210131preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2021-01-31-preview/redhatopenshift"
 )
 
 // OpenShiftClustersClientAddons contains addons for OpenShiftClustersClient
 type OpenShiftClustersClientAddons interface {
-	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, resourceName string, parameters redhatopenshift.OpenShiftCluster) error
+	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, resourceName string, parameters mgmtredhatopenshift20210131preview.OpenShiftCluster) error
 	DeleteAndWait(ctx context.Context, resourceGroupName string, resourceName string) error
-	List(ctx context.Context) (clusters []redhatopenshift.OpenShiftCluster, err error)
-	ListByResourceGroup(ctx context.Context, resourceGroupName string) (clusters []redhatopenshift.OpenShiftCluster, err error)
+	List(ctx context.Context) (clusters []mgmtredhatopenshift20210131preview.OpenShiftCluster, err error)
+	ListByResourceGroup(ctx context.Context, resourceGroupName string) (clusters []mgmtredhatopenshift20210131preview.OpenShiftCluster, err error)
 }
 
-func (c *openShiftClustersClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, resourceName string, parameters redhatopenshift.OpenShiftCluster) error {
+func (c *openShiftClustersClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, resourceName string, parameters mgmtredhatopenshift20210131preview.OpenShiftCluster) error {
 	future, err := c.CreateOrUpdate(ctx, resourceGroupName, resourceName, parameters)
 	if err != nil {
 		return err
@@ -35,7 +35,7 @@ func (c *openShiftClustersClient) DeleteAndWait(ctx context.Context, resourceGro
 	return future.WaitForCompletionRef(ctx, c.Client)
 }
 
-func (c *openShiftClustersClient) List(ctx context.Context) (clusters []redhatopenshift.OpenShiftCluster, err error) {
+func (c *openShiftClustersClient) List(ctx context.Context) (clusters []mgmtredhatopenshift20210131preview.OpenShiftCluster, err error) {
 	page, err := c.OpenShiftClustersClient.List(ctx)
 	if err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func (c *openShiftClustersClient) List(ctx context.Context) (clusters []redhatop
 	return clusters, nil
 }
 
-func (c *openShiftClustersClient) ListByResourceGroup(ctx context.Context, resourceGroupName string) (clusters []redhatopenshift.OpenShiftCluster, err error) {
+func (c *openShiftClustersClient) ListByResourceGroup(ctx context.Context, resourceGroupName string) (clusters []mgmtredhatopenshift20210131preview.OpenShiftCluster, err error) {
 	page, err := c.OpenShiftClustersClient.ListByResourceGroup(ctx, resourceGroupName)
 	if err != nil {
 		return nil, err

@@ -31,7 +31,7 @@ import (
 	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
-	testclusterdata "github.com/Azure/ARO-RP/test/util/clusterdata"
+	"github.com/Azure/ARO-RP/test/util/clusterdata"
 	"github.com/Azure/ARO-RP/test/util/listener"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -62,7 +62,7 @@ type testInfra struct {
 	controller *gomock.Controller
 	l          net.Listener
 	cli        *http.Client
-	enricher   testclusterdata.TestEnricher
+	enricher   clusterdata.TestEnricher
 	audit      *logrus.Entry
 	log        *logrus.Entry
 	fixture    *testdatabase.Fixture
@@ -112,7 +112,7 @@ func newTestInfra(t *testing.T) *testInfra {
 		env:        _env,
 		controller: controller,
 		l:          l,
-		enricher:   testclusterdata.NewTestEnricher(),
+		enricher:   clusterdata.NewTestEnricher(),
 		fixture:    fixture,
 		checker:    checker,
 		audit:      auditEntry,

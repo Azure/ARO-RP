@@ -10,7 +10,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/types"
-	aztypes "github.com/openshift/installer/pkg/types/azure"
+	azuretypes "github.com/openshift/installer/pkg/types/azure"
 )
 
 func TestZones(t *testing.T) {
@@ -47,7 +47,7 @@ func TestZones(t *testing.T) {
 				Config: &types.InstallConfig{
 					ControlPlane: &types.MachinePool{
 						Platform: types.MachinePoolPlatform{
-							Azure: &aztypes.MachinePool{
+							Azure: &azuretypes.MachinePool{
 								Zones: tt.zones,
 							},
 						},

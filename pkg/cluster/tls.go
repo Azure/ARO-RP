@@ -9,10 +9,10 @@ import (
 	"encoding/pem"
 
 	configv1 "github.com/openshift/api/config/v1"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	coreclient "k8s.io/client-go/kubernetes/typed/core/v1"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
@@ -68,7 +68,7 @@ func (m *manager) createCertificates(ctx context.Context) error {
 	return nil
 }
 
-func (m *manager) ensureSecret(ctx context.Context, secrets coreclient.SecretInterface, certificateName string) error {
+func (m *manager) ensureSecret(ctx context.Context, secrets corev1client.SecretInterface, certificateName string) error {
 	bundle, err := m.env.ClusterKeyvault().GetSecret(ctx, certificateName)
 	if err != nil {
 		return err
@@ -89,17 +89,17 @@ func (m *manager) ensureSecret(ctx context.Context, secrets coreclient.SecretInt
 		cb = append(cb, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})...)
 	}
 
-	_, err = secrets.Create(ctx, &v1.Secret{
+	_, err = secrets.Create(ctx, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: certificateName,
 		},
 		Data: map[string][]byte{
-			v1.TLSCertKey:       cb,
-			v1.TLSPrivateKeyKey: pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: b}),
+			corev1.TLSCertKey:       cb,
+			corev1.TLSPrivateKeyKey: pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: b}),
 		},
-		Type: v1.SecretTypeTLS,
+		Type: corev1.SecretTypeTLS,
 	}, metav1.CreateOptions{})
-	if errors.IsAlreadyExists(err) {
+	if kerrors.IsAlreadyExists(err) {
 		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			s, err := secrets.Get(ctx, certificateName, metav1.GetOptions{})
 			if err != nil {
@@ -107,10 +107,10 @@ func (m *manager) ensureSecret(ctx context.Context, secrets coreclient.SecretInt
 			}
 
 			s.Data = map[string][]byte{
-				v1.TLSCertKey:       cb,
-				v1.TLSPrivateKeyKey: pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: b}),
+				corev1.TLSCertKey:       cb,
+				corev1.TLSPrivateKeyKey: pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: b}),
 			}
-			s.Type = v1.SecretTypeTLS
+			s.Type = corev1.SecretTypeTLS
 
 			_, err = secrets.Update(ctx, s, metav1.UpdateOptions{})
 			return err
@@ -185,7 +185,7 @@ func (m *manager) configureIngressCertificate(ctx context.Context) error {
 			return err
 		}
 
-		ic.Spec.DefaultCertificate = &v1.LocalObjectReference{
+		ic.Spec.DefaultCertificate = &corev1.LocalObjectReference{
 			Name: m.doc.ID + "-ingress",
 		}
 

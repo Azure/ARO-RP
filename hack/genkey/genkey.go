@@ -13,7 +13,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/Azure/ARO-RP/pkg/util/tls"
+	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 )
 
 var (
@@ -51,7 +51,7 @@ func run(name string) error {
 		}
 	}
 
-	key, cert, err := tls.GenerateKeyAndCertificate(name, signingKey, signingCert, *ca, *client)
+	key, cert, err := utiltls.GenerateKeyAndCertificate(name, signingKey, signingCert, *ca, *client)
 	if err != nil {
 		return err
 	}

@@ -10,7 +10,7 @@ import (
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
-	fakeopclient "github.com/openshift/client-go/operator/clientset/versioned/fake"
+	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +36,7 @@ func TestIngressProfilesEnricherTask(t *testing.T) {
 	}{
 		{
 			name: "default simplest case of ingress profile found",
-			operatorcli: fakeopclient.NewSimpleClientset(
+			operatorcli: operatorfake.NewSimpleClientset(
 				&operatorv1.IngressController{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "default",
@@ -77,7 +77,7 @@ func TestIngressProfilesEnricherTask(t *testing.T) {
 		},
 		{
 			name: "private ingress profile found",
-			operatorcli: fakeopclient.NewSimpleClientset(
+			operatorcli: operatorfake.NewSimpleClientset(
 				&operatorv1.IngressController{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "private",
@@ -125,7 +125,7 @@ func TestIngressProfilesEnricherTask(t *testing.T) {
 		},
 		{
 			name: "public ingress profile found",
-			operatorcli: fakeopclient.NewSimpleClientset(
+			operatorcli: operatorfake.NewSimpleClientset(
 				&operatorv1.IngressController{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "public",
@@ -173,7 +173,7 @@ func TestIngressProfilesEnricherTask(t *testing.T) {
 		},
 		{
 			name: "several ingress profiles found",
-			operatorcli: fakeopclient.NewSimpleClientset(
+			operatorcli: operatorfake.NewSimpleClientset(
 				&operatorv1.IngressController{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "default",
@@ -260,7 +260,7 @@ func TestIngressProfilesEnricherTask(t *testing.T) {
 		},
 		{
 			name: "no router service found",
-			operatorcli: fakeopclient.NewSimpleClientset(
+			operatorcli: operatorfake.NewSimpleClientset(
 				&operatorv1.IngressController{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "private",

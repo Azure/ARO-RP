@@ -10,7 +10,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 
-	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2021-01-31-preview/redhatopenshift"
+	mgmtredhatopenshift20210131preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2021-01-31-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
@@ -20,16 +20,16 @@ type OperationsClient interface {
 }
 
 type operationsClient struct {
-	redhatopenshift.OperationsClient
+	mgmtredhatopenshift20210131preview.OperationsClient
 }
 
 var _ OperationsClient = &operationsClient{}
 
 // NewOperationsClient creates a new OperationsClient
 func NewOperationsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) OperationsClient {
-	var client redhatopenshift.OperationsClient
+	var client mgmtredhatopenshift20210131preview.OperationsClient
 	if deployment.NewMode() == deployment.Development {
-		client = redhatopenshift.NewOperationsClientWithBaseURI("https://localhost:8443", subscriptionID)
+		client = mgmtredhatopenshift20210131preview.NewOperationsClientWithBaseURI("https://localhost:8443", subscriptionID)
 		client.Sender = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -38,7 +38,7 @@ func NewOperationsClient(environment *azure.Environment, subscriptionID string, 
 			},
 		}
 	} else {
-		client = redhatopenshift.NewOperationsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
+		client = mgmtredhatopenshift20210131preview.NewOperationsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 		client.Authorizer = authorizer
 	}
 

@@ -6,138 +6,262 @@ package main
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
-	"os"
-	"path/filepath"
-	"sort"
+	"regexp"
 	"strings"
 )
 
-const local = "github.com/Azure/ARO-RP"
-
-type importSpecs []*ast.ImportSpec
-
-func (is importSpecs) Len() int           { return len(is) }
-func (is importSpecs) Less(i, j int) bool { return is[i].Path.Value < is[j].Path.Value }
-func (is importSpecs) Swap(i, j int)      { is[i], is[j] = is[j], is[i] }
-
-var _ sort.Interface = importSpecs{}
-
-type importType int
-
-// at most one import group of each type may exist in a validated source file,
-// specifically in the order declared below
-const (
-	importStd   importType = 1 << iota // go standard library
-	importDot                          // "." imports (ginkgo and gomega)
-	importOther                        // non-local imports
-	importLocal                        // local imports
-)
-
-func typeForImport(imp *ast.ImportSpec) importType {
-	path := strings.Trim(imp.Path.Value, `"`)
-
-	switch {
-	case imp.Name != nil && imp.Name.Name == ".":
-		return importDot
-	case strings.HasPrefix(path, local+"/"):
-		return importLocal
-	case strings.ContainsRune(path, '.'):
-		return importOther
-	default:
-		return importStd
-	}
+func isStandardLibrary(path string) bool {
+	return !strings.ContainsRune(strings.SplitN(path, "/", 2)[0], '.')
 }
 
-func validateImport(imp *ast.ImportSpec) (errs []error) {
-	path := strings.Trim(imp.Path.Value, `"`)
-
-	switch typeForImport(imp) {
-	case importDot:
-		switch path {
-		case "github.com/onsi/ginkgo",
-			"github.com/onsi/gomega",
-			"github.com/onsi/gomega/gstruct":
-		default:
-			errs = append(errs, fmt.Errorf("invalid . import %s", imp.Path.Value))
-		}
+func validateDotImport(path string) error {
+	switch path {
+	case "github.com/onsi/ginkgo",
+		"github.com/onsi/gomega":
+		return nil
 	}
 
-	return
+	return fmt.Errorf("invalid . import %s", path)
 }
 
-func check(path string) (errs []error) {
-	var fset token.FileSet
-
-	f, err := parser.ParseFile(&fset, path, nil, parser.ImportsOnly)
-	if err != nil {
-		return []error{err}
+func validateUnderscoreImport(path string) error {
+	if regexp.MustCompile(`^github.com/Azure/ARO-RP/pkg/api/(admin|v[^/]+)$`).MatchString(path) {
+		return nil
 	}
 
-	var groups [][]*ast.ImportSpec
-
-	for i, imp := range f.Imports {
-		// if there's more than one line between this and the previous import,
-		// break open a new import group
-		if i == 0 || fset.Position(f.Imports[i].Pos()).Line-fset.Position(f.Imports[i-1].Pos()).Line > 1 {
-			groups = append(groups, []*ast.ImportSpec{})
-		}
-
-		groups[len(groups)-1] = append(groups[len(groups)-1], imp)
+	switch path {
+	case "net/http/pprof",
+		"github.com/Azure/ARO-RP/pkg/util/scheme":
+		return nil
 	}
 
-	// seenTypes holds a bitmask of the importTypes seen up to this point, so
-	// that we can detect duplicate groups.  We can also detect misordered
-	// groups, because when we set a bit (say 0b0100), we actually set all the
-	// trailing bits (0b0111) as sentinels
-	var seenTypes importType
-
-	for groupnum, group := range groups {
-		if !sort.IsSorted(importSpecs(group)) {
-			errs = append(errs, fmt.Errorf("group %d: imports are not sorted", groupnum+1))
-		}
-
-		groupImportType := typeForImport(group[0])
-		if (seenTypes & groupImportType) != 0 { // check if single bit is already set...
-			errs = append(errs, fmt.Errorf("group %d: duplicate group or invalid group ordering", groupnum+1))
-		}
-		seenTypes |= groupImportType<<1 - 1 // ...but set all trailing bits
-
-		for _, imp := range group {
-			errs = append(errs, validateImport(imp)...)
-		}
-
-		for _, imp := range group {
-			if typeForImport(imp) != groupImportType {
-				errs = append(errs, fmt.Errorf("group %d: mixed import type", groupnum+1))
-				break
-			}
-		}
-	}
-
-	return
+	return fmt.Errorf("invalid _ import %s", path)
 }
 
-func main() {
-	var rv int
-	for _, path := range os.Args[1:] {
-		if err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
+// acceptableNames returns a list of acceptable names for an import; empty
+// string = no import override; nil list = don't care
+func acceptableNames(path string) []string {
+	m := regexp.MustCompile(`^github.com/Azure/ARO-RP/pkg/api/(v[^/]*[0-9])$`).FindStringSubmatch(path)
+	if m != nil {
+		return []string{m[1]}
+	}
 
-			if !info.IsDir() && strings.HasSuffix(path, ".go") {
-				for _, err := range check(path) {
-					fmt.Printf("%s: %v\n", path, err)
-					rv = 1
-				}
-			}
+	m = regexp.MustCompile(`^github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/([^/]+)/redhatopenshift$`).FindStringSubmatch(path)
+	if m != nil {
+		return []string{"mgmtredhatopenshift" + strings.ReplaceAll(m[1], "-", "")}
+	}
 
+	m = regexp.MustCompile(`^github.com/Azure/ARO-RP/pkg/(deploy|mirror|monitor|operator|portal)$`).FindStringSubmatch(path)
+	if m != nil {
+		return []string{"", "pkg" + m[1]}
+	}
+
+	m = regexp.MustCompile(`^github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/([^/]+)/redhatopenshift$`).FindStringSubmatch(path)
+	if m != nil {
+		return []string{"redhatopenshift" + strings.ReplaceAll(m[1], "-", "")}
+	}
+
+	m = regexp.MustCompile(`^github.com/Azure/ARO-RP/pkg/util/(log|pem|tls)$`).FindStringSubmatch(path)
+	if m != nil {
+		return []string{"util" + m[1]}
+	}
+
+	m = regexp.MustCompile(`^github.com/Azure/ARO-RP/pkg/util/mocks/(?:.+/)?([^/]+)$`).FindStringSubmatch(path)
+	if m != nil {
+		return []string{"mock_" + m[1]}
+	}
+
+	m = regexp.MustCompile(`^github.com/Azure/azure-sdk-for-go/services/(?:preview/)?(?:[^/]+)/mgmt/(?:[^/]+)/([^/]+)$`).FindStringSubmatch(path)
+	if m != nil {
+		return []string{"mgmt" + m[1]}
+	}
+
+	m = regexp.MustCompile(`^github.com/openshift/api/([^/]+)/(v[^/]+)$`).FindStringSubmatch(path)
+	if m != nil {
+		return []string{m[1] + m[2]}
+	}
+
+	m = regexp.MustCompile(`^github.com/openshift/client-go/([^/]+)/clientset/versioned$`).FindStringSubmatch(path)
+	if m != nil {
+		return []string{m[1] + "client"}
+	}
+
+	m = regexp.MustCompile(`^github.com/openshift/client-go/([^/]+)/clientset/versioned/fake$`).FindStringSubmatch(path)
+	if m != nil {
+		return []string{m[1] + "fake"}
+	}
+
+	m = regexp.MustCompile(`^k8s.io/api/([^/]+)/(v[^/]+)$`).FindStringSubmatch(path)
+	if m != nil {
+		return []string{m[1] + m[2]}
+	}
+
+	m = regexp.MustCompile(`^k8s.io/kubernetes/pkg/apis/[^/]+/v[^/]+$`).FindStringSubmatch(path)
+	if m != nil {
+		return nil
+	}
+
+	m = regexp.MustCompile(`^k8s.io/client-go/kubernetes/typed/([^/]+)/(v[^/]+)$`).FindStringSubmatch(path)
+	if m != nil {
+		return []string{m[1] + m[2] + "client"}
+	}
+
+	switch path {
+	case "github.com/Azure/ARO-RP/pkg/frontend/middleware":
+		return []string{"", "frontendmiddleware"}
+	case "github.com/Azure/ARO-RP/pkg/metrics/statsd/cosmosdb":
+		return []string{"dbmetrics"}
+	case "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1":
+		return []string{"arov1alpha1"}
+	case "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned":
+		return []string{"aroclient"}
+	case "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake":
+		return []string{"arofake"}
+	case "github.com/Azure/ARO-RP/pkg/util/dynamichelper/discovery":
+		return []string{"utildiscovery"}
+	case "github.com/Azure/ARO-RP/pkg/util/namespace":
+		return []string{"", "utilnamespace"}
+	case "github.com/Azure/ARO-RP/test/database":
+		return []string{"testdatabase"}
+	case "github.com/Azure/ARO-RP/test/util/log":
+		return []string{"testlog"}
+	case "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac":
+		return []string{"azgraphrbac"}
+	case "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault":
+		return []string{"azkeyvault"}
+	case "github.com/Azure/azure-sdk-for-go/storage":
+		return []string{"azstorage"}
+	case "github.com/googleapis/gnostic/openapiv2":
+		return []string{"openapi_v2"}
+	case "github.com/openshift/console-operator/pkg/api":
+		return []string{"consoleapi"}
+	case "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1":
+		return []string{"machinev1beta1"}
+	case "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned":
+		return []string{"maoclient"}
+	case "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake":
+		return []string{"maofake"}
+	case "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1":
+		return []string{"mcv1"}
+	case "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned":
+		return []string{"mcoclient"}
+	case "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake":
+		return []string{"mcofake"}
+	case "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1":
+		return []string{"mcoclientv1"}
+	case "github.com/openshift/installer/pkg/asset/installconfig/azure":
+		return []string{"icazure"}
+	case "github.com/openshift/installer/pkg/types/azure":
+		return []string{"azuretypes"}
+	case "github.com/satori/go.uuid":
+		return []string{"uuid"}
+	case "golang.org/x/crypto/ssh":
+		return []string{"", "cryptossh"}
+	case "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1":
+		return []string{"extensionsv1beta1"}
+	case "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1":
+		return []string{"extensionsv1"}
+	case "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset":
+		return []string{"extensionsclient"}
+	case "k8s.io/apimachinery/pkg/api/errors":
+		return []string{"kerrors"}
+	case "k8s.io/apimachinery/pkg/apis/meta/v1":
+		return []string{"metav1"}
+	case "k8s.io/apimachinery/pkg/runtime/serializer/json":
+		return []string{"kjson"}
+	case "k8s.io/apimachinery/pkg/util/runtime":
+		return []string{"utilruntime"}
+	case "k8s.io/apimachinery/pkg/version":
+		return []string{"kversion"}
+	case "k8s.io/client-go/testing":
+		return []string{"ktesting"}
+	case "k8s.io/client-go/tools/clientcmd/api/v1":
+		return []string{"clientcmdv1"}
+	case "k8s.io/client-go/tools/metrics":
+		return []string{"kmetrics"}
+	case "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1":
+		return []string{"azureproviderv1beta1"}
+	case "sigs.k8s.io/controller-runtime":
+		return []string{"ctrl"}
+	}
+
+	return []string{""}
+}
+
+func validateImports(path string, fset *token.FileSet, f *ast.File) (errs []error) {
+	for _, prefix := range []string{
+		"pkg/client/",
+		"pkg/database/cosmosdb/zz_generated_",
+		"pkg/operator/apis",
+		"pkg/operator/clientset",
+		"pkg/util/mocks/",
+	} {
+		if strings.HasPrefix(path, prefix) {
 			return nil
-		}); err != nil {
-			panic(err)
 		}
 	}
-	os.Exit(rv)
+
+nextImport:
+	for _, imp := range f.Imports {
+		value := strings.Trim(imp.Path.Value, `"`)
+
+		if imp.Name != nil && imp.Name.Name == "." {
+			err := validateDotImport(value)
+			if err != nil {
+				errs = append(errs, err)
+			}
+			continue
+		}
+
+		if imp.Name != nil && imp.Name.Name == "_" {
+			err := validateUnderscoreImport(value)
+			if err != nil {
+				errs = append(errs, err)
+			}
+			continue
+		}
+
+		switch value {
+		case "sigs.k8s.io/yaml", "gopkg.in/yaml.v2":
+			errs = append(errs, fmt.Errorf("%s is imported; use github.com/ghodss/yaml", value))
+			continue nextImport
+		case "github.com/google/uuid":
+			errs = append(errs, fmt.Errorf("%s is imported; use github.com/satori/go.uuid", value))
+			continue nextImport
+		}
+
+		if strings.HasPrefix(value, "github.com/Azure/azure-sdk-for-go/profiles") {
+			errs = append(errs, fmt.Errorf("%s is imported; use github.com/Azure/azure-sdk-for-go/services/*", value))
+			continue
+		}
+
+		if strings.HasSuffix(value, "/scheme") &&
+			value != "k8s.io/client-go/kubernetes/scheme" {
+			errs = append(errs, fmt.Errorf("%s is imported; should probably use k8s.io/client-go/kubernetes/scheme", value))
+			continue
+		}
+
+		if isStandardLibrary(value) {
+			if imp.Name != nil {
+				errs = append(errs, fmt.Errorf("overridden import %s", value))
+			}
+			continue
+		}
+
+		names := acceptableNames(value)
+		if names == nil {
+			continue
+		}
+		for _, name := range names {
+			if name == "" && imp.Name == nil ||
+				name != "" && imp.Name != nil && imp.Name.Name == name {
+				continue nextImport
+			}
+		}
+
+		errs = append(errs, fmt.Errorf("%s is imported as %q, should be %q", value, imp.Name, names))
+	}
+
+	return
 }

@@ -7,15 +7,15 @@ import (
 	"context"
 
 	batchv1 "k8s.io/api/batch/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/namespace"
 )
 
-var jobConditionsExpected = map[batchv1.JobConditionType]v1.ConditionStatus{
-	batchv1.JobComplete: v1.ConditionTrue,
-	batchv1.JobFailed:   v1.ConditionFalse,
+var jobConditionsExpected = map[batchv1.JobConditionType]corev1.ConditionStatus{
+	batchv1.JobComplete: corev1.ConditionTrue,
+	batchv1.JobFailed:   corev1.ConditionFalse,
 }
 
 func (mon *Monitor) emitJobConditions(ctx context.Context) error {

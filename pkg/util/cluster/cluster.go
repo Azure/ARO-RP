@@ -26,9 +26,9 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
-	v2021131preview "github.com/Azure/ARO-RP/pkg/api/v20210131preview"
-	mgmtopenshiftclustersv20200430 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
-	mgmtopenshiftclustersv20210131preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2021-01-31-preview/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/api/v20210131preview"
+	mgmtredhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
+	mgmtredhatopenshift20210131preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2021-01-31-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -37,8 +37,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
-	openshiftclustersv20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
-	openshiftclustersv20210131preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-01-31-preview/redhatopenshift"
+	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
+	redhatopenshift20210131preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-01-31-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
@@ -53,8 +53,8 @@ type Cluster struct {
 	groups                            features.ResourceGroupsClient
 	applications                      graphrbac.ApplicationsClient
 	serviceprincipals                 graphrbac.ServicePrincipalClient
-	openshiftclustersv20200430        openshiftclustersv20200430.OpenShiftClustersClient
-	openshiftclustersv20210131preview openshiftclustersv20210131preview.OpenShiftClustersClient
+	openshiftclustersv20200430        redhatopenshift20200430.OpenShiftClustersClient
+	openshiftclustersv20210131preview redhatopenshift20210131preview.OpenShiftClustersClient
 	securitygroups                    network.SecurityGroupsClient
 	subnets                           network.SubnetsClient
 	routetables                       network.RouteTablesClient
@@ -109,8 +109,8 @@ func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
 
 		deployments:                       features.NewDeploymentsClient(env.Environment(), env.SubscriptionID(), authorizer),
 		groups:                            features.NewResourceGroupsClient(env.Environment(), env.SubscriptionID(), authorizer),
-		openshiftclustersv20200430:        openshiftclustersv20200430.NewOpenShiftClustersClient(env.Environment(), env.SubscriptionID(), authorizer),
-		openshiftclustersv20210131preview: openshiftclustersv20210131preview.NewOpenShiftClustersClient(env.Environment(), env.SubscriptionID(), authorizer),
+		openshiftclustersv20200430:        redhatopenshift20200430.NewOpenShiftClustersClient(env.Environment(), env.SubscriptionID(), authorizer),
+		openshiftclustersv20210131preview: redhatopenshift20210131preview.NewOpenShiftClustersClient(env.Environment(), env.SubscriptionID(), authorizer),
 		applications:                      graphrbac.NewApplicationsClient(env.Environment(), env.TenantID(), graphAuthorizer),
 		serviceprincipals:                 graphrbac.NewServicePrincipalClient(env.Environment(), env.TenantID(), graphAuthorizer),
 		securitygroups:                    network.NewSecurityGroupsClient(env.Environment(), env.SubscriptionID(), authorizer),
@@ -433,13 +433,13 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 	switch c.env.DeploymentMode() {
 	case deployment.Development:
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
-		ext := api.APIs[v2021131preview.APIVersion].OpenShiftClusterConverter().ToExternal(&oc)
+		ext := api.APIs[v20210131preview.APIVersion].OpenShiftClusterConverter().ToExternal(&oc)
 		data, err := json.Marshal(ext)
 		if err != nil {
 			return err
 		}
 
-		ocExt := mgmtopenshiftclustersv20210131preview.OpenShiftCluster{}
+		ocExt := mgmtredhatopenshift20210131preview.OpenShiftCluster{}
 		err = json.Unmarshal(data, &ocExt)
 		if err != nil {
 			return err
@@ -453,7 +453,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			return err
 		}
 
-		ocExt := mgmtopenshiftclustersv20200430.OpenShiftCluster{}
+		ocExt := mgmtredhatopenshift20200430.OpenShiftCluster{}
 		err = json.Unmarshal(data, &ocExt)
 		if err != nil {
 			return err

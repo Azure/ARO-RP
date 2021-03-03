@@ -17,7 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
-	mock_authz "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
+	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 )
@@ -101,7 +101,7 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
-			denyAssignments := mock_authz.NewMockDenyAssignmentClient(controller)
+			denyAssignments := mock_authorization.NewMockDenyAssignmentClient(controller)
 			deployments := mock_features.NewMockDeploymentsClient(controller)
 
 			env.EXPECT().DeploymentMode().Return(deployment.Production)

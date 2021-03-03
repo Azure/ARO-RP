@@ -10,7 +10,6 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -124,7 +123,7 @@ func (r *AlertWebhookReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1.Secret{}).
+		For(&corev1.Secret{}).
 		WithEventFilter(isAlertManager).
 		Named(controllers.AlertwebhookControllerName).
 		Complete(r)

@@ -10,7 +10,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	fakemcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
+	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ktesting "k8s.io/client-go/testing"
@@ -23,14 +23,14 @@ import (
 func TestSystemreservedEnsure(t *testing.T) {
 	tests := []struct {
 		name                         string
-		mcocli                       *fakemcoclient.Clientset
+		mcocli                       *mcofake.Clientset
 		mocker                       func(mdh *mock_dynamichelper.MockInterface)
 		machineConfigPoolNeedsUpdate bool
 		wantErr                      bool
 	}{
 		{
 			name: "first time create",
-			mcocli: fakemcoclient.NewSimpleClientset(&mcv1.MachineConfigPool{
+			mcocli: mcofake.NewSimpleClientset(&mcv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "worker",
 				},
@@ -42,7 +42,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 		},
 		{
 			name: "nothing to be done",
-			mcocli: fakemcoclient.NewSimpleClientset(&mcv1.MachineConfigPool{
+			mcocli: mcofake.NewSimpleClientset(&mcv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "worker",
 					Labels: map[string]string{labelName: labelValue},

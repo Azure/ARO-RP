@@ -13,10 +13,9 @@ import (
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
-	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	"k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,7 +37,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
-	"github.com/Azure/ARO-RP/pkg/util/tls"
+	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -116,12 +115,12 @@ func (o *operator) resources() ([]runtime.Object, error) {
 	}
 	// then dynamic resources
 	key, cert := o.env.ClusterGenevaLoggingSecret()
-	gcsKeyBytes, err := tls.PrivateKeyAsBytes(key)
+	gcsKeyBytes, err := utiltls.PrivateKeyAsBytes(key)
 	if err != nil {
 		return nil, err
 	}
 
-	gcsCertBytes, err := tls.CertAsBytes(cert)
+	gcsCertBytes, err := utiltls.CertAsBytes(cert)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +161,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 			Data: map[string][]byte{
 				genevalogging.GenevaCertName: gcsCertBytes,
 				genevalogging.GenevaKeyName:  gcsKeyBytes,
-				v1.DockerConfigJsonKey:       []byte(ps),
+				corev1.DockerConfigJsonKey:   []byte(ps),
 			},
 		},
 		&arov1alpha1.Cluster{
@@ -259,7 +258,7 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 				// RESTMapping for APIVersion aro.openshift.io/v1alpha1 Kind
 				// Cluster: no matches for kind "Cluster" in version
 				// "aro.openshift.io/v1alpha1"
-				return errors.IsForbidden(err) || errors.IsConflict(err)
+				return kerrors.IsForbidden(err) || kerrors.IsConflict(err)
 			}, func() error {
 				cluster, err := o.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 				if err != nil {
@@ -300,11 +299,11 @@ func (o *operator) IsReady(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func isCRDEstablished(crd *extv1.CustomResourceDefinition) bool {
-	m := make(map[extv1.CustomResourceDefinitionConditionType]extv1.ConditionStatus, len(crd.Status.Conditions))
+func isCRDEstablished(crd *extensionsv1.CustomResourceDefinition) bool {
+	m := make(map[extensionsv1.CustomResourceDefinitionConditionType]extensionsv1.ConditionStatus, len(crd.Status.Conditions))
 	for _, cond := range crd.Status.Conditions {
 		m[cond.Type] = cond.Status
 	}
-	return m[extv1.Established] == extv1.ConditionTrue &&
-		m[extv1.NamesAccepted] == extv1.ConditionTrue
+	return m[extensionsv1.Established] == extensionsv1.ConditionTrue &&
+		m[extensionsv1.NamesAccepted] == extensionsv1.ConditionTrue
 }

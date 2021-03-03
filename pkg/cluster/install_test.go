@@ -14,8 +14,8 @@ import (
 	"github.com/onsi/gomega/types"
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	fakeconfig "github.com/openshift/client-go/config/clientset/versioned/fake"
-	fakeoperator "github.com/openshift/client-go/operator/clientset/versioned/fake"
+	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
+	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,8 +66,8 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 		wantEntries   []map[string]types.GomegaMatcher
 		wantErr       string
 		kubernetescli *fake.Clientset
-		configcli     *fakeconfig.Clientset
-		operatorcli   *fakeoperator.Clientset
+		configcli     *configfake.Clientset
+		operatorcli   *operatorfake.Clientset
 	}{
 		{
 			name: "Failed step run will log cluster version, cluster operator status, and ingress information if available",
@@ -102,8 +102,8 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 			},
 			kubernetescli: fake.NewSimpleClientset(node),
-			configcli:     fakeconfig.NewSimpleClientset(clusterVersion, clusterOperator),
-			operatorcli:   fakeoperator.NewSimpleClientset(ingressController),
+			configcli:     configfake.NewSimpleClientset(clusterVersion, clusterOperator),
+			operatorcli:   operatorfake.NewSimpleClientset(ingressController),
 		},
 		{
 			name: "Failed step run will not crash if it cannot get the clusterversions, clusteroperators, ingresscontrollers",
@@ -138,8 +138,8 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 			},
 			kubernetescli: fake.NewSimpleClientset(),
-			configcli:     fakeconfig.NewSimpleClientset(),
-			operatorcli:   fakeoperator.NewSimpleClientset(),
+			configcli:     configfake.NewSimpleClientset(),
+			operatorcli:   operatorfake.NewSimpleClientset(),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

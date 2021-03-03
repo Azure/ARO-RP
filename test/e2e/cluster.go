@@ -19,7 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/util/ready"
-	proj "github.com/Azure/ARO-RP/test/util/project"
+	"github.com/Azure/ARO-RP/test/util/project"
 )
 
 const (
@@ -27,24 +27,24 @@ const (
 )
 
 var _ = Describe("Cluster smoke test", func() {
-	var project proj.Project
+	var p project.Project
 
 	var _ = BeforeEach(func() {
-		project = proj.NewProject(clients.Kubernetes, clients.Project, testNamespace)
-		err := project.Create(context.Background())
+		p = project.NewProject(clients.Kubernetes, clients.Project, testNamespace)
+		err := p.Create(context.Background())
 		Expect(err).NotTo(HaveOccurred(), "Failed to create test namespace")
 
 		Eventually(func() error {
-			return project.Verify(context.Background())
+			return p.Verify(context.Background())
 		}).Should(BeNil())
 	})
 
 	var _ = AfterEach(func() {
-		err := project.Delete(context.Background())
+		err := p.Delete(context.Background())
 		Expect(err).NotTo(HaveOccurred(), "Failed to delete test namespace")
 
 		Eventually(func() error {
-			return project.VerifyProjectIsDeleted(context.Background())
+			return p.VerifyProjectIsDeleted(context.Background())
 		}, 5*time.Minute, 10*time.Second).Should(BeNil())
 	})
 

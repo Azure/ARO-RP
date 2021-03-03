@@ -13,19 +13,19 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
-	v1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/Azure/ARO-RP/pkg/env"
-	openshiftclustersv20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
+	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
 )
 
-func Get(ctx context.Context, log *logrus.Entry, env env.Core, authorizer autorest.Authorizer, resourceID string) (*v1.Config, error) {
+func Get(ctx context.Context, log *logrus.Entry, env env.Core, authorizer autorest.Authorizer, resourceID string) (*clientcmdv1.Config, error) {
 	res, err := azure.ParseResourceID(resourceID)
 	if err != nil {
 		return nil, err
 	}
 
-	openshiftclusters := openshiftclustersv20200430.NewOpenShiftClustersClient(env.Environment(), res.SubscriptionID, authorizer)
+	openshiftclusters := redhatopenshift20200430.NewOpenShiftClustersClient(env.Environment(), res.SubscriptionID, authorizer)
 
 	oc, err := openshiftclusters.Get(ctx, res.ResourceGroup, res.ResourceName)
 	if err != nil {
@@ -68,35 +68,35 @@ func Get(ctx context.Context, log *logrus.Entry, env env.Core, authorizer autore
 	return makeKubeconfig(u.Host, *creds.KubeadminUsername, token, "kube-system"), nil
 }
 
-func makeKubeconfig(endpoint, username, token, namespace string) *v1.Config {
+func makeKubeconfig(endpoint, username, token, namespace string) *clientcmdv1.Config {
 	clustername := strings.Replace(endpoint, ".", "-", -1)
 	authinfoname := username + "/" + clustername
 	contextname := namespace + "/" + clustername + "/" + username
 
-	return &v1.Config{
+	return &clientcmdv1.Config{
 		APIVersion: "v1",
 		Kind:       "Config",
-		Clusters: []v1.NamedCluster{
+		Clusters: []clientcmdv1.NamedCluster{
 			{
 				Name: clustername,
-				Cluster: v1.Cluster{
+				Cluster: clientcmdv1.Cluster{
 					Server:                "https://" + endpoint,
 					InsecureSkipTLSVerify: true,
 				},
 			},
 		},
-		AuthInfos: []v1.NamedAuthInfo{
+		AuthInfos: []clientcmdv1.NamedAuthInfo{
 			{
 				Name: authinfoname,
-				AuthInfo: v1.AuthInfo{
+				AuthInfo: clientcmdv1.AuthInfo{
 					Token: token,
 				},
 			},
 		},
-		Contexts: []v1.NamedContext{
+		Contexts: []clientcmdv1.NamedContext{
 			{
 				Name: contextname,
-				Context: v1.Context{
+				Context: clientcmdv1.Context{
 					Cluster:   clustername,
 					Namespace: namespace,
 					AuthInfo:  authinfoname,

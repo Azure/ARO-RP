@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
+	"github.com/Azure/ARO-RP/pkg/operator"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -26,7 +26,7 @@ func TestEmitClusterVersion(t *testing.T) {
 	cli := fake.NewSimpleClientset(
 		&appsv1.Deployment{ // metrics expected
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: pkgoperator.Namespace,
+				Namespace: operator.Namespace,
 				Name:      "aro-operator-master",
 				Labels: map[string]string{
 					"version": "test",

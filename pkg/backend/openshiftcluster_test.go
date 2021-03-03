@@ -23,14 +23,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	mock_cluster "github.com/Azure/ARO-RP/pkg/util/mocks/cluster"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	testdb "github.com/Azure/ARO-RP/test/database"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 type backendTestStruct struct {
 	name    string
 	mocks   func(*mock_cluster.MockInterface, database.OpenShiftClusters)
-	fixture func(*testdb.Fixture)
-	checker func(*testdb.Checker)
+	fixture func(*testdatabase.Fixture)
+	checker func(*testdatabase.Checker)
 }
 
 func TestBackendTry(t *testing.T) {
@@ -40,7 +40,7 @@ func TestBackendTry(t *testing.T) {
 	for _, tt := range []backendTestStruct{
 		{
 			name: "StateCreating success that sets an InstallPhase stays it in Creating",
-			fixture: func(f *testdb.Fixture) {
+			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -57,7 +57,7 @@ func TestBackendTry(t *testing.T) {
 					ID: mockSubID,
 				})
 			},
-			checker: func(c *testdb.Checker) {
+			checker: func(c *testdatabase.Checker) {
 				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -86,7 +86,7 @@ func TestBackendTry(t *testing.T) {
 		},
 		{
 			name: "StateCreating success without an InstallPhase marks provisioning as succeeded",
-			fixture: func(f *testdb.Fixture) {
+			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -103,7 +103,7 @@ func TestBackendTry(t *testing.T) {
 					ID: mockSubID,
 				})
 			},
-			checker: func(c *testdb.Checker) {
+			checker: func(c *testdatabase.Checker) {
 				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -129,7 +129,7 @@ func TestBackendTry(t *testing.T) {
 		},
 		{
 			name: "StateCreating that fails marks ProvisioningState as Failed",
-			fixture: func(f *testdb.Fixture) {
+			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -146,7 +146,7 @@ func TestBackendTry(t *testing.T) {
 					ID: mockSubID,
 				})
 			},
-			checker: func(c *testdb.Checker) {
+			checker: func(c *testdatabase.Checker) {
 				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key:      strings.ToLower(resourceID),
 					Dequeues: 1,
@@ -170,7 +170,7 @@ func TestBackendTry(t *testing.T) {
 		},
 		{
 			name: "StateAdminUpdating success sets the last ProvisioningState and clears LastAdminUpdateError",
-			fixture: func(f *testdb.Fixture) {
+			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -189,7 +189,7 @@ func TestBackendTry(t *testing.T) {
 					ID: mockSubID,
 				})
 			},
-			checker: func(c *testdb.Checker) {
+			checker: func(c *testdatabase.Checker) {
 				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -209,7 +209,7 @@ func TestBackendTry(t *testing.T) {
 		},
 		{
 			name: "StateAdminUpdating run failure populates LastAdminUpdateError and restores previous provisioning state + failed provisioning state",
-			fixture: func(f *testdb.Fixture) {
+			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -228,7 +228,7 @@ func TestBackendTry(t *testing.T) {
 					ID: mockSubID,
 				})
 			},
-			checker: func(c *testdb.Checker) {
+			checker: func(c *testdatabase.Checker) {
 				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -250,7 +250,7 @@ func TestBackendTry(t *testing.T) {
 		},
 		{
 			name: "StateDeleting success deletes the document",
-			fixture: func(f *testdb.Fixture) {
+			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -267,7 +267,7 @@ func TestBackendTry(t *testing.T) {
 					ID: mockSubID,
 				})
 			},
-			checker: func(c *testdb.Checker) {},
+			checker: func(c *testdatabase.Checker) {},
 			mocks: func(manager *mock_cluster.MockInterface, dbOpenShiftClusters database.OpenShiftClusters) {
 				manager.EXPECT().Delete(gomock.Any()).Return(nil)
 			},
@@ -283,10 +283,10 @@ func TestBackendTry(t *testing.T) {
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().DeploymentMode().Return(deployment.Development)
 
-			dbOpenShiftClusters, clientOpenShiftClusters := testdb.NewFakeOpenShiftClusters()
-			dbSubscriptions, _ := testdb.NewFakeSubscriptions()
+			dbOpenShiftClusters, clientOpenShiftClusters := testdatabase.NewFakeOpenShiftClusters()
+			dbSubscriptions, _ := testdatabase.NewFakeSubscriptions()
 
-			f := testdb.NewFixture().WithOpenShiftClusters(dbOpenShiftClusters).WithSubscriptions(dbSubscriptions)
+			f := testdatabase.NewFixture().WithOpenShiftClusters(dbOpenShiftClusters).WithSubscriptions(dbSubscriptions)
 			tt.mocks(manager, dbOpenShiftClusters)
 			tt.fixture(f)
 			err := f.Create()
@@ -319,7 +319,7 @@ func TestBackendTry(t *testing.T) {
 			// wait on the workers to finish their tasks
 			b.waitForWorkerCompletion()
 
-			c := testdb.NewChecker()
+			c := testdatabase.NewChecker()
 			tt.checker(c)
 
 			errs := c.CheckOpenShiftClusters(clientOpenShiftClusters)

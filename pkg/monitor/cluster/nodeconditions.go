@@ -7,14 +7,14 @@ import (
 	"context"
 
 	"github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
-var nodeConditionsExpected = map[v1.NodeConditionType]v1.ConditionStatus{
-	v1.NodeDiskPressure:   v1.ConditionFalse,
-	v1.NodeMemoryPressure: v1.ConditionFalse,
-	v1.NodePIDPressure:    v1.ConditionFalse,
-	v1.NodeReady:          v1.ConditionTrue,
+var nodeConditionsExpected = map[corev1.NodeConditionType]corev1.ConditionStatus{
+	corev1.NodeDiskPressure:   corev1.ConditionFalse,
+	corev1.NodeMemoryPressure: corev1.ConditionFalse,
+	corev1.NodePIDPressure:    corev1.ConditionFalse,
+	corev1.NodeReady:          corev1.ConditionTrue,
 }
 
 func (mon *Monitor) emitNodeConditions(ctx context.Context) error {

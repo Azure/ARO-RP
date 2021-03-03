@@ -14,7 +14,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
-	machineapiclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
+	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -28,18 +28,18 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/insights"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
-	openshiftclustersv20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
-	openshiftclustersv20210131preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-01-31-preview/redhatopenshift"
+	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
+	redhatopenshift20210131preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-01-31-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
 type clientSet struct {
-	OpenshiftClustersv20200430        openshiftclustersv20200430.OpenShiftClustersClient
-	Operationsv20200430               openshiftclustersv20200430.OperationsClient
-	OpenshiftClustersv20210131preview openshiftclustersv20210131preview.OpenShiftClustersClient
-	Operationsv20210131preview        openshiftclustersv20210131preview.OperationsClient
+	OpenshiftClustersv20200430        redhatopenshift20200430.OpenShiftClustersClient
+	Operationsv20200430               redhatopenshift20200430.OperationsClient
+	OpenshiftClustersv20210131preview redhatopenshift20210131preview.OpenShiftClustersClient
+	Operationsv20210131preview        redhatopenshift20210131preview.OperationsClient
 
 	VirtualMachines compute.VirtualMachinesClient
 	Resources       features.ResourcesClient
@@ -48,7 +48,7 @@ type clientSet struct {
 
 	RestConfig  *rest.Config
 	Kubernetes  kubernetes.Interface
-	MachineAPI  machineapiclient.Interface
+	MachineAPI  maoclient.Interface
 	AROClusters aroclient.Interface
 	Project     projectclient.Interface
 }
@@ -102,7 +102,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	machineapicli, err := machineapiclient.NewForConfig(restconfig)
+	machineapicli, err := maoclient.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
 	}
@@ -118,10 +118,10 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}
 
 	return &clientSet{
-		OpenshiftClustersv20200430:        openshiftclustersv20200430.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Operationsv20200430:               openshiftclustersv20200430.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		OpenshiftClustersv20210131preview: openshiftclustersv20210131preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Operationsv20210131preview:        openshiftclustersv20210131preview.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClustersv20200430:        redhatopenshift20200430.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Operationsv20200430:               redhatopenshift20200430.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClustersv20210131preview: redhatopenshift20210131preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Operationsv20210131preview:        redhatopenshift20210131preview.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		VirtualMachines: compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Resources:       features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
