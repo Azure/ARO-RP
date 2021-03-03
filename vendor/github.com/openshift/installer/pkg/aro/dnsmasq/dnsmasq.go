@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"text/template"
 
+	ign2types "github.com/coreos/ignition/config/v2_2/types"
 	ignutil "github.com/coreos/ignition/v2/config/util"
-	igntypes "github.com/coreos/ignition/v2/config/v3_1/types"
-	"github.com/openshift/installer/pkg/asset/ignition"
+	ign3types "github.com/coreos/ignition/v2/config/v3_1/types"
 	mcfgv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	"github.com/vincent-petithory/dataurl"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var t = template.Must(template.New("").Parse(`
@@ -76,7 +78,7 @@ func service() (string, error) {
 	return buf.String(), nil
 }
 
-func IgnitionConfig(clusterDomain, apiIntIP, ingressIP string) (*igntypes.Config, error) {
+func Ignition2Config(clusterDomain, apiIntIP, ingressIP string) (*ign2types.Config, error) {
 	service, err := service()
 	if err != nil {
 		return nil, err
@@ -87,17 +89,78 @@ func IgnitionConfig(clusterDomain, apiIntIP, ingressIP string) (*igntypes.Config
 		return nil, err
 	}
 
-	return &igntypes.Config{
-		Ignition: igntypes.Ignition{
-			Version: igntypes.MaxVersion.String(),
+	return &ign2types.Config{
+		Ignition: ign2types.Ignition{
+			Version: ign2types.MaxVersion.String(),
 		},
-		Storage: igntypes.Storage{
-			Files: []igntypes.File{
-				ignition.FileFromBytes("/etc/dnsmasq.conf", "root", 0644, config),
+		Storage: ign2types.Storage{
+			Files: []ign2types.File{
+				{
+					Node: ign2types.Node{
+						Filesystem: "root",
+						Overwrite:  ignutil.BoolToPtr(true),
+						Path:       "/etc/dnsmasq.conf",
+						User: &ign2types.NodeUser{
+							Name: "root",
+						},
+					},
+					FileEmbedded1: ign2types.FileEmbedded1{
+						Contents: ign2types.FileContents{
+							Source: dataurl.EncodeBytes(config),
+						},
+						Mode: ignutil.IntToPtr(0644),
+					},
+				},
 			},
 		},
-		Systemd: igntypes.Systemd{
-			Units: []igntypes.Unit{
+		Systemd: ign2types.Systemd{
+			Units: []ign2types.Unit{
+				{
+					Contents: service,
+					Enabled:  ignutil.BoolToPtr(true),
+					Name:     "dnsmasq.service",
+				},
+			},
+		},
+	}, nil
+}
+
+func Ignition3Config(clusterDomain, apiIntIP, ingressIP string) (*ign3types.Config, error) {
+	service, err := service()
+	if err != nil {
+		return nil, err
+	}
+
+	config, err := config(clusterDomain, apiIntIP, ingressIP)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ign3types.Config{
+		Ignition: ign3types.Ignition{
+			Version: ign3types.MaxVersion.String(),
+		},
+		Storage: ign3types.Storage{
+			Files: []ign3types.File{
+				{
+					Node: ign3types.Node{
+						Overwrite: ignutil.BoolToPtr(true),
+						Path:      "/etc/dnsmasq.conf",
+						User: ign3types.NodeUser{
+							Name: ignutil.StrToPtr("root"),
+						},
+					},
+					FileEmbedded1: ign3types.FileEmbedded1{
+						Contents: ign3types.Resource{
+							Source: ignutil.StrToPtr(dataurl.EncodeBytes(config)),
+						},
+						Mode: ignutil.IntToPtr(0644),
+					},
+				},
+			},
+		},
+		Systemd: ign3types.Systemd{
+			Units: []ign3types.Unit{
 				{
 					Contents: &service,
 					Enabled:  ignutil.BoolToPtr(true),
@@ -109,23 +172,24 @@ func IgnitionConfig(clusterDomain, apiIntIP, ingressIP string) (*igntypes.Config
 }
 
 func MachineConfig(clusterDomain, apiIntIP, ingressIP, role string) (*mcfgv1.MachineConfig, error) {
-	ignConfig, err := IgnitionConfig(clusterDomain, apiIntIP, ingressIP)
+	ignConfig, err := Ignition2Config(clusterDomain, apiIntIP, ingressIP)
 	if err != nil {
 		return nil, err
 	}
 
-	rawExt, err := ignition.ConvertToRawExtension(*ignConfig)
+	b, err := json.Marshal(ignConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	// canonicalise the machineconfig payload the same way as MCO
 	var i interface{}
-	err = json.Unmarshal(rawExt.Raw, &i)
+	err = json.Unmarshal(b, &i)
 	if err != nil {
 		return nil, err
 	}
 
+	rawExt := runtime.RawExtension{}
 	rawExt.Raw, err = json.Marshal(i)
 	if err != nil {
 		return nil, err
