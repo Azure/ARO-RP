@@ -15,4 +15,5 @@ const (
 	DnsmasqClusterControllerName           = "DnsmasqCluster"
 	DnsmasqMachineConfigControllerName     = "DnsmasqMachineConfig"
 	DnsmasqMachineConfigPoolControllerName = "DnsmasqMachineConfigPool"
+	NodeControllerName                     = "Node"
 )
