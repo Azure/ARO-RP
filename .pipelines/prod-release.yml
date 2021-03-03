@@ -45,7 +45,7 @@ stages:
       - australiasoutheast
       - centralindia
       - eastasia
-      - indiasouth
+      - southindia
       - japaneast
       - japanwest
       - koreacentral
