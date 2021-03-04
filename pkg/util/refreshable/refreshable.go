@@ -5,8 +5,8 @@ package refreshable
 
 import (
 	"context"
-	"strings"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/sirupsen/logrus"
@@ -47,15 +47,19 @@ type authorizer struct {
 //
 // 3. Network failures.  If the error is not an adal.TokenRefreshError, then
 // it's likely a transient failure. For example, connection reset by peer.
+//
+// 4. If credentials are just created, they might fail with `adal.tokenRefreshError)
+// adal: Refresh request failed. Status Code = '401'.  Response body:
+// {"error":"invalid_client","error_description":"AADSTS7000215: Invalid client secret is provided.`
+// Once aad starts propagating credentials you might see occasional success in authentication.
 func (a *authorizer) RefreshWithContext(ctx context.Context, log *logrus.Entry) (bool, error) {
 	err := a.sp.RefreshWithContext(ctx)
 	if err != nil {
 		log.Info(err)
 
-		isAADSTS700016 := strings.Contains(err.Error(), "AADSTS700016")
-		isTokenRefreshError := autorest.IsTokenRefreshError(err)
-
-		if !isTokenRefreshError || isAADSTS700016 {
+		if !autorest.IsTokenRefreshError(err) ||
+			azureerrors.IsUnauthorizedClientError(err) ||
+			azureerrors.IsInvalidSecretError(err) {
 			return false, nil
 		}
 
