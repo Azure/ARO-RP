@@ -123,7 +123,7 @@ func TestConfigRequiredValues(t *testing.T) {
 			config: RPConfig{
 				Configuration: &Configuration{},
 			},
-			wantErr: "configuration has missing fields: ACRResourceID,RPVersionStorageAccountName,AdminAPICABundle,AdminAPIClientCertCommonName,ClusterParentDomainName,DatabaseAccountName,ExtraClusterKeyvaultAccessPolicies,ExtraCosmosDBIPs,ExtraPortalKeyvaultAccessPolicies,ExtraServiceKeyvaultAccessPolicies,FPServicePrincipalID,GlobalResourceGroupName,GlobalResourceGroupLocation,GlobalSubscriptionID,KeyvaultPrefix,MDMFrontendURL,MDSDConfigVersion,MDSDEnvironment,PortalAccessGroupIDs,PortalClientID,PortalElevatedGroupIDs,RPImagePrefix,RPNSGSourceAddressPrefixes,RPParentDomainName,SubscriptionResourceGroupName,SubscriptionResourceGroupLocation,SSHPublicKey,StorageAccountDomain,VMSize",
+			wantErr: "configuration has missing fields: ACRResourceID,RPVersionStorageAccountName,AdminAPICABundle,AdminAPIClientCertCommonName,BillingServicePrincipalID,ClusterParentDomainName,DatabaseAccountName,ExtraClusterKeyvaultAccessPolicies,ExtraCosmosDBIPs,ExtraPortalKeyvaultAccessPolicies,ExtraServiceKeyvaultAccessPolicies,FPServicePrincipalID,GlobalResourceGroupName,GlobalResourceGroupLocation,GlobalSubscriptionID,KeyvaultPrefix,MDMFrontendURL,MDSDConfigVersion,MDSDEnvironment,PortalAccessGroupIDs,PortalClientID,PortalElevatedGroupIDs,RPImagePrefix,RPNSGSourceAddressPrefixes,RPParentDomainName,SubscriptionResourceGroupName,SubscriptionResourceGroupLocation,SSHPublicKey,StorageAccountDomain,VMSize",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

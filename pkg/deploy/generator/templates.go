@@ -68,6 +68,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"acrResourceId",
 			"adminApiCaBundle",
 			"adminApiClientCertCommonName",
+			"billingServicePrincipalId",
 			"encryptionAtHost",
 			"extraCosmosDBIPs",
 			"keyvaultPrefix",

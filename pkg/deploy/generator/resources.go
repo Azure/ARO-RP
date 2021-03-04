@@ -30,9 +30,6 @@ import (
 
 const (
 	tenantIDHack = "13805ec3-a223-47ad-ad65-8b2baf92c0fb"
-	//aro-billing-operator SP Id, from https://msazure.visualstudio.com/AzureRedHatOpenShift/_workitems/edit/7547877/
-	//needs cleanup of the old role assignment if changed
-	billingSPID = "970792b5-7720-4bf5-a335-f15e97c7e25a"
 )
 
 var (
@@ -1810,10 +1807,10 @@ func (g *generator) billingContributorRbac() []*arm.Resource {
 	return []*arm.Resource{
 		rbac.ResourceRoleAssignmentWithName(
 			rbac.RoleDocumentDBAccountContributor,
-			"'"+billingSPID+"'",
+			"parameters('billingServicePrincipalId')",
 			"Microsoft.DocumentDB/databaseAccounts",
 			"parameters('databaseAccountName')",
-			"concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), '"+billingSPID+"' , 'Billing / DocumentDB Account Contributor'))",
+			"concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('billingServicePrincipalId') , 'Billing / DocumentDB Account Contributor'))",
 		),
 	}
 }

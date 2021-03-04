@@ -11,6 +11,9 @@
         "adminApiClientCertCommonName": {
             "value": ""
         },
+        "billingServicePrincipalId": {
+            "value": ""
+        },
         "clusterParentDomainName": {
             "value": ""
         },
