@@ -375,9 +375,9 @@ def service_principal_update(cli_ctx, oc, client_id=None, client_secret=None, re
             app, client_secret = aad.create_application(cluster_resource_group or 'aro-' + random_id)
             client_id = app.app_id
         else:
-            # TODO: Append here, not delete
-            # application exists so we need to generate new secret
-            client_secret = aad.generate_secret_by_client_id(app.app_id)
+            # only flow 2.
+            if refresh_cluster_service_principal is not None:
+                client_secret = aad.generate_secret_by_client_id(app.app_id)
     except GraphErrorException as e:
         raise logger.error(e.message) if fail else logger.info(e.message)
 
@@ -415,4 +415,6 @@ def service_principal_update(cli_ctx, oc, client_id=None, client_secret=None, re
             if not resource_contributor_exists:
                 assign_network_contributor_to_resource(cli_ctx, resource, sp_id)
 
+    print(client_id)
+    print(client_secret)
     return client_id, client_secret

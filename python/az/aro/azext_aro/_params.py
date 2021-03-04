@@ -7,6 +7,7 @@ from azext_aro._validators import validate_cluster_resource_group
 from azext_aro._validators import validate_domain
 from azext_aro._validators import validate_pull_secret
 from azext_aro._validators import validate_subnet
+from azext_aro._validators import validate_client_secret
 from azext_aro._validators import validate_visibility
 from azext_aro._validators import validate_vnet
 from azext_aro._validators import validate_vnet_resource_group_name
@@ -44,7 +45,8 @@ def load_arguments(self, _):
                    help='Client ID of cluster service principal.',
                    validator=validate_client_id)
         c.argument('client_secret',
-                   help='Client secret of cluster service principal.')
+                   help='Client secret of cluster service principal.',
+                   validator=validate_client_secret)
         c.argument('refresh_cluster_service_principal',
                    arg_type=get_three_state_flag(),
                    help='Refresh cluster service principal.',

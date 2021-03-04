@@ -82,27 +82,29 @@ class AADManager:
     def generate_secret_by_client_id(self, client_id):
         password = uuid.uuid4()
 
-        application = self.get_application_by_client_id(client_id)
-
         try:
-            end_date = datetime.datetime(2199, 12, 31, tzinfo=datetime.timezone.utc)
+            end_date = datetime.datetime(2299, 12, 31, tzinfo=datetime.timezone.utc)
         except AttributeError:
-            end_date = datetime.datetime(2199, 12, 31)
+            end_date = datetime.datetime(2299, 12, 31)
 
         try:
-            response = self.client.applications.update_password_credentials(
-                application_object_id=application.object_id,
-                raw="true",
-                value=[
-                    PasswordCredential(
-                        custom_key_identifier=str(datetime.datetime.utcnow()).encode(),
-                        end_date=end_date,
-                        value=password,
-                    ),
-                ],
-            )
-
+            application = self.get_application_by_client_id(client_id)
+            credentials = list(self.client.applications.list_password_credentials(application.object_id))
         except GraphErrorException as e:
             raise logger.error(e.message)
+
+        key_id = uuid.uuid4()
+        start_date = datetime.datetime.utcnow()
+
+        # when appending credentials ALL fields must be present, otherwise
+        # azure gives ambiguous errors about not being able to update old keys
+        credentials.append(PasswordCredential(
+            custom_key_identifier=str(start_date).encode(),
+            key_id=str(key_id),
+            start_date=start_date,
+            end_date=end_date,
+            value=password))
+
+        self.client.applications.update_password_credentials(application.object_id, credentials)
 
         return password
