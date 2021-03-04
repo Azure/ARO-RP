@@ -24,7 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
-func portal(ctx context.Context, log *logrus.Entry) error {
+func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 	_env, err := env.NewCore(ctx, log)
 	if err != nil {
 		return err
@@ -166,7 +166,7 @@ func portal(ctx context.Context, log *logrus.Entry) error {
 
 	log.Print("listening")
 
-	p := pkgportal.NewPortal(_env, log.WithField("component", "portal"), log.WithField("component", "portal-access"), l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbOpenShiftClusters, dbPortal, dialer)
+	p := pkgportal.NewPortal(_env, audit, log.WithField("component", "portal"), log.WithField("component", "portal-access"), l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbOpenShiftClusters, dbPortal, dialer)
 
 	return p.Run(ctx)
 }

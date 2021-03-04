@@ -15,18 +15,20 @@ import (
 	"net/http/httputil"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
-	"github.com/sirupsen/logrus"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/portal/util/responsewriter"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_proxy "github.com/Azure/ARO-RP/pkg/util/mocks/proxy"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/listener"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 // fakeServer returns a test listener for an HTTPS server which validates its
@@ -381,6 +383,11 @@ func TestProxy(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
+			_env := mock_env.NewMockInterface(ctrl)
+			_env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+			_env.EXPECT().Hostname().AnyTimes().Return("testhost")
+			_env.EXPECT().Location().AnyTimes().Return("eastus")
+
 			dialer := mock_proxy.NewMockDialer(ctrl)
 			if tt.mocks != nil {
 				tt.mocks(dialer)
@@ -388,7 +395,10 @@ func TestProxy(t *testing.T) {
 
 			unauthenticatedRouter := &mux.Router{}
 
-			k := New(logrus.NewEntry(logrus.StandardLogger()), logrus.NewEntry(logrus.StandardLogger()), nil, nil, dbOpenShiftClusters, dbPortal, dialer, &mux.Router{}, unauthenticatedRouter)
+			_, audit := testlog.NewAudit()
+			_, baseLog := testlog.New()
+			_, baseAccessLog := testlog.New()
+			k := New(baseLog, audit, _env, baseAccessLog, nil, nil, dbOpenShiftClusters, dbPortal, dialer, &mux.Router{}, unauthenticatedRouter)
 
 			k.newToken = func() string { return token }
 

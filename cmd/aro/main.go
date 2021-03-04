@@ -62,7 +62,7 @@ func main() {
 		err = rp(ctx, log, audit)
 	case "portal":
 		checkArgs(1)
-		err = portal(ctx, log)
+		err = portal(ctx, log, audit)
 	case "operator":
 		checkArgs(2)
 		err = operator(ctx, log)

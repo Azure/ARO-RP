@@ -495,6 +495,8 @@ func TestSecurity(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			defer auditHook.Reset()
+
 			tlsConfig := &tls.Config{
 				RootCAs: pool,
 			}
@@ -527,7 +529,6 @@ func TestSecurity(t *testing.T) {
 			}
 
 			testlog.AssertAuditPayloads(t, auditHook, tt.wantAuditPayloads)
-			auditHook.Entries = []logrus.Entry{}
 		})
 	}
 }

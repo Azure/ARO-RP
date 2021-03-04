@@ -34,6 +34,8 @@ var (
 	RXAdminProvider = regexp.MustCompile(`^/admin/providers/([^/]+)/([^/]+)$`)
 
 	RXTolerantResourceID = regexp.MustCompile(`(?i)^(?:/admin)?/subscriptions/([^/]+)(?:/resourceGroups/([^/]+)(?:/providers/([^/]+)/([^/]+)(?:/([^/]+))?)?)?`)
+
+	RXTolerantSubResourceID = regexp.MustCompile(`(?i)^(?:/admin)?/subscriptions/([^/]+)(?:/resourceGroups/([^/]+)(?:/providers/([^/]+)/([^/]+)/([^/]+)(?:/([^/]+))?)?)?`)
 )
 
 func getBaseLogger() *logrus.Logger {
