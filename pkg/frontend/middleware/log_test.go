@@ -141,5 +141,4 @@ func TestIsAdminOp(t *testing.T) {
 			t.Errorf("%s: expected: %t, actual: %t", tc.url, tc.expected, actual)
 		}
 	}
-
 }

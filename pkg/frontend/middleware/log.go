@@ -99,10 +99,8 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 			log.Print("read request")
 
 			var (
-				auditCallerIdentity     = r.UserAgent()
-				auditCallerType         = audit.CallerIdentityTypeApplicationID
-				auditTargetResourceType = auditTargetResourceType(r)
-				auditTargetResourceName = r.URL.Path
+				auditCallerIdentity = r.UserAgent()
+				auditCallerType     = audit.CallerIdentityTypeApplicationID
 			)
 
 			if correlationData.ClientPrincipalName != "" {
@@ -139,8 +137,8 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 				},
 				audit.PayloadKeyTargetResources: []audit.TargetResource{
 					{
-						TargetResourceName: auditTargetResourceName,
-						TargetResourceType: auditTargetResourceType,
+						TargetResourceName: r.URL.Path,
+						TargetResourceType: auditTargetResourceType(r),
 					},
 				},
 			})
