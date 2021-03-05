@@ -12,6 +12,7 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -75,10 +76,23 @@ func (m *manager) ensureResourceGroup(ctx context.Context) error {
 	}
 
 	_, err := m.resourceGroups.CreateOrUpdate(ctx, resourceGroup, group)
-	if requestErr, ok := err.(*azure.RequestError); ok &&
-		requestErr.ServiceError != nil && requestErr.ServiceError.Code == "RequestDisallowedByPolicy" {
+
+	var serviceError *azure.ServiceError
+	// CreateOrUpdate wraps DetailedError wrapping a *RequestError (if error generated in ResourceGroup CreateOrUpdateResponder at least)
+	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		if requestErr, ok := detailedErr.Original.(*azure.RequestError); ok {
+			serviceError = requestErr.ServiceError
+		}
+	}
+
+	// TODO [gv]: Keeping this for retro-compatibility, but probably this can be removed
+	if requestErr, ok := err.(*azure.RequestError); ok {
+		serviceError = requestErr.ServiceError
+	}
+
+	if serviceError != nil && serviceError.Code == "RequestDisallowedByPolicy" {
 		// if request was disallowed by policy, inform user so they can take appropriate action
-		b, _ := json.Marshal(requestErr.ServiceError)
+		b, _ := json.Marshal(serviceError)
 		return &api.CloudError{
 			StatusCode: http.StatusBadRequest,
 			CloudErrorBody: &api.CloudErrorBody{
