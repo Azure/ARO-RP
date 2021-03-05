@@ -144,7 +144,7 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 		err := wait.PollImmediate(30*time.Second, 15*time.Minute, mdsdReady)
 		if err != nil {
 			// TODO: Remove dump once reason for flakes is clear
-			err := dumpEvents(context.Background(), "openshift-azure-monitoring")
+			err := dumpEvents(context.Background(), "openshift-azure-logging")
 			Expect(err).NotTo(HaveOccurred())
 		}
 		Expect(err).NotTo(HaveOccurred())
@@ -158,6 +158,11 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 
 		// wait for it to be fixed
 		err = wait.PollImmediate(30*time.Second, 15*time.Minute, mdsdReady)
+		if err != nil {
+			// TODO: Remove dump once reason for flakes is clear
+			err := dumpEvents(context.Background(), "openshift-azure-logging")
+			Expect(err).NotTo(HaveOccurred())
+		}
 		Expect(err).NotTo(HaveOccurred())
 
 		// confirm that only one object was updated
