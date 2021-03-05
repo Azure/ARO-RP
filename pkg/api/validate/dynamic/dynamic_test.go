@@ -12,7 +12,6 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
@@ -20,7 +19,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
-	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 )
 
@@ -705,143 +703,6 @@ func TestValidateSubnets(t *testing.T) {
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))
-			}
-		})
-	}
-}
-
-func TestValidateProviders(t *testing.T) {
-	ctx := context.Background()
-
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	for _, tt := range []struct {
-		name    string
-		mocks   func(*mock_features.MockProvidersClient)
-		wantErr string
-	}{
-		{
-			name: "pass",
-			mocks: func(providersClient *mock_features.MockProvidersClient) {
-				providersClient.EXPECT().
-					List(gomock.Any(), nil, "").
-					Return([]mgmtfeatures.Provider{
-						{
-							Namespace:         to.StringPtr("Microsoft.Authorization"),
-							RegistrationState: to.StringPtr("Registered"),
-						},
-						{
-							Namespace:         to.StringPtr("Microsoft.Compute"),
-							RegistrationState: to.StringPtr("Registered"),
-						},
-						{
-							Namespace:         to.StringPtr("Microsoft.Network"),
-							RegistrationState: to.StringPtr("Registered"),
-						},
-						{
-							Namespace:         to.StringPtr("Microsoft.Storage"),
-							RegistrationState: to.StringPtr("Registered"),
-						},
-						{
-							Namespace:         to.StringPtr("otherRegisteredProvider"),
-							RegistrationState: to.StringPtr("Registered"),
-						},
-						{
-							Namespace:         to.StringPtr("otherNotRegisteredProvider"),
-							RegistrationState: to.StringPtr("NotRegistered"),
-						},
-					}, nil)
-			},
-		},
-		{
-			name: "fail: compute not registered",
-			mocks: func(providersClient *mock_features.MockProvidersClient) {
-				providersClient.EXPECT().
-					List(gomock.Any(), nil, "").
-					Return([]mgmtfeatures.Provider{
-						{
-							Namespace:         to.StringPtr("Microsoft.Authorization"),
-							RegistrationState: to.StringPtr("Registered"),
-						},
-						{
-							Namespace:         to.StringPtr("Microsoft.Compute"),
-							RegistrationState: to.StringPtr("NotRegistered"),
-						},
-						{
-							Namespace:         to.StringPtr("Microsoft.Network"),
-							RegistrationState: to.StringPtr("Registered"),
-						},
-						{
-							Namespace:         to.StringPtr("Microsoft.Storage"),
-							RegistrationState: to.StringPtr("Registered"),
-						},
-						{
-							Namespace:         to.StringPtr("otherRegisteredProvider"),
-							RegistrationState: to.StringPtr("Registered"),
-						},
-						{
-							Namespace:         to.StringPtr("otherNotRegisteredProvider"),
-							RegistrationState: to.StringPtr("NotRegistered"),
-						},
-					}, nil)
-			},
-			wantErr: "400: ResourceProviderNotRegistered: : The resource provider 'Microsoft.Compute' is not registered.",
-		},
-		{
-			name: "fail: storage missing",
-			mocks: func(providersClient *mock_features.MockProvidersClient) {
-				providersClient.EXPECT().
-					List(gomock.Any(), nil, "").
-					Return([]mgmtfeatures.Provider{
-						{
-							Namespace:         to.StringPtr("Microsoft.Authorization"),
-							RegistrationState: to.StringPtr("Registered"),
-						},
-						{
-							Namespace:         to.StringPtr("Microsoft.Compute"),
-							RegistrationState: to.StringPtr("Registered"),
-						},
-						{
-							Namespace:         to.StringPtr("Microsoft.Network"),
-							RegistrationState: to.StringPtr("Registered"),
-						},
-						{
-							Namespace:         to.StringPtr("otherRegisteredProvider"),
-							RegistrationState: to.StringPtr("Registered"),
-						},
-						{
-							Namespace:         to.StringPtr("otherNotRegisteredProvider"),
-							RegistrationState: to.StringPtr("NotRegistered"),
-						},
-					}, nil)
-			},
-			wantErr: "400: ResourceProviderNotRegistered: : The resource provider 'Microsoft.Storage' is not registered.",
-		},
-		{
-			name: "error case",
-			mocks: func(providersClient *mock_features.MockProvidersClient) {
-				providersClient.EXPECT().
-					List(gomock.Any(), nil, "").
-					Return(nil, errors.New("random error"))
-			},
-			wantErr: "random error",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			providerClient := mock_features.NewMockProvidersClient(controller)
-
-			tt.mocks(providerClient)
-
-			dv := &dynamic{
-				log:       logrus.NewEntry(logrus.StandardLogger()),
-				providers: providerClient,
-			}
-
-			err := dv.ValidateProviders(ctx)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
 			}
 		})
 	}

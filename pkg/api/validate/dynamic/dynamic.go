@@ -13,17 +13,13 @@ import (
 	"time"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/apparentlymart/go-cidr/cidr"
-	"github.com/form3tech-oss/jwt-go"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/aad"
-	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -380,60 +376,6 @@ func (dv *dynamic) validateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 		ones, _ := net.Mask.Size()
 		if ones > 27 {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must be /27 or larger.", s.ID)
-		}
-	}
-
-	return nil
-}
-
-func (dv *dynamic) ValidateProviders(ctx context.Context) error {
-	dv.log.Print("ValidateProviders")
-
-	providers, err := dv.providers.List(ctx, nil, "")
-	if err != nil {
-		return err
-	}
-
-	providerMap := make(map[string]mgmtfeatures.Provider, len(providers))
-
-	for _, provider := range providers {
-		providerMap[*provider.Namespace] = provider
-	}
-
-	for _, provider := range []string{
-		"Microsoft.Authorization",
-		"Microsoft.Compute",
-		"Microsoft.Network",
-		"Microsoft.Storage",
-	} {
-		if providerMap[provider].RegistrationState == nil ||
-			*providerMap[provider].RegistrationState != "Registered" {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", provider)
-		}
-	}
-
-	return nil
-}
-
-func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string) error {
-	// TODO: once aad.GetToken is mockable, write a unit test for this function
-	log.Print("ValidateServicePrincipal")
-
-	token, err := aad.GetToken(ctx, dv.log, clientID, clientSecret, tenantID, dv.azEnv.ActiveDirectoryEndpoint, dv.azEnv.GraphEndpoint)
-	if err != nil {
-		return err
-	}
-
-	p := &jwt.Parser{}
-	c := &azureclaim.AzureClaim{}
-	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
-	if err != nil {
-		return err
-	}
-
-	for _, role := range c.Roles {
-		if role == "Application.ReadWrite.OwnedBy" {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal must not have the Application.ReadWrite.OwnedBy permission.")
 		}
 	}
 
