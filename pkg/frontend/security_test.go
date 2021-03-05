@@ -135,7 +135,7 @@ func TestSecurity(t *testing.T) {
 					TargetResources: []audit.TargetResource{
 						{
 							TargetResourceType: "",
-							TargetResourceName: "",
+							TargetResourceName: "/providers/microsoft.redhatopenshift/operations",
 						},
 					},
 				},
@@ -174,7 +174,7 @@ func TestSecurity(t *testing.T) {
 					TargetResources: []audit.TargetResource{
 						{
 							TargetResourceType: "",
-							TargetResourceName: "",
+							TargetResourceName: "/providers/microsoft.redhatopenshift/operations",
 						},
 					},
 				},
@@ -234,7 +234,7 @@ func TestSecurity(t *testing.T) {
 					TargetResources: []audit.TargetResource{
 						{
 							TargetResourceType: "",
-							TargetResourceName: "",
+							TargetResourceName: "/providers/microsoft.redhatopenshift/operations",
 						},
 					},
 				},
@@ -275,7 +275,7 @@ func TestSecurity(t *testing.T) {
 					TargetResources: []audit.TargetResource{
 						{
 							TargetResourceType: "",
-							TargetResourceName: "",
+							TargetResourceName: "/providers/microsoft.redhatopenshift/operations",
 						},
 					},
 				},
@@ -351,7 +351,7 @@ func TestSecurity(t *testing.T) {
 					TargetResources: []audit.TargetResource{
 						{
 							TargetResourceType: "",
-							TargetResourceName: "",
+							TargetResourceName: "/providers/microsoft.redhatopenshift/operations",
 						},
 					},
 				},
@@ -392,7 +392,7 @@ func TestSecurity(t *testing.T) {
 					TargetResources: []audit.TargetResource{
 						{
 							TargetResourceType: "",
-							TargetResourceName: "",
+							TargetResourceName: "/providers/microsoft.redhatopenshift/operations",
 						},
 					},
 				},
@@ -433,7 +433,7 @@ func TestSecurity(t *testing.T) {
 					TargetResources: []audit.TargetResource{
 						{
 							TargetResourceType: "",
-							TargetResourceName: "",
+							TargetResourceName: "/providers/microsoft.redhatopenshift/operations",
 						},
 					},
 				},
@@ -474,7 +474,7 @@ func TestSecurity(t *testing.T) {
 					TargetResources: []audit.TargetResource{
 						{
 							TargetResourceType: "",
-							TargetResourceName: "",
+							TargetResourceName: "/providers/microsoft.redhatopenshift/operations",
 						},
 					},
 				},

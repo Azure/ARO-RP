@@ -99,9 +99,8 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 			log.Print("read request")
 
 			var (
-				auditCallerIdentity                              = r.UserAgent()
-				auditCallerType                                  = audit.CallerIdentityTypeApplicationID
-				auditTargetResourceName, auditTargetResourceType = auditTargetResourceData(r)
+				auditCallerIdentity = r.UserAgent()
+				auditCallerType     = audit.CallerIdentityTypeApplicationID
 			)
 
 			if correlationData.ClientPrincipalName != "" {
@@ -138,8 +137,8 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 				},
 				audit.PayloadKeyTargetResources: []audit.TargetResource{
 					{
-						TargetResourceName: auditTargetResourceName,
-						TargetResourceType: auditTargetResourceType,
+						TargetResourceName: r.URL.Path,
+						TargetResourceType: auditTargetResourceType(r),
 					},
 				},
 			})
@@ -175,25 +174,20 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 	}
 }
 
-func auditTargetResourceData(r *http.Request) (string, string) {
+func auditTargetResourceType(r *http.Request) string {
 	if matches := utillog.RXProviderResourceKind.FindStringSubmatch(r.URL.Path); matches != nil {
-		if resourceKind := matches[len(matches)-1]; resourceKind != "" {
-			return resourceKind, ""
-		}
+		return matches[len(matches)-1]
 	}
 
 	if matches := utillog.RXAdminProvider.FindStringSubmatch(r.URL.Path); matches != nil {
-		if resourceKind := matches[len(matches)-1]; resourceKind != "" {
-			return resourceKind, ""
-		}
+		return matches[len(matches)-1]
 	}
 
 	if matches := utillog.RXTolerantResourceID.FindStringSubmatch(r.URL.Path); matches != nil {
-		resourceKind, resourceName := matches[len(matches)-2], matches[len(matches)-1]
-		return resourceKind, resourceName
+		return matches[len(matches)-2]
 	}
 
-	return "", ""
+	return ""
 }
 
 func isAdminOp(r *http.Request) bool {
