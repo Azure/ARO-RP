@@ -93,6 +93,11 @@ func validateAdminKubernetesObjects(method, groupKind, namespace, name string) e
 		strings.HasSuffix(strings.ToLower(groupKind), ".oauth.openshift.io") {
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to secrets is forbidden.")
 	}
+	if method != http.MethodGet &&
+		(strings.HasSuffix(strings.ToLower(groupKind), ".rbac.authorization.k8s.io") ||
+			strings.HasSuffix(strings.ToLower(groupKind), ".authorization.openshift.io")) {
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Write access to RBAC is forbidden.")
+	}
 
 	if !rxKubernetesString.MatchString(namespace) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided namespace '%s' is invalid.", namespace)
