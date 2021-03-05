@@ -280,6 +280,17 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					}, nil)
 			},
 		},
+		{
+			name:   "pass: no route table to check",
+			subnet: Subnet{ID: masterSubnet},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				(*vnet.Subnets)[0].RouteTable = nil
+				(*vnet.Subnets)[1].RouteTable = nil
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(ctx)

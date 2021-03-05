@@ -166,6 +166,11 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 		return err
 	}
 
+	// no route table found
+	if rtID == "" {
+		return nil
+	}
+
 	rtr, err := azure.ParseResourceID(rtID)
 	if err != nil {
 		return err
