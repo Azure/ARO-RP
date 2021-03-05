@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
@@ -312,6 +314,50 @@ func TestMerge(t *testing.T) {
 
 			if !reflect.DeepEqual(got, tt.wantPS) {
 				t.Errorf("wrong ps: %s", ps)
+			}
+		})
+	}
+}
+
+func TestUnmarshalSecretData(t *testing.T) {
+	test := []struct {
+		name     string
+		ps       *corev1.Secret
+		wantAuth map[string]string
+		wantErr  string
+	}{
+		{
+			name: "ok secret",
+			ps: &corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}, "registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				},
+			},
+			wantAuth: map[string]string{
+				"arosvc.azurecr.io":  "ZnJlZDplbnRlcg==",
+				"registry.redhat.io": "ZnJlZDplbnRlcg==",
+			},
+		},
+		{
+			name: "broken secret",
+			ps: &corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				},
+			},
+			wantErr: "invalid character ':' after object key:value pair",
+		},
+	}
+
+	for _, tt := range test {
+		t.Run(tt.name, func(t *testing.T) {
+			out, err := UnmarshalSecretData(tt.ps)
+			if err != nil {
+				if err.Error() != tt.wantErr {
+					t.Fatal(err.Error())
+				}
+			} else if !reflect.DeepEqual(out, tt.wantAuth) {
+				t.Fatalf("Auth does not match:\n%v\n%v", out, tt.wantAuth)
 			}
 		})
 	}
