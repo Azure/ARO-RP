@@ -501,7 +501,7 @@ func TestValidateVnetLocation(t *testing.T) {
 				virtualNetworks: vnetClient,
 			}
 
-			err := dv.validateLocation(ctx, Subnet{ID: vnetID}, "eastus")
+			err := dv.validateLocation(ctx, Subnet{ID: masterSubnet}, "eastus")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

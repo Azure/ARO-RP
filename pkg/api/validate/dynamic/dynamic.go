@@ -278,10 +278,15 @@ func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, add
 	return nil
 }
 
-func (dv *dynamic) validateLocation(ctx context.Context, subnet Subnet, location string) error {
+func (dv *dynamic) validateLocation(ctx context.Context, s Subnet, location string) error {
 	dv.log.Print("validateLocation")
 
-	vnetr, err := azure.ParseResourceID(subnet.ID)
+	vnetID, _, err := subnet.Split(s.ID)
+	if err != nil {
+		return err
+	}
+
+	vnetr, err := azure.ParseResourceID(vnetID)
 	if err != nil {
 		return err
 	}
