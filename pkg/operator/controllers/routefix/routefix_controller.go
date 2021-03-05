@@ -9,6 +9,7 @@ import (
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -94,6 +95,7 @@ func (r *RouteFixReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error
 func (r *RouteFixReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}).
+		Owns(&corev1.Namespace{}).
 		Owns(&appsv1.DaemonSet{}).
 		Named(controllers.RouteFixControllerName).
 		Complete(r)
