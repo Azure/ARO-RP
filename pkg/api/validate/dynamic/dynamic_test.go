@@ -24,14 +24,24 @@ import (
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 )
 
+var (
+	resourceGroupName = "testGroup"
+	subscriptionID    = "0000000-0000-0000-0000-000000000000"
+	resourceGroupID   = "/subscriptions/" + subscriptionID + "/resourceGroups/" + resourceGroupName
+	vnetName          = "testVnet"
+	vnetID            = resourceGroupID + "/providers/Microsoft.Network/virtualNetworks/" + vnetName
+	masterSubnet      = vnetID + "/subnet/masterSubnet"
+	workerSubnet      = vnetID + "/subnet/workerSubnet"
+	masterSubnetPath  = "properties.masterProfile.subnetId"
+	masterRtID        = resourceGroupID + "/providers/Microsoft.Network/routeTables/masterRt"
+	workerRtID        = resourceGroupID + "/providers/Microsoft.Network/routeTables/workerRt"
+	masterNSGv1       = resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg"
+	workerNSGv1       = resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg"
+)
+
 func TestValidateVnetPermissions(t *testing.T) {
 	ctx := context.Background()
 
-	resourceGroupName := "testGroup"
-	vnetName := "testVnet"
-	subscriptionID := "0000000-0000-0000-0000-000000000000"
-	vnetID := "/subscriptions/" + subscriptionID + "/resourceGroups/" + resourceGroupName + "/providers/Microsoft.Network/virtualNetworks/" + vnetName
-	masterSubnet := vnetID + "/subnet/masterSubnet"
 	resourceType := "virtualNetworks"
 	resourceProvider := "Microsoft.Network"
 
@@ -124,11 +134,6 @@ func TestValidateVnetPermissions(t *testing.T) {
 }
 
 func TestGetRouteTableID(t *testing.T) {
-	resourceGroupID := "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup"
-	vnetID := resourceGroupID + "/providers/Microsoft.Network/virtualNetworks/testVnet"
-	genericSubnet := vnetID + "/subnet/genericSubnet"
-	routeTableID := resourceGroupID + "/providers/Microsoft.Network/routeTables/testRouteTable"
-
 	for _, tt := range []struct {
 		name       string
 		modifyVnet func(*mgmtnetwork.VirtualNetwork)
@@ -148,7 +153,7 @@ func TestGetRouteTableID(t *testing.T) {
 			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
 				vnet.Subnets = nil
 			},
-			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + genericSubnet + "' could not be found.",
+			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -157,10 +162,10 @@ func TestGetRouteTableID(t *testing.T) {
 				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
 					Subnets: &[]mgmtnetwork.Subnet{
 						{
-							ID: &genericSubnet,
+							ID: &masterSubnet,
 							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 								RouteTable: &mgmtnetwork.RouteTable{
-									ID: &routeTableID,
+									ID: &masterRtID,
 								},
 							},
 						},
@@ -173,7 +178,7 @@ func TestGetRouteTableID(t *testing.T) {
 			}
 
 			// purposefully hardcoding path to "" so it is not needed in the wantErr message
-			_, err := getRouteTableID(vnet, genericSubnet)
+			_, err := getRouteTableID(vnet, masterSubnet)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))
@@ -184,16 +189,6 @@ func TestGetRouteTableID(t *testing.T) {
 
 func TestValidateRouteTablesPermissions(t *testing.T) {
 	ctx := context.Background()
-
-	subscriptionID := "0000000-0000-0000-0000-000000000000"
-	resourceGroupName := "testGroup"
-	resourceGroupID := "/subscriptions/" + subscriptionID + "/resourceGroups/" + resourceGroupName
-	vnetName := "testVnet"
-	vnetID := resourceGroupID + "/providers/Microsoft.Network/virtualNetworks/" + vnetName
-	masterSubnet := vnetID + "/subnet/masterSubnet"
-	workerSubnet := vnetID + "/subnet/workerSubnet"
-	masterRtID := resourceGroupID + "/providers/Microsoft.Network/routeTables/masterRt"
-	workerRtID := resourceGroupID + "/providers/Microsoft.Network/routeTables/workerRt"
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
@@ -224,7 +219,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: : The subnet '" + masterSubnet + "' could not be found.",
+			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
 		},
 		{
 			name:   "fail: worker subnet ID doesn't exist",
@@ -235,7 +230,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: : The subnet '" + workerSubnet + "' could not be found.",
+			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + workerSubnet + "' could not be found.",
 		},
 		{
 			name:   "fail: permissions don't exist",
@@ -345,16 +340,6 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 
 func TestValidateCIDRRanges(t *testing.T) {
 	ctx := context.Background()
-
-	resourceGroupName := "testGroup"
-	resourceGroupID := "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroupName
-	vnetName := "testVnet"
-	subscriptionID := "0000000-0000-0000-0000-000000000000"
-	vnetID := "/subscriptions/" + subscriptionID + "/resourceGroups/" + resourceGroupName + "/providers/Microsoft.Network/virtualNetworks/" + vnetName
-	masterSubnet := vnetID + "/subnet/masterSubnet"
-	workerSubnet := vnetID + "/subnet/workerSubnet"
-	masterNSGv1 := resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg"
-	workerNSGv1 := resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg"
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
@@ -486,10 +471,6 @@ func TestValidateVnetLocation(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	resourceGroupName := "testGroup"
-	vnetName := "testVnet"
-	vnetID := "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroupName + "/providers/Microsoft.Network/virtualNetworks/" + vnetName
-
 	for _, tt := range []struct {
 		name     string
 		location string
@@ -537,14 +518,6 @@ func TestValidateSubnets(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	resourceGroupName := "testGroup"
-	resourceGroupID := "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroupName
-	vnetName := "testVnet"
-	vnetID := "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroupName + "/providers/Microsoft.Network/virtualNetworks/" + vnetName
-	genericSubnet := vnetID + "/subnet/genericSubnet"
-	genericSubnetPath := "properties.masterProfile.subnetId"
-	masterNSGv1 := resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg"
-
 	for _, tt := range []struct {
 		name      string
 		modifyOC  func(*api.OpenShiftCluster)
@@ -563,7 +536,7 @@ func TestValidateSubnets(t *testing.T) {
 			name: "pass (master subnet)",
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.MasterProfile = api.MasterProfile{
-					SubnetID: genericSubnet,
+					SubnetID: masterSubnet,
 				}
 			},
 			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
@@ -592,13 +565,13 @@ func TestValidateSubnets(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + genericSubnet + "' could not be found.",
+			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
 		},
 		{
 			name: "fail: private link service network policies enabled on master subnet",
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.MasterProfile = api.MasterProfile{
-					SubnetID: genericSubnet,
+					SubnetID: masterSubnet,
 				}
 			},
 			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
@@ -607,7 +580,7 @@ func TestValidateSubnets(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + genericSubnet + "' is invalid: must have privateLinkServiceNetworkPolicies disabled.",
+			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must have privateLinkServiceNetworkPolicies disabled.",
 		},
 		{
 			name: "fail: container registry endpoint doesn't exist",
@@ -617,7 +590,7 @@ func TestValidateSubnets(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + genericSubnet + "' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.",
+			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.",
 		},
 		{
 			name: "fail: network provisioning state not succeeded",
@@ -627,7 +600,7 @@ func TestValidateSubnets(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + genericSubnet + "' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.",
+			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.",
 		},
 		{
 			name: "fail: provisioning state creating: subnet has NSG",
@@ -639,7 +612,7 @@ func TestValidateSubnets(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + genericSubnet + "' is invalid: must not have a network security group attached.",
+			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must not have a network security group attached.",
 		},
 		{
 			name: "fail: invalid architecture version returns no NSG",
@@ -661,7 +634,7 @@ func TestValidateSubnets(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + genericSubnet + "' is invalid: must have network security group '" + masterNSGv1 + "' attached.",
+			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must have network security group '" + masterNSGv1 + "' attached.",
 		},
 		{
 			name: "fail: invalid subnet CIDR",
@@ -681,7 +654,7 @@ func TestValidateSubnets(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + genericSubnet + "' is invalid: must be /27 or larger.",
+			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must be /27 or larger.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -697,7 +670,7 @@ func TestValidateSubnets(t *testing.T) {
 				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
 					Subnets: &[]mgmtnetwork.Subnet{
 						{
-							ID: &genericSubnet,
+							ID: &masterSubnet,
 							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 								AddressPrefix: to.StringPtr("10.0.0.0/24"),
 								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
@@ -728,7 +701,7 @@ func TestValidateSubnets(t *testing.T) {
 				log:             logrus.NewEntry(logrus.StandardLogger()),
 			}
 
-			err := dv.validateSubnets(ctx, oc, []Subnet{{ID: genericSubnet, Path: genericSubnetPath}})
+			err := dv.validateSubnets(ctx, oc, []Subnet{{ID: masterSubnet, Path: masterSubnetPath}})
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))
