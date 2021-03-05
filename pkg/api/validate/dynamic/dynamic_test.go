@@ -710,7 +710,7 @@ func TestValidateSubnets(t *testing.T) {
 				log:             logrus.NewEntry(logrus.StandardLogger()),
 			}
 
-			err := dv.validateSubnets(ctx, oc, []Subnet{{ID: masterSubnet, Path: masterSubnetPath}})
+			err := dv.ValidateSubnets(ctx, oc, []Subnet{{ID: masterSubnet, Path: masterSubnetPath}})
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))

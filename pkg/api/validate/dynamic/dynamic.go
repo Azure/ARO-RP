@@ -38,6 +38,7 @@ type Subnet struct {
 // Dynamic validate in the operator context.
 type Dynamic interface {
 	ValidateVnet(ctx context.Context, location string, subnets []Subnet, additionalCIDRs ...string) error
+	ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
 	ValidateProviders(ctx context.Context) error
 	ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string) error
 
@@ -97,12 +98,7 @@ func (dv *dynamic) ValidateVnet(ctx context.Context, location string, subnets []
 
 	}
 
-	err := dv.validateCIDRRanges(ctx, subnets, additionalCIDRs...)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return dv.validateCIDRRanges(ctx, subnets, additionalCIDRs...)
 }
 
 func (dv *dynamic) validatePermissions(ctx context.Context, s Subnet) error {
@@ -162,13 +158,8 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 	}
 
 	rtID, err := getRouteTableID(&vnet, s.ID)
-	if err != nil {
+	if err != nil || rtID == "" { // error or no route table
 		return err
-	}
-
-	// no route table found
-	if rtID == "" {
-		return nil
 	}
 
 	rtr, err := azure.ParseResourceID(rtID)
@@ -258,13 +249,12 @@ func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, add
 		if err != nil {
 			return err
 		}
-		if s != nil {
-			_, net, err := net.ParseCIDR(*s.AddressPrefix)
-			if err != nil {
-				return err
-			}
-			CIDRArray = append(CIDRArray, net)
+
+		_, net, err := net.ParseCIDR(*s.AddressPrefix)
+		if err != nil {
+			return err
 		}
+		CIDRArray = append(CIDRArray, net)
 	}
 
 	for _, c := range additionalCIDRs {
@@ -308,7 +298,7 @@ func (dv *dynamic) validateLocation(ctx context.Context, s Subnet, location stri
 	return nil
 }
 
-func (dv *dynamic) validateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error {
+func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error {
 	dv.log.Printf("validateSubnet")
 	if len(subnets) == 0 {
 		return fmt.Errorf("no subnets found")
@@ -394,11 +384,11 @@ func (dv *dynamic) validateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 
 func getRouteTableID(vnet *mgmtnetwork.VirtualNetwork, subnetID string) (string, error) {
 	s, err := findSubnet(vnet, subnetID)
-	if err != nil || s == nil {
+	if err != nil {
 		return "", err
 	}
 
-	if s.RouteTable == nil {
+	if s == nil || s.RouteTable == nil {
 		return "", nil
 	}
 

@@ -93,6 +93,11 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
+	err = spDynamic.ValidateSubnets(ctx, dv.oc, subnets)
+	if err != nil {
+		return err
+	}
+
 	err = spDynamic.ValidateProviders(ctx)
 	if err != nil {
 		return err
