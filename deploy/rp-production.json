@@ -11,6 +11,9 @@
         "adminApiClientCertCommonName": {
             "type": "string"
         },
+        "billingServicePrincipalId": {
+            "type": "string"
+        },
         "clusterParentDomainName": {
             "type": "string"
         },
@@ -481,12 +484,12 @@
             ]
         },
         {
-            "name": "[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), '970792b5-7720-4bf5-a335-f15e97c7e25a' , 'Billing / DocumentDB Account Contributor'))]",
+            "name": "[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('billingServicePrincipalId') , 'Billing / DocumentDB Account Contributor'))]",
             "type": "Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5bd9cd88-fe45-4216-938b-f97437e15450')]",
-                "principalId": "['970792b5-7720-4bf5-a335-f15e97c7e25a']",
+                "principalId": "[parameters('billingServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview",

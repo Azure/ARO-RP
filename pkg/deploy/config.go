@@ -33,6 +33,7 @@ type Configuration struct {
 	ACRReplicaDisabled                 *bool         `json:"acrReplicaDisabled,omitempty"`
 	AdminAPICABundle                   *string       `json:"adminApiCaBundle,omitempty" value:"required"`
 	AdminAPIClientCertCommonName       *string       `json:"adminApiClientCertCommonName,omitempty" value:"required"`
+	BillingServicePrincipalID          *string       `json:"billingServicePrincipalId,omitempty" value:"required"`
 	ClusterParentDomainName            *string       `json:"clusterParentDomainName,omitempty" value:"required"`
 	DatabaseAccountName                *string       `json:"databaseAccountName,omitempty" value:"required"`
 	ExtraClusterKeyvaultAccessPolicies []interface{} `json:"extraClusterKeyvaultAccessPolicies,omitempty" value:"required"`
