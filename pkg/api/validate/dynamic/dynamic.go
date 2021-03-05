@@ -34,14 +34,16 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
+type Subnet struct {
+	ID   string
+	Path string
+}
+
 // Dynamic validate in the operator context.
 type Dynamic interface {
-	ValidateVnetPermissions(ctx context.Context, vnetID string) error
-	ValidateRouteTablesPermissions(ctx context.Context, subnetIDs []string) error
-	ValidateCIDRRanges(ctx context.Context, subnetIDs []string, additionalCIDRs ...string) error
-	ValidateVnetLocation(ctx context.Context, vnetID string, location string) error
+	ValidateVnet(ctx context.Context, location string, subnets []Subnet, additionalCIDRs ...string) error
 	ValidateProviders(ctx context.Context) error
-	ValidateClusterServicePrincipalProfile(ctx context.Context, clientID, clientSecret, tenantID string) error
+	ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string) error
 
 	ValidateQuota(ctx context.Context, oc *api.OpenShiftCluster) error
 }
@@ -75,8 +77,46 @@ func NewValidator(log *logrus.Entry, azEnv *azure.Environment, subscriptionID st
 	}, nil
 }
 
-func (dv *dynamic) ValidateVnetPermissions(ctx context.Context, vnetID string) error {
-	dv.log.Printf("ValidateVnetPermissions")
+func (dv *dynamic) ValidateVnet(ctx context.Context, location string, subnets []Subnet, additionalCIDRs ...string) error {
+	if len(subnets) == 0 {
+		return fmt.Errorf("no subnets provided")
+	}
+
+	// each subnet is threated individually as it would be from the different vnet
+	for _, s := range subnets {
+		err := dv.validatePermissions(ctx, s)
+		if err != nil {
+			return err
+		}
+
+		err = dv.validateRouteTablePermissions(ctx, s)
+		if err != nil {
+			return err
+		}
+
+		err = dv.validateLocation(ctx, s, location)
+		if err != nil {
+			return err
+		}
+
+	}
+
+	err := dv.validateCIDRRanges(ctx, subnets, additionalCIDRs...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (dv *dynamic) validatePermissions(ctx context.Context, s Subnet) error {
+	dv.log.Printf("ValidatePermissions")
+
+	vnetID, _, err := subnet.Split(s.ID)
+	if err != nil {
+		return err
+	}
+
 	vnetr, err := azure.ParseResourceID(vnetID)
 	if err != nil {
 		return err
@@ -106,15 +146,11 @@ func (dv *dynamic) ValidateVnetPermissions(ctx context.Context, vnetID string) e
 	return err
 }
 
-// ValidateRouteValidateRouteTablesPermissions will validate permissions on each provided subnet
-// We are not extracting subnets from the vnet because vnet might contain subnets used
-// outside ARO. By explicitly asking caller to provide these we make it callers responsibility.
-func (dv *dynamic) ValidateRouteTablesPermissions(ctx context.Context, subnetIDs []string) error {
-	if len(subnetIDs) == 0 {
-		return fmt.Errorf("no subnets provided")
-	}
+// validateRouteTablesPermissions will validate permissions on provided subnet
+func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) error {
+	log.Printf("validateRouteTablePermissions")
 
-	vnetID, _, err := subnet.Split(subnetIDs[0])
+	vnetID, _, err := subnet.Split(s.ID)
 	if err != nil {
 		return err
 	}
@@ -129,37 +165,10 @@ func (dv *dynamic) ValidateRouteTablesPermissions(ctx context.Context, subnetIDs
 		return err
 	}
 
-	m := map[string]bool{}
-
-	for _, s := range subnetIDs {
-		rtID, err := getRouteTableID(&vnet, s)
-		if err != nil {
-			return err
-		}
-
-		if _, ok := m[strings.ToLower(rtID)]; ok || rtID == "" {
-			continue
-		}
-		m[strings.ToLower(rtID)] = true
+	rtID, err := getRouteTableID(&vnet, s.ID)
+	if err != nil {
+		return err
 	}
-
-	rts := make([]string, 0, len(m))
-	for rt := range m {
-		rts = append(rts, rt)
-	}
-
-	for _, rt := range rts {
-		err := dv.validateRouteTablePermissions(ctx, rt)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, rtID string) error {
-	dv.log.Printf("validateRouteTablePermissions")
 
 	rtr, err := azure.ParseResourceID(rtID)
 	if err != nil {
@@ -217,29 +226,37 @@ func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actio
 	}, timeoutCtx.Done())
 }
 
-func (dv *dynamic) ValidateCIDRRanges(ctx context.Context, subnetIDs []string, additionalCIDRs ...string) error {
+func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, additionalCIDRs ...string) error {
 	dv.log.Print("ValidateCIDRRanges")
 
-	vnetID, _, err := subnet.Split(subnetIDs[0])
-	if err != nil {
-		return err
-	}
-
-	vnetr, err := azure.ParseResourceID(vnetID)
-	if err != nil {
-		return err
-	}
-
-	vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, "")
-	if err != nil {
-		return err
-	}
+	// During cluster runtime they get enriched and contains multiple
+	// duplicate values for multiple worker pools. CIDRRange validation
+	// only cares about unique CIDR ranges.
+	subnets = uniqueSubnetSlice(subnets)
 
 	var CIDRArray []*net.IPNet
 
 	// unique names of subnets from all node pools
-	for _, subnet := range subnetIDs {
-		s := findSubnet(&vnet, subnet)
+	for _, s := range subnets {
+		vnetID, _, err := subnet.Split(s.ID)
+		if err != nil {
+			return err
+		}
+
+		vnetr, err := azure.ParseResourceID(vnetID)
+		if err != nil {
+			return err
+		}
+
+		vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, "")
+		if err != nil {
+			return err
+		}
+
+		s, err := findSubnet(&vnet, s.ID)
+		if err != nil {
+			return err
+		}
 		if s != nil {
 			_, net, err := net.ParseCIDR(*s.AddressPrefix)
 			if err != nil {
@@ -257,7 +274,7 @@ func (dv *dynamic) ValidateCIDRRanges(ctx context.Context, subnetIDs []string, a
 		CIDRArray = append(CIDRArray, cidr)
 	}
 
-	err = cidr.VerifyNoOverlap(CIDRArray, &net.IPNet{IP: net.IPv4zero, Mask: net.IPMask(net.IPv4zero)})
+	err := cidr.VerifyNoOverlap(CIDRArray, &net.IPNet{IP: net.IPv4zero, Mask: net.IPMask(net.IPv4zero)})
 	if err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided CIDRs must not overlap: '%s'.", err)
 	}
@@ -265,9 +282,10 @@ func (dv *dynamic) ValidateCIDRRanges(ctx context.Context, subnetIDs []string, a
 	return nil
 }
 
-func (dv *dynamic) ValidateVnetLocation(ctx context.Context, vnetID string, location string) error {
-	dv.log.Print("ValidateVnetLocation")
-	vnetr, err := azure.ParseResourceID(vnetID)
+func (dv *dynamic) validateLocation(ctx context.Context, subnet Subnet, location string) error {
+	dv.log.Print("validateLocation")
+
+	vnetr, err := azure.ParseResourceID(subnet.ID)
 	if err != nil {
 		return err
 	}
@@ -284,42 +302,46 @@ func (dv *dynamic) ValidateVnetLocation(ctx context.Context, vnetID string, loca
 	return nil
 }
 
-func (dv *dynamic) validateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnetIDs []string) error {
+func (dv *dynamic) validateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error {
 	dv.log.Printf("validateSubnet")
-	if len(subnetIDs) == 0 {
+	if len(subnets) == 0 {
 		return fmt.Errorf("no subnets found")
 	}
 
-	vnetID, _, err := subnet.Split(subnetIDs[0])
-	if err != nil {
-		return err
-	}
-
-	vnetr, err := azure.ParseResourceID(vnetID)
-	if err != nil {
-		return err
-	}
-
-	vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, "")
-	if err != nil {
-		return err
-	}
-	for _, subnetID := range subnetIDs {
-		s := findSubnet(&vnet, subnetID)
-		if s == nil {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided subnet '%s' could not be found.", subnetID)
+	for _, s := range subnets {
+		vnetID, _, err := subnet.Split(s.ID)
+		if err != nil {
+			return err
 		}
 
-		if strings.EqualFold(oc.Properties.MasterProfile.SubnetID, subnetID) {
-			if s.PrivateLinkServiceNetworkPolicies == nil ||
-				!strings.EqualFold(*s.PrivateLinkServiceNetworkPolicies, "Disabled") {
-				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided subnet '%s' is invalid: must have privateLinkServiceNetworkPolicies disabled.", subnetID)
+		vnetr, err := azure.ParseResourceID(vnetID)
+		if err != nil {
+			return err
+		}
+
+		vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, "")
+		if err != nil {
+			return err
+		}
+
+		ss, err := findSubnet(&vnet, s.ID)
+		if err != nil {
+			return err
+		}
+		if ss == nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' could not be found.", s.ID)
+		}
+
+		if strings.EqualFold(oc.Properties.MasterProfile.SubnetID, *ss.ID) {
+			if ss.PrivateLinkServiceNetworkPolicies == nil ||
+				!strings.EqualFold(*ss.PrivateLinkServiceNetworkPolicies, "Disabled") {
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must have privateLinkServiceNetworkPolicies disabled.", s.ID)
 			}
 		}
 
 		var found bool
-		if s.ServiceEndpoints != nil {
-			for _, se := range *s.ServiceEndpoints {
+		if ss.ServiceEndpoints != nil {
+			for _, se := range *ss.ServiceEndpoints {
 				if strings.EqualFold(*se.Service, "Microsoft.ContainerRegistry") &&
 					se.ProvisioningState == mgmtnetwork.Succeeded {
 					found = true
@@ -328,36 +350,36 @@ func (dv *dynamic) validateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 			}
 		}
 		if !found {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided subnet '%s' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.", subnetID)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.", s.ID)
 		}
 
 		if oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
-			if s.SubnetPropertiesFormat != nil &&
-				s.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided subnet '%s' is invalid: must not have a network security group attached.", subnetID)
+			if ss.SubnetPropertiesFormat != nil &&
+				ss.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must not have a network security group attached.", s.ID)
 			}
 
 		} else {
-			nsgID, err := subnet.NetworkSecurityGroupID(oc, *s.ID)
+			nsgID, err := subnet.NetworkSecurityGroupID(oc, *ss.ID)
 			if err != nil {
 				return err
 			}
 
-			if s.SubnetPropertiesFormat == nil ||
-				s.SubnetPropertiesFormat.NetworkSecurityGroup == nil ||
-				!strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
-				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided subnet '%s' is invalid: must have network security group '%s' attached.", subnetID, nsgID)
+			if ss.SubnetPropertiesFormat == nil ||
+				ss.SubnetPropertiesFormat.NetworkSecurityGroup == nil ||
+				!strings.EqualFold(*ss.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must have network security group '%s' attached.", s.ID, nsgID)
 			}
 		}
 
-		_, net, err := net.ParseCIDR(*s.AddressPrefix)
+		_, net, err := net.ParseCIDR(*ss.AddressPrefix)
 		if err != nil {
 			return err
 		}
 
 		ones, _ := net.Mask.Size()
 		if ones > 27 {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided subnet '%s' is invalid: must be /27 or larger.", subnetID)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must be /27 or larger.", s.ID)
 		}
 	}
 
@@ -393,9 +415,9 @@ func (dv *dynamic) ValidateProviders(ctx context.Context) error {
 	return nil
 }
 
-func (dv *dynamic) ValidateClusterServicePrincipalProfile(ctx context.Context, clientID, clientSecret, tenantID string) error {
+func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string) error {
 	// TODO: once aad.GetToken is mockable, write a unit test for this function
-	log.Print("ValidateClusterServicePrincipalProfile")
+	log.Print("ValidateServicePrincipal")
 
 	token, err := aad.GetToken(ctx, dv.log, clientID, clientSecret, tenantID, dv.azEnv.ActiveDirectoryEndpoint, dv.azEnv.GraphEndpoint)
 	if err != nil {
@@ -419,9 +441,9 @@ func (dv *dynamic) ValidateClusterServicePrincipalProfile(ctx context.Context, c
 }
 
 func getRouteTableID(vnet *mgmtnetwork.VirtualNetwork, subnetID string) (string, error) {
-	s := findSubnet(vnet, subnetID)
-	if s == nil {
-		return "", api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The subnet '%s' could not be found.", subnetID)
+	s, err := findSubnet(vnet, subnetID)
+	if err != nil || s == nil {
+		return "", err
 	}
 
 	if s.RouteTable == nil {
@@ -431,14 +453,27 @@ func getRouteTableID(vnet *mgmtnetwork.VirtualNetwork, subnetID string) (string,
 	return *s.RouteTable.ID, nil
 }
 
-func findSubnet(vnet *mgmtnetwork.VirtualNetwork, subnetID string) *mgmtnetwork.Subnet {
+func findSubnet(vnet *mgmtnetwork.VirtualNetwork, subnetID string) (*mgmtnetwork.Subnet, error) {
 	if vnet.Subnets != nil {
 		for _, s := range *vnet.Subnets {
 			if strings.EqualFold(*s.ID, subnetID) {
-				return &s
+				return &s, nil
 			}
 		}
 	}
 
-	return nil
+	return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided subnet '%s' could not be found.", subnetID)
+}
+
+// uniqueSubnetSlice returns string subnets with unique values only
+func uniqueSubnetSlice(slice []Subnet) []Subnet {
+	keys := make(map[string]bool)
+	list := []Subnet{}
+	for _, entry := range slice {
+		if _, value := keys[entry.ID]; !value {
+			keys[entry.ID] = true
+			list = append(list, entry)
+		}
+	}
+	return list
 }

@@ -5,6 +5,7 @@ package validate
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sirupsen/logrus"
 
@@ -13,8 +14,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
-	"github.com/Azure/ARO-RP/pkg/util/stringutils"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 // OpenShiftClusterDynamicValidator is the dynamic validator interface
@@ -46,21 +45,17 @@ type openShiftClusterDynamicValidator struct {
 // Dynamic validates an OpenShift cluster
 func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	// Get all subnets
-	subnetIDs := []string{dv.oc.Properties.MasterProfile.SubnetID}
+	var subnets []dynamic.Subnet
+	subnets = append(subnets, dynamic.Subnet{
+		ID:   dv.oc.Properties.MasterProfile.SubnetID,
+		Path: "properties.masterProfile.subnetId",
+	})
 
-	for _, s := range dv.oc.Properties.WorkerProfiles {
-		subnetIDs = append(subnetIDs, s.SubnetID)
-	}
-
-	// its callers responsibility to provive unique values for validations
-	// if this is required. In this case on create worker pool profiles are
-	// not enriched. During cluster runtime they get enriched and contains multiple
-	// duplicate values for multiple worker pools
-	subnetIDs = stringutils.UniqueSlice(subnetIDs)
-
-	vnetID, _, err := subnet.Split(subnetIDs[0])
-	if err != nil {
-		return err
+	for i, s := range dv.oc.Properties.WorkerProfiles {
+		subnets = append(subnets, dynamic.Subnet{
+			ID:   s.SubnetID,
+			Path: fmt.Sprintf("properties.workerProfiles[%d].subnetId", i),
+		})
 	}
 
 	// FP validation
@@ -69,12 +64,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	err = fpDynamic.ValidateVnetPermissions(ctx, vnetID)
-	if err != nil {
-		return err
-	}
-
-	err = fpDynamic.ValidateRouteTablesPermissions(ctx, subnetIDs)
+	err = fpDynamic.ValidateVnet(ctx, dv.oc.Location, subnets, dv.oc.Properties.NetworkProfile.PodCIDR, dv.oc.Properties.NetworkProfile.ServiceCIDR)
 	if err != nil {
 		return err
 	}
@@ -93,28 +83,12 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	// SP validation
-	err = spDynamic.ValidateClusterServicePrincipalProfile(ctx, spp.ClientID, string(spp.ClientSecret), dv.subscriptionDoc.Subscription.Properties.TenantID)
+	err = spDynamic.ValidateServicePrincipal(ctx, spp.ClientID, string(spp.ClientSecret), dv.subscriptionDoc.Subscription.Properties.TenantID)
 	if err != nil {
 		return err
 	}
 
-	err = spDynamic.ValidateVnetPermissions(ctx, vnetID)
-	if err != nil {
-		return err
-	}
-
-	err = spDynamic.ValidateRouteTablesPermissions(ctx, subnetIDs)
-	if err != nil {
-		return err
-	}
-
-	// Additional checks - use any dynamic because they both have the correct permissions
-	err = spDynamic.ValidateCIDRRanges(ctx, subnetIDs, dv.oc.Properties.NetworkProfile.PodCIDR, dv.oc.Properties.NetworkProfile.ServiceCIDR)
-	if err != nil {
-		return err
-	}
-
-	err = spDynamic.ValidateVnetLocation(ctx, vnetID, dv.oc.Location)
+	err = spDynamic.ValidateVnet(ctx, dv.oc.Location, subnets, dv.oc.Properties.NetworkProfile.PodCIDR, dv.oc.Properties.NetworkProfile.ServiceCIDR)
 	if err != nil {
 		return err
 	}

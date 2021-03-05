@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"testing"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
@@ -32,6 +31,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 	vnetName := "testVnet"
 	subscriptionID := "0000000-0000-0000-0000-000000000000"
 	vnetID := "/subscriptions/" + subscriptionID + "/resourceGroups/" + resourceGroupName + "/providers/Microsoft.Network/virtualNetworks/" + vnetName
+	masterSubnet := vnetID + "/subnet/masterSubnet"
 	resourceType := "virtualNetworks"
 	resourceProvider := "Microsoft.Network"
 
@@ -114,7 +114,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 				permissions:    permissionsClient,
 			}
 
-			err := dv.ValidateVnetPermissions(ctx, vnetID)
+			err := dv.validatePermissions(ctx, Subnet{ID: masterSubnet})
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))
@@ -148,135 +148,37 @@ func TestGetRouteTableID(t *testing.T) {
 			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
 				vnet.Subnets = nil
 			},
-			wantErr: "400: InvalidLinkedVNet: : The subnet '" + genericSubnet + "' could not be found.",
+			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + genericSubnet + "' could not be found.",
 		},
 	} {
-		vnet := &mgmtnetwork.VirtualNetwork{
-			ID: &vnetID,
-			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-				Subnets: &[]mgmtnetwork.Subnet{
-					{
-						ID: &genericSubnet,
-						SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-							RouteTable: &mgmtnetwork.RouteTable{
-								ID: &routeTableID,
+		t.Run(tt.name, func(t *testing.T) {
+			vnet := &mgmtnetwork.VirtualNetwork{
+				ID: &vnetID,
+				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
+					Subnets: &[]mgmtnetwork.Subnet{
+						{
+							ID: &genericSubnet,
+							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+								RouteTable: &mgmtnetwork.RouteTable{
+									ID: &routeTableID,
+								},
 							},
 						},
 					},
 				},
-			},
-		}
+			}
 
-		if tt.modifyVnet != nil {
-			tt.modifyVnet(vnet)
-		}
+			if tt.modifyVnet != nil {
+				tt.modifyVnet(vnet)
+			}
 
-		// purposefully hardcoding path to "" so it is not needed in the wantErr message
-		_, err := getRouteTableID(vnet, genericSubnet)
-		if err != nil && err.Error() != tt.wantErr ||
-			err == nil && tt.wantErr != "" {
-			t.Error(err)
-		}
-	}
-}
-
-func TestValidateRouteTablePermissions(t *testing.T) {
-	ctx := context.Background()
-
-	resourceGroupName := "testGroup"
-	resourceGroupID := "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroupName
-	routeTableName := "testRouteTable"
-	routeTableID := resourceGroupID + "/providers/Microsoft.Network/routeTables/" + routeTableName
-
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	for _, tt := range []struct {
-		name    string
-		rtID    string
-		mocks   func(*mock_authorization.MockPermissionsClient, func())
-		wantErr string
-	}{
-		{
-			name: "pass",
-			rtID: routeTableID,
-			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel func()) {
-				permissionsClient.EXPECT().
-					ListForResource(gomock.Any(), resourceGroupName, "Microsoft.Network", "", "routeTables", routeTableName).
-					Return([]mgmtauthorization.Permission{
-						{
-							Actions: &[]string{
-								"Microsoft.Network/routeTables/join/action",
-								"Microsoft.Network/routeTables/read",
-								"Microsoft.Network/routeTables/write",
-							},
-							NotActions: &[]string{},
-						},
-					}, nil)
-			},
-		},
-		{
-			name:    "fail: cannot parse resource id",
-			rtID:    "invalid_route_table_id",
-			wantErr: "parsing failed for invalid_route_table_id. Invalid resource Id format",
-		},
-		{
-			name: "fail: missing permissions",
-			rtID: routeTableID,
-			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel func()) {
-				permissionsClient.EXPECT().
-					ListForResource(gomock.Any(), resourceGroupName, "Microsoft.Network", "", "routeTables", routeTableName).
-					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
-						cancel()
-					}).
-					Return([]mgmtauthorization.Permission{
-						{
-							Actions:    &[]string{},
-							NotActions: &[]string{},
-						},
-					}, nil)
-			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on route table '" + routeTableID + "'.",
-		},
-		{
-			name: "fail: not found",
-			rtID: routeTableID,
-			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel func()) {
-				permissionsClient.EXPECT().
-					ListForResource(gomock.Any(), resourceGroupName, "Microsoft.Network", "", "routeTables", routeTableName).
-					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
-						cancel()
-					}).
-					Return(
-						nil,
-						autorest.DetailedError{
-							StatusCode: http.StatusNotFound,
-						},
-					)
-			},
-			wantErr: "400: InvalidLinkedRouteTable: : The route table '" + routeTableID + "' could not be found.",
-		},
-	} {
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
-
-		permissionsClient := mock_authorization.NewMockPermissionsClient(controller)
-		if tt.mocks != nil {
-			tt.mocks(permissionsClient, cancel)
-		}
-
-		dv := &dynamic{
-			authorizerType: AuthorizerClusterServicePrincipal,
-			log:            logrus.NewEntry(logrus.StandardLogger()),
-			permissions:    permissionsClient,
-		}
-
-		// purposefully hardcoding path to "" so it is not needed in the wantErr message
-		err := dv.validateRouteTablePermissions(ctx, tt.rtID)
-		if err != nil && err.Error() != tt.wantErr ||
-			err == nil && tt.wantErr != "" {
-			t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))
-		}
+			// purposefully hardcoding path to "" so it is not needed in the wantErr message
+			_, err := getRouteTableID(vnet, genericSubnet)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))
+			}
+		})
 	}
 }
 
@@ -298,12 +200,14 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 
 	for _, tt := range []struct {
 		name            string
+		subnet          Subnet
 		permissionMocks func(*mock_authorization.MockPermissionsClient, func())
 		vnetMocks       func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
 		wantErr         string
 	}{
 		{
-			name: "fail: failed to get vnet",
+			name:   "fail: failed to get vnet",
+			subnet: Subnet{ID: masterSubnet},
 			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
@@ -312,7 +216,8 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			wantErr: "failed to get vnet",
 		},
 		{
-			name: "fail: master subnet doesn't exist",
+			name:   "fail: master subnet doesn't exist",
+			subnet: Subnet{ID: masterSubnet},
 			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnet.Subnets = nil
 				vnetClient.EXPECT().
@@ -322,7 +227,8 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			wantErr: "400: InvalidLinkedVNet: : The subnet '" + masterSubnet + "' could not be found.",
 		},
 		{
-			name: "fail: worker subnet ID doesn't exist",
+			name:   "fail: worker subnet ID doesn't exist",
+			subnet: Subnet{ID: workerSubnet},
 			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[1].ID = to.StringPtr("not valid")
 				vnetClient.EXPECT().
@@ -332,7 +238,8 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			wantErr: "400: InvalidLinkedVNet: : The subnet '" + workerSubnet + "' could not be found.",
 		},
 		{
-			name: "fail: permissions don't exist",
+			name:   "fail: permissions don't exist",
+			subnet: Subnet{ID: workerSubnet},
 			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
@@ -340,7 +247,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			},
 			permissionMocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel func()) {
 				permissionsClient.EXPECT().
-					ListForResource(gomock.Any(), strings.ToLower(resourceGroupName), strings.ToLower("Microsoft.Network"), "", strings.ToLower("routeTables"), gomock.Any()).
+					ListForResource(gomock.Any(), resourceGroupName, "Microsoft.Network", "", "routeTables", gomock.Any()).
 					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
 						cancel()
 					}).
@@ -354,10 +261,11 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 						nil,
 					)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on route table '" + strings.ToLower(masterRtID) + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on route table '" + workerRtID + "'.",
 		},
 		{
-			name: "pass",
+			name:   "pass",
+			subnet: Subnet{ID: masterSubnet},
 			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
@@ -365,7 +273,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			},
 			permissionMocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel func()) {
 				permissionsClient.EXPECT().
-					ListForResource(gomock.Any(), strings.ToLower(resourceGroupName), strings.ToLower("Microsoft.Network"), "", strings.ToLower("routeTables"), gomock.Any()).
+					ListForResource(gomock.Any(), resourceGroupName, "Microsoft.Network", "", "routeTables", gomock.Any()).
 					AnyTimes().
 					Return([]mgmtauthorization.Permission{
 						{
@@ -426,7 +334,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 				tt.vnetMocks(vnetClient, *vnet)
 			}
 
-			err := dv.ValidateRouteTablesPermissions(ctx, []string{masterSubnet, workerSubnet})
+			err := dv.validateRouteTablePermissions(ctx, tt.subnet)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))
@@ -463,6 +371,9 @@ func TestValidateCIDRRanges(t *testing.T) {
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
 			},
 		},
 		{
@@ -471,6 +382,9 @@ func TestValidateCIDRRanges(t *testing.T) {
 				oc.Properties.NetworkProfile.ServiceCIDR = "10.0.0.0/24"
 			},
 			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
@@ -555,7 +469,10 @@ func TestValidateCIDRRanges(t *testing.T) {
 			virtualNetworks: vnetClient,
 		}
 
-		err := dv.ValidateCIDRRanges(ctx, []string{masterSubnet, workerSubnet}, oc.Properties.NetworkProfile.PodCIDR, oc.Properties.NetworkProfile.ServiceCIDR)
+		err := dv.validateCIDRRanges(ctx, []Subnet{
+			{ID: masterSubnet},
+			{ID: workerSubnet}},
+			oc.Properties.NetworkProfile.PodCIDR, oc.Properties.NetworkProfile.ServiceCIDR)
 		if err != nil && err.Error() != tt.wantErr ||
 			err == nil && tt.wantErr != "" {
 			t.Error(err)
@@ -605,7 +522,7 @@ func TestValidateVnetLocation(t *testing.T) {
 				virtualNetworks: vnetClient,
 			}
 
-			err := dv.ValidateVnetLocation(ctx, vnetID, "eastus")
+			err := dv.validateLocation(ctx, Subnet{ID: vnetID}, "eastus")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -625,6 +542,7 @@ func TestValidateSubnets(t *testing.T) {
 	vnetName := "testVnet"
 	vnetID := "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroupName + "/providers/Microsoft.Network/virtualNetworks/" + vnetName
 	genericSubnet := vnetID + "/subnet/genericSubnet"
+	genericSubnetPath := "properties.masterProfile.subnetId"
 	masterNSGv1 := resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg"
 
 	for _, tt := range []struct {
@@ -689,7 +607,7 @@ func TestValidateSubnets(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + genericSubnet + "' is invalid: must have privateLinkServiceNetworkPolicies disabled.",
+			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + genericSubnet + "' is invalid: must have privateLinkServiceNetworkPolicies disabled.",
 		},
 		{
 			name: "fail: container registry endpoint doesn't exist",
@@ -699,7 +617,7 @@ func TestValidateSubnets(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + genericSubnet + "' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.",
+			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + genericSubnet + "' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.",
 		},
 		{
 			name: "fail: network provisioning state not succeeded",
@@ -709,7 +627,7 @@ func TestValidateSubnets(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + genericSubnet + "' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.",
+			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + genericSubnet + "' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.",
 		},
 		{
 			name: "fail: provisioning state creating: subnet has NSG",
@@ -721,7 +639,7 @@ func TestValidateSubnets(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + genericSubnet + "' is invalid: must not have a network security group attached.",
+			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + genericSubnet + "' is invalid: must not have a network security group attached.",
 		},
 		{
 			name: "fail: invalid architecture version returns no NSG",
@@ -743,7 +661,7 @@ func TestValidateSubnets(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + genericSubnet + "' is invalid: must have network security group '" + masterNSGv1 + "' attached.",
+			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + genericSubnet + "' is invalid: must have network security group '" + masterNSGv1 + "' attached.",
 		},
 		{
 			name: "fail: invalid subnet CIDR",
@@ -763,7 +681,7 @@ func TestValidateSubnets(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + genericSubnet + "' is invalid: must be /27 or larger.",
+			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + genericSubnet + "' is invalid: must be /27 or larger.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -810,7 +728,7 @@ func TestValidateSubnets(t *testing.T) {
 				log:             logrus.NewEntry(logrus.StandardLogger()),
 			}
 
-			err := dv.validateSubnets(ctx, oc, []string{genericSubnet})
+			err := dv.validateSubnets(ctx, oc, []Subnet{{ID: genericSubnet, Path: genericSubnetPath}})
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))
