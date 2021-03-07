@@ -189,19 +189,19 @@ func (m *manager) updateAPIIPEarly(ctx context.Context) error {
 	return err
 }
 
-func (m *manager) createPrivateEndpoint(ctx context.Context) error {
+func (m *manager) createAPIServerPrivateEndpoint(ctx context.Context) error {
 	err := m.privateendpoint.Create(ctx, m.doc)
 	if err != nil {
 		return err
 	}
 
-	privateEndpointIP, err := m.privateendpoint.GetIP(ctx, m.doc)
+	apiServerPrivateEndpointIP, err := m.privateendpoint.GetIP(ctx, m.doc)
 	if err != nil {
 		return err
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.NetworkProfile.PrivateEndpointIP = privateEndpointIP
+		doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP = apiServerPrivateEndpointIP
 		return nil
 	})
 	return err

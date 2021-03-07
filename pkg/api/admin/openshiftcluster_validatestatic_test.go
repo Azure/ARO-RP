@@ -342,12 +342,12 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				return &OpenShiftCluster{
 					Properties: OpenShiftClusterProperties{
 						NetworkProfile: NetworkProfile{
-							PrivateEndpointIP: "1.2.3.4",
+							APIServerPrivateEndpointIP: "1.2.3.4",
 						},
 					},
 				}
 			},
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.PrivateEndpointIP = "4.3.2.1" },
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.APIServerPrivateEndpointIP = "4.3.2.1" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.privateEndpointIp: Changing property 'properties.networkProfile.privateEndpointIp' is not allowed.",
 		},
 		{

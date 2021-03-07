@@ -141,7 +141,7 @@ func TestProxy(t *testing.T) {
 	resourceGroup := "rg"
 	resourceName := "cluster"
 	resourceID := "/subscriptions/" + subscriptionID + "/resourcegroups/" + resourceGroup + "/providers/microsoft.redhatopenshift/openshiftclusters/" + resourceName
-	privateEndpointIP := "1.2.3.4"
+	apiServerPrivateEndpointIP := "1.2.3.4"
 
 	hostKey, _, err := utiltls.GenerateKeyAndCertificate("proxy", nil, nil, false, false)
 	if err != nil {
@@ -166,7 +166,7 @@ func TestProxy(t *testing.T) {
 			OpenShiftCluster: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					NetworkProfile: api.NetworkProfile{
-						PrivateEndpointIP: privateEndpointIP,
+						APIServerPrivateEndpointIP: apiServerPrivateEndpointIP,
 					},
 					SSHKey: api.SecureBytes(x509.MarshalPKCS1PrivateKey(clusterKey)),
 				},
@@ -213,7 +213,7 @@ func TestProxy(t *testing.T) {
 				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
 			},
 			mocks: func(dialer *mock_proxy.MockDialer) {
-				dialer.EXPECT().DialContext(gomock.Any(), "tcp", privateEndpointIP+":2201").Return(l.DialContext(ctx, "", ""))
+				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":2201").Return(l.DialContext(ctx, "", ""))
 			},
 			wantLogs: []map[string]types.GomegaMatcher{
 				{
@@ -367,7 +367,7 @@ func TestProxy(t *testing.T) {
 				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
 			},
 			mocks: func(dialer *mock_proxy.MockDialer) {
-				dialer.EXPECT().DialContext(gomock.Any(), "tcp", privateEndpointIP+":2201").Return(nil, fmt.Errorf("sad"))
+				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":2201").Return(nil, fmt.Errorf("sad"))
 			},
 			wantErrPrefix: "EOF",
 			wantLogs: []map[string]types.GomegaMatcher{

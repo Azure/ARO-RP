@@ -41,9 +41,9 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				SPObjectID: oc.Properties.ServicePrincipalProfile.SPObjectID,
 			},
 			NetworkProfile: NetworkProfile{
-				PodCIDR:           oc.Properties.NetworkProfile.PodCIDR,
-				ServiceCIDR:       oc.Properties.NetworkProfile.ServiceCIDR,
-				PrivateEndpointIP: oc.Properties.NetworkProfile.PrivateEndpointIP,
+				PodCIDR:                    oc.Properties.NetworkProfile.PodCIDR,
+				ServiceCIDR:                oc.Properties.NetworkProfile.ServiceCIDR,
+				APIServerPrivateEndpointIP: oc.Properties.NetworkProfile.APIServerPrivateEndpointIP,
 			},
 			MasterProfile: MasterProfile{
 				VMSize:   VMSize(oc.Properties.MasterProfile.VMSize),
@@ -156,7 +156,7 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.ServicePrincipalProfile.SPObjectID = oc.Properties.ServicePrincipalProfile.SPObjectID
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
-	out.Properties.NetworkProfile.PrivateEndpointIP = oc.Properties.NetworkProfile.PrivateEndpointIP
+	out.Properties.NetworkProfile.APIServerPrivateEndpointIP = oc.Properties.NetworkProfile.APIServerPrivateEndpointIP
 	out.Properties.MasterProfile.VMSize = api.VMSize(oc.Properties.MasterProfile.VMSize)
 	out.Properties.MasterProfile.SubnetID = oc.Properties.MasterProfile.SubnetID
 	out.Properties.StorageSuffix = oc.Properties.StorageSuffix

@@ -139,7 +139,7 @@ func (s *ssh) newConn(ctx context.Context, c1 net.Conn) error {
 		return err
 	}
 
-	address := fmt.Sprintf("%s:%d", openShiftDoc.OpenShiftCluster.Properties.NetworkProfile.PrivateEndpointIP, 2200+portalDoc.Portal.SSH.Master)
+	address := fmt.Sprintf("%s:%d", openShiftDoc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP, 2200+portalDoc.Portal.SSH.Master)
 
 	c2, err := s.dialer.DialContext(ctx, "tcp", address)
 	if err != nil {

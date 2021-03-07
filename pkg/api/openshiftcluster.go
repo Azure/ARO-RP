@@ -166,7 +166,7 @@ type NetworkProfile struct {
 	PodCIDR     string `json:"podCidr,omitempty"`
 	ServiceCIDR string `json:"serviceCidr,omitempty"`
 
-	PrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
+	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
 }
 
 // MasterProfile represents a master profile

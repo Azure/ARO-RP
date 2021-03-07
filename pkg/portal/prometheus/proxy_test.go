@@ -171,7 +171,7 @@ func testKubeconfig(cacerts []*x509.Certificate, clientkey *rsa.PrivateKey, clie
 func TestProxy(t *testing.T) {
 	ctx := context.Background()
 	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/microsoft.redhatopenshift/openshiftclusters/cluster"
-	privateEndpointIP := "1.2.3.4"
+	apiServerPrivateEndpointIP := "1.2.3.4"
 
 	cakey, cacerts, err := utiltls.GenerateKeyAndCertificate("ca", nil, nil, true, false)
 	if err != nil {
@@ -213,7 +213,7 @@ func TestProxy(t *testing.T) {
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
 							NetworkProfile: api.NetworkProfile{
-								PrivateEndpointIP: privateEndpointIP,
+								APIServerPrivateEndpointIP: apiServerPrivateEndpointIP,
 							},
 							AROServiceKubeconfig: api.SecureBytes(serviceKubeconfig),
 						},
@@ -224,7 +224,7 @@ func TestProxy(t *testing.T) {
 				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
 			},
 			mocks: func(dialer *mock_proxy.MockDialer) {
-				dialer.EXPECT().DialContext(gomock.Any(), "tcp", privateEndpointIP+":6443").Return(l.DialContext(ctx, "", ""))
+				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":6443").Return(l.DialContext(ctx, "", ""))
 			},
 			wantStatusCode: http.StatusOK,
 			wantBody:       "GET /test HTTP/1.1\r\nHost: prometheus-k8s-0:9090\r\nAccept-Encoding: gzip\r\nUser-Agent: Go-http-client/1.1\r\n\r\n",
