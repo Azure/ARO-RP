@@ -36,7 +36,7 @@ var (
 	tenantUUIDHack = uuid.Must(uuid.FromString(tenantIDHack))
 )
 
-func (g *generator) managedIdentity() *arm.Resource {
+func (g *generator) rpManagedIdentity() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtmsi.Identity{
 			Type:     to.StringPtr("Microsoft.ManagedIdentity/userAssignedIdentities"),
@@ -47,7 +47,7 @@ func (g *generator) managedIdentity() *arm.Resource {
 	}
 }
 
-func (g *generator) securityGroupRP() *arm.Resource {
+func (g *generator) rpSecurityGroup() *arm.Resource {
 	nsg := &mgmtnetwork.SecurityGroup{
 		SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
 			SecurityRules: &[]mgmtnetwork.SecurityRule{
@@ -111,7 +111,7 @@ func (g *generator) securityGroupRP() *arm.Resource {
 	}
 }
 
-func (g *generator) securityGroupPE() *arm.Resource {
+func (g *generator) rpPESecurityGroup() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.SecurityGroup{
 			SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{},
@@ -124,7 +124,7 @@ func (g *generator) securityGroupPE() *arm.Resource {
 	}
 }
 
-func (g *generator) proxyVmss() *arm.Resource {
+func (g *generator) devProxyVMSS() *arm.Resource {
 	parts := []string{
 		fmt.Sprintf("base64ToString('%s')", base64.StdEncoding.EncodeToString([]byte("set -ex\n\n"))),
 	}
@@ -299,7 +299,7 @@ systemctl enable proxy.service
 	}
 }
 
-func (g *generator) devVpnPip() *arm.Resource {
+func (g *generator) devVPNPip() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.PublicIPAddress{
 			Sku: &mgmtnetwork.PublicIPAddressSku{
@@ -404,8 +404,9 @@ func (g *generator) devVPN() *arm.Resource {
 	}
 }
 
-// halfPeering configures vnetA to peer with vnetB, two symmetrical configurations have to be applied for a peering to work
-func (g *generator) halfPeering(vnetA string, vnetB string) *arm.Resource {
+// virtualNetworkPeering configures vnetA to peer with vnetB, two symmetrical
+// configurations have to be applied for a peering to work
+func (g *generator) virtualNetworkPeering(vnetA, vnetB string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.VirtualNetworkPeering{
 			VirtualNetworkPeeringPropertiesFormat: &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
@@ -429,7 +430,7 @@ func (g *generator) halfPeering(vnetA string, vnetB string) *arm.Resource {
 	}
 }
 
-func (g *generator) rpvnet() *arm.Resource {
+func (g *generator) rpVnet() *arm.Resource {
 	subnet := mgmtnetwork.Subnet{
 		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 			AddressPrefix: to.StringPtr("10.0.0.0/24"),
@@ -473,7 +474,7 @@ func (g *generator) rpvnet() *arm.Resource {
 	}
 }
 
-func (g *generator) pevnet() *arm.Resource {
+func (g *generator) rpPEVnet() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.VirtualNetwork{
 			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
@@ -503,7 +504,7 @@ func (g *generator) pevnet() *arm.Resource {
 	}
 }
 
-func (g *generator) pip(name string) *arm.Resource {
+func (g *generator) publicIPAddress(name string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.PublicIPAddress{
 			Sku: &mgmtnetwork.PublicIPAddressSku{
@@ -520,7 +521,7 @@ func (g *generator) pip(name string) *arm.Resource {
 	}
 }
 
-func (g *generator) lb() *arm.Resource {
+func (g *generator) rpLB() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.LoadBalancer{
 			Sku: &mgmtnetwork.LoadBalancerSku{
@@ -662,8 +663,8 @@ func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
 	}
 }
 
-// lbAlert generates an alert resource for the rp-lb healthprobe metric
-func (g *generator) lbAlert(threshold float64, severity int32, name string, evalFreq string, windowSize string, metric string) *arm.Resource {
+// rpLBAlert generates an alert resource for the rp-lb healthprobe metric
+func (g *generator) rpLBAlert(threshold float64, severity int32, name string, evalFreq string, windowSize string, metric string) *arm.Resource {
 	return &arm.Resource{
 		Resource: mgmtinsights.MetricAlertResource{
 			MetricAlertProperties: &mgmtinsights.MetricAlertProperties{
@@ -707,7 +708,7 @@ func (g *generator) lbAlert(threshold float64, severity int32, name string, eval
 	}
 }
 
-func (g *generator) vmss() *arm.Resource {
+func (g *generator) rpVMSS() *arm.Resource {
 	parts := []string{
 		fmt.Sprintf("base64ToString('%s')", base64.StdEncoding.EncodeToString([]byte("set -ex\n\n"))),
 	}
@@ -1301,7 +1302,7 @@ done
 	}
 }
 
-func (g *generator) zone() *arm.Resource {
+func (g *generator) rpDNSZone() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtdns.Zone{
 			ZoneProperties: &mgmtdns.ZoneProperties{},
@@ -1313,7 +1314,7 @@ func (g *generator) zone() *arm.Resource {
 	}
 }
 
-func (g *generator) clusterKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
+func (g *generator) rpClusterKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
 	return []mgmtkeyvault.AccessPolicyEntry{
 		// TODO: remove fpServicePrincipalId after next RP rollout
 		{
@@ -1349,7 +1350,7 @@ func (g *generator) clusterKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyE
 	}
 }
 
-func (g *generator) portalKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
+func (g *generator) rpPortalKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
 	return []mgmtkeyvault.AccessPolicyEntry{
 		{
 			TenantID: &tenantUUIDHack,
@@ -1363,7 +1364,7 @@ func (g *generator) portalKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEn
 	}
 }
 
-func (g *generator) serviceKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
+func (g *generator) rpServiceKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
 	return []mgmtkeyvault.AccessPolicyEntry{
 		{
 			TenantID: &tenantUUIDHack,
@@ -1377,7 +1378,7 @@ func (g *generator) serviceKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyE
 	}
 }
 
-func (g *generator) clusterKeyvault() *arm.Resource {
+func (g *generator) rpClusterKeyvault() *arm.Resource {
 	vault := &mgmtkeyvault.Vault{
 		Properties: &mgmtkeyvault.VaultProperties{
 			EnableSoftDelete: to.BoolPtr(true),
@@ -1394,7 +1395,7 @@ func (g *generator) clusterKeyvault() *arm.Resource {
 	}
 
 	if !g.production {
-		*vault.Properties.AccessPolicies = append(g.clusterKeyvaultAccessPolicies(),
+		*vault.Properties.AccessPolicies = append(g.rpClusterKeyvaultAccessPolicies(),
 			mgmtkeyvault.AccessPolicyEntry{
 				TenantID: &tenantUUIDHack,
 				ObjectID: to.StringPtr("[parameters('adminObjectId')]"),
@@ -1414,7 +1415,7 @@ func (g *generator) clusterKeyvault() *arm.Resource {
 	}
 }
 
-func (g *generator) portalKeyvault() *arm.Resource {
+func (g *generator) rpPortalKeyvault() *arm.Resource {
 	vault := &mgmtkeyvault.Vault{
 		Properties: &mgmtkeyvault.VaultProperties{
 			EnableSoftDelete: to.BoolPtr(true),
@@ -1431,7 +1432,7 @@ func (g *generator) portalKeyvault() *arm.Resource {
 	}
 
 	if !g.production {
-		*vault.Properties.AccessPolicies = append(g.portalKeyvaultAccessPolicies(),
+		*vault.Properties.AccessPolicies = append(g.rpPortalKeyvaultAccessPolicies(),
 			mgmtkeyvault.AccessPolicyEntry{
 				TenantID: &tenantUUIDHack,
 				ObjectID: to.StringPtr("[parameters('adminObjectId')]"),
@@ -1457,7 +1458,7 @@ func (g *generator) portalKeyvault() *arm.Resource {
 	}
 }
 
-func (g *generator) serviceKeyvault() *arm.Resource {
+func (g *generator) rpServiceKeyvault() *arm.Resource {
 	vault := &mgmtkeyvault.Vault{
 		Properties: &mgmtkeyvault.VaultProperties{
 			EnableSoftDelete: to.BoolPtr(true),
@@ -1474,7 +1475,7 @@ func (g *generator) serviceKeyvault() *arm.Resource {
 	}
 
 	if !g.production {
-		*vault.Properties.AccessPolicies = append(g.serviceKeyvaultAccessPolicies(),
+		*vault.Properties.AccessPolicies = append(g.rpServiceKeyvaultAccessPolicies(),
 			mgmtkeyvault.AccessPolicyEntry{
 				TenantID: &tenantUUIDHack,
 				ObjectID: to.StringPtr("[parameters('adminObjectId')]"),
@@ -1500,7 +1501,7 @@ func (g *generator) serviceKeyvault() *arm.Resource {
 	}
 }
 
-func (g *generator) cosmosdb() []*arm.Resource {
+func (g *generator) rpCosmosDB() []*arm.Resource {
 	cosmosdb := &mgmtdocumentdb.DatabaseAccountCreateUpdateParameters{
 		Kind: mgmtdocumentdb.GlobalDocumentDB,
 		DatabaseAccountCreateUpdateProperties: &mgmtdocumentdb.DatabaseAccountCreateUpdateProperties{
@@ -1748,7 +1749,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 	return rs
 }
 
-func (g *generator) roleDefinitionTokenContributor() *arm.Resource {
+func (g *generator) rpRoleDefinitionTokenContributor() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtauthorization.RoleDefinition{
 			Name: to.StringPtr("48983534-3d06-4dcb-a566-08a694eb1279"),
@@ -1774,7 +1775,7 @@ func (g *generator) roleDefinitionTokenContributor() *arm.Resource {
 	}
 }
 
-func (g *generator) rbac() []*arm.Resource {
+func (g *generator) rpRBAC() []*arm.Resource {
 	return []*arm.Resource{
 		rbac.ResourceGroupRoleAssignmentWithName(
 			rbac.RoleReader,
@@ -1803,7 +1804,7 @@ func (g *generator) rbac() []*arm.Resource {
 	}
 }
 
-func (g *generator) billingContributorRbac() []*arm.Resource {
+func (g *generator) rpBillingContributorRbac() []*arm.Resource {
 	return []*arm.Resource{
 		rbac.ResourceRoleAssignmentWithName(
 			rbac.RoleDocumentDBAccountContributor,
@@ -1815,7 +1816,7 @@ func (g *generator) billingContributorRbac() []*arm.Resource {
 	}
 }
 
-func (g *generator) acrReplica() *arm.Resource {
+func (g *generator) rpACRReplica() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtcontainerregistry.Replication{
 			Name:     to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', parameters('location'))]"),
@@ -1826,7 +1827,7 @@ func (g *generator) acrReplica() *arm.Resource {
 	}
 }
 
-func (g *generator) acrRbac() []*arm.Resource {
+func (g *generator) rpACRRBAC() []*arm.Resource {
 	rs := []*arm.Resource{
 		rbac.ResourceRoleAssignmentWithName(
 			rbac.RoleACRPull,
@@ -1883,7 +1884,7 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 	}
 }
 
-func (g *generator) storageAccount() *arm.Resource {
+func (g *generator) rpStorageAccount() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtstorage.Account{
 			Name:     to.StringPtr("[substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.'))]"),

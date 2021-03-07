@@ -44,11 +44,11 @@ func (g *generator) clusterPredeploy() *arm.Template {
 	return t
 }
 
-func (g *generator) managedIdentityTemplate() *arm.Template {
+func (g *generator) rpManagedIdentityTemplate() *arm.Template {
 	t := templateStanza()
 
 	t.Resources = append(t.Resources,
-		g.managedIdentity(),
+		g.rpManagedIdentity(),
 	)
 
 	return t
@@ -104,24 +104,24 @@ func (g *generator) rpTemplate() *arm.Template {
 
 	if g.production {
 		t.Resources = append(t.Resources,
-			g.pip("rp-pip"),
-			g.pip("portal-pip"),
-			g.lb(),
-			g.vmss(),
-			g.storageAccount(),
-			g.lbAlert(30.0, 2, "rp-availability-alert", "PT5M", "PT15M", "DipAvailability"), // triggers on all 3 RPs being down for 10min, can't be >=0.3 due to deploys going down to 32% at times.
-			g.lbAlert(67.0, 3, "rp-degraded-alert", "PT15M", "PT6H", "DipAvailability"),     // 1/3 backend down for 1h or 2/3 down for 3h in the last 6h
-			g.lbAlert(33.0, 2, "rp-vnet-alert", "PT5M", "PT5M", "VipAvailability"))          // this will trigger only if the Azure network infrastructure between the loadBalancers and VMs is down for 3.5min
+			g.publicIPAddress("rp-pip"),
+			g.publicIPAddress("portal-pip"),
+			g.rpLB(),
+			g.rpVMSS(),
+			g.rpStorageAccount(),
+			g.rpLBAlert(30.0, 2, "rp-availability-alert", "PT5M", "PT15M", "DipAvailability"), // triggers on all 3 RPs being down for 10min, can't be >=0.3 due to deploys going down to 32% at times.
+			g.rpLBAlert(67.0, 3, "rp-degraded-alert", "PT15M", "PT6H", "DipAvailability"),     // 1/3 backend down for 1h or 2/3 down for 3h in the last 6h
+			g.rpLBAlert(33.0, 2, "rp-vnet-alert", "PT5M", "PT5M", "VipAvailability"))          // this will trigger only if the Azure network infrastructure between the loadBalancers and VMs is down for 3.5min
 		// more on alerts https://msazure.visualstudio.com/AzureRedHatOpenShift/_wiki/wikis/ARO.wiki/53765/WIP-Alerting
-		t.Resources = append(t.Resources, g.billingContributorRbac()...)
+		t.Resources = append(t.Resources, g.rpBillingContributorRbac()...)
 	}
 
-	t.Resources = append(t.Resources, g.zone(),
-		g.rpvnet(), g.pevnet(),
-		g.halfPeering("rp-vnet", "rp-pe-vnet-001"),
-		g.halfPeering("rp-pe-vnet-001", "rp-vnet"))
-	t.Resources = append(t.Resources, g.cosmosdb()...)
-	t.Resources = append(t.Resources, g.rbac()...)
+	t.Resources = append(t.Resources, g.rpDNSZone(),
+		g.rpVnet(), g.rpPEVnet(),
+		g.virtualNetworkPeering("rp-vnet", "rp-pe-vnet-001"),
+		g.virtualNetworkPeering("rp-pe-vnet-001", "rp-vnet"))
+	t.Resources = append(t.Resources, g.rpCosmosDB()...)
+	t.Resources = append(t.Resources, g.rpRBAC()...)
 
 	return t
 }
@@ -140,7 +140,7 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
 	}
 	t.Resources = append(t.Resources,
-		g.acrRbac()...,
+		g.rpACRRBAC()...,
 	)
 	t.Resources = append(t.Resources,
 		g.rpVersionStorageAccount()...,
@@ -161,7 +161,7 @@ func (g *generator) rpGlobalACRReplicationTemplate() *arm.Template {
 		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
 	}
 	t.Resources = append(t.Resources,
-		g.acrReplica(),
+		g.rpACRReplica(),
 	)
 
 	return t
@@ -171,7 +171,7 @@ func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 	t := templateStanza()
 
 	t.Resources = append(t.Resources,
-		g.roleDefinitionTokenContributor(),
+		g.rpRoleDefinitionTokenContributor(),
 	)
 
 	return t
@@ -185,7 +185,7 @@ func (g *generator) rpSubscriptionTemplate() *arm.Template {
 	return t
 }
 
-func (g *generator) databaseTemplate() *arm.Template {
+func (g *generator) devDatabaseTemplate() *arm.Template {
 	t := templateStanza()
 
 	t.Resources = append(t.Resources,
@@ -218,14 +218,14 @@ func (g *generator) rpParameters() *arm.Parameters {
 	return p
 }
 
-func (g *generator) preDeployTemplate() *arm.Template {
+func (g *generator) rpPredeployTemplate() *arm.Template {
 	t := templateStanza()
 
 	if g.production {
 		t.Variables = map[string]interface{}{
-			"clusterKeyvaultAccessPolicies": g.clusterKeyvaultAccessPolicies(),
-			"portalKeyvaultAccessPolicies":  g.portalKeyvaultAccessPolicies(),
-			"serviceKeyvaultAccessPolicies": g.serviceKeyvaultAccessPolicies(),
+			"clusterKeyvaultAccessPolicies": g.rpClusterKeyvaultAccessPolicies(),
+			"portalKeyvaultAccessPolicies":  g.rpPortalKeyvaultAccessPolicies(),
+			"serviceKeyvaultAccessPolicies": g.rpServiceKeyvaultAccessPolicies(),
 		}
 	}
 
@@ -270,20 +270,20 @@ func (g *generator) preDeployTemplate() *arm.Template {
 	}
 
 	t.Resources = append(t.Resources,
-		g.securityGroupRP(),
-		g.securityGroupPE(),
+		g.rpSecurityGroup(),
+		g.rpPESecurityGroup(),
 		// clusterKeyvault, portalKeyvault and serviceKeyvault must be in this
 		// order due to terrible bytes.Replace in templateFixup
-		g.clusterKeyvault(),
-		g.portalKeyvault(),
-		g.serviceKeyvault(),
+		g.rpClusterKeyvault(),
+		g.rpPortalKeyvault(),
+		g.rpServiceKeyvault(),
 	)
 
 	return t
 }
 
-func (g *generator) rpPreDeployParameters() *arm.Parameters {
-	t := g.preDeployTemplate()
+func (g *generator) rpPredeployParameters() *arm.Parameters {
+	t := g.rpPredeployTemplate()
 	p := parametersStanza()
 
 	for name, tp := range t.Parameters {
@@ -297,15 +297,15 @@ func (g *generator) rpPreDeployParameters() *arm.Parameters {
 	return p
 }
 
-func (g *generator) sharedDevelopmentEnvTemplate() *arm.Template {
+func (g *generator) devSharedTemplate() *arm.Template {
 	t := templateStanza()
 
 	t.Resources = append(t.Resources,
-		g.devVpnPip(),
+		g.devVPNPip(),
 		g.devVnet(),
 		g.devVPN(),
 		g.devCIPool(),
-		g.proxyVmss())
+		g.devProxyVMSS())
 
 	for _, param := range []string{
 		"ciAzpToken",
