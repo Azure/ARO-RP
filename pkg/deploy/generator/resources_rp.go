@@ -988,7 +988,11 @@ func (g *generator) rpClusterKeyvault() *arm.Resource {
 				Name:   mgmtkeyvault.Standard,
 				Family: to.StringPtr("A"),
 			},
-			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
+			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
+				{
+					ObjectID: to.StringPtr(clusterAccessPolicyHack),
+				},
+			},
 		},
 		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + env.ClusterKeyvaultSuffix + "')]"),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
@@ -1025,7 +1029,11 @@ func (g *generator) rpPortalKeyvault() *arm.Resource {
 				Name:   mgmtkeyvault.Standard,
 				Family: to.StringPtr("A"),
 			},
-			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
+			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
+				{
+					ObjectID: to.StringPtr(portalAccessPolicyHack),
+				},
+			},
 		},
 		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + env.PortalKeyvaultSuffix + "')]"),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
@@ -1068,7 +1076,11 @@ func (g *generator) rpServiceKeyvault() *arm.Resource {
 				Name:   mgmtkeyvault.Standard,
 				Family: to.StringPtr("A"),
 			},
-			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
+			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
+				{
+					ObjectID: to.StringPtr(serviceAccessPolicyHack),
+				},
+			},
 		},
 		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + env.ServiceKeyvaultSuffix + "')]"),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),

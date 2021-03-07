@@ -6,6 +6,7 @@ package generator
 import (
 	"bytes"
 	"encoding/json"
+	"regexp"
 
 	uuid "github.com/satori/go.uuid"
 
@@ -13,7 +14,10 @@ import (
 )
 
 const (
-	tenantIDHack = "13805ec3-a223-47ad-ad65-8b2baf92c0fb"
+	tenantIDHack            = "13805ec3-a223-47ad-ad65-8b2baf92c0fb"
+	clusterAccessPolicyHack = "e1992efe-4835-46cf-8c08-d8b8451044b8"
+	portalAccessPolicyHack  = "e5e11dae-7c49-4118-9628-e0afa4d6a502"
+	serviceAccessPolicyHack = "533a94d0-d6c2-4fca-9af1-374aa6493468"
 )
 
 var (
@@ -40,9 +44,9 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 	b = bytes.ReplaceAll(b, []byte(tenantIDHack), []byte("[subscription().tenantId]"))
 	b = bytes.ReplaceAll(b, []byte(`"capacity": 1337`), []byte(`"capacity": "[int(parameters('ciCapacity'))]"`))
 	if g.production {
-		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('clusterKeyvaultAccessPolicies'), parameters('extraClusterKeyvaultAccessPolicies'))]"`), 1)
-		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('portalKeyvaultAccessPolicies'), parameters('extraPortalKeyvaultAccessPolicies'))]"`), 1)
-		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraServiceKeyvaultAccessPolicies'))]"`), 1)
+		b = regexp.MustCompile(`(?m)"accessPolicies": \[[^]]*`+clusterAccessPolicyHack+`[^]]*\]`).ReplaceAll(b, []byte(`"accessPolicies": "[concat(variables('clusterKeyvaultAccessPolicies'), parameters('extraClusterKeyvaultAccessPolicies'))]"`))
+		b = regexp.MustCompile(`(?m)"accessPolicies": \[[^]]*`+portalAccessPolicyHack+`[^]]*\]`).ReplaceAll(b, []byte(`"accessPolicies": "[concat(variables('portalKeyvaultAccessPolicies'), parameters('extraPortalKeyvaultAccessPolicies'))]"`))
+		b = regexp.MustCompile(`(?m)"accessPolicies": \[[^]]*`+serviceAccessPolicyHack+`[^]]*\]`).ReplaceAll(b, []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraServiceKeyvaultAccessPolicies'))]"`))
 		b = bytes.Replace(b, []byte(`"sourceAddressPrefixes": []`), []byte(`"sourceAddressPrefixes": "[parameters('rpNsgSourceAddressPrefixes')]"`), 1)
 		b = bytes.Replace(b, []byte(`"encryptionAtHost": true`), []byte(`"encryptionAtHost": "[parameters('encryptionAtHost')]"`), 1)
 	}

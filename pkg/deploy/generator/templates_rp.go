@@ -218,8 +218,6 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 	t.Resources = append(t.Resources,
 		g.rpSecurityGroup(),
 		g.rpPESecurityGroup(),
-		// clusterKeyvault, portalKeyvault and serviceKeyvault must be in this
-		// order due to terrible bytes.Replace in templateFixup
 		g.rpClusterKeyvault(),
 		g.rpPortalKeyvault(),
 		g.rpServiceKeyvault(),
