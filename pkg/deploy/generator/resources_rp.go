@@ -1455,20 +1455,9 @@ func (g *generator) rpACRRBAC() []*arm.Resource {
 
 func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 	return []*arm.Resource{
-		{
-			Resource: &mgmtstorage.Account{
-				Name:     to.StringPtr("[parameters('rpVersionStorageAccountName')]"),
-				Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
-				Location: to.StringPtr("[resourceGroup().location]"),
-				AccountProperties: &mgmtstorage.AccountProperties{
-					AllowBlobPublicAccess: to.BoolPtr(true),
-				},
-				Sku: &mgmtstorage.Sku{
-					Name: "Standard_LRS",
-				},
-			},
-			APIVersion: azureclient.APIVersion("Microsoft.Storage"),
-		},
+		g.storageAccount("[parameters('rpVersionStorageAccountName')]", &mgmtstorage.AccountProperties{
+			AllowBlobPublicAccess: to.BoolPtr(true),
+		}),
 		{
 			Resource: &mgmtstorage.BlobContainer{
 				Name: to.StringPtr("[concat(parameters('rpVersionStorageAccountName'), '/default/rpversion')]"),
@@ -1486,15 +1475,5 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 }
 
 func (g *generator) rpStorageAccount() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtstorage.Account{
-			Name:     to.StringPtr("[substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.'))]"),
-			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
-			Location: to.StringPtr("[resourceGroup().location]"),
-			Sku: &mgmtstorage.Sku{
-				Name: "Standard_LRS",
-			},
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
-	}
+	return g.storageAccount("[substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.'))]", nil)
 }

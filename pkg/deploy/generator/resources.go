@@ -8,6 +8,7 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtinsights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -58,6 +59,21 @@ func (g *generator) publicIPAddress(name string) *arm.Resource {
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
+	}
+}
+
+func (g *generator) storageAccount(name string, accountProperties *mgmtstorage.AccountProperties) *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtstorage.Account{
+			Name:     &name,
+			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+			Sku: &mgmtstorage.Sku{
+				Name: "Standard_LRS",
+			},
+			AccountProperties: accountProperties,
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 	}
 }
 
