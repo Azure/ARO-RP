@@ -39,34 +39,27 @@ func (g *generator) rpManagedIdentity() *arm.Resource {
 }
 
 func (g *generator) rpSecurityGroup() *arm.Resource {
-	nsg := &mgmtnetwork.SecurityGroup{
-		SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
-			SecurityRules: &[]mgmtnetwork.SecurityRule{
-				{
-					SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-						Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-						SourcePortRange:          to.StringPtr("*"),
-						DestinationPortRange:     to.StringPtr("443"),
-						SourceAddressPrefix:      to.StringPtr("AzureResourceManager"),
-						DestinationAddressPrefix: to.StringPtr("*"),
-						Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-						Priority:                 to.Int32Ptr(120),
-						Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-					},
-					Name: to.StringPtr("rp_in_arm"),
-				},
+	rules := []mgmtnetwork.SecurityRule{
+		{
+			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+				SourcePortRange:          to.StringPtr("*"),
+				DestinationPortRange:     to.StringPtr("443"),
+				SourceAddressPrefix:      to.StringPtr("AzureResourceManager"),
+				DestinationAddressPrefix: to.StringPtr("*"),
+				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+				Priority:                 to.Int32Ptr(120),
+				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 			},
+			Name: to.StringPtr("rp_in_arm"),
 		},
-		Name:     to.StringPtr("rp-nsg"),
-		Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-		Location: to.StringPtr("[resourceGroup().location]"),
 	}
 
 	if !g.production {
 		// override production ARM flag for more open configuration in development
-		(*nsg.SecurityRules)[0].SecurityRulePropertiesFormat.SourceAddressPrefix = to.StringPtr("*")
+		rules[0].SecurityRulePropertiesFormat.SourceAddressPrefix = to.StringPtr("*")
 
-		*nsg.SecurityRules = append(*nsg.SecurityRules, mgmtnetwork.SecurityRule{
+		rules = append(rules, mgmtnetwork.SecurityRule{
 			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
 				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
 				SourcePortRange:          to.StringPtr("*"),
@@ -80,7 +73,7 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 			Name: to.StringPtr("ssh_in"),
 		})
 	} else {
-		*nsg.SecurityRules = append(*nsg.SecurityRules, mgmtnetwork.SecurityRule{
+		rules = append(rules, mgmtnetwork.SecurityRule{
 			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
 				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
 				SourcePortRange:          to.StringPtr("*"),
@@ -95,24 +88,11 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 		})
 	}
 
-	return &arm.Resource{
-		Resource:   nsg,
-		Condition:  g.conditionStanza("deployNSGs"),
-		APIVersion: azureclient.APIVersion("Microsoft.Network"),
-	}
+	return g.securityGroup("rp-nsg", &rules, g.conditionStanza("deployNSGs"))
 }
 
 func (g *generator) rpPESecurityGroup() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtnetwork.SecurityGroup{
-			SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{},
-			Name:                          to.StringPtr("rp-pe-nsg"),
-			Type:                          to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-			Location:                      to.StringPtr("[resourceGroup().location]"),
-		},
-		Condition:  g.conditionStanza("deployNSGs"),
-		APIVersion: azureclient.APIVersion("Microsoft.Network"),
-	}
+	return g.securityGroup("rp-pe-nsg", nil, g.conditionStanza("deployNSGs"))
 }
 
 func (g *generator) rpVnet() *arm.Resource {

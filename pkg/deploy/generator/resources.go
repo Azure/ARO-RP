@@ -29,6 +29,21 @@ func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
 	}
 }
 
+func (g *generator) securityGroup(name string, securityRules *[]mgmtnetwork.SecurityRule, condition interface{}) *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtnetwork.SecurityGroup{
+			SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
+				SecurityRules: securityRules,
+			},
+			Name:     &name,
+			Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		Condition:  condition,
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
+	}
+}
+
 func (g *generator) publicIPAddress(name string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.PublicIPAddress{
