@@ -31,7 +31,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
-	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -70,12 +69,12 @@ type manager struct {
 	roleAssignments     authorization.RoleAssignmentsClient
 	roleDefinitions     authorization.RoleDefinitionsClient
 	denyAssignments     authorization.DenyAssignmentClient
+	fpPrivateEndpoints  network.PrivateEndpointsClient
 
-	dns             dns.Manager
-	privateendpoint privateendpoint.Manager
-	storage         storage.Manager
-	subnet          subnet.Manager
-	graph           graph.Manager
+	dns     dns.Manager
+	storage storage.Manager
+	subnet  subnet.Manager
+	graph   graph.Manager
 
 	kubernetescli kubernetes.Interface
 	extensionscli extensionsclient.Interface
@@ -132,11 +131,11 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.
 		roleAssignments:     authorization.NewRoleAssignmentsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 		roleDefinitions:     authorization.NewRoleDefinitionsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 		denyAssignments:     authorization.NewDenyAssignmentsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
+		fpPrivateEndpoints:  network.NewPrivateEndpointsClient(env.Environment(), env.SubscriptionID(), localFPAuthorizer),
 
-		dns:             dns.NewManager(env, localFPAuthorizer),
-		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
-		storage:         storage,
-		subnet:          subnet.NewManager(env, r.SubscriptionID, fpAuthorizer),
-		graph:           graph.NewManager(log, aead, storage),
+		dns:     dns.NewManager(env, localFPAuthorizer),
+		storage: storage,
+		subnet:  subnet.NewManager(env, r.SubscriptionID, fpAuthorizer),
+		graph:   graph.NewManager(log, aead, storage),
 	}, nil
 }
