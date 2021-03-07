@@ -46,6 +46,26 @@ func (g *generator) publicIPAddress(name string) *arm.Resource {
 	}
 }
 
+func (g *generator) virtualNetwork(name, addressPrefix string, subnets *[]mgmtnetwork.Subnet, condition interface{}) *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtnetwork.VirtualNetwork{
+			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
+				AddressSpace: &mgmtnetwork.AddressSpace{
+					AddressPrefixes: &[]string{
+						addressPrefix,
+					},
+				},
+				Subnets: subnets,
+			},
+			Name:     &name,
+			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		Condition:  condition,
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
+	}
+}
+
 // virtualNetworkPeering configures vnetA to peer with vnetB, two symmetrical
 // configurations have to be applied for a peering to work
 func (g *generator) virtualNetworkPeering(vnetA, vnetB string) *arm.Resource {

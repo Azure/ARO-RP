@@ -12,22 +12,7 @@ import (
 )
 
 func (g *generator) clusterVnet() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtnetwork.VirtualNetwork{
-			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-				AddressSpace: &mgmtnetwork.AddressSpace{
-					AddressPrefixes: &[]string{
-						"[parameters('vnetAddressPrefix')]",
-					},
-				},
-			},
-			Name:     to.StringPtr("dev-vnet"),
-			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
-			Location: to.StringPtr("[resourceGroup().location]"),
-		},
-		Condition:  "[parameters('ci')]",
-		APIVersion: azureclient.APIVersion("Microsoft.Network"),
-	}
+	return g.virtualNetwork("dev-vnet", "[parameters('vnetAddressPrefix')]", nil, "[parameters('ci')]")
 }
 
 func (g *generator) clusterRouteTable() *arm.Resource {

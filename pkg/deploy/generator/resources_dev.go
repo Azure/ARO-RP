@@ -210,38 +210,23 @@ func (g *generator) devVPNPip() *arm.Resource {
 }
 
 func (g *generator) devVnet() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtnetwork.VirtualNetwork{
-			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-				AddressSpace: &mgmtnetwork.AddressSpace{
-					AddressPrefixes: &[]string{
-						"10.0.0.0/23",
-					},
-				},
-				Subnets: &[]mgmtnetwork.Subnet{
-					{
-						SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-							AddressPrefix: to.StringPtr("10.0.0.0/24"),
-						},
-						Name: to.StringPtr("GatewaySubnet"),
-					},
-					{
-						SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-							AddressPrefix: to.StringPtr("10.0.1.0/24"),
-							NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
-							},
-						},
-						Name: to.StringPtr("ToolingSubnet"),
-					},
+	return g.virtualNetwork("dev-vnet", "10.0.0.0/23", &[]mgmtnetwork.Subnet{
+		{
+			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+				AddressPrefix: to.StringPtr("10.0.0.0/24"),
+			},
+			Name: to.StringPtr("GatewaySubnet"),
+		},
+		{
+			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+				AddressPrefix: to.StringPtr("10.0.1.0/24"),
+				NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+					ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
 				},
 			},
-			Name:     to.StringPtr("dev-vnet"),
-			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Name: to.StringPtr("ToolingSubnet"),
 		},
-		APIVersion: azureclient.APIVersion("Microsoft.Network"),
-	}
+	}, nil)
 }
 
 func (g *generator) devVPN() *arm.Resource {

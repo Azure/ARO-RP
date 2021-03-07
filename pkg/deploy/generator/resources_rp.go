@@ -139,54 +139,22 @@ func (g *generator) rpVnet() *arm.Resource {
 		}
 	}
 
-	return &arm.Resource{
-		Resource: &mgmtnetwork.VirtualNetwork{
-			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-				AddressSpace: &mgmtnetwork.AddressSpace{
-					AddressPrefixes: &[]string{
-						"10.0.0.0/24",
-					},
-				},
-				Subnets: &[]mgmtnetwork.Subnet{
-					subnet,
-				},
-			},
-			Name:     to.StringPtr("rp-vnet"),
-			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
-			Location: to.StringPtr("[resourceGroup().location]"),
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Network"),
-	}
+	return g.virtualNetwork("rp-vnet", "10.0.0.0/24", &[]mgmtnetwork.Subnet{subnet}, nil)
 }
 
 func (g *generator) rpPEVnet() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtnetwork.VirtualNetwork{
-			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-				AddressSpace: &mgmtnetwork.AddressSpace{
-					AddressPrefixes: &[]string{
-						"10.0.4.0/22",
-					},
+	return g.virtualNetwork("rp-pe-vnet-001", "10.0.4.0/22", &[]mgmtnetwork.Subnet{
+		{
+			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+				AddressPrefix: to.StringPtr("10.0.4.0/22"),
+				NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+					ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"),
 				},
-				Subnets: &[]mgmtnetwork.Subnet{
-					{
-						SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-							AddressPrefix: to.StringPtr("10.0.4.0/22"),
-							NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"),
-							},
-							PrivateEndpointNetworkPolicies: to.StringPtr("Disabled"),
-						},
-						Name: to.StringPtr("rp-pe-subnet"),
-					},
-				},
+				PrivateEndpointNetworkPolicies: to.StringPtr("Disabled"),
 			},
-			Name:     to.StringPtr("rp-pe-vnet-001"),
-			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Name: to.StringPtr("rp-pe-subnet"),
 		},
-		APIVersion: azureclient.APIVersion("Microsoft.Network"),
-	}
+	}, nil)
 }
 
 func (g *generator) rpLB() *arm.Resource {
