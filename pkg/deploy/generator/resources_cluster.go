@@ -11,7 +11,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
-func clusterVnet() *arm.Resource {
+func (g *generator) clusterVnet() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.VirtualNetwork{
 			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
@@ -30,7 +30,7 @@ func clusterVnet() *arm.Resource {
 	}
 }
 
-func clusterRouteTable() *arm.Resource {
+func (g *generator) clusterRouteTable() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.RouteTable{
 			Name:     to.StringPtr("[concat(parameters('clusterName'), '-rt')]"),
@@ -41,7 +41,7 @@ func clusterRouteTable() *arm.Resource {
 	}
 }
 
-func clusterMasterSubnet() *arm.Resource {
+func (g *generator) clusterMasterSubnet() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.Subnet{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
@@ -68,7 +68,7 @@ func clusterMasterSubnet() *arm.Resource {
 	}
 }
 
-func clusterWorkerSubnet() *arm.Resource {
+func (g *generator) clusterWorkerSubnet() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.Subnet{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{

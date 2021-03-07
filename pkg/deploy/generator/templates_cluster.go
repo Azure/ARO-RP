@@ -31,10 +31,10 @@ func (g *generator) clusterPredeploy() *arm.Template {
 	}
 
 	t.Resources = append(t.Resources,
-		clusterVnet(),
-		clusterRouteTable(),
-		clusterMasterSubnet(),
-		clusterWorkerSubnet(),
+		g.clusterVnet(),
+		g.clusterRouteTable(),
+		g.clusterMasterSubnet(),
+		g.clusterWorkerSubnet(),
 	)
 
 	return t
