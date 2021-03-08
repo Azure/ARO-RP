@@ -29,25 +29,27 @@ type OpenShiftCluster struct {
 
 // OpenShiftClusterProperties represents an OpenShift cluster's properties.
 type OpenShiftClusterProperties struct {
-	ArchitectureVersion     ArchitectureVersion     `json:"architectureVersion"` // ArchitectureVersion is int so 0 is valid value to be returned
-	ProvisioningState       ProvisioningState       `json:"provisioningState,omitempty"`
-	LastProvisioningState   ProvisioningState       `json:"lastProvisioningState,omitempty"`
-	FailedProvisioningState ProvisioningState       `json:"failedProvisioningState,omitempty"`
-	LastAdminUpdateError    string                  `json:"lastAdminUpdateError,omitempty"`
-	CreatedAt               time.Time               `json:"createdAt,omitempty"`
-	CreatedBy               string                  `json:"createdBy,omitempty"`
-	ProvisionedBy           string                  `json:"provisionedBy,omitempty"`
-	ClusterProfile          ClusterProfile          `json:"clusterProfile,omitempty"`
-	ConsoleProfile          ConsoleProfile          `json:"consoleProfile,omitempty"`
-	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
-	NetworkProfile          NetworkProfile          `json:"networkProfile,omitempty"`
-	MasterProfile           MasterProfile           `json:"masterProfile,omitempty"`
-	WorkerProfiles          []WorkerProfile         `json:"workerProfiles,omitempty"`
-	APIServerProfile        APIServerProfile        `json:"apiserverProfile,omitempty"`
-	IngressProfiles         []IngressProfile        `json:"ingressProfiles,omitempty"`
-	Install                 *Install                `json:"install,omitempty"`
-	StorageSuffix           string                  `json:"storageSuffix,omitempty"`
-	RegistryProfiles        []RegistryProfile       `json:"registryProfiles,omitempty"`
+	ArchitectureVersion             ArchitectureVersion     `json:"architectureVersion"` // ArchitectureVersion is int so 0 is valid value to be returned
+	ProvisioningState               ProvisioningState       `json:"provisioningState,omitempty"`
+	LastProvisioningState           ProvisioningState       `json:"lastProvisioningState,omitempty"`
+	FailedProvisioningState         ProvisioningState       `json:"failedProvisioningState,omitempty"`
+	LastAdminUpdateError            string                  `json:"lastAdminUpdateError,omitempty"`
+	CreatedAt                       time.Time               `json:"createdAt,omitempty"`
+	CreatedBy                       string                  `json:"createdBy,omitempty"`
+	ProvisionedBy                   string                  `json:"provisionedBy,omitempty"`
+	ClusterProfile                  ClusterProfile          `json:"clusterProfile,omitempty"`
+	FeatureProfile                  FeatureProfile          `json:"featureProfile,omitempty"`
+	ConsoleProfile                  ConsoleProfile          `json:"consoleProfile,omitempty"`
+	ServicePrincipalProfile         ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
+	NetworkProfile                  NetworkProfile          `json:"networkProfile,omitempty"`
+	MasterProfile                   MasterProfile           `json:"masterProfile,omitempty"`
+	WorkerProfiles                  []WorkerProfile         `json:"workerProfiles,omitempty"`
+	APIServerProfile                APIServerProfile        `json:"apiserverProfile,omitempty"`
+	IngressProfiles                 []IngressProfile        `json:"ingressProfiles,omitempty"`
+	Install                         *Install                `json:"install,omitempty"`
+	StorageSuffix                   string                  `json:"storageSuffix,omitempty"`
+	ImageRegistryStorageAccountName string                  `json:"imageRegistryStorageAccountName,omitempty"`
+	RegistryProfiles                []RegistryProfile       `json:"registryProfiles,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.
@@ -70,6 +72,11 @@ type ClusterProfile struct {
 	ResourceGroupID string `json:"resourceGroupId,omitempty"`
 }
 
+// FeatureProfile represents a feature profile.
+type FeatureProfile struct {
+	GatewayEnabled bool `json:"gatewayEnabled,omitempty" mutable:"true"`
+}
+
 // ConsoleProfile represents a console profile.
 type ConsoleProfile struct {
 	URL string `json:"url,omitempty"`
@@ -87,6 +94,8 @@ type NetworkProfile struct {
 	ServiceCIDR string `json:"serviceCidr,omitempty"`
 
 	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
+	GatewayPrivateEndpointIP   string `json:"gatewayPrivateEndpointIp,omitempty"`
+	GatewayPrivateLinkID       string `json:"gatewayPrivateLinkId,omitempty"`
 }
 
 // MasterProfile represents a master profile.

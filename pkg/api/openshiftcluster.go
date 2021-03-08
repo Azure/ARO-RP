@@ -107,6 +107,8 @@ type OpenShiftClusterProperties struct {
 
 	ClusterProfile ClusterProfile `json:"clusterProfile,omitempty"`
 
+	FeatureProfile FeatureProfile `json:"featureProfile,omitempty"`
+
 	ConsoleProfile ConsoleProfile `json:"consoleProfile,omitempty"`
 
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
@@ -124,7 +126,8 @@ type OpenShiftClusterProperties struct {
 	// Install is non-nil only when an install is in progress
 	Install *Install `json:"install,omitempty"`
 
-	StorageSuffix string `json:"storageSuffix,omitempty"`
+	StorageSuffix                   string `json:"storageSuffix,omitempty"`
+	ImageRegistryStorageAccountName string `json:"imageRegistryStorageAccountName,omitempty"`
 
 	InfraID              string       `json:"infraId,omitempty"`
 	SSHKey               SecureBytes  `json:"sshKey,omitempty"`
@@ -168,6 +171,13 @@ type ClusterProfile struct {
 	ResourceGroupID string       `json:"resourceGroupId,omitempty"`
 }
 
+// FeatureProfile represents a feature profile.
+type FeatureProfile struct {
+	MissingFields
+
+	GatewayEnabled bool `json:"gatewayEnabled,omitempty"`
+}
+
 // ConsoleProfile represents a console profile.
 type ConsoleProfile struct {
 	MissingFields
@@ -192,6 +202,8 @@ type NetworkProfile struct {
 	ServiceCIDR string `json:"serviceCidr,omitempty"`
 
 	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
+	GatewayPrivateEndpointIP   string `json:"gatewayPrivateEndpointIp,omitempty"`
+	GatewayPrivateLinkID       string `json:"gatewayPrivateLinkId,omitempty"`
 }
 
 // MasterProfile represents a master profile
