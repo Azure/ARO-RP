@@ -52,13 +52,7 @@
                 "routeTable": {
                     "id": "[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]",
                     "tags": null
-                },
-                "serviceEndpoints": [
-                    {
-                        "service": "Microsoft.ContainerRegistry"
-                    }
-                ],
-                "privateLinkServiceNetworkPolicies": "Disabled"
+                }
             },
             "name": "[concat('dev-vnet/', parameters('clusterName'), '-master')]",
             "type": "Microsoft.Network/virtualNetworks/subnets",
@@ -71,12 +65,7 @@
         },
         {
             "properties": {
-                "addressPrefix": "[parameters('workerAddressPrefix')]",
-                "serviceEndpoints": [
-                    {
-                        "service": "Microsoft.ContainerRegistry"
-                    }
-                ]
+                "addressPrefix": "[parameters('workerAddressPrefix')]"
             },
             "name": "[concat('dev-vnet/', parameters('clusterName'), '-worker')]",
             "type": "Microsoft.Network/virtualNetworks/subnets",

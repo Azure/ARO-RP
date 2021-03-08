@@ -142,6 +142,33 @@ func (m *manager) networkPrivateLinkService(installConfig *installconfig.Install
 	}
 }
 
+func (m *manager) networkPrivateEndpoint() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtnetwork.PrivateEndpoint{
+			PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
+				Subnet: &mgmtnetwork.Subnet{
+					ID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+				},
+				ManualPrivateLinkServiceConnections: &[]mgmtnetwork.PrivateLinkServiceConnection{
+					{
+						Name: to.StringPtr("gateway-plsconnection"),
+						PrivateLinkServiceConnectionProperties: &mgmtnetwork.PrivateLinkServiceConnectionProperties{
+							// TODO: in the future we will need multiple PLSes.
+							// It will be necessary to decide which the PLS for
+							// a cluster somewhere around here.
+							PrivateLinkServiceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.GatewayResourceGroup() + "/providers/Microsoft.Network/privateLinkServices/gateway-pls-001"),
+						},
+					},
+				},
+			},
+			Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pe"),
+			Type:     to.StringPtr("Microsoft.Network/privateEndpoints"),
+			Location: &m.doc.OpenShiftCluster.Location,
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
+	}
+}
+
 func (m *manager) networkPublicIPAddress(installConfig *installconfig.InstallConfig, name string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.PublicIPAddress{

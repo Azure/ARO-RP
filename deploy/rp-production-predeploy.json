@@ -77,6 +77,9 @@
         "fpServicePrincipalId": {
             "type": "string"
         },
+        "gatewayResourceGroupName": {
+            "type": "string"
+        },
         "keyvaultPrefix": {
             "type": "string",
             "maxLength": 20

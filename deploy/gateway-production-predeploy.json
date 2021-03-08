@@ -102,6 +102,9 @@
             ]
         },
         {
+            "name": "[concat(parameters('keyvaultPrefix'), '-gwy')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
             "properties": {
                 "tenantId": "[subscription().tenantId]",
                 "sku": {
@@ -111,10 +114,7 @@
                 "accessPolicies": "[concat(variables('gatewayKeyvaultAccessPolicies'), parameters('extraGatewayKeyvaultAccessPolicies'))]",
                 "enableSoftDelete": true
             },
-            "name": "[concat(parameters('keyvaultPrefix'), '-gwy')]",
-            "type": "Microsoft.KeyVault/vaults",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2016-10-01"
+            "apiVersion": "2019-09-01"
         }
     ]
 }

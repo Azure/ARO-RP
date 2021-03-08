@@ -148,6 +148,12 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		)
 	}
 
+	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
+		resources = append(resources,
+			m.networkPrivateEndpoint(),
+		)
+	}
+
 	t := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
@@ -196,6 +202,11 @@ func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.
 	dnsConfig := &bootkube.ARODNSConfig{
 		APIIntIP:  m.doc.OpenShiftCluster.Properties.APIServerProfile.IntIP,
 		IngressIP: m.doc.OpenShiftCluster.Properties.IngressProfiles[0].IP,
+	}
+
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
+		dnsConfig.GatewayPrivateEndpointIP = m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP
+		dnsConfig.GatewayDomains = m.env.GatewayDomains()
 	}
 
 	g := graph.Graph{}
@@ -259,4 +270,23 @@ func (m *manager) attachNSGs(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
+	// TODO: there is probably an undesirable race condition here - check if etags can help.
+	s, err := m.subnet.Get(ctx, m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+	if err != nil {
+		return err
+	}
+
+	if s.SubnetPropertiesFormat == nil {
+		s.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
+	}
+
+	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
+		s.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies = to.StringPtr("Disabled")
+	}
+	s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies = to.StringPtr("Disabled")
+
+	return m.subnet.CreateOrUpdate(ctx, m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID, s)
 }
