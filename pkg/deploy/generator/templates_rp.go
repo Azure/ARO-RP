@@ -61,7 +61,8 @@ func (g *generator) rpTemplate() *arm.Template {
 		switch param {
 		case "encryptionAtHost":
 			p.Type = "bool"
-		case "billingE2EStorageAccountId",
+		case "billingServicePrincipalId",
+			"billingE2EStorageAccountId",
 			"extraCosmosDBIPs",
 			"rpFeatures":
 			p.DefaultValue = ""

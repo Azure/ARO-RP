@@ -16,7 +16,8 @@
             "defaultValue": ""
         },
         "billingServicePrincipalId": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": ""
         },
         "clusterMdsdConfigVersion": {
             "type": "string"
@@ -502,6 +503,7 @@
                 "principalId": "[parameters('billingServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
+            "condition": "[greater(length(parameters('billingServicePrincipalId')), 0)]",
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"

@@ -35,7 +35,7 @@ type Configuration struct {
 	AdminAPICABundle                   *string       `json:"adminApiCaBundle,omitempty" value:"required"`
 	AdminAPIClientCertCommonName       *string       `json:"adminApiClientCertCommonName,omitempty" value:"required"`
 	BillingE2EStorageAccountID         *string       `json:"billingE2EStorageAccountId,omitempty"`
-	BillingServicePrincipalID          *string       `json:"billingServicePrincipalId,omitempty" value:"required"`
+	BillingServicePrincipalID          *string       `json:"billingServicePrincipalId,omitempty"`
 	ClusterMDSDConfigVersion           *string       `json:"clusterMdsdConfigVersion,omitempty" value:"required"`
 	ClusterParentDomainName            *string       `json:"clusterParentDomainName,omitempty" value:"required"`
 	DatabaseAccountName                *string       `json:"databaseAccountName,omitempty" value:"required"`
