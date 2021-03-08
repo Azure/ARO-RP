@@ -1355,8 +1355,34 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		},
 	}
 
+	gateway := &arm.Resource{
+		Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
+			SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
+				Resource: &mgmtdocumentdb.SQLContainerResource{
+					ID: to.StringPtr("Gateway"),
+					PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
+						Paths: &[]string{
+							"/id",
+						},
+						Kind: mgmtdocumentdb.PartitionKindHash,
+					},
+					DefaultTTL: to.Int32Ptr(-1),
+				},
+				Options: map[string]*string{},
+			},
+			Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Gateway')]"),
+			Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+		DependsOn: []string{
+			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+		},
+	}
+
 	if g.production {
 		portal.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options["throughput"] = to.StringPtr("400")
+		gateway.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options["throughput"] = to.StringPtr("400")
 	}
 
 	rs := []*arm.Resource{
@@ -1423,6 +1449,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
 		},
+		gateway,
 		{
 			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
 				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
@@ -1628,6 +1655,13 @@ func (g *generator) rpACRRBAC() []*arm.Resource {
 			"Microsoft.ContainerRegistry/registries",
 			"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",
 			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull')))",
+		),
+		rbac.ResourceRoleAssignmentWithName(
+			rbac.RoleACRPull,
+			"parameters('gatewayServicePrincipalId')",
+			"Microsoft.ContainerRegistry/registries",
+			"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",
+			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('gatewayServicePrincipalId'), 'RP / AcrPull')))",
 		),
 		rbac.ResourceRoleAssignmentWithName(
 			"48983534-3d06-4dcb-a566-08a694eb1279", // ARO v4 ContainerRegistry Token Contributor

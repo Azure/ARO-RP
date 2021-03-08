@@ -118,6 +118,7 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 		"acrResourceId",
 		"fpServicePrincipalId",
 		"clusterParentDomainName",
+		"gatewayServicePrincipalId",
 		"rpParentDomainName",
 		"rpServicePrincipalId",
 		"rpVersionStorageAccountName",

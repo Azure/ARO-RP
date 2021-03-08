@@ -63,6 +63,26 @@ func (g *generator) Artifacts() error {
 		if err != nil {
 			return err
 		}
+		err = g.writeTemplate(g.gatewayManagedIdentityTemplate(), FileGatewayProductionManagedIdentity)
+		if err != nil {
+			return err
+		}
+		err = g.writeTemplate(g.gatewayPredeployTemplate(), FileGatewayProductionPredeploy)
+		if err != nil {
+			return err
+		}
+		err = g.writeTemplate(g.gatewayTemplate(), FileGatewayProduction)
+		if err != nil {
+			return err
+		}
+		err = g.writeParameters(g.gatewayPredeployParameters(), FileGatewayProductionPredeployParameters)
+		if err != nil {
+			return err
+		}
+		err = g.writeParameters(g.gatewayParameters(), FileGatewayProductionParameters)
+		if err != nil {
+			return err
+		}
 
 	} else {
 		err := g.writeTemplate(g.devSharedTemplate(), fileEnvDevelopment)
