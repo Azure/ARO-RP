@@ -17,5 +17,5 @@ FROM registry.access.redhat.com/ubi7/ubi-minimal
 RUN microdnf update && microdnf clean all
 COPY --from=builder /go/src/github.com/Azure/ARO-RP/aro /go/src/github.com/Azure/ARO-RP/e2e.test /usr/local/bin/
 ENTRYPOINT ["aro"]
-EXPOSE 2222/tcp 8443/tcp 8444/tcp 8445/tcp
+EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp 8445/tcp
 USER 1000
