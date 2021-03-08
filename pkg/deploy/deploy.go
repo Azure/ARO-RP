@@ -28,7 +28,9 @@ var _ Deployer = (*deployer)(nil)
 type Deployer interface {
 	PreDeploy(context.Context) error
 	DeployRP(context.Context) error
+	DeployGateway(context.Context) error
 	UpgradeRP(context.Context) error
+	UpgradeGateway(context.Context) error
 	SaveVersion(context.Context) error
 }
 
@@ -133,7 +135,7 @@ func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
 		}
 
 		switch p {
-		case "portalAccessGroupIds", "portalElevatedGroupIds", "rpFeatures":
+		case "gatewayDomains", "gatewayFeatures", "portalAccessGroupIds", "portalElevatedGroupIds", "rpFeatures":
 			v = strings.Join(v.([]string), ",")
 		}
 

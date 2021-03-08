@@ -48,6 +48,7 @@ const (
 	PortalServerSSHKeySecretName     = "portal-sshkey"
 	ClusterKeyvaultSuffix            = "-cls"
 	DBTokenKeyvaultSuffix            = "-dbt"
+	GatewayKeyvaultSuffix            = "-gwy"
 	PortalKeyvaultSuffix             = "-por"
 	ServiceKeyvaultSuffix            = "-svc"
 	RPPrivateEndpointPrefix          = "rp-pe-"
