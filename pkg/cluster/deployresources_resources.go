@@ -89,6 +89,7 @@ func (m *manager) networkMasterNICs(installConfig *installconfig.InstallConfig) 
 func (m *manager) computeBootstrapVM(installConfig *installconfig.InstallConfig) *arm.Resource {
 	var customData string
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
+		// set https proxy if we're using the gateway
 		customData = `[base64(concat('{"ignition":{"version":"3.1.0","proxy":{"httpsProxy":"http://` + m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP + `"},"config":{"replace":{"source":"https://cluster` + m.doc.OpenShiftCluster.Properties.StorageSuffix + `.blob.` + m.env.Environment().StorageEndpointSuffix + `/ignition/bootstrap.ign?', listAccountSas(resourceId('Microsoft.Storage/storageAccounts', 'cluster` + m.doc.OpenShiftCluster.Properties.StorageSuffix + `'), '2019-04-01', parameters('sas')).accountSasToken, '"}}}}'))]`
 	} else {
 		customData = `[base64(concat('{"ignition":{"version":"3.1.0","config":{"replace":{"source":"https://cluster` + m.doc.OpenShiftCluster.Properties.StorageSuffix + `.blob.` + m.env.Environment().StorageEndpointSuffix + `/ignition/bootstrap.ign?', listAccountSas(resourceId('Microsoft.Storage/storageAccounts', 'cluster` + m.doc.OpenShiftCluster.Properties.StorageSuffix + `'), '2019-04-01', parameters('sas')).accountSasToken, '"}}}}'))]`

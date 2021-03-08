@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"strings"
 
@@ -48,6 +49,8 @@ type prod struct {
 	clusterGenevaLoggingConfigVersion string
 	clusterGenevaLoggingEnvironment   string
 
+	gatewayDomains []string
+
 	log *logrus.Entry
 
 	features map[Feature]bool
@@ -66,6 +69,8 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	if !IsLocalDevelopmentMode() {
 		for _, key := range []string{
 			"CLUSTER_MDSD_CONFIG_VERSION",
+			"GATEWAY_DOMAINS",
+			"GATEWAY_RESOURCEGROUP",
 			"MDSD_ENVIRONMENT",
 		} {
 			if _, found := os.LookupEnv(key); !found {
@@ -160,14 +165,38 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	p.clusterGenevaLoggingPrivateKey = clusterGenevaLoggingPrivateKey
 	p.clusterGenevaLoggingCertificate = clusterGenevaLoggingCertificates[0]
 
+	var acrDataDomain string
 	if p.ACRResourceID() != "" { // TODO: ugh!
 		acrResource, err := azure.ParseResourceID(p.ACRResourceID())
 		if err != nil {
 			return nil, err
 		}
 		p.acrDomain = acrResource.ResourceName + "." + p.Environment().ContainerRegistryDNSSuffix
+		acrDataDomain = acrResource.ResourceName + "." + p.Location() + ".data." + p.Environment().ContainerRegistryDNSSuffix
 	} else {
-		p.acrDomain = "arointsvc" + "." + azure.PublicCloud.ContainerRegistryDNSSuffix // TODO: make cloud aware once this is set up for US Gov Cloud
+		p.acrDomain = "arointsvc." + azure.PublicCloud.ContainerRegistryDNSSuffix                             // TODO: make cloud aware once this is set up for US Gov Cloud
+		acrDataDomain = "arointsvc." + p.Location() + ".data." + azure.PublicCloud.ContainerRegistryDNSSuffix // TODO: make cloud aware once this is set up for US Gov Cloud
+	}
+
+	if !p.IsLocalDevelopmentMode() {
+		gatewayDomains := os.Getenv("GATEWAY_DOMAINS")
+		if gatewayDomains != "" {
+			p.gatewayDomains = strings.Split(gatewayDomains, ",")
+		}
+
+		for _, rawurl := range []string{
+			p.Environment().ActiveDirectoryEndpoint,
+			p.Environment().ResourceManagerEndpoint,
+		} {
+			u, err := url.Parse(rawurl)
+			if err != nil {
+				return nil, err
+			}
+
+			p.gatewayDomains = append(p.gatewayDomains, u.Hostname())
+		}
+
+		p.gatewayDomains = append(p.gatewayDomains, p.acrDomain, acrDataDomain)
 	}
 
 	p.ARMHelper, err = newARMHelper(ctx, log, p)
@@ -298,6 +327,18 @@ func (p *prod) FPClientID() string {
 
 func (p *prod) Listen() (net.Listener, error) {
 	return net.Listen("tcp", ":8443")
+}
+
+func (p *prod) GatewayDomains() []string {
+	gatewayDomains := make([]string, len(p.gatewayDomains))
+
+	copy(gatewayDomains, p.gatewayDomains)
+
+	return gatewayDomains
+}
+
+func (p *prod) GatewayResourceGroup() string {
+	return os.Getenv("GATEWAY_RESOURCEGROUP")
 }
 
 func (p *prod) ServiceKeyvault() keyvault.Manager {

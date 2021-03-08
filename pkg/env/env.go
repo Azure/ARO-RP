@@ -78,6 +78,8 @@ type Interface interface {
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
 	FPClientID() string
 	Listen() (net.Listener, error)
+	GatewayDomains() []string
+	GatewayResourceGroup() string
 	ServiceKeyvault() keyvault.Manager
 	Zones(vmSize string) ([]string, error)
 	ACRResourceID() string

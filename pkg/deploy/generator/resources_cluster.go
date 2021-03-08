@@ -31,12 +31,6 @@ func (g *generator) clusterMasterSubnet() *arm.Resource {
 		Resource: &mgmtnetwork.Subnet{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 				AddressPrefix: to.StringPtr("[parameters('masterAddressPrefix')]"),
-				ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
-					{
-						Service: to.StringPtr("Microsoft.ContainerRegistry"),
-					},
-				},
-				PrivateLinkServiceNetworkPolicies: to.StringPtr("Disabled"),
 				RouteTable: &mgmtnetwork.RouteTable{
 					ID: to.StringPtr("[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"),
 				},
@@ -58,11 +52,6 @@ func (g *generator) clusterWorkerSubnet() *arm.Resource {
 		Resource: &mgmtnetwork.Subnet{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 				AddressPrefix: to.StringPtr("[parameters('workerAddressPrefix')]"),
-				ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
-					{
-						Service: to.StringPtr("Microsoft.ContainerRegistry"),
-					},
-				},
 			},
 			Name: to.StringPtr("[concat('dev-vnet/', parameters('clusterName'), '-worker')]"),
 		},

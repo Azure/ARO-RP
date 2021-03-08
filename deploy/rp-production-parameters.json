@@ -50,6 +50,15 @@
         "fpServicePrincipalId": {
             "value": ""
         },
+        "gatewayDomains": {
+            "value": ""
+        },
+        "gatewayResourceGroupName": {
+            "value": ""
+        },
+        "gatewayServicePrincipalId": {
+            "value": ""
+        },
         "keyvaultPrefix": {
             "value": ""
         },
