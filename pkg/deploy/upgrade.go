@@ -24,21 +24,21 @@ const (
 func (d *deployer) UpgradeRP(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 40*time.Minute)
 	defer cancel()
-	err := d.waitForRPReadiness(timeoutCtx, rpVMSSPrefix+d.version)
+	err := d.rpWaitForReadiness(timeoutCtx, rpVMSSPrefix+d.version)
 	if err != nil {
 		return err
 	}
 
-	err = d.removeOldScalesets(ctx)
+	err = d.rpRemoveOldScalesets(ctx)
 	if err != nil {
 		return err
 	}
 
 	// Must be last step so we can be sure there are no RPs at older versions still serving
-	return d.saveRPVersion(ctx)
+	return d.saveVersion(ctx)
 }
 
-func (d *deployer) waitForRPReadiness(ctx context.Context, vmssName string) error {
+func (d *deployer) rpWaitForReadiness(ctx context.Context, vmssName string) error {
 	scalesetVMs, err := d.vmssvms.List(ctx, d.config.ResourceGroupName, vmssName, "", "", "")
 	if err != nil {
 		return err
@@ -58,7 +58,7 @@ func (d *deployer) waitForRPReadiness(ctx context.Context, vmssName string) erro
 	}, ctx.Done())
 }
 
-func (d *deployer) removeOldScalesets(ctx context.Context) error {
+func (d *deployer) rpRemoveOldScalesets(ctx context.Context) error {
 	d.log.Print("removing old scalesets")
 	scalesets, err := d.vmss.List(ctx, d.config.ResourceGroupName)
 	if err != nil {
@@ -70,7 +70,7 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 			continue
 		}
 
-		err = d.removeOldScaleset(ctx, *vmss.Name)
+		err = d.rpRemoveOldScaleset(ctx, *vmss.Name)
 		if err != nil {
 			return err
 		}
@@ -79,7 +79,7 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 	return nil
 }
 
-func (d *deployer) removeOldScaleset(ctx context.Context, vmssName string) error {
+func (d *deployer) rpRemoveOldScaleset(ctx context.Context, vmssName string) error {
 	scalesetVMs, err := d.vmssvms.List(ctx, d.config.ResourceGroupName, vmssName, "", "", "")
 	if err != nil {
 		return err
@@ -108,8 +108,8 @@ func (d *deployer) removeOldScaleset(ctx context.Context, vmssName string) error
 	return d.vmss.DeleteAndWait(ctx, d.config.ResourceGroupName, vmssName)
 }
 
-// saveRPVersion for current location in shared storage account for environment
-func (d *deployer) saveRPVersion(ctx context.Context) error {
+// saveVersion for current location in shared storage account for environment
+func (d *deployer) saveVersion(ctx context.Context) error {
 	d.log.Printf("saving rpVersion %s deployed in %s to storage account %s", d.version, d.config.Location, *d.config.Configuration.RPVersionStorageAccountName)
 	t := time.Now().UTC().Truncate(time.Second)
 	res, err := d.globalaccounts.ListAccountSAS(
