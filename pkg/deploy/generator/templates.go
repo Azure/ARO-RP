@@ -7,8 +7,18 @@ import (
 	"bytes"
 	"encoding/json"
 
+	uuid "github.com/satori/go.uuid"
+
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+)
+
+const (
+	tenantIDHack = "13805ec3-a223-47ad-ad65-8b2baf92c0fb"
+)
+
+var (
+	tenantUUIDHack = uuid.Must(uuid.FromString(tenantIDHack))
 )
 
 func (g *generator) clusterPredeploy() *arm.Template {
