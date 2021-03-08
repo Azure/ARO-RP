@@ -14,11 +14,14 @@ import (
 
 func (mon *Monitor) emitStatefulsetStatuses(ctx context.Context) error {
 	var cont string
+	var count int64
 	for {
 		sss, err := mon.cli.AppsV1().StatefulSets("").List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
 		if err != nil {
 			return err
 		}
+
+		count += int64(len(sss.Items))
 
 		for _, ss := range sss.Items {
 			if !namespace.IsOpenShift(ss.Namespace) {
@@ -42,6 +45,8 @@ func (mon *Monitor) emitStatefulsetStatuses(ctx context.Context) error {
 			break
 		}
 	}
+
+	mon.emitGauge("statefulset.count", count, nil)
 
 	return nil
 }

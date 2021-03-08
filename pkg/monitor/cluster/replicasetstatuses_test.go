@@ -60,6 +60,8 @@ func TestEmitReplicasetStatuses(t *testing.T) {
 		m:   m,
 	}
 
+	m.EXPECT().EmitGauge("replicaset.count", int64(3), map[string]string{})
+
 	m.EXPECT().EmitGauge("replicaset.statuses", int64(1), map[string]string{
 		"availableReplicas": strconv.Itoa(1),
 		"name":              "name1",

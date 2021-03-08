@@ -20,11 +20,14 @@ var jobConditionsExpected = map[batchv1.JobConditionType]corev1.ConditionStatus{
 
 func (mon *Monitor) emitJobConditions(ctx context.Context) error {
 	var cont string
+	var count int64
 	for {
 		jobs, err := mon.cli.BatchV1().Jobs("").List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
 		if err != nil {
 			return err
 		}
+
+		count += int64(len(jobs.Items))
 
 		for _, job := range jobs.Items {
 			if !namespace.IsOpenShift(job.Namespace) {
@@ -55,6 +58,8 @@ func (mon *Monitor) emitJobConditions(ctx context.Context) error {
 			break
 		}
 	}
+
+	mon.emitGauge("job.count", count, nil)
 
 	return nil
 }

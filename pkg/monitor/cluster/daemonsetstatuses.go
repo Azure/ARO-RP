@@ -14,11 +14,14 @@ import (
 
 func (mon *Monitor) emitDaemonsetStatuses(ctx context.Context) error {
 	var cont string
+	var count int64
 	for {
 		dss, err := mon.cli.AppsV1().DaemonSets("").List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
 		if err != nil {
 			return err
 		}
+
+		count += int64(len(dss.Items))
 
 		for _, ds := range dss.Items {
 			if !namespace.IsOpenShift(ds.Namespace) {
@@ -41,6 +44,10 @@ func (mon *Monitor) emitDaemonsetStatuses(ctx context.Context) error {
 		if cont == "" {
 			break
 		}
+
 	}
+
+	mon.emitGauge("daemonset.count", count, nil)
+
 	return nil
 }

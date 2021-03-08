@@ -67,6 +67,8 @@ func TestEmitDaemonsetStatuses(t *testing.T) {
 		"numberAvailable":        strconv.Itoa(1),
 	})
 
+	m.EXPECT().EmitGauge("daemonset.count", int64(3), map[string]string{})
+
 	err := mon.emitDaemonsetStatuses(ctx)
 	if err != nil {
 		t.Fatal(err)

@@ -14,11 +14,14 @@ import (
 
 func (mon *Monitor) emitDeploymentStatuses(ctx context.Context) error {
 	var cont string
+	var count int64
 	for {
 		ds, err := mon.cli.AppsV1().Deployments("").List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
 		if err != nil {
 			return err
 		}
+
+		count += int64(len(ds.Items))
 
 		for _, d := range ds.Items {
 			if !namespace.IsOpenShift(d.Namespace) {
@@ -42,6 +45,6 @@ func (mon *Monitor) emitDeploymentStatuses(ctx context.Context) error {
 			break
 		}
 	}
-
+	mon.emitGauge("deployment.count", count, nil)
 	return nil
 }

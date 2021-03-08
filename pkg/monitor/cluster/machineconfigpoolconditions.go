@@ -22,11 +22,14 @@ var machineConfigPoolConditionsExpected = map[mcv1.MachineConfigPoolConditionTyp
 
 func (mon *Monitor) emitMachineConfigPoolConditions(ctx context.Context) error {
 	var cont string
+	var count int64
 	for {
 		mcps, err := mon.mcocli.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
 		if err != nil {
 			return err
 		}
+
+		count += int64(len(mcps.Items))
 
 		for _, mcp := range mcps.Items {
 			for _, c := range mcp.Status.Conditions {
@@ -57,6 +60,8 @@ func (mon *Monitor) emitMachineConfigPoolConditions(ctx context.Context) error {
 			break
 		}
 	}
+
+	mon.emitGauge("machineconfigpool.count", count, nil)
 
 	return nil
 }
