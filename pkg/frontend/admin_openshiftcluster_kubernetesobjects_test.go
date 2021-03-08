@@ -244,6 +244,30 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 			wantErr:   "403: Forbidden: : Access to secrets is forbidden.",
 		},
 		{
+			test:      "allowed groupKind on read",
+			groupKind: "ClusterRole.rbac.authorization.k8s.io",
+			name:      "Valid-NAME-01",
+		},
+		{
+			test:      "allowed groupKind on read 2",
+			groupKind: "ClusterRole.authorization.openshift.io",
+			name:      "Valid-NAME-01",
+		},
+		{
+			test:      "forbidden groupKind on write",
+			method:    http.MethodPost,
+			groupKind: "ClusterRole.rbac.authorization.k8s.io",
+			name:      "Valid-NAME-01",
+			wantErr:   "403: Forbidden: : Write access to RBAC is forbidden.",
+		},
+		{
+			test:      "forbidden groupKind on write 2",
+			method:    http.MethodPost,
+			groupKind: "ClusterRole.authorization.openshift.io",
+			name:      "Valid-NAME-01",
+			wantErr:   "403: Forbidden: : Write access to RBAC is forbidden.",
+		},
+		{
 			test:      "empty groupKind",
 			namespace: "openshift-ns",
 			name:      "Valid-NAME-01",
