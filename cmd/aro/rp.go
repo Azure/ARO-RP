@@ -108,6 +108,11 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
+	dbGateway, err := database.NewGateway(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	if err != nil {
+		return err
+	}
+
 	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc)
 	if err != nil {
 		return err
@@ -135,7 +140,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, dbAsyncOperations, dbBilling, dbOpenShiftClusters, dbSubscriptions, aead, m)
+	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, dbAsyncOperations, dbBilling, dbGateway, dbOpenShiftClusters, dbSubscriptions, aead, m)
 	if err != nil {
 		return err
 	}

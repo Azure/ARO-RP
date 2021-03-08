@@ -33,6 +33,9 @@
             "sku": {
                 "name": "Premium"
             },
+            "properties": {
+                "dataEndpointEnabled": true
+            },
             "name": "[substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))]",
             "type": "Microsoft.ContainerRegistry/registries",
             "location": "[if(equals(parameters('acrLocationOverride'), ''), resourceGroup().location, parameters('acrLocationOverride'))]",
