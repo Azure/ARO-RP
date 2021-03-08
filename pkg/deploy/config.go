@@ -20,10 +20,10 @@ type Config struct {
 
 // RPConfig represents individual RP configuration
 type RPConfig struct {
-	Location          string         `json:"location,omitempty"`
-	SubscriptionID    string         `json:"subscriptionId,omitempty"`
-	ResourceGroupName string         `json:"resourceGroupName,omitempty"`
-	Configuration     *Configuration `json:"configuration,omitempty"`
+	Location            string         `json:"location,omitempty"`
+	SubscriptionID      string         `json:"subscriptionId,omitempty"`
+	RPResourceGroupName string         `json:"resourceGroupName,omitempty"`
+	Configuration       *Configuration `json:"configuration,omitempty"`
 }
 
 // Configuration represents configuration structure

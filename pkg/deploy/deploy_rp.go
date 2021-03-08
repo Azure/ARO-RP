@@ -27,7 +27,7 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		d.log.Warn("encryption at host not supported")
 	}
 
-	rpMSI, err := d.userassignedidentities.Get(ctx, d.config.ResourceGroupName, "aro-rp-"+d.config.Location)
+	rpMSI, err := d.userassignedidentities.Get(ctx, d.config.RPResourceGroupName, "aro-rp-"+d.config.Location)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 
 	for i := 0; i < 2; i++ {
 		d.log.Printf("deploying %s", deploymentName)
-		err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+		err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.RPResourceGroupName, deploymentName, mgmtfeatures.Deployment{
 			Properties: &mgmtfeatures.DeploymentProperties{
 				Template:   template,
 				Mode:       mgmtfeatures.Incremental,
@@ -96,17 +96,17 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 }
 
 func (d *deployer) configureDNS(ctx context.Context) error {
-	rpPip, err := d.publicipaddresses.Get(ctx, d.config.ResourceGroupName, "rp-pip", "")
+	rpPip, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "rp-pip", "")
 	if err != nil {
 		return err
 	}
 
-	portalPip, err := d.publicipaddresses.Get(ctx, d.config.ResourceGroupName, "portal-pip", "")
+	portalPip, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "portal-pip", "")
 	if err != nil {
 		return err
 	}
 
-	zone, err := d.zones.Get(ctx, d.config.ResourceGroupName, d.config.Location+"."+*d.config.Configuration.ClusterParentDomainName)
+	zone, err := d.zones.Get(ctx, d.config.RPResourceGroupName, d.config.Location+"."+*d.config.Configuration.ClusterParentDomainName)
 	if err != nil {
 		return err
 	}

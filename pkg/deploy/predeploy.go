@@ -55,8 +55,8 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
-	d.log.Infof("deploying rg %s in %s", d.config.ResourceGroupName, d.config.Location)
-	_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtfeatures.ResourceGroup{
+	d.log.Infof("deploying rg %s in %s", d.config.RPResourceGroupName, d.config.Location)
+	_, err = d.groups.CreateOrUpdate(ctx, d.config.RPResourceGroupName, mgmtfeatures.ResourceGroup{
 		Location: &d.config.Location,
 	})
 	if err != nil {
@@ -75,7 +75,7 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
-	rpMSI, err := d.userassignedidentities.Get(ctx, d.config.ResourceGroupName, "aro-rp-"+d.config.Location)
+	rpMSI, err := d.userassignedidentities.Get(ctx, d.config.RPResourceGroupName, "aro-rp-"+d.config.Location)
 	if err != nil {
 		return err
 	}
@@ -280,7 +280,7 @@ func (d *deployer) deployRPManagedIdentity(ctx context.Context) error {
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.RPResourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
 			Template: template,
 			Mode:     mgmtfeatures.Incremental,
@@ -292,7 +292,7 @@ func (d *deployer) deployRPPreDeploy(ctx context.Context, rpServicePrincipalID s
 	deploymentName := "rp-production-predeploy"
 
 	var isCreate bool
-	_, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
+	_, err := d.deployments.Get(ctx, d.config.RPResourceGroupName, deploymentName)
 	if isDeploymentNotFoundError(err) {
 		isCreate = true
 		err = nil
@@ -321,7 +321,7 @@ func (d *deployer) deployRPPreDeploy(ctx context.Context, rpServicePrincipalID s
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.RPResourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   template,
 			Mode:       mgmtfeatures.Incremental,

@@ -34,7 +34,7 @@ func (d *deployer) UpgradeRP(ctx context.Context) error {
 }
 
 func (d *deployer) rpWaitForReadiness(ctx context.Context, vmssName string) error {
-	scalesetVMs, err := d.vmssvms.List(ctx, d.config.ResourceGroupName, vmssName, "", "", "")
+	scalesetVMs, err := d.vmssvms.List(ctx, d.config.RPResourceGroupName, vmssName, "", "", "")
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func (d *deployer) rpWaitForReadiness(ctx context.Context, vmssName string) erro
 	d.log.Printf("waiting for %s instances to be healthy", vmssName)
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		for _, vm := range scalesetVMs {
-			r, err := d.vmssvms.GetInstanceView(ctx, d.config.ResourceGroupName, vmssName, *vm.InstanceID)
+			r, err := d.vmssvms.GetInstanceView(ctx, d.config.RPResourceGroupName, vmssName, *vm.InstanceID)
 			if err != nil || *r.VMHealth.Status.Code != "HealthState/healthy" {
 				d.log.Printf("instance %s status %s", *vm.InstanceID, *r.VMHealth.Status.Code)
 				return false, nil
@@ -55,7 +55,7 @@ func (d *deployer) rpWaitForReadiness(ctx context.Context, vmssName string) erro
 
 func (d *deployer) rpRemoveOldScalesets(ctx context.Context) error {
 	d.log.Print("removing old scalesets")
-	scalesets, err := d.vmss.List(ctx, d.config.ResourceGroupName)
+	scalesets, err := d.vmss.List(ctx, d.config.RPResourceGroupName)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (d *deployer) rpRemoveOldScalesets(ctx context.Context) error {
 }
 
 func (d *deployer) rpRemoveOldScaleset(ctx context.Context, vmssName string) error {
-	scalesetVMs, err := d.vmssvms.List(ctx, d.config.ResourceGroupName, vmssName, "", "", "")
+	scalesetVMs, err := d.vmssvms.List(ctx, d.config.RPResourceGroupName, vmssName, "", "", "")
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (d *deployer) rpRemoveOldScaleset(ctx context.Context, vmssName string) err
 	errors := make(chan error, len(scalesetVMs))
 	for _, vm := range scalesetVMs {
 		go func(id string) {
-			errors <- d.vmssvms.RunCommandAndWait(ctx, d.config.ResourceGroupName, vmssName, id, mgmtcompute.RunCommandInput{
+			errors <- d.vmssvms.RunCommandAndWait(ctx, d.config.RPResourceGroupName, vmssName, id, mgmtcompute.RunCommandInput{
 				CommandID: to.StringPtr("RunShellScript"),
 				Script:    &[]string{"systemctl stop aro-rp"},
 			})
@@ -100,5 +100,5 @@ func (d *deployer) rpRemoveOldScaleset(ctx context.Context, vmssName string) err
 	}
 
 	d.log.Printf("deleting scaleset %s", vmssName)
-	return d.vmss.DeleteAndWait(ctx, d.config.ResourceGroupName, vmssName)
+	return d.vmss.DeleteAndWait(ctx, d.config.RPResourceGroupName, vmssName)
 }
