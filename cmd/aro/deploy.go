@@ -65,10 +65,10 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	err = deployer.Deploy(ctx)
+	err = deployer.DeployRP(ctx)
 	if err != nil {
 		return err
 	}
 
-	return deployer.Upgrade(ctx)
+	return deployer.UpgradeRP(ctx)
 }

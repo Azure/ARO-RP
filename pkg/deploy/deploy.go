@@ -26,8 +26,8 @@ var _ Deployer = (*deployer)(nil)
 
 type Deployer interface {
 	PreDeploy(context.Context) error
-	Deploy(context.Context) error
-	Upgrade(context.Context) error
+	DeployRP(context.Context) error
+	UpgradeRP(context.Context) error
 }
 
 type deployer struct {

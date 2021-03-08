@@ -18,13 +18,13 @@ import (
 )
 
 const (
-	vmssPrefix = "rp-vmss-"
+	rpVMSSPrefix = "rp-vmss-"
 )
 
-func (d *deployer) Upgrade(ctx context.Context) error {
+func (d *deployer) UpgradeRP(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 40*time.Minute)
 	defer cancel()
-	err := d.waitForRPReadiness(timeoutCtx, vmssPrefix+d.version)
+	err := d.waitForRPReadiness(timeoutCtx, rpVMSSPrefix+d.version)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 	}
 
 	for _, vmss := range scalesets {
-		if *vmss.Name == vmssPrefix+d.version {
+		if *vmss.Name == rpVMSSPrefix+d.version {
 			continue
 		}
 

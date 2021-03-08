@@ -18,7 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
 
-func (d *deployer) Deploy(ctx context.Context) error {
+func (d *deployer) DeployRP(ctx context.Context) error {
 	encryptionAtHostSupported, err := d.encryptionAtHostSupported(ctx)
 	if err != nil {
 		return err
