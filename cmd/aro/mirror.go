@@ -93,29 +93,27 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	if len(flag.Args()) == 1 {
-		for _, ref := range []string{
-			version.MdsdImage("linuxgeneva-microsoft" + acrDomainSuffix),
-			version.MdmImage("linuxgeneva-microsoft" + acrDomainSuffix),
-		} {
-			log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
-			err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, nil)
-			if err != nil {
-				log.Errorf("%s: %s\n", ref, err)
-				errorOccurred = true
-			}
+	for _, ref := range []string{
+		version.MdsdImage("linuxgeneva-microsoft" + acrDomainSuffix),
+		version.MdmImage("linuxgeneva-microsoft" + acrDomainSuffix),
+	} {
+		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
+		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, nil)
+		if err != nil {
+			log.Errorf("%s: %s\n", ref, err)
+			errorOccurred = true
 		}
+	}
 
-		for _, ref := range []string{
-			"registry.redhat.io/rhel7/support-tools:latest",
-			"registry.redhat.io/rhel8/support-tools:latest",
-		} {
-			log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
-			err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthRedhat)
-			if err != nil {
-				log.Errorf("%s: %s\n", ref, err)
-				errorOccurred = true
-			}
+	for _, ref := range []string{
+		"registry.redhat.io/rhel7/support-tools:latest",
+		"registry.redhat.io/rhel8/support-tools:latest",
+	} {
+		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
+		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthRedhat)
+		if err != nil {
+			log.Errorf("%s: %s\n", ref, err)
+			errorOccurred = true
 		}
 	}
 
