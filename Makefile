@@ -24,6 +24,11 @@ clean:
 client: generate
 	hack/build-client.sh 2020-04-30 2021-01-31-preview
 
+# TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
+# override COMMIT.
+deploy:
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
+
 discoverycache:
 	$(MAKE) admin.kubeconfig
 	KUBECONFIG=admin.kubeconfig go run ./hack/gendiscoverycache
@@ -128,4 +133,4 @@ vendor:
 	# https://groups.google.com/forum/#!topic/golang-nuts/51-D_YFC78k
 	hack/update-go-module-dependencies.sh
 
-.PHONY: admin.kubeconfig aro az clean client discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy lint-go proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test test-e2e test-go test-python vendor
+.PHONY: admin.kubeconfig aro az clean client deploy discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy lint-go proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test test-e2e test-go test-python vendor

@@ -38,7 +38,8 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 
 	log.Printf("deploying version %s to location %s", deployVersion, location)
 
-	if deployVersion == "unknown" || strings.Contains(deployVersion, "dirty") {
+	if deployVersion == "unknown" ||
+		(!env.IsDevelopmentMode() && strings.Contains(deployVersion, "dirty")) {
 		return fmt.Errorf("invalid deploy version %q", deployVersion)
 	}
 
