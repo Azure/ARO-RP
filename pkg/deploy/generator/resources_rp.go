@@ -1429,6 +1429,20 @@ func (g *generator) rpBillingContributorRbac() []*arm.Resource {
 	}
 }
 
+func (g *generator) rpACR() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtcontainerregistry.Registry{
+			Sku: &mgmtcontainerregistry.Sku{
+				Name: mgmtcontainerregistry.Premium,
+			},
+			Name:     to.StringPtr("[substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))]"),
+			Type:     to.StringPtr("Microsoft.ContainerRegistry/registries"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.ContainerRegistry"),
+	}
+}
+
 func (g *generator) rpACRReplica() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtcontainerregistry.Replication{
@@ -1441,7 +1455,7 @@ func (g *generator) rpACRReplica() *arm.Resource {
 }
 
 func (g *generator) rpACRRBAC() []*arm.Resource {
-	rs := []*arm.Resource{
+	return []*arm.Resource{
 		rbac.ResourceRoleAssignmentWithName(
 			rbac.RoleACRPull,
 			"parameters('rpServicePrincipalId')",
@@ -1457,12 +1471,6 @@ func (g *generator) rpACRRBAC() []*arm.Resource {
 			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))",
 		),
 	}
-
-	for _, r := range rs {
-		r.DependsOn = nil
-	}
-
-	return rs
 }
 
 func (g *generator) rpVersionStorageAccount() []*arm.Resource {

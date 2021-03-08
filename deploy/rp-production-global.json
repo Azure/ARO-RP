@@ -17,6 +17,15 @@
     },
     "resources": [
         {
+            "sku": {
+                "name": "Premium"
+            },
+            "name": "[substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))]",
+            "type": "Microsoft.ContainerRegistry/registries",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2020-11-01-preview"
+        },
+        {
             "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull')))]",
             "type": "Microsoft.ContainerRegistry/registries/providers/roleAssignments",
             "properties": {
@@ -25,7 +34,10 @@
                 "principalId": "[parameters('rpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
-            "apiVersion": "2018-09-01-preview"
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.ContainerRegistry/registries', substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)))]"
+            ]
         },
         {
             "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))]",
@@ -36,7 +48,10 @@
                 "principalId": "[parameters('fpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
-            "apiVersion": "2018-09-01-preview"
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.ContainerRegistry/registries', substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)))]"
+            ]
         },
         {
             "sku": {

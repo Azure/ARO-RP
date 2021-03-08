@@ -104,6 +104,9 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
 	}
 	t.Resources = append(t.Resources,
+		g.rpACR(),
+	)
+	t.Resources = append(t.Resources,
 		g.rpACRRBAC()...,
 	)
 	t.Resources = append(t.Resources,
