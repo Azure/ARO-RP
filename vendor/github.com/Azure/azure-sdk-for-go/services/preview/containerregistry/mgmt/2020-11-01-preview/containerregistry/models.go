@@ -29,7 +29,13 @@ import (
 )
 
 // The package's fully qualified name.
-const fqdn = "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2019-06-01-preview/containerregistry"
+const fqdn = "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
+
+// ActivationProperties the activation properties of the connected registry.
+type ActivationProperties struct {
+	// Status - READ-ONLY; The activation status of the connected registry. Possible values include: 'Active', 'Inactive'
+	Status ActivationStatus `json:"status,omitempty"`
+}
 
 // ActiveDirectoryObject the Active Directory Object that will be used for authenticating the token of a
 // container registry.
@@ -510,7 +516,7 @@ type BaseImageTrigger struct {
 	UpdateTriggerEndpoint *string `json:"updateTriggerEndpoint,omitempty"`
 	// UpdateTriggerPayloadType - Type of Payload body for Base image update triggers. Possible values include: 'UpdateTriggerPayloadTypeDefault', 'UpdateTriggerPayloadTypeToken'
 	UpdateTriggerPayloadType UpdateTriggerPayloadType `json:"updateTriggerPayloadType,omitempty"`
-	// Status - The current status of trigger. Possible values include: 'TriggerStatusDisabled', 'TriggerStatusEnabled'
+	// Status - The current status of trigger. Possible values include: 'TriggerStatusEnabled', 'TriggerStatusDisabled'
 	Status TriggerStatus `json:"status,omitempty"`
 	// Name - The name of the trigger.
 	Name *string `json:"name,omitempty"`
@@ -524,7 +530,7 @@ type BaseImageTriggerUpdateParameters struct {
 	UpdateTriggerEndpoint *string `json:"updateTriggerEndpoint,omitempty"`
 	// UpdateTriggerPayloadType - Type of Payload body for Base image update triggers. Possible values include: 'UpdateTriggerPayloadTypeDefault', 'UpdateTriggerPayloadTypeToken'
 	UpdateTriggerPayloadType UpdateTriggerPayloadType `json:"updateTriggerPayloadType,omitempty"`
-	// Status - The current status of trigger. Possible values include: 'TriggerStatusDisabled', 'TriggerStatusEnabled'
+	// Status - The current status of trigger. Possible values include: 'TriggerStatusEnabled', 'TriggerStatusDisabled'
 	Status TriggerStatus `json:"status,omitempty"`
 	// Name - The name of the trigger.
 	Name *string `json:"name,omitempty"`
@@ -549,6 +555,382 @@ func (cc CallbackConfig) MarshalJSON() ([]byte, error) {
 		objectMap["customHeaders"] = cc.CustomHeaders
 	}
 	return json.Marshal(objectMap)
+}
+
+// ConnectedRegistriesCreateFuture an abstraction for monitoring and retrieving the results of a
+// long-running operation.
+type ConnectedRegistriesCreateFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(ConnectedRegistriesClient) (ConnectedRegistry, error)
+}
+
+// ConnectedRegistriesDeactivateFuture an abstraction for monitoring and retrieving the results of a
+// long-running operation.
+type ConnectedRegistriesDeactivateFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(ConnectedRegistriesClient) (autorest.Response, error)
+}
+
+// ConnectedRegistriesDeleteFuture an abstraction for monitoring and retrieving the results of a
+// long-running operation.
+type ConnectedRegistriesDeleteFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(ConnectedRegistriesClient) (autorest.Response, error)
+}
+
+// ConnectedRegistriesUpdateFuture an abstraction for monitoring and retrieving the results of a
+// long-running operation.
+type ConnectedRegistriesUpdateFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(ConnectedRegistriesClient) (ConnectedRegistry, error)
+}
+
+// ConnectedRegistry an object that represents a connected registry for a container registry.
+type ConnectedRegistry struct {
+	autorest.Response `json:"-"`
+	// ConnectedRegistryProperties - The properties of the connected registry.
+	*ConnectedRegistryProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; The resource ID.
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource.
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource.
+	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Metadata pertaining to creation and last modification of the resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ConnectedRegistry.
+func (cr ConnectedRegistry) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if cr.ConnectedRegistryProperties != nil {
+		objectMap["properties"] = cr.ConnectedRegistryProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for ConnectedRegistry struct.
+func (cr *ConnectedRegistry) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var connectedRegistryProperties ConnectedRegistryProperties
+				err = json.Unmarshal(*v, &connectedRegistryProperties)
+				if err != nil {
+					return err
+				}
+				cr.ConnectedRegistryProperties = &connectedRegistryProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				cr.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				cr.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				cr.Type = &typeVar
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				cr.SystemData = &systemData
+			}
+		}
+	}
+
+	return nil
+}
+
+// ConnectedRegistryListResult the result of a request to list connected registries for a container
+// registry.
+type ConnectedRegistryListResult struct {
+	autorest.Response `json:"-"`
+	// Value - The list of connected registries. Since this list may be incomplete, the nextLink field should be used to request the next list of connected registries.
+	Value *[]ConnectedRegistry `json:"value,omitempty"`
+	// NextLink - The URI that can be used to request the next list of connected registries.
+	NextLink *string `json:"nextLink,omitempty"`
+}
+
+// ConnectedRegistryListResultIterator provides access to a complete listing of ConnectedRegistry values.
+type ConnectedRegistryListResultIterator struct {
+	i    int
+	page ConnectedRegistryListResultPage
+}
+
+// NextWithContext advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+func (iter *ConnectedRegistryListResultIterator) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ConnectedRegistryListResultIterator.NextWithContext")
+		defer func() {
+			sc := -1
+			if iter.Response().Response.Response != nil {
+				sc = iter.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	iter.i++
+	if iter.i < len(iter.page.Values()) {
+		return nil
+	}
+	err = iter.page.NextWithContext(ctx)
+	if err != nil {
+		iter.i--
+		return err
+	}
+	iter.i = 0
+	return nil
+}
+
+// Next advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (iter *ConnectedRegistryListResultIterator) Next() error {
+	return iter.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the enumeration should be started or is not yet complete.
+func (iter ConnectedRegistryListResultIterator) NotDone() bool {
+	return iter.page.NotDone() && iter.i < len(iter.page.Values())
+}
+
+// Response returns the raw server response from the last page request.
+func (iter ConnectedRegistryListResultIterator) Response() ConnectedRegistryListResult {
+	return iter.page.Response()
+}
+
+// Value returns the current value or a zero-initialized value if the
+// iterator has advanced beyond the end of the collection.
+func (iter ConnectedRegistryListResultIterator) Value() ConnectedRegistry {
+	if !iter.page.NotDone() {
+		return ConnectedRegistry{}
+	}
+	return iter.page.Values()[iter.i]
+}
+
+// Creates a new instance of the ConnectedRegistryListResultIterator type.
+func NewConnectedRegistryListResultIterator(page ConnectedRegistryListResultPage) ConnectedRegistryListResultIterator {
+	return ConnectedRegistryListResultIterator{page: page}
+}
+
+// IsEmpty returns true if the ListResult contains no values.
+func (crlr ConnectedRegistryListResult) IsEmpty() bool {
+	return crlr.Value == nil || len(*crlr.Value) == 0
+}
+
+// hasNextLink returns true if the NextLink is not empty.
+func (crlr ConnectedRegistryListResult) hasNextLink() bool {
+	return crlr.NextLink != nil && len(*crlr.NextLink) != 0
+}
+
+// connectedRegistryListResultPreparer prepares a request to retrieve the next set of results.
+// It returns nil if no more results exist.
+func (crlr ConnectedRegistryListResult) connectedRegistryListResultPreparer(ctx context.Context) (*http.Request, error) {
+	if !crlr.hasNextLink() {
+		return nil, nil
+	}
+	return autorest.Prepare((&http.Request{}).WithContext(ctx),
+		autorest.AsJSON(),
+		autorest.AsGet(),
+		autorest.WithBaseURL(to.String(crlr.NextLink)))
+}
+
+// ConnectedRegistryListResultPage contains a page of ConnectedRegistry values.
+type ConnectedRegistryListResultPage struct {
+	fn   func(context.Context, ConnectedRegistryListResult) (ConnectedRegistryListResult, error)
+	crlr ConnectedRegistryListResult
+}
+
+// NextWithContext advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+func (page *ConnectedRegistryListResultPage) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ConnectedRegistryListResultPage.NextWithContext")
+		defer func() {
+			sc := -1
+			if page.Response().Response.Response != nil {
+				sc = page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	for {
+		next, err := page.fn(ctx, page.crlr)
+		if err != nil {
+			return err
+		}
+		page.crlr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
+	}
+	return nil
+}
+
+// Next advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (page *ConnectedRegistryListResultPage) Next() error {
+	return page.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the page enumeration should be started or is not yet complete.
+func (page ConnectedRegistryListResultPage) NotDone() bool {
+	return !page.crlr.IsEmpty()
+}
+
+// Response returns the raw server response from the last page request.
+func (page ConnectedRegistryListResultPage) Response() ConnectedRegistryListResult {
+	return page.crlr
+}
+
+// Values returns the slice of values for the current page or nil if there are no values.
+func (page ConnectedRegistryListResultPage) Values() []ConnectedRegistry {
+	if page.crlr.IsEmpty() {
+		return nil
+	}
+	return *page.crlr.Value
+}
+
+// Creates a new instance of the ConnectedRegistryListResultPage type.
+func NewConnectedRegistryListResultPage(cur ConnectedRegistryListResult, getNextPage func(context.Context, ConnectedRegistryListResult) (ConnectedRegistryListResult, error)) ConnectedRegistryListResultPage {
+	return ConnectedRegistryListResultPage{
+		fn:   getNextPage,
+		crlr: cur,
+	}
+}
+
+// ConnectedRegistryProperties the properties of a connected registry.
+type ConnectedRegistryProperties struct {
+	// ProvisioningState - READ-ONLY; Provisioning state of the resource. Possible values include: 'Creating', 'Updating', 'Deleting', 'Succeeded', 'Failed', 'Canceled'
+	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
+	// Mode - The mode of the connected registry resource that indicates the permissions of the registry. Possible values include: 'ConnectedRegistryModeRegistry', 'ConnectedRegistryModeMirror'
+	Mode ConnectedRegistryMode `json:"mode,omitempty"`
+	// Version - READ-ONLY; The current version of ACR runtime on the connected registry.
+	Version *string `json:"version,omitempty"`
+	// ConnectionState - READ-ONLY; The current connection state of the connected registry. Possible values include: 'Online', 'Offline', 'Syncing', 'Unhealthy'
+	ConnectionState ConnectionState `json:"connectionState,omitempty"`
+	// LastActivityTime - READ-ONLY; The last activity time of the connected registry.
+	LastActivityTime *date.Time `json:"lastActivityTime,omitempty"`
+	// Activation - READ-ONLY; The activation properties of the connected registry.
+	Activation *ActivationProperties `json:"activation,omitempty"`
+	// Parent - The parent of the connected registry.
+	Parent *ParentProperties `json:"parent,omitempty"`
+	// ClientTokenIds - The list of the ACR token resource IDs used to authenticate clients to the connected registry.
+	ClientTokenIds *[]string `json:"clientTokenIds,omitempty"`
+	// LoginServer - The login server properties of the connected registry.
+	LoginServer *LoginServerProperties `json:"loginServer,omitempty"`
+	// Logging - The logging properties of the connected registry.
+	Logging *LoggingProperties `json:"logging,omitempty"`
+	// StatusDetails - READ-ONLY; The list of current statuses of the connected registry.
+	StatusDetails *[]StatusDetailProperties `json:"statusDetails,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ConnectedRegistryProperties.
+func (crp ConnectedRegistryProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if crp.Mode != "" {
+		objectMap["mode"] = crp.Mode
+	}
+	if crp.Parent != nil {
+		objectMap["parent"] = crp.Parent
+	}
+	if crp.ClientTokenIds != nil {
+		objectMap["clientTokenIds"] = crp.ClientTokenIds
+	}
+	if crp.LoginServer != nil {
+		objectMap["loginServer"] = crp.LoginServer
+	}
+	if crp.Logging != nil {
+		objectMap["logging"] = crp.Logging
+	}
+	return json.Marshal(objectMap)
+}
+
+// ConnectedRegistryUpdateParameters the parameters for updating a connected registry.
+type ConnectedRegistryUpdateParameters struct {
+	// ConnectedRegistryUpdateProperties - The properties of the connected registry update parameters.
+	*ConnectedRegistryUpdateProperties `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ConnectedRegistryUpdateParameters.
+func (crup ConnectedRegistryUpdateParameters) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if crup.ConnectedRegistryUpdateProperties != nil {
+		objectMap["properties"] = crup.ConnectedRegistryUpdateProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for ConnectedRegistryUpdateParameters struct.
+func (crup *ConnectedRegistryUpdateParameters) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var connectedRegistryUpdateProperties ConnectedRegistryUpdateProperties
+				err = json.Unmarshal(*v, &connectedRegistryUpdateProperties)
+				if err != nil {
+					return err
+				}
+				crup.ConnectedRegistryUpdateProperties = &connectedRegistryUpdateProperties
+			}
+		}
+	}
+
+	return nil
+}
+
+// ConnectedRegistryUpdateProperties the parameters for updating token properties.
+type ConnectedRegistryUpdateProperties struct {
+	// SyncProperties - The sync properties of the connected registry with its parent.
+	SyncProperties *SyncUpdateProperties `json:"syncProperties,omitempty"`
+	// Logging - The logging properties of the connected registry.
+	Logging *LoggingProperties `json:"logging,omitempty"`
+	// ClientTokenIds - The list of the ACR token resource IDs used to authenticate clients to the connected registry.
+	ClientTokenIds *[]string `json:"clientTokenIds,omitempty"`
 }
 
 // Credentials the parameters that describes a set of credentials that will be used when a run is invoked.
@@ -1106,6 +1488,14 @@ func (etsup EncodedTaskStepUpdateParameters) AsBasicTaskStepUpdateParameters() (
 	return &etsup, true
 }
 
+// EncryptionProperty ...
+type EncryptionProperty struct {
+	// Status - Indicates whether or not the encryption is enabled for container registry. Possible values include: 'EncryptionStatusEnabled', 'EncryptionStatusDisabled'
+	Status EncryptionStatus `json:"status,omitempty"`
+	// KeyVaultProperties - Key vault properties.
+	KeyVaultProperties *KeyVaultProperties `json:"keyVaultProperties,omitempty"`
+}
+
 // ErrorResponse an error response from the Azure Container Registry service.
 type ErrorResponse struct {
 	// Error - Azure container registry build API error body.
@@ -1388,6 +1778,329 @@ func (erm EventResponseMessage) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
+// ExportPipeline an object that represents an export pipeline for a container registry.
+type ExportPipeline struct {
+	autorest.Response `json:"-"`
+	// Location - The location of the export pipeline.
+	Location *string `json:"location,omitempty"`
+	// Identity - The identity of the export pipeline.
+	Identity *IdentityProperties `json:"identity,omitempty"`
+	// ExportPipelineProperties - The properties of the export pipeline.
+	*ExportPipelineProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; The resource ID.
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource.
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource.
+	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Metadata pertaining to creation and last modification of the resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ExportPipeline.
+func (ep ExportPipeline) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ep.Location != nil {
+		objectMap["location"] = ep.Location
+	}
+	if ep.Identity != nil {
+		objectMap["identity"] = ep.Identity
+	}
+	if ep.ExportPipelineProperties != nil {
+		objectMap["properties"] = ep.ExportPipelineProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for ExportPipeline struct.
+func (ep *ExportPipeline) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "location":
+			if v != nil {
+				var location string
+				err = json.Unmarshal(*v, &location)
+				if err != nil {
+					return err
+				}
+				ep.Location = &location
+			}
+		case "identity":
+			if v != nil {
+				var identity IdentityProperties
+				err = json.Unmarshal(*v, &identity)
+				if err != nil {
+					return err
+				}
+				ep.Identity = &identity
+			}
+		case "properties":
+			if v != nil {
+				var exportPipelineProperties ExportPipelineProperties
+				err = json.Unmarshal(*v, &exportPipelineProperties)
+				if err != nil {
+					return err
+				}
+				ep.ExportPipelineProperties = &exportPipelineProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				ep.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				ep.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				ep.Type = &typeVar
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				ep.SystemData = &systemData
+			}
+		}
+	}
+
+	return nil
+}
+
+// ExportPipelineListResult the result of a request to list export pipelines for a container registry.
+type ExportPipelineListResult struct {
+	autorest.Response `json:"-"`
+	// Value - The list of export pipelines. Since this list may be incomplete, the nextLink field should be used to request the next list of export pipelines.
+	Value *[]ExportPipeline `json:"value,omitempty"`
+	// NextLink - The URI that can be used to request the next list of pipeline runs.
+	NextLink *string `json:"nextLink,omitempty"`
+}
+
+// ExportPipelineListResultIterator provides access to a complete listing of ExportPipeline values.
+type ExportPipelineListResultIterator struct {
+	i    int
+	page ExportPipelineListResultPage
+}
+
+// NextWithContext advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+func (iter *ExportPipelineListResultIterator) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ExportPipelineListResultIterator.NextWithContext")
+		defer func() {
+			sc := -1
+			if iter.Response().Response.Response != nil {
+				sc = iter.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	iter.i++
+	if iter.i < len(iter.page.Values()) {
+		return nil
+	}
+	err = iter.page.NextWithContext(ctx)
+	if err != nil {
+		iter.i--
+		return err
+	}
+	iter.i = 0
+	return nil
+}
+
+// Next advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (iter *ExportPipelineListResultIterator) Next() error {
+	return iter.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the enumeration should be started or is not yet complete.
+func (iter ExportPipelineListResultIterator) NotDone() bool {
+	return iter.page.NotDone() && iter.i < len(iter.page.Values())
+}
+
+// Response returns the raw server response from the last page request.
+func (iter ExportPipelineListResultIterator) Response() ExportPipelineListResult {
+	return iter.page.Response()
+}
+
+// Value returns the current value or a zero-initialized value if the
+// iterator has advanced beyond the end of the collection.
+func (iter ExportPipelineListResultIterator) Value() ExportPipeline {
+	if !iter.page.NotDone() {
+		return ExportPipeline{}
+	}
+	return iter.page.Values()[iter.i]
+}
+
+// Creates a new instance of the ExportPipelineListResultIterator type.
+func NewExportPipelineListResultIterator(page ExportPipelineListResultPage) ExportPipelineListResultIterator {
+	return ExportPipelineListResultIterator{page: page}
+}
+
+// IsEmpty returns true if the ListResult contains no values.
+func (eplr ExportPipelineListResult) IsEmpty() bool {
+	return eplr.Value == nil || len(*eplr.Value) == 0
+}
+
+// hasNextLink returns true if the NextLink is not empty.
+func (eplr ExportPipelineListResult) hasNextLink() bool {
+	return eplr.NextLink != nil && len(*eplr.NextLink) != 0
+}
+
+// exportPipelineListResultPreparer prepares a request to retrieve the next set of results.
+// It returns nil if no more results exist.
+func (eplr ExportPipelineListResult) exportPipelineListResultPreparer(ctx context.Context) (*http.Request, error) {
+	if !eplr.hasNextLink() {
+		return nil, nil
+	}
+	return autorest.Prepare((&http.Request{}).WithContext(ctx),
+		autorest.AsJSON(),
+		autorest.AsGet(),
+		autorest.WithBaseURL(to.String(eplr.NextLink)))
+}
+
+// ExportPipelineListResultPage contains a page of ExportPipeline values.
+type ExportPipelineListResultPage struct {
+	fn   func(context.Context, ExportPipelineListResult) (ExportPipelineListResult, error)
+	eplr ExportPipelineListResult
+}
+
+// NextWithContext advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+func (page *ExportPipelineListResultPage) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ExportPipelineListResultPage.NextWithContext")
+		defer func() {
+			sc := -1
+			if page.Response().Response.Response != nil {
+				sc = page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	for {
+		next, err := page.fn(ctx, page.eplr)
+		if err != nil {
+			return err
+		}
+		page.eplr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
+	}
+	return nil
+}
+
+// Next advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (page *ExportPipelineListResultPage) Next() error {
+	return page.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the page enumeration should be started or is not yet complete.
+func (page ExportPipelineListResultPage) NotDone() bool {
+	return !page.eplr.IsEmpty()
+}
+
+// Response returns the raw server response from the last page request.
+func (page ExportPipelineListResultPage) Response() ExportPipelineListResult {
+	return page.eplr
+}
+
+// Values returns the slice of values for the current page or nil if there are no values.
+func (page ExportPipelineListResultPage) Values() []ExportPipeline {
+	if page.eplr.IsEmpty() {
+		return nil
+	}
+	return *page.eplr.Value
+}
+
+// Creates a new instance of the ExportPipelineListResultPage type.
+func NewExportPipelineListResultPage(cur ExportPipelineListResult, getNextPage func(context.Context, ExportPipelineListResult) (ExportPipelineListResult, error)) ExportPipelineListResultPage {
+	return ExportPipelineListResultPage{
+		fn:   getNextPage,
+		eplr: cur,
+	}
+}
+
+// ExportPipelineProperties the properties of an export pipeline.
+type ExportPipelineProperties struct {
+	// Target - The target properties of the export pipeline.
+	Target *ExportPipelineTargetProperties `json:"target,omitempty"`
+	// Options - The list of all options configured for the pipeline.
+	Options *[]PipelineOptions `json:"options,omitempty"`
+	// ProvisioningState - READ-ONLY; The provisioning state of the pipeline at the time the operation was called. Possible values include: 'Creating', 'Updating', 'Deleting', 'Succeeded', 'Failed', 'Canceled'
+	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ExportPipelineProperties.
+func (epp ExportPipelineProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if epp.Target != nil {
+		objectMap["target"] = epp.Target
+	}
+	if epp.Options != nil {
+		objectMap["options"] = epp.Options
+	}
+	return json.Marshal(objectMap)
+}
+
+// ExportPipelinesCreateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type ExportPipelinesCreateFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(ExportPipelinesClient) (ExportPipeline, error)
+}
+
+// ExportPipelinesDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type ExportPipelinesDeleteFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(ExportPipelinesClient) (autorest.Response, error)
+}
+
+// ExportPipelineTargetProperties the properties of the export pipeline target.
+type ExportPipelineTargetProperties struct {
+	// Type - The type of target for the export pipeline.
+	Type *string `json:"type,omitempty"`
+	// URI - The target uri of the export pipeline.
+	// When 'AzureStorageBlob': "https://accountName.blob.core.windows.net/containerName/blobName"
+	// When 'AzureStorageBlobContainer':  "https://accountName.blob.core.windows.net/containerName"
+	URI *string `json:"uri,omitempty"`
+	// KeyVaultURI - They key vault secret uri to obtain the target storage SAS token.
+	KeyVaultURI *string `json:"keyVaultUri,omitempty"`
+}
+
 // FileTaskRunRequest the request parameters for a scheduling run against a task file.
 type FileTaskRunRequest struct {
 	// TaskFilePath - The template/definition file path relative to the source.
@@ -1650,7 +2363,7 @@ type IdentityProperties struct {
 	PrincipalID *string `json:"principalId,omitempty"`
 	// TenantID - The tenant ID of resource.
 	TenantID *string `json:"tenantId,omitempty"`
-	// Type - The identity type. Possible values include: 'SystemAssigned', 'UserAssigned', 'SystemAssignedUserAssigned', 'None'
+	// Type - The identity type. Possible values include: 'ResourceIdentityTypeSystemAssigned', 'ResourceIdentityTypeUserAssigned', 'ResourceIdentityTypeSystemAssignedUserAssigned', 'ResourceIdentityTypeNone'
 	Type ResourceIdentityType `json:"type,omitempty"`
 	// UserAssignedIdentities - The list of user identities associated with the resource. The user identity
 	// dictionary key references will be ARM resource ids in the form:
@@ -1711,6 +2424,334 @@ type ImportImageParameters struct {
 	Mode ImportMode `json:"mode,omitempty"`
 }
 
+// ImportPipeline an object that represents an import pipeline for a container registry.
+type ImportPipeline struct {
+	autorest.Response `json:"-"`
+	// Location - The location of the import pipeline.
+	Location *string `json:"location,omitempty"`
+	// Identity - The identity of the import pipeline.
+	Identity *IdentityProperties `json:"identity,omitempty"`
+	// ImportPipelineProperties - The properties of the import pipeline.
+	*ImportPipelineProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; The resource ID.
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource.
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource.
+	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Metadata pertaining to creation and last modification of the resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ImportPipeline.
+func (IP ImportPipeline) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if IP.Location != nil {
+		objectMap["location"] = IP.Location
+	}
+	if IP.Identity != nil {
+		objectMap["identity"] = IP.Identity
+	}
+	if IP.ImportPipelineProperties != nil {
+		objectMap["properties"] = IP.ImportPipelineProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for ImportPipeline struct.
+func (IP *ImportPipeline) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "location":
+			if v != nil {
+				var location string
+				err = json.Unmarshal(*v, &location)
+				if err != nil {
+					return err
+				}
+				IP.Location = &location
+			}
+		case "identity":
+			if v != nil {
+				var identity IdentityProperties
+				err = json.Unmarshal(*v, &identity)
+				if err != nil {
+					return err
+				}
+				IP.Identity = &identity
+			}
+		case "properties":
+			if v != nil {
+				var importPipelineProperties ImportPipelineProperties
+				err = json.Unmarshal(*v, &importPipelineProperties)
+				if err != nil {
+					return err
+				}
+				IP.ImportPipelineProperties = &importPipelineProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				IP.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				IP.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				IP.Type = &typeVar
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				IP.SystemData = &systemData
+			}
+		}
+	}
+
+	return nil
+}
+
+// ImportPipelineListResult the result of a request to list import pipelines for a container registry.
+type ImportPipelineListResult struct {
+	autorest.Response `json:"-"`
+	// Value - The list of import pipelines. Since this list may be incomplete, the nextLink field should be used to request the next list of import pipelines.
+	Value *[]ImportPipeline `json:"value,omitempty"`
+	// NextLink - The URI that can be used to request the next list of pipeline runs.
+	NextLink *string `json:"nextLink,omitempty"`
+}
+
+// ImportPipelineListResultIterator provides access to a complete listing of ImportPipeline values.
+type ImportPipelineListResultIterator struct {
+	i    int
+	page ImportPipelineListResultPage
+}
+
+// NextWithContext advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+func (iter *ImportPipelineListResultIterator) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ImportPipelineListResultIterator.NextWithContext")
+		defer func() {
+			sc := -1
+			if iter.Response().Response.Response != nil {
+				sc = iter.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	iter.i++
+	if iter.i < len(iter.page.Values()) {
+		return nil
+	}
+	err = iter.page.NextWithContext(ctx)
+	if err != nil {
+		iter.i--
+		return err
+	}
+	iter.i = 0
+	return nil
+}
+
+// Next advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (iter *ImportPipelineListResultIterator) Next() error {
+	return iter.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the enumeration should be started or is not yet complete.
+func (iter ImportPipelineListResultIterator) NotDone() bool {
+	return iter.page.NotDone() && iter.i < len(iter.page.Values())
+}
+
+// Response returns the raw server response from the last page request.
+func (iter ImportPipelineListResultIterator) Response() ImportPipelineListResult {
+	return iter.page.Response()
+}
+
+// Value returns the current value or a zero-initialized value if the
+// iterator has advanced beyond the end of the collection.
+func (iter ImportPipelineListResultIterator) Value() ImportPipeline {
+	if !iter.page.NotDone() {
+		return ImportPipeline{}
+	}
+	return iter.page.Values()[iter.i]
+}
+
+// Creates a new instance of the ImportPipelineListResultIterator type.
+func NewImportPipelineListResultIterator(page ImportPipelineListResultPage) ImportPipelineListResultIterator {
+	return ImportPipelineListResultIterator{page: page}
+}
+
+// IsEmpty returns true if the ListResult contains no values.
+func (iplr ImportPipelineListResult) IsEmpty() bool {
+	return iplr.Value == nil || len(*iplr.Value) == 0
+}
+
+// hasNextLink returns true if the NextLink is not empty.
+func (iplr ImportPipelineListResult) hasNextLink() bool {
+	return iplr.NextLink != nil && len(*iplr.NextLink) != 0
+}
+
+// importPipelineListResultPreparer prepares a request to retrieve the next set of results.
+// It returns nil if no more results exist.
+func (iplr ImportPipelineListResult) importPipelineListResultPreparer(ctx context.Context) (*http.Request, error) {
+	if !iplr.hasNextLink() {
+		return nil, nil
+	}
+	return autorest.Prepare((&http.Request{}).WithContext(ctx),
+		autorest.AsJSON(),
+		autorest.AsGet(),
+		autorest.WithBaseURL(to.String(iplr.NextLink)))
+}
+
+// ImportPipelineListResultPage contains a page of ImportPipeline values.
+type ImportPipelineListResultPage struct {
+	fn   func(context.Context, ImportPipelineListResult) (ImportPipelineListResult, error)
+	iplr ImportPipelineListResult
+}
+
+// NextWithContext advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+func (page *ImportPipelineListResultPage) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ImportPipelineListResultPage.NextWithContext")
+		defer func() {
+			sc := -1
+			if page.Response().Response.Response != nil {
+				sc = page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	for {
+		next, err := page.fn(ctx, page.iplr)
+		if err != nil {
+			return err
+		}
+		page.iplr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
+	}
+	return nil
+}
+
+// Next advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (page *ImportPipelineListResultPage) Next() error {
+	return page.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the page enumeration should be started or is not yet complete.
+func (page ImportPipelineListResultPage) NotDone() bool {
+	return !page.iplr.IsEmpty()
+}
+
+// Response returns the raw server response from the last page request.
+func (page ImportPipelineListResultPage) Response() ImportPipelineListResult {
+	return page.iplr
+}
+
+// Values returns the slice of values for the current page or nil if there are no values.
+func (page ImportPipelineListResultPage) Values() []ImportPipeline {
+	if page.iplr.IsEmpty() {
+		return nil
+	}
+	return *page.iplr.Value
+}
+
+// Creates a new instance of the ImportPipelineListResultPage type.
+func NewImportPipelineListResultPage(cur ImportPipelineListResult, getNextPage func(context.Context, ImportPipelineListResult) (ImportPipelineListResult, error)) ImportPipelineListResultPage {
+	return ImportPipelineListResultPage{
+		fn:   getNextPage,
+		iplr: cur,
+	}
+}
+
+// ImportPipelineProperties the properties of an import pipeline.
+type ImportPipelineProperties struct {
+	// Source - The source properties of the import pipeline.
+	Source *ImportPipelineSourceProperties `json:"source,omitempty"`
+	// Trigger - The properties that describe the trigger of the import pipeline.
+	Trigger *PipelineTriggerProperties `json:"trigger,omitempty"`
+	// Options - The list of all options configured for the pipeline.
+	Options *[]PipelineOptions `json:"options,omitempty"`
+	// ProvisioningState - READ-ONLY; The provisioning state of the pipeline at the time the operation was called. Possible values include: 'Creating', 'Updating', 'Deleting', 'Succeeded', 'Failed', 'Canceled'
+	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ImportPipelineProperties.
+func (ipp ImportPipelineProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ipp.Source != nil {
+		objectMap["source"] = ipp.Source
+	}
+	if ipp.Trigger != nil {
+		objectMap["trigger"] = ipp.Trigger
+	}
+	if ipp.Options != nil {
+		objectMap["options"] = ipp.Options
+	}
+	return json.Marshal(objectMap)
+}
+
+// ImportPipelinesCreateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type ImportPipelinesCreateFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(ImportPipelinesClient) (ImportPipeline, error)
+}
+
+// ImportPipelinesDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type ImportPipelinesDeleteFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(ImportPipelinesClient) (autorest.Response, error)
+}
+
+// ImportPipelineSourceProperties the properties of the import pipeline source.
+type ImportPipelineSourceProperties struct {
+	// Type - The type of source for the import pipeline. Possible values include: 'AzureStorageBlobContainer'
+	Type PipelineSourceType `json:"type,omitempty"`
+	// URI - The source uri of the import pipeline.
+	// When 'AzureStorageBlob': "https://accountName.blob.core.windows.net/containerName/blobName"
+	// When 'AzureStorageBlobContainer': "https://accountName.blob.core.windows.net/containerName"
+	URI *string `json:"uri,omitempty"`
+	// KeyVaultURI - They key vault secret uri to obtain the source storage SAS token.
+	KeyVaultURI *string `json:"keyVaultUri,omitempty"`
+}
+
 // ImportSource ...
 type ImportSource struct {
 	// ResourceID - The resource identifier of the source Azure Container Registry.
@@ -1750,6 +2791,48 @@ type IPRule struct {
 	Action Action `json:"action,omitempty"`
 	// IPAddressOrRange - Specifies the IP or IP range in CIDR format. Only IPV4 address is allowed.
 	IPAddressOrRange *string `json:"value,omitempty"`
+}
+
+// KeyVaultProperties ...
+type KeyVaultProperties struct {
+	// KeyIdentifier - Key vault uri to access the encryption key.
+	KeyIdentifier *string `json:"keyIdentifier,omitempty"`
+	// VersionedKeyIdentifier - READ-ONLY; The fully qualified key identifier that includes the version of the key that is actually used for encryption.
+	VersionedKeyIdentifier *string `json:"versionedKeyIdentifier,omitempty"`
+	// Identity - The client id of the identity which will be used to access key vault.
+	Identity *string `json:"identity,omitempty"`
+	// KeyRotationEnabled - READ-ONLY; Auto key rotation status for a CMK enabled registry.
+	KeyRotationEnabled *bool `json:"keyRotationEnabled,omitempty"`
+	// LastKeyRotationTimestamp - READ-ONLY; Timestamp of the last successful key rotation.
+	LastKeyRotationTimestamp *date.Time `json:"lastKeyRotationTimestamp,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for KeyVaultProperties.
+func (kvp KeyVaultProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if kvp.KeyIdentifier != nil {
+		objectMap["keyIdentifier"] = kvp.KeyIdentifier
+	}
+	if kvp.Identity != nil {
+		objectMap["identity"] = kvp.Identity
+	}
+	return json.Marshal(objectMap)
+}
+
+// LoggingProperties the logging properties of the connected registry.
+type LoggingProperties struct {
+	// LogLevel - The verbosity of logs persisted on the connected registry. Possible values include: 'LogLevelDebug', 'LogLevelInformation', 'LogLevelWarning', 'LogLevelError', 'LogLevelNone'
+	LogLevel LogLevel `json:"logLevel,omitempty"`
+	// AuditLogStatus - Indicates whether audit logs are enabled on the connected registry. Possible values include: 'Enabled', 'Disabled'
+	AuditLogStatus AuditLogStatus `json:"auditLogStatus,omitempty"`
+}
+
+// LoginServerProperties the login server properties of the connected registry.
+type LoginServerProperties struct {
+	// Host - READ-ONLY; The host of the connected registry. Can be FQDN or IP.
+	Host *string `json:"host,omitempty"`
+	// TLS - READ-ONLY; The TLS properties of the connected registry login server.
+	TLS *TLSProperties `json:"tls,omitempty"`
 }
 
 // NetworkRuleSet the network rule set for a container registry.
@@ -2059,6 +3142,380 @@ type OverrideTaskStepProperties struct {
 	UpdateTriggerToken *string `json:"updateTriggerToken,omitempty"`
 }
 
+// ParentProperties the properties of the connected registry parent.
+type ParentProperties struct {
+	// ID - The resource ID of the parent to which the connected registry will be associated.
+	ID *string `json:"id,omitempty"`
+	// SyncProperties - The sync properties of the connected registry with its parent.
+	SyncProperties *SyncProperties `json:"syncProperties,omitempty"`
+}
+
+// PipelineRun an object that represents a pipeline run for a container registry.
+type PipelineRun struct {
+	autorest.Response `json:"-"`
+	// PipelineRunProperties - The properties of a pipeline run.
+	*PipelineRunProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; The resource ID.
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource.
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource.
+	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Metadata pertaining to creation and last modification of the resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PipelineRun.
+func (pr PipelineRun) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if pr.PipelineRunProperties != nil {
+		objectMap["properties"] = pr.PipelineRunProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for PipelineRun struct.
+func (pr *PipelineRun) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var pipelineRunProperties PipelineRunProperties
+				err = json.Unmarshal(*v, &pipelineRunProperties)
+				if err != nil {
+					return err
+				}
+				pr.PipelineRunProperties = &pipelineRunProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				pr.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				pr.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				pr.Type = &typeVar
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				pr.SystemData = &systemData
+			}
+		}
+	}
+
+	return nil
+}
+
+// PipelineRunListResult the result of a request to list pipeline runs for a container registry.
+type PipelineRunListResult struct {
+	autorest.Response `json:"-"`
+	// Value - The list of pipeline runs. Since this list may be incomplete, the nextLink field should be used to request the next list of pipeline runs.
+	Value *[]PipelineRun `json:"value,omitempty"`
+	// NextLink - The URI that can be used to request the next list of pipeline runs.
+	NextLink *string `json:"nextLink,omitempty"`
+}
+
+// PipelineRunListResultIterator provides access to a complete listing of PipelineRun values.
+type PipelineRunListResultIterator struct {
+	i    int
+	page PipelineRunListResultPage
+}
+
+// NextWithContext advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+func (iter *PipelineRunListResultIterator) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/PipelineRunListResultIterator.NextWithContext")
+		defer func() {
+			sc := -1
+			if iter.Response().Response.Response != nil {
+				sc = iter.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	iter.i++
+	if iter.i < len(iter.page.Values()) {
+		return nil
+	}
+	err = iter.page.NextWithContext(ctx)
+	if err != nil {
+		iter.i--
+		return err
+	}
+	iter.i = 0
+	return nil
+}
+
+// Next advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (iter *PipelineRunListResultIterator) Next() error {
+	return iter.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the enumeration should be started or is not yet complete.
+func (iter PipelineRunListResultIterator) NotDone() bool {
+	return iter.page.NotDone() && iter.i < len(iter.page.Values())
+}
+
+// Response returns the raw server response from the last page request.
+func (iter PipelineRunListResultIterator) Response() PipelineRunListResult {
+	return iter.page.Response()
+}
+
+// Value returns the current value or a zero-initialized value if the
+// iterator has advanced beyond the end of the collection.
+func (iter PipelineRunListResultIterator) Value() PipelineRun {
+	if !iter.page.NotDone() {
+		return PipelineRun{}
+	}
+	return iter.page.Values()[iter.i]
+}
+
+// Creates a new instance of the PipelineRunListResultIterator type.
+func NewPipelineRunListResultIterator(page PipelineRunListResultPage) PipelineRunListResultIterator {
+	return PipelineRunListResultIterator{page: page}
+}
+
+// IsEmpty returns true if the ListResult contains no values.
+func (prlr PipelineRunListResult) IsEmpty() bool {
+	return prlr.Value == nil || len(*prlr.Value) == 0
+}
+
+// hasNextLink returns true if the NextLink is not empty.
+func (prlr PipelineRunListResult) hasNextLink() bool {
+	return prlr.NextLink != nil && len(*prlr.NextLink) != 0
+}
+
+// pipelineRunListResultPreparer prepares a request to retrieve the next set of results.
+// It returns nil if no more results exist.
+func (prlr PipelineRunListResult) pipelineRunListResultPreparer(ctx context.Context) (*http.Request, error) {
+	if !prlr.hasNextLink() {
+		return nil, nil
+	}
+	return autorest.Prepare((&http.Request{}).WithContext(ctx),
+		autorest.AsJSON(),
+		autorest.AsGet(),
+		autorest.WithBaseURL(to.String(prlr.NextLink)))
+}
+
+// PipelineRunListResultPage contains a page of PipelineRun values.
+type PipelineRunListResultPage struct {
+	fn   func(context.Context, PipelineRunListResult) (PipelineRunListResult, error)
+	prlr PipelineRunListResult
+}
+
+// NextWithContext advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+func (page *PipelineRunListResultPage) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/PipelineRunListResultPage.NextWithContext")
+		defer func() {
+			sc := -1
+			if page.Response().Response.Response != nil {
+				sc = page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	for {
+		next, err := page.fn(ctx, page.prlr)
+		if err != nil {
+			return err
+		}
+		page.prlr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
+	}
+	return nil
+}
+
+// Next advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (page *PipelineRunListResultPage) Next() error {
+	return page.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the page enumeration should be started or is not yet complete.
+func (page PipelineRunListResultPage) NotDone() bool {
+	return !page.prlr.IsEmpty()
+}
+
+// Response returns the raw server response from the last page request.
+func (page PipelineRunListResultPage) Response() PipelineRunListResult {
+	return page.prlr
+}
+
+// Values returns the slice of values for the current page or nil if there are no values.
+func (page PipelineRunListResultPage) Values() []PipelineRun {
+	if page.prlr.IsEmpty() {
+		return nil
+	}
+	return *page.prlr.Value
+}
+
+// Creates a new instance of the PipelineRunListResultPage type.
+func NewPipelineRunListResultPage(cur PipelineRunListResult, getNextPage func(context.Context, PipelineRunListResult) (PipelineRunListResult, error)) PipelineRunListResultPage {
+	return PipelineRunListResultPage{
+		fn:   getNextPage,
+		prlr: cur,
+	}
+}
+
+// PipelineRunProperties the properties of a pipeline run.
+type PipelineRunProperties struct {
+	// ProvisioningState - READ-ONLY; The provisioning state of a pipeline run. Possible values include: 'Creating', 'Updating', 'Deleting', 'Succeeded', 'Failed', 'Canceled'
+	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
+	// Request - The request parameters for a pipeline run.
+	Request *PipelineRunRequest `json:"request,omitempty"`
+	// Response - READ-ONLY; The response of a pipeline run.
+	Response *PipelineRunResponse `json:"response,omitempty"`
+	// ForceUpdateTag - How the pipeline run should be forced to recreate even if the pipeline run configuration has not changed.
+	ForceUpdateTag *string `json:"forceUpdateTag,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PipelineRunProperties.
+func (prp PipelineRunProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if prp.Request != nil {
+		objectMap["request"] = prp.Request
+	}
+	if prp.ForceUpdateTag != nil {
+		objectMap["forceUpdateTag"] = prp.ForceUpdateTag
+	}
+	return json.Marshal(objectMap)
+}
+
+// PipelineRunRequest the request properties provided for a pipeline run.
+type PipelineRunRequest struct {
+	// PipelineResourceID - The resource ID of the pipeline to run.
+	PipelineResourceID *string `json:"pipelineResourceId,omitempty"`
+	// Artifacts - List of source artifacts to be transferred by the pipeline.
+	// Specify an image by repository ('hello-world'). This will use the 'latest' tag.
+	// Specify an image by tag ('hello-world:latest').
+	// Specify an image by sha256-based manifest digest ('hello-world@sha256:abc123').
+	Artifacts *[]string `json:"artifacts,omitempty"`
+	// Source - The source properties of the pipeline run.
+	Source *PipelineRunSourceProperties `json:"source,omitempty"`
+	// Target - The target properties of the pipeline run.
+	Target *PipelineRunTargetProperties `json:"target,omitempty"`
+	// CatalogDigest - The digest of the tar used to transfer the artifacts.
+	CatalogDigest *string `json:"catalogDigest,omitempty"`
+}
+
+// PipelineRunResponse the response properties returned for a pipeline run.
+type PipelineRunResponse struct {
+	// Status - The current status of the pipeline run.
+	Status *string `json:"status,omitempty"`
+	// ImportedArtifacts - The artifacts imported in the pipeline run.
+	ImportedArtifacts *[]string `json:"importedArtifacts,omitempty"`
+	// Progress - The current progress of the copy operation.
+	Progress *ProgressProperties `json:"progress,omitempty"`
+	// StartTime - The time the pipeline run started.
+	StartTime *date.Time `json:"startTime,omitempty"`
+	// FinishTime - The time the pipeline run finished.
+	FinishTime *date.Time `json:"finishTime,omitempty"`
+	// Source - The source of the pipeline run.
+	Source *ImportPipelineSourceProperties `json:"source,omitempty"`
+	// Target - The target of the pipeline run.
+	Target *ExportPipelineTargetProperties `json:"target,omitempty"`
+	// CatalogDigest - The digest of the tar used to transfer the artifacts.
+	CatalogDigest *string `json:"catalogDigest,omitempty"`
+	// Trigger - The trigger that caused the pipeline run.
+	Trigger *PipelineTriggerDescriptor `json:"trigger,omitempty"`
+	// PipelineRunErrorMessage - The detailed error message for the pipeline run in the case of failure.
+	PipelineRunErrorMessage *string `json:"pipelineRunErrorMessage,omitempty"`
+}
+
+// PipelineRunsCreateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type PipelineRunsCreateFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(PipelineRunsClient) (PipelineRun, error)
+}
+
+// PipelineRunsDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type PipelineRunsDeleteFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(PipelineRunsClient) (autorest.Response, error)
+}
+
+// PipelineRunSourceProperties ...
+type PipelineRunSourceProperties struct {
+	// Type - The type of the source. Possible values include: 'AzureStorageBlob'
+	Type PipelineRunSourceType `json:"type,omitempty"`
+	// Name - The name of the source.
+	Name *string `json:"name,omitempty"`
+}
+
+// PipelineRunTargetProperties ...
+type PipelineRunTargetProperties struct {
+	// Type - The type of the target. Possible values include: 'PipelineRunTargetTypeAzureStorageBlob'
+	Type PipelineRunTargetType `json:"type,omitempty"`
+	// Name - The name of the target.
+	Name *string `json:"name,omitempty"`
+}
+
+// PipelineSourceTriggerDescriptor ...
+type PipelineSourceTriggerDescriptor struct {
+	// Timestamp - The timestamp when the source update happened.
+	Timestamp *date.Time `json:"timestamp,omitempty"`
+}
+
+// PipelineSourceTriggerProperties ...
+type PipelineSourceTriggerProperties struct {
+	// Status - The current status of the source trigger. Possible values include: 'TriggerStatusEnabled', 'TriggerStatusDisabled'
+	Status TriggerStatus `json:"status,omitempty"`
+}
+
+// PipelineTriggerDescriptor ...
+type PipelineTriggerDescriptor struct {
+	// SourceTrigger - The source trigger that caused the pipeline run.
+	SourceTrigger *PipelineSourceTriggerDescriptor `json:"sourceTrigger,omitempty"`
+}
+
+// PipelineTriggerProperties ...
+type PipelineTriggerProperties struct {
+	// SourceTrigger - The source trigger properties of the pipeline.
+	SourceTrigger *PipelineSourceTriggerProperties `json:"sourceTrigger,omitempty"`
+}
+
 // PlatformProperties the platform properties against which the run has to happen.
 type PlatformProperties struct {
 	// Os - The operating system type required for the run. Possible values include: 'Windows', 'Linux'
@@ -2089,6 +3546,563 @@ type Policies struct {
 	RetentionPolicy *RetentionPolicy `json:"retentionPolicy,omitempty"`
 }
 
+// PrivateEndpoint the Private Endpoint resource.
+type PrivateEndpoint struct {
+	// ID - This is private endpoint resource created with Microsoft.Network resource provider.
+	ID *string `json:"id,omitempty"`
+}
+
+// PrivateEndpointConnection an object that represents a private endpoint connection for a container
+// registry.
+type PrivateEndpointConnection struct {
+	autorest.Response `json:"-"`
+	// PrivateEndpointConnectionProperties - The properties of a private endpoint connection.
+	*PrivateEndpointConnectionProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; The resource ID.
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource.
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource.
+	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Metadata pertaining to creation and last modification of the resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PrivateEndpointConnection.
+func (pec PrivateEndpointConnection) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if pec.PrivateEndpointConnectionProperties != nil {
+		objectMap["properties"] = pec.PrivateEndpointConnectionProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for PrivateEndpointConnection struct.
+func (pec *PrivateEndpointConnection) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var privateEndpointConnectionProperties PrivateEndpointConnectionProperties
+				err = json.Unmarshal(*v, &privateEndpointConnectionProperties)
+				if err != nil {
+					return err
+				}
+				pec.PrivateEndpointConnectionProperties = &privateEndpointConnectionProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				pec.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				pec.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				pec.Type = &typeVar
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				pec.SystemData = &systemData
+			}
+		}
+	}
+
+	return nil
+}
+
+// PrivateEndpointConnectionListResult the result of a request to list private endpoint connections for a
+// container registry.
+type PrivateEndpointConnectionListResult struct {
+	autorest.Response `json:"-"`
+	// Value - The list of private endpoint connections. Since this list may be incomplete, the nextLink field should be used to request the next list of private endpoint connections.
+	Value *[]PrivateEndpointConnection `json:"value,omitempty"`
+	// NextLink - The URI that can be used to request the next list of private endpoint connections.
+	NextLink *string `json:"nextLink,omitempty"`
+}
+
+// PrivateEndpointConnectionListResultIterator provides access to a complete listing of
+// PrivateEndpointConnection values.
+type PrivateEndpointConnectionListResultIterator struct {
+	i    int
+	page PrivateEndpointConnectionListResultPage
+}
+
+// NextWithContext advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+func (iter *PrivateEndpointConnectionListResultIterator) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/PrivateEndpointConnectionListResultIterator.NextWithContext")
+		defer func() {
+			sc := -1
+			if iter.Response().Response.Response != nil {
+				sc = iter.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	iter.i++
+	if iter.i < len(iter.page.Values()) {
+		return nil
+	}
+	err = iter.page.NextWithContext(ctx)
+	if err != nil {
+		iter.i--
+		return err
+	}
+	iter.i = 0
+	return nil
+}
+
+// Next advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (iter *PrivateEndpointConnectionListResultIterator) Next() error {
+	return iter.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the enumeration should be started or is not yet complete.
+func (iter PrivateEndpointConnectionListResultIterator) NotDone() bool {
+	return iter.page.NotDone() && iter.i < len(iter.page.Values())
+}
+
+// Response returns the raw server response from the last page request.
+func (iter PrivateEndpointConnectionListResultIterator) Response() PrivateEndpointConnectionListResult {
+	return iter.page.Response()
+}
+
+// Value returns the current value or a zero-initialized value if the
+// iterator has advanced beyond the end of the collection.
+func (iter PrivateEndpointConnectionListResultIterator) Value() PrivateEndpointConnection {
+	if !iter.page.NotDone() {
+		return PrivateEndpointConnection{}
+	}
+	return iter.page.Values()[iter.i]
+}
+
+// Creates a new instance of the PrivateEndpointConnectionListResultIterator type.
+func NewPrivateEndpointConnectionListResultIterator(page PrivateEndpointConnectionListResultPage) PrivateEndpointConnectionListResultIterator {
+	return PrivateEndpointConnectionListResultIterator{page: page}
+}
+
+// IsEmpty returns true if the ListResult contains no values.
+func (peclr PrivateEndpointConnectionListResult) IsEmpty() bool {
+	return peclr.Value == nil || len(*peclr.Value) == 0
+}
+
+// hasNextLink returns true if the NextLink is not empty.
+func (peclr PrivateEndpointConnectionListResult) hasNextLink() bool {
+	return peclr.NextLink != nil && len(*peclr.NextLink) != 0
+}
+
+// privateEndpointConnectionListResultPreparer prepares a request to retrieve the next set of results.
+// It returns nil if no more results exist.
+func (peclr PrivateEndpointConnectionListResult) privateEndpointConnectionListResultPreparer(ctx context.Context) (*http.Request, error) {
+	if !peclr.hasNextLink() {
+		return nil, nil
+	}
+	return autorest.Prepare((&http.Request{}).WithContext(ctx),
+		autorest.AsJSON(),
+		autorest.AsGet(),
+		autorest.WithBaseURL(to.String(peclr.NextLink)))
+}
+
+// PrivateEndpointConnectionListResultPage contains a page of PrivateEndpointConnection values.
+type PrivateEndpointConnectionListResultPage struct {
+	fn    func(context.Context, PrivateEndpointConnectionListResult) (PrivateEndpointConnectionListResult, error)
+	peclr PrivateEndpointConnectionListResult
+}
+
+// NextWithContext advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+func (page *PrivateEndpointConnectionListResultPage) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/PrivateEndpointConnectionListResultPage.NextWithContext")
+		defer func() {
+			sc := -1
+			if page.Response().Response.Response != nil {
+				sc = page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	for {
+		next, err := page.fn(ctx, page.peclr)
+		if err != nil {
+			return err
+		}
+		page.peclr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
+	}
+	return nil
+}
+
+// Next advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (page *PrivateEndpointConnectionListResultPage) Next() error {
+	return page.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the page enumeration should be started or is not yet complete.
+func (page PrivateEndpointConnectionListResultPage) NotDone() bool {
+	return !page.peclr.IsEmpty()
+}
+
+// Response returns the raw server response from the last page request.
+func (page PrivateEndpointConnectionListResultPage) Response() PrivateEndpointConnectionListResult {
+	return page.peclr
+}
+
+// Values returns the slice of values for the current page or nil if there are no values.
+func (page PrivateEndpointConnectionListResultPage) Values() []PrivateEndpointConnection {
+	if page.peclr.IsEmpty() {
+		return nil
+	}
+	return *page.peclr.Value
+}
+
+// Creates a new instance of the PrivateEndpointConnectionListResultPage type.
+func NewPrivateEndpointConnectionListResultPage(cur PrivateEndpointConnectionListResult, getNextPage func(context.Context, PrivateEndpointConnectionListResult) (PrivateEndpointConnectionListResult, error)) PrivateEndpointConnectionListResultPage {
+	return PrivateEndpointConnectionListResultPage{
+		fn:    getNextPage,
+		peclr: cur,
+	}
+}
+
+// PrivateEndpointConnectionProperties the properties of a private endpoint connection.
+type PrivateEndpointConnectionProperties struct {
+	// PrivateEndpoint - The resource of private endpoint.
+	PrivateEndpoint *PrivateEndpoint `json:"privateEndpoint,omitempty"`
+	// PrivateLinkServiceConnectionState - A collection of information about the state of the connection between service consumer and provider.
+	PrivateLinkServiceConnectionState *PrivateLinkServiceConnectionState `json:"privateLinkServiceConnectionState,omitempty"`
+	// ProvisioningState - READ-ONLY; The provisioning state of private endpoint connection resource. Possible values include: 'Creating', 'Updating', 'Deleting', 'Succeeded', 'Failed', 'Canceled'
+	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PrivateEndpointConnectionProperties.
+func (pecp PrivateEndpointConnectionProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if pecp.PrivateEndpoint != nil {
+		objectMap["privateEndpoint"] = pecp.PrivateEndpoint
+	}
+	if pecp.PrivateLinkServiceConnectionState != nil {
+		objectMap["privateLinkServiceConnectionState"] = pecp.PrivateLinkServiceConnectionState
+	}
+	return json.Marshal(objectMap)
+}
+
+// PrivateEndpointConnectionsCreateOrUpdateFuture an abstraction for monitoring and retrieving the results
+// of a long-running operation.
+type PrivateEndpointConnectionsCreateOrUpdateFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(PrivateEndpointConnectionsClient) (PrivateEndpointConnection, error)
+}
+
+// PrivateEndpointConnectionsDeleteFuture an abstraction for monitoring and retrieving the results of a
+// long-running operation.
+type PrivateEndpointConnectionsDeleteFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(PrivateEndpointConnectionsClient) (autorest.Response, error)
+}
+
+// PrivateLinkResource a resource that supports private link capabilities.
+type PrivateLinkResource struct {
+	// Type - READ-ONLY; The resource type is private link resource.
+	Type *string `json:"type,omitempty"`
+	// ID - The resource ID.
+	ID *string `json:"id,omitempty"`
+	// Name - The name of the resource.
+	Name *string `json:"name,omitempty"`
+	// PrivateLinkResourceProperties - A resource that supports private link capabilities.
+	*PrivateLinkResourceProperties `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PrivateLinkResource.
+func (plr PrivateLinkResource) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if plr.ID != nil {
+		objectMap["id"] = plr.ID
+	}
+	if plr.Name != nil {
+		objectMap["name"] = plr.Name
+	}
+	if plr.PrivateLinkResourceProperties != nil {
+		objectMap["properties"] = plr.PrivateLinkResourceProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for PrivateLinkResource struct.
+func (plr *PrivateLinkResource) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				plr.Type = &typeVar
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				plr.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				plr.Name = &name
+			}
+		case "properties":
+			if v != nil {
+				var privateLinkResourceProperties PrivateLinkResourceProperties
+				err = json.Unmarshal(*v, &privateLinkResourceProperties)
+				if err != nil {
+					return err
+				}
+				plr.PrivateLinkResourceProperties = &privateLinkResourceProperties
+			}
+		}
+	}
+
+	return nil
+}
+
+// PrivateLinkResourceListResult the result of a request to list private link resources for a container
+// registry.
+type PrivateLinkResourceListResult struct {
+	autorest.Response `json:"-"`
+	// Value - The list of private link resources. Since this list may be incomplete, the nextLink field should be used to request the next list of private link resources.
+	Value *[]PrivateLinkResource `json:"value,omitempty"`
+	// NextLink - The URI that can be used to request the next list of private link resources.
+	NextLink *string `json:"nextLink,omitempty"`
+}
+
+// PrivateLinkResourceListResultIterator provides access to a complete listing of PrivateLinkResource
+// values.
+type PrivateLinkResourceListResultIterator struct {
+	i    int
+	page PrivateLinkResourceListResultPage
+}
+
+// NextWithContext advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+func (iter *PrivateLinkResourceListResultIterator) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/PrivateLinkResourceListResultIterator.NextWithContext")
+		defer func() {
+			sc := -1
+			if iter.Response().Response.Response != nil {
+				sc = iter.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	iter.i++
+	if iter.i < len(iter.page.Values()) {
+		return nil
+	}
+	err = iter.page.NextWithContext(ctx)
+	if err != nil {
+		iter.i--
+		return err
+	}
+	iter.i = 0
+	return nil
+}
+
+// Next advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (iter *PrivateLinkResourceListResultIterator) Next() error {
+	return iter.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the enumeration should be started or is not yet complete.
+func (iter PrivateLinkResourceListResultIterator) NotDone() bool {
+	return iter.page.NotDone() && iter.i < len(iter.page.Values())
+}
+
+// Response returns the raw server response from the last page request.
+func (iter PrivateLinkResourceListResultIterator) Response() PrivateLinkResourceListResult {
+	return iter.page.Response()
+}
+
+// Value returns the current value or a zero-initialized value if the
+// iterator has advanced beyond the end of the collection.
+func (iter PrivateLinkResourceListResultIterator) Value() PrivateLinkResource {
+	if !iter.page.NotDone() {
+		return PrivateLinkResource{}
+	}
+	return iter.page.Values()[iter.i]
+}
+
+// Creates a new instance of the PrivateLinkResourceListResultIterator type.
+func NewPrivateLinkResourceListResultIterator(page PrivateLinkResourceListResultPage) PrivateLinkResourceListResultIterator {
+	return PrivateLinkResourceListResultIterator{page: page}
+}
+
+// IsEmpty returns true if the ListResult contains no values.
+func (plrlr PrivateLinkResourceListResult) IsEmpty() bool {
+	return plrlr.Value == nil || len(*plrlr.Value) == 0
+}
+
+// hasNextLink returns true if the NextLink is not empty.
+func (plrlr PrivateLinkResourceListResult) hasNextLink() bool {
+	return plrlr.NextLink != nil && len(*plrlr.NextLink) != 0
+}
+
+// privateLinkResourceListResultPreparer prepares a request to retrieve the next set of results.
+// It returns nil if no more results exist.
+func (plrlr PrivateLinkResourceListResult) privateLinkResourceListResultPreparer(ctx context.Context) (*http.Request, error) {
+	if !plrlr.hasNextLink() {
+		return nil, nil
+	}
+	return autorest.Prepare((&http.Request{}).WithContext(ctx),
+		autorest.AsJSON(),
+		autorest.AsGet(),
+		autorest.WithBaseURL(to.String(plrlr.NextLink)))
+}
+
+// PrivateLinkResourceListResultPage contains a page of PrivateLinkResource values.
+type PrivateLinkResourceListResultPage struct {
+	fn    func(context.Context, PrivateLinkResourceListResult) (PrivateLinkResourceListResult, error)
+	plrlr PrivateLinkResourceListResult
+}
+
+// NextWithContext advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+func (page *PrivateLinkResourceListResultPage) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/PrivateLinkResourceListResultPage.NextWithContext")
+		defer func() {
+			sc := -1
+			if page.Response().Response.Response != nil {
+				sc = page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	for {
+		next, err := page.fn(ctx, page.plrlr)
+		if err != nil {
+			return err
+		}
+		page.plrlr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
+	}
+	return nil
+}
+
+// Next advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (page *PrivateLinkResourceListResultPage) Next() error {
+	return page.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the page enumeration should be started or is not yet complete.
+func (page PrivateLinkResourceListResultPage) NotDone() bool {
+	return !page.plrlr.IsEmpty()
+}
+
+// Response returns the raw server response from the last page request.
+func (page PrivateLinkResourceListResultPage) Response() PrivateLinkResourceListResult {
+	return page.plrlr
+}
+
+// Values returns the slice of values for the current page or nil if there are no values.
+func (page PrivateLinkResourceListResultPage) Values() []PrivateLinkResource {
+	if page.plrlr.IsEmpty() {
+		return nil
+	}
+	return *page.plrlr.Value
+}
+
+// Creates a new instance of the PrivateLinkResourceListResultPage type.
+func NewPrivateLinkResourceListResultPage(cur PrivateLinkResourceListResult, getNextPage func(context.Context, PrivateLinkResourceListResult) (PrivateLinkResourceListResult, error)) PrivateLinkResourceListResultPage {
+	return PrivateLinkResourceListResultPage{
+		fn:    getNextPage,
+		plrlr: cur,
+	}
+}
+
+// PrivateLinkResourceProperties the properties of a private link resource.
+type PrivateLinkResourceProperties struct {
+	// GroupID - The private link resource group id.
+	GroupID *string `json:"groupId,omitempty"`
+	// RequiredMembers - The private link resource required member names.
+	RequiredMembers *[]string `json:"requiredMembers,omitempty"`
+	// RequiredZoneNames - The private link resource Private link DNS zone name.
+	RequiredZoneNames *[]string `json:"requiredZoneNames,omitempty"`
+}
+
+// PrivateLinkServiceConnectionState the state of a private link service connection.
+type PrivateLinkServiceConnectionState struct {
+	// Status - The private link service connection status. Possible values include: 'Approved', 'Pending', 'Rejected', 'Disconnected'
+	Status ConnectionStatus `json:"status,omitempty"`
+	// Description - The description for connection status. For example if connection is rejected it can indicate reason for rejection.
+	Description *string `json:"description,omitempty"`
+	// ActionsRequired - A message indicating if changes on the service provider require any updates on the consumer. Possible values include: 'None', 'Recreate'
+	ActionsRequired ActionsRequired `json:"actionsRequired,omitempty"`
+}
+
+// ProgressProperties ...
+type ProgressProperties struct {
+	// Percentage - The percentage complete of the copy operation.
+	Percentage *string `json:"percentage,omitempty"`
+}
+
 // ProxyResource the resource model definition for a ARM proxy resource. It will have everything other than
 // required location and tags.
 type ProxyResource struct {
@@ -2104,7 +4118,7 @@ type ProxyResource struct {
 
 // QuarantinePolicy the quarantine policy for a container registry.
 type QuarantinePolicy struct {
-	// Status - The value that indicates whether the policy is enabled or not. Possible values include: 'Enabled', 'Disabled'
+	// Status - The value that indicates whether the policy is enabled or not. Possible values include: 'PolicyStatusEnabled', 'PolicyStatusDisabled'
 	Status PolicyStatus `json:"status,omitempty"`
 }
 
@@ -2173,6 +4187,8 @@ type Registry struct {
 	autorest.Response `json:"-"`
 	// Sku - The SKU of the container registry.
 	Sku *Sku `json:"sku,omitempty"`
+	// Identity - The identity of the container registry.
+	Identity *IdentityProperties `json:"identity,omitempty"`
 	// RegistryProperties - The properties of the container registry.
 	*RegistryProperties `json:"properties,omitempty"`
 	// ID - READ-ONLY; The resource ID.
@@ -2194,6 +4210,9 @@ func (r Registry) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
 	if r.Sku != nil {
 		objectMap["sku"] = r.Sku
+	}
+	if r.Identity != nil {
+		objectMap["identity"] = r.Identity
 	}
 	if r.RegistryProperties != nil {
 		objectMap["properties"] = r.RegistryProperties
@@ -2224,6 +4243,15 @@ func (r *Registry) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				r.Sku = &sku
+			}
+		case "identity":
+			if v != nil {
+				var identity IdentityProperties
+				err = json.Unmarshal(*v, &identity)
+				if err != nil {
+					return err
+				}
+				r.Identity = &identity
 			}
 		case "properties":
 			if v != nil {
@@ -2507,6 +4535,20 @@ type RegistryProperties struct {
 	NetworkRuleSet *NetworkRuleSet `json:"networkRuleSet,omitempty"`
 	// Policies - The policies for a container registry.
 	Policies *Policies `json:"policies,omitempty"`
+	// Encryption - The encryption settings of container registry.
+	Encryption *EncryptionProperty `json:"encryption,omitempty"`
+	// DataEndpointEnabled - Enable a single data endpoint per region for serving data.
+	DataEndpointEnabled *bool `json:"dataEndpointEnabled,omitempty"`
+	// DataEndpointHostNames - READ-ONLY; List of host names that will serve data when dataEndpointEnabled is true.
+	DataEndpointHostNames *[]string `json:"dataEndpointHostNames,omitempty"`
+	// PrivateEndpointConnections - READ-ONLY; List of private endpoint connections for a container registry.
+	PrivateEndpointConnections *[]PrivateEndpointConnection `json:"privateEndpointConnections,omitempty"`
+	// PublicNetworkAccess - Whether or not public network access is allowed for the container registry. Possible values include: 'PublicNetworkAccessEnabled', 'PublicNetworkAccessDisabled'
+	PublicNetworkAccess PublicNetworkAccess `json:"publicNetworkAccess,omitempty"`
+	// NetworkRuleBypassOptions - Whether to allow trusted Azure services to access a network restricted registry. Possible values include: 'NetworkRuleBypassOptionsAzureServices', 'NetworkRuleBypassOptionsNone'
+	NetworkRuleBypassOptions NetworkRuleBypassOptions `json:"networkRuleBypassOptions,omitempty"`
+	// ZoneRedundancy - Whether or not zone redundancy is enabled for this container registry. Possible values include: 'ZoneRedundancyEnabled', 'ZoneRedundancyDisabled'
+	ZoneRedundancy ZoneRedundancy `json:"zoneRedundancy,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for RegistryProperties.
@@ -2524,6 +4566,21 @@ func (rp RegistryProperties) MarshalJSON() ([]byte, error) {
 	if rp.Policies != nil {
 		objectMap["policies"] = rp.Policies
 	}
+	if rp.Encryption != nil {
+		objectMap["encryption"] = rp.Encryption
+	}
+	if rp.DataEndpointEnabled != nil {
+		objectMap["dataEndpointEnabled"] = rp.DataEndpointEnabled
+	}
+	if rp.PublicNetworkAccess != "" {
+		objectMap["publicNetworkAccess"] = rp.PublicNetworkAccess
+	}
+	if rp.NetworkRuleBypassOptions != "" {
+		objectMap["networkRuleBypassOptions"] = rp.NetworkRuleBypassOptions
+	}
+	if rp.ZoneRedundancy != "" {
+		objectMap["zoneRedundancy"] = rp.ZoneRedundancy
+	}
 	return json.Marshal(objectMap)
 }
 
@@ -2535,6 +4592,14 @@ type RegistryPropertiesUpdateParameters struct {
 	NetworkRuleSet *NetworkRuleSet `json:"networkRuleSet,omitempty"`
 	// Policies - The policies for a container registry.
 	Policies *Policies `json:"policies,omitempty"`
+	// Encryption - The encryption settings of container registry.
+	Encryption *EncryptionProperty `json:"encryption,omitempty"`
+	// DataEndpointEnabled - Enable a single data endpoint per region for serving data.
+	DataEndpointEnabled *bool `json:"dataEndpointEnabled,omitempty"`
+	// PublicNetworkAccess - Whether or not public network access is allowed for the container registry. Possible values include: 'PublicNetworkAccessEnabled', 'PublicNetworkAccessDisabled'
+	PublicNetworkAccess PublicNetworkAccess `json:"publicNetworkAccess,omitempty"`
+	// NetworkRuleBypassOptions - Whether to allow trusted Azure services to access a network restricted registry. Possible values include: 'NetworkRuleBypassOptionsAzureServices', 'NetworkRuleBypassOptionsNone'
+	NetworkRuleBypassOptions NetworkRuleBypassOptions `json:"networkRuleBypassOptions,omitempty"`
 }
 
 // RegistryUpdateParameters the parameters for updating a container registry.
@@ -2543,6 +4608,8 @@ type RegistryUpdateParameters struct {
 	Tags map[string]*string `json:"tags"`
 	// Sku - The SKU of the container registry.
 	Sku *Sku `json:"sku,omitempty"`
+	// Identity - The identity of the container registry.
+	Identity *IdentityProperties `json:"identity,omitempty"`
 	// RegistryPropertiesUpdateParameters - The properties that the container registry will be updated with.
 	*RegistryPropertiesUpdateParameters `json:"properties,omitempty"`
 }
@@ -2555,6 +4622,9 @@ func (rup RegistryUpdateParameters) MarshalJSON() ([]byte, error) {
 	}
 	if rup.Sku != nil {
 		objectMap["sku"] = rup.Sku
+	}
+	if rup.Identity != nil {
+		objectMap["identity"] = rup.Identity
 	}
 	if rup.RegistryPropertiesUpdateParameters != nil {
 		objectMap["properties"] = rup.RegistryPropertiesUpdateParameters
@@ -2588,6 +4658,15 @@ func (rup *RegistryUpdateParameters) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				rup.Sku = &sku
+			}
+		case "identity":
+			if v != nil {
+				var identity IdentityProperties
+				err = json.Unmarshal(*v, &identity)
+				if err != nil {
+					return err
+				}
+				rup.Identity = &identity
 			}
 		case "properties":
 			if v != nil {
@@ -2900,6 +4979,22 @@ type ReplicationProperties struct {
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 	// Status - READ-ONLY; The status of the replication at the time the operation was called.
 	Status *Status `json:"status,omitempty"`
+	// RegionEndpointEnabled - Specifies whether the replication's regional endpoint is enabled. Requests will not be routed to a replication whose regional endpoint is disabled, however its data will continue to be synced with other replications.
+	RegionEndpointEnabled *bool `json:"regionEndpointEnabled,omitempty"`
+	// ZoneRedundancy - Whether or not zone redundancy is enabled for this container registry replication. Possible values include: 'ZoneRedundancyEnabled', 'ZoneRedundancyDisabled'
+	ZoneRedundancy ZoneRedundancy `json:"zoneRedundancy,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ReplicationProperties.
+func (rp ReplicationProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if rp.RegionEndpointEnabled != nil {
+		objectMap["regionEndpointEnabled"] = rp.RegionEndpointEnabled
+	}
+	if rp.ZoneRedundancy != "" {
+		objectMap["zoneRedundancy"] = rp.ZoneRedundancy
+	}
+	return json.Marshal(objectMap)
 }
 
 // ReplicationsCreateFuture an abstraction for monitoring and retrieving the results of a long-running
@@ -2933,6 +5028,8 @@ type ReplicationsUpdateFuture struct {
 type ReplicationUpdateParameters struct {
 	// Tags - The tags for the replication.
 	Tags map[string]*string `json:"tags"`
+	// ReplicationUpdateParametersProperties - The parameters for updating a replication's properties
+	*ReplicationUpdateParametersProperties `json:"properties,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for ReplicationUpdateParameters.
@@ -2941,7 +5038,49 @@ func (rup ReplicationUpdateParameters) MarshalJSON() ([]byte, error) {
 	if rup.Tags != nil {
 		objectMap["tags"] = rup.Tags
 	}
+	if rup.ReplicationUpdateParametersProperties != nil {
+		objectMap["properties"] = rup.ReplicationUpdateParametersProperties
+	}
 	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for ReplicationUpdateParameters struct.
+func (rup *ReplicationUpdateParameters) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "tags":
+			if v != nil {
+				var tags map[string]*string
+				err = json.Unmarshal(*v, &tags)
+				if err != nil {
+					return err
+				}
+				rup.Tags = tags
+			}
+		case "properties":
+			if v != nil {
+				var replicationUpdateParametersProperties ReplicationUpdateParametersProperties
+				err = json.Unmarshal(*v, &replicationUpdateParametersProperties)
+				if err != nil {
+					return err
+				}
+				rup.ReplicationUpdateParametersProperties = &replicationUpdateParametersProperties
+			}
+		}
+	}
+
+	return nil
+}
+
+// ReplicationUpdateParametersProperties ...
+type ReplicationUpdateParametersProperties struct {
+	// RegionEndpointEnabled - Specifies whether the replication's regional endpoint is enabled. Requests will not be routed to a replication whose regional endpoint is disabled, however its data will continue to be synced with other replications.
+	RegionEndpointEnabled *bool `json:"regionEndpointEnabled,omitempty"`
 }
 
 // Request the request that generated the event.
@@ -2992,7 +5131,7 @@ type RetentionPolicy struct {
 	Days *int32 `json:"days,omitempty"`
 	// LastUpdatedTime - READ-ONLY; The timestamp when the policy was last updated.
 	LastUpdatedTime *date.Time `json:"lastUpdatedTime,omitempty"`
-	// Status - The value that indicates whether the policy is enabled or not. Possible values include: 'Enabled', 'Disabled'
+	// Status - The value that indicates whether the policy is enabled or not. Possible values include: 'PolicyStatusEnabled', 'PolicyStatusDisabled'
 	Status PolicyStatus `json:"status,omitempty"`
 }
 
@@ -3959,7 +6098,7 @@ type SourceTrigger struct {
 	SourceRepository *SourceProperties `json:"sourceRepository,omitempty"`
 	// SourceTriggerEvents - The source event corresponding to the trigger.
 	SourceTriggerEvents *[]SourceTriggerEvent `json:"sourceTriggerEvents,omitempty"`
-	// Status - The current status of trigger. Possible values include: 'TriggerStatusDisabled', 'TriggerStatusEnabled'
+	// Status - The current status of trigger. Possible values include: 'TriggerStatusEnabled', 'TriggerStatusDisabled'
 	Status TriggerStatus `json:"status,omitempty"`
 	// Name - The name of the trigger.
 	Name *string `json:"name,omitempty"`
@@ -3989,7 +6128,7 @@ type SourceTriggerUpdateParameters struct {
 	SourceRepository *SourceUpdateParameters `json:"sourceRepository,omitempty"`
 	// SourceTriggerEvents - The source event corresponding to the trigger.
 	SourceTriggerEvents *[]SourceTriggerEvent `json:"sourceTriggerEvents,omitempty"`
-	// Status - The current status of trigger. Possible values include: 'TriggerStatusDisabled', 'TriggerStatusEnabled'
+	// Status - The current status of trigger. Possible values include: 'TriggerStatusEnabled', 'TriggerStatusDisabled'
 	Status TriggerStatus `json:"status,omitempty"`
 	// Name - The name of the trigger.
 	Name *string `json:"name,omitempty"`
@@ -4027,11 +6166,70 @@ type Status struct {
 	Timestamp *date.Time `json:"timestamp,omitempty"`
 }
 
+// StatusDetailProperties the status detail properties of the connected registry.
+type StatusDetailProperties struct {
+	// Type - READ-ONLY; The component of the connected registry corresponding to the status.
+	Type *string `json:"type,omitempty"`
+	// Code - READ-ONLY; The code of the status.
+	Code *string `json:"code,omitempty"`
+	// Description - READ-ONLY; The description of the status.
+	Description *string `json:"description,omitempty"`
+	// Timestamp - READ-ONLY; The timestamp of the status.
+	Timestamp *date.Time `json:"timestamp,omitempty"`
+	// CorrelationID - READ-ONLY; The correlation ID of the status.
+	CorrelationID *string `json:"correlationId,omitempty"`
+}
+
 // StorageAccountProperties the properties of a storage account for a container registry. Only applicable
 // to Classic SKU.
 type StorageAccountProperties struct {
 	// ID - The resource ID of the storage account.
 	ID *string `json:"id,omitempty"`
+}
+
+// SyncProperties the sync properties of the connected registry with its parent.
+type SyncProperties struct {
+	// TokenID - The resource ID of the ACR token used to authenticate the connected registry to its parent during sync.
+	TokenID *string `json:"tokenId,omitempty"`
+	// Schedule - The cron expression indicating the schedule that the connected registry will sync with its parent.
+	Schedule *string `json:"schedule,omitempty"`
+	// SyncWindow - The time window during which sync is enabled for each schedule occurrence. Specify the duration using the format P[n]Y[n]M[n]DT[n]H[n]M[n]S as per ISO8601.
+	SyncWindow *string `json:"syncWindow,omitempty"`
+	// MessageTTL - The period of time for which a message is available to sync before it is expired. Specify the duration using the format P[n]Y[n]M[n]DT[n]H[n]M[n]S as per ISO8601.
+	MessageTTL *string `json:"messageTtl,omitempty"`
+	// LastSyncTime - READ-ONLY; The last time a sync occurred between the connected registry and its parent.
+	LastSyncTime *date.Time `json:"lastSyncTime,omitempty"`
+	// GatewayEndpoint - READ-ONLY; The gateway endpoint used by the connected registry to communicate with its parent.
+	GatewayEndpoint *string `json:"gatewayEndpoint,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for SyncProperties.
+func (sp SyncProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if sp.TokenID != nil {
+		objectMap["tokenId"] = sp.TokenID
+	}
+	if sp.Schedule != nil {
+		objectMap["schedule"] = sp.Schedule
+	}
+	if sp.SyncWindow != nil {
+		objectMap["syncWindow"] = sp.SyncWindow
+	}
+	if sp.MessageTTL != nil {
+		objectMap["messageTtl"] = sp.MessageTTL
+	}
+	return json.Marshal(objectMap)
+}
+
+// SyncUpdateProperties the parameters for updating the sync properties of the connected registry with its
+// parent.
+type SyncUpdateProperties struct {
+	// Schedule - The cron expression indicating the schedule that the connected registry will sync with its parent.
+	Schedule *string `json:"schedule,omitempty"`
+	// SyncWindow - The time window during which sync is enabled for each schedule occurrence. Specify the duration using the format P[n]Y[n]M[n]DT[n]H[n]M[n]S as per ISO8601.
+	SyncWindow *string `json:"syncWindow,omitempty"`
+	// MessageTTL - The period of time for which a message is available to sync before it is expired. Specify the duration using the format P[n]Y[n]M[n]DT[n]H[n]M[n]S as per ISO8601.
+	MessageTTL *string `json:"messageTtl,omitempty"`
 }
 
 // SystemData metadata pertaining to creation and last modification of the resource.
@@ -5527,7 +7725,7 @@ func (tup *TaskUpdateParameters) UnmarshalJSON(body []byte) error {
 type TimerTrigger struct {
 	// Schedule - The CRON expression for the task schedule
 	Schedule *string `json:"schedule,omitempty"`
-	// Status - The current status of trigger. Possible values include: 'TriggerStatusDisabled', 'TriggerStatusEnabled'
+	// Status - The current status of trigger. Possible values include: 'TriggerStatusEnabled', 'TriggerStatusDisabled'
 	Status TriggerStatus `json:"status,omitempty"`
 	// Name - The name of the trigger.
 	Name *string `json:"name,omitempty"`
@@ -5545,10 +7743,26 @@ type TimerTriggerDescriptor struct {
 type TimerTriggerUpdateParameters struct {
 	// Schedule - The CRON expression for the task schedule
 	Schedule *string `json:"schedule,omitempty"`
-	// Status - The current status of trigger. Possible values include: 'TriggerStatusDisabled', 'TriggerStatusEnabled'
+	// Status - The current status of trigger. Possible values include: 'TriggerStatusEnabled', 'TriggerStatusDisabled'
 	Status TriggerStatus `json:"status,omitempty"`
 	// Name - The name of the trigger.
 	Name *string `json:"name,omitempty"`
+}
+
+// TLSCertificateProperties the TLS certificate properties of the connected registry login server.
+type TLSCertificateProperties struct {
+	// Type - READ-ONLY; The type of certificate location. Possible values include: 'LocalDirectory'
+	Type CertificateType `json:"type,omitempty"`
+	// Location - READ-ONLY; Indicates the location of the certificates.
+	Location *string `json:"location,omitempty"`
+}
+
+// TLSProperties the TLS properties of the connected registry login server.
+type TLSProperties struct {
+	// Status - READ-ONLY; Indicates whether HTTPS is enabled for the login server. Possible values include: 'TLSStatusEnabled', 'TLSStatusDisabled'
+	Status TLSStatus `json:"status,omitempty"`
+	// Certificate - READ-ONLY; The certificate used to configure HTTPS for the login server.
+	Certificate *TLSCertificateProperties `json:"certificate,omitempty"`
 }
 
 // Token an object that represents a token for a container registry.
@@ -5650,9 +7864,8 @@ type TokenCertificate struct {
 // TokenCredentialsProperties the properties of the credentials that can be used for authenticating the
 // token.
 type TokenCredentialsProperties struct {
-	ActiveDirectoryObject *ActiveDirectoryObject `json:"activeDirectoryObject,omitempty"`
-	Certificates          *[]TokenCertificate    `json:"certificates,omitempty"`
-	Passwords             *[]TokenPassword       `json:"passwords,omitempty"`
+	Certificates *[]TokenCertificate `json:"certificates,omitempty"`
+	Passwords    *[]TokenPassword    `json:"passwords,omitempty"`
 }
 
 // TokenListResult the result of a request to list tokens for a container registry.
@@ -5967,7 +8180,7 @@ type TriggerUpdateParameters struct {
 type TrustPolicy struct {
 	// Type - The type of trust policy. Possible values include: 'Notary'
 	Type TrustPolicyType `json:"type,omitempty"`
-	// Status - The value that indicates whether the policy is enabled or not. Possible values include: 'Enabled', 'Disabled'
+	// Status - The value that indicates whether the policy is enabled or not. Possible values include: 'PolicyStatusEnabled', 'PolicyStatusDisabled'
 	Status PolicyStatus `json:"status,omitempty"`
 }
 

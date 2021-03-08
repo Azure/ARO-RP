@@ -26,31 +26,31 @@ import (
 	"net/http"
 )
 
-// TokensClient is the client for the Tokens methods of the Containerregistry service.
-type TokensClient struct {
+// ScopeMapsClient is the client for the ScopeMaps methods of the Containerregistry service.
+type ScopeMapsClient struct {
 	BaseClient
 }
 
-// NewTokensClient creates an instance of the TokensClient client.
-func NewTokensClient(subscriptionID string) TokensClient {
-	return NewTokensClientWithBaseURI(DefaultBaseURI, subscriptionID)
+// NewScopeMapsClient creates an instance of the ScopeMapsClient client.
+func NewScopeMapsClient(subscriptionID string) ScopeMapsClient {
+	return NewScopeMapsClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewTokensClientWithBaseURI creates an instance of the TokensClient client using a custom endpoint.  Use this when
-// interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure stack).
-func NewTokensClientWithBaseURI(baseURI string, subscriptionID string) TokensClient {
-	return TokensClient{NewWithBaseURI(baseURI, subscriptionID)}
+// NewScopeMapsClientWithBaseURI creates an instance of the ScopeMapsClient client using a custom endpoint.  Use this
+// when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure stack).
+func NewScopeMapsClientWithBaseURI(baseURI string, subscriptionID string) ScopeMapsClient {
+	return ScopeMapsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
-// Create creates a token for a container registry with the specified parameters.
+// Create creates a scope map for a container registry with the specified parameters.
 // Parameters:
 // resourceGroupName - the name of the resource group to which the container registry belongs.
 // registryName - the name of the container registry.
-// tokenName - the name of the token.
-// tokenCreateParameters - the parameters for creating a token.
-func (client TokensClient) Create(ctx context.Context, resourceGroupName string, registryName string, tokenName string, tokenCreateParameters Token) (result TokensCreateFuture, err error) {
+// scopeMapName - the name of the scope map.
+// scopeMapCreateParameters - the parameters for creating a scope map.
+func (client ScopeMapsClient) Create(ctx context.Context, resourceGroupName string, registryName string, scopeMapName string, scopeMapCreateParameters ScopeMap) (result ScopeMapsCreateFuture, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/TokensClient.Create")
+		ctx = tracing.StartSpan(ctx, fqdn+"/ScopeMapsClient.Create")
 		defer func() {
 			sc := -1
 			if result.Response() != nil {
@@ -66,22 +66,25 @@ func (client TokensClient) Create(ctx context.Context, resourceGroupName string,
 			Constraints: []validation.Constraint{{Target: "registryName", Name: validation.MaxLength, Rule: 50, Chain: nil},
 				{Target: "registryName", Name: validation.MinLength, Rule: 5, Chain: nil},
 				{Target: "registryName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]*$`, Chain: nil}}},
-		{TargetValue: tokenName,
-			Constraints: []validation.Constraint{{Target: "tokenName", Name: validation.MaxLength, Rule: 50, Chain: nil},
-				{Target: "tokenName", Name: validation.MinLength, Rule: 5, Chain: nil},
-				{Target: "tokenName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9-]*$`, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("containerregistry.TokensClient", "Create", err.Error())
+		{TargetValue: scopeMapName,
+			Constraints: []validation.Constraint{{Target: "scopeMapName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "scopeMapName", Name: validation.MinLength, Rule: 5, Chain: nil},
+				{Target: "scopeMapName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9-_]*$`, Chain: nil}}},
+		{TargetValue: scopeMapCreateParameters,
+			Constraints: []validation.Constraint{{Target: "scopeMapCreateParameters.ScopeMapProperties", Name: validation.Null, Rule: false,
+				Chain: []validation.Constraint{{Target: "scopeMapCreateParameters.ScopeMapProperties.Actions", Name: validation.Null, Rule: true, Chain: nil}}}}}}); err != nil {
+		return result, validation.NewError("containerregistry.ScopeMapsClient", "Create", err.Error())
 	}
 
-	req, err := client.CreatePreparer(ctx, resourceGroupName, registryName, tokenName, tokenCreateParameters)
+	req, err := client.CreatePreparer(ctx, resourceGroupName, registryName, scopeMapName, scopeMapCreateParameters)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "containerregistry.TokensClient", "Create", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsClient", "Create", nil, "Failure preparing request")
 		return
 	}
 
 	result, err = client.CreateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "containerregistry.TokensClient", "Create", nil, "Failure sending request")
+		err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsClient", "Create", nil, "Failure sending request")
 		return
 	}
 
@@ -89,15 +92,15 @@ func (client TokensClient) Create(ctx context.Context, resourceGroupName string,
 }
 
 // CreatePreparer prepares the Create request.
-func (client TokensClient) CreatePreparer(ctx context.Context, resourceGroupName string, registryName string, tokenName string, tokenCreateParameters Token) (*http.Request, error) {
+func (client ScopeMapsClient) CreatePreparer(ctx context.Context, resourceGroupName string, registryName string, scopeMapName string, scopeMapCreateParameters ScopeMap) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"registryName":      autorest.Encode("path", registryName),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"scopeMapName":      autorest.Encode("path", scopeMapName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
-		"tokenName":         autorest.Encode("path", tokenName),
 	}
 
-	const APIVersion = "2019-05-01-preview"
+	const APIVersion = "2020-11-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -106,15 +109,15 @@ func (client TokensClient) CreatePreparer(ctx context.Context, resourceGroupName
 		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerRegistry/registries/{registryName}/tokens/{tokenName}", pathParameters),
-		autorest.WithJSON(tokenCreateParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerRegistry/registries/{registryName}/scopeMaps/{scopeMapName}", pathParameters),
+		autorest.WithJSON(scopeMapCreateParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
 // CreateSender sends the Create request. The method will close the
 // http.Response Body if it receives an error.
-func (client TokensClient) CreateSender(req *http.Request) (future TokensCreateFuture, err error) {
+func (client ScopeMapsClient) CreateSender(req *http.Request) (future ScopeMapsCreateFuture, err error) {
 	var resp *http.Response
 	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
@@ -123,26 +126,26 @@ func (client TokensClient) CreateSender(req *http.Request) (future TokensCreateF
 	var azf azure.Future
 	azf, err = azure.NewFutureFromResponse(resp)
 	future.FutureAPI = &azf
-	future.Result = func(client TokensClient) (t Token, err error) {
+	future.Result = func(client ScopeMapsClient) (sm ScopeMap, err error) {
 		var done bool
 		done, err = future.DoneWithContext(context.Background(), client)
 		if err != nil {
-			err = autorest.NewErrorWithError(err, "containerregistry.TokensCreateFuture", "Result", future.Response(), "Polling failure")
+			err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsCreateFuture", "Result", future.Response(), "Polling failure")
 			return
 		}
 		if !done {
-			err = azure.NewAsyncOpIncompleteError("containerregistry.TokensCreateFuture")
+			err = azure.NewAsyncOpIncompleteError("containerregistry.ScopeMapsCreateFuture")
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		t.Response.Response, err = future.GetResult(sender)
-		if t.Response.Response == nil && err == nil {
-			err = autorest.NewErrorWithError(err, "containerregistry.TokensCreateFuture", "Result", nil, "received nil response and error")
+		sm.Response.Response, err = future.GetResult(sender)
+		if sm.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsCreateFuture", "Result", nil, "received nil response and error")
 		}
-		if err == nil && t.Response.Response.StatusCode != http.StatusNoContent {
-			t, err = client.CreateResponder(t.Response.Response)
+		if err == nil && sm.Response.Response.StatusCode != http.StatusNoContent {
+			sm, err = client.CreateResponder(sm.Response.Response)
 			if err != nil {
-				err = autorest.NewErrorWithError(err, "containerregistry.TokensCreateFuture", "Result", t.Response.Response, "Failure responding to request")
+				err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsCreateFuture", "Result", sm.Response.Response, "Failure responding to request")
 			}
 		}
 		return
@@ -152,7 +155,7 @@ func (client TokensClient) CreateSender(req *http.Request) (future TokensCreateF
 
 // CreateResponder handles the response to the Create request. The method always
 // closes the http.Response Body.
-func (client TokensClient) CreateResponder(resp *http.Response) (result Token, err error) {
+func (client ScopeMapsClient) CreateResponder(resp *http.Response) (result ScopeMap, err error) {
 	err = autorest.Respond(
 		resp,
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
@@ -162,14 +165,14 @@ func (client TokensClient) CreateResponder(resp *http.Response) (result Token, e
 	return
 }
 
-// Delete deletes a token from a container registry.
+// Delete deletes a scope map from a container registry.
 // Parameters:
 // resourceGroupName - the name of the resource group to which the container registry belongs.
 // registryName - the name of the container registry.
-// tokenName - the name of the token.
-func (client TokensClient) Delete(ctx context.Context, resourceGroupName string, registryName string, tokenName string) (result TokensDeleteFuture, err error) {
+// scopeMapName - the name of the scope map.
+func (client ScopeMapsClient) Delete(ctx context.Context, resourceGroupName string, registryName string, scopeMapName string) (result ScopeMapsDeleteFuture, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/TokensClient.Delete")
+		ctx = tracing.StartSpan(ctx, fqdn+"/ScopeMapsClient.Delete")
 		defer func() {
 			sc := -1
 			if result.Response() != nil {
@@ -185,22 +188,22 @@ func (client TokensClient) Delete(ctx context.Context, resourceGroupName string,
 			Constraints: []validation.Constraint{{Target: "registryName", Name: validation.MaxLength, Rule: 50, Chain: nil},
 				{Target: "registryName", Name: validation.MinLength, Rule: 5, Chain: nil},
 				{Target: "registryName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]*$`, Chain: nil}}},
-		{TargetValue: tokenName,
-			Constraints: []validation.Constraint{{Target: "tokenName", Name: validation.MaxLength, Rule: 50, Chain: nil},
-				{Target: "tokenName", Name: validation.MinLength, Rule: 5, Chain: nil},
-				{Target: "tokenName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9-]*$`, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("containerregistry.TokensClient", "Delete", err.Error())
+		{TargetValue: scopeMapName,
+			Constraints: []validation.Constraint{{Target: "scopeMapName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "scopeMapName", Name: validation.MinLength, Rule: 5, Chain: nil},
+				{Target: "scopeMapName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9-_]*$`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("containerregistry.ScopeMapsClient", "Delete", err.Error())
 	}
 
-	req, err := client.DeletePreparer(ctx, resourceGroupName, registryName, tokenName)
+	req, err := client.DeletePreparer(ctx, resourceGroupName, registryName, scopeMapName)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "containerregistry.TokensClient", "Delete", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsClient", "Delete", nil, "Failure preparing request")
 		return
 	}
 
 	result, err = client.DeleteSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "containerregistry.TokensClient", "Delete", nil, "Failure sending request")
+		err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsClient", "Delete", nil, "Failure sending request")
 		return
 	}
 
@@ -208,15 +211,15 @@ func (client TokensClient) Delete(ctx context.Context, resourceGroupName string,
 }
 
 // DeletePreparer prepares the Delete request.
-func (client TokensClient) DeletePreparer(ctx context.Context, resourceGroupName string, registryName string, tokenName string) (*http.Request, error) {
+func (client ScopeMapsClient) DeletePreparer(ctx context.Context, resourceGroupName string, registryName string, scopeMapName string) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"registryName":      autorest.Encode("path", registryName),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"scopeMapName":      autorest.Encode("path", scopeMapName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
-		"tokenName":         autorest.Encode("path", tokenName),
 	}
 
-	const APIVersion = "2019-05-01-preview"
+	const APIVersion = "2020-11-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -224,14 +227,14 @@ func (client TokensClient) DeletePreparer(ctx context.Context, resourceGroupName
 	preparer := autorest.CreatePreparer(
 		autorest.AsDelete(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerRegistry/registries/{registryName}/tokens/{tokenName}", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerRegistry/registries/{registryName}/scopeMaps/{scopeMapName}", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
 // DeleteSender sends the Delete request. The method will close the
 // http.Response Body if it receives an error.
-func (client TokensClient) DeleteSender(req *http.Request) (future TokensDeleteFuture, err error) {
+func (client ScopeMapsClient) DeleteSender(req *http.Request) (future ScopeMapsDeleteFuture, err error) {
 	var resp *http.Response
 	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
@@ -240,15 +243,15 @@ func (client TokensClient) DeleteSender(req *http.Request) (future TokensDeleteF
 	var azf azure.Future
 	azf, err = azure.NewFutureFromResponse(resp)
 	future.FutureAPI = &azf
-	future.Result = func(client TokensClient) (ar autorest.Response, err error) {
+	future.Result = func(client ScopeMapsClient) (ar autorest.Response, err error) {
 		var done bool
 		done, err = future.DoneWithContext(context.Background(), client)
 		if err != nil {
-			err = autorest.NewErrorWithError(err, "containerregistry.TokensDeleteFuture", "Result", future.Response(), "Polling failure")
+			err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsDeleteFuture", "Result", future.Response(), "Polling failure")
 			return
 		}
 		if !done {
-			err = azure.NewAsyncOpIncompleteError("containerregistry.TokensDeleteFuture")
+			err = azure.NewAsyncOpIncompleteError("containerregistry.ScopeMapsDeleteFuture")
 			return
 		}
 		ar.Response = future.Response()
@@ -259,7 +262,7 @@ func (client TokensClient) DeleteSender(req *http.Request) (future TokensDeleteF
 
 // DeleteResponder handles the response to the Delete request. The method always
 // closes the http.Response Body.
-func (client TokensClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
+func (client ScopeMapsClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent),
@@ -268,14 +271,14 @@ func (client TokensClient) DeleteResponder(resp *http.Response) (result autorest
 	return
 }
 
-// Get gets the properties of the specified token.
+// Get gets the properties of the specified scope map.
 // Parameters:
 // resourceGroupName - the name of the resource group to which the container registry belongs.
 // registryName - the name of the container registry.
-// tokenName - the name of the token.
-func (client TokensClient) Get(ctx context.Context, resourceGroupName string, registryName string, tokenName string) (result Token, err error) {
+// scopeMapName - the name of the scope map.
+func (client ScopeMapsClient) Get(ctx context.Context, resourceGroupName string, registryName string, scopeMapName string) (result ScopeMap, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/TokensClient.Get")
+		ctx = tracing.StartSpan(ctx, fqdn+"/ScopeMapsClient.Get")
 		defer func() {
 			sc := -1
 			if result.Response.Response != nil {
@@ -291,29 +294,29 @@ func (client TokensClient) Get(ctx context.Context, resourceGroupName string, re
 			Constraints: []validation.Constraint{{Target: "registryName", Name: validation.MaxLength, Rule: 50, Chain: nil},
 				{Target: "registryName", Name: validation.MinLength, Rule: 5, Chain: nil},
 				{Target: "registryName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]*$`, Chain: nil}}},
-		{TargetValue: tokenName,
-			Constraints: []validation.Constraint{{Target: "tokenName", Name: validation.MaxLength, Rule: 50, Chain: nil},
-				{Target: "tokenName", Name: validation.MinLength, Rule: 5, Chain: nil},
-				{Target: "tokenName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9-]*$`, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("containerregistry.TokensClient", "Get", err.Error())
+		{TargetValue: scopeMapName,
+			Constraints: []validation.Constraint{{Target: "scopeMapName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "scopeMapName", Name: validation.MinLength, Rule: 5, Chain: nil},
+				{Target: "scopeMapName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9-_]*$`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("containerregistry.ScopeMapsClient", "Get", err.Error())
 	}
 
-	req, err := client.GetPreparer(ctx, resourceGroupName, registryName, tokenName)
+	req, err := client.GetPreparer(ctx, resourceGroupName, registryName, scopeMapName)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "containerregistry.TokensClient", "Get", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsClient", "Get", nil, "Failure preparing request")
 		return
 	}
 
 	resp, err := client.GetSender(req)
 	if err != nil {
 		result.Response = autorest.Response{Response: resp}
-		err = autorest.NewErrorWithError(err, "containerregistry.TokensClient", "Get", resp, "Failure sending request")
+		err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsClient", "Get", resp, "Failure sending request")
 		return
 	}
 
 	result, err = client.GetResponder(resp)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "containerregistry.TokensClient", "Get", resp, "Failure responding to request")
+		err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsClient", "Get", resp, "Failure responding to request")
 		return
 	}
 
@@ -321,15 +324,15 @@ func (client TokensClient) Get(ctx context.Context, resourceGroupName string, re
 }
 
 // GetPreparer prepares the Get request.
-func (client TokensClient) GetPreparer(ctx context.Context, resourceGroupName string, registryName string, tokenName string) (*http.Request, error) {
+func (client ScopeMapsClient) GetPreparer(ctx context.Context, resourceGroupName string, registryName string, scopeMapName string) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"registryName":      autorest.Encode("path", registryName),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"scopeMapName":      autorest.Encode("path", scopeMapName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
-		"tokenName":         autorest.Encode("path", tokenName),
 	}
 
-	const APIVersion = "2019-05-01-preview"
+	const APIVersion = "2020-11-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -337,20 +340,20 @@ func (client TokensClient) GetPreparer(ctx context.Context, resourceGroupName st
 	preparer := autorest.CreatePreparer(
 		autorest.AsGet(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerRegistry/registries/{registryName}/tokens/{tokenName}", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerRegistry/registries/{registryName}/scopeMaps/{scopeMapName}", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
-func (client TokensClient) GetSender(req *http.Request) (*http.Response, error) {
+func (client ScopeMapsClient) GetSender(req *http.Request) (*http.Response, error) {
 	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // GetResponder handles the response to the Get request. The method always
 // closes the http.Response Body.
-func (client TokensClient) GetResponder(resp *http.Response) (result Token, err error) {
+func (client ScopeMapsClient) GetResponder(resp *http.Response) (result ScopeMap, err error) {
 	err = autorest.Respond(
 		resp,
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
@@ -360,17 +363,17 @@ func (client TokensClient) GetResponder(resp *http.Response) (result Token, err 
 	return
 }
 
-// List lists all the tokens for the specified container registry.
+// List lists all the scope maps for the specified container registry.
 // Parameters:
 // resourceGroupName - the name of the resource group to which the container registry belongs.
 // registryName - the name of the container registry.
-func (client TokensClient) List(ctx context.Context, resourceGroupName string, registryName string) (result TokenListResultPage, err error) {
+func (client ScopeMapsClient) List(ctx context.Context, resourceGroupName string, registryName string) (result ScopeMapListResultPage, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/TokensClient.List")
+		ctx = tracing.StartSpan(ctx, fqdn+"/ScopeMapsClient.List")
 		defer func() {
 			sc := -1
-			if result.tlr.Response.Response != nil {
-				sc = result.tlr.Response.Response.StatusCode
+			if result.smlr.Response.Response != nil {
+				sc = result.smlr.Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -382,29 +385,29 @@ func (client TokensClient) List(ctx context.Context, resourceGroupName string, r
 			Constraints: []validation.Constraint{{Target: "registryName", Name: validation.MaxLength, Rule: 50, Chain: nil},
 				{Target: "registryName", Name: validation.MinLength, Rule: 5, Chain: nil},
 				{Target: "registryName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]*$`, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("containerregistry.TokensClient", "List", err.Error())
+		return result, validation.NewError("containerregistry.ScopeMapsClient", "List", err.Error())
 	}
 
 	result.fn = client.listNextResults
 	req, err := client.ListPreparer(ctx, resourceGroupName, registryName)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "containerregistry.TokensClient", "List", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsClient", "List", nil, "Failure preparing request")
 		return
 	}
 
 	resp, err := client.ListSender(req)
 	if err != nil {
-		result.tlr.Response = autorest.Response{Response: resp}
-		err = autorest.NewErrorWithError(err, "containerregistry.TokensClient", "List", resp, "Failure sending request")
+		result.smlr.Response = autorest.Response{Response: resp}
+		err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsClient", "List", resp, "Failure sending request")
 		return
 	}
 
-	result.tlr, err = client.ListResponder(resp)
+	result.smlr, err = client.ListResponder(resp)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "containerregistry.TokensClient", "List", resp, "Failure responding to request")
+		err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsClient", "List", resp, "Failure responding to request")
 		return
 	}
-	if result.tlr.hasNextLink() && result.tlr.IsEmpty() {
+	if result.smlr.hasNextLink() && result.smlr.IsEmpty() {
 		err = result.NextWithContext(ctx)
 		return
 	}
@@ -413,14 +416,14 @@ func (client TokensClient) List(ctx context.Context, resourceGroupName string, r
 }
 
 // ListPreparer prepares the List request.
-func (client TokensClient) ListPreparer(ctx context.Context, resourceGroupName string, registryName string) (*http.Request, error) {
+func (client ScopeMapsClient) ListPreparer(ctx context.Context, resourceGroupName string, registryName string) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"registryName":      autorest.Encode("path", registryName),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-05-01-preview"
+	const APIVersion = "2020-11-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -428,20 +431,20 @@ func (client TokensClient) ListPreparer(ctx context.Context, resourceGroupName s
 	preparer := autorest.CreatePreparer(
 		autorest.AsGet(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerRegistry/registries/{registryName}/tokens", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerRegistry/registries/{registryName}/scopeMaps", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
-func (client TokensClient) ListSender(req *http.Request) (*http.Response, error) {
+func (client ScopeMapsClient) ListSender(req *http.Request) (*http.Response, error) {
 	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListResponder handles the response to the List request. The method always
 // closes the http.Response Body.
-func (client TokensClient) ListResponder(resp *http.Response) (result TokenListResult, err error) {
+func (client ScopeMapsClient) ListResponder(resp *http.Response) (result ScopeMapListResult, err error) {
 	err = autorest.Respond(
 		resp,
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
@@ -452,10 +455,10 @@ func (client TokensClient) ListResponder(resp *http.Response) (result TokenListR
 }
 
 // listNextResults retrieves the next set of results, if any.
-func (client TokensClient) listNextResults(ctx context.Context, lastResults TokenListResult) (result TokenListResult, err error) {
-	req, err := lastResults.tokenListResultPreparer(ctx)
+func (client ScopeMapsClient) listNextResults(ctx context.Context, lastResults ScopeMapListResult) (result ScopeMapListResult, err error) {
+	req, err := lastResults.scopeMapListResultPreparer(ctx)
 	if err != nil {
-		return result, autorest.NewErrorWithError(err, "containerregistry.TokensClient", "listNextResults", nil, "Failure preparing next results request")
+		return result, autorest.NewErrorWithError(err, "containerregistry.ScopeMapsClient", "listNextResults", nil, "Failure preparing next results request")
 	}
 	if req == nil {
 		return
@@ -463,19 +466,19 @@ func (client TokensClient) listNextResults(ctx context.Context, lastResults Toke
 	resp, err := client.ListSender(req)
 	if err != nil {
 		result.Response = autorest.Response{Response: resp}
-		return result, autorest.NewErrorWithError(err, "containerregistry.TokensClient", "listNextResults", resp, "Failure sending next results request")
+		return result, autorest.NewErrorWithError(err, "containerregistry.ScopeMapsClient", "listNextResults", resp, "Failure sending next results request")
 	}
 	result, err = client.ListResponder(resp)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "containerregistry.TokensClient", "listNextResults", resp, "Failure responding to next results request")
+		err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsClient", "listNextResults", resp, "Failure responding to next results request")
 	}
 	return
 }
 
 // ListComplete enumerates all values, automatically crossing page boundaries as required.
-func (client TokensClient) ListComplete(ctx context.Context, resourceGroupName string, registryName string) (result TokenListResultIterator, err error) {
+func (client ScopeMapsClient) ListComplete(ctx context.Context, resourceGroupName string, registryName string) (result ScopeMapListResultIterator, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/TokensClient.List")
+		ctx = tracing.StartSpan(ctx, fqdn+"/ScopeMapsClient.List")
 		defer func() {
 			sc := -1
 			if result.Response().Response.Response != nil {
@@ -488,15 +491,15 @@ func (client TokensClient) ListComplete(ctx context.Context, resourceGroupName s
 	return
 }
 
-// Update updates a token with the specified parameters.
+// Update updates a scope map with the specified parameters.
 // Parameters:
 // resourceGroupName - the name of the resource group to which the container registry belongs.
 // registryName - the name of the container registry.
-// tokenName - the name of the token.
-// tokenUpdateParameters - the parameters for updating a token.
-func (client TokensClient) Update(ctx context.Context, resourceGroupName string, registryName string, tokenName string, tokenUpdateParameters TokenUpdateParameters) (result TokensUpdateFuture, err error) {
+// scopeMapName - the name of the scope map.
+// scopeMapUpdateParameters - the parameters for updating a scope map.
+func (client ScopeMapsClient) Update(ctx context.Context, resourceGroupName string, registryName string, scopeMapName string, scopeMapUpdateParameters ScopeMapUpdateParameters) (result ScopeMapsUpdateFuture, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/TokensClient.Update")
+		ctx = tracing.StartSpan(ctx, fqdn+"/ScopeMapsClient.Update")
 		defer func() {
 			sc := -1
 			if result.Response() != nil {
@@ -512,22 +515,22 @@ func (client TokensClient) Update(ctx context.Context, resourceGroupName string,
 			Constraints: []validation.Constraint{{Target: "registryName", Name: validation.MaxLength, Rule: 50, Chain: nil},
 				{Target: "registryName", Name: validation.MinLength, Rule: 5, Chain: nil},
 				{Target: "registryName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]*$`, Chain: nil}}},
-		{TargetValue: tokenName,
-			Constraints: []validation.Constraint{{Target: "tokenName", Name: validation.MaxLength, Rule: 50, Chain: nil},
-				{Target: "tokenName", Name: validation.MinLength, Rule: 5, Chain: nil},
-				{Target: "tokenName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9-]*$`, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("containerregistry.TokensClient", "Update", err.Error())
+		{TargetValue: scopeMapName,
+			Constraints: []validation.Constraint{{Target: "scopeMapName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "scopeMapName", Name: validation.MinLength, Rule: 5, Chain: nil},
+				{Target: "scopeMapName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9-_]*$`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("containerregistry.ScopeMapsClient", "Update", err.Error())
 	}
 
-	req, err := client.UpdatePreparer(ctx, resourceGroupName, registryName, tokenName, tokenUpdateParameters)
+	req, err := client.UpdatePreparer(ctx, resourceGroupName, registryName, scopeMapName, scopeMapUpdateParameters)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "containerregistry.TokensClient", "Update", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsClient", "Update", nil, "Failure preparing request")
 		return
 	}
 
 	result, err = client.UpdateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "containerregistry.TokensClient", "Update", nil, "Failure sending request")
+		err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsClient", "Update", nil, "Failure sending request")
 		return
 	}
 
@@ -535,15 +538,15 @@ func (client TokensClient) Update(ctx context.Context, resourceGroupName string,
 }
 
 // UpdatePreparer prepares the Update request.
-func (client TokensClient) UpdatePreparer(ctx context.Context, resourceGroupName string, registryName string, tokenName string, tokenUpdateParameters TokenUpdateParameters) (*http.Request, error) {
+func (client ScopeMapsClient) UpdatePreparer(ctx context.Context, resourceGroupName string, registryName string, scopeMapName string, scopeMapUpdateParameters ScopeMapUpdateParameters) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"registryName":      autorest.Encode("path", registryName),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"scopeMapName":      autorest.Encode("path", scopeMapName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
-		"tokenName":         autorest.Encode("path", tokenName),
 	}
 
-	const APIVersion = "2019-05-01-preview"
+	const APIVersion = "2020-11-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -552,15 +555,15 @@ func (client TokensClient) UpdatePreparer(ctx context.Context, resourceGroupName
 		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerRegistry/registries/{registryName}/tokens/{tokenName}", pathParameters),
-		autorest.WithJSON(tokenUpdateParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerRegistry/registries/{registryName}/scopeMaps/{scopeMapName}", pathParameters),
+		autorest.WithJSON(scopeMapUpdateParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
 // UpdateSender sends the Update request. The method will close the
 // http.Response Body if it receives an error.
-func (client TokensClient) UpdateSender(req *http.Request) (future TokensUpdateFuture, err error) {
+func (client ScopeMapsClient) UpdateSender(req *http.Request) (future ScopeMapsUpdateFuture, err error) {
 	var resp *http.Response
 	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
@@ -569,26 +572,26 @@ func (client TokensClient) UpdateSender(req *http.Request) (future TokensUpdateF
 	var azf azure.Future
 	azf, err = azure.NewFutureFromResponse(resp)
 	future.FutureAPI = &azf
-	future.Result = func(client TokensClient) (t Token, err error) {
+	future.Result = func(client ScopeMapsClient) (sm ScopeMap, err error) {
 		var done bool
 		done, err = future.DoneWithContext(context.Background(), client)
 		if err != nil {
-			err = autorest.NewErrorWithError(err, "containerregistry.TokensUpdateFuture", "Result", future.Response(), "Polling failure")
+			err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsUpdateFuture", "Result", future.Response(), "Polling failure")
 			return
 		}
 		if !done {
-			err = azure.NewAsyncOpIncompleteError("containerregistry.TokensUpdateFuture")
+			err = azure.NewAsyncOpIncompleteError("containerregistry.ScopeMapsUpdateFuture")
 			return
 		}
 		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
-		t.Response.Response, err = future.GetResult(sender)
-		if t.Response.Response == nil && err == nil {
-			err = autorest.NewErrorWithError(err, "containerregistry.TokensUpdateFuture", "Result", nil, "received nil response and error")
+		sm.Response.Response, err = future.GetResult(sender)
+		if sm.Response.Response == nil && err == nil {
+			err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsUpdateFuture", "Result", nil, "received nil response and error")
 		}
-		if err == nil && t.Response.Response.StatusCode != http.StatusNoContent {
-			t, err = client.UpdateResponder(t.Response.Response)
+		if err == nil && sm.Response.Response.StatusCode != http.StatusNoContent {
+			sm, err = client.UpdateResponder(sm.Response.Response)
 			if err != nil {
-				err = autorest.NewErrorWithError(err, "containerregistry.TokensUpdateFuture", "Result", t.Response.Response, "Failure responding to request")
+				err = autorest.NewErrorWithError(err, "containerregistry.ScopeMapsUpdateFuture", "Result", sm.Response.Response, "Failure responding to request")
 			}
 		}
 		return
@@ -598,7 +601,7 @@ func (client TokensClient) UpdateSender(req *http.Request) (future TokensUpdateF
 
 // UpdateResponder handles the response to the Update request. The method always
 // closes the http.Response Body.
-func (client TokensClient) UpdateResponder(resp *http.Response) (result Token, err error) {
+func (client ScopeMapsClient) UpdateResponder(resp *http.Response) (result ScopeMap, err error) {
 	err = autorest.Respond(
 		resp,
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
