@@ -80,6 +80,9 @@ func (m *manager) clusterServicePrincipalRBAC() []*arm.Resource {
 						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/disks
 						"Microsoft.Compute/disks/*",
 
+						//needed for user-initiated backup
+						"Microsoft.Compute/snapshots/*",
+
 						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/internalloadbalancers
 						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/publicloadbalancers
 						"Microsoft.Network/loadBalancers/*",
