@@ -5,10 +5,7 @@ Production deployment and upgrade can be orchestrated using deployment tooling:
 `go run ./cmd/aro deploy config.yaml location`
 
 The deploy utility is decoupled from the `env` package and is configured with a
-config file (see config.yaml.example) and the following optional
-environment variables:
-
-* RP_VERSION: RP VM scaleset git commit version
+config file (see config.yaml.example).
 
 Notes:
 
