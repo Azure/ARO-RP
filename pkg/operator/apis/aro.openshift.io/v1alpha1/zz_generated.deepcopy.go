@@ -73,6 +73,11 @@ func (in *ClusterSpec) DeepCopyInto(out *ClusterSpec) {
 	*out = *in
 	out.GenevaLogging = in.GenevaLogging
 	in.InternetChecker.DeepCopyInto(&out.InternetChecker)
+	if in.GatewayDomains != nil {
+		in, out := &in.GatewayDomains, &out.GatewayDomains
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	out.Features = in.Features
 }
 
