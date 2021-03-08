@@ -67,9 +67,9 @@ func NewValidator(log *logrus.Entry, azEnv *azure.Environment, subscriptionID st
 		authorizerType: authorizerType,
 		azEnv:          azEnv,
 
-		permissions:     authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer),
 		providers:       features.NewProvidersClient(azEnv, subscriptionID, authorizer),
 		spUsage:         compute.NewUsageClient(azEnv, subscriptionID, authorizer),
+		permissions:     newPermissionsCache(authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer)),
 		virtualNetworks: newVirtualNetworksCache(network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer)),
 	}, nil
 }
@@ -79,14 +79,12 @@ func (dv *dynamic) ValidateVnet(ctx context.Context, location string, subnets []
 		return fmt.Errorf("no subnets provided")
 	}
 
-	// We validate permissions on vnet (extraced from subnet)
-	err := dv.validatePermissions(ctx, subnets[0])
-	if err != nil {
-		return err
-	}
-
 	// each subnet is threated individually as it would be from the different vnet
 	for _, s := range subnets {
+		err := dv.validatePermissions(ctx, s)
+		if err != nil {
+			return err
+		}
 
 		err = dv.validateRouteTablePermissions(ctx, s)
 		if err != nil {
