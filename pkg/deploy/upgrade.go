@@ -14,8 +14,8 @@ import (
 	"github.com/Azure/go-autorest/autorest/date"
 )
 
-// saveVersion for current location in shared storage account for environment
-func (d *deployer) saveVersion(ctx context.Context) error {
+// SaveVersion for current location in shared storage account for environment
+func (d *deployer) SaveVersion(ctx context.Context) error {
 	d.log.Printf("saving rpVersion %s deployed in %s to storage account %s", d.version, d.config.Location, *d.config.Configuration.RPVersionStorageAccountName)
 	t := time.Now().UTC().Truncate(time.Second)
 	res, err := d.globalaccounts.ListAccountSAS(

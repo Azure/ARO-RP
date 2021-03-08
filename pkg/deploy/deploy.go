@@ -28,6 +28,7 @@ type Deployer interface {
 	PreDeploy(context.Context) error
 	DeployRP(context.Context) error
 	UpgradeRP(context.Context) error
+	SaveVersion(context.Context) error
 }
 
 type deployer struct {

@@ -70,5 +70,12 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	return deployer.UpgradeRP(ctx)
+	err = deployer.UpgradeRP(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Must be last step so we can be sure there are no RPs at older versions
+	// still serving
+	return deployer.SaveVersion(ctx)
 }

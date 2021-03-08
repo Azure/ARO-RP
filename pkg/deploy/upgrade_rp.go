@@ -24,13 +24,7 @@ func (d *deployer) UpgradeRP(ctx context.Context) error {
 		return err
 	}
 
-	err = d.rpRemoveOldScalesets(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Must be last step so we can be sure there are no RPs at older versions still serving
-	return d.saveVersion(ctx)
+	return d.rpRemoveOldScalesets(ctx)
 }
 
 func (d *deployer) rpWaitForReadiness(ctx context.Context, vmssName string) error {
