@@ -92,7 +92,7 @@ func reconcileMachineConfigs(ctx context.Context, arocli aroclient.Interface, dh
 
 	var resources []runtime.Object
 	for _, role := range roles {
-		resource, err := dnsmasq.MachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, role, []string{}, "")
+		resource, err := dnsmasq.MachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, role, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP)
 		if err != nil {
 			return err
 		}
