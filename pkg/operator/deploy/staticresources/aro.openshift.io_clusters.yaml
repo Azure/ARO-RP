@@ -47,6 +47,12 @@ spec:
               features:
                 description: FeaturesSpec defines ARO operator feature gates
                 type: object
+              gatewayDomains:
+                items:
+                  type: string
+                type: array
+              gatewayPrivateEndpointIP:
+                type: string
               genevaLogging:
                 properties:
                   configVersion:

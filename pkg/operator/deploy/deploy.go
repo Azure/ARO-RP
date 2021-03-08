@@ -149,6 +149,40 @@ func (o *operator) resources() ([]runtime.Object, error) {
 		domain += "." + o.env.Domain()
 	}
 
+	cluster := &arov1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: arov1alpha1.SingletonClusterName,
+		},
+		Spec: arov1alpha1.ClusterSpec{
+			ResourceID:    o.oc.ID,
+			Domain:        domain,
+			ACRDomain:     o.env.ACRDomain(),
+			AZEnvironment: o.env.Environment().Name,
+			Location:      o.env.Location(),
+			VnetID:        vnetID,
+			GenevaLogging: arov1alpha1.GenevaLoggingSpec{
+				ConfigVersion:            o.env.ClusterGenevaLoggingConfigVersion(),
+				MonitoringGCSEnvironment: o.env.ClusterGenevaLoggingEnvironment(),
+			},
+			APIIntIP:                 o.oc.Properties.APIServerProfile.IntIP,
+			IngressIP:                o.oc.Properties.IngressProfiles[0].IP,
+			GatewayPrivateEndpointIP: o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP,
+		},
+	}
+
+	if o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
+		cluster.Spec.GatewayDomains = o.env.GatewayDomains()
+	} else {
+		cluster.Spec.InternetChecker = arov1alpha1.InternetCheckerSpec{
+			URLs: []string{
+				fmt.Sprintf("https://%s/", o.env.ACRDomain()),
+				o.env.Environment().ActiveDirectoryEndpoint,
+				o.env.Environment().ResourceManagerEndpoint,
+				monitoringEndpoint,
+			},
+		}
+	}
+
 	// create a secret here for genevalogging, later we will copy it to
 	// the genevalogging namespace.
 	return append(results,
@@ -163,33 +197,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 				corev1.DockerConfigJsonKey:   []byte(ps),
 			},
 		},
-		&arov1alpha1.Cluster{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: arov1alpha1.SingletonClusterName,
-			},
-			Spec: arov1alpha1.ClusterSpec{
-				ResourceID:    o.oc.ID,
-				Domain:        domain,
-				ACRDomain:     o.env.ACRDomain(),
-				AZEnvironment: o.env.Environment().Name,
-				Location:      o.env.Location(),
-				VnetID:        vnetID,
-				GenevaLogging: arov1alpha1.GenevaLoggingSpec{
-					ConfigVersion:            o.env.ClusterGenevaLoggingConfigVersion(),
-					MonitoringGCSEnvironment: o.env.ClusterGenevaLoggingEnvironment(),
-				},
-				InternetChecker: arov1alpha1.InternetCheckerSpec{
-					URLs: []string{
-						fmt.Sprintf("https://%s/", o.env.ACRDomain()),
-						o.env.Environment().ActiveDirectoryEndpoint,
-						o.env.Environment().ResourceManagerEndpoint,
-						monitoringEndpoint,
-					},
-				},
-				APIIntIP:  o.oc.Properties.APIServerProfile.IntIP,
-				IngressIP: o.oc.Properties.IngressProfiles[0].IP,
-			},
-		},
+		cluster,
 	), nil
 }
 
