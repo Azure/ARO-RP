@@ -387,6 +387,9 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"clusterParentDomainName",
 		"fpClientId",
 		"fpServicePrincipalId",
+		"gatewayDomains",
+		"gatewayResourceGroupName",
+		"gatewayServicePrincipalId",
 		"portalAccessGroupIds",
 		"portalClientId",
 		"portalElevatedGroupIds",
@@ -523,7 +526,7 @@ EOF
 
 export AZURE_CLOUD_NAME=$AZURECLOUDNAME
 
-az login -i
+az login -i --allow-no-subscriptions
 az account set -s "$SUBSCRIPTIONID"
 
 systemctl start docker.service
@@ -596,6 +599,8 @@ BILLING_E2E_STORAGE_ACCOUNT_ID='$BILLINGE2ESTORAGEACCOUNTID'
 CLUSTER_MDSD_CONFIG_VERSION='$CLUSTERMDSDCONFIGVERSION'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 DOMAIN_NAME='$LOCATION.$CLUSTERPARENTDOMAINNAME'
+GATEWAY_DOMAINS='$GATEWAYDOMAINS'
+GATEWAY_RESOURCEGROUP='$GATEWAYRESOURCEGROUPNAME'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT=AzureRedHatOpenShiftRP
 MDM_NAMESPACE=RP
@@ -625,6 +630,8 @@ ExecStart=/usr/bin/docker run \
   -e CLUSTER_MDSD_CONFIG_VERSION \
   -e DATABASE_ACCOUNT_NAME \
   -e DOMAIN_NAME \
+  -e GATEWAY_DOMAINS \
+  -e GATEWAY_RESOURCEGROUP \
   -e KEYVAULT_PREFIX \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
@@ -649,6 +656,7 @@ EOF
 
 cat >/etc/sysconfig/aro-dbtoken <<EOF
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
+AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$GATEWAYSERVICEPRINCIPALID'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT=AzureRedHatOpenShiftRP
 MDM_NAMESPACE=DBToken
@@ -667,6 +675,7 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  -e AZURE_GATEWAY_SERVICE_PRINCIPAL_ID \
   -e DATABASE_ACCOUNT_NAME \
   -e KEYVAULT_PREFIX \
   -e MDM_ACCOUNT \
@@ -812,8 +821,7 @@ echo "Download \$COMPONENT credentials"
 
 TEMP_DIR=\$(mktemp -d)
 export AZURE_CONFIG_DIR=\$(mktemp -d)
-az login -i
-az account set -s "$SUBSCRIPTIONID"
+az login -i --allow-no-subscriptions
 
 trap "cleanup" EXIT
 
@@ -1626,6 +1634,10 @@ func (g *generator) rpACR() *arm.Resource {
 		Resource: &mgmtcontainerregistry.Registry{
 			Sku: &mgmtcontainerregistry.Sku{
 				Name: mgmtcontainerregistry.Premium,
+			},
+			RegistryProperties: &mgmtcontainerregistry.RegistryProperties{
+				// enable data hostname stability: https://azure.microsoft.com/en-gb/blog/azure-container-registry-mitigating-data-exfiltration-with-dedicated-data-endpoints/
+				DataEndpointEnabled: to.BoolPtr(true),
 			},
 			Name: to.StringPtr("[substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))]"),
 			Type: to.StringPtr("Microsoft.ContainerRegistry/registries"),
