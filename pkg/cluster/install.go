@@ -108,7 +108,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGsAndPatch)),
 			steps.Action(m.ensureBillingRecord),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.deployResourceTemplate)),
-			steps.Action(m.createPrivateEndpoint),
+			steps.Action(m.createAPIServerPrivateEndpoint),
 			steps.Action(m.createCertificates),
 			steps.Action(m.initializeKubernetesClients),
 			steps.Condition(m.bootstrapConfigMapReady, 30*time.Minute),

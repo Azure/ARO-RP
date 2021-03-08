@@ -22,7 +22,7 @@ func RestConfig(dialer proxy.Dialer, oc *api.OpenShiftCluster) (*rest.Config, er
 	// k8s.io/client-go/transport/cache.go, k8s caches our transport, and it
 	// can't tell if data in the restconfig.Dial closure has changed.  We don't
 	// want it to cache a transport that can never work.
-	if oc.Properties.NetworkProfile.PrivateEndpointIP == "" {
+	if oc.Properties.NetworkProfile.APIServerPrivateEndpointIP == "" {
 		return nil, errors.New("privateEndpointIP is empty")
 	}
 
@@ -56,6 +56,6 @@ func DialContext(dialer proxy.Dialer, oc *api.OpenShiftCluster) func(ctx context
 			return nil, err
 		}
 
-		return dialer.DialContext(ctx, network, oc.Properties.NetworkProfile.PrivateEndpointIP+":"+port)
+		return dialer.DialContext(ctx, network, oc.Properties.NetworkProfile.APIServerPrivateEndpointIP+":"+port)
 	}
 }

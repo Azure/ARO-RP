@@ -11,26 +11,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
-func clusterVnet() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtnetwork.VirtualNetwork{
-			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-				AddressSpace: &mgmtnetwork.AddressSpace{
-					AddressPrefixes: &[]string{
-						"[parameters('vnetAddressPrefix')]",
-					},
-				},
-			},
-			Name:     to.StringPtr("dev-vnet"),
-			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
-			Location: to.StringPtr("[resourceGroup().location]"),
-		},
-		Condition:  "[parameters('ci')]",
-		APIVersion: azureclient.APIVersion("Microsoft.Network"),
-	}
+func (g *generator) clusterVnet() *arm.Resource {
+	return g.virtualNetwork("dev-vnet", "[parameters('vnetAddressPrefix')]", nil, "[parameters('ci')]")
 }
 
-func clusterRouteTable() *arm.Resource {
+func (g *generator) clusterRouteTable() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.RouteTable{
 			Name:     to.StringPtr("[concat(parameters('clusterName'), '-rt')]"),
@@ -41,7 +26,7 @@ func clusterRouteTable() *arm.Resource {
 	}
 }
 
-func clusterMasterSubnet() *arm.Resource {
+func (g *generator) clusterMasterSubnet() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.Subnet{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
@@ -68,7 +53,7 @@ func clusterMasterSubnet() *arm.Resource {
 	}
 }
 
-func clusterWorkerSubnet() *arm.Resource {
+func (g *generator) clusterWorkerSubnet() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.Subnet{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{

@@ -27,11 +27,11 @@ func New(production bool) Generator {
 
 func (g *generator) Artifacts() error {
 	if g.production {
-		err := g.writeTemplate(g.managedIdentityTemplate(), FileRPProductionManagedIdentity)
+		err := g.writeTemplate(g.rpManagedIdentityTemplate(), FileRPProductionManagedIdentity)
 		if err != nil {
 			return err
 		}
-		err = g.writeTemplate(g.preDeployTemplate(), FileRPProductionPredeploy)
+		err = g.writeTemplate(g.rpPredeployTemplate(), FileRPProductionPredeploy)
 		if err != nil {
 			return err
 		}
@@ -55,7 +55,7 @@ func (g *generator) Artifacts() error {
 		if err != nil {
 			return err
 		}
-		err = g.writeParameters(g.rpPreDeployParameters(), FileRPProductionPredeployParameters)
+		err = g.writeParameters(g.rpPredeployParameters(), FileRPProductionPredeployParameters)
 		if err != nil {
 			return err
 		}
@@ -65,15 +65,15 @@ func (g *generator) Artifacts() error {
 		}
 
 	} else {
-		err := g.writeTemplate(g.sharedDevelopmentEnvTemplate(), fileEnvDevelopment)
+		err := g.writeTemplate(g.devSharedTemplate(), fileEnvDevelopment)
 		if err != nil {
 			return err
 		}
-		err = g.writeTemplate(g.databaseTemplate(), fileDatabaseDevelopment)
+		err = g.writeTemplate(g.devDatabaseTemplate(), fileDatabaseDevelopment)
 		if err != nil {
 			return err
 		}
-		err = g.writeTemplate(g.preDeployTemplate(), fileRPDevelopmentPredeploy)
+		err = g.writeTemplate(g.rpPredeployTemplate(), fileRPDevelopmentPredeploy)
 		if err != nil {
 			return err
 		}

@@ -93,7 +93,7 @@ func TestProxy(t *testing.T) {
 	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/microsoft.redhatopenshift/openshiftclusters/cluster"
 	username := "username"
 	token := "00000000-0000-0000-0000-000000000000"
-	privateEndpointIP := "1.2.3.4"
+	apiServerPrivateEndpointIP := "1.2.3.4"
 
 	cakey, cacerts, err := utiltls.GenerateKeyAndCertificate("ca", nil, nil, true, false)
 	if err != nil {
@@ -158,7 +158,7 @@ func TestProxy(t *testing.T) {
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
 							NetworkProfile: api.NetworkProfile{
-								PrivateEndpointIP: privateEndpointIP,
+								APIServerPrivateEndpointIP: apiServerPrivateEndpointIP,
 							},
 							AROServiceKubeconfig: api.SecureBytes(serviceKubeconfig),
 							AROSREKubeconfig:     api.SecureBytes(sreKubeconfig),
@@ -169,7 +169,7 @@ func TestProxy(t *testing.T) {
 				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
 			},
 			mocks: func(dialer *mock_proxy.MockDialer) {
-				dialer.EXPECT().DialContext(gomock.Any(), "tcp", privateEndpointIP+":6443").Return(l.DialContext(ctx, "", ""))
+				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":6443").Return(l.DialContext(ctx, "", ""))
 			},
 			wantStatusCode: http.StatusOK,
 			wantBody:       "GET /test HTTP/1.1\r\nHost: kubernetes:6443\r\nAccept-Encoding: gzip\r\nUser-Agent: Go-http-client/1.1\r\nX-Authenticated-Name: system:aro-service\r\n\r\n",
@@ -194,7 +194,7 @@ func TestProxy(t *testing.T) {
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
 							NetworkProfile: api.NetworkProfile{
-								PrivateEndpointIP: privateEndpointIP,
+								APIServerPrivateEndpointIP: apiServerPrivateEndpointIP,
 							},
 							AROServiceKubeconfig: api.SecureBytes(serviceKubeconfig),
 							AROSREKubeconfig:     api.SecureBytes(sreKubeconfig),
@@ -205,7 +205,7 @@ func TestProxy(t *testing.T) {
 				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
 			},
 			mocks: func(dialer *mock_proxy.MockDialer) {
-				dialer.EXPECT().DialContext(gomock.Any(), "tcp", privateEndpointIP+":6443").Return(l.DialContext(ctx, "", ""))
+				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":6443").Return(l.DialContext(ctx, "", ""))
 			},
 			wantStatusCode: http.StatusOK,
 			wantBody:       "GET /test HTTP/1.1\r\nHost: kubernetes:6443\r\nAccept-Encoding: gzip\r\nUser-Agent: Go-http-client/1.1\r\nX-Authenticated-Name: system:aro-sre\r\n\r\n",
@@ -339,7 +339,7 @@ func TestProxy(t *testing.T) {
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
 							NetworkProfile: api.NetworkProfile{
-								PrivateEndpointIP: privateEndpointIP,
+								APIServerPrivateEndpointIP: apiServerPrivateEndpointIP,
 							},
 						},
 					},
