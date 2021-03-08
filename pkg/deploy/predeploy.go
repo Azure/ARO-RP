@@ -34,7 +34,7 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 	}
 
 	// deploy global rbac
-	err = d.deployGlobalSubscription(ctx)
+	err = d.deployRPGlobalSubscription(ctx)
 	if err != nil {
 		return err
 	}
@@ -63,17 +63,19 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
-	err = d.deploySubscription(ctx)
+	// deploy action groups
+	err = d.deployRPSubscription(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = d.deployManagedIdentity(ctx)
+	// deploy managed identity
+	err = d.deployRPManagedIdentity(ctx)
 	if err != nil {
 		return err
 	}
 
-	msi, err := d.userassignedidentities.Get(ctx, d.config.ResourceGroupName, "aro-rp-"+d.config.Location)
+	rpMSI, err := d.userassignedidentities.Get(ctx, d.config.ResourceGroupName, "aro-rp-"+d.config.Location)
 	if err != nil {
 		return err
 	}
@@ -81,19 +83,20 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 	// Due to https://github.com/Azure/azure-resource-manager-schemas/issues/1067
 	// we can't use conditions to define ACR replication object deployment.
 	if d.config.Configuration.ACRReplicaDisabled != nil && !*d.config.Configuration.ACRReplicaDisabled {
-		err = d.deployGloalACRReplication(ctx)
+		err = d.deployRPGlobalACRReplication(ctx)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = d.deployGlobal(ctx, msi.PrincipalID.String())
+	// deploy ACR RBAC, RP version storage account
+	err = d.deployRPGlobal(ctx, rpMSI.PrincipalID.String())
 	if err != nil {
 		return err
 	}
 
 	// deploy NSGs, keyvaults
-	err = d.deployPreDeploy(ctx, msi.PrincipalID.String())
+	err = d.deployRPPreDeploy(ctx, rpMSI.PrincipalID.String())
 	if err != nil {
 		return err
 	}
@@ -141,7 +144,7 @@ func (d *deployer) enableEncryptionAtHostSubscriptionFeatureFlag(ctx context.Con
 	return err
 }
 
-func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string) error {
+func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID string) error {
 	deploymentName := "rp-global-" + d.config.Location
 
 	b, err := Asset(generator.FileRPProductionGlobal)
@@ -170,7 +173,7 @@ func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string
 	})
 }
 
-func (d *deployer) deployGloalACRReplication(ctx context.Context) error {
+func (d *deployer) deployRPGlobalACRReplication(ctx context.Context) error {
 	deploymentName := "rp-global-acr-replication-" + d.config.Location
 
 	b, err := Asset(generator.FileRPProductionGlobalACRReplication)
@@ -199,7 +202,7 @@ func (d *deployer) deployGloalACRReplication(ctx context.Context) error {
 	})
 }
 
-func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
+func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 	deploymentName := "rp-global-subscription-" + d.config.Location
 
 	b, err := Asset(generator.FileRPProductionGlobalSubscription)
@@ -239,7 +242,7 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 	return nil
 }
 
-func (d *deployer) deploySubscription(ctx context.Context) error {
+func (d *deployer) deployRPSubscription(ctx context.Context) error {
 	deploymentName := "rp-production-subscription-" + d.config.Location
 
 	b, err := Asset(generator.FileRPProductionSubscription)
@@ -262,7 +265,7 @@ func (d *deployer) deploySubscription(ctx context.Context) error {
 	})
 }
 
-func (d *deployer) deployManagedIdentity(ctx context.Context) error {
+func (d *deployer) deployRPManagedIdentity(ctx context.Context) error {
 	deploymentName := "rp-production-managed-identity"
 
 	b, err := Asset(generator.FileRPProductionManagedIdentity)
@@ -285,7 +288,7 @@ func (d *deployer) deployManagedIdentity(ctx context.Context) error {
 	})
 }
 
-func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID string) error {
+func (d *deployer) deployRPPreDeploy(ctx context.Context, rpServicePrincipalID string) error {
 	deploymentName := "rp-production-predeploy"
 
 	var isCreate bool

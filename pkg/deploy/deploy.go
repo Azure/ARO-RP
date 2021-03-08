@@ -114,7 +114,7 @@ func (d *deployer) Deploy(ctx context.Context) error {
 		d.log.Warn("encryption at host not supported")
 	}
 
-	msi, err := d.userassignedidentities.Get(ctx, d.config.ResourceGroupName, "aro-rp-"+d.config.Location)
+	rpMSI, err := d.userassignedidentities.Get(ctx, d.config.ResourceGroupName, "aro-rp-"+d.config.Location)
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,7 @@ func (d *deployer) Deploy(ctx context.Context) error {
 		Value: *d.config.Configuration.RPImagePrefix + ":" + d.version,
 	}
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
-		Value: msi.PrincipalID.String(),
+		Value: rpMSI.PrincipalID.String(),
 	}
 	parameters.Parameters["vmssName"] = &arm.ParametersParameter{
 		Value: d.version,
