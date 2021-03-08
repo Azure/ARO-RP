@@ -15,6 +15,8 @@ import (
 // PrivateLinkServicesClient is a minimal interface for azure PrivateLinkServicesClient
 type PrivateLinkServicesClient interface {
 	DeletePrivateEndpointConnection(ctx context.Context, resourceGroupName string, serviceName string, peConnectionName string) (result mgmtnetwork.PrivateLinkServicesDeletePrivateEndpointConnectionFuture, err error)
+	Get(ctx context.Context, resourceGroupName string, serviceName string, expand string) (result mgmtnetwork.PrivateLinkService, err error)
+	UpdatePrivateEndpointConnection(ctx context.Context, resourceGroupName string, serviceName string, peConnectionName string, parameters mgmtnetwork.PrivateEndpointConnection) (result mgmtnetwork.PrivateEndpointConnection, err error)
 	PrivateLinkServicesClientAddons
 }
 
