@@ -26,6 +26,14 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	for _, key := range []string{
+		"AZURE_GATEWAY_SERVICE_PRINCIPAL_ID",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return fmt.Errorf("environment variable %q unset", key)
+		}
+	}
+
 	if !_env.IsLocalDevelopmentMode() {
 		for _, key := range []string{
 			"MDM_ACCOUNT",
