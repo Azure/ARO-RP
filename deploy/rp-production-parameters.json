@@ -62,6 +62,15 @@
         "fpServicePrincipalId": {
             "value": ""
         },
+        "gatewayDomains": {
+            "value": ""
+        },
+        "gatewayResourceGroupName": {
+            "value": ""
+        },
+        "gatewayServicePrincipalId": {
+            "value": ""
+        },
         "ipRules": {
             "value": ""
         },

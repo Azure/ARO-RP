@@ -24,6 +24,11 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		return err
 	}
 
+	gwMSI, err := d.userassignedidentities.Get(ctx, d.config.GatewayResourceGroupName, "aro-gateway-"+d.config.Location)
+	if err != nil {
+		return err
+	}
+
 	deploymentName := "rp-production-" + d.version
 
 	b, err := Asset(generator.FileRPProduction)
@@ -49,6 +54,12 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	ipRules := d.convertToIPAddressOrRange(d.config.Configuration.ExtraCosmosDBIPs)
 	parameters.Parameters["ipRules"] = &arm.ParametersParameter{
 		Value: ipRules,
+	}
+	parameters.Parameters["gatewayResourceGroupName"] = &arm.ParametersParameter{
+		Value: d.config.GatewayResourceGroupName,
+	}
+	parameters.Parameters["gatewayServicePrincipalId"] = &arm.ParametersParameter{
+		Value: gwMSI.PrincipalID.String(),
 	}
 	parameters.Parameters["rpImage"] = &arm.ParametersParameter{
 		Value: *d.config.Configuration.RPImagePrefix + ":" + d.version,

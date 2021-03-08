@@ -326,6 +326,12 @@ func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deplo
 	parameters.Parameters["deployNSGs"] = &arm.ParametersParameter{
 		Value: isCreate,
 	}
+	// TODO: ugh
+	if _, ok := template["parameters"].(map[string]interface{})["gatewayResourceGroupName"]; ok {
+		parameters.Parameters["gatewayResourceGroupName"] = &arm.ParametersParameter{
+			Value: d.config.GatewayResourceGroupName,
+		}
+	}
 	parameters.Parameters[spIDName] = &arm.ParametersParameter{
 		Value: spID,
 	}

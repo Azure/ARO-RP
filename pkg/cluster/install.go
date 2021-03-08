@@ -46,6 +46,7 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 		steps.Action(m.populateDatabaseIntIP),
 		steps.Action(m.fixMCSCert),
 		steps.Action(m.fixMCSUserData),
+		steps.Action(m.ensureGatewayUpgrade),
 		steps.Action(m.ensureAROOperator),
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute),
 		steps.Action(m.configureAPIServerCertificate),
@@ -98,11 +99,13 @@ func (m *manager) Install(ctx context.Context) error {
 				return m.ensureInfraID(ctx, installConfig)
 			}),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
 				return m.deployStorageTemplate(ctx, installConfig)
 			})),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.updateAPIIPEarly)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.createOrUpdateRouterIPEarly)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureGatewayCreate)),
 			steps.Action(func(ctx context.Context) error {
 				return m.ensureGraph(ctx, installConfig, image)
 			}),

@@ -48,28 +48,31 @@ type manager struct {
 	log               *logrus.Entry
 	env               env.Interface
 	db                database.OpenShiftClusters
+	dbGateway         database.Gateway
 	billing           billing.Manager
 	doc               *api.OpenShiftClusterDocument
 	subscriptionDoc   *api.SubscriptionDocument
 	fpAuthorizer      refreshable.Authorizer
 	localFpAuthorizer refreshable.Authorizer
 
-	spApplications      graphrbac.ApplicationsClient
-	disks               compute.DisksClient
-	virtualMachines     compute.VirtualMachinesClient
-	interfaces          network.InterfacesClient
-	publicIPAddresses   network.PublicIPAddressesClient
-	loadBalancers       network.LoadBalancersClient
-	securityGroups      network.SecurityGroupsClient
-	deployments         features.DeploymentsClient
-	resourceGroups      features.ResourceGroupsClient
-	resources           features.ResourcesClient
-	privateZones        privatedns.PrivateZonesClient
-	virtualNetworkLinks privatedns.VirtualNetworkLinksClient
-	roleAssignments     authorization.RoleAssignmentsClient
-	roleDefinitions     authorization.RoleDefinitionsClient
-	denyAssignments     authorization.DenyAssignmentClient
-	fpPrivateEndpoints  network.PrivateEndpointsClient
+	spApplications        graphrbac.ApplicationsClient
+	disks                 compute.DisksClient
+	virtualMachines       compute.VirtualMachinesClient
+	interfaces            network.InterfacesClient
+	publicIPAddresses     network.PublicIPAddressesClient
+	loadBalancers         network.LoadBalancersClient
+	privateEndpoints      network.PrivateEndpointsClient
+	securityGroups        network.SecurityGroupsClient
+	deployments           features.DeploymentsClient
+	resourceGroups        features.ResourceGroupsClient
+	resources             features.ResourcesClient
+	privateZones          privatedns.PrivateZonesClient
+	virtualNetworkLinks   privatedns.VirtualNetworkLinksClient
+	roleAssignments       authorization.RoleAssignmentsClient
+	roleDefinitions       authorization.RoleDefinitionsClient
+	denyAssignments       authorization.DenyAssignmentClient
+	fpPrivateEndpoints    network.PrivateEndpointsClient
+	rpPrivateLinkServices network.PrivateLinkServicesClient
 
 	dns     dns.Manager
 	storage storage.Manager
@@ -88,54 +91,62 @@ type manager struct {
 }
 
 // New returns a cluster manager
-func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, aead encryption.AEAD,
+func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, dbGateway database.Gateway, aead encryption.AEAD,
 	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (Interface, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	localFPAuthorizer, err := env.FPAuthorizer(env.TenantID(), env.Environment().ResourceManagerEndpoint)
+	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), _env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	fpAuthorizer, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, env.Environment().ResourceManagerEndpoint)
+	fpAuthorizer, err := _env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, _env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	storage := storage.NewManager(env, r.SubscriptionID, fpAuthorizer)
+	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	storage := storage.NewManager(_env, r.SubscriptionID, fpAuthorizer)
 
 	return &manager{
 		log:               log,
-		env:               env,
+		env:               _env,
 		db:                db,
+		dbGateway:         dbGateway,
 		billing:           billing,
 		doc:               doc,
 		subscriptionDoc:   subscriptionDoc,
 		fpAuthorizer:      fpAuthorizer,
 		localFpAuthorizer: localFPAuthorizer,
 
-		disks:               compute.NewDisksClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
-		virtualMachines:     compute.NewVirtualMachinesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
-		interfaces:          network.NewInterfacesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
-		publicIPAddresses:   network.NewPublicIPAddressesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
-		loadBalancers:       network.NewLoadBalancersClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
-		securityGroups:      network.NewSecurityGroupsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
-		deployments:         features.NewDeploymentsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
-		resourceGroups:      features.NewResourceGroupsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
-		resources:           features.NewResourcesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
-		privateZones:        privatedns.NewPrivateZonesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
-		virtualNetworkLinks: privatedns.NewVirtualNetworkLinksClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
-		roleAssignments:     authorization.NewRoleAssignmentsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
-		roleDefinitions:     authorization.NewRoleDefinitionsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
-		denyAssignments:     authorization.NewDenyAssignmentsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
-		fpPrivateEndpoints:  network.NewPrivateEndpointsClient(env.Environment(), env.SubscriptionID(), localFPAuthorizer),
+		disks:                 compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		virtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		interfaces:            network.NewInterfacesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		publicIPAddresses:     network.NewPublicIPAddressesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		loadBalancers:         network.NewLoadBalancersClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		privateEndpoints:      network.NewPrivateEndpointsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		securityGroups:        network.NewSecurityGroupsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		deployments:           features.NewDeploymentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		resourceGroups:        features.NewResourceGroupsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		resources:             features.NewResourcesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		privateZones:          privatedns.NewPrivateZonesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		virtualNetworkLinks:   privatedns.NewVirtualNetworkLinksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		roleAssignments:       authorization.NewRoleAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		roleDefinitions:       authorization.NewRoleDefinitionsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		denyAssignments:       authorization.NewDenyAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		fpPrivateEndpoints:    network.NewPrivateEndpointsClient(_env.Environment(), _env.SubscriptionID(), localFPAuthorizer),
+		rpPrivateLinkServices: network.NewPrivateLinkServicesClient(_env.Environment(), _env.SubscriptionID(), msiAuthorizer),
 
-		dns:     dns.NewManager(env, localFPAuthorizer),
+		dns:     dns.NewManager(_env, localFPAuthorizer),
 		storage: storage,
-		subnet:  subnet.NewManager(env, r.SubscriptionID, fpAuthorizer),
+		subnet:  subnet.NewManager(_env, r.SubscriptionID, fpAuthorizer),
 		graph:   graph.NewManager(log, aead, storage),
 	}, nil
 }
