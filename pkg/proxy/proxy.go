@@ -13,6 +13,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -107,16 +108,16 @@ func (s *Server) Run() error {
 			return
 		}
 
-		proxy(s.Log, w, r)
+		Proxy(s.Log, w, r, 0)
 	}))
 }
 
-// proxy takes an HTTP/1.x CONNECT Request and ResponseWriter from the Golang
+// Proxy takes an HTTP/1.x CONNECT Request and ResponseWriter from the Golang
 // HTTP stack and uses Hijack() to get the underlying Connection (c1).  It dials
 // a second Connection (c2) to the requested end Host and then copies data in
 // both directions (c1->c2 and c2->c1).
-func proxy(log *logrus.Entry, w http.ResponseWriter, r *http.Request) {
-	c2, err := net.Dial("tcp", r.Host)
+func Proxy(log *logrus.Entry, w http.ResponseWriter, r *http.Request, sz int) {
+	c2, err := utilnet.Dial("tcp", r.Host, sz)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -158,7 +159,7 @@ func proxy(log *logrus.Entry, w http.ResponseWriter, r *http.Request) {
 	func() {
 		// copy from c2->c1.  Call c1.CloseWrite() when done.
 		defer func() {
-			_ = c1.(*tls.Conn).CloseWrite()
+			_ = c1.(interface{ CloseWrite() error }).CloseWrite()
 		}()
 		_, _ = io.Copy(c1, c2)
 	}()
