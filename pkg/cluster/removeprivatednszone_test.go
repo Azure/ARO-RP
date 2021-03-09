@@ -31,12 +31,13 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 	const resourceGroupID = "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup"
 
 	for _, tt := range []struct {
-		name          string
-		doc           *api.OpenShiftClusterDocument
-		mocks         func(*mock_privatedns.MockPrivateZonesClient, *mock_privatedns.MockVirtualNetworkLinksClient)
-		kubernetescli kubernetes.Interface
-		mcocli        mcoclient.Interface
-		configcli     configclient.Interface
+		name                      string
+		doc                       *api.OpenShiftClusterDocument
+		mocks                     func(*mock_privatedns.MockPrivateZonesClient, *mock_privatedns.MockVirtualNetworkLinksClient)
+		kubernetescli             kubernetes.Interface
+		mcocli                    mcoclient.Interface
+		configcli                 configclient.Interface
+		wantDNSPrivateZoneRemoved bool
 	}{
 		{
 			name: "no private zones",
@@ -287,7 +288,18 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 						},
 					},
 				},
+				&configv1.DNS{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster",
+					},
+					Spec: configv1.DNSSpec{
+						PrivateZone: &configv1.DNSZone{
+							ID: "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/privateDnsZones/zone1",
+						},
+					},
+				},
 			),
+			wantDNSPrivateZoneRemoved: true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -311,6 +323,16 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 			err := m.removePrivateDNSZone(ctx)
 			if err != nil {
 				t.Fatal(err)
+			}
+
+			if tt.wantDNSPrivateZoneRemoved {
+				dns, err := m.configcli.ConfigV1().DNSes().Get(ctx, "cluster", metav1.GetOptions{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if dns.Spec.PrivateZone != nil {
+					t.Error(dns.Spec.PrivateZone)
+				}
 			}
 		})
 	}

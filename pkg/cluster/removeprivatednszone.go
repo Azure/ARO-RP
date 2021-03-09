@@ -5,9 +5,11 @@ package cluster
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -76,6 +78,27 @@ func (m *manager) removePrivateDNSZone(ctx context.Context) error {
 	if v.Lt(version.NewVersion(4, 4)) {
 		// 4.3 uses SRV records for etcd
 		m.log.Printf("cluster version < 4.4, not removing private DNS zone")
+		return nil
+	}
+
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		dns, err := m.configcli.ConfigV1().DNSes().Get(ctx, "cluster", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if dns.Spec.PrivateZone == nil ||
+			!strings.EqualFold(dns.Spec.PrivateZone.ID, *zones[0].ID) {
+			return nil
+		}
+
+		dns.Spec.PrivateZone = nil
+
+		_, err = m.configcli.ConfigV1().DNSes().Update(ctx, dns, metav1.UpdateOptions{})
+		return err
+	})
+	if err != nil {
+		m.log.Print(err)
 		return nil
 	}
 
