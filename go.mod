@@ -104,6 +104,7 @@ require (
 	k8s.io/code-generator v0.19.4
 	k8s.io/klog/v2 v2.5.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20210216185858-15cd8face8d6 // indirect
+	k8s.io/kubectl v0.19.4
 	k8s.io/kubernetes v1.13.0
 	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009 // indirect
 	sigs.k8s.io/cluster-api-provider-aws v0.6.4 // indirect
@@ -116,6 +117,7 @@ require (
 replace (
 	bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d // 404 on bitbucket.org/ww/goautoneg
 	github.com/docker/spdystream => github.com/docker/spdystream v0.1.0
+	github.com/go-openapi/spec => github.com/go-openapi/spec v0.19.8
 	github.com/metal3-io/baremetal-operator => github.com/openshift/baremetal-operator v0.0.0-20210128152529-b4b10a088a0c
 	github.com/metal3-io/cluster-api-provider-baremetal => github.com/openshift/cluster-api-provider-baremetal v0.0.0-20201105032354-fcd9e769a45c
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20210127195806-54e5e88cf848
