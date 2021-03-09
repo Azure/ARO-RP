@@ -71,7 +71,7 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 					ListByResourceGroup(ctx, "testGroup", nil).
 					Return([]mgmtprivatedns.PrivateZone{
 						{
-							ID: to.StringPtr("/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/privateZones/zone1"),
+							ID: to.StringPtr("/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/privateDnsZones/zone1"),
 						},
 					}, nil)
 			},
@@ -95,7 +95,7 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 					ListByResourceGroup(ctx, "testGroup", nil).
 					Return([]mgmtprivatedns.PrivateZone{
 						{
-							ID: to.StringPtr("/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/privateZones/zone1"),
+							ID: to.StringPtr("/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/privateDnsZones/zone1"),
 						},
 					}, nil)
 			},
@@ -133,7 +133,7 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 					ListByResourceGroup(ctx, "testGroup", nil).
 					Return([]mgmtprivatedns.PrivateZone{
 						{
-							ID: to.StringPtr("/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/privateZones/zone1"),
+							ID: to.StringPtr("/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/privateDnsZones/zone1"),
 						},
 					}, nil)
 			},
@@ -173,7 +173,7 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 					ListByResourceGroup(ctx, "testGroup", nil).
 					Return([]mgmtprivatedns.PrivateZone{
 						{
-							ID: to.StringPtr("/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/privateZones/zone1"),
+							ID: to.StringPtr("/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/privateDnsZones/zone1"),
 						},
 					}, nil)
 			},
@@ -231,7 +231,7 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 					ListByResourceGroup(ctx, "testGroup", nil).
 					Return([]mgmtprivatedns.PrivateZone{
 						{
-							ID: to.StringPtr("/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/privateZones/zone1"),
+							ID: to.StringPtr("/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/privateDnsZones/zone1"),
 						},
 					}, nil)
 
