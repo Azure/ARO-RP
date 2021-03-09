@@ -13,6 +13,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -46,6 +47,7 @@ type deployer struct {
 	providers              features.ProvidersClient
 	publicipaddresses      network.PublicIPAddressesClient
 	resourceskus           compute.ResourceSkusClient
+	roleassignments        authorization.RoleAssignmentsClient
 	vmss                   compute.VirtualMachineScaleSetsClient
 	vmssvms                compute.VirtualMachineScaleSetVMsClient
 	zones                  dns.ZonesClient
@@ -86,6 +88,7 @@ func New(ctx context.Context, log *logrus.Entry, env env.Core, config *RPConfig,
 		groups:                 features.NewResourceGroupsClient(env.Environment(), config.SubscriptionID, authorizer),
 		userassignedidentities: msi.NewUserAssignedIdentitiesClient(env.Environment(), config.SubscriptionID, authorizer),
 		providers:              features.NewProvidersClient(env.Environment(), config.SubscriptionID, authorizer),
+		roleassignments:        authorization.NewRoleAssignmentsClient(env.Environment(), config.SubscriptionID, authorizer),
 		resourceskus:           compute.NewResourceSkusClient(env.Environment(), config.SubscriptionID, authorizer),
 		publicipaddresses:      network.NewPublicIPAddressesClient(env.Environment(), config.SubscriptionID, authorizer),
 		vmss:                   compute.NewVirtualMachineScaleSetsClient(env.Environment(), config.SubscriptionID, authorizer),
