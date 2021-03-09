@@ -5,19 +5,17 @@ package main
 
 import (
 	"context"
-	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const discoveryCacheDir = "pkg/util/dynamichelper/discovery/cache"
@@ -57,30 +55,13 @@ func writeVersion(ctx context.Context, restconfig *rest.Config) error {
 		return err
 	}
 
-	clusterVersion, err := getClusterVersion(ctx, configcli)
+	clusterVersion, err := version.GetClusterVersion(ctx, configcli)
 	if err != nil {
 		return err
 	}
 
 	versionPath := filepath.Join(discoveryCacheDir, "assets_version")
-	return ioutil.WriteFile(versionPath, []byte(clusterVersion+"\n"), 0666)
-}
-
-func getClusterVersion(ctx context.Context, configcli configclient.Interface) (string, error) {
-	cv, err := configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
-	if err != nil {
-		return "", err
-	}
-
-	for _, history := range cv.Status.History {
-		if history.State == configv1.CompletedUpdate {
-			return history.Version, nil
-		}
-	}
-
-	// Should never happen as a successfully created cluster
-	// should have at least one completed update.
-	return "", errors.New("could find actual cluster version")
+	return ioutil.WriteFile(versionPath, []byte(clusterVersion.String()+"\n"), 0666)
 }
 
 func main() {

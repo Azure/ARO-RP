@@ -5,12 +5,15 @@ package cluster
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func (m *manager) removePrivateDNSZone(ctx context.Context) error {
@@ -23,6 +26,27 @@ func (m *manager) removePrivateDNSZone(ctx context.Context) error {
 	}
 
 	if len(zones) == 0 {
+		// fix up any clusters that we already upgraded
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			dns, err := m.configcli.ConfigV1().DNSes().Get(ctx, "cluster", metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			if dns.Spec.PrivateZone == nil ||
+				!strings.HasPrefix(strings.ToLower(dns.Spec.PrivateZone.ID), strings.ToLower(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)) {
+				return nil
+			}
+
+			dns.Spec.PrivateZone = nil
+
+			_, err = m.configcli.ConfigV1().DNSes().Update(ctx, dns, metav1.UpdateOptions{})
+			return err
+		})
+		if err != nil {
+			m.log.Print(err)
+		}
+
 		return nil
 	}
 
@@ -32,6 +56,7 @@ func (m *manager) removePrivateDNSZone(ctx context.Context) error {
 		return nil
 	}
 
+	var machineCount int
 	for _, mcp := range mcps.Items {
 		var found bool
 		for _, source := range mcp.Status.Configuration.Source {
@@ -50,6 +75,52 @@ func (m *manager) removePrivateDNSZone(ctx context.Context) error {
 			m.log.Printf("MCP %s not ready", mcp.Name)
 			return nil
 		}
+
+		machineCount += int(mcp.Status.MachineCount)
+	}
+
+	nodes, err := m.kubernetescli.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		m.log.Print(err)
+		return nil
+	}
+
+	if len(nodes.Items) != machineCount {
+		m.log.Printf("cluster has %d nodes but %d under MCPs, not removing private DNS zone", len(nodes.Items), machineCount)
+		return nil
+	}
+
+	v, err := version.GetClusterVersion(ctx, m.configcli)
+	if err != nil {
+		m.log.Print(err)
+		return nil
+	}
+
+	if v.Lt(version.NewVersion(4, 4)) {
+		// 4.3 uses SRV records for etcd
+		m.log.Printf("cluster version < 4.4, not removing private DNS zone")
+		return nil
+	}
+
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		dns, err := m.configcli.ConfigV1().DNSes().Get(ctx, "cluster", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if dns.Spec.PrivateZone == nil ||
+			!strings.HasPrefix(strings.ToLower(dns.Spec.PrivateZone.ID), strings.ToLower(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)) {
+			return nil
+		}
+
+		dns.Spec.PrivateZone = nil
+
+		_, err = m.configcli.ConfigV1().DNSes().Update(ctx, dns, metav1.UpdateOptions{})
+		return err
+	})
+	if err != nil {
+		m.log.Print(err)
+		return nil
 	}
 
 	for _, zone := range zones {
