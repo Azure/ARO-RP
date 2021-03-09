@@ -55,6 +55,19 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 					ListByResourceGroup(ctx, "testGroup", nil).
 					Return(nil, nil)
 			},
+			configcli: configfake.NewSimpleClientset(
+				&configv1.DNS{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster",
+					},
+					Spec: configv1.DNSSpec{
+						PrivateZone: &configv1.DNSZone{
+							ID: "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/privateDnsZones/zone1",
+						},
+					},
+				},
+			),
+			wantDNSPrivateZoneRemoved: true,
 		},
 		{
 			name: "has private zone, dnsmasq config not yet reconciled",

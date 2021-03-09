@@ -26,6 +26,27 @@ func (m *manager) removePrivateDNSZone(ctx context.Context) error {
 	}
 
 	if len(zones) == 0 {
+		// fix up any clusters that we already upgraded
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			dns, err := m.configcli.ConfigV1().DNSes().Get(ctx, "cluster", metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			if dns.Spec.PrivateZone == nil ||
+				!strings.HasPrefix(strings.ToLower(dns.Spec.PrivateZone.ID), strings.ToLower(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)) {
+				return nil
+			}
+
+			dns.Spec.PrivateZone = nil
+
+			_, err = m.configcli.ConfigV1().DNSes().Update(ctx, dns, metav1.UpdateOptions{})
+			return err
+		})
+		if err != nil {
+			m.log.Print(err)
+		}
+
 		return nil
 	}
 
@@ -88,7 +109,7 @@ func (m *manager) removePrivateDNSZone(ctx context.Context) error {
 		}
 
 		if dns.Spec.PrivateZone == nil ||
-			!strings.EqualFold(dns.Spec.PrivateZone.ID, *zones[0].ID) {
+			!strings.HasPrefix(strings.ToLower(dns.Spec.PrivateZone.ID), strings.ToLower(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)) {
 			return nil
 		}
 
