@@ -5,14 +5,11 @@ package workaround
 
 import (
 	"context"
-	"fmt"
 	"time"
 
-	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -52,25 +49,11 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, config
 	}
 }
 
-func (r *WorkaroundReconciler) actualClusterVersion(ctx context.Context) (*version.Version, error) {
-	cv, err := r.configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	for _, history := range cv.Status.History {
-		if history.State == configv1.CompletedUpdate {
-			return version.ParseVersion(history.Version)
-		}
-	}
-	return nil, fmt.Errorf("unknown cluster version")
-}
-
 // Reconcile makes sure that the workarounds are applied or removed as per the OpenShift version.
 func (r *WorkaroundReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	// TODO(mj): controller-runtime master fixes the need for this (https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/reconcile/reconcile.go#L93) but it's not yet released.
 	ctx := context.Background()
-	clusterVersion, err := r.actualClusterVersion(ctx)
+	clusterVersion, err := version.GetClusterVersion(ctx, r.configcli)
 	if err != nil {
 		r.log.Errorf("error getting the OpenShift version: %v", err)
 		return reconcile.Result{}, err
