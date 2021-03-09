@@ -80,6 +80,8 @@ func TestEmitJobConditions(t *testing.T) {
 		m:   m,
 	}
 
+	m.EXPECT().EmitGauge("job.count", int64(2), map[string]string{})
+
 	m.EXPECT().EmitGauge("job.conditions", int64(1), map[string]string{
 		"name":      "job-failing",
 		"namespace": "openshift",

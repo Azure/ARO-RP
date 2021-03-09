@@ -23,11 +23,14 @@ var podConditionsExpected = map[corev1.PodConditionType]corev1.ConditionStatus{
 func (mon *Monitor) emitPodConditions(ctx context.Context) error {
 	// to list pods once
 	var cont string
+	var count int64
 	for {
 		ps, err := mon.cli.CoreV1().Pods("").List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
 		if err != nil {
 			return err
 		}
+
+		count += int64(len(ps.Items))
 
 		mon._emitPodConditions(ps)
 		mon._emitPodContainerStatuses(ps)
@@ -37,6 +40,9 @@ func (mon *Monitor) emitPodConditions(ctx context.Context) error {
 			break
 		}
 	}
+
+	mon.emitGauge("pod.count", count, nil)
+
 	return nil
 }
 

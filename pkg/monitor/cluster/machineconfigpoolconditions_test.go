@@ -59,6 +59,8 @@ func TestEmitMachineConfigPoolConditions(t *testing.T) {
 		m:      m,
 	}
 
+	m.EXPECT().EmitGauge("machineconfigpool.count", int64(1), map[string]string{})
+
 	m.EXPECT().EmitGauge("machineconfigpool.conditions", int64(1), map[string]string{
 		"name":   "machine-config-pool",
 		"type":   "Degraded",

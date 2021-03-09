@@ -60,6 +60,8 @@ func TestEmitStatefulsetStatuses(t *testing.T) {
 		m:   m,
 	}
 
+	m.EXPECT().EmitGauge("statefulset.count", int64(3), map[string]string{})
+
 	m.EXPECT().EmitGauge("statefulset.statuses", int64(1), map[string]string{
 		"name":          "name1",
 		"namespace":     "openshift",

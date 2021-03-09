@@ -14,11 +14,14 @@ import (
 
 func (mon *Monitor) emitReplicasetStatuses(ctx context.Context) error {
 	var cont string
+	var count int64
 	for {
 		rss, err := mon.cli.AppsV1().ReplicaSets("").List(ctx, metav1.ListOptions{Limit: 500, Continue: cont})
 		if err != nil {
 			return err
 		}
+
+		count += int64(len(rss.Items))
 
 		for _, rs := range rss.Items {
 			if !namespace.IsOpenShift(rs.Namespace) {
@@ -42,6 +45,8 @@ func (mon *Monitor) emitReplicasetStatuses(ctx context.Context) error {
 			break
 		}
 	}
+
+	mon.emitGauge("replicaset.count", count, nil)
 
 	return nil
 }
