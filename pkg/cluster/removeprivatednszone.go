@@ -11,6 +11,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func (m *manager) removePrivateDNSZone(ctx context.Context) error {
@@ -63,6 +64,18 @@ func (m *manager) removePrivateDNSZone(ctx context.Context) error {
 
 	if len(nodes.Items) != machineCount {
 		m.log.Printf("cluster has %d nodes but %d under MCPs, not removing private DNS zone", len(nodes.Items), machineCount)
+		return nil
+	}
+
+	v, err := version.GetClusterVersion(ctx, m.configcli)
+	if err != nil {
+		m.log.Print(err)
+		return nil
+	}
+
+	if v.Lt(version.NewVersion(4, 4)) {
+		// 4.3 uses SRV records for etcd
+		m.log.Printf("cluster version < 4.4, not removing private DNS zone")
 		return nil
 	}
 
