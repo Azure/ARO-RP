@@ -19,7 +19,7 @@ import (
 )
 
 func (d *deployer) fixupBillingRoleAssignment(ctx context.Context) error {
-	roleassignments, err := d.roleassignments.ListForResource(ctx, d.config.RPResourceGroupName, "Microsoft.CosmosDB", "", "databaseAccounts", *d.config.Configuration.DatabaseAccountName, "")
+	roleassignments, err := d.roleassignments.ListForResource(ctx, d.config.RPResourceGroupName, "Microsoft.DocumentDB", "", "databaseAccounts", *d.config.Configuration.DatabaseAccountName, "")
 	if err != nil {
 		return err
 	}
