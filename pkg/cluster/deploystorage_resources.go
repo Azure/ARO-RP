@@ -15,36 +15,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
 
-var extraDenyAssignmentExclusions = map[string][]string{
-	"Microsoft.RedHatOpenShift/RedHatEngineering": {
-		"Microsoft.Network/networkInterfaces/effectiveRouteTable/action",
-	},
-}
-
 func (m *manager) denyAssignment() *arm.Resource {
-	notActions := []string{
-		"Microsoft.Network/networkSecurityGroups/join/action",
-		"Microsoft.Compute/disks/beginGetAccess/action",
-		"Microsoft.Compute/disks/endGetAccess/action",
-		"Microsoft.Compute/disks/write",
-		"Microsoft.Compute/snapshots/beginGetAccess/action",
-		"Microsoft.Compute/snapshots/endGetAccess/action",
-		"Microsoft.Compute/snapshots/write",
-		"Microsoft.Compute/snapshots/delete",
-	}
-
-	var props = m.subscriptionDoc.Subscription.Properties
-
-	for flag, exclusions := range extraDenyAssignmentExclusions {
-		if feature.IsRegisteredForFeature(props, flag) {
-			notActions = append(notActions, exclusions...)
-		}
-	}
-
 	return &arm.Resource{
 		Resource: &mgmtauthorization.DenyAssignment{
 			Name: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
@@ -58,7 +32,17 @@ func (m *manager) denyAssignment() *arm.Resource {
 							"*/delete",
 							"*/write",
 						},
-						NotActions: &notActions,
+						NotActions: &[]string{
+							"Microsoft.Compute/disks/beginGetAccess/action",
+							"Microsoft.Compute/disks/endGetAccess/action",
+							"Microsoft.Compute/disks/write",
+							"Microsoft.Compute/snapshots/beginGetAccess/action",
+							"Microsoft.Compute/snapshots/delete",
+							"Microsoft.Compute/snapshots/endGetAccess/action",
+							"Microsoft.Compute/snapshots/write",
+							"Microsoft.Network/networkInterfaces/effectiveRouteTable/action",
+							"Microsoft.Network/networkSecurityGroups/join/action",
+						},
 					},
 				},
 				Scope: &m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID,
@@ -81,55 +65,64 @@ func (m *manager) denyAssignment() *arm.Resource {
 	}
 }
 
-func (m *manager) clusterServicePrincipalRBAC() []*arm.Resource {
+func (m *manager) clusterServicePrincipalRoleDefinitionName() string {
 	infraSuffix := m.doc.OpenShiftCluster.Properties.InfraID
 	if len(infraSuffix) > 5 {
 		infraSuffix = infraSuffix[len(infraSuffix)-5:]
 	}
-	name := fmt.Sprintf("Azure Red Hat OpenShift cluster (%s)", infraSuffix)
+	return fmt.Sprintf("Azure Red Hat OpenShift cluster (%s)", infraSuffix)
+}
 
-	return []*arm.Resource{
-		rbac.CustomRoleDefinition(name,
-			[]mgmtauthorization.Permission{
-				{
-					Actions: &[]string{
-						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/disks
-						"Microsoft.Compute/disks/*",
+func (m *manager) clusterServicePrincipalRoleDefinition() *arm.Resource {
+	return rbac.CustomRoleDefinition(m.clusterServicePrincipalRoleDefinitionName(),
+		[]mgmtauthorization.Permission{
+			{
+				Actions: &[]string{
+					//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/disks
+					"Microsoft.Compute/disks/*",
 
-						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/internalloadbalancers
-						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/publicloadbalancers
-						"Microsoft.Network/loadBalancers/*",
+					//needed for user-initiated backup
+					"Microsoft.Compute/snapshots/*",
 
-						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/networkinterfaces
-						"Microsoft.Network/networkInterfaces/*",
+					//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/internalloadbalancers
+					//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/publicloadbalancers
+					"Microsoft.Network/loadBalancers/*",
 
-						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/publicips
-						"Microsoft.Network/publicIPAddresses/*",
+					//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/networkinterfaces
+					"Microsoft.Network/networkInterfaces/*",
 
-						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/securitygroups
-						"Microsoft.Network/networkSecurityGroups/*",
+					//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/publicips
+					"Microsoft.Network/publicIPAddresses/*",
 
-						//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/virtualmachines
-						"Microsoft.Compute/virtualMachines/*",
+					//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/securitygroups
+					"Microsoft.Network/networkSecurityGroups/*",
 
-						//based on openshift/cluster-insgress-operator /pkg/dns/azure/client
-						"Microsoft.Network/privateDnsZones/A/*",
+					//based on openshift/cluster-api-provider-azure /pkg/cloud/azure/services/virtualmachines
+					"Microsoft.Compute/virtualMachines/*",
 
-						//based on openshift/cluster-image-registry-operator /pkg/storage/azure
-						"Microsoft.Storage/storageAccounts/*",
-					},
-					NotActions: &[]string{
-						"Microsoft.Compute/virtualMachines/powerOff/action",
-						"Microsoft.Compute/virtualMachines/deallocate/action",
-						"Microsoft.Compute/virtualMachines/generalize/action",
-						"Microsoft.Compute/virtualMachines/capture/action",
-						"Microsoft.Compute/virtualMachines/performMaintenance/action",
-						"Microsoft.Network/networkSecurityGroups/delete",
-					},
+					//based on openshift/cluster-insgress-operator /pkg/dns/azure/client
+					"Microsoft.Network/privateDnsZones/A/*",
+
+					//based on openshift/cluster-image-registry-operator /pkg/storage/azure
+					"Microsoft.Storage/storageAccounts/*",
 				},
-			}),
+				NotActions: &[]string{
+					"Microsoft.Compute/virtualMachines/powerOff/action",
+					"Microsoft.Compute/virtualMachines/deallocate/action",
+					"Microsoft.Compute/virtualMachines/generalize/action",
+					"Microsoft.Compute/virtualMachines/capture/action",
+					"Microsoft.Compute/virtualMachines/performMaintenance/action",
+					"Microsoft.Network/networkSecurityGroups/delete",
+				},
+			},
+		})
+}
+
+func (m *manager) clusterServicePrincipalRBAC() []*arm.Resource {
+	return []*arm.Resource{
+		m.clusterServicePrincipalRoleDefinition(),
 		rbac.ResourceGroupCustomRoleAssignment(
-			rbac.CustomRoleDefinitionName(name),
+			rbac.CustomRoleDefinitionName(m.clusterServicePrincipalRoleDefinitionName()),
 			"'"+m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID+"'"),
 	}
 }
