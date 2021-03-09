@@ -318,7 +318,7 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install azure-cli docker jq libassuan-devel gcc gpgme-devel rh-git29 rh-python36 tmpwatch lttng-usr
+yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install azure-cli docker jq libassuan-devel gcc rh-git29 rh-python36 tmpwatch lttng-usr
 
 GO_VERSION=1.14.9
 curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz | tar -C /usr/local -xz

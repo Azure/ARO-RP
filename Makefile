@@ -7,7 +7,7 @@ ifneq ($(shell uname -s),Darwin)
 endif
 
 aro: generate
-	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro
+	go build -tags containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro
 
 az: pyenv
 	. pyenv/bin/activate && \
@@ -36,6 +36,9 @@ image-aro: aro e2e.test
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
 
+image-aro-multistage:
+	docker build --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) .
+
 image-fluentbit:
 	docker build --no-cache --build-arg VERSION=1.6.10-1 \
 	  -f Dockerfile.fluentbit -t ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.6.10-1 .
@@ -49,6 +52,13 @@ image-routefix:
 	docker build --no-cache -f Dockerfile.routefix -t ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT) .
 
 publish-image-aro: image-aro
+	docker push $(ARO_IMAGE)
+ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
+		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
+		docker push arointsvc.azurecr.io/aro:latest
+endif
+
+publish-image-aro-multistage: image-aro-multistage
 	docker push $(ARO_IMAGE)
 ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
 		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
@@ -125,4 +135,4 @@ vendor:
 	# https://groups.google.com/forum/#!topic/golang-nuts/51-D_YFC78k
 	hack/update-go-module-dependencies.sh
 
-.PHONY: admin.kubeconfig aro az clean client discoverycache generate image-aro image-fluentbit image-proxy image-routefix lint-go proxy publish-image-aro publish-image-fluentbit publish-image-proxy publish-image-routefix secrets secrets-update e2e.test test-e2e test-go test-python vendor
+.PHONY: admin.kubeconfig aro az clean client discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy image-routefix lint-go proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy publish-image-routefix secrets secrets-update e2e.test test-e2e test-go test-python vendor
