@@ -15,7 +15,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 )
@@ -79,7 +78,6 @@ func TestCreateAndUpdateErrors(t *testing.T) {
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Location().AnyTimes().Return(location)
 			env.EXPECT().EnsureARMResourceGroupRoleAssignment(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
-			env.EXPECT().DeploymentMode().Return(deployment.Production)
 
 			m := &manager{
 				log:            logrus.NewEntry(logrus.StandardLogger()),

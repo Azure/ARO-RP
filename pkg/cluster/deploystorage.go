@@ -71,9 +71,6 @@ func (m *manager) ensureResourceGroup(ctx context.Context) error {
 		Location:  &m.doc.OpenShiftCluster.Location,
 		ManagedBy: to.StringPtr(m.doc.OpenShiftCluster.ID),
 	}
-	if m.env.DeploymentMode() == deployment.Development {
-		group.ManagedBy = nil
-	}
 
 	_, err := m.resourceGroups.CreateOrUpdate(ctx, resourceGroup, group)
 
