@@ -32,6 +32,7 @@ func (m *manager) removePrivateDNSZone(ctx context.Context) error {
 		return nil
 	}
 
+	var machineCount int
 	for _, mcp := range mcps.Items {
 		var found bool
 		for _, source := range mcp.Status.Configuration.Source {
@@ -50,6 +51,19 @@ func (m *manager) removePrivateDNSZone(ctx context.Context) error {
 			m.log.Printf("MCP %s not ready", mcp.Name)
 			return nil
 		}
+
+		machineCount += int(mcp.Status.MachineCount)
+	}
+
+	nodes, err := m.kubernetescli.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		m.log.Print(err)
+		return nil
+	}
+
+	if len(nodes.Items) != machineCount {
+		m.log.Printf("cluster has %d nodes but %d under MCPs, not removing private DNS zone", len(nodes.Items), machineCount)
+		return nil
 	}
 
 	for _, zone := range zones {

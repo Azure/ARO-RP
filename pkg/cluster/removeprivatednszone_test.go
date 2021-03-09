@@ -16,6 +16,8 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_privatedns "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/privatedns"
@@ -26,10 +28,11 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 	const resourceGroupID = "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup"
 
 	for _, tt := range []struct {
-		name   string
-		doc    *api.OpenShiftClusterDocument
-		mocks  func(*mock_privatedns.MockPrivateZonesClient, *mock_privatedns.MockVirtualNetworkLinksClient)
-		mcocli mcoclient.Interface
+		name          string
+		doc           *api.OpenShiftClusterDocument
+		mocks         func(*mock_privatedns.MockPrivateZonesClient, *mock_privatedns.MockVirtualNetworkLinksClient)
+		kubernetescli kubernetes.Interface
+		mcocli        mcoclient.Interface
 	}{
 		{
 			name: "no private zones",
@@ -111,7 +114,47 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 			),
 		},
 		{
-			name: "has private zone, dnsmasq rolled out",
+			name: "has private zone, node mismatch",
+			doc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: resourceGroupID,
+						},
+					},
+				},
+			},
+			mocks: func(privateZones *mock_privatedns.MockPrivateZonesClient, virtualNetworkLinks *mock_privatedns.MockVirtualNetworkLinksClient) {
+				privateZones.EXPECT().
+					ListByResourceGroup(ctx, "testGroup", nil).
+					Return([]mgmtprivatedns.PrivateZone{
+						{
+							ID: to.StringPtr("/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/privateZones/zone1"),
+						},
+					}, nil)
+			},
+			kubernetescli: fake.NewSimpleClientset(
+				&corev1.Node{},
+			),
+			mcocli: mcofake.NewSimpleClientset(
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "master",
+					},
+					Status: mcv1.MachineConfigPoolStatus{
+						Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+							Source: []corev1.ObjectReference{
+								{
+									Name: "99-master-aro-dns",
+								},
+							},
+						},
+					},
+				},
+			),
+		},
+		{
+			name: "has private zone, nodes match, dnsmasq rolled out",
 			doc: &api.OpenShiftClusterDocument{
 				OpenShiftCluster: &api.OpenShiftCluster{
 					Properties: api.OpenShiftClusterProperties{
@@ -146,6 +189,9 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 					DeleteAndWait(ctx, "testGroup", "zone1", "").
 					Return(nil)
 			},
+			kubernetescli: fake.NewSimpleClientset(
+				&corev1.Node{},
+			),
 			mcocli: mcofake.NewSimpleClientset(
 				&mcv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{
@@ -159,6 +205,9 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 								},
 							},
 						},
+						MachineCount:        1,
+						UpdatedMachineCount: 1,
+						ReadyMachineCount:   1,
 					},
 				},
 			),
@@ -177,6 +226,7 @@ func TestRemovePrivateDNSZone(t *testing.T) {
 				doc:                 tt.doc,
 				privateZones:        privateZones,
 				virtualNetworkLinks: virtualNetworkLinks,
+				kubernetescli:       tt.kubernetescli,
 				mcocli:              tt.mcocli,
 			}
 
