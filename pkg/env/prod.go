@@ -49,6 +49,8 @@ type prod struct {
 	clusterGenevaLoggingEnvironment   string
 
 	log *logrus.Entry
+
+	features map[Feature]bool
 }
 
 func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
@@ -92,6 +94,20 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		clusterGenevaLoggingConfigVersion: os.Getenv("CLUSTER_MDSD_CONFIG_VERSION"),
 
 		log: log,
+
+		features: map[Feature]bool{},
+	}
+
+	features := os.Getenv("RP_FEATURES")
+	if features != "" {
+		for _, feature := range strings.Split(features, ",") {
+			f, err := FeatureString("Feature" + feature)
+			if err != nil {
+				return nil, err
+			}
+
+			p.features[f] = true
+		}
 	}
 
 	rpAuthorizer, err := p.NewRPAuthorizer(p.Environment().ResourceManagerEndpoint)
@@ -231,6 +247,10 @@ func (p *prod) ClusterKeyvault() keyvault.Manager {
 
 func (p *prod) Domain() string {
 	return os.Getenv("DOMAIN_NAME")
+}
+
+func (p *prod) FeatureIsSet(f Feature) bool {
+	return p.features[f]
 }
 
 func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {

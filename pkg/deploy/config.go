@@ -55,6 +55,7 @@ type Configuration struct {
 	PortalAccessGroupIDs               []string      `json:"portalAccessGroupIds,omitempty" value:"required"`
 	PortalClientID                     *string       `json:"portalClientId,omitempty" value:"required"`
 	PortalElevatedGroupIDs             []string      `json:"portalElevatedGroupIds,omitempty" value:"required"`
+	RPFeatures                         []string      `json:"rpFeatures,omitempty"`
 	RPImagePrefix                      *string       `json:"rpImagePrefix,omitempty" value:"required"`
 	RPMode                             *string       `json:"rpMode,omitempty"`
 	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty" value:"required"`

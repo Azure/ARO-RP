@@ -6,14 +6,13 @@ package cluster
 import (
 	"context"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 func (m *manager) createOrUpdateDenyAssignment(ctx context.Context) error {
-	if m.env.DeploymentMode() != deployment.Production {
-		// only need this upgrade in production, where there are DenyAssignments
+	if m.env.FeatureIsSet(env.FeatureDisableDenyAssignments) {
 		return nil
 	}
 

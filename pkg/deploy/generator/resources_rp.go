@@ -326,6 +326,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"portalAccessGroupIds",
 		"portalClientId",
 		"portalElevatedGroupIds",
+		"rpFeatures",
 		"rpImage",
 		"rpMode",
 		"rpParentDomainName",
@@ -524,6 +525,7 @@ KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT=AzureRedHatOpenShiftRP
 MDM_NAMESPACE=RP
 MDSD_ENVIRONMENT='$MDSDENVIRONMENT'
+RP_FEATURES='$RPFEATURES'
 RP_MODE='$RPMODE'
 RPIMAGE='$RPIMAGE'
 EOF
@@ -551,6 +553,7 @@ ExecStart=/usr/bin/docker run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -e MDSD_ENVIRONMENT \
+  -e RP_FEATURES \
   -e RP_MODE \
   -m 2g \
   -p 443:8443 \

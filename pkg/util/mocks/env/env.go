@@ -15,6 +15,7 @@ import (
 	azure "github.com/Azure/go-autorest/autorest/azure"
 	gomock "github.com/golang/mock/gomock"
 
+	env "github.com/Azure/ARO-RP/pkg/env"
 	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	deployment "github.com/Azure/ARO-RP/pkg/util/deployment"
 	keyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
@@ -391,6 +392,20 @@ func (m *MockInterface) FPAuthorizer(arg0, arg1 string) (refreshable.Authorizer,
 func (mr *MockInterfaceMockRecorder) FPAuthorizer(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FPAuthorizer", reflect.TypeOf((*MockInterface)(nil).FPAuthorizer), arg0, arg1)
+}
+
+// FeatureIsSet mocks base method
+func (m *MockInterface) FeatureIsSet(arg0 env.Feature) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FeatureIsSet", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// FeatureIsSet indicates an expected call of FeatureIsSet
+func (mr *MockInterfaceMockRecorder) FeatureIsSet(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FeatureIsSet", reflect.TypeOf((*MockInterface)(nil).FeatureIsSet), arg0)
 }
 
 // Hostname mocks base method

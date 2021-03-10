@@ -13,8 +13,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 )
@@ -66,16 +66,16 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			env := mock_env.NewMockInterface(controller)
+			_env := mock_env.NewMockInterface(controller)
 			deployments := mock_features.NewMockDeploymentsClient(controller)
 
-			env.EXPECT().DeploymentMode().Return(deployment.Production)
+			_env.EXPECT().FeatureIsSet(env.FeatureDisableDenyAssignments).AnyTimes().Return(false)
 
 			if tt.mocks != nil {
 				tt.mocks(deployments)
 			}
 
-			m.env = env
+			m.env = _env
 			m.deployments = deployments
 
 			err := m.createOrUpdateDenyAssignment(ctx)

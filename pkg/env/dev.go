@@ -55,6 +55,8 @@ func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		return nil, err
 	}
 
+	d.features[FeatureDisableDenyAssignments] = true
+
 	ccc := auth.ClientCredentialsConfig{
 		ClientID:     os.Getenv("AZURE_ARM_CLIENT_ID"),
 		ClientSecret: os.Getenv("AZURE_ARM_CLIENT_SECRET"),

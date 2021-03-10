@@ -18,6 +18,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
+type Feature int
+
+// At least to start with, features are intended to be used so that the
+// production default is not set (in production RP_FEATURES is unset).
+const (
+	FeatureDisableDenyAssignments Feature = iota
+)
+
 const (
 	RPFirstPartySecretName           = "rp-firstparty"
 	RPServerSecretName               = "rp-server"
@@ -49,6 +57,7 @@ type Interface interface {
 	ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
 	ClusterKeyvault() keyvault.Manager
 	Domain() string
+	FeatureIsSet(Feature) bool
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
 	Listen() (net.Listener, error)
 	ServiceKeyvault() keyvault.Manager
