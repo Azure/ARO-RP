@@ -87,11 +87,10 @@ type claims struct {
 }
 
 type aad struct {
-	isDevelopmentMode bool
-	log               *logrus.Entry
-	env               env.Core
-	now               func() time.Time
-	rt                http.RoundTripper
+	log *logrus.Entry
+	env env.Core
+	now func() time.Time
+	rt  http.RoundTripper
 
 	tenantID    string
 	clientID    string
@@ -122,11 +121,10 @@ func NewAAD(log *logrus.Entry,
 	}
 
 	a := &aad{
-		isDevelopmentMode: env.IsDevelopmentMode(),
-		log:               log,
-		env:               env,
-		now:               time.Now,
-		rt:                http.DefaultTransport,
+		log: log,
+		env: env,
+		now: time.Now,
+		rt:  http.DefaultTransport,
 
 		tenantID:    env.TenantID(),
 		clientID:    clientID,
