@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -59,6 +60,17 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		}
 	}
 
+	if deployment.NewMode() != deployment.Development {
+		for _, key := range []string{
+			"CLUSTER_MDSD_CONFIG_VERSION",
+			"MDSD_ENVIRONMENT",
+		} {
+			if _, found := os.LookupEnv(key); !found {
+				return nil, fmt.Errorf("environment variable %q unset", key)
+			}
+		}
+	}
+
 	core, err := NewCore(ctx, log)
 	if err != nil {
 		return nil, err
@@ -73,8 +85,8 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		Core:   core,
 		Dialer: dialer,
 
-		clusterGenevaLoggingEnvironment:   "DiagnosticsProd",
-		clusterGenevaLoggingConfigVersion: "2.2",
+		clusterGenevaLoggingEnvironment:   os.Getenv("MDSD_ENVIRONMENT"),
+		clusterGenevaLoggingConfigVersion: os.Getenv("CLUSTER_MDSD_CONFIG_VERSION"),
 
 		log: log,
 	}

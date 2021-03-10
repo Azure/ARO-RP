@@ -33,6 +33,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"adminApiCaBundle",
 			"adminApiClientCertCommonName",
 			"billingServicePrincipalId",
+			"clusterMdsdConfigVersion",
 			"encryptionAtHost",
 			"extraCosmosDBIPs",
 			"keyvaultPrefix",

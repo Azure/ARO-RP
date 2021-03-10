@@ -34,6 +34,7 @@ type Configuration struct {
 	AdminAPICABundle                   *string       `json:"adminApiCaBundle,omitempty" value:"required"`
 	AdminAPIClientCertCommonName       *string       `json:"adminApiClientCertCommonName,omitempty" value:"required"`
 	BillingServicePrincipalID          *string       `json:"billingServicePrincipalId,omitempty" value:"required"`
+	ClusterMDSDConfigVersion           *string       `json:"clusterMdsdConfigVersion,omitempty" value:"required"`
 	ClusterParentDomainName            *string       `json:"clusterParentDomainName,omitempty" value:"required"`
 	DatabaseAccountName                *string       `json:"databaseAccountName,omitempty" value:"required"`
 	ExtraClusterKeyvaultAccessPolicies []interface{} `json:"extraClusterKeyvaultAccessPolicies,omitempty" value:"required"`
