@@ -12,6 +12,9 @@ import (
 	"github.com/ghodss/yaml"
 )
 
+// NOTICE: when modifying the config definition here, don't forget to update
+// DevConfig().
+
 // Config represents configuration object for deployer tooling
 type Config struct {
 	RPs           []RPConfig     `json:"rps,omitempty"`

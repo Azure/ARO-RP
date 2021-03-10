@@ -29,6 +29,9 @@ client: generate
 deploy:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
+dev-config.yaml:
+	go run ./hack/gendevconfig >dev-config.yaml
+
 discoverycache:
 	$(MAKE) admin.kubeconfig
 	KUBECONFIG=admin.kubeconfig go run ./hack/gendiscoverycache
