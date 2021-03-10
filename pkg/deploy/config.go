@@ -22,7 +22,7 @@ type Config struct {
 type RPConfig struct {
 	Location            string         `json:"location,omitempty"`
 	SubscriptionID      string         `json:"subscriptionId,omitempty"`
-	RPResourceGroupName string         `json:"resourceGroupName,omitempty"`
+	RPResourceGroupName string         `json:"rpResourceGroupName,omitempty"`
 	Configuration       *Configuration `json:"configuration,omitempty"`
 }
 
