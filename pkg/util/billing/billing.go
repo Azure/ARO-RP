@@ -39,7 +39,6 @@ type Manager interface {
 }
 
 type manager struct {
-	env           env.Interface
 	storageClient *azstorage.Client
 	billingDB     database.Billing
 	subDB         database.Subscriptions
@@ -53,7 +52,6 @@ func NewManager(env env.Interface, billing database.Billing, sub database.Subscr
 	}
 
 	return &manager{
-		env:           env,
 		storageClient: storageClient,
 		subDB:         sub,
 		billingDB:     billing,
@@ -149,7 +147,7 @@ func isSubscriptionRegisteredForE2E(sub *api.SubscriptionProperties) bool {
 // storage account. This is used later on by the billing e2e
 func (m *manager) createOrUpdateE2EBlob(ctx context.Context, doc *api.BillingDocument) error {
 	//skip updating the storage account if this is a dev scenario
-	if m.env.IsDevelopmentMode() {
+	if m.storageClient == nil {
 		return nil
 	}
 
