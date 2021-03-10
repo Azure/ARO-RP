@@ -27,6 +27,16 @@ steps:
 
     VERSION=$(curl -sf "https://${{ parameters.aroVersionStorageAccount }}.blob.core.windows.net/rpversion/$LOCATION")
 
+    # TODO: get these into ADO variables, then remove rpMode
+    case ${{ parameters.rpMode }} in
+      prod)
+        export AZURE_FP_CLIENT_ID=f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875
+        ;;
+      int)
+        export AZURE_FP_CLIENT_ID=71cfb175-ea3a-444e-8c03-b119b2752ce4
+        ;;
+    esac
+
     # TODO: remove --env RESOURCEGROUP after next RP deployment.
 
     # TODO: e2e.test arguments need to move inside the container somehow.  Maybe
@@ -37,6 +47,7 @@ steps:
       --env RP_MODE=${{ parameters.rpMode }} \
       --env AZURE_CLIENT_ID \
       --env AZURE_CLIENT_SECRET \
+      --env AZURE_FP_CLIENT_ID \
       --env AZURE_TENANT_ID \
       --env AZURE_SUBSCRIPTION_ID \
       --env LOCATION \

@@ -63,11 +63,6 @@ type Cluster struct {
 	ciParentVnetPeerings              network.VirtualNetworkPeeringsClient
 }
 
-const (
-	firstPartyClientIDProduction  = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
-	firstPartyClientIDIntegration = "71cfb175-ea3a-444e-8c03-b119b2752ce4"
-)
-
 type errors []error
 
 func (errs errors) Error() string {
@@ -145,15 +140,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return nil
 	}
 
-	var fpClientID string
-	switch c.env.DeploymentMode() {
-	case deployment.Integration:
-		fpClientID = firstPartyClientIDIntegration
-	case deployment.Production:
-		fpClientID = firstPartyClientIDProduction
-	default:
-		fpClientID = os.Getenv("AZURE_FP_CLIENT_ID")
-	}
+	fpClientID := os.Getenv("AZURE_FP_CLIENT_ID")
 
 	fpSPID, err := c.getServicePrincipal(ctx, fpClientID)
 	if err != nil {
