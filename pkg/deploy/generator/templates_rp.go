@@ -47,7 +47,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"portalElevatedGroupIds",
 			"rpFeatures",
 			"rpImage",
-			"rpMode",
 			"rpParentDomainName",
 			"sshPublicKey",
 			"storageAccountDomain",
@@ -64,8 +63,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			p.Type = "bool"
 		case "billingE2EStorageAccountId",
 			"extraCosmosDBIPs",
-			"rpFeatures",
-			"rpMode":
+			"rpFeatures":
 			p.DefaultValue = ""
 		case "vmSize":
 			p.DefaultValue = "Standard_D2s_v3"

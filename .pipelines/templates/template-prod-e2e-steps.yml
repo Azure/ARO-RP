@@ -44,7 +44,6 @@ steps:
     docker run \
       --rm \
       --env CI=true \
-      --env RP_MODE=${{ parameters.rpMode }} \
       --env AZURE_CLIENT_ID \
       --env AZURE_CLIENT_SECRET \
       --env AZURE_FP_CLIENT_ID \
