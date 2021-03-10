@@ -105,7 +105,7 @@ test-e2e: e2e.test
 	./e2e.test -test.timeout 180m -test.v -ginkgo.v
 
 test-go: generate
-	go build ./...
+	go build -tags containers_image_openpgp ./...
 
 	gofmt -s -w cmd hack pkg test
 	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg test
