@@ -53,6 +53,7 @@ type prod struct {
 
 func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	for _, key := range []string{
+		"AZURE_FP_CLIENT_ID",
 		"DOMAIN_NAME",
 	} {
 		if _, found := os.LookupEnv(key); !found {
@@ -84,6 +85,8 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	p := &prod{
 		Core:   core,
 		Dialer: dialer,
+
+		fpClientID: os.Getenv("AZURE_FP_CLIENT_ID"),
 
 		clusterGenevaLoggingEnvironment:   os.Getenv("MDSD_ENVIRONMENT"),
 		clusterGenevaLoggingConfigVersion: os.Getenv("CLUSTER_MDSD_CONFIG_VERSION"),
@@ -126,7 +129,6 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 
 	p.fpPrivateKey = fpPrivateKey
 	p.fpCertificate = fpCertificates[0]
-	p.fpClientID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
 
 	clusterGenevaLoggingPrivateKey, clusterGenevaLoggingCertificates, err := p.serviceKeyvault.GetCertificateSecret(ctx, ClusterLoggingSecretName)
 	if err != nil {

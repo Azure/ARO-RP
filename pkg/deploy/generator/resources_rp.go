@@ -321,6 +321,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"acrResourceId",
 		"clusterMdsdConfigVersion",
 		"clusterParentDomainName",
+		"fpClientId",
 		"portalAccessGroupIds",
 		"portalClientId",
 		"portalElevatedGroupIds",
@@ -513,6 +514,7 @@ EOF
 cat >/etc/sysconfig/aro-rp <<EOF
 ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
+AZURE_FP_CLIENT_ID='$FPCLIENTID'
 CLUSTER_MDSD_CONFIG_VERSION='$CLUSTERMDSDCONFIGVERSION'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 DOMAIN_NAME='$LOCATION.$CLUSTERPARENTDOMAINNAME'
@@ -538,6 +540,7 @@ ExecStart=/usr/bin/docker run \
   --rm \
   -e ACR_RESOURCE_ID \
   -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
+  -e AZURE_FP_CLIENT_ID \
   -e CLUSTER_MDSD_CONFIG_VERSION \
   -e DATABASE_ACCOUNT_NAME \
   -e DOMAIN_NAME \

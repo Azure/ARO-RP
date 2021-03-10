@@ -41,6 +41,7 @@ type Configuration struct {
 	ExtraCosmosDBIPs                   []string      `json:"extraCosmosDBIPs,omitempty" value:"required"`
 	ExtraPortalKeyvaultAccessPolicies  []interface{} `json:"extraPortalKeyvaultAccessPolicies,omitempty" value:"required"`
 	ExtraServiceKeyvaultAccessPolicies []interface{} `json:"extraServiceKeyvaultAccessPolicies,omitempty" value:"required"`
+	FPClientID                         *string       `json:"fpClientId,omitempty" value:"required"`
 	FPServerCertCommonName             *string       `json:"fpServerCertCommonName,omitempty"`
 	FPServicePrincipalID               *string       `json:"fpServicePrincipalId,omitempty" value:"required"`
 	GlobalResourceGroupName            *string       `json:"globalResourceGroupName,omitempty" value:"required"`

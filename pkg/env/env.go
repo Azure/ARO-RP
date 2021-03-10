@@ -59,12 +59,9 @@ type Interface interface {
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
-	switch deployment.NewMode() {
-	case deployment.Development:
+	if deployment.NewMode() == deployment.Development {
 		return newDev(ctx, log)
-	case deployment.Integration:
-		return newInt(ctx, log)
-	default:
-		return newProd(ctx, log)
 	}
+
+	return newProd(ctx, log)
 }

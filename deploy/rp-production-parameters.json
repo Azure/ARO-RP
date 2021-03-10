@@ -29,6 +29,9 @@
         "extraCosmosDBIPs": {
             "value": ""
         },
+        "fpClientId": {
+            "value": ""
+        },
         "fpServicePrincipalId": {
             "value": ""
         },

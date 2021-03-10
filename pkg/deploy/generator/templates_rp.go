@@ -36,6 +36,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clusterMdsdConfigVersion",
 			"encryptionAtHost",
 			"extraCosmosDBIPs",
+			"fpClientId",
 			"keyvaultPrefix",
 			"mdmFrontendUrl",
 			"mdsdConfigVersion",
