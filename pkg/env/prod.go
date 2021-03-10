@@ -167,7 +167,21 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 }
 
 func (p *prod) InitializeAuthorizers() error {
-	p.armClientAuthorizer = clientauthorizer.NewARM(p.log, p.Core)
+	if !p.FeatureIsSet(FeatureEnableDevelopmentAuthorizer) {
+		p.armClientAuthorizer = clientauthorizer.NewARM(p.log, p.Core)
+
+	} else {
+		armClientAuthorizer, err := clientauthorizer.NewAdmin(
+			p.log,
+			"/etc/aro-rp/arm-ca-bundle.pem",
+			os.Getenv("ARM_API_CLIENT_CERT_COMMON_NAME"),
+		)
+		if err != nil {
+			return err
+		}
+
+		p.armClientAuthorizer = armClientAuthorizer
+	}
 
 	adminClientAuthorizer, err := clientauthorizer.NewAdmin(
 		p.log,

@@ -26,6 +26,7 @@ type Feature int
 const (
 	FeatureDisableDenyAssignments Feature = iota
 	FeatureDisableSignedCertificates
+	FeatureEnableDevelopmentAuthorizer
 )
 
 const (

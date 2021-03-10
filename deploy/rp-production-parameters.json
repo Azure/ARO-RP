@@ -11,6 +11,12 @@
         "adminApiClientCertCommonName": {
             "value": ""
         },
+        "armApiCaBundle": {
+            "value": ""
+        },
+        "armApiClientCertCommonName": {
+            "value": ""
+        },
         "billingE2EStorageAccountId": {
             "value": ""
         },

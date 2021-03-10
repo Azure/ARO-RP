@@ -32,6 +32,8 @@ func (g *generator) rpTemplate() *arm.Template {
 			"acrResourceId",
 			"adminApiCaBundle",
 			"adminApiClientCertCommonName",
+			"armApiCaBundle",
+			"armApiClientCertCommonName",
 			"billingE2EStorageAccountId",
 			"billingServicePrincipalId",
 			"clusterMdsdConfigVersion",
@@ -61,7 +63,9 @@ func (g *generator) rpTemplate() *arm.Template {
 		switch param {
 		case "encryptionAtHost":
 			p.Type = "bool"
-		case "billingServicePrincipalId",
+		case "armApiCaBundle",
+			"armApiClientCertCommonName",
+			"billingServicePrincipalId",
 			"billingE2EStorageAccountId",
 			"extraCosmosDBIPs",
 			"rpFeatures":

@@ -318,6 +318,8 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"mdmFrontendUrl",
 		"mdsdEnvironment",
 		"acrResourceId",
+		"adminApiClientCertCommonName",
+		"armApiClientCertCommonName",
 		"billingE2EStorageAccountId",
 		"clusterMdsdConfigVersion",
 		"clusterParentDomainName",
@@ -329,7 +331,6 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"rpImage",
 		"rpMdsdConfigVersion",
 		"rpParentDomainName",
-		"adminApiClientCertCommonName",
 		"databaseAccountName",
 		"keyvaultPrefix",
 	} {
@@ -342,6 +343,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 
 	for _, variable := range []string{
 		"adminApiCaBundle",
+		"armApiCaBundle",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s='''", strings.ToUpper(variable)),
@@ -467,6 +469,9 @@ az logout
 
 mkdir /etc/aro-rp
 base64 -d <<<"$ADMINAPICABUNDLE" >/etc/aro-rp/admin-ca-bundle.pem
+if [[ -n "$ARMAPICABUNDLE" ]]; then
+  base64 -d <<<"$ARMAPICABUNDLE" >/etc/aro-rp/arm-ca-bundle.pem
+fi
 chown -R 1000:1000 /etc/aro-rp
 
 cat >/etc/sysconfig/mdm <<EOF
@@ -515,6 +520,7 @@ EOF
 cat >/etc/sysconfig/aro-rp <<EOF
 ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
+ARM_API_CLIENT_CERT_COMMON_NAME='$ARMAPICLIENTCERTCOMMONNAME'
 AZURE_FP_CLIENT_ID='$FPCLIENTID'
 BILLING_E2E_STORAGE_ACCOUNT_ID='$BILLINGE2ESTORAGEACCOUNTID'
 CLUSTER_MDSD_CONFIG_VERSION='$CLUSTERMDSDCONFIGVERSION'
@@ -542,6 +548,7 @@ ExecStart=/usr/bin/docker run \
   --rm \
   -e ACR_RESOURCE_ID \
   -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
+  -e ARM_API_CLIENT_CERT_COMMON_NAME \
   -e AZURE_FP_CLIENT_ID \
   -e BILLING_E2E_STORAGE_ACCOUNT_ID \
   -e CLUSTER_MDSD_CONFIG_VERSION \
@@ -635,7 +642,6 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
-  -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
   -e AZURE_PORTAL_ACCESS_GROUP_IDS \
   -e AZURE_PORTAL_CLIENT_ID \
   -e AZURE_PORTAL_ELEVATED_GROUP_IDS \
