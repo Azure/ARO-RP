@@ -20,7 +20,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/portal/util/responsewriter"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -40,7 +39,6 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range []struct {
 		name           string
-		deploymentMode deployment.Mode
 		r              func(*http.Request)
 		checker        func(*testdatabase.Checker, *cosmosdb.FakePortalDocumentClient)
 		wantStatusCode int
@@ -138,7 +136,7 @@ func TestNew(t *testing.T) {
 			defer ctrl.Finish()
 
 			env := mock_env.NewMockCore(ctrl)
-			env.EXPECT().DeploymentMode().AnyTimes().Return(tt.deploymentMode)
+			env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
 
 			aadAuthenticatedRouter := &mux.Router{}
 

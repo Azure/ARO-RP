@@ -14,7 +14,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -106,7 +105,7 @@ func (s *statsd) run() {
 
 func (s *statsd) dial() (err error) {
 	path := "/var/etw/mdm_statsd.socket"
-	if s.env.DeploymentMode() == deployment.Development {
+	if s.env.IsDevelopmentMode() {
 		path = "mdm_statsd.socket"
 	}
 
@@ -127,7 +126,7 @@ func (s *statsd) write(m *metric) (err error) {
 	if s.conn == nil {
 		err = s.dial()
 		if err != nil {
-			if s.env.DeploymentMode() == deployment.Development {
+			if s.env.IsDevelopmentMode() {
 				err = nil
 			}
 			return

@@ -8,11 +8,10 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 func (m *manager) ensureACRToken(ctx context.Context) error {
-	if m.env.DeploymentMode() == deployment.Development {
+	if m.env.IsDevelopmentMode() {
 		return nil
 	}
 

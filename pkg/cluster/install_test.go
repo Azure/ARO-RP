@@ -22,7 +22,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -147,7 +146,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().DeploymentMode().Return(deployment.Production)
+			env.EXPECT().IsDevelopmentMode().Return(false)
 
 			h, log := testlog.New()
 			m := &manager{

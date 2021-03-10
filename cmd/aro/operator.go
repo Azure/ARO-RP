@@ -18,6 +18,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
@@ -31,7 +32,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/rbac"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/routefix"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/workaround"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	// +kubebuilder:scaffold:imports
@@ -44,8 +44,10 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	default:
 		return fmt.Errorf("invalid role %s", role)
 	}
-	deploymentMode := deployment.NewMode()
-	log.Infof("running in %s mode", deploymentMode)
+	isDevelopmentMode := env.IsDevelopmentMode()
+	if isDevelopmentMode {
+		log.Info("running in development mode")
+	}
 
 	ctrl.SetLogger(utillog.LogrWrapper(log))
 
@@ -152,7 +154,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 
 	if err = (checker.NewReconciler(
 		log.WithField("controller", controllers.CheckerControllerName),
-		maocli, arocli, role, deploymentMode)).SetupWithManager(mgr); err != nil {
+		maocli, arocli, role, isDevelopmentMode)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller InternetChecker: %v", err)
 	}
 

@@ -5,14 +5,13 @@ package validate
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 func DiskSizeIsValid(sizeGB int) bool {
 	return sizeGB >= 128
 }
 
-func VMSizeIsValid(vmSize api.VMSize, deploymentMode deployment.Mode, isMaster bool) bool {
+func VMSizeIsValid(vmSize api.VMSize, isDevelopmentMode, isMaster bool) bool {
 	if isMaster {
 		switch vmSize {
 		case api.VMSizeStandardD8sV3,
@@ -21,7 +20,7 @@ func VMSizeIsValid(vmSize api.VMSize, deploymentMode deployment.Mode, isMaster b
 			return true
 		}
 	} else {
-		if deploymentMode == deployment.Development {
+		if isDevelopmentMode {
 			switch vmSize {
 			case api.VMSizeStandardD2sV3:
 				return true

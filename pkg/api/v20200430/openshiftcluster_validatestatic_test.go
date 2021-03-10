@@ -13,17 +13,16 @@ import (
 	"github.com/gofrs/uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/validate"
 )
 
 type validateTest struct {
-	name           string
-	current        func(oc *OpenShiftCluster)
-	modify         func(oc *OpenShiftCluster)
-	deploymentMode deployment.Mode
-	wantErr        string
+	name              string
+	current           func(oc *OpenShiftCluster)
+	modify            func(oc *OpenShiftCluster)
+	isDevelopmentMode bool
+	wantErr           string
 }
 
 type testMode string
@@ -102,10 +101,10 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				v := &openShiftClusterStaticValidator{
-					location:       "location",
-					domain:         "location.aroapp.io",
-					deploymentMode: tt.deploymentMode,
-					resourceID:     id,
+					location:          "location",
+					domain:            "location.aroapp.io",
+					isDevelopmentMode: tt.isDevelopmentMode,
+					resourceID:        id,
 					r: azure.Resource{
 						SubscriptionID: subscriptionID,
 						ResourceGroup:  "resourceGroup",
@@ -512,8 +511,8 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D4s_v3"
 			},
-			deploymentMode: deployment.Development,
-			wantErr:        "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D4s_v3' is invalid.",
+			isDevelopmentMode: true,
+			wantErr:           "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D4s_v3' is invalid.",
 		},
 		{
 			name: "disk too small",

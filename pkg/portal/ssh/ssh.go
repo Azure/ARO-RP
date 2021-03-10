@@ -24,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/proxy"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 const (
@@ -166,7 +165,7 @@ func (s *ssh) new(w http.ResponseWriter, r *http.Request) {
 	}
 
 	port := ""
-	if s.env.DeploymentMode() == deployment.Development {
+	if s.env.IsDevelopmentMode() {
 		port = "-p 2222 "
 	}
 

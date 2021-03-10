@@ -20,7 +20,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/feature"
 )
 
@@ -150,7 +149,7 @@ func isSubscriptionRegisteredForE2E(sub *api.SubscriptionProperties) bool {
 // storage account. This is used later on by the billing e2e
 func (m *manager) createOrUpdateE2EBlob(ctx context.Context, doc *api.BillingDocument) error {
 	//skip updating the storage account if this is a dev scenario
-	if m.env.DeploymentMode() == deployment.Development {
+	if m.env.IsDevelopmentMode() {
 		return nil
 	}
 

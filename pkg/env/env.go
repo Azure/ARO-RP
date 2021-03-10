@@ -8,12 +8,13 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"net"
+	"os"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
@@ -68,9 +69,13 @@ type Interface interface {
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
-	if deployment.NewMode() == deployment.Development {
+	if IsDevelopmentMode() {
 		return newDev(ctx, log)
 	}
 
 	return newProd(ctx, log)
+}
+
+func IsDevelopmentMode() bool {
+	return strings.EqualFold(os.Getenv("RP_MODE"), "development")
 }

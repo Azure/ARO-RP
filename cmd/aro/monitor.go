@@ -20,7 +20,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	pkgmonitor "github.com/Azure/ARO-RP/pkg/monitor"
 	"github.com/Azure/ARO-RP/pkg/proxy"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
@@ -31,7 +30,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if _env.DeploymentMode() != deployment.Development {
+	if !_env.IsDevelopmentMode() {
 		for _, key := range []string{
 			"CLUSTER_MDM_ACCOUNT",
 			"CLUSTER_MDM_NAMESPACE",
@@ -82,22 +81,22 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbMonitors, err := database.NewMonitors(ctx, _env.DeploymentMode(), dbc)
+	dbMonitors, err := database.NewMonitors(ctx, _env.IsDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}
 
-	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.DeploymentMode(), dbc)
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}
 
-	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.DeploymentMode(), dbc)
+	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.IsDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}
 
-	dialer, err := proxy.NewDialer(_env.DeploymentMode())
+	dialer, err := proxy.NewDialer(_env.IsDevelopmentMode())
 	if err != nil {
 		return err
 	}

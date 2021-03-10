@@ -20,7 +20,6 @@ import (
 	pkgportal "github.com/Azure/ARO-RP/pkg/portal"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/proxy"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
@@ -31,7 +30,7 @@ func portal(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if _env.DeploymentMode() != deployment.Development {
+	if !_env.IsDevelopmentMode() {
 		for _, key := range []string{
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
@@ -93,12 +92,12 @@ func portal(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.DeploymentMode(), dbc)
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}
 
-	dbPortal, err := database.NewPortal(ctx, _env.DeploymentMode(), dbc)
+	dbPortal, err := database.NewPortal(ctx, _env.IsDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}
@@ -135,7 +134,7 @@ func portal(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dialer, err := proxy.NewDialer(_env.DeploymentMode())
+	dialer, err := proxy.NewDialer(_env.IsDevelopmentMode())
 	if err != nil {
 		return err
 	}
@@ -149,7 +148,7 @@ func portal(ctx context.Context, log *logrus.Entry) error {
 	hostname := "localhost:8444"
 	address := "localhost:8444"
 	sshAddress := "localhost:2222"
-	if _env.DeploymentMode() != deployment.Development {
+	if !_env.IsDevelopmentMode() {
 		hostname = os.Getenv("PORTAL_HOSTNAME")
 		address = ":8444"
 		sshAddress = ":2222"

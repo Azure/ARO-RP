@@ -20,7 +20,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -63,7 +62,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		}
 	}
 
-	if deployment.NewMode() != deployment.Development {
+	if !IsDevelopmentMode() {
 		for _, key := range []string{
 			"CLUSTER_MDSD_CONFIG_VERSION",
 			"MDSD_ENVIRONMENT",
@@ -79,7 +78,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
-	dialer, err := proxy.NewDialer(core.DeploymentMode())
+	dialer, err := proxy.NewDialer(core.IsDevelopmentMode())
 	if err != nil {
 		return nil, err
 	}

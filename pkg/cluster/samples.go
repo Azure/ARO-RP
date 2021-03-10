@@ -10,13 +10,11 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
-
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 // disableSamples disables the samples if there's no appropriate pull secret
 func (m *manager) disableSamples(ctx context.Context) error {
-	if m.env.DeploymentMode() != deployment.Development &&
+	if !m.env.IsDevelopmentMode() &&
 		m.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret != "" {
 		return nil
 	}
@@ -37,7 +35,7 @@ func (m *manager) disableSamples(ctx context.Context) error {
 // disableOperatorHubSources disables operator hub sources if there's no
 // appropriate pull secret
 func (m *manager) disableOperatorHubSources(ctx context.Context) error {
-	if m.env.DeploymentMode() != deployment.Development &&
+	if !m.env.IsDevelopmentMode() &&
 		m.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret != "" {
 		return nil
 	}

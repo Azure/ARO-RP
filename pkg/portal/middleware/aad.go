@@ -24,7 +24,6 @@ import (
 	"golang.org/x/oauth2/microsoft"
 
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 )
 
@@ -88,11 +87,11 @@ type claims struct {
 }
 
 type aad struct {
-	deploymentMode deployment.Mode
-	log            *logrus.Entry
-	env            env.Core
-	now            func() time.Time
-	rt             http.RoundTripper
+	isDevelopmentMode bool
+	log               *logrus.Entry
+	env               env.Core
+	now               func() time.Time
+	rt                http.RoundTripper
 
 	tenantID    string
 	clientID    string
@@ -123,11 +122,11 @@ func NewAAD(log *logrus.Entry,
 	}
 
 	a := &aad{
-		deploymentMode: env.DeploymentMode(),
-		log:            log,
-		env:            env,
-		now:            time.Now,
-		rt:             http.DefaultTransport,
+		isDevelopmentMode: env.IsDevelopmentMode(),
+		log:               log,
+		env:               env,
+		now:               time.Now,
+		rt:                http.DefaultTransport,
 
 		tenantID:    env.TenantID(),
 		clientID:    clientID,

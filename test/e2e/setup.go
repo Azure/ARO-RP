@@ -31,7 +31,6 @@ import (
 	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
 	redhatopenshift20210131preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-01-31-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
@@ -62,7 +61,7 @@ var (
 )
 
 func skipIfNotInDevelopmentEnv() {
-	if _env.DeploymentMode() != deployment.Development {
+	if !_env.IsDevelopmentMode() {
 		Skip("skipping tests in non-development environment")
 	}
 }

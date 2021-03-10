@@ -21,7 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -38,7 +37,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 	apis := map[string]*api.Version{
 		"admin": {
 			OpenShiftClusterConverter: api.APIs["admin"].OpenShiftClusterConverter,
-			OpenShiftClusterStaticValidator: func(string, string, deployment.Mode, string) api.OpenShiftClusterStaticValidator {
+			OpenShiftClusterStaticValidator: func(string, string, bool, string) api.OpenShiftClusterStaticValidator {
 				return &dummyOpenShiftClusterValidator{}
 			},
 			OpenShiftClusterCredentialsConverter: api.APIs["admin"].OpenShiftClusterCredentialsConverter,
@@ -280,7 +279,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 	apis := map[string]*api.Version{
 		"2020-04-30": {
 			OpenShiftClusterConverter: api.APIs["2020-04-30"].OpenShiftClusterConverter,
-			OpenShiftClusterStaticValidator: func(string, string, deployment.Mode, string) api.OpenShiftClusterStaticValidator {
+			OpenShiftClusterStaticValidator: func(string, string, bool, string) api.OpenShiftClusterStaticValidator {
 				return &dummyOpenShiftClusterValidator{}
 			},
 			OpenShiftClusterCredentialsConverter: api.APIs["2020-04-30"].OpenShiftClusterCredentialsConverter,

@@ -39,7 +39,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
 	redhatopenshift20210131preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-01-31-preview/redhatopenshift"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
 
@@ -77,7 +76,7 @@ func (errs errors) Error() string {
 }
 
 func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
-	if env.DeploymentMode() == deployment.Development {
+	if env.IsDevelopmentMode() {
 		for _, key := range []string{
 			"AZURE_FP_CLIENT_ID",
 		} {
@@ -116,7 +115,7 @@ func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
 	}
 
 	if ci {
-		if env.DeploymentMode() == deployment.Development {
+		if env.IsDevelopmentMode() {
 			c.ciParentVnet = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.env.SubscriptionID(), c.env.ResourceGroup())
 		} else {
 			c.ciParentVnet = "/subscriptions/46626fc5-476d-41ad-8c76-2ec49c6994eb/resourceGroups/e2einfra-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet"
@@ -417,8 +416,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		Location: c.env.Location(),
 	}
 
-	switch c.env.DeploymentMode() {
-	case deployment.Development:
+	if c.env.IsDevelopmentMode() {
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 		ext := api.APIs[v20210131preview.APIVersion].OpenShiftClusterConverter().ToExternal(&oc)
 		data, err := json.Marshal(ext)
@@ -433,7 +431,8 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		}
 
 		return c.openshiftclustersv20210131preview.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
-	default:
+
+	} else {
 		ext := api.APIs[v20200430.APIVersion].OpenShiftClusterConverter().ToExternal(&oc)
 		data, err := json.Marshal(ext)
 		if err != nil {

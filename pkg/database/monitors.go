@@ -13,7 +13,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 type monitors struct {
@@ -32,8 +31,8 @@ type Monitors interface {
 }
 
 // NewMonitors returns a new Monitors
-func NewMonitors(ctx context.Context, deploymentMode deployment.Mode, dbc cosmosdb.DatabaseClient) (Monitors, error) {
-	dbid, err := databaseName(deploymentMode)
+func NewMonitors(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (Monitors, error) {
+	dbid, err := databaseName(isDevelopmentMode)
 	if err != nil {
 		return nil, err
 	}

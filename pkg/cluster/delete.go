@@ -20,7 +20,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -304,7 +303,7 @@ func (m *manager) Delete(ctx context.Context) error {
 		return err
 	}
 
-	if m.env.DeploymentMode() != deployment.Development {
+	if !m.env.IsDevelopmentMode() {
 		managedDomain, err := dns.ManagedDomain(m.env, m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 		if err != nil {
 			return err

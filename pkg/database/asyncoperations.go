@@ -11,7 +11,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 type asyncOperations struct {
@@ -26,8 +25,8 @@ type AsyncOperations interface {
 }
 
 // NewAsyncOperations returns a new AsyncOperations
-func NewAsyncOperations(ctx context.Context, deploymentMode deployment.Mode, dbc cosmosdb.DatabaseClient) (AsyncOperations, error) {
-	dbid, err := databaseName(deploymentMode)
+func NewAsyncOperations(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (AsyncOperations, error) {
+	dbid, err := databaseName(isDevelopmentMode)
 	if err != nil {
 		return nil, err
 	}

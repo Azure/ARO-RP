@@ -21,7 +21,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -150,7 +149,7 @@ func (m *manager) Install(ctx context.Context) error {
 
 func (m *manager) runSteps(ctx context.Context, s []steps.Step) error {
 	err := steps.Run(ctx, m.log, 10*time.Second, s)
-	if err != nil && m.env.DeploymentMode() != deployment.Development {
+	if err != nil && !m.env.IsDevelopmentMode() {
 		m.gatherFailureLogs(ctx)
 	}
 	return err

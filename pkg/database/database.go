@@ -21,7 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	dbmetrics "github.com/Azure/ARO-RP/pkg/metrics/statsd/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/documentdb"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
@@ -80,8 +79,8 @@ func NewJSONHandle(aead encryption.AEAD) (*codec.JsonHandle, error) {
 	return h, nil
 }
 
-func databaseName(deploymentMode deployment.Mode) (string, error) {
-	if deploymentMode != deployment.Development {
+func databaseName(isDevelopmentMode bool) (string, error) {
+	if !isDevelopmentMode {
 		return "ARO", nil
 	}
 
