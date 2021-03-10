@@ -25,6 +25,7 @@ type Feature int
 // production default is not set (in production RP_FEATURES is unset).
 const (
 	FeatureDisableDenyAssignments Feature = iota
+	FeatureDisableSignedCertificates
 )
 
 const (

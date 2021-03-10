@@ -56,6 +56,7 @@ func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	}
 
 	d.features[FeatureDisableDenyAssignments] = true
+	d.features[FeatureDisableSignedCertificates] = true
 
 	ccc := auth.ClientCredentialsConfig{
 		ClientID:     os.Getenv("AZURE_ARM_CLIENT_ID"),

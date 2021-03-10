@@ -303,7 +303,7 @@ func (m *manager) Delete(ctx context.Context) error {
 		return err
 	}
 
-	if !m.env.IsDevelopmentMode() {
+	if !m.env.FeatureIsSet(env.FeatureDisableSignedCertificates) {
 		managedDomain, err := dns.ManagedDomain(m.env, m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 		if err != nil {
 			return err
@@ -322,7 +322,9 @@ func (m *manager) Delete(ctx context.Context) error {
 				return err
 			}
 		}
+	}
 
+	if !m.env.IsDevelopmentMode() {
 		acrManager, err := acrtoken.NewManager(m.env, m.localFpAuthorizer)
 		if err != nil {
 			return err
