@@ -316,7 +316,6 @@ func (g *generator) rpVMSS() *arm.Resource {
 
 	for _, variable := range []string{
 		"mdmFrontendUrl",
-		"mdsdConfigVersion",
 		"mdsdEnvironment",
 		"acrResourceId",
 		"billingE2EStorageAccountId",
@@ -328,6 +327,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"portalElevatedGroupIds",
 		"rpFeatures",
 		"rpImage",
+		"rpMdsdConfigVersion",
 		"rpParentDomainName",
 		"adminApiClientCertCommonName",
 		"databaseAccountName",
@@ -759,7 +759,7 @@ export MONITORING_GCS_REGION='$LOCATION'
 export MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault
 export MONITORING_GCS_AUTH_ID='$MDSDCERTIFICATESAN'
 export MONITORING_GCS_NAMESPACE=ARORPLogs
-export MONITORING_CONFIG_VERSION='$MDSDCONFIGVERSION'
+export MONITORING_CONFIG_VERSION='$RPMDSDCONFIGVERSION'
 export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
 
 export MONITORING_TENANT='$LOCATION'

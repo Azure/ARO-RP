@@ -51,13 +51,13 @@ type Configuration struct {
 	GlobalSubscriptionID               *string       `json:"globalSubscriptionId,omitempty" value:"required"`
 	KeyvaultPrefix                     *string       `json:"keyvaultPrefix,omitempty" value:"required"`
 	MDMFrontendURL                     *string       `json:"mdmFrontendUrl,omitempty" value:"required"`
-	MDSDConfigVersion                  *string       `json:"mdsdConfigVersion,omitempty" value:"required"`
 	MDSDEnvironment                    *string       `json:"mdsdEnvironment,omitempty" value:"required"`
 	PortalAccessGroupIDs               []string      `json:"portalAccessGroupIds,omitempty" value:"required"`
 	PortalClientID                     *string       `json:"portalClientId,omitempty" value:"required"`
 	PortalElevatedGroupIDs             []string      `json:"portalElevatedGroupIds,omitempty" value:"required"`
 	RPFeatures                         []string      `json:"rpFeatures,omitempty"`
 	RPImagePrefix                      *string       `json:"rpImagePrefix,omitempty" value:"required"`
+	RPMDSDConfigVersion                *string       `json:"rpMdsdConfigVersion,omitempty" value:"required"`
 	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty" value:"required"`
 	RPParentDomainName                 *string       `json:"rpParentDomainName,omitempty" value:"required"`
 	SubscriptionResourceGroupName      *string       `json:"subscriptionResourceGroupName,omitempty" value:"required"`

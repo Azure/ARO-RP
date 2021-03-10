@@ -44,9 +44,6 @@
         "mdmFrontendUrl": {
             "value": ""
         },
-        "mdsdConfigVersion": {
-            "value": ""
-        },
         "mdsdEnvironment": {
             "value": ""
         },
@@ -63,6 +60,9 @@
             "value": ""
         },
         "rpImage": {
+            "value": ""
+        },
+        "rpMdsdConfigVersion": {
             "value": ""
         },
         "rpParentDomainName": {
