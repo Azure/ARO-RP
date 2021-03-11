@@ -9,7 +9,13 @@
         "acrResourceId": {
             "type": "string"
         },
+        "clusterParentDomainName": {
+            "type": "string"
+        },
         "fpServicePrincipalId": {
+            "type": "string"
+        },
+        "rpParentDomainName": {
             "type": "string"
         },
         "rpServicePrincipalId": {
@@ -28,6 +34,20 @@
             "type": "Microsoft.ContainerRegistry/registries",
             "location": "[if(equals(parameters('acrLocationOverride'), ''), resourceGroup().location, parameters('acrLocationOverride'))]",
             "apiVersion": "2020-11-01-preview"
+        },
+        {
+            "properties": {},
+            "name": "[parameters('rpParentDomainName')]",
+            "type": "Microsoft.Network/dnsZones",
+            "location": "global",
+            "apiVersion": "2018-05-01"
+        },
+        {
+            "properties": {},
+            "name": "[parameters('clusterParentDomainName')]",
+            "type": "Microsoft.Network/dnsZones",
+            "location": "global",
+            "apiVersion": "2018-05-01"
         },
         {
             "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull')))]",

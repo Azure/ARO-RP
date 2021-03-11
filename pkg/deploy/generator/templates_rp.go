@@ -107,6 +107,8 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 		"acrLocationOverride",
 		"acrResourceId",
 		"fpServicePrincipalId",
+		"clusterParentDomainName",
+		"rpParentDomainName",
 		"rpServicePrincipalId",
 		"rpVersionStorageAccountName",
 	}
@@ -121,6 +123,8 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 	}
 	t.Resources = append(t.Resources,
 		g.rpACR(),
+		g.rpParentDNSZone(),
+		g.rpClusterParentDNSZone(),
 	)
 	t.Resources = append(t.Resources,
 		g.rpACRRBAC()...,

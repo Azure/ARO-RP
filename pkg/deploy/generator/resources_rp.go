@@ -10,7 +10,6 @@ import (
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb"
-	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
@@ -916,16 +915,16 @@ done
 	}
 }
 
+func (g *generator) rpParentDNSZone() *arm.Resource {
+	return g.dnsZone("[parameters('rpParentDomainName')]")
+}
+
+func (g *generator) rpClusterParentDNSZone() *arm.Resource {
+	return g.dnsZone("[parameters('clusterParentDomainName')]")
+}
+
 func (g *generator) rpDNSZone() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtdns.Zone{
-			ZoneProperties: &mgmtdns.ZoneProperties{},
-			Name:           to.StringPtr("[concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))]"),
-			Type:           to.StringPtr("Microsoft.Network/dnsZones"),
-			Location:       to.StringPtr("global"),
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Network/dnsZones"),
-	}
+	return g.dnsZone("[concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))]")
 }
 
 func (g *generator) rpClusterKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
