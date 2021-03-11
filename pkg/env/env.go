@@ -33,6 +33,7 @@ const (
 	ClusterKeyvaultSuffix            = "-cls"
 	PortalKeyvaultSuffix             = "-por"
 	ServiceKeyvaultSuffix            = "-svc"
+	RPPrivateEndpointPrefix          = "rp-pe-"
 )
 
 type Interface interface {

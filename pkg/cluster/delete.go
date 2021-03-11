@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
@@ -261,7 +262,7 @@ func (m *manager) Delete(ctx context.Context) error {
 	}
 
 	m.log.Print("deleting private endpoint")
-	err = m.privateendpoint.Delete(ctx, m.doc)
+	err = m.fpPrivateEndpoints.DeleteAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID)
 	if err != nil {
 		return err
 	}

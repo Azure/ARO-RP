@@ -8,11 +8,14 @@ import (
 	"fmt"
 	"net/http"
 
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/password"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -190,18 +193,35 @@ func (m *manager) updateAPIIPEarly(ctx context.Context) error {
 }
 
 func (m *manager) createAPIServerPrivateEndpoint(ctx context.Context) error {
-	err := m.privateendpoint.Create(ctx, m.doc)
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
+
+	err := m.fpPrivateEndpoints.CreateOrUpdateAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, mgmtnetwork.PrivateEndpoint{
+		PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
+			Subnet: &mgmtnetwork.Subnet{
+				ID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
+			},
+			ManualPrivateLinkServiceConnections: &[]mgmtnetwork.PrivateLinkServiceConnection{
+				{
+					Name: to.StringPtr("rp-plsconnection"),
+					PrivateLinkServiceConnectionProperties: &mgmtnetwork.PrivateLinkServiceConnectionProperties{
+						PrivateLinkServiceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/privateLinkServices/" + infraID + "-pls"),
+					},
+				},
+			},
+		},
+		Location: &m.doc.OpenShiftCluster.Location,
+	})
 	if err != nil {
 		return err
 	}
 
-	apiServerPrivateEndpointIP, err := m.privateendpoint.GetIP(ctx, m.doc)
+	pe, err := m.fpPrivateEndpoints.Get(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, "networkInterfaces")
 	if err != nil {
 		return err
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP = apiServerPrivateEndpointIP
+		doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP = *(*(*pe.PrivateEndpointProperties.NetworkInterfaces)[0].IPConfigurations)[0].PrivateIPAddress
 		return nil
 	})
 	return err
