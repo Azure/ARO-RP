@@ -50,6 +50,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"rpImage",
 			"rpMdsdConfigVersion",
 			"rpParentDomainName",
+			"rpVmssCapacity",
 			"sshPublicKey",
 			"storageAccountDomain",
 			"subscriptionResourceGroupName",
@@ -72,6 +73,9 @@ func (g *generator) rpTemplate() *arm.Template {
 			p.DefaultValue = ""
 		case "vmSize":
 			p.DefaultValue = "Standard_D2s_v3"
+		case "rpVmssCapacity":
+			p.Type = "int"
+			p.DefaultValue = 3
 		}
 		t.Parameters[param] = p
 	}

@@ -143,6 +143,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			},
 			RPParentDomainName:                to.StringPtr(os.Getenv("USER") + "-rp." + os.Getenv("PARENT_DOMAIN_NAME")),
 			RPVersionStorageAccountName:       to.StringPtr(os.Getenv("USER") + "rpversion"),
+			RPVMSSCapacity:                    to.IntPtr(1),
 			SSHPublicKey:                      to.StringPtr(string(sshPublicKey)),
 			SubscriptionResourceGroupLocation: to.StringPtr(_env.Location()),
 			SubscriptionResourceGroupName:     to.StringPtr(os.Getenv("USER") + "-subscription"),

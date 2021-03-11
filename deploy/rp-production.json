@@ -83,6 +83,10 @@
         "rpServicePrincipalId": {
             "type": "string"
         },
+        "rpVmssCapacity": {
+            "type": "int",
+            "defaultValue": 3
+        },
         "sshPublicKey": {
             "type": "string"
         },
@@ -253,7 +257,7 @@
             "sku": {
                 "name": "[parameters('vmSize')]",
                 "tier": "Standard",
-                "capacity": 3
+                "capacity": "[parameters('rpVmssCapacity')]"
             },
             "properties": {
                 "upgradePolicy": {

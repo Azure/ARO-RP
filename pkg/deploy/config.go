@@ -67,6 +67,7 @@ type Configuration struct {
 	RPParentDomainName                 *string       `json:"rpParentDomainName,omitempty" value:"required"`
 	SubscriptionResourceGroupName      *string       `json:"subscriptionResourceGroupName,omitempty" value:"required"`
 	SubscriptionResourceGroupLocation  *string       `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
+	RPVMSSCapacity                     *int          `json:"rpVmssCapacity,omitempty"`
 	SSHPublicKey                       *string       `json:"sshPublicKey,omitempty" value:"required"`
 	StorageAccountDomain               *string       `json:"storageAccountDomain,omitempty" value:"required"`
 	VMSize                             *string       `json:"vmSize,omitempty" value:"required"`

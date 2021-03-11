@@ -798,7 +798,7 @@ done
 			Sku: &mgmtcompute.Sku{
 				Name:     to.StringPtr("[parameters('vmSize')]"),
 				Tier:     to.StringPtr("Standard"),
-				Capacity: to.Int64Ptr(3),
+				Capacity: to.Int64Ptr(1338),
 			},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
 				UpgradePolicy: &mgmtcompute.UpgradePolicy{
