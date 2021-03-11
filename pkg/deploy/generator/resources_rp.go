@@ -15,7 +15,7 @@ import (
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2019-06-01-preview/containerregistry"
+	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
 	mgmtinsights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -1429,6 +1429,20 @@ func (g *generator) rpBillingContributorRbac() []*arm.Resource {
 	}
 }
 
+func (g *generator) rpACR() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtcontainerregistry.Registry{
+			Sku: &mgmtcontainerregistry.Sku{
+				Name: mgmtcontainerregistry.Premium,
+			},
+			Name:     to.StringPtr("[substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))]"),
+			Type:     to.StringPtr("Microsoft.ContainerRegistry/registries"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.ContainerRegistry"),
+	}
+}
+
 func (g *generator) rpACRReplica() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtcontainerregistry.Replication{
@@ -1441,7 +1455,7 @@ func (g *generator) rpACRReplica() *arm.Resource {
 }
 
 func (g *generator) rpACRRBAC() []*arm.Resource {
-	rs := []*arm.Resource{
+	return []*arm.Resource{
 		rbac.ResourceRoleAssignmentWithName(
 			rbac.RoleACRPull,
 			"parameters('rpServicePrincipalId')",
@@ -1457,12 +1471,6 @@ func (g *generator) rpACRRBAC() []*arm.Resource {
 			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))",
 		),
 	}
-
-	for _, r := range rs {
-		r.DependsOn = nil
-	}
-
-	return rs
 }
 
 func (g *generator) rpVersionStorageAccount() []*arm.Resource {
