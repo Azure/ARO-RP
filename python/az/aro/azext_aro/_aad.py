@@ -30,11 +30,7 @@ class AADManager:
 
     def create_application(self, display_name):
         password = uuid.uuid4()
-
-        try:
-            end_date = datetime.datetime(2299, 12, 31, tzinfo=datetime.timezone.utc)
-        except AttributeError:
-            end_date = datetime.datetime(2299, 12, 31)
+        end_date = datetime.datetime(2299, 12, 31, tzinfo=datetime.timezone.utc)
 
         app = self.client.applications.create(ApplicationCreateParameters(
             display_name=display_name,
@@ -79,22 +75,16 @@ class AADManager:
                 logger.warning("%s; retry %d of %d", ex, retries, max_retries)
                 time.sleep(10)
 
-    def generate_secret_by_client_id(self, client_id):
+    def refresh_application_credentials(self, object_id):
         password = uuid.uuid4()
-
-        try:
-            end_date = datetime.datetime(2299, 12, 31, tzinfo=datetime.timezone.utc)
-        except AttributeError:
-            end_date = datetime.datetime(2299, 12, 31)
-
-        try:
-            application = self.get_application_by_client_id(client_id)
-            credentials = list(self.client.applications.list_password_credentials(application.object_id))
-        except GraphErrorException as e:
-            raise logger.error(e.message)
-
         key_id = uuid.uuid4()
         start_date = datetime.datetime.utcnow()
+        end_date = datetime.datetime(2299, 12, 31, tzinfo=datetime.timezone.utc)
+
+        try:
+            credentials = list(self.client.applications.list_password_credentials(object_id))
+        except GraphErrorException as e:
+            raise logger.error(e.message)
 
         # when appending credentials ALL fields must be present, otherwise
         # azure gives ambiguous errors about not being able to update old keys
@@ -105,6 +95,6 @@ class AADManager:
             end_date=end_date,
             value=password))
 
-        self.client.applications.update_password_credentials(application.object_id, credentials)
+        self.client.applications.update_password_credentials(object_id, credentials)
 
         return password

@@ -308,81 +308,58 @@ def get_network_resources(cli_ctx, subnets, vnet):
 # service_principal_update manages cluster service principal update
 # If called without parameters it should be best-effort
 # If called with parameters it fails if something is not possible
-# Flows:
-# 1. Manual mode where customer provides client_secret and optional client_id
-#      If client_id is provided, we expect expect secret to be provided too
-#      If only secret is provided - we are updating the secret
-# 2. Refresh-cluster-service-principal is provided. client_secret and client_id is not needed
-#      We validate in the validator code so client_id and client_secret is not provided
-#      Check if client_id for existing cluster SP exists for re-usability
-#      If client_id application do not exist - recreate
-#      If SP for client_id do not exist (if we created it in step above it will not) - create
-#  In any case (1,2) we will try to verify and update rbac
-
-def service_principal_update(cli_ctx, oc, client_id=None, client_secret=None, refresh_cluster_service_principal=None):
+# Flow:
+# 1. Set fail - if we are in fail mode or best effort.
+# 2. Sort out client_id, rp_client_sp, resources we care for RBAC.
+# 3. If we are in refresh_cluster_service_principal mode - attempt to reuse/recreate
+# cluster service principal application and acquire client_id, client_secret
+# 4. Reuse/Recreate service principal.
+# 5. Sort out required rbac
+def service_principal_update(cli_ctx, oc,
+                            client_id=None,
+                            client_secret=None,
+                            cluster_resource_group=None,
+                            refresh_cluster_service_principal=None):
     rp_client_sp = None
     client_sp = None
-    random_id = generate_random_id()
     resources = set()
 
     # if any of these are set - we expect users to have access to fix rbac so we fail
     # common for 1 and 2 flows
     fail = client_id is not None or client_secret is not None or refresh_cluster_service_principal is not None
 
-    # update client_id without providing secret is not valid.
-    # this acts as dynamic validator
-    # skip in 2 flow
-    if client_id is not None:
-        if client_id != oc.service_principal_profile.client_id and client_secret is None:
-            raise InvalidArgumentValueError("Must specify --client-id with --client-secret.")
-
     # if only secret is provided, we assume we re-use existing application
     # it is users responsibility to vet it.
-    # common for 1 and 2 flows
     if client_id is None:
         client_id = oc.service_principal_profile.client_id
-
-    if rp_mode_production():
-        rp_client_id = FP_CLIENT_ID
-    else:
-        rp_client_id = os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
 
     try:
         # Get cluster resources we need to assign network contributor on
         resources = get_cluster_network_resources(cli_ctx, oc)
     except (CloudError, HttpOperationError) as e:
-        raise logger.error(e.message) if fail else logger.info(e.message)
+        if fail:
+            logger.error(e.message)
+            raise
+        logger.info(e.message)
 
     aad = AADManager(cli_ctx)
 
     # check if we can see if RP service principal exists
     try:
-        rp_client_sp = aad.get_service_principal(rp_client_id)
+        rp_client_sp = aad.get_service_principal(resolve_rp_client_id())
         if not rp_client_sp:
             raise ResourceNotFoundError("RP service principal not found.")
     except GraphErrorException as e:
-        raise logger.error(e.message) if fail else logger.info(e.message)
+        if fail:
+            logger.error(e.message)
+            raise
+        logger.info(e.message)
 
 
-    try:
-        app = aad.get_application_by_client_id(client_id)
-        if not app:
-            # fail if we are not in 2 flow
-            if refresh_cluster_service_principal is None:
-                raise ResourceNotFoundError("Cluster application not found.")
-
-            # for 2 flow attemp to create an application if one does not exist
-            app, client_secret = aad.create_application(cluster_resource_group or 'aro-' + random_id)
-            client_id = app.app_id
-        else:
-            # only flow 2.
-            if refresh_cluster_service_principal is not None:
-                client_secret = aad.generate_secret_by_client_id(app.app_id)
-    except GraphErrorException as e:
-        raise logger.error(e.message) if fail else logger.info(e.message)
+    if refresh_cluster_service_principal:
+        client_id, client_secret = refresh_cluster_application(aad,client_id, cluster_resource_group)
 
     # attempt to get/create SP if one was not found.
-    # common for 1 and 2 flow
     try:
         client_sp = aad.get_service_principal(client_id)
         if not client_sp and fail:  # if we are in hard fail - attempt to re-create
@@ -390,9 +367,11 @@ def service_principal_update(cli_ctx, oc, client_id=None, client_secret=None, re
             client_sp = aad.create_service_principal(client_id)
             if not client_sp:
                 e = ResourceNotFoundError("Cluster service principal creation failed")
-                raise logger.error(e) if fail else logger.info(e)
     except GraphErrorException as e:
-        raise logger.error(e.message) if fail else logger.info(e.message)
+        if fail:
+            logger.error(e.message)
+            raise
+        logger.info(e.message)
 
     # Drop any None service principal objects
     sp_obj_ids = [sp.object_id for sp in [rp_client_sp, client_sp] if sp]
@@ -415,6 +394,33 @@ def service_principal_update(cli_ctx, oc, client_id=None, client_secret=None, re
             if not resource_contributor_exists:
                 assign_network_contributor_to_resource(cli_ctx, resource, sp_id)
 
-    print(client_id)
-    print(client_secret)
+    return client_id, client_secret
+
+
+def resolve_rp_client_id():
+    if rp_mode_production():
+        return FP_CLIENT_ID
+    else:
+        return os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
+
+# refresh_cluster_application refreshes cluster SP application.
+# At firsts it tries to re-use existing application and generate new password.
+# If application does not exist - creates new one
+def refresh_cluster_application(aad,
+                                client_id,
+                                cluster_resource_group,
+                                ):
+    random_id = generate_random_id()
+    try:
+        app = aad.get_application_by_client_id(client_id)
+        if not app:
+            # we were not able to find and applications, create new one
+            app, client_secret = aad.create_application(cluster_resource_group or 'aro-' + random_id)
+            client_id = app.app_id
+        else:
+            app = aad.get_application_by_client_id(client_id)
+            client_secret = aad.refresh_application_credentials(app.object_id)
+    except GraphErrorException as e:
+            logger.error(e.message)
+            raise
     return client_id, client_secret
