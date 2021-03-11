@@ -12,6 +12,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -42,9 +44,6 @@ func NewClusterReconciler(log *logrus.Entry, arocli aroclient.Interface, mcocli 
 func (r *ClusterReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	// TODO(mj): controller-runtime master fixes the need for this (https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/reconcile/reconcile.go#L93) but it's not yet released.
 	ctx := context.Background()
-	if request.Name != arov1alpha1.SingletonClusterName {
-		return reconcile.Result{}, nil
-	}
 
 	mcps, err := r.mcocli.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -68,8 +67,12 @@ func (r *ClusterReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error)
 
 // SetupWithManager setup our mananger
 func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	aroClusterPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
+		return meta.GetName() == arov1alpha1.SingletonClusterName
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		Named(controllers.DnsmasqClusterControllerName).
 		Complete(r)
 }
