@@ -96,6 +96,8 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 	params := []string{
 		"acrResourceId",
 		"fpServicePrincipalId",
+		"clusterParentDomainName",
+		"rpParentDomainName",
 		"rpServicePrincipalId",
 		"rpVersionStorageAccountName",
 		"subscriptionResourceGroupLocation", // TODO(mjudeikis): we need to rebuild INT to have right locations
@@ -106,6 +108,8 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 	}
 	t.Resources = append(t.Resources,
 		g.rpACR(),
+		g.rpParentDNSZone(),
+		g.rpClusterParentDNSZone(),
 	)
 	t.Resources = append(t.Resources,
 		g.rpACRRBAC()...,
