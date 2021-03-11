@@ -1,4 +1,4 @@
-package validate
+package dynamic
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -16,7 +16,7 @@ import (
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 )
 
-func TestQuotaCheck(t *testing.T) {
+func TestValidateQuota(t *testing.T) {
 	ctx := context.Background()
 
 	type test struct {
@@ -140,26 +140,30 @@ func TestQuotaCheck(t *testing.T) {
 				tt.mocks(tt, usageClient)
 			}
 
-			qv := quotaValidator{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-				oc: &api.OpenShiftCluster{
-					Location: "ocLocation",
-					Properties: api.OpenShiftClusterProperties{
-						MasterProfile: api.MasterProfile{
+			oc := &api.OpenShiftCluster{
+				Location: "ocLocation",
+				Properties: api.OpenShiftClusterProperties{
+					Install: &api.Install{
+						Phase: api.InstallPhaseBootstrap,
+					},
+					MasterProfile: api.MasterProfile{
+						VMSize: "Standard_D8s_v3",
+					},
+					WorkerProfiles: []api.WorkerProfile{
+						{
 							VMSize: "Standard_D8s_v3",
-						},
-						WorkerProfiles: []api.WorkerProfile{
-							{
-								VMSize: "Standard_D8s_v3",
-								Count:  10,
-							},
+							Count:  10,
 						},
 					},
 				},
+			}
+
+			qv := dynamic{
+				log:     logrus.NewEntry(logrus.StandardLogger()),
 				spUsage: usageClient,
 			}
 
-			err := qv.Validate(ctx)
+			err := qv.ValidateQuota(ctx, oc)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

@@ -1,4 +1,4 @@
-package validate
+package dynamic
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -8,14 +8,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/sirupsen/logrus"
-
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/aad"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, count int) error {
@@ -85,67 +78,30 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 	return nil
 }
 
-type AzureQuotaValidator interface {
-	Validate(context.Context) error
-}
-
-type quotaValidator struct {
-	log *logrus.Entry
-	env env.Core
-
-	oc      *api.OpenShiftCluster
-	spUsage compute.UsageClient
-}
-
-func NewAzureQuotaValidator(ctx context.Context, log *logrus.Entry, env env.Core, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument) (AzureQuotaValidator, error) {
-	r, err := azure.ParseResourceID(oc.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	err = validateServicePrincipalProfile(ctx, log, env, oc, subscriptionDoc)
-	if err != nil {
-		return nil, err
-	}
-
-	spp := oc.Properties.ServicePrincipalProfile
-	token, err := aad.GetToken(ctx, log, spp.ClientID, string(spp.ClientSecret), subscriptionDoc.Subscription.Properties.TenantID, env.Environment().ActiveDirectoryEndpoint, env.Environment().ResourceManagerEndpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	spAuthorizer := refreshable.NewAuthorizer(token)
-
-	validator := &quotaValidator{
-		log: log,
-		env: env,
-
-		oc:      oc,
-		spUsage: compute.NewUsageClient(env.Environment(), r.SubscriptionID, spAuthorizer),
-	}
-
-	return validator, nil
-}
-
-// Validate checks usage quotas vs. resources required by cluster before cluster
+// ValidateQuota checks usage quotas vs. resources required by cluster before cluster
 // creation
-func (qv *quotaValidator) Validate(ctx context.Context) error {
-	qv.log.Print("ValidateQuotas")
+func (dv *dynamic) ValidateQuota(ctx context.Context, oc *api.OpenShiftCluster) error {
+	dv.log.Print("ValidateQuota")
+
+	// If ValidateQuota runs outside install process, we should skip quota validation
+	if oc.Properties.Install == nil || oc.Properties.Install.Phase != api.InstallPhaseBootstrap {
+		return nil
+	}
 
 	requiredResources := map[string]int{}
-	err := addRequiredResources(requiredResources, qv.oc.Properties.MasterProfile.VMSize, 3)
+	err := addRequiredResources(requiredResources, oc.Properties.MasterProfile.VMSize, 3)
 	if err != nil {
 		return err
 	}
 	//worker node resource calculation
-	for _, w := range qv.oc.Properties.WorkerProfiles {
+	for _, w := range oc.Properties.WorkerProfiles {
 		err = addRequiredResources(requiredResources, w.VMSize, w.Count)
 		if err != nil {
 			return err
 		}
 	}
 
-	usages, err := qv.spUsage.List(ctx, qv.oc.Location)
+	usages, err := dv.spUsage.List(ctx, oc.Location)
 	if err != nil {
 		return err
 	}

@@ -14,15 +14,9 @@ import (
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/form3tech-oss/jwt-go"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 )
-
-type azureClaim struct {
-	TenantID string `json:"tid,omitempty"`
-}
-
-func (*azureClaim) Valid() error {
-	return fmt.Errorf("unimplemented")
-}
 
 type ServicePrincipalToken interface {
 	RefreshWithContext(context.Context) error
@@ -74,7 +68,7 @@ func (p *prod) populateTenantIDFromMSI(ctx context.Context) error {
 	}
 
 	parser := &jwt.Parser{}
-	c := &azureClaim{}
+	c := &azureclaim.AzureClaim{}
 	_, _, err = parser.ParseUnverified(token.OAuthToken(), c)
 	if err != nil {
 		return err

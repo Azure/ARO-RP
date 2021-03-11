@@ -3,7 +3,9 @@ package stringutils
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestLastTokenByte(t *testing.T) {
 	result := LastTokenByte("a/b/c/d", '/')
