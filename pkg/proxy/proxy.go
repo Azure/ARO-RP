@@ -115,6 +115,7 @@ func proxy(w http.ResponseWriter, r *http.Request) {
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
 		http.Error(w, "hijacking not supported", http.StatusInternalServerError)
+		c2.Close()
 		return
 	}
 
@@ -123,14 +124,20 @@ func proxy(w http.ResponseWriter, r *http.Request) {
 	c1, buf, err := hijacker.Hijack()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		c1.Close()
+		c2.Close()
 		return
 	}
 
 	go func() {
+		defer func() {
+			_ = c2.(*net.TCPConn).CloseWrite()
+		}()
 		_, _ = io.Copy(c2, buf)
-		_ = c2.(*net.TCPConn).CloseWrite()
 	}()
 
+	defer func() {
+		_ = c1.(*tls.Conn).CloseWrite()
+	}()
 	_, _ = io.Copy(c1, c2)
-	_ = c1.(*tls.Conn).CloseWrite()
 }
