@@ -41,10 +41,12 @@ def validate_client_id(namespace):
             raise InvalidArgumentValueError("Invalid --client-id '%s'." % namespace.client_id)
 
 
-def validate_client_secret(namespace):
-    if namespace.client_secret is not None:
-        if namespace.client_id is None or not str(namespace.client_id):
-            raise RequiredArgumentMissingError('Must specify --client-id with --client-secret.')
+def validate_client_secret(isCreate):
+    def _validate_client_secret(namespace):
+        if namespace.client_secret is not None and isCreate:
+            if namespace.client_id is None or not str(namespace.client_id):
+                raise RequiredArgumentMissingError('Must specify --client-id with --client-secret.')
+
 
 def validate_cluster_resource_group(cmd, namespace):
     if namespace.cluster_resource_group is not None:

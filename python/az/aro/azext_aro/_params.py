@@ -46,11 +46,7 @@ def load_arguments(self, _):
                    validator=validate_client_id)
         c.argument('client_secret',
                    help='Client secret of cluster service principal.',
-                   validator=validate_client_secret)
-        c.argument('refresh_cluster_service_principal',
-                   arg_type=get_three_state_flag(),
-                   help='Refresh cluster service principal.',
-                   validator=validate_refresh_cluster_service_principal)
+                   validator=validate_client_secret(isCreate=True))
 
         c.argument('pod_cidr',
                    help='CIDR of pod network.',
@@ -95,3 +91,11 @@ def load_arguments(self, _):
         c.argument('worker_subnet',
                    help='Name or ID of worker vnet subnet.  If name is supplied, `--vnet` must be supplied.',
                    validator=validate_subnet('worker_subnet'))
+    with self.argument_context('aro update') as c:
+        c.argument('client_secret',
+                   help='Client secret of cluster service principal.',
+                   validator=validate_client_secret(isCreate=None))
+        c.argument('refresh_cluster_service_principal',
+                   arg_type=get_three_state_flag(),
+                   help='Refresh cluster service principal.',
+                   validator=validate_refresh_cluster_service_principal)
