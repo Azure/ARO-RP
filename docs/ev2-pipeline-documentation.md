@@ -14,10 +14,13 @@ This is a living document that will contain definitions of Ev2 structures as wel
 1. Rollout Strategy
    1. Sectors/Stages in ADO
       1. **Sectors/Stages being defined by CF and RH (will update this document when a consensus is achieved**
-      1. Two separate pipelines for PROD and INT
+      1. One Mirroring Deployment Pipeline for PROD and INT
+         1. INT and PROD automatically run daily at 0700 UTC
+         1. Fairfax is triggered after successful PROD mirror
+      1. Two separate Deployment pipelines for PROD and INT
          1. INT Public and INT Fairfax in parallel
          1. PROD Public and PROD Fairfax in parallel
-      1. INT pipeline to run daily automatically
+         1. INT Deployment pipeline to run daily automatically
       1. Manual kick-off of PROD deployment pipeline
          1. Each "sector" will have an approval gate
          1. Public sectors will remain the same
