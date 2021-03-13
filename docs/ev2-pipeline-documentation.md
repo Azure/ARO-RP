@@ -17,6 +17,8 @@ This is a living document that will contain definitions of Ev2 structures as wel
       1. One Mirroring Deployment Pipeline for PROD and INT
          1. INT and PROD automatically run daily at 0700 UTC
          1. Fairfax is triggered after successful PROD mirror
+         
+         **Note:** It was agreed upon that Fairfax will be behind INT/PROD due to restrictions needing to pull from Private ACR and not directly from public internet.
       1. Two separate Deployment pipelines for PROD and INT
          1. INT Public and INT Fairfax in parallel
          1. PROD Public and PROD Fairfax in parallel
