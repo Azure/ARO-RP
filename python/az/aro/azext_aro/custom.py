@@ -58,8 +58,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
             raise UnauthorizedError('Microsoft.RedHatOpenShift provider is not registered.',
                                     'Run `az provider register -n Microsoft.RedHatOpenShift --wait`.')
 
-    vnet = validate_subnets(master_subnet, worker_subnet)
-    resources = get_network_resources(cmd.cli_ctx, [master_subnet, worker_subnet], vnet)
+    validate_subnets(master_subnet, worker_subnet)
 
     subscription_id = get_subscription_id(cmd.cli_ctx)
 
@@ -77,11 +76,6 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     rp_client_sp = aad.get_service_principal(resolve_rp_client_id())
     if not rp_client_sp:
         raise ResourceNotFoundError("RP service principal not found.")
-
-    for sp_id in [client_sp.object_id, rp_client_sp.object_id]:
-        for resource in sorted(resources):
-            if not has_network_contributor_on_resource(cmd.cli_ctx, resource, sp_id):
-                assign_network_contributor_to_resource(cmd.cli_ctx, resource, sp_id)
 
     if rp_mode_development():
         worker_vm_size = worker_vm_size or 'Standard_D2s_v3'
@@ -135,6 +129,10 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         ],
     )
 
+    sp_obj_ids = [client_sp.object_id, rp_client_sp.object_id]
+    ensure_resource_permissions(cmd.cli_ctx, oc, True, sp_obj_ids)
+
+
     return sdk_no_wait(no_wait, client.create_or_update,
                        resource_group_name=resource_group_name,
                        resource_name=resource_name,
@@ -167,20 +165,7 @@ def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
     # Customers frequently remove the Cluster or RP's service principal permissions.
     # Attempt to fix this before performing any action against the cluster
     if rp_client_sp:
-        for resource in sorted(resources):
-            # Create the role assignment if it doesn't exist
-            # Assume that the role assignment exists if we fail to look it up
-            resource_contributor_exists = True
-
-            try:
-                resource_contributor_exists = has_network_contributor_on_resource(cmd.cli_ctx, resource,
-                                                                                  rp_client_sp.object_id)
-            except CloudError as e:
-                logger.info(e.message)
-                continue
-
-            if not resource_contributor_exists:
-                assign_network_contributor_to_resource(cmd.cli_ctx, resource, rp_client_sp.object_id)
+        ensure_resource_permissions(cmd.cli_ctx, oc, None, [rp_client_sp.object_id])
 
     return sdk_no_wait(no_wait, client.delete,
                        resource_group_name=resource_group_name,
@@ -312,7 +297,6 @@ def service_principal_update(cli_ctx, oc,
                             refresh_cluster_service_principal=None):
     rp_client_sp = None
     client_sp = None
-    resources = set()
 
     # if any of these are set - we expect users to have access to fix rbac so we fail
     # common for 1 and 2 flows
@@ -322,15 +306,6 @@ def service_principal_update(cli_ctx, oc,
     # it is users responsibility to vet it.
     if client_id is None:
         client_id = oc.service_principal_profile.client_id
-
-    try:
-        # Get cluster resources we need to assign network contributor on
-        resources = get_cluster_network_resources(cli_ctx, oc)
-    except (CloudError, HttpOperationError) as e:
-        if fail:
-            logger.error(e.message)
-            raise
-        logger.info(e.message)
 
     aad = AADManager(cli_ctx)
 
@@ -363,26 +338,8 @@ def service_principal_update(cli_ctx, oc,
             raise
         logger.info(e.message)
 
-    # Drop any None service principal objects
     sp_obj_ids = [sp.object_id for sp in [rp_client_sp, client_sp] if sp]
-
-    # Customers frequently remove the Cluster or RP's service principal permissions.
-    # Attempt to fix this before performing any action against the cluster
-    # common for 1 and 2 flows
-    for sp_id in sp_obj_ids:
-        for resource in sorted(resources):
-            # Create the role assignment if it doesn't exist
-            # Assume that the role assignment exists if we fail to look it up
-            resource_contributor_exists = True
-
-            try:
-                resource_contributor_exists = has_network_contributor_on_resource(cli_ctx, resource, sp_id)
-            except CloudError as e:
-                logger.info(e.message)
-                continue
-
-            if not resource_contributor_exists:
-                assign_network_contributor_to_resource(cli_ctx, resource, sp_id)
+    ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids)
 
     return client_id, client_secret
 
@@ -414,3 +371,30 @@ def refresh_cluster_application(aad,
             logger.error(e.message)
             raise
     return client_id, client_secret
+
+def ensure_resource_permissions(ctx, oc=None, fail=None, sp_obj_ids=[]):
+    try:
+        # Get cluster resources we need to assign network contributor on
+        resources = get_cluster_network_resources(ctx, oc)
+    except (CloudError, HttpOperationError) as e:
+        if fail:
+            logger.error(e.message)
+            raise
+        logger.info(e.message)
+
+    for sp_id in sp_obj_ids:
+        for resource in sorted(resources):
+            # Create the role assignment if it doesn't exist
+            # Assume that the role assignment exists if we fail to look it up
+            resource_contributor_exists = True
+
+            try:
+                resource_contributor_exists = has_network_contributor_on_resource(ctx, resource, sp_id)
+            except CloudError as e:
+                if fail:
+                    logger.error(e.message)
+                    raise
+                logger.info(e.message)
+
+            if not resource_contributor_exists:
+                assign_network_contributor_to_resource(ctx, resource, sp_id)
