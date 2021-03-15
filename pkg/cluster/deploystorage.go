@@ -122,6 +122,7 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		m.clusterStorageAccountBlob("ignition"),
 		m.clusterStorageAccountBlob("aro"),
 		m.clusterNSG(infraID, installConfig.Config.Azure.Region),
+		m.clusterServicePrincipalRBAC(),
 		m.networkPrivateLinkService(installConfig),
 		m.networkPublicIPAddress(installConfig, m.doc.OpenShiftCluster.Properties.InfraID+"-pip-v4"),
 		m.networkInternalLoadBalancer(installConfig),
@@ -139,8 +140,6 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		ContentVersion: "1.0.0.0",
 		Resources:      resources,
 	}
-
-	t.Resources = append(t.Resources, m.clusterServicePrincipalRBAC()...)
 
 	if m.env.DeploymentMode() == deployment.Production {
 		t.Resources = append(t.Resources, m.denyAssignment())

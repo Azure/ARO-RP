@@ -22,7 +22,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
-	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -208,50 +207,6 @@ func (m *manager) deleteResources(ctx context.Context) error {
 	return nil
 }
 
-func (m *manager) deleteRoleAssignmentsAndDefinition(ctx context.Context) error {
-	resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-
-	roleAssignments, err := m.roleAssignments.ListForResourceGroup(ctx, resourceGroup, "")
-	if err != nil {
-		return err
-	}
-
-	for _, assignment := range roleAssignments {
-		if !strings.EqualFold(*assignment.Scope, resourceGroupID) ||
-			strings.HasSuffix(strings.ToLower(*assignment.RoleDefinitionID), strings.ToLower(rbac.RoleOwner)) /* should only matter in development */ {
-			continue
-		}
-
-		m.log.Infof("deleting role assignment %s", *assignment.Name)
-		_, err := m.roleAssignments.Delete(ctx, *assignment.Scope, *assignment.Name)
-		if err != nil {
-			return err
-		}
-	}
-
-	roleDefinitions, err := m.roleDefinitions.List(ctx, resourceGroupID, "")
-	if err != nil {
-		return err
-	}
-
-	for _, definition := range roleDefinitions {
-		if len(*definition.AssignableScopes) != 1 ||
-			!strings.EqualFold((*definition.AssignableScopes)[0], resourceGroupID) ||
-			!strings.HasPrefix(*definition.RoleName, "Azure Red Hat OpenShift cluster") {
-			continue
-		}
-
-		m.log.Infof("deleting role definition %s", *definition.Name)
-		_, err := m.roleDefinitions.Delete(ctx, (*definition.AssignableScopes)[0], *definition.Name)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (m *manager) Delete(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
@@ -263,12 +218,6 @@ func (m *manager) Delete(ctx context.Context) error {
 
 	m.log.Print("deleting private endpoint")
 	err = m.fpPrivateEndpoints.DeleteAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID)
-	if err != nil {
-		return err
-	}
-
-	m.log.Printf("deleting role assignments and role definition")
-	err = m.deleteRoleAssignmentsAndDefinition(ctx)
 	if err != nil {
 		return err
 	}
