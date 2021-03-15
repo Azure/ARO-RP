@@ -24,13 +24,28 @@ func (m *manager) createOrUpdateDenyAssignment(ctx context.Context) error {
 	}
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	clusterSPObjectID := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID
+
+	denyAssignments, err := m.denyAssignments.ListForResourceGroup(ctx, resourceGroup, "")
+	if err != nil {
+		return err
+	}
+
+	for _, assignment := range denyAssignments {
+		if assignment.DenyAssignmentProperties.ExcludePrincipals != nil {
+			for _, ps := range *assignment.DenyAssignmentProperties.ExcludePrincipals {
+				if *ps.ID == clusterSPObjectID {
+					return nil
+				}
+			}
+		}
+	}
 
 	t := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
 		Resources: []*arm.Resource{
 			m.denyAssignment(),
-			m.clusterServicePrincipalRoleDefinition(),
 		},
 	}
 

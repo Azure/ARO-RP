@@ -86,7 +86,7 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 						Template: &arm.Template{
 							Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 							ContentVersion: "1.0.0.0",
-							Resources:      m.clusterServicePrincipalRBAC(),
+							Resources:      []*arm.Resource{m.clusterServicePrincipalRBAC()},
 						},
 						Parameters: parameters,
 						Mode:       mgmtfeatures.Incremental,
@@ -117,7 +117,7 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 						Template: &arm.Template{
 							Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 							ContentVersion: "1.0.0.0",
-							Resources:      m.clusterServicePrincipalRBAC(),
+							Resources:      []*arm.Resource{m.clusterServicePrincipalRBAC()},
 						},
 						Parameters: parameters,
 						Mode:       mgmtfeatures.Incremental,
