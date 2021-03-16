@@ -13,6 +13,9 @@
         },
         "rpVersionStorageAccountName": {
             "type": "string"
+        },
+        "subscriptionResourceGroupLocation": {
+            "type": "string"
         }
     },
     "resources": [
@@ -22,7 +25,7 @@
             },
             "name": "[substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))]",
             "type": "Microsoft.ContainerRegistry/registries",
-            "location": "[resourceGroup().location]",
+            "location": "[parameters('subscriptionResourceGroupLocation')]",
             "apiVersion": "2020-11-01-preview"
         },
         {

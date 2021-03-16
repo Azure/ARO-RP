@@ -1437,7 +1437,7 @@ func (g *generator) rpACR() *arm.Resource {
 			},
 			Name:     to.StringPtr("[substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))]"),
 			Type:     to.StringPtr("Microsoft.ContainerRegistry/registries"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Location: to.StringPtr("[parameters('subscriptionResourceGroupLocation')]"), // TODO: INT has wrong RG location.
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.ContainerRegistry"),
 	}
