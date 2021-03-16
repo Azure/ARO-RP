@@ -20,6 +20,7 @@ import (
 
 type validateTest struct {
 	name           string
+	current        func(oc *OpenShiftCluster)
 	modify         func(oc *OpenShiftCluster)
 	deploymentMode deployment.Mode
 	wantErr        string
@@ -114,7 +115,15 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 					},
 				}
 
-				oc := validOpenShiftCluster()
+				validOCForTest := func() *OpenShiftCluster {
+					oc := validOpenShiftCluster()
+					if tt.current != nil {
+						tt.current(oc)
+					}
+					return oc
+				}
+
+				oc := validOCForTest()
 				if tt.modify != nil {
 					tt.modify(oc)
 				}
@@ -122,7 +131,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 				var current *api.OpenShiftCluster
 				if mode == testModeUpdate {
 					current = &api.OpenShiftCluster{}
-					(&openShiftClusterConverter{}).ToInternal(validOpenShiftCluster(), current)
+					(&openShiftClusterConverter{}).ToInternal(validOCForTest(), current)
 				}
 
 				err := v.Static(oc, current)
@@ -310,10 +319,27 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.version: The provided version 'invalid' is invalid.",
 		},
+		{
+			name: "leading digit domain invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Domain = "4k7f9clk"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain '4k7f9clk' is invalid.",
+		},
+	}
+
+	updateTests := []*validateTest{
+		{
+			name: "leading digit domain valid",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Domain = "4k7f9clk"
+			},
+		},
 	}
 
 	runTests(t, testModeCreate, createTests)
 	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, updateTests)
 	runTests(t, testModeUpdate, commonTests)
 }
 
