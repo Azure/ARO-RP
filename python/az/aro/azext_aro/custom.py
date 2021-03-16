@@ -32,7 +32,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                resource_name,
                master_subnet,
                worker_subnet,
-               vnet=None,
+               vnet=None,  # pylint: disable=unused-argument
                vnet_resource_group_name=None,  # pylint: disable=unused-argument
                location=None,
                pull_secret=None,
@@ -142,13 +142,9 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
 def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
     # TODO: clean up rbac
     rp_client_sp = None
-    resources = set()
 
     try:
         oc = client.get(resource_group_name, resource_name)
-
-        # Get cluster resources we need to assign network contributor on
-        resources = get_cluster_network_resources(cmd.cli_ctx, oc)
     except (CloudError, HttpOperationError) as e:
         logger.info(e.message)
 
@@ -297,6 +293,7 @@ def service_principal_update(cli_ctx, oc,
                             refresh_cluster_service_principal=None):
     rp_client_sp = None
     client_sp = None
+    random_id = generate_random_id()
 
     # if any of these are set - we expect users to have access to fix rbac so we fail
     # common for 1 and 2 flows
@@ -321,8 +318,23 @@ def service_principal_update(cli_ctx, oc,
         logger.info(e.message)
 
 
+# refresh_cluster_service_principal refreshes cluster SP application.
+# At firsts it tries to re-use existing application and generate new password.
+# If application does not exist - creates new one
     if refresh_cluster_service_principal:
-        client_id, client_secret = refresh_cluster_application(aad,client_id, cluster_resource_group)
+        try:
+            app = aad.get_application_by_client_id(client_id)
+            if not app:
+                # we were not able to find and applications, create new one
+                app, client_secret = aad.create_application(cluster_resource_group or 'aro-' + random_id)
+                client_id = app.app_id
+            else:
+                app = aad.get_application_by_client_id(client_id)
+                client_secret = aad.refresh_application_credentials(app.object_id)
+        except GraphErrorException as e:
+            logger.error(e.message)
+            raise
+
 
     # attempt to get/create SP if one was not found.
     try:
@@ -350,27 +362,6 @@ def resolve_rp_client_id():
     else:
         return os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
 
-# refresh_cluster_application refreshes cluster SP application.
-# At firsts it tries to re-use existing application and generate new password.
-# If application does not exist - creates new one
-def refresh_cluster_application(aad,
-                                client_id,
-                                cluster_resource_group,
-                                ):
-    random_id = generate_random_id()
-    try:
-        app = aad.get_application_by_client_id(client_id)
-        if not app:
-            # we were not able to find and applications, create new one
-            app, client_secret = aad.create_application(cluster_resource_group or 'aro-' + random_id)
-            client_id = app.app_id
-        else:
-            app = aad.get_application_by_client_id(client_id)
-            client_secret = aad.refresh_application_credentials(app.object_id)
-    except GraphErrorException as e:
-            logger.error(e.message)
-            raise
-    return client_id, client_secret
 
 def ensure_resource_permissions(ctx, oc=None, fail=None, sp_obj_ids=[]):
     try:
