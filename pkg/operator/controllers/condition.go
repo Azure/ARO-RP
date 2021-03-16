@@ -25,7 +25,7 @@ func SetCondition(ctx context.Context, arocli aroclient.Interface, cond *status.
 
 		changed := cluster.Status.Conditions.SetCondition(*cond)
 
-		if setStaticStatus(cluster, role) {
+		if cleanStaleConditions(cluster, role) {
 			changed = true
 		}
 
@@ -38,7 +38,9 @@ func SetCondition(ctx context.Context, arocli aroclient.Interface, cond *status.
 	})
 }
 
-func setStaticStatus(cluster *arov1alpha1.Cluster, role string) (changed bool) {
+// cleanStaleConditions ensures that conditions no longer in use as defined by older operators
+// are always removed from the cluster.status.conditions
+func cleanStaleConditions(cluster *arov1alpha1.Cluster, role string) (changed bool) {
 	conditions := make(status.Conditions, 0, len(cluster.Status.Conditions))
 
 	// cleanup any old conditions
