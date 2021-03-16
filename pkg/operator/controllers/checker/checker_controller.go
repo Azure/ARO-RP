@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -32,11 +33,14 @@ type CheckerController struct {
 	checkers []Checker
 }
 
-func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.Interface, role string, isDevelopmentMode bool) *CheckerController {
+func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.Interface, kubernetescli kubernetes.Interface, role string, isDevelopmentMode bool) *CheckerController {
 	checkers := []Checker{NewInternetChecker(log, arocli, role)}
 
 	if role == operator.RoleMaster {
-		checkers = append(checkers, NewMachineChecker(log, maocli, arocli, role, isDevelopmentMode))
+		checkers = append(checkers,
+			NewMachineChecker(log, maocli, arocli, role, isDevelopmentMode),
+			NewServicePrincipalChecker(log, maocli, arocli, kubernetescli, role),
+		)
 	}
 
 	return &CheckerController{
