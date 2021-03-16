@@ -1,8 +1,19 @@
+# original file: https://github.com/Azure/azure-cli/blob/master/linter_exclusions.yml
 aro create:
   parameters:
+    cluster_resource_group:
+      rule_exclusions:
+      - option_length_too_long
+    worker_vm_disk_size_gb:
+      rule_exclusions:
+      - option_length_too_long
     cluster_resource_group:
       rule_exclusions:
       - parameter_should_not_end_in_resource_group
     vnet_resource_group_name:
       rule_exclusions:
       - parameter_should_not_end_in_resource_group
+aro update:
+    refresh_cluster_service_principal:
+      rule_exclusions:
+      - option_length_too_long
