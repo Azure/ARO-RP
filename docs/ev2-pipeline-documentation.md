@@ -25,14 +25,14 @@ This is a living document that will contain definitions of Ev2 structures as wel
          1. INT and PROD automatically run daily at 0700 UTC
 
          1. Fairfax is triggered after successful PROD mirror
-         
+
          **Note:** It was agreed upon that Fairfax will be behind INT/PROD due to restrictions needing to pull from Private ACR and not directly from public internet.
 
       1. Two separate Deployment pipelines for PROD and INT
 
-         1. INT Public and INT Fairfax in parallel
+         1. INT Public and INT Fairfax in parallel - requires no approval
 
-         1. PROD Public and PROD Fairfax in parallel
+         1. PROD Public and PROD Fairfax in parallel - requires approval
 
          1. INT Deployment pipeline to run daily automatically
 
@@ -48,7 +48,7 @@ This is a living document that will contain definitions of Ev2 structures as wel
 
    1. Tooling
 
-      1. PowerShell for Ev2 Artifact Generation
+      1. Golang for Ev2 Artifact Generation
 
          1. Create Base Templates that will be used to generate templates specific to sectors/regions
 
@@ -70,9 +70,9 @@ This is a living document that will contain definitions of Ev2 structures as wel
 
             Name | Location | Type | Description
             -------------- | ------------------ | -------------- | ----------
-            vsoDeployerBuildID | In Pipeline | String | Default: latest
-            vso-deployer-pipeline-id | In Pipeline | int |
-            vso-project-id | In Pipeline | guid |
+            vsoDeployerBuildID | In Pipeline as Param | String | Default: latest
+            vso-deployer-pipeline-id | In Pipeline as Var | int |
+            vso-project-id | In Pipeline as Var | guid |
 
       1. **Parameters - Ev2**
 
@@ -84,8 +84,6 @@ This is a living document that will contain definitions of Ev2 structures as wel
             quay-pull-auth | Var group | | Pull secret to pull from quay.io
             redhat-pull-auth | Var group | | Pull secret to pull from RH
             dst-acr-name | Ev2 Parameter | | Destination ACR Name
-            subscriptionId | | | Subscription Id
-            location | | string | Region (East US, West US, etc)
 
          1. Ev2-Specific
 
@@ -112,24 +110,6 @@ This is a living document that will contain definitions of Ev2 structures as wel
             StorageAccount | | |
             SubscriptionId | | |
             rpMode | | | "development", "int", or left blank for production
-
-```text
-aroVersionStorageAccount: ''
-azureDevOpsE2EJSONSPN: ''
-azureDevOpsJSONSPN: ''
-billingE2EPipelineName: ''
-billingE2EBranchName: ''
-configFileName: ''
-e2eSubscription: ''
-environment: ''
-locations: []
-rpMode: ''
-vsoProjectID: ''
-vsoConfigPipelineID: ''
-vsoConfigBuildID: ''
-vsoDeployerPipelineID: ''
-vsoDeployerBuildID: ''
-```
 
 ## Glossary
 
