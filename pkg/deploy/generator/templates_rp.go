@@ -98,6 +98,7 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 		"fpServicePrincipalId",
 		"rpServicePrincipalId",
 		"rpVersionStorageAccountName",
+		"subscriptionResourceGroupLocation", // TODO(mjudeikis): we need to rebuild INT to have right locations
 	}
 
 	for _, param := range params {

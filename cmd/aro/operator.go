@@ -22,6 +22,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/alertwebhook"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/azurensg"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
@@ -147,6 +148,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", controllers.NodeControllerName),
 			kubernetescli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller Node: %v", err)
+		}
+		if err = (azurensg.NewReconciler(
+			log.WithField("controller", controllers.DnsmasqMachineConfigPoolControllerName),
+			arocli)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller DnsmasqMachineConfigPool: %v", err)
 		}
 	}
 
