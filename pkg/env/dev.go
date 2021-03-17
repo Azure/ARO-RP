@@ -38,8 +38,13 @@ func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		return nil, err
 	}
 
-	d.features[FeatureDisableDenyAssignments] = true
-	d.features[FeatureDisableSignedCertificates] = true
+	for _, feature := range []Feature{
+		FeatureDisableDenyAssignments,
+		FeatureDisableSignedCertificates,
+		FeatureRequireD2sV3Workers,
+	} {
+		d.features[feature] = true
+	}
 
 	d.prod.clusterGenevaLoggingEnvironment = "Test"
 	d.prod.clusterGenevaLoggingConfigVersion = "2.3"
