@@ -15,7 +15,14 @@ const (
 	MachineValid                status.ConditionType = "MachineValid"
 )
 
+// AllConditionTypes is a operator conditions currently in use, any condition not in this list is not
+// added to the operator.status.conditions list
 func AllConditionTypes() []status.ConditionType {
+	return []status.ConditionType{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid}
+}
+
+// ClusterChecksTypes represents checks performed on the cluster to verify basic functionality
+func ClusterChecksTypes() []status.ConditionType {
 	return []status.ConditionType{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid}
 }
 

@@ -279,14 +279,14 @@ var _ = Describe("ARO Operator - RBAC", func() {
 	})
 })
 
-var _ = Describe("ARO Operator - All conditions valid", func() {
-	Specify("All condition should not be failing", func() {
+var _ = Describe("ARO Operator - Conditions", func() {
+	Specify("Cluster check conditions should not be failing", func() {
 		clusterOperatorConditionsValid := func() (bool, error) {
 			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(context.Background(), "cluster", metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			valid := true
-			for _, condition := range arov1alpha1.AllConditionTypes() {
+			for _, condition := range arov1alpha1.ClusterChecksTypes() {
 				if !co.Status.Conditions.IsTrueFor(condition) {
 					valid = false
 				}
