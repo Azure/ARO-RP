@@ -72,7 +72,10 @@ func New(env env.Core,
 		dialer: dialer,
 
 		baseServerConfig: &cryptossh.ServerConfig{},
-		newPassword:      func() string { return uuid.NewV4().String() },
+		newPassword:      func() string {
+			newUuid4, _ := uuid.NewV4()
+			return newUuid4.String()
+		},
 	}
 
 	signer, err := cryptossh.NewSignerFromSigner(hostKey)

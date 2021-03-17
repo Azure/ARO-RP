@@ -134,7 +134,9 @@ func (d *dev) EnsureARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 		return err
 	}
 
-	_, err = d.roleassignments.Create(ctx, "/subscriptions/"+d.SubscriptionID()+"/resourceGroups/"+resourceGroup, uuid.NewV4().String(), mgmtauthorization.RoleAssignmentCreateParameters{
+	newUuid4, _ := uuid.NewV4()
+
+	_, err = d.roleassignments.Create(ctx, "/subscriptions/"+d.SubscriptionID()+"/resourceGroups/"+resourceGroup, newUuid4.String(), mgmtauthorization.RoleAssignmentCreateParameters{
 		RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
 			RoleDefinitionID: to.StringPtr("/subscriptions/" + d.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleOwner),
 			PrincipalID:      res.Value,

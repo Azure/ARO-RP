@@ -36,11 +36,14 @@ func (c *Cluster) getServicePrincipal(ctx context.Context, appID string) (string
 }
 
 func (c *Cluster) createApplication(ctx context.Context, displayName string) (string, string, error) {
-	password := uuid.NewV4().String()
+	newUuid4a, _ := uuid.NewV4()
+	password := newUuid4a.String()
+
+	newUuid4b, _ := uuid.NewV4()
 
 	app, err := c.applications.Create(ctx, azgraphrbac.ApplicationCreateParameters{
 		DisplayName:    &displayName,
-		IdentifierUris: &[]string{"https://test.aro.azure.com/" + uuid.NewV4().String()},
+		IdentifierUris: &[]string{"https://test.aro.azure.com/" + newUuid4b.String()},
 		PasswordCredentials: &[]azgraphrbac.PasswordCredential{
 			{
 				EndDate: &date.Time{Time: time.Now().AddDate(1, 0, 0)},

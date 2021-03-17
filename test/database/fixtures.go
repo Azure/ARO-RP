@@ -114,8 +114,10 @@ func (f *Fixture) Create() error {
 	ctx := context.Background()
 
 	for _, i := range f.openshiftClusterDocuments {
+		newUuid4, _ := uuid.NewV4()
+
 		if i.ID == "" {
-			i.ID = uuid.NewV4().String()
+			i.ID = newUuid4.String()
 		}
 		_, err := f.openShiftClustersDatabase.Create(ctx, i)
 		if err != nil {

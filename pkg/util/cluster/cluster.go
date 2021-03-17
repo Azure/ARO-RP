@@ -236,10 +236,12 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	} {
 		for _, principalID := range []string{spID, fpSPID} {
 			for i := 0; i < 5; i++ {
+				newUuid4, _ := uuid.NewV4()
+
 				_, err = c.roleassignments.Create(
 					ctx,
 					scope,
-					uuid.NewV4().String(),
+					newUuid4.String(),
 					mgmtauthorization.RoleAssignmentCreateParameters{
 						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
 							RoleDefinitionID: to.StringPtr("/subscriptions/" + c.env.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleNetworkContributor),

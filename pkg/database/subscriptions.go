@@ -83,9 +83,10 @@ func NewSubscriptions(ctx context.Context, deploymentMode deployment.Mode, dbc c
 }
 
 func NewSubscriptionsWithProvidedClient(client cosmosdb.SubscriptionDocumentClient) Subscriptions {
+	newUuid4, _ := uuid.NewV4()
 	return &subscriptions{
 		c:    client,
-		uuid: uuid.NewV4().String(),
+		uuid: newUuid4.String(),
 	}
 }
 

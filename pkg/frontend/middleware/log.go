@@ -62,10 +62,12 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 			r.Body = &logReadCloser{ReadCloser: r.Body}
 			w = &logResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
+			newUuid4, _ := uuid.NewV4()
+
 			correlationData := &api.CorrelationData{
 				ClientRequestID: r.Header.Get("X-Ms-Client-Request-Id"),
 				CorrelationID:   r.Header.Get("X-Ms-Correlation-Request-Id"),
-				RequestID:       uuid.NewV4().String(),
+				RequestID:       newUuid4.String(),
 				RequestTime:     t,
 			}
 

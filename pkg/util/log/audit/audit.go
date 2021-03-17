@@ -60,7 +60,7 @@ var (
 	// epoch is an unique identifier associated with the current session of the
 	// telemetry library running on the platform. It must be stable during a
 	// session, and has no implied ordering across sessions.
-	epoch = uuid.NewV4().String()
+	epoch = getNewUuid4String()
 
 	// seqNum is used to track absolute order of uploaded events, per session.
 	// It is reset when the ARO component is restarted. The first log will have
@@ -68,6 +68,12 @@ var (
 	seqNum      uint64
 	seqNumMutex sync.Mutex
 )
+
+// Wrapper function to github.com/gofrs/uuid to return just a string representation UUID4
+func getNewUuid4String() string {
+	newUuid4, _ := uuid.NewV4()
+	return newUuid4.String()
+}
 
 // AddHook modifies logger by adding the payload hook to its list of hooks.
 func AddHook(logger *logrus.Logger) {

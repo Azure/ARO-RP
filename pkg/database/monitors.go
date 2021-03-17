@@ -63,9 +63,11 @@ func NewMonitors(ctx context.Context, deploymentMode deployment.Mode, dbc cosmos
 		}
 	}
 
+	newUuid4, _ := uuid.NewV4()
+
 	return &monitors{
 		c:    cosmosdb.NewMonitorDocumentClient(collc, collMonitors),
-		uuid: uuid.NewV4().String(),
+		uuid: newUuid4.String(),
 	}, nil
 }
 

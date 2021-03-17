@@ -232,7 +232,8 @@ func (a *aad) redirect(w http.ResponseWriter, r *http.Request) {
 		path = "/"
 	}
 
-	state := uuid.NewV4().String()
+	newUuid4, _ := uuid.NewV4()
+	state := newUuid4.String()
 
 	session.Values = map[interface{}]interface{}{
 		sessionKeyRedirectPath: path,

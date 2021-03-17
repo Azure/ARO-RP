@@ -63,8 +63,10 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			return nil, err
 		}
 
+		newUuid4, _ := uuid.NewV4()
+
 		doc = &api.OpenShiftClusterDocument{
-			ID:  uuid.NewV4().String(),
+			ID:  newUuid4.String(),
 			Key: r.URL.Path,
 			OpenShiftCluster: &api.OpenShiftCluster{
 				ID:   originalPath,

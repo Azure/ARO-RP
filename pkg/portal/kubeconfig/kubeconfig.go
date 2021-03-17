@@ -70,7 +70,10 @@ func New(baseLog *logrus.Entry,
 		dialer:      dialer,
 		clientCache: clientcache.New(time.Hour),
 
-		newToken: func() string { return uuid.NewV4().String() },
+		newToken: func() string {
+			newUuid4, _ := uuid.NewV4()
+			return newUuid4.String()
+		},
 	}
 
 	rp := &httputil.ReverseProxy{

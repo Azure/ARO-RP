@@ -89,10 +89,11 @@ func NewOpenShiftClusters(ctx context.Context, deploymentMode deployment.Mode, d
 }
 
 func NewOpenShiftClustersWithProvidedClient(client cosmosdb.OpenShiftClusterDocumentClient, collectionClient cosmosdb.CollectionClient) OpenShiftClusters {
+	newUuid4, _ := uuid.NewV4()
 	return &openShiftClusters{
 		c:     client,
 		collc: collectionClient,
-		uuid:  uuid.NewV4().String(),
+		uuid:  newUuid4.String(),
 	}
 }
 

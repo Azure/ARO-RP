@@ -37,6 +37,11 @@ var (
 	id             = fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName", subscriptionID)
 )
 
+func getNewUuid4String() string {
+	newUuid4, _ := uuid.NewV4()
+	return newUuid4.String()
+}
+
 func validOpenShiftCluster() *OpenShiftCluster {
 	oc := &OpenShiftCluster{
 		ID:       id,
@@ -730,7 +735,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		},
 		{
 			name:   "clientId change",
-			modify: func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientID = uuid.NewV4().String() },
+			modify: func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientID = getNewUuidString() },
 		},
 		{
 			name:   "clientSecret change",
