@@ -5,7 +5,6 @@ package dynamic
 
 import (
 	"context"
-	"log"
 	"net/http"
 
 	"github.com/form3tech-oss/jwt-go"
@@ -17,7 +16,7 @@ import (
 
 func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string) error {
 	// TODO: once aad.GetToken is mockable, write a unit test for this function
-	log.Print("ValidateServicePrincipal")
+	dv.log.Print("ValidateServicePrincipal")
 
 	token, err := aad.GetToken(ctx, dv.log, clientID, clientSecret, tenantID, dv.azEnv.ActiveDirectoryEndpoint, dv.azEnv.GraphEndpoint)
 	if err != nil {
