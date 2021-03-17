@@ -5,7 +5,6 @@ package controllers
 
 const (
 	AlertwebhookControllerName             = "Alertwebhook"
-	AzureNSGControllerName                 = "AzureNSG"
 	GenevaLoggingControllerName            = "GenevaLogging"
 	PullSecretControllerName               = "PullSecret"
 	WorkaroundControllerName               = "Workaround"

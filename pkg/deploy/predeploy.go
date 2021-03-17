@@ -80,6 +80,12 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
+	// deploy ACR RBAC, RP version storage account
+	err = d.deployRPGlobal(ctx, rpMSI.PrincipalID.String())
+	if err != nil {
+		return err
+	}
+
 	// Due to https://github.com/Azure/azure-resource-manager-schemas/issues/1067
 	// we can't use conditions to define ACR replication object deployment.
 	if d.config.Configuration.ACRReplicaDisabled != nil && !*d.config.Configuration.ACRReplicaDisabled {
@@ -87,12 +93,6 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-	}
-
-	// deploy ACR RBAC, RP version storage account
-	err = d.deployRPGlobal(ctx, rpMSI.PrincipalID.String())
-	if err != nil {
-		return err
 	}
 
 	// deploy NSGs, keyvaults
