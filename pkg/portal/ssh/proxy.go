@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gofrs/uuid"
+	uuid "github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 	cryptossh "golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"

@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
+	uuid "github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
-	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 	cryptossh "golang.org/x/crypto/ssh"
 
@@ -72,7 +72,7 @@ func New(env env.Core,
 		dialer: dialer,
 
 		baseServerConfig: &cryptossh.ServerConfig{},
-		newPassword:      func() string {
+		newPassword: func() string {
 			newUuid4, _ := uuid.NewV4()
 			return newUuid4.String()
 		},

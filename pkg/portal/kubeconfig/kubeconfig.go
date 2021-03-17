@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
+	uuid "github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
-	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 

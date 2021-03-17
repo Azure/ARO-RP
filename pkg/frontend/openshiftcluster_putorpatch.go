@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	uuid "github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
-	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"

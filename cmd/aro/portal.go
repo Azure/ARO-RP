@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gofrs/uuid"
+	uuid "github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
