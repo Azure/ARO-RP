@@ -296,7 +296,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 					},
 				}
 			},
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientID = getNewUuidString() },
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientID = getNewUuid4String() },
 			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.clientId: Changing property 'properties.servicePrincipalProfile.clientId' is not allowed.",
 		},
 		{
@@ -310,7 +310,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 					},
 				}
 			},
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.SPObjectID = getNewUuidString() },
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.SPObjectID = getNewUuid4String() },
 			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.spObjectId: Changing property 'properties.servicePrincipalProfile.spObjectId' is not allowed.",
 		},
 		{

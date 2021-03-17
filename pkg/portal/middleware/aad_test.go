@@ -449,7 +449,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "success",
 			request: func(a *aad) (*http.Request, error) {
-				uuid := getNewUuidString()
+				uuid := getNewUuid4String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState:        uuid,
@@ -500,7 +500,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "fail - state mismatch",
 			request: func(a *aad) (*http.Request, error) {
-				uuid := getNewUuidString()
+				uuid := getNewUuid4String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState:        uuid,
@@ -525,7 +525,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "fail - error returned",
 			request: func(a *aad) (*http.Request, error) {
-				uuid := getNewUuidString()
+				uuid := getNewUuid4String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState:        uuid,
@@ -552,7 +552,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "fail - oauther failed",
 			request: func(a *aad) (*http.Request, error) {
-				uuid := getNewUuidString()
+				uuid := getNewUuid4String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState:        uuid,
@@ -580,7 +580,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "fail - no idtoken",
 			request: func(a *aad) (*http.Request, error) {
-				uuid := getNewUuidString()
+				uuid := getNewUuid4String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState:        uuid,
@@ -606,7 +606,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "fail - verifier error",
 			request: func(a *aad) (*http.Request, error) {
-				uuid := getNewUuidString()
+				uuid := getNewUuid4String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState:        uuid,
@@ -637,7 +637,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "fail - invalid claims",
 			request: func(a *aad) (*http.Request, error) {
-				uuid := getNewUuidString()
+				uuid := getNewUuid4String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState:        uuid,
@@ -668,7 +668,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "fail - group mismatch",
 			request: func(a *aad) (*http.Request, error) {
-				uuid := getNewUuidString()
+				uuid := getNewUuid4String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState:        uuid,
@@ -699,7 +699,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "fail - missing redirect_path",
 			request: func(a *aad) (*http.Request, error) {
-				uuid := getNewUuidString()
+				uuid := getNewUuid4String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState: uuid,

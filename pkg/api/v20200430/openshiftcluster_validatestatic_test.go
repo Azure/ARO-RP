@@ -735,7 +735,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		},
 		{
 			name:   "clientId change",
-			modify: func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientID = getNewUuidString() },
+			modify: func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientID = getNewUuid4String() },
 		},
 		{
 			name:   "clientSecret change",
