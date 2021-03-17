@@ -17,6 +17,9 @@
         "armApiClientCertCommonName": {
             "value": ""
         },
+        "armClientId": {
+            "value": ""
+        },
         "billingE2EStorageAccountId": {
             "value": ""
         },

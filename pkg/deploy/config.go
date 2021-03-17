@@ -39,6 +39,7 @@ type Configuration struct {
 	AdminAPIClientCertCommonName       *string       `json:"adminApiClientCertCommonName,omitempty" value:"required"`
 	ARMAPICABundle                     *string       `json:"armApiCaBundle,omitempty"`
 	ARMAPIClientCertCommonName         *string       `json:"armApiClientCertCommonName,omitempty"`
+	ARMClientID                        *string       `json:"armClientId,omitempty"`
 	BillingE2EStorageAccountID         *string       `json:"billingE2EStorageAccountId,omitempty"`
 	BillingServicePrincipalID          *string       `json:"billingServicePrincipalId,omitempty"`
 	ClusterMDSDConfigVersion           *string       `json:"clusterMdsdConfigVersion,omitempty" value:"required"`

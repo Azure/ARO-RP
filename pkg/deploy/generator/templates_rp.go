@@ -34,6 +34,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"adminApiClientCertCommonName",
 			"armApiCaBundle",
 			"armApiClientCertCommonName",
+			"armClientId",
 			"billingE2EStorageAccountId",
 			"billingServicePrincipalId",
 			"clusterMdsdConfigVersion",
@@ -66,6 +67,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			p.Type = "bool"
 		case "armApiCaBundle",
 			"armApiClientCertCommonName",
+			"armClientId",
 			"billingServicePrincipalId",
 			"billingE2EStorageAccountId",
 			"extraCosmosDBIPs",

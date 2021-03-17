@@ -104,6 +104,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			AdminAPIClientCertCommonName: to.StringPtr(clientCert.Subject.CommonName),
 			ARMAPICABundle:               to.StringPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
 			ARMAPIClientCertCommonName:   to.StringPtr(clientCert.Subject.CommonName),
+			ARMClientID:                  to.StringPtr(os.Getenv("AZURE_ARM_CLIENT_ID")),
 			ClusterMDSDConfigVersion:     to.StringPtr("2.3"),
 			ClusterParentDomainName:      to.StringPtr(os.Getenv("USER") + "-clusters." + os.Getenv("PARENT_DOMAIN_NAME")),
 			ExtraClusterKeyvaultAccessPolicies: []interface{}{
