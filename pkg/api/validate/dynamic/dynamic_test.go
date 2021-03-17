@@ -13,6 +13,7 @@ import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
@@ -122,7 +123,12 @@ func TestValidateVnetPermissions(t *testing.T) {
 				permissions:    permissionsClient,
 			}
 
-			err := dv.validatePermissions(ctx, Subnet{ID: masterSubnet})
+			vnetr, err := azure.ParseResourceID(vnetID)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = dv.validateVnetPermissions(ctx, vnetr)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))
@@ -512,7 +518,12 @@ func TestValidateVnetLocation(t *testing.T) {
 				virtualNetworks: vnetClient,
 			}
 
-			err := dv.validateLocation(ctx, Subnet{ID: masterSubnet}, "eastus")
+			vnetr, err := azure.ParseResourceID(vnetID)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = dv.validateLocation(ctx, vnetr, "eastus")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

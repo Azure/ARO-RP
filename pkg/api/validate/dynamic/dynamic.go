@@ -6,7 +6,6 @@ package dynamic
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -69,7 +68,7 @@ func NewValidator(log *logrus.Entry, azEnv *azure.Environment, subscriptionID st
 
 		providers:       features.NewProvidersClient(azEnv, subscriptionID, authorizer),
 		spUsage:         compute.NewUsageClient(azEnv, subscriptionID, authorizer),
-		permissions:     newPermissionsCache(authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer)),
+		permissions:     authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer),
 		virtualNetworks: newVirtualNetworksCache(network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer)),
 	}, nil
 }
@@ -80,46 +79,59 @@ func (dv *dynamic) ValidateVnet(ctx context.Context, location string, subnets []
 	}
 
 	// each subnet is threated individually as it would be from the different vnet
+	// During cluster runtime worker profile gets enriched and contains multiple
+	// duplicate values for multiple worker pools. We care only about
+	// unique subnet value in the functions below.
+	subnets = uniqueSubnetSlice(subnets)
+
+	// get unique vnets from subnets
+	vnets := make(map[string]azure.Resource)
 	for _, s := range subnets {
-		err := dv.validatePermissions(ctx, s)
+		vnetID, _, err := subnet.Split(s.ID)
 		if err != nil {
 			return err
 		}
 
-		err = dv.validateRouteTablePermissions(ctx, s)
+		vnetr, err := azure.ParseResourceID(vnetID)
+		if err != nil {
+			return err
+		}
+		vnets[strings.ToLower(vnetID)] = vnetr
+	}
+
+	// validate at vnet level
+	for _, vnet := range vnets {
+		err := dv.validateVnetPermissions(ctx, vnet)
 		if err != nil {
 			return err
 		}
 
-		err = dv.validateLocation(ctx, s, location)
+		err = dv.validateLocation(ctx, vnet, location)
 		if err != nil {
 			return err
 		}
+	}
 
+	// validate at subnets level
+	for _, s := range subnets {
+		err := dv.validateRouteTablePermissions(ctx, s)
+		if err != nil {
+			return err
+		}
 	}
 
 	return dv.validateCIDRRanges(ctx, subnets, additionalCIDRs...)
 }
 
-func (dv *dynamic) validatePermissions(ctx context.Context, s Subnet) error {
-	dv.log.Printf("ValidatePermissions")
-
-	vnetID, _, err := subnet.Split(s.ID)
-	if err != nil {
-		return err
-	}
-
-	vnetr, err := azure.ParseResourceID(vnetID)
-	if err != nil {
-		return err
-	}
+func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resource) error {
+	dv.log.Printf("validateVnetPermissions")
 
 	errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
 	if dv.authorizerType == AuthorizerClusterServicePrincipal {
 		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
 	}
 
-	err = dv.validateActions(ctx, &vnetr, []string{
+	err := dv.validateActions(ctx, &vnet, []string{
 		"Microsoft.Network/virtualNetworks/join/action",
 		"Microsoft.Network/virtualNetworks/read",
 		"Microsoft.Network/virtualNetworks/write",
@@ -129,18 +141,18 @@ func (dv *dynamic) validatePermissions(ctx context.Context, s Subnet) error {
 	})
 
 	if err == wait.ErrWaitTimeout {
-		return api.NewCloudError(http.StatusBadRequest, errCode, "", "The %s service principal does not have Network Contributor permission on vnet '%s'.", dv.authorizerType, vnetID)
+		return api.NewCloudError(http.StatusBadRequest, errCode, "", "The %s service principal does not have Network Contributor permission on vnet '%s'.", dv.authorizerType, vnet.String())
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The vnet '%s' could not be found.", vnetID)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The vnet '%s' could not be found.", vnet.String())
 	}
 	return err
 }
 
 // validateRouteTablesPermissions will validate permissions on provided subnet
 func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) error {
-	log.Printf("validateRouteTablePermissions")
+	dv.log.Printf("validateRouteTablePermissions")
 
 	vnetID, _, err := subnet.Split(s.ID)
 	if err != nil {
@@ -273,18 +285,8 @@ func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, add
 	return nil
 }
 
-func (dv *dynamic) validateLocation(ctx context.Context, s Subnet, location string) error {
+func (dv *dynamic) validateLocation(ctx context.Context, vnetr azure.Resource, location string) error {
 	dv.log.Print("validateLocation")
-
-	vnetID, _, err := subnet.Split(s.ID)
-	if err != nil {
-		return err
-	}
-
-	vnetr, err := azure.ParseResourceID(vnetID)
-	if err != nil {
-		return err
-	}
 
 	vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, "")
 	if err != nil {
@@ -412,8 +414,8 @@ func uniqueSubnetSlice(slice []Subnet) []Subnet {
 	keys := make(map[string]bool)
 	list := []Subnet{}
 	for _, entry := range slice {
-		if _, value := keys[entry.ID]; !value {
-			keys[entry.ID] = true
+		if _, value := keys[strings.ToLower(entry.ID)]; !value {
+			keys[strings.ToLower(entry.ID)] = true
 			list = append(list, entry)
 		}
 	}
