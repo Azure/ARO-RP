@@ -16,4 +16,5 @@ const (
 	DnsmasqMachineConfigControllerName     = "DnsmasqMachineConfig"
 	DnsmasqMachineConfigPoolControllerName = "DnsmasqMachineConfigPool"
 	NodeControllerName                     = "Node"
+	OpenshiftInstallControllerName         = "OpenshiftInstall"
 )
