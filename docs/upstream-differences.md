@@ -5,8 +5,7 @@ upstream OCP.
 
 ## Installer carry patches
 
-See
-https://github.com/jim-minter/installer/compare/release-4.5...jim-minter:release-4.5-azure .
+See https://github.com/openshift/installer/compare/release-4.6...jim-minter:release-4.6-azure.
 
 ## Installation differences
 
