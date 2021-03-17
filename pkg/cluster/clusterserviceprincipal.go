@@ -29,18 +29,20 @@ func (m *manager) createOrUpdateClusterServicePrincipalRBAC(ctx context.Context)
 		return err
 	}
 
-	// If we have Contributor RBAC role for Cluster SP on the resource group in question
 	// We are interested in Resource group scope only (inherited are returned too).
 	var toDelete []mgmtauthorization.RoleAssignment
 	var found bool
 	for _, assignment := range roleAssignments {
-		// Contributor assignments only!
-		if strings.EqualFold(*assignment.Scope, resourceGroupID) && strings.HasSuffix(strings.ToLower(*assignment.RoleDefinitionID), rbac.RoleContributor) {
-			if strings.EqualFold(*assignment.PrincipalID, clusterSPObjectID) {
-				found = true
-			} else {
-				toDelete = append(toDelete, assignment)
-			}
+		if !strings.EqualFold(*assignment.Scope, resourceGroupID) ||
+			strings.HasSuffix(strings.ToLower(*assignment.RoleDefinitionID), strings.ToLower(rbac.RoleOwner)) /* should only matter in development */ {
+			continue
+		}
+
+		if strings.EqualFold(*assignment.PrincipalID, clusterSPObjectID) &&
+			strings.HasSuffix(strings.ToLower(*assignment.RoleDefinitionID), strings.ToLower(rbac.RoleContributor)) {
+			found = true
+		} else {
+			toDelete = append(toDelete, assignment)
 		}
 	}
 
@@ -50,6 +52,11 @@ func (m *manager) createOrUpdateClusterServicePrincipalRBAC(ctx context.Context)
 		if err != nil {
 			return err
 		}
+	}
+
+	err = m.deleteRoleDefinition(ctx)
+	if err != nil {
+		return err
 	}
 
 	if !found {
