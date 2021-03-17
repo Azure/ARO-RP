@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	uuid "github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 

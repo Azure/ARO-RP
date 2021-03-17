@@ -154,7 +154,7 @@ func acceptableNames(path string) []string {
 		return []string{"icazure"}
 	case "github.com/openshift/installer/pkg/types/azure":
 		return []string{"azuretypes"}
-	case "github.com/satori/go.uuid":
+	case "github.com/gofrs/uuid":
 		return []string{"uuid"}
 	case "golang.org/x/crypto/ssh":
 		return []string{"", "cryptossh"}
@@ -227,7 +227,7 @@ nextImport:
 			errs = append(errs, fmt.Errorf("%s is imported; use github.com/ghodss/yaml", value))
 			continue nextImport
 		case "github.com/google/uuid":
-			errs = append(errs, fmt.Errorf("%s is imported; use github.com/satori/go.uuid", value))
+			errs = append(errs, fmt.Errorf("%s is imported; use github.com/gofrs/uuid", value))
 			continue nextImport
 		}
 

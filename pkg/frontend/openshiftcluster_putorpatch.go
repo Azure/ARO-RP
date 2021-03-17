@@ -14,7 +14,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
-	uuid "github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
