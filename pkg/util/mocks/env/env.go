@@ -379,6 +379,20 @@ func (mr *MockInterfaceMockRecorder) FPAuthorizer(arg0, arg1 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FPAuthorizer", reflect.TypeOf((*MockInterface)(nil).FPAuthorizer), arg0, arg1)
 }
 
+// FPClientID mocks base method
+func (m *MockInterface) FPClientID() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FPClientID")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// FPClientID indicates an expected call of FPClientID
+func (mr *MockInterfaceMockRecorder) FPClientID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FPClientID", reflect.TypeOf((*MockInterface)(nil).FPClientID))
+}
+
 // FeatureIsSet mocks base method
 func (m *MockInterface) FeatureIsSet(arg0 env.Feature) bool {
 	m.ctrl.T.Helper()

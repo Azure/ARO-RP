@@ -28,6 +28,7 @@ import (
 type prod struct {
 	Core
 	proxy.Dialer
+	ARMHelper
 
 	armClientAuthorizer   clientauthorizer.ClientAuthorizer
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
@@ -163,6 +164,11 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		p.acrDomain = "arointsvc" + "." + azure.PublicCloud.ContainerRegistryDNSSuffix // TODO: make cloud aware once this is set up for US Gov Cloud
 	}
 
+	p.ARMHelper, err = newARMHelper(log, p)
+	if err != nil {
+		return nil, err
+	}
+
 	return p, nil
 }
 
@@ -280,6 +286,10 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, 
 	return refreshable.NewAuthorizer(sp), nil
 }
 
+func (p *prod) FPClientID() string {
+	return p.fpClientID
+}
+
 func (p *prod) Listen() (net.Listener, error) {
 	return net.Listen("tcp", ":8443")
 }
@@ -294,9 +304,4 @@ func (p *prod) Zones(vmSize string) ([]string, error) {
 		return nil, fmt.Errorf("zone information not found for vm size %q", vmSize)
 	}
 	return zones, nil
-}
-
-func (d *prod) EnsureARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer refreshable.Authorizer, resourceGroup string) error {
-	// ARM ResourceGroup role assignments are not required in production.
-	return nil
 }

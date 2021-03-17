@@ -50,11 +50,11 @@ const (
 type Interface interface {
 	Core
 	proxy.Dialer
+	ARMHelper
 
 	InitializeAuthorizers() error
 	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
 	AdminClientAuthorizer() clientauthorizer.ClientAuthorizer
-	EnsureARMResourceGroupRoleAssignment(context.Context, refreshable.Authorizer, string) error
 	ClusterGenevaLoggingConfigVersion() string
 	ClusterGenevaLoggingEnvironment() string
 	ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
@@ -62,6 +62,7 @@ type Interface interface {
 	Domain() string
 	FeatureIsSet(Feature) bool
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
+	FPClientID() string
 	Listen() (net.Listener, error)
 	ServiceKeyvault() keyvault.Manager
 	Zones(vmSize string) ([]string, error)
