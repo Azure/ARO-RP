@@ -1,3 +1,13 @@
+## 1.15.2
+
+### Fixes
+- ignore blank `-focus` and `-skip` flags (#780) [e90a4a0]
+
+## 1.15.1
+
+### Fixes
+- reporters/junit: Use `system-out` element instead of `passed` (#769) [9eda305]
+
 ## 1.15.0
 
 ### Features
