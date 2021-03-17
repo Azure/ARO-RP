@@ -40,7 +40,11 @@ func (a *azureActions) ResourcesList(ctx context.Context) ([]byte, error) {
 		case "Microsoft.Compute/virtualMachines":
 			vm, err := a.virtualMachines.Get(ctx, clusterRGName, *res.Name, mgmtcompute.InstanceView)
 			if err != nil {
-				return nil, err
+				a.log.Warn(err) // can happen when the ARM cache is lagging
+				armResources = append(armResources, arm.Resource{
+					Resource: res,
+				})
+				continue
 			}
 			armResources = append(armResources, arm.Resource{
 				Resource: vm,
@@ -48,7 +52,11 @@ func (a *azureActions) ResourcesList(ctx context.Context) ([]byte, error) {
 		default:
 			gr, err := a.resources.GetByID(ctx, *res.ID, apiVersion)
 			if err != nil {
-				return nil, err
+				a.log.Warn(err) // can happen when the ARM cache is lagging
+				armResources = append(armResources, arm.Resource{
+					Resource: res,
+				})
+				continue
 			}
 			armResources = append(armResources, arm.Resource{
 				Resource: gr,
