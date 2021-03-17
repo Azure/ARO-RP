@@ -5,11 +5,11 @@ package env
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -40,29 +40,47 @@ type armHelper struct {
 	applications    graphrbac.ApplicationsClient
 }
 
-func newARMHelper(log *logrus.Entry, env Interface) (ARMHelper, error) {
+func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHelper, error) {
 	if os.Getenv("AZURE_ARM_CLIENT_ID") == "" {
 		return &noopARMHelper{}, nil
 	}
 
-	for _, key := range []string{
-		"AZURE_ARM_CLIENT_SECRET",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return nil, fmt.Errorf("environment variable %q unset", key)
-		}
-	}
+	var armAuthorizer autorest.Authorizer
+	if os.Getenv("AZURE_ARM_CLIENT_SECRET") != "" {
+		// TODO: migrate away from AZURE_ARM_CLIENT_SECRET and remove this code
+		// path
 
-	ccc := auth.ClientCredentialsConfig{
-		ClientID:     os.Getenv("AZURE_ARM_CLIENT_ID"),
-		ClientSecret: os.Getenv("AZURE_ARM_CLIENT_SECRET"),
-		TenantID:     env.TenantID(),
-		Resource:     env.Environment().ResourceManagerEndpoint,
-		AADEndpoint:  env.Environment().ActiveDirectoryEndpoint,
-	}
-	armAuthorizer, err := ccc.Authorizer()
-	if err != nil {
-		return nil, err
+		ccc := auth.ClientCredentialsConfig{
+			ClientID:     os.Getenv("AZURE_ARM_CLIENT_ID"),
+			ClientSecret: os.Getenv("AZURE_ARM_CLIENT_SECRET"),
+			TenantID:     env.TenantID(),
+			Resource:     env.Environment().ResourceManagerEndpoint,
+			AADEndpoint:  env.Environment().ActiveDirectoryEndpoint,
+		}
+
+		var err error
+		armAuthorizer, err = ccc.Authorizer()
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		key, certs, err := env.ServiceKeyvault().GetCertificateSecret(ctx, RPDevARMSecretName)
+		if err != nil {
+			return nil, err
+		}
+
+		oauthConfig, err := adal.NewOAuthConfig(env.Environment().ActiveDirectoryEndpoint, env.TenantID())
+		if err != nil {
+			return nil, err
+		}
+
+		sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_ARM_CLIENT_ID"), certs[0], key, env.Environment().ResourceManagerEndpoint)
+		if err != nil {
+			return nil, err
+		}
+
+		armAuthorizer = autorest.NewBearerAuthorizer(sp)
 	}
 
 	fpGraphAuthorizer, err := env.FPAuthorizer(env.TenantID(), env.Environment().GraphEndpoint)

@@ -31,6 +31,7 @@ const (
 )
 
 const (
+	RPDevARMSecretName               = "dev-arm"
 	RPFirstPartySecretName           = "rp-firstparty"
 	RPServerSecretName               = "rp-server"
 	ClusterLoggingSecretName         = "cluster-mdsd"

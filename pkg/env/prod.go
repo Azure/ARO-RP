@@ -164,7 +164,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		p.acrDomain = "arointsvc" + "." + azure.PublicCloud.ContainerRegistryDNSSuffix // TODO: make cloud aware once this is set up for US Gov Cloud
 	}
 
-	p.ARMHelper, err = newARMHelper(log, p)
+	p.ARMHelper, err = newARMHelper(ctx, log, p)
 	if err != nil {
 		return nil, err
 	}

@@ -51,7 +51,7 @@ func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
 
 	// ugh: run this again after RP_MODE=development has caused the feature flag
 	// to be set.
-	d.prod.ARMHelper, err = newARMHelper(log, d)
+	d.prod.ARMHelper, err = newARMHelper(ctx, log, d)
 	if err != nil {
 		return nil, err
 	}
