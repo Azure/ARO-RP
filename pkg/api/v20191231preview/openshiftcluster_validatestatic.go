@@ -122,8 +122,17 @@ func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, c
 	if pullsecret.Validate(cp.PullSecret) != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".pullSecret", "The provided pull secret is invalid.")
 	}
-	if !validate.RxDomainName.MatchString(cp.Domain) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
+	if isCreate {
+		if !validate.RxDomainName.MatchString(cp.Domain) {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
+		}
+	} else {
+		// We currently do not allow domains with a digit as a first charecter,
+		// for new clusters, but we already have some existing clusters with
+		// domains like this and we need to allow customers to update them.
+		if !validate.RxDomainNameRFC1123.MatchString(cp.Domain) {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
+		}
 	}
 	// domain ends .aroapp.io, but doesn't end .<rp-location>.aroapp.io
 	if strings.HasSuffix(cp.Domain, "."+strings.SplitN(sv.domain, ".", 2)[1]) &&
