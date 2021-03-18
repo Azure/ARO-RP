@@ -142,6 +142,10 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 
 	visibility := api.VisibilityPublic
 
+	if os.Getenv("NO_INTERNET") != "" {
+		visibility = api.VisibilityPrivate
+	}
+
 	if c.ci {
 		c.log.Infof("creating resource group")
 		_, err = c.groups.CreateOrUpdate(ctx, vnetResourceGroup, mgmtfeatures.ResourceGroup{
@@ -176,6 +180,21 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		"vnetAddressPrefix":         {Value: addressPrefix},
 		"masterAddressPrefix":       {Value: masterSubnet},
 		"workerAddressPrefix":       {Value: workerSubnet},
+	}
+
+	// TODO: ick
+	if os.Getenv("NO_INTERNET") != "" {
+		parameters["routes"] = &arm.ParametersParameter{
+			Value: []mgmtnetwork.Route{
+				{
+					RoutePropertiesFormat: &mgmtnetwork.RoutePropertiesFormat{
+						AddressPrefix: to.StringPtr("0.0.0.0/0"),
+						NextHopType:   mgmtnetwork.RouteNextHopTypeNone,
+					},
+					Name: to.StringPtr("blackhole"),
+				},
+			},
+		}
 	}
 
 	armctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
