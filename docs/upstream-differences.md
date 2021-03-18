@@ -33,3 +33,5 @@ See https://github.com/openshift/installer/compare/release-4.6...jim-minter:rele
 
 * ARO deploys a private link service in order for the RP to be able to
   communicate with the cluster.
+
+* ARO runs a dnsmasq service on the nodes through the use of a machineconfig to resolve api-int and *.apps domains on the node locally allowing for custom DNS configured on the VNET.
