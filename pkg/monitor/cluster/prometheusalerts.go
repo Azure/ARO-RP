@@ -17,6 +17,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/portforward"
 )
 
+var ignoredAlerts = map[string]struct{}{
+	"ImagePruningDisabled": {},
+}
+
 func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 	var resp *http.Response
 	var err error
@@ -73,14 +77,14 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 		severity string
 	}{}
 
-	mon.emitGauge("prometheus.alerts", int64(len(alerts)), nil)
+	mon.emitGauge("prometheus.alerts.count", int64(len(alerts)), nil)
 
 	for _, alert := range alerts {
 		if !namespace.IsOpenShift(string(alert.Labels["namespace"])) {
 			continue
 		}
 
-		if strings.HasPrefix(alert.Name(), "UsingDeprecatedAPI") {
+		if alertIsIgnored(alert.Name()) {
 			continue
 		}
 
@@ -100,4 +104,16 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func alertIsIgnored(alertName string) bool {
+	if strings.HasPrefix(alertName, "UsingDeprecatedAPI") {
+		return true
+	}
+
+	if _, ok := ignoredAlerts[alertName]; ok {
+		return true
+	}
+
+	return false
 }
