@@ -26,6 +26,8 @@ func main() {
 	flag.Parse()
 
 	s := &proxy.Server{
+		Log: log,
+
 		CertFile:       *certFile,
 		KeyFile:        *keyFile,
 		ClientCertFile: *clientCertFile,

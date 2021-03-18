@@ -10,9 +10,15 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+
+	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
 type Server struct {
+	Log *logrus.Entry
+
 	CertFile       string
 	KeyFile        string
 	ClientCertFile string
@@ -101,21 +107,22 @@ func (s *Server) Run() error {
 			return
 		}
 
-		proxy(w, r)
+		proxy(s.Log, w, r)
 	}))
 }
 
-func proxy(w http.ResponseWriter, r *http.Request) {
+func proxy(log *logrus.Entry, w http.ResponseWriter, r *http.Request) {
 	c2, err := net.Dial("tcp", r.Host)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	defer c2.Close()
+
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
 		http.Error(w, "hijacking not supported", http.StatusInternalServerError)
-		c2.Close()
 		return
 	}
 
@@ -124,20 +131,27 @@ func proxy(w http.ResponseWriter, r *http.Request) {
 	c1, buf, err := hijacker.Hijack()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		c1.Close()
-		c2.Close()
 		return
 	}
 
+	defer c1.Close()
+	ch := make(chan struct{})
+
 	go func() {
+		defer recover.Panic(log)
+		defer close(ch)
 		defer func() {
 			_ = c2.(*net.TCPConn).CloseWrite()
 		}()
 		_, _ = io.Copy(c2, buf)
 	}()
 
-	defer func() {
-		_ = c1.(*tls.Conn).CloseWrite()
+	func() {
+		defer func() {
+			_ = c1.(*tls.Conn).CloseWrite()
+		}()
+		_, _ = io.Copy(c1, c2)
 	}()
-	_, _ = io.Copy(c1, c2)
+
+	<-ch
 }
