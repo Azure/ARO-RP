@@ -134,16 +134,6 @@
    go run ./cmd/aro rp
    ```
 
-1. Before creating a cluster, it is necessary to fake up the step of registering
-   the development resource provider to the subscription:
-
-   ```bash
-   curl -k -X PUT \
-     -H 'Content-Type: application/json' \
-     -d '{"state": "Registered", "properties": {"tenantId": "'"$AZURE_TENANT_ID"'"}}' \
-     "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0"
-   ```
-
 1. To create a cluster, EITHER follow the instructions in [Create, access, and
    manage an Azure Red Hat OpenShift 4.3 Cluster][1].  Note that as long as the
    `RP_MODE` environment variable is set to `development`, the `az aro` client
