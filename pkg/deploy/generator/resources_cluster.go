@@ -16,12 +16,17 @@ func (g *generator) clusterVnet() *arm.Resource {
 }
 
 func (g *generator) clusterRouteTable() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtnetwork.RouteTable{
-			Name:     to.StringPtr("[concat(parameters('clusterName'), '-rt')]"),
-			Type:     to.StringPtr("Microsoft.Network/routeTables"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+	rt := &mgmtnetwork.RouteTable{
+		RouteTablePropertiesFormat: &mgmtnetwork.RouteTablePropertiesFormat{
+			Routes: &[]mgmtnetwork.Route{},
 		},
+		Name:     to.StringPtr("[concat(parameters('clusterName'), '-rt')]"),
+		Type:     to.StringPtr("Microsoft.Network/routeTables"),
+		Location: to.StringPtr("[resourceGroup().location]"),
+	}
+
+	return &arm.Resource{
+		Resource:   rt,
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
@@ -52,6 +57,9 @@ func (g *generator) clusterWorkerSubnet() *arm.Resource {
 		Resource: &mgmtnetwork.Subnet{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 				AddressPrefix: to.StringPtr("[parameters('workerAddressPrefix')]"),
+				RouteTable: &mgmtnetwork.RouteTable{
+					ID: to.StringPtr("[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"),
+				},
 			},
 			Name: to.StringPtr("[concat('dev-vnet/', parameters('clusterName'), '-worker')]"),
 		},
@@ -60,6 +68,7 @@ func (g *generator) clusterWorkerSubnet() *arm.Resource {
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
 			"[resourceid('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', concat(parameters('clusterName'), '-master'))]",
+			"[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]",
 		},
 	}
 }
