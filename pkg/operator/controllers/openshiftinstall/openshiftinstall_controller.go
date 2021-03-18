@@ -67,7 +67,7 @@ func (r *OpenshiftInstallReconciler) setOpenshiftInstallInvoker(ctx context.Cont
 
 // SetupWithManager setup reconcilier with manager to reconcile openshift-install-manifest ConfigMap
 func (r *OpenshiftInstallReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.log.Info("Setting openshift-install-manifest invoker to ARO")
+	r.log.Info("Setting openshift-install-manifests invoker to ARO")
 
 	isOpenshiftInstallPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
 		return meta.GetName() == openshiftInstallConfigMap.Name && meta.GetNamespace() == openshiftInstallConfigMap.Namespace
