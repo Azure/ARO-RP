@@ -19,6 +19,8 @@
    OSX users: please follow [Prepare your development environment using
    OSX](./prepare-your-development-environment-using-osx.md).
 
+   > __NOTE:__ The `gpgme-devel` and `libassuan-devel` libraries are needed in the aro `mirror` functionality.  The dependency can be excluded if one uses build tag `containers_image_openpgp` when building the RP.  See [this link](https://github.com/containers/image#supported-build-tags) for more details on removal.
+
 1. Install the [az
    client](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), if you
    haven't already. You will need `az` version 2.0.72 or greater, as this
