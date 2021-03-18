@@ -15,6 +15,7 @@ func (g *generator) clusterPredeploy() *arm.Template {
 		"clusterServicePrincipalId",
 		"fpServicePrincipalId",
 		"ci",
+		"routes",
 		"vnetAddressPrefix",
 		"masterAddressPrefix",
 		"workerAddressPrefix",
@@ -26,6 +27,9 @@ func (g *generator) clusterPredeploy() *arm.Template {
 		case "ci":
 			p.Type = "bool"
 			p.DefaultValue = false
+		case "routes":
+			p.Type = "array"
+			p.DefaultValue = []interface{}{}
 		}
 		t.Parameters[param] = p
 	}
