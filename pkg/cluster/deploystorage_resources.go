@@ -73,13 +73,13 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 	)
 }
 
-func (m *manager) clusterStorageAccount(region string) *arm.Resource {
+func (m *manager) storageAccount(name, region string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtstorage.Account{
 			Sku: &mgmtstorage.Sku{
 				Name: "Standard_LRS",
 			},
-			Name:     to.StringPtr("cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix),
+			Name:     &name,
 			Location: &region,
 			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
 		},
@@ -87,15 +87,15 @@ func (m *manager) clusterStorageAccount(region string) *arm.Resource {
 	}
 }
 
-func (m *manager) clusterStorageAccountBlob(name string) *arm.Resource {
+func (m *manager) storageAccountBlobContainer(storageAccountName, name string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtstorage.BlobContainer{
-			Name: to.StringPtr("cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/" + name),
+			Name: to.StringPtr(storageAccountName + "/default/" + name),
 			Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 		DependsOn: []string{
-			"Microsoft.Storage/storageAccounts/cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix,
+			"Microsoft.Storage/storageAccounts/" + storageAccountName,
 		},
 	}
 }

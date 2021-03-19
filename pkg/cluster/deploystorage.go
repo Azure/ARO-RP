@@ -122,10 +122,12 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
+	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+
 	resources := []*arm.Resource{
-		m.clusterStorageAccount(installConfig.Config.Azure.Region),
-		m.clusterStorageAccountBlob("ignition"),
-		m.clusterStorageAccountBlob("aro"),
+		m.storageAccount(clusterStorageAccountName, installConfig.Config.Azure.Region),
+		m.storageAccountBlobContainer(clusterStorageAccountName, "ignition"),
+		m.storageAccountBlobContainer(clusterStorageAccountName, "aro"),
 		m.clusterNSG(infraID, installConfig.Config.Azure.Region),
 		m.clusterServicePrincipalRBAC(),
 		m.networkPrivateLinkService(installConfig),
