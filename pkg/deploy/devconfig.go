@@ -35,6 +35,7 @@ func adminKeyvaultAccessPolicy(_env env.Core) map[string]interface{} {
 				"ListIssuers",
 			},
 			"secrets": []interface{}{
+				"Get",
 				"List",
 			},
 		},
