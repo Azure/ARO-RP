@@ -6,6 +6,16 @@ variables:
 - template: vars.yml
 
 jobs:
+- job: Golang_Code_Lint
+  pool: ARO-CI
+  steps:
+  - template: ./templates/template-checkout.yml
+  - script: |
+      set -xe
+      make lint-go
+      [[ -z "$(git status -s)" ]]
+    displayName: 🕵️Run Golang Linters
+
 - job: Python_Unit_Tests
   pool:
     name: ARO-CI
@@ -24,7 +34,7 @@ jobs:
   - template: ./templates/template-checkout.yml
   - script: |
       set -xe
-      make test-go lint-go
+      make test-go
       [[ -z "$(git status -s)" ]]
     displayName: 🧪Run Golang Unit Tests
 
@@ -48,3 +58,4 @@ jobs:
       summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
       failIfCoverageEmpty: false
     condition: succeededOrFailed()
+
