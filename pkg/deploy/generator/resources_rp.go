@@ -1268,6 +1268,7 @@ func (g *generator) rpServiceKeyvault() *arm.Resource {
 						mgmtkeyvault.List,
 					},
 					Secrets: &[]mgmtkeyvault.SecretPermissions{
+						mgmtkeyvault.SecretPermissionsGet,
 						mgmtkeyvault.SecretPermissionsSet,
 						mgmtkeyvault.SecretPermissionsList,
 					},
