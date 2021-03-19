@@ -114,6 +114,64 @@ require (
 	sigs.k8s.io/controller-tools v0.3.1-0.20200617211605-651903477185
 )
 
+exclude (
+	// https://msazure.visualstudio.com/AzureRedHatOpenShift/_workitems/edit/9555522
+	github.com/hashicorp/vault v0.10.4
+	github.com/hashicorp/vault v0.11.0-beta1
+	github.com/hashicorp/vault v0.11.0
+	github.com/hashicorp/vault v0.11.1
+	github.com/hashicorp/vault v0.11.2
+	github.com/hashicorp/vault v0.11.3
+	github.com/hashicorp/vault v0.11.4
+	github.com/hashicorp/vault v0.11.5
+	github.com/hashicorp/vault v0.11.6
+	github.com/hashicorp/vault v0.11.7
+	github.com/hashicorp/vault v0.11.8
+	github.com/hashicorp/vault v1.0.0-beta1
+	github.com/hashicorp/vault v1.0.0-beta2
+	github.com/hashicorp/vault v1.0.0-rc1
+	github.com/hashicorp/vault v1.0.0
+	github.com/hashicorp/vault v1.0.1
+	github.com/hashicorp/vault v1.0.2
+	github.com/hashicorp/vault v1.0.3
+	github.com/hashicorp/vault v1.1.0-beta1
+	github.com/hashicorp/vault v1.1.0-beta2
+	github.com/hashicorp/vault v1.1.0
+	github.com/hashicorp/vault v1.1.1
+	github.com/hashicorp/vault v1.1.2
+	github.com/hashicorp/vault v1.1.3
+	github.com/hashicorp/vault v1.1.4
+	github.com/hashicorp/vault v1.1.5
+	github.com/hashicorp/vault v1.2.0-beta1
+	github.com/hashicorp/vault v1.2.0-beta2
+	github.com/hashicorp/vault v1.2.0-rc1
+	github.com/hashicorp/vault v1.2.0
+	github.com/hashicorp/vault v1.2.1
+	github.com/hashicorp/vault v1.2.2
+	github.com/hashicorp/vault v1.2.3
+	github.com/hashicorp/vault v1.2.4
+	github.com/hashicorp/vault v1.3.0
+	github.com/hashicorp/vault v1.3.1
+	github.com/hashicorp/vault v1.3.2
+	github.com/hashicorp/vault v1.3.3
+	github.com/hashicorp/vault v1.3.4
+	github.com/hashicorp/vault v1.3.5
+	github.com/hashicorp/vault v1.3.6
+	github.com/hashicorp/vault v1.3.7
+	github.com/hashicorp/vault v1.4.0-beta1
+	github.com/hashicorp/vault v1.4.0-beta2
+	github.com/hashicorp/vault v1.4.0-beta3
+	github.com/hashicorp/vault v1.4.0-rc1
+	github.com/hashicorp/vault v1.4.0
+	github.com/hashicorp/vault v1.4.1
+	github.com/hashicorp/vault v1.4.2
+	github.com/hashicorp/vault v1.4.3
+	github.com/hashicorp/vault v1.5.0-beta1
+	github.com/hashicorp/vault v1.5.0-beta2
+	github.com/hashicorp/vault v1.5.0-rc1
+	github.com/hashicorp/vault v1.5.0
+)
+
 replace (
 	bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d // 404 on bitbucket.org/ww/goautoneg
 	github.com/docker/spdystream => github.com/docker/spdystream v0.1.0
