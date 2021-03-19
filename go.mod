@@ -115,7 +115,7 @@ require (
 )
 
 exclude (
-	// https://msazure.visualstudio.com/AzureRedHatOpenShift/_workitems/edit/9555522
+	// exclude github.com/hashicorp/vault < v1.5.1: https://nvd.nist.gov/vuln/detail/CVE-2020-16251
 	github.com/hashicorp/vault v0.10.4
 	github.com/hashicorp/vault v0.11.0-beta1
 	github.com/hashicorp/vault v0.11.0
