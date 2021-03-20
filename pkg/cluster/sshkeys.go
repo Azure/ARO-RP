@@ -30,6 +30,8 @@ func (m *manager) generateSSHKey(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
+
+			doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName = "imageregistry" + doc.OpenShiftCluster.Properties.StorageSuffix
 		}
 
 		doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName = "imageregistry" + doc.OpenShiftCluster.Properties.StorageSuffix

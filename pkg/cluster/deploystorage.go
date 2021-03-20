@@ -134,6 +134,8 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		m.storageAccount(clusterStorageAccountName, installConfig.Config.Azure.Region),
 		m.storageAccountBlobContainer(clusterStorageAccountName, "ignition"),
 		m.storageAccountBlobContainer(clusterStorageAccountName, "aro"),
+		m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, installConfig.Config.Azure.Region),
+		m.storageAccountBlobContainer(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, "image-registry"),
 		m.clusterNSG(infraID, installConfig.Config.Azure.Region),
 		m.clusterServicePrincipalRBAC(),
 		m.networkPrivateLinkService(installConfig),
@@ -206,7 +208,7 @@ func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.
 
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
 		dnsConfig.GatewayPrivateEndpointIP = m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP
-		dnsConfig.GatewayDomains = m.env.GatewayDomains()
+		dnsConfig.GatewayDomains = append(m.env.GatewayDomains(), m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName+".blob."+m.env.Environment().StorageEndpointSuffix)
 	}
 
 	g := graph.Graph{}
