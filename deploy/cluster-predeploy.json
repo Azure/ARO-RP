@@ -38,13 +38,13 @@
             "type": "Microsoft.Network/virtualNetworks",
             "location": "[resourceGroup().location]",
             "condition": "[parameters('ci')]",
-            "apiVersion": "2019-07-01"
+            "apiVersion": "2020-08-01"
         },
         {
             "name": "[concat(parameters('clusterName'), '-rt')]",
             "type": "Microsoft.Network/routeTables",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-07-01"
+            "apiVersion": "2020-08-01"
         },
         {
             "properties": {
@@ -62,7 +62,7 @@
             },
             "name": "[concat('dev-vnet/', parameters('clusterName'), '-master')]",
             "type": "Microsoft.Network/virtualNetworks/subnets",
-            "apiVersion": "2019-07-01",
+            "apiVersion": "2020-08-01",
             "dependsOn": [
                 "[resourceid('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
                 "[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"
@@ -80,7 +80,7 @@
             },
             "name": "[concat('dev-vnet/', parameters('clusterName'), '-worker')]",
             "type": "Microsoft.Network/virtualNetworks/subnets",
-            "apiVersion": "2019-07-01",
+            "apiVersion": "2020-08-01",
             "dependsOn": [
                 "[resourceid('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', concat(parameters('clusterName'), '-master'))]"
             ],

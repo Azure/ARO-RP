@@ -149,7 +149,7 @@
             "name": "rp-pip",
             "type": "Microsoft.Network/publicIPAddresses",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-07-01"
+            "apiVersion": "2020-08-01"
         },
         {
             "sku": {
@@ -161,7 +161,7 @@
             "name": "portal-pip",
             "type": "Microsoft.Network/publicIPAddresses",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-07-01"
+            "apiVersion": "2020-08-01"
         },
         {
             "sku": {
@@ -281,7 +281,7 @@
             "name": "rp-lb",
             "type": "Microsoft.Network/loadBalancers",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-07-01",
+            "apiVersion": "2020-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]",
                 "[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]"
@@ -342,7 +342,7 @@
             "name": "rp-lb-internal",
             "type": "Microsoft.Network/loadBalancers",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-07-01"
+            "apiVersion": "2020-08-01"
         },
         {
             "sku": {
@@ -657,7 +657,7 @@
             "name": "rp-vnet",
             "type": "Microsoft.Network/virtualNetworks",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-07-01"
+            "apiVersion": "2020-08-01"
         },
         {
             "properties": {
@@ -683,7 +683,7 @@
             "name": "rp-pe-vnet-001",
             "type": "Microsoft.Network/virtualNetworks",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-07-01"
+            "apiVersion": "2020-08-01"
         },
         {
             "properties": {
@@ -697,7 +697,7 @@
             },
             "name": "rp-vnet/peering-rp-pe-vnet-001",
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-            "apiVersion": "2019-07-01",
+            "apiVersion": "2020-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
                 "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]"
@@ -716,7 +716,7 @@
             },
             "name": "rp-pe-vnet-001/peering-rp-vnet",
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-            "apiVersion": "2019-07-01",
+            "apiVersion": "2020-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]",
                 "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"
