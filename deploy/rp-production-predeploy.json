@@ -125,7 +125,7 @@
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
             "condition": "[parameters('deployNSGs')]",
-            "apiVersion": "2019-07-01"
+            "apiVersion": "2020-08-01"
         },
         {
             "properties": {},
@@ -133,7 +133,7 @@
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
             "condition": "[parameters('deployNSGs')]",
-            "apiVersion": "2019-07-01"
+            "apiVersion": "2020-08-01"
         },
         {
             "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",

@@ -51,14 +51,14 @@
             "name": "rp-nsg",
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-07-01"
+            "apiVersion": "2020-08-01"
         },
         {
             "properties": {},
             "name": "rp-pe-nsg",
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-07-01"
+            "apiVersion": "2020-08-01"
         },
         {
             "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
