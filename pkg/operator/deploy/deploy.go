@@ -183,7 +183,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 	}
 
 	if o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
-		cluster.Spec.GatewayDomains = o.env.GatewayDomains()
+		cluster.Spec.GatewayDomains = append(o.env.GatewayDomains(), o.oc.Properties.ImageRegistryStorageAccountName+".blob."+o.env.Environment().StorageEndpointSuffix)
 	} else {
 		cluster.Spec.InternetChecker = arov1alpha1.InternetCheckerSpec{
 			URLs: []string{
