@@ -1,61 +1,69 @@
-# Azure DevOps Pipeline running CI
+# Azure DevOps Pipeline running basic checks
 trigger:
-- master
+  - master
 
 variables:
-- template: vars.yml
+  - template: vars.yaml
 
 jobs:
-- job: Golang_Code_Lint
-  pool: ARO-CI
-  steps:
-  - template: ./templates/template-checkout.yml
-  - script: |
-      set -xe
-      make lint-go
-      [[ -z "$(git status -s)" ]]
-    displayName: 🕵️Run Golang Linters
+  - job: Python_Unit_Tests
+    pool:
+      name: ARO-CI
+    steps:
+      - template: ./templates/template-checkout.yaml
+      - script: |
+          set -xe
+          make test-python
+        displayName: Run Python Unit Tests
 
-- job: Python_Unit_Tests
-  pool:
-    name: ARO-CI
-  steps:
-  - template: ./templates/template-checkout.yml
-  - script: |
-      set -xe
-      make test-python
-      [[ -z "$(git status -s)" ]]
-    displayName: 🧪Run Python Unit Tests
+  - job: Golang_Basic_Checks
+    pool:
+      name: ARO-CI
+    steps:
+      - template: ./templates/template-checkout.yaml
 
-- job: Golang_Unit_Tests
-  pool:
-    name: ARO-CI
-  steps:
-  - template: ./templates/template-checkout.yml
-  - script: |
-      set -xe
-      make test-go
-      [[ -z "$(git status -s)" ]]
-    displayName: 🧪Run Golang Unit Tests
+      - script: |
+          set -xe
+          make generate
+          [[ -z "$(git status -s)" ]]
+        displayName: Run codegen check
 
-  - script: |
-      go run ./vendor/github.com/jstemmer/go-junit-report/go-junit-report.go < uts.txt > report.xml
-      go run ./vendor/github.com/axw/gocov/gocov/*.go convert cover.out > coverage.json
-      go run ./vendor/github.com/AlekSi/gocov-xml/gocov-xml.go < coverage.json > coverage.xml
-    displayName: ⚙️ Process Reports
-    condition: succeededOrFailed()
+      - script: |
+          set -xe
+          make lint-go
+        displayName: Run Golang Linters
 
-  - task: PublishTestResults@2
-    displayName: 📊 Publish tests results
-    inputs:
-      testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
-    condition: succeededOrFailed()
+      - script: |
+          set -xe
+          make test-go
+        displayName: Run Golang Unit Tests
 
-  - task: PublishCodeCoverageResults@1
-    displayName: 📈 Publish code coverage
-    inputs:
-      codeCoverageTool: Cobertura
-      summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
-      failIfCoverageEmpty: false
-    condition: succeededOrFailed()
+      - script: |
+          go run ./vendor/github.com/jstemmer/go-junit-report/go-junit-report.go < uts.txt > report.xml
+        displayName: Process Reports
+        condition: succeededOrFailed()
 
+      - task: PublishTestResults@2
+        displayName: Publish tests results
+        inputs:
+          testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
+        condition: succeededOrFailed()
+
+      - script: |
+          set -xe
+          make test-go-coverage
+        displayName: Run coverage test
+
+      - script: |
+          go run ./vendor/github.com/axw/gocov/gocov/*.go convert cover.out > coverage.json
+          go run ./vendor/github.com/AlekSi/gocov-xml/gocov-xml.go < coverage.json > coverage.xml
+        displayName: Process Reports
+        condition: succeededOrFailed()
+
+      - task: PublishCodeCoverageResults@1
+        displayName: Publish code coverage
+        inputs:
+          codeCoverageTool: Cobertura
+          summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
+          failIfCoverageEmpty: false
+        condition: succeededOrFailed()
