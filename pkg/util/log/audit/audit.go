@@ -7,8 +7,9 @@ import (
 	"encoding/json"
 	"sync"
 
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (

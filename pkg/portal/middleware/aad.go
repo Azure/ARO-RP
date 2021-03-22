@@ -18,7 +18,6 @@ import (
 	"github.com/coreos/go-oidc"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/microsoft"
@@ -26,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"reflect"
 
-	uuid "github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 )
 
 // MarshalJSON marshals the nested r.Resource ignoring any MarshalJSON() methods

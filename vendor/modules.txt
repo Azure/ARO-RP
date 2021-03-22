@@ -1870,3 +1870,5 @@ sigs.k8s.io/yaml
 # sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.6.4
 # sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.3.0
 # github.com/ugorji/go/codec => github.com/ugorji/go/codec v1.2.2
+# github.com/satori/go.uuid => github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
+# github.com/satori/uuid => github.com/satori/uuid v1.2.1-0.20181028125025-b2ce2384e17b

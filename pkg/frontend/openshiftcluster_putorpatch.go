@@ -14,13 +14,13 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 

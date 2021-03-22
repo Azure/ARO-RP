@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"regexp"
 
-	uuid "github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
