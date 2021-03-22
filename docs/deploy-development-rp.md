@@ -2,50 +2,7 @@
 
 ## Prerequisites
 
-1. Install [Go 1.14](https://golang.org/dl) or later, if you haven't already.
-
-1. Install [Python 3.6+](https://www.python.org/downloads), if you haven't
-   already.  You will also need `python-setuptools` installed, if you don't have it
-   installed already.
-
-1. Install `virtualenv`, a tool for managing Python virtual environments. The
-   package is called `python-virtualenv` on both Fedora and Debian-based
-   systems.
-
-1. Fedora users: install the `gpgme-devel`, `libassuan-devel`, and `openssl` packages.
-
-   Debian users: install the `libgpgme-dev` package.
-
-   OSX users: please follow [Prepare your development environment using
-   OSX](./prepare-your-development-environment-using-osx.md).
-
-   > __NOTE:__ The `gpgme-devel` and `libassuan-devel` libraries are needed in the aro `mirror` functionality.  The dependency can be excluded if one uses build tag `containers_image_openpgp` when building the RP.  See [this link](https://github.com/containers/image#supported-build-tags) for more details on removal.
-
-1. Install the [az
-   client](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), if you
-   haven't already. You will need `az` version 2.0.72 or greater, as this
-   version includes the `az network vnet subnet update
-   --disable-private-link-service-network-policies` flag.
-
-1. Install [OpenVPN](https://openvpn.net/community-downloads), if you haven't
-   already.
-
-
-## Getting started
-
-1. Log in to Azure:
-
-   ```bash
-   az login
-   ```
-
-1. Git clone this repository to your local machine:
-
-   ```bash
-   go get -u github.com/Azure/ARO-RP/...
-   cd ${GOPATH:-$HOME/go}/src/github.com/Azure/ARO-RP
-   ```
-
+1. Your development environment is prepared according to the steps outlined in [Prepare Your Dev Environment](./prepare-your-dev-environment.md)
 
 ## Installing the extension
 
