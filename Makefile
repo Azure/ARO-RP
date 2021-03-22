@@ -104,29 +104,34 @@ e2e.test:
 test-e2e: e2e.test
 	./e2e.test -test.timeout 180m -test.v -ginkgo.v
 
-test-go: generate
-	go build -tags containers_image_openpgp ./...
+test-go:
+	go test -v ./... | tee uts.txt
+	go test -tags e2e -run ^$$ ./test/e2e/...
 
+test-go-cover:
+	set -o pipefail && go test ./... -coverprofile cover.out
+
+lint-go:
+	go run ./vendor/github.com/golangci/golangci-lint/cmd/golangci-lint run
 	gofmt -s -w cmd hack pkg test
+	go vet ./...
 	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg test
 	go run ./hack/validate-imports cmd hack pkg test
 	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
-	go test -tags e2e -run ^$$ ./test/e2e/...
 
-	go vet ./...
-	set -o pipefail && go test -v ./... -coverprofile cover.out | tee uts.txt
+lint-pipelines: pyenv
+	. pyenv/bin/activate && \
+	hack/format-yaml/format-yaml.py .pipelines
 
-lint-go:
-	go run ./vendor/github.com/golangci/golangci-lint/cmd/golangci-lint run
-
-test-python: generate pyenv az
+test-python: pyenv az
 	. pyenv/bin/activate && \
 		azdev linter && \
-		azdev style && \
-		hack/format-yaml/format-yaml.py .pipelines
+		azdev style
+
+pr: generate lint-pipelines lint-go test-go test-go-cover
 
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
@@ -135,4 +140,4 @@ vendor:
 	# https://groups.google.com/forum/#!topic/golang-nuts/51-D_YFC78k
 	hack/update-go-module-dependencies.sh
 
-.PHONY: admin.kubeconfig aro az clean client discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy image-routefix lint-go proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy publish-image-routefix secrets secrets-update e2e.test test-e2e test-go test-python vendor
+.PHONY: admin.kubeconfig aro az clean client discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy image-routefix lint-go proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy publish-image-routefix secrets secrets-update e2e.test test-e2e test-go test-python vendor lint-pipelines
