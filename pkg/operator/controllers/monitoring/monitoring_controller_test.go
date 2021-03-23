@@ -49,14 +49,7 @@ func TestReconcileMonitoringConfig(t *testing.T) {
 				}
 			},
 			wantConfig: `
-prometheusK8s:
-  retention: 15d
-  volumeClaimTemplate:
-    spec:
-      resources:
-        requests:
-          storage: 100Gi
-`,
+{}`,
 		},
 		{
 			name: "ConfigMap does not have data",
@@ -77,15 +70,7 @@ prometheusK8s:
 					jsonHandle: new(codec.JsonHandle),
 				}
 			},
-			wantConfig: `
-prometheusK8s:
-  retention: 15d
-  volumeClaimTemplate:
-    spec:
-      resources:
-        requests:
-          storage: 100Gi
-`,
+			wantConfig: ``,
 		},
 		{
 			name: "empty config.yaml",
@@ -109,15 +94,7 @@ prometheusK8s:
 					jsonHandle: new(codec.JsonHandle),
 				}
 			},
-			wantConfig: `
-prometheusK8s:
-  retention: 15d
-  volumeClaimTemplate:
-    spec:
-      resources:
-        requests:
-          storage: 100Gi
-`,
+			wantConfig: ``,
 		},
 		{
 			name: "settings restored to default and extra fields are preserved",
@@ -153,12 +130,8 @@ prometheusK8s:
 			},
 			wantConfig: `
 prometheusK8s:
-  retention: 15d
   volumeClaimTemplate:
     spec:
-      resources:
-        requests:
-          storage: 100Gi
       storageClassName: fast
       volumeMode: Filesystem
 `,
@@ -193,13 +166,6 @@ alertmanagerMain:
 alertmanagerMain:
   nodeSelector:
     foo: bar
-prometheusK8s:
-  retention: 15d
-  volumeClaimTemplate:
-    spec:
-      resources:
-        requests:
-          storage: 100Gi
 `,
 		},
 		{
