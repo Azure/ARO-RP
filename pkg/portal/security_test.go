@@ -326,15 +326,17 @@ func TestSecurity(t *testing.T) {
 					return
 				}
 
-				// skipping https://server because the (async?) <script> and <link> tags in
-				// index.html triggers a race condition with the audit hook. The html
-				// response was returned to the client and the testlog.AssertAuditPayloads()
-				// was called immediately, while the audit hook was still in-flight.
-				// Removing the <script> and <link> tags in index.html also removes this race
-				// condition.
+				// skipping https://server because the http.ServeContent() calls in the
+				// portal's serve() and index() handlers[1] issued a call to io.Copy()[2]
+				// causes a race condition with the audit hook. The response was returned
+				// to the client and the testlog.AssertAuditPayloads() was called immediately,
+				// while the audit hook was still in-flight.
 				//
 				// note that the audit logs will still be recorded and emitted by the audit
 				// hook, so this is a non-issue in the Geneva environment.
+				//
+				// [1] https://github.com/Azure/ARO-RP/blob/master/pkg/portal/portal.go#L222-L247
+				// [2] https://go.googlesource.com/go/+/go1.16.2/src/net/http/fs.go#337
 				if tt.name == "/" || tt.name == "/index.js" {
 					return
 				}
