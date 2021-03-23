@@ -6,10 +6,11 @@ package refreshable
 import (
 	"context"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 )
 
 type Authorizer interface {
