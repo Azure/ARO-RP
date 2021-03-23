@@ -13,7 +13,3 @@ aro create:
     vnet_resource_group_name:
       rule_exclusions:
       - parameter_should_not_end_in_resource_group
-aro update:
-    refresh_cluster_service_principal:
-      rule_exclusions:
-      - option_length_too_long

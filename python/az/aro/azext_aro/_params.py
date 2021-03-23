@@ -98,4 +98,5 @@ def load_arguments(self, _):
         c.argument('refresh_cluster_service_principal',
                    arg_type=get_three_state_flag(),
                    help='Refresh cluster service principal.',
+                   options_list=['--refresh-cluster-service-principal', '--refresh-csp'],
                    validator=validate_refresh_cluster_service_principal)
