@@ -208,4 +208,4 @@ def validate_worker_vm_disk_size_gb(namespace):
 def validate_refresh_cluster_service_principal(namespace):
     if namespace.refresh_cluster_service_principal is not None:
         if namespace.client_secret is not None or namespace.client_id is not None:
-            raise RequiredArgumentMissingError('--client-id and --client-secret must be not set with --refresh-cluster-service-principal.')
+            raise RequiredArgumentMissingError('--client-id and --client-secret must be not set with --refresh-cluster-service-principal.')  # pylint: disable=line-too-long

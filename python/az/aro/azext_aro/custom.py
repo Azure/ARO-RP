@@ -8,7 +8,7 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
-from azure.cli.core.azclierror import ResourceNotFoundError, UnauthorizedError, InvalidArgumentValueError
+from azure.cli.core.azclierror import ResourceNotFoundError, UnauthorizedError
 from azure.graphrbac.models import GraphErrorException
 from msrestazure.azure_exceptions import CloudError
 from msrestazure.tools import resource_id, parse_resource_id
@@ -132,7 +132,6 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     sp_obj_ids = [client_sp.object_id, rp_client_sp.object_id]
     ensure_resource_permissions(cmd.cli_ctx, oc, True, sp_obj_ids)
 
-
     return sdk_no_wait(no_wait, client.create_or_update,
                        resource_group_name=resource_group_name,
                        resource_name=resource_name,
@@ -195,11 +194,11 @@ def aro_update(cmd,
 
     ocUpdate = openshiftcluster.OpenShiftClusterUpdate()
 
-    client_id, client_secret = service_principal_update(cmd.cli_ctx, oc, client_id, client_secret, refresh_cluster_service_principal)
+    client_id, client_secret = service_principal_update(cmd.cli_ctx, oc, client_id, client_secret, refresh_cluster_service_principal)  # pylint: disable=line-too-long
 
     if client_id is not None or client_secret is not None:
         # construct update payload
-        ocUpdate.service_principal_profile=openshiftcluster.ServicePrincipalProfile()
+        ocUpdate.service_principal_profile = openshiftcluster.ServicePrincipalProfile()
 
         if client_secret is not None:
             ocUpdate.service_principal_profile.client_secret = client_secret
@@ -287,10 +286,10 @@ def get_network_resources(cli_ctx, subnets, vnet):
 # 4. Reuse/Recreate service principal.
 # 5. Sort out required rbac
 def service_principal_update(cli_ctx, oc,
-                            client_id=None,
-                            client_secret=None,
-                            cluster_resource_group=None,
-                            refresh_cluster_service_principal=None):
+                             client_id=None,
+                             client_secret=None,
+                             cluster_resource_group=None,
+                             refresh_cluster_service_principal=None):
     rp_client_sp = None
     client_sp = None
     random_id = generate_random_id()
@@ -335,7 +334,6 @@ def service_principal_update(cli_ctx, oc,
             logger.error(e.message)
             raise
 
-
     # attempt to get/create SP if one was not found.
     try:
         client_sp = aad.get_service_principal(client_id)
@@ -343,7 +341,7 @@ def service_principal_update(cli_ctx, oc,
             logger.info("Cluster service principal not found. Will attempt to re-create")
             client_sp = aad.create_service_principal(client_id)
             if not client_sp:
-                e = ResourceNotFoundError("Cluster service principal creation failed")
+                raise ResourceNotFoundError("Cluster service principal creation failed")
     except GraphErrorException as e:
         if fail:
             logger.error(e.message)
@@ -359,11 +357,11 @@ def service_principal_update(cli_ctx, oc,
 def resolve_rp_client_id():
     if rp_mode_production():
         return FP_CLIENT_ID
-    else:
-        return os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
+
+    return os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
 
 
-def ensure_resource_permissions(ctx, oc=None, fail=None, sp_obj_ids=[]):
+def ensure_resource_permissions(ctx, oc=None, fail=None, sp_obj_ids=[]):  # pylint: disable=dangerous-default-value
     try:
         # Get cluster resources we need to assign network contributor on
         resources = get_cluster_network_resources(ctx, oc)
