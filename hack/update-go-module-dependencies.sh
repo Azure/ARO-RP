@@ -2,6 +2,10 @@
 
 for x in vendor/github.com/openshift/*; do
 	case $x in
+    vendor/github.com/openshift/client-go)
+      # bumped openshift/client-go to specific version with samples/fake clientset available
+      # once release > release-4.6 this can be removed
+      ;;
 		vendor/github.com/openshift/installer|vendor/github.com/openshift/cluster-api-provider-baremetal)
 			;;
 		vendor/github.com/openshift/cloud-credential-operator)

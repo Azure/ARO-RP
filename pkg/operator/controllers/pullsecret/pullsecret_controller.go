@@ -15,6 +15,8 @@ import (
 	"errors"
 	"strings"
 
+	operatorv1 "github.com/openshift/api/operator/v1"
+	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -45,14 +47,16 @@ var rhKeys = []string{"registry.redhat.io", "cloud.redhat.com"}
 type PullSecretReconciler struct {
 	kubernetescli kubernetes.Interface
 	arocli        aroclient.Interface
+	samplescli    samplesclient.Interface
 	log           *logrus.Entry
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.Interface) *PullSecretReconciler {
+func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.Interface, samplescli samplesclient.Interface) *PullSecretReconciler {
 	return &PullSecretReconciler{
 		log:           log,
 		kubernetescli: kubernetescli,
 		arocli:        arocli,
+		samplescli:    samplescli,
 	}
 }
 
@@ -93,6 +97,32 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 
 	redHatKeyCondition := r.buildRedHatKeyCondition(userSecret)
 	err = controllers.SetCondition(ctx, r.arocli, redHatKeyCondition, operator.RoleMaster)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	aroCluster, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if !aroCluster.Spec.Features.ManageSamplesOperator {
+		return reconcile.Result{}, nil
+	}
+
+	var updated, enabled bool
+	// reconcile the samples operator state
+	// if `registry.redhat.io` pull secret key is missing set samples operator to unmanaged
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		updated, enabled, err = r.updateSamplesController(ctx, redHatKeyCondition)
+		return err
+	})
+
+	samplesCondition := r.buildSamplesCondition(updated, enabled)
+	err = controllers.SetCondition(ctx, r.arocli, samplesCondition, operator.RoleMaster)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
 	return reconcile.Result{}, err
 }
@@ -256,4 +286,71 @@ func (r *PullSecretReconciler) keyCondition(failed bool, foundKeys []string) *st
 	keyCondition.Message = b.String()
 
 	return keyCondition
+}
+
+func (r *PullSecretReconciler) updateSamplesController(ctx context.Context, state *status.Condition) (updated bool, enabled bool, err error) {
+	if state.Type == arov1alpha1.RedHatKeyPresent && state.IsTrue() {
+		enabled = true
+	}
+
+	c, err := r.samplescli.SamplesV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
+	if err != nil {
+		return updated, enabled, err
+	}
+
+	if c.Spec.SamplesRegistry != "" {
+		// if the samples registry point elsewhere no action
+		return updated, enabled, nil
+	}
+
+	oldManagementState := c.Spec.ManagementState
+
+	if enabled {
+		c.Spec.ManagementState = operatorv1.Managed
+	} else {
+		c.Spec.ManagementState = operatorv1.Removed
+	}
+
+	if oldManagementState == c.Spec.ManagementState {
+		return updated, enabled, nil
+	}
+
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		_, err = r.samplescli.SamplesV1().Configs().Update(ctx, c, metav1.UpdateOptions{})
+		if err == nil {
+			updated = true
+		}
+		return err
+	})
+
+	return updated, enabled, err
+}
+
+// buildSamplesCondition indicates whether aroOperator modified state of the cluster-samples-operator
+func (r *PullSecretReconciler) buildSamplesCondition(updated bool, foundKey bool) *status.Condition {
+	samplesCondition := &status.Condition{
+		Type:   arov1alpha1.SamplesOperatorEnabled,
+		Status: corev1.ConditionFalse,
+		Reason: "RedHatKey",
+	}
+	sb := strings.Builder{}
+	sb.WriteString("cluster-samples-operator ")
+
+	if updated {
+		sb.WriteString("updated to ")
+	} else {
+		sb.WriteString("in ")
+	}
+
+	if foundKey {
+		sb.WriteString("managed ")
+		samplesCondition.Status = corev1.ConditionTrue
+	} else {
+		sb.WriteString("removed ")
+	}
+
+	sb.WriteString("state")
+	samplesCondition.Message = sb.String()
+
+	return samplesCondition
 }
