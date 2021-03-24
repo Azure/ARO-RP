@@ -44,6 +44,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, r *http.Request, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
+	systemData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.SystemData)
 
 	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
@@ -86,6 +87,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	}
 
 	doc.CorrelationData = correlationData
+	doc.OpenShiftCluster.SystemData = systemData
 
 	err = validateTerminalProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState)
 	if err != nil {
@@ -122,9 +124,10 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// think is required. We expect payload to have everything else required.
 	case http.MethodPut:
 		ext = converter.ToExternal(&api.OpenShiftCluster{
-			ID:   doc.OpenShiftCluster.ID,
-			Name: doc.OpenShiftCluster.Name,
-			Type: doc.OpenShiftCluster.Type,
+			ID:         doc.OpenShiftCluster.ID,
+			Name:       doc.OpenShiftCluster.Name,
+			Type:       doc.OpenShiftCluster.Type,
+			SystemData: systemData,
 			Properties: api.OpenShiftClusterProperties{
 				ProvisioningState: doc.OpenShiftCluster.Properties.ProvisioningState,
 				ClusterProfile: api.ClusterProfile{

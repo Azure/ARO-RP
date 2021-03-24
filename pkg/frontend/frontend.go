@@ -270,6 +270,7 @@ func (f *frontend) setupRouter() *mux.Router {
 	r.Use(middleware.Headers)
 	r.Use(middleware.Validate(f.env, f.apis))
 	r.Use(middleware.Body)
+	r.Use(middleware.SystemData)
 
 	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

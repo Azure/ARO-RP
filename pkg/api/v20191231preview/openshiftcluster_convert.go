@@ -81,6 +81,17 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 		}
 	}
 
+	if oc.SystemData != nil {
+		out.SystemData = &SystemData{
+			CreatedBy:          oc.SystemData.CreatedBy,
+			CreatedByType:      CreatedByType(oc.SystemData.CreatedBy),
+			CreatedAt:          oc.SystemData.CreatedAt,
+			LastModifiedBy:     oc.SystemData.LastModifiedBy,
+			LastModifiedByType: CreatedByType(oc.SystemData.LastModifiedBy),
+			LastModifiedAt:     oc.SystemData.LastModifiedAt,
+		}
+	}
+
 	return out
 }
 

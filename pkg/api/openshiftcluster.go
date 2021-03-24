@@ -5,6 +5,8 @@ package api
 
 import (
 	"time"
+
+	"github.com/Azure/go-autorest/autorest/date"
 )
 
 // OpenShiftCluster represents an OpenShift cluster
@@ -17,8 +19,27 @@ type OpenShiftCluster struct {
 	Name       string                     `json:"name,omitempty"`
 	Type       string                     `json:"type,omitempty"`
 	Location   string                     `json:"location,omitempty"`
+	SystemData *SystemData                `json:"systemData,omitempty"`
 	Tags       map[string]string          `json:"tags,omitempty"`
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
+}
+
+type CreatedByType string
+
+const (
+	Application     CreatedByType = "Application"
+	Key             CreatedByType = "Key"
+	ManagedIdentity CreatedByType = "ManagedIdentity"
+	User            CreatedByType = "User"
+)
+
+type SystemData struct {
+	CreatedBy          string        `json:"createdBy,omitempty"`
+	CreatedByType      CreatedByType `json:"createdByType,omitempty"`
+	CreatedAt          date.Time     `json:"createdAt,omitempty"`
+	LastModifiedBy     string        `json:"lastModifiedBy,omitempty"`
+	LastModifiedByType CreatedByType `json:"lastModifiedByType,omitempty"`
+	LastModifiedAt     date.Time     `json:"lastModifiedAt,omitempty"`
 }
 
 // SecureBytes represents an encrypted []byte

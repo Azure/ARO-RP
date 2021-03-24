@@ -10,4 +10,5 @@ const (
 	ContextKeyOriginalPath
 	ContextKeyBody
 	ContextKeyCorrelationData
+	ContextKeySystemData
 )

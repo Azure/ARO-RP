@@ -1,5 +1,7 @@
 package v20191231preview
 
+import "github.com/Azure/go-autorest/autorest/date"
+
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
@@ -25,6 +27,9 @@ type OpenShiftCluster struct {
 
 	// The resource location.
 	Location string `json:"location,omitempty"`
+
+	// SystemData - The system metadata relating to this resource
+	SystemData *SystemData `json:"systemData,omitempty"`
 
 	// The resource tags.
 	Tags Tags `json:"tags,omitempty" mutable:"true"`
@@ -204,4 +209,34 @@ type IngressProfile struct {
 
 	// The IP of the ingress.
 	IP string `json:"ip,omitempty"`
+}
+
+// CreatedByType enumerates the values for created by type.
+type CreatedByType string
+
+const (
+	// Application ...
+	Application CreatedByType = "Application"
+	// Key ...
+	Key CreatedByType = "Key"
+	// ManagedIdentity ...
+	ManagedIdentity CreatedByType = "ManagedIdentity"
+	// User ...
+	User CreatedByType = "User"
+)
+
+// SystemData metadata pertaining to creation and last modification of the resource.
+type SystemData struct {
+	// CreatedBy - The identity that created the resource.
+	CreatedBy string `json:"createdBy,omitempty"`
+	// CreatedByType - The type of identity that created the resource. Possible values include: 'User', 'Application', 'ManagedIdentity', 'Key'
+	CreatedByType CreatedByType `json:"createdByType,omitempty"`
+	// CreatedAt - The timestamp of resource creation (UTC).
+	CreatedAt date.Time `json:"createdAt,omitempty"`
+	// LastModifiedBy - The identity that last modified the resource.
+	LastModifiedBy string `json:"lastModifiedBy,omitempty"`
+	// LastModifiedByType - The type of identity that last modified the resource. Possible values include: 'User', 'Application', 'ManagedIdentity', 'Key'
+	LastModifiedByType CreatedByType `json:"lastModifiedByType,omitempty"`
+	// LastModifiedAt - The type of identity that last modified the resource.
+	LastModifiedAt date.Time `json:"lastModifiedAt,omitempty"`
 }
