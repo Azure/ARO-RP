@@ -3,7 +3,7 @@
 
 // +build go1.7
 // +build !go1.12
-// +build safe codec.safe appengine
+// +build safe appengine
 
 package codec
 
