@@ -20,6 +20,7 @@ import (
 
 const (
 	kubeName           = "routefix"
+	kubeNameLog        = "routefix-log"
 	kubeNamespace      = "openshift-azure-routefix"
 	kubeServiceAccount = "system:serviceaccount:" + kubeNamespace + ":default"
 	shellScript        = `for ((;;))
@@ -29,6 +30,18 @@ do
     ip route flush cache
   fi
   sleep 60
+done`
+	shellScriptLog = `while true;
+do
+	NOW=$(date "+%Y-%m-%d %H:%M:%S")
+	DROPPED_PACKETS=$(ovs-ofctl -O OpenFlow13 dump-flows br0 | sed -ne '/table=10,.* actions=drop/ { s/.* n_packets=//; s/,.*//; p }')
+	if [ "$DROPPED_PACKETS" != "" ] && [ "$DROPPED_PACKETS" -gt 1000 ];
+	then
+		echo "$NOW table=10 actions=drop packets=$DROPPED_PACKETS broken=true"
+	else
+		echo "$NOW table=10 actions=drop packets=$DROPPED_PACKETS broken=false"
+	fi
+	sleep 60
 done`
 )
 
@@ -50,6 +63,7 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 	if err != nil {
 		return nil, err
 	}
+	hostPathUnset := corev1.HostPathUnset
 	return []runtime.Object{
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -86,6 +100,26 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 									Privileged: to.BoolPtr(true),
 								},
 							},
+							{
+								Name:  kubeNameLog,
+								Image: version.RouteFixImage(cluster.Spec.ACRDomain),
+								Args: []string{
+									"sh",
+									"-c",
+									shellScriptLog,
+								},
+								// TODO: specify requests/limits
+								SecurityContext: &corev1.SecurityContext{
+									Privileged: to.BoolPtr(true),
+								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      "host-run",
+										MountPath: "/run",
+										ReadOnly:  true,
+									},
+								},
+							},
 						},
 						HostNetwork: true,
 						Tolerations: []corev1.Toleration{
@@ -96,6 +130,17 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 							{
 								Effect:   corev1.TaintEffectNoSchedule,
 								Operator: corev1.TolerationOpExists,
+							},
+						},
+						Volumes: []corev1.Volume{
+							{
+								Name: "host-run",
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/run",
+										Type: &hostPathUnset,
+									},
+								},
 							},
 						},
 					},
