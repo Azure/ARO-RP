@@ -1008,7 +1008,7 @@ github.com/tomarrell/wrapcheck/wrapcheck
 github.com/tommy-muehle/go-mnd
 github.com/tommy-muehle/go-mnd/checks
 github.com/tommy-muehle/go-mnd/config
-# github.com/ugorji/go/codec v1.2.5-0.20210226122216-b5e6aedbb7b6
+# github.com/ugorji/go/codec v1.2.5-0.20210320190651-a2bb12368408 => github.com/ugorji/go/codec v1.2.2
 ## explicit
 github.com/ugorji/go/codec
 # github.com/ulikunitz/xz v0.5.10
@@ -1869,3 +1869,4 @@ sigs.k8s.io/yaml
 # sigs.k8s.io/cluster-api-provider-openstack => github.com/openshift/cluster-api-provider-openstack v0.0.0-20201002114634-3622a0ce6b56
 # sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.6.4
 # sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.3.0
+# github.com/ugorji/go/codec => github.com/ugorji/go/codec v1.2.2

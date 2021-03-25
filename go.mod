@@ -82,7 +82,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.7.1
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
-	github.com/ugorji/go/codec v1.2.5-0.20210226122216-b5e6aedbb7b6
+	github.com/ugorji/go/codec v1.2.5-0.20210320190651-a2bb12368408
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/vmware/govmomi v0.24.0 // indirect
 	go.opencensus.io v0.22.6 // indirect
@@ -117,8 +117,8 @@ require (
 exclude (
 	// exclude github.com/hashicorp/vault < v1.5.1: https://nvd.nist.gov/vuln/detail/CVE-2020-16251
 	github.com/hashicorp/vault v0.10.4
-	github.com/hashicorp/vault v0.11.0-beta1
 	github.com/hashicorp/vault v0.11.0
+	github.com/hashicorp/vault v0.11.0-beta1
 	github.com/hashicorp/vault v0.11.1
 	github.com/hashicorp/vault v0.11.2
 	github.com/hashicorp/vault v0.11.3
@@ -127,25 +127,25 @@ exclude (
 	github.com/hashicorp/vault v0.11.6
 	github.com/hashicorp/vault v0.11.7
 	github.com/hashicorp/vault v0.11.8
+	github.com/hashicorp/vault v1.0.0
 	github.com/hashicorp/vault v1.0.0-beta1
 	github.com/hashicorp/vault v1.0.0-beta2
 	github.com/hashicorp/vault v1.0.0-rc1
-	github.com/hashicorp/vault v1.0.0
 	github.com/hashicorp/vault v1.0.1
 	github.com/hashicorp/vault v1.0.2
 	github.com/hashicorp/vault v1.0.3
+	github.com/hashicorp/vault v1.1.0
 	github.com/hashicorp/vault v1.1.0-beta1
 	github.com/hashicorp/vault v1.1.0-beta2
-	github.com/hashicorp/vault v1.1.0
 	github.com/hashicorp/vault v1.1.1
 	github.com/hashicorp/vault v1.1.2
 	github.com/hashicorp/vault v1.1.3
 	github.com/hashicorp/vault v1.1.4
 	github.com/hashicorp/vault v1.1.5
+	github.com/hashicorp/vault v1.2.0
 	github.com/hashicorp/vault v1.2.0-beta1
 	github.com/hashicorp/vault v1.2.0-beta2
 	github.com/hashicorp/vault v1.2.0-rc1
-	github.com/hashicorp/vault v1.2.0
 	github.com/hashicorp/vault v1.2.1
 	github.com/hashicorp/vault v1.2.2
 	github.com/hashicorp/vault v1.2.3
@@ -158,18 +158,18 @@ exclude (
 	github.com/hashicorp/vault v1.3.5
 	github.com/hashicorp/vault v1.3.6
 	github.com/hashicorp/vault v1.3.7
+	github.com/hashicorp/vault v1.4.0
 	github.com/hashicorp/vault v1.4.0-beta1
 	github.com/hashicorp/vault v1.4.0-beta2
 	github.com/hashicorp/vault v1.4.0-beta3
 	github.com/hashicorp/vault v1.4.0-rc1
-	github.com/hashicorp/vault v1.4.0
 	github.com/hashicorp/vault v1.4.1
 	github.com/hashicorp/vault v1.4.2
 	github.com/hashicorp/vault v1.4.3
+	github.com/hashicorp/vault v1.5.0
 	github.com/hashicorp/vault v1.5.0-beta1
 	github.com/hashicorp/vault v1.5.0-beta2
 	github.com/hashicorp/vault v1.5.0-rc1
-	github.com/hashicorp/vault v1.5.0
 )
 
 replace (
@@ -193,6 +193,8 @@ replace (
 	github.com/terraform-providers/terraform-provider-aws => github.com/openshift/terraform-provider-aws v1.60.1-0.20200630224953-76d1fb4e5699
 	github.com/terraform-providers/terraform-provider-azurerm => github.com/openshift/terraform-provider-azurerm v1.40.1-0.20200707062554-97ea089cc12a
 	github.com/terraform-providers/terraform-provider-ignition/v2 => github.com/community-terraform-providers/terraform-provider-ignition/v2 v2.1.0
+	// https://github.com/ugorji/go/issues/357
+	github.com/ugorji/go/codec => github.com/ugorji/go/codec v1.2.2
 	k8s.io/api => k8s.io/api v0.19.0-rc.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.0-rc.2
 	k8s.io/apimachinery => k8s.io/apimachinery v0.19.0-rc.2

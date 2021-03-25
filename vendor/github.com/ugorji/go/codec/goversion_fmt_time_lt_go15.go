@@ -7,8 +7,8 @@ package codec
 
 import "time"
 
-func fmtTime(t time.Time, fmt string, b []byte) []byte {
-	s := t.Format(fmt)
+func fmtTime(t time.Time, b []byte) []byte {
+	s := t.Format(time.RFC3339Nano)
 	b = b[:len(s)]
 	copy(b, s)
 	return b

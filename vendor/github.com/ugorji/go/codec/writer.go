@@ -210,9 +210,9 @@ type encWr struct {
 	c containerState
 
 	calls uint16
-	seq   uint16 // sequencer (e.g. used by binc for symbols, etc)
-	wb    bytesEncAppender
-	wf    *bufioEncWriter
+
+	wb bytesEncAppender
+	wf *bufioEncWriter
 }
 
 // MARKER: manually inline bytesEncAppender.writenx/writeqstr methods,

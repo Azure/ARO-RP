@@ -7,13 +7,10 @@
 
 package codec
 
-import (
-	"encoding"
-	"reflect"
-)
+import "encoding"
 
 // GenVersion is the current version of codecgen.
-const GenVersion = 24
+const GenVersion = 20
 
 // This file is used to generate helper code for codecgen.
 // The values here i.e. genHelper(En|De)coder are not to be used directly by
@@ -78,7 +75,7 @@ func (f genHelperEncoder) IsJSONHandle() bool {
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
 func (f genHelperEncoder) EncFallback(iv interface{}) {
 	// f.e.encodeI(iv, false, false)
-	f.e.encodeValue(reflect.ValueOf(iv), nil)
+	f.e.encodeValue(rv4i(iv), nil)
 }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
@@ -138,22 +135,6 @@ func (f genHelperEncoder) EncWriteMapElemKey() { f.e.mapElemKey() }
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
 func (f genHelperEncoder) EncWriteMapElemValue() { f.e.mapElemValue() }
 
-// FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
-func (f genHelperEncoder) EncEncodeComplex64(v complex64) { f.e.encodeComplex64(v) }
-
-// FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
-func (f genHelperEncoder) EncEncodeComplex128(v complex128) { f.e.encodeComplex128(v) }
-
-// FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
-func (f genHelperEncoder) EncEncode(v interface{}) { f.e.encode(v) }
-
-// FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
-func (f genHelperEncoder) EncEncodeMapNonNil(v interface{}) {
-	if skipFastpathTypeSwitchInDirectCall || !fastpathEncodeTypeSwitch(v, f.e) {
-		f.e.encodeValue(reflect.ValueOf(v), nil)
-	}
-}
-
 // ---------------- DECODER FOLLOWS -----------------
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
@@ -181,11 +162,9 @@ func (f genHelperDecoder) DecScratchArrayBuffer() *[decScratchByteArrayLen]byte 
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
 func (f genHelperDecoder) DecFallback(iv interface{}, chkPtr bool) {
-	rv := reflect.ValueOf(iv)
-	if chkPtr {
-		if x, _ := isDecodeable(rv); !x {
-			f.d.haltAsNotDecodeable(rv)
-		}
+	rv := rv4i(iv)
+	if chkPtr && !isDecodeable(rv) {
+		f.d.haltAsNotDecodeable(rv)
 	}
 	f.d.decodeValue(rv, nil)
 }
@@ -212,12 +191,18 @@ func (f genHelperDecoder) DecTextUnmarshal(tm encoding.TextUnmarshaler) {
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
 func (f genHelperDecoder) DecJSONUnmarshal(tm jsonUnmarshaler) {
-	f.d.jsonUnmarshalV(tm)
+	// bs := f.dd.DecodeStringAsBytes()
+	// grab the bytes to be read, as UnmarshalJSON needs the full JSON so as to unmarshal it itself.
+	bs := f.d.blist.get(256)
+	bs = f.d.d.nextValueBytes(bs)
+	fnerr := tm.UnmarshalJSON(bs)
+	f.d.blist.put(bs)
+	halt.onerror(fnerr)
 }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
 func (f genHelperDecoder) DecBinaryUnmarshal(bm encoding.BinaryUnmarshaler) {
-	halt.onerror(bm.UnmarshalBinary(f.d.d.DecodeBytes(nil)))
+	halt.onerror(bm.UnmarshalBinary(f.d.d.DecodeBytes(nil, true)))
 }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
@@ -226,6 +211,11 @@ func (f genHelperDecoder) DecRaw() []byte { return f.d.rawBytes() }
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
 func (f genHelperDecoder) IsJSONHandle() bool {
 	return f.d.js
+}
+
+// FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
+func (f genHelperDecoder) I2Rtid(v interface{}) uintptr {
+	return i2rtid(v)
 }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
@@ -244,13 +234,16 @@ func (f genHelperDecoder) DecInferLen(clen, maxlen, unit int) (rvlen int) {
 }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
-func (f genHelperDecoder) DecReadMapStart() int { return f.d.mapStart(f.d.d.ReadMapStart()) }
+func (f genHelperDecoder) StringView(v []byte) string { return stringView(v) }
+
+// FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
+func (f genHelperDecoder) DecReadMapStart() int { return f.d.mapStart() }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
 func (f genHelperDecoder) DecReadMapEnd() { f.d.mapEnd() }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
-func (f genHelperDecoder) DecReadArrayStart() int { return f.d.arrayStart(f.d.d.ReadArrayStart()) }
+func (f genHelperDecoder) DecReadArrayStart() int { return f.d.arrayStart() }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
 func (f genHelperDecoder) DecReadArrayEnd() { f.d.arrayEnd() }
@@ -269,9 +262,3 @@ func (f genHelperDecoder) DecDecodeFloat32() float32 { return f.d.decodeFloat32(
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
 func (f genHelperDecoder) DecCheckBreak() bool { return f.d.checkBreak() }
-
-// FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
-func (f genHelperDecoder) DecStringZC(v []byte) string { return f.d.stringZC(v) }
-
-// FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
-func (f genHelperDecoder) DecodeBytesInto(v []byte) []byte { return f.d.decodeBytesInto(v) }
