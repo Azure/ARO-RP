@@ -13,7 +13,7 @@ build-all:
 	go build -tags containers_image_openpgp ./...
 
 aro: generate
-	go build -tags containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro
+	go build -tags containers_image_openpgp,codec.safe -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro
 
 az: pyenv
 	. pyenv/bin/activate && \
@@ -113,7 +113,7 @@ tunnel:
 	go run ./hack/tunnel $(shell az network public-ip show -g ${RESOURCEGROUP} -n rp-pip --query 'ipAddress')
 
 e2e.test:
-	go test ./test/e2e -tags e2e -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" -o e2e.test
+	go test ./test/e2e -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" -o e2e.test
 
 test-e2e: e2e.test
 	./e2e.test -test.timeout 180m -test.v -ginkgo.v
