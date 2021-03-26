@@ -54,21 +54,6 @@ func marshal(t *testing.T, i interface{}) []byte {
 	return b
 }
 
-func canonicalise(t *testing.T, b []byte) []byte {
-	var i interface{}
-
-	err := json.Unmarshal(b, &i)
-	if err != nil {
-		t.Fatal(i)
-	}
-	b, err = json.Marshal(i)
-	if err != nil {
-		t.Fatal(i)
-	}
-
-	return b
-}
-
 func userDataSecret(t *testing.T, namespace, name, appendSource, mergeSource string) *corev1.Secret {
 	config := map[string]interface{}{
 		"extrakey": true,
@@ -194,9 +179,6 @@ func TestFixMCSUserData(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-
-		// needed because of https://github.com/ugorji/go/issues/354
-		s.Data["userData"] = canonicalise(t, s.Data["userData"])
 
 		if !reflect.DeepEqual(s, wantSecret) {
 			t.Error(cmp.Diff(s, wantSecret))
