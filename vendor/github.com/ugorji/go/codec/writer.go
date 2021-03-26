@@ -187,9 +187,11 @@ func (z *bytesEncAppender) writen2(b1, b2 byte) {
 }
 func (z *bytesEncAppender) writen4(b [4]byte) {
 	z.b = append(z.b, b[:]...)
+	// z.b = append(z.b, b[0], b[1], b[2], b[3]) // prevents inlining encWr.writen4
 }
 func (z *bytesEncAppender) writen8(b [8]byte) {
 	z.b = append(z.b, b[:]...)
+	// z.b = append(z.b, b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]) // prevents inlining encWr.writen4
 }
 func (z *bytesEncAppender) endErr() error {
 	*(z.out) = z.b
@@ -210,9 +212,9 @@ type encWr struct {
 	c containerState
 
 	calls uint16
-
-	wb bytesEncAppender
-	wf *bufioEncWriter
+	seq   uint16 // sequencer (e.g. used by binc for symbols, etc)
+	wb    bytesEncAppender
+	wf    *bufioEncWriter
 }
 
 // MARKER: manually inline bytesEncAppender.writenx/writeqstr methods,
