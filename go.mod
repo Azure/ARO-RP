@@ -83,7 +83,7 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/sirupsen/logrus v1.7.1
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
-	github.com/ugorji/go/codec v1.2.5-0.20210320190651-a2bb12368408
+	github.com/ugorji/go/codec v1.2.5-0.20210326071331-11d01daad36c
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/vmware/govmomi v0.24.0 // indirect
 	go.opencensus.io v0.22.6 // indirect
@@ -200,8 +200,6 @@ replace (
 	github.com/terraform-providers/terraform-provider-aws => github.com/openshift/terraform-provider-aws v1.60.1-0.20200630224953-76d1fb4e5699
 	github.com/terraform-providers/terraform-provider-azurerm => github.com/openshift/terraform-provider-azurerm v1.40.1-0.20200707062554-97ea089cc12a
 	github.com/terraform-providers/terraform-provider-ignition/v2 => github.com/community-terraform-providers/terraform-provider-ignition/v2 v2.1.0
-	// https://github.com/ugorji/go/issues/357
-	github.com/ugorji/go/codec => github.com/ugorji/go/codec v1.2.2
 	k8s.io/api => k8s.io/api v0.19.0-rc.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.0-rc.2
 	k8s.io/apimachinery => k8s.io/apimachinery v0.19.0-rc.2
