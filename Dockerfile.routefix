@@ -1,6 +1,0 @@
-FROM registry.redhat.io/rhosp-rhel8/openstack-openvswitch-base:16.1
-
-# In the past this installed iproute on ubi8.
-# We need openvswitch for ovs-ofctl.
-# This requires a sub for openstack.
-# But there's a base image that provides it already.  Switching to that and this becomes a simple wrapper to allow us to push an image to somewhere we control.

@@ -17,10 +17,11 @@ import (
 	"k8s.io/kubernetes/pkg/apis/rbac"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
+	// image is the openshift-sdn image from 4.6.18
+	image               = "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:bcc1fb20f06f00829727cb46ff21e22103fd4c737fdcbbf2fab13121f31ebcbd"
 	kubeName            = "routefix"
 	kubeNamespace       = "openshift-azure-routefix"
 	kubeServiceAccount  = "system:serviceaccount:" + kubeNamespace + ":default"
@@ -39,11 +40,6 @@ do
 	sleep 60
 done`
 	shellScriptDrop = `set -xe
-if [[ -f "/env/_master" ]]; then
-	set -o allexport
-	source "/env/_master"
-	set +o allexport
-fi
 
 echo "I$(date "+%m%d %H:%M:%S.%N") - drop-icmp - start drop-icmp ${K8S_NODE}"
 iptables -X CHECK_ICMP_SOURCE || true
@@ -55,8 +51,7 @@ iptables -N ICMP_ACTION || true
 iptables -F ICMP_ACTION
 iptables -A ICMP_ACTION -j LOG
 iptables -A ICMP_ACTION -j DROP
-oc observe nodes -a '{ .status.addresses[1].address }' -- /tmp/add_iptables.sh
-tail -F /dev/null`
+oc observe nodes -a '{ .status.addresses[1].address }' -- /tmp/add_iptables.sh`
 	shellScriptAddIptables = `#!/bin/sh
 echo "Adding ICMP drop rule for '$2' " 
 #iptables -C CHECK_ICMP_SOURCE -p icmp -s $2 -j ICMP_ACTION || iptables -A CHECK_ICMP_SOURCE -p icmp -s $2 -j ICMP_ACTION
@@ -97,7 +92,7 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 	if err2 != nil {
 		return nil, err2
 	}
-	defaultMode555 := int32(555)
+	defaultMode555 := int32(0555)
 	return []runtime.Object{
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -119,7 +114,7 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 			RoleRef: rbac.RoleRef{
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "ClusterRole",
-				Name:     "openshift-sd-controller",
+				Name:     "openshift-sdn-controller",
 			},
 			Subjects: []rbac.Subject{
 				{
@@ -155,7 +150,7 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 						Containers: []corev1.Container{
 							{
 								Name:  containerNameDrop,
-								Image: version.RouteFixImage(cluster.Spec.ACRDomain),
+								Image: image,
 								Args: []string{
 									"sh",
 									"-c",
@@ -197,10 +192,6 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 								},
 								Env: []corev1.EnvVar{
 									{
-										Name:  "OVN_KUBE_LOG_LEVEL",
-										Value: "4",
-									},
-									{
 										Name: "K8S_NODE",
 										ValueFrom: &corev1.EnvVarSource{
 											FieldRef: &corev1.ObjectFieldSelector{
@@ -212,7 +203,7 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 							},
 							{
 								Name:  containerNameDetect,
-								Image: version.RouteFixImage(cluster.Spec.ACRDomain),
+								Image: image,
 								Args: []string{
 									"sh",
 									"-c",
