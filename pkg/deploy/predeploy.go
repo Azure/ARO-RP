@@ -163,14 +163,31 @@ func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID stri
 		Value: rpServicePrincipalID,
 	}
 
-	d.log.Infof("deploying %s", deploymentName)
-	return d.globaldeployments.CreateOrUpdateAndWait(ctx, *d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtfeatures.Deployment{
-		Properties: &mgmtfeatures.DeploymentProperties{
-			Template:   template,
-			Mode:       mgmtfeatures.Incremental,
-			Parameters: parameters.Parameters,
-		},
-	})
+	for i := 0; i < 2; i++ {
+		d.log.Infof("deploying %s", deploymentName)
+		err = d.globaldeployments.CreateOrUpdateAndWait(ctx, *d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+			Properties: &mgmtfeatures.DeploymentProperties{
+				Template:   template,
+				Mode:       mgmtfeatures.Incremental,
+				Parameters: parameters.Parameters,
+			},
+		})
+		if serviceErr, ok := err.(*azure.ServiceError); ok &&
+			serviceErr.Code == "DeploymentFailed" &&
+			i < 1 {
+			// Can get a Conflict ("Another operation is in progress") on the
+			// ACR.  Retry once.
+			d.log.Print(err)
+			continue
+		}
+		if err != nil {
+			return err
+		}
+
+		break
+	}
+
+	return nil
 }
 
 func (d *deployer) deployRPGlobalACRReplication(ctx context.Context) error {
