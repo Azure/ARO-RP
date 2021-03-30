@@ -46,6 +46,7 @@ type Configuration struct {
 	ClusterParentDomainName            *string       `json:"clusterParentDomainName,omitempty" value:"required"`
 	DatabaseAccountName                *string       `json:"databaseAccountName,omitempty" value:"required"`
 	ExtraClusterKeyvaultAccessPolicies []interface{} `json:"extraClusterKeyvaultAccessPolicies,omitempty" value:"required"`
+	ExtraDBTokenKeyvaultAccessPolicies []interface{} `json:"extraDBTokenKeyvaultAccessPolicies,omitempty" value:"required"`
 	ExtraCosmosDBIPs                   []string      `json:"extraCosmosDBIPs,omitempty"`
 	ExtraPortalKeyvaultAccessPolicies  []interface{} `json:"extraPortalKeyvaultAccessPolicies,omitempty" value:"required"`
 	ExtraServiceKeyvaultAccessPolicies []interface{} `json:"extraServiceKeyvaultAccessPolicies,omitempty" value:"required"`

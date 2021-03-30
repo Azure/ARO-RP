@@ -111,6 +111,12 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 		return err
 	}
 
+	lb, err := d.loadbalancers.Get(ctx, d.config.RPResourceGroupName, "rp-lb-internal", "")
+	if err != nil {
+		return err
+	}
+	dbtokenIp := *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
+
 	zone, err := d.zones.Get(ctx, d.config.RPResourceGroupName, d.config.Location+"."+*d.config.Configuration.ClusterParentDomainName)
 	if err != nil {
 		return err
@@ -136,6 +142,20 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 			ARecords: &[]mgmtdns.ARecord{
 				{
 					Ipv4Address: portalPip.IPAddress,
+				},
+			},
+		},
+	}, "", "")
+	if err != nil {
+		return err
+	}
+
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, "dbtoken."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
+		RecordSetProperties: &mgmtdns.RecordSetProperties{
+			TTL: to.Int64Ptr(3600),
+			ARecords: &[]mgmtdns.ARecord{
+				{
+					Ipv4Address: &dbtokenIp,
 				},
 			},
 		},

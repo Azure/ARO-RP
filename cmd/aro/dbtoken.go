@@ -1,0 +1,104 @@
+package main
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
+import (
+	"context"
+	"fmt"
+	"net"
+	"os"
+
+	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	pkgdbtoken "github.com/Azure/ARO-RP/pkg/dbtoken"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/oidc"
+)
+
+func dbtoken(ctx context.Context, log *logrus.Entry) error {
+	_env, err := env.NewCore(ctx, log)
+	if err != nil {
+		return err
+	}
+
+	if !_env.IsLocalDevelopmentMode() {
+		for _, key := range []string{
+			"MDM_ACCOUNT",
+			"MDM_NAMESPACE",
+		} {
+			if _, found := os.LookupEnv(key); !found {
+				return fmt.Errorf("environment variable %q unset", key)
+			}
+		}
+	}
+
+	rpKVAuthorizer, err := _env.NewRPAuthorizer(_env.Environment().ResourceIdentifiers.KeyVault)
+	if err != nil {
+		return err
+	}
+
+	m := statsd.New(ctx, log.WithField("component", "dbtoken"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
+
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env)
+	if err != nil {
+		return err
+	}
+
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, nil)
+	if err != nil {
+		return err
+	}
+
+	dbid, err := database.Name(_env.IsLocalDevelopmentMode())
+	if err != nil {
+		return err
+	}
+
+	userc := cosmosdb.NewUserClient(dbc, dbid)
+
+	err = pkgdbtoken.ConfigurePermissions(ctx, dbid, userc)
+	if err != nil {
+		return err
+	}
+
+	dbtokenKeyvaultURI, err := keyvault.URI(_env, env.DBTokenKeyvaultSuffix)
+	if err != nil {
+		return err
+	}
+
+	dbtokenKeyvault := keyvault.NewManager(rpKVAuthorizer, dbtokenKeyvaultURI)
+
+	servingKey, servingCerts, err := dbtokenKeyvault.GetCertificateSecret(ctx, env.DBTokenServerSecretName)
+	if err != nil {
+		return err
+	}
+
+	verifier, err := oidc.NewVerifier(ctx, "https://sts.windows.net/"+_env.TenantID()+"/", pkgdbtoken.Resource)
+	if err != nil {
+		return err
+	}
+
+	address := "localhost:8445"
+	if !_env.IsLocalDevelopmentMode() {
+		address = ":8445"
+	}
+
+	l, err := net.Listen("tcp", address)
+	if err != nil {
+		return err
+	}
+
+	log.Print("listening")
+
+	server, err := pkgdbtoken.NewServer(ctx, _env, log.WithField("component", "dbtoken"), log.WithField("component", "dbtoken-access"), l, servingKey, servingCerts, verifier, userc)
+	if err != nil {
+		return err
+	}
+
+	return server.Run(ctx)
+}

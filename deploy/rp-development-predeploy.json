@@ -152,6 +152,47 @@
                 ],
                 "enableSoftDelete": true
             },
+            "name": "[concat(parameters('keyvaultPrefix'), '-dbt')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2016-10-01"
+        },
+        {
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": [
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[parameters('rpServicePrincipalId')]",
+                        "permissions": {
+                            "secrets": [
+                                "get"
+                            ]
+                        }
+                    },
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[parameters('adminObjectId')]",
+                        "permissions": {
+                            "secrets": [
+                                "set",
+                                "list"
+                            ],
+                            "certificates": [
+                                "delete",
+                                "get",
+                                "import",
+                                "list"
+                            ]
+                        }
+                    }
+                ],
+                "enableSoftDelete": true
+            },
             "name": "[concat(parameters('keyvaultPrefix'), '-por')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
