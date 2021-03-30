@@ -109,7 +109,7 @@ func NewJSONHandle(aead encryption.AEAD) (*codec.JsonHandle, error) {
 	return h, nil
 }
 
-func databaseName(isLocalDevelopmentMode bool) (string, error) {
+func Name(isLocalDevelopmentMode bool) (string, error) {
 	if !isLocalDevelopmentMode {
 		return "ARO", nil
 	}

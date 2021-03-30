@@ -26,7 +26,7 @@ type Portal interface {
 
 // NewPortal returns a new Portal
 func NewPortal(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (Portal, error) {
-	dbid, err := databaseName(isLocalDevelopmentMode)
+	dbid, err := Name(isLocalDevelopmentMode)
 	if err != nil {
 		return nil, err
 	}

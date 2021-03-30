@@ -35,7 +35,7 @@ type Subscriptions interface {
 
 // NewSubscriptions returns a new Subscriptions
 func NewSubscriptions(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (Subscriptions, error) {
-	dbid, err := databaseName(isLocalDevelopmentMode)
+	dbid, err := Name(isLocalDevelopmentMode)
 	if err != nil {
 		return nil, err
 	}
