@@ -52,7 +52,7 @@ require (
 	github.com/gorilla/sessions v1.2.1
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/h2non/filetype v1.1.1 // indirect
-	github.com/jim-minter/go-cosmosdb v0.0.0-20201119201311-b37af9b82812
+	github.com/jim-minter/go-cosmosdb v0.0.0-20210320020825-d7f11ed7bd6d
 	github.com/jstemmer/go-junit-report v0.9.1
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/libvirt/libvirt-go v7.0.0+incompatible // indirect

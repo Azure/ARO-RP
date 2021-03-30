@@ -551,7 +551,7 @@ github.com/hashicorp/hcl/json/token
 github.com/imdario/mergo
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
-# github.com/jim-minter/go-cosmosdb v0.0.0-20201119201311-b37af9b82812
+# github.com/jim-minter/go-cosmosdb v0.0.0-20210320020825-d7f11ed7bd6d
 ## explicit
 github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb
 github.com/jim-minter/go-cosmosdb/pkg/gencosmosdb
