@@ -11,10 +11,10 @@ import (
 	securityv1 "github.com/openshift/api/security/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/kubernetes/pkg/apis/rbac"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
@@ -107,16 +107,16 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 				Namespace: kubeNamespace,
 			},
 		},
-		&rbac.ClusterRoleBinding{
+		&rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: kubeName,
 			},
-			RoleRef: rbac.RoleRef{
+			RoleRef: rbacv1.RoleRef{
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "ClusterRole",
 				Name:     "openshift-sdn-controller",
 			},
-			Subjects: []rbac.Subject{
+			Subjects: []rbacv1.Subject{
 				{
 					Kind:      "ServiceAccount",
 					Name:      kubeName,
