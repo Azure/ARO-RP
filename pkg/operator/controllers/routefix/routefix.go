@@ -23,8 +23,12 @@ const (
 	// image is the openshift-sdn image from 4.6.18
 	image               = "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:bcc1fb20f06f00829727cb46ff21e22103fd4c737fdcbbf2fab13121f31ebcbd"
 	kubeName            = "routefix"
+	serviceAccountName  = "routefix"
 	kubeNamespace       = "openshift-azure-routefix"
-	kubeServiceAccount  = "system:serviceaccount:" + kubeNamespace + ":default"
+	kubeServiceAccount  = "system:serviceaccount:" + kubeNamespace + ":" + serviceAccountName
+	configmapName       = "add-iptables"
+	configmapScriptName = "add_iptables.sh"
+	configmapScriptDir  = "/tmp"
 	containerNameDrop   = "drop-icmp"
 	containerNameDetect = "detect"
 	shellScriptLog      = `while true;
@@ -51,7 +55,7 @@ iptables -N ICMP_ACTION || true
 iptables -F ICMP_ACTION
 iptables -A ICMP_ACTION -j LOG
 iptables -A ICMP_ACTION -j DROP
-oc observe nodes -a '{ .status.addresses[1].address }' -- /tmp/add_iptables.sh`
+oc observe nodes -a '{ .status.addresses[1].address }' -- ` + configmapScriptDir + `/` + configmapScriptName
 	shellScriptAddIptables = `#!/bin/sh
 echo "Adding ICMP drop rule for '$2' " 
 #iptables -C CHECK_ICMP_SOURCE -p icmp -s $2 -j ICMP_ACTION || iptables -A CHECK_ICMP_SOURCE -p icmp -s $2 -j ICMP_ACTION
@@ -103,7 +107,7 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 		scc,
 		&corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      kubeName,
+				Name:      serviceAccountName,
 				Namespace: kubeNamespace,
 			},
 		},
@@ -119,18 +123,18 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 			Subjects: []rbacv1.Subject{
 				{
 					Kind:      "ServiceAccount",
-					Name:      kubeName,
+					Name:      serviceAccountName,
 					Namespace: kubeNamespace,
 				},
 			},
 		},
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      kubeName,
+				Name:      configmapName,
 				Namespace: kubeNamespace,
 			},
 			Data: map[string]string{
-				"add_iptables.sh": shellScriptAddIptables,
+				configmapScriptName: shellScriptAddIptables,
 			},
 		},
 		&appsv1.DaemonSet{
@@ -147,6 +151,7 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 						Labels: map[string]string{"app": kubeName},
 					},
 					Spec: corev1.PodSpec{
+						ServiceAccountName: serviceAccountName,
 						Containers: []corev1.Container{
 							{
 								Name:  containerNameDrop,
@@ -178,9 +183,9 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 										ReadOnly:  false,
 									},
 									{
-										Name:      "add-iptables",
-										MountPath: "/tmp/add_iptables.sh",
-										SubPath:   "add_iptables.sh",
+										Name:      configmapName,
+										MountPath: configmapScriptDir + "/" + configmapScriptName,
+										SubPath:   configmapScriptName,
 										ReadOnly:  false,
 									},
 								},
@@ -244,11 +249,11 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 								},
 							},
 							{
-								Name: "add-iptables",
+								Name: configmapName,
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "add-iptables",
+											Name: configmapName,
 										},
 										DefaultMode: &defaultMode555,
 									},
