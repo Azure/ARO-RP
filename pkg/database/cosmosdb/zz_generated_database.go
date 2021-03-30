@@ -4,8 +4,8 @@ package cosmosdb
 
 import (
 	"context"
-	"encoding/base64"
 	"net/http"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
@@ -30,16 +30,18 @@ type Databases struct {
 }
 
 type databaseClient struct {
+	mu               sync.RWMutex
 	log              *logrus.Entry
 	hc               *http.Client
 	jsonHandle       *codec.JsonHandle
 	databaseHostname string
-	masterKey        []byte
+	authorizer       Authorizer
 	maxRetries       int
 }
 
 // DatabaseClient is a database client
 type DatabaseClient interface {
+	SetAuthorizer(Authorizer)
 	Create(context.Context, *Database) (*Database, error)
 	List() DatabaseIterator
 	ListAll(context.Context) (*Databases, error)
@@ -59,23 +61,15 @@ type DatabaseIterator interface {
 }
 
 // NewDatabaseClient returns a new database client
-func NewDatabaseClient(log *logrus.Entry, hc *http.Client, jsonHandle *codec.JsonHandle, databaseHostname, masterKey string) (DatabaseClient, error) {
-	var err error
-
-	c := &databaseClient{
+func NewDatabaseClient(log *logrus.Entry, hc *http.Client, jsonHandle *codec.JsonHandle, databaseHostname string, authorizer Authorizer) DatabaseClient {
+	return &databaseClient{
 		log:              log,
 		hc:               hc,
 		jsonHandle:       jsonHandle,
 		databaseHostname: databaseHostname,
+		authorizer:       authorizer,
 		maxRetries:       10,
 	}
-
-	c.masterKey, err = base64.StdEncoding.DecodeString(masterKey)
-	if err != nil {
-		return nil, err
-	}
-
-	return c, nil
 }
 
 func (c *databaseClient) all(ctx context.Context, i DatabaseIterator) (*Databases, error) {
@@ -96,6 +90,13 @@ func (c *databaseClient) all(ctx context.Context, i DatabaseIterator) (*Database
 	}
 
 	return alldbs, nil
+}
+
+func (c *databaseClient) SetAuthorizer(authorizer Authorizer) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.authorizer = authorizer
 }
 
 func (c *databaseClient) Create(ctx context.Context, newdb *Database) (db *Database, err error) {

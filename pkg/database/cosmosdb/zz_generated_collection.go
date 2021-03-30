@@ -23,6 +23,7 @@ type Collection struct {
 	PartitionKey             *PartitionKey             `json:"partitionKey,omitempty"`
 	UniqueKeyPolicy          *UniqueKeyPolicy          `json:"uniqueKeyPolicy,omitempty"`
 	ConflictResolutionPolicy *ConflictResolutionPolicy `json:"conflictResolutionPolicy,omitempty"`
+	AllowMaterializedViews   bool                      `json:"allowMaterializedViews,omitempty"`
 	GeospatialConfig         *GeospatialConfig         `json:"geospatialConfig,omitempty"`
 }
 
