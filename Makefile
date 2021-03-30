@@ -2,6 +2,10 @@ SHELL = /bin/bash
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
 
+# disable CGO so we're not dependent on system libraries
+# TODO remove this when we move to only multistage builds
+export CGO_ENABLED=0
+
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
 endif

@@ -6,7 +6,8 @@
 # until we get podman working without issue
 FROM registry.access.redhat.com/ubi7/go-toolset:1.14 AS builder
 ENV GOOS=linux \
-    GOPATH=/go/
+    GOPATH=/go/ \
+    CGO_ENABLED=0
 WORKDIR ${GOPATH}/src/github.com/Azure/ARO-RP
 USER root
 RUN yum update -y
