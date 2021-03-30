@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
@@ -76,10 +77,17 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	} else {
 		for _, arg := range flag.Args()[1:] {
-			releases = append(releases, pkgmirror.Node{
-				Version: arg,
-				Payload: arg,
-			})
+			if strings.EqualFold(arg, "latest") {
+				releases = append(releases, pkgmirror.Node{
+					Version: version.InstallStream.Version.String(),
+					Payload: version.InstallStream.PullSpec,
+				})
+			} else {
+				releases = append(releases, pkgmirror.Node{
+					Version: arg,
+					Payload: arg,
+				})
+			}
 		}
 	}
 
