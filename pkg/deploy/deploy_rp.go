@@ -18,25 +18,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
 
-func (d *deployer) fixupBillingRoleAssignment(ctx context.Context) error {
-	roleassignments, err := d.roleassignments.ListForResource(ctx, d.config.RPResourceGroupName, "Microsoft.DocumentDB", "", "databaseAccounts", *d.config.Configuration.DatabaseAccountName, "")
-	if err != nil {
-		return err
-	}
-
-	for _, roleassignment := range roleassignments {
-		if strings.EqualFold(*roleassignment.PrincipalID, *d.config.Configuration.BillingServicePrincipalID) {
-			d.log.Infof("deleting role assignment %s", *roleassignment.Name)
-			_, err = d.roleassignments.Delete(ctx, *roleassignment.Scope, *roleassignment.Name)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
 func (d *deployer) DeployRP(ctx context.Context) error {
 	encryptionAtHostSupported, err := d.encryptionAtHostSupported(ctx)
 	if err != nil {
@@ -44,13 +25,6 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	}
 	if !encryptionAtHostSupported {
 		d.log.Warn("encryption at host not supported")
-	}
-
-	// TODO: must remove this after one RP rollout.  Remove the existing billing
-	// DB role assignment so that it can be re-PUT with the correct GUID.
-	err = d.fixupBillingRoleAssignment(ctx)
-	if err != nil {
-		return err
 	}
 
 	rpMSI, err := d.userassignedidentities.Get(ctx, d.config.RPResourceGroupName, "aro-rp-"+d.config.Location)
