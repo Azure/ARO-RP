@@ -20,6 +20,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
+	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 )
 
 type ServicePrincipalChecker struct {
@@ -67,12 +68,12 @@ func (r *ServicePrincipalChecker) Check(ctx context.Context) error {
 		return err
 	}
 
-	azCred, err := azCredentials(ctx, r.kubernetescli)
+	azCred, err := clusterauthorizer.AzCredentials(ctx, r.kubernetescli)
 	if err != nil {
 		return err
 	}
 
-	_, err = aad.GetToken(ctx, r.log, azCred.clientID, azCred.clientSecret, azCred.tenantID, azEnv.ActiveDirectoryEndpoint, azEnv.ResourceManagerEndpoint)
+	_, err = aad.GetToken(ctx, r.log, string(azCred.ClientID), string(azCred.ClientSecret), string(azCred.TenantID), azEnv.ActiveDirectoryEndpoint, azEnv.ResourceManagerEndpoint)
 	if err != nil {
 		updateFailedCondition(cond, err)
 	}
@@ -82,33 +83,12 @@ func (r *ServicePrincipalChecker) Check(ctx context.Context) error {
 		return err
 	}
 
-	err = spDynamic.ValidateServicePrincipal(ctx, azCred.clientID, azCred.clientSecret, azCred.tenantID)
+	err = spDynamic.ValidateServicePrincipal(ctx, string(azCred.ClientID), string(azCred.ClientSecret), string(azCred.TenantID))
 	if err != nil {
 		updateFailedCondition(cond, err)
 	}
 
 	return controllers.SetCondition(ctx, r.arocli, cond, r.role)
-}
-
-type credentials struct {
-	clientID     string
-	clientSecret string
-	tenantID     string
-}
-
-func azCredentials(ctx context.Context, kubernetescli kubernetes.Interface) (*credentials, error) {
-	var creds credentials
-
-	mysec, err := kubernetescli.CoreV1().Secrets(azureCredentialSecretNamespace).Get(ctx, azureCredentialSecretName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	creds.clientID = string(mysec.Data["azure_client_id"])
-	creds.clientSecret = string(mysec.Data["azure_client_secret"])
-	creds.tenantID = string(mysec.Data["azure_tenant_id"])
-
-	return &creds, nil
 }
 
 func updateFailedCondition(cond *status.Condition, err error) {

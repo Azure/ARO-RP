@@ -25,6 +25,9 @@ There will be use cases where we may want to remediate end user decisions
 automatically. Carrying out remediation locally is advantageous because it is
 likely to be simpler, more reliable, and with a shorter time to remediate.
 
+Remediations in place:
+* periodically reset NSGs in the master and worker subnets to the defaults (controlled by the reconcileNSGs feature flag)
+
 ### End user warnings
 
 * [TODO] see https://docs.openshift.com/container-platform/4.4/web_console/customizing-the-web-console.html#creating-custom-notification-banners_customizing-web-console

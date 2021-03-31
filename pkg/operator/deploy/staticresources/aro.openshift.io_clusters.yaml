@@ -40,12 +40,17 @@ spec:
                 type: string
               apiIntIP:
                 type: string
+              architectureVersion:
+                type: integer
               azEnvironment:
                 type: string
               domain:
                 type: string
               features:
                 description: FeaturesSpec defines ARO operator feature gates
+                properties:
+                  reconcileNSGs:
+                    type: boolean
                 type: object
               genevaLogging:
                 properties:
@@ -58,6 +63,8 @@ spec:
                     - Test
                     type: string
                 type: object
+              infraId:
+                type: string
               ingressIP:
                 type: string
               internetChecker:
