@@ -6,7 +6,7 @@ cloud.google.com/go/compute/metadata
 # github.com/AlekSi/gocov-xml v0.0.0-20190121064608-3a14fb1c4737
 ## explicit
 github.com/AlekSi/gocov-xml
-# github.com/Azure/azure-sdk-for-go v51.2.0+incompatible
+# github.com/Azure/azure-sdk-for-go v52.5.0+incompatible
 ## explicit
 github.com/Azure/azure-sdk-for-go/profiles/latest/dns/mgmt/dns
 github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-10-01/compute
@@ -369,6 +369,9 @@ github.com/gobwas/glob/util/runes
 github.com/gobwas/glob/util/strings
 # github.com/gofrs/flock v0.8.0
 github.com/gofrs/flock
+# github.com/gofrs/uuid v3.3.0+incompatible
+## explicit
+github.com/gofrs/uuid
 # github.com/gogo/protobuf v1.3.2
 ## explicit
 github.com/gogo/protobuf/proto
@@ -951,9 +954,6 @@ github.com/russross/blackfriday
 github.com/ryancurrah/gomodguard
 # github.com/ryanrolds/sqlclosecheck v0.3.0
 github.com/ryanrolds/sqlclosecheck/pkg/analyzer
-# github.com/satori/go.uuid v1.2.0
-## explicit
-github.com/satori/go.uuid
 # github.com/securego/gosec/v2 v2.5.0
 github.com/securego/gosec/v2
 github.com/securego/gosec/v2/rules
@@ -1840,6 +1840,7 @@ sigs.k8s.io/yaml
 # github.com/terraform-providers/terraform-provider-aws => github.com/openshift/terraform-provider-aws v1.60.1-0.20200630224953-76d1fb4e5699
 # github.com/terraform-providers/terraform-provider-azurerm => github.com/openshift/terraform-provider-azurerm v1.40.1-0.20200707062554-97ea089cc12a
 # github.com/terraform-providers/terraform-provider-ignition/v2 => github.com/community-terraform-providers/terraform-provider-ignition/v2 v2.1.0
+# github.com/ugorji/go/codec => github.com/ugorji/go/codec v1.2.2
 # k8s.io/api => k8s.io/api v0.19.0-rc.2
 # k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.0-rc.2
 # k8s.io/apimachinery => k8s.io/apimachinery v0.19.0-rc.2
@@ -1869,4 +1870,5 @@ sigs.k8s.io/yaml
 # sigs.k8s.io/cluster-api-provider-openstack => github.com/openshift/cluster-api-provider-openstack v0.0.0-20201002114634-3622a0ce6b56
 # sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.6.4
 # sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.3.0
-# github.com/ugorji/go/codec => github.com/ugorji/go/codec v1.2.2
+# github.com/satori/go.uuid => github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
+# github.com/satori/uuid => github.com/satori/uuid v1.2.1-0.20181028125025-b2ce2384e17b

@@ -9,11 +9,11 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (

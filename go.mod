@@ -5,7 +5,7 @@ go 1.14
 require (
 	cloud.google.com/go v0.77.0 // indirect
 	github.com/AlekSi/gocov-xml v0.0.0-20190121064608-3a14fb1c4737
-	github.com/Azure/azure-sdk-for-go v51.2.0+incompatible
+	github.com/Azure/azure-sdk-for-go v52.5.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.18
 	github.com/Azure/go-autorest/autorest/adal v0.9.13
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.7
@@ -37,6 +37,7 @@ require (
 	github.com/go-openapi/spec v0.20.3 // indirect
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/go-test/deep v1.0.7
+	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/mock v1.4.4
 	github.com/golangci/golangci-lint v1.32.2
@@ -79,7 +80,6 @@ require (
 	github.com/prometheus/common v0.15.0
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
-	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.7.1
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
 	github.com/ugorji/go/codec v1.2.5-0.20210320190651-a2bb12368408
@@ -170,6 +170,9 @@ exclude (
 	github.com/hashicorp/vault v1.5.0-beta1
 	github.com/hashicorp/vault v1.5.0-beta2
 	github.com/hashicorp/vault v1.5.0-rc1
+	// https://www.whitesourcesoftware.com/vulnerability-database/WS-2018-0594
+	github.com/satori/go.uuid v0.0.0
+	github.com/satori/uuid v0.0.0
 )
 
 replace (
@@ -224,4 +227,7 @@ replace (
 	sigs.k8s.io/cluster-api-provider-openstack => github.com/openshift/cluster-api-provider-openstack v0.0.0-20201002114634-3622a0ce6b56
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.6.4
 	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.3.0
+	// https://www.whitesourcesoftware.com/vulnerability-database/WS-2018-0594
+	github.com/satori/go.uuid => github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
+	github.com/satori/uuid => github.com/satori/uuid v1.2.1-0.20181028125025-b2ce2384e17b
 )
