@@ -50,7 +50,3 @@ func MdmImage(acrDomain string) string {
 func MdsdImage(acrDomain string) string {
 	return acrDomain + "/genevamdsd:master_20210201.2"
 }
-
-func RouteFixImage(acrDomain string) string {
-	return acrDomain + "/routefix:c5c4a5db"
-}

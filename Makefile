@@ -47,10 +47,6 @@ image-proxy: proxy
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build --no-cache -f Dockerfile.proxy -t ${RP_IMAGE_ACR}.azurecr.io/proxy:latest .
 
-image-routefix:
-	docker pull registry.access.redhat.com/ubi8/ubi
-	docker build --no-cache -f Dockerfile.routefix -t ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT) .
-
 publish-image-aro: image-aro
 	docker push $(ARO_IMAGE)
 ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
@@ -70,9 +66,6 @@ publish-image-fluentbit: image-fluentbit
 
 publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
-
-publish-image-routefix: image-routefix
-	docker push ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT)
 
 proxy:
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./hack/proxy
@@ -135,4 +128,4 @@ vendor:
 	# https://groups.google.com/forum/#!topic/golang-nuts/51-D_YFC78k
 	hack/update-go-module-dependencies.sh
 
-.PHONY: admin.kubeconfig aro az clean client discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy image-routefix lint-go proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy publish-image-routefix secrets secrets-update e2e.test test-e2e test-go test-python vendor
+.PHONY: admin.kubeconfig aro az clean client discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy lint-go proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test test-e2e test-go test-python vendor

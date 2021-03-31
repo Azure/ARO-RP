@@ -179,7 +179,34 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 var _ = Describe("ARO Operator - Routefix Daemonset", func() {
 	// remove this once the change where the operator manages the routefix
 	// daemonset is in production
-	Specify("routefix must be repaired if daemonset is deleted", func() {
+	Specify("routefix DaemonSet must be Ready", func() {
+		dsReady := func() (bool, error) {
+			done, err := ready.CheckDaemonSetIsReady(context.Background(), clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix"), "routefix")()
+			if err != nil {
+				log.Warn(err)
+			}
+			return done, nil // swallow error
+		}
+
+		err := wait.PollImmediate(30*time.Second, 15*time.Minute, dsReady)
+		Expect(err).NotTo(HaveOccurred())
+
+	})
+	Specify("routefix Pods must all be Running before testing DaemonSet deletion", func() {
+		dsReady := func() (bool, error) {
+			clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix")
+			done, err := ready.CheckPodsAreRunning(context.Background(), clients.Kubernetes.CoreV1().Pods("openshift-azure-routefix"), map[string]string{"app": "routefix"})()
+			if err != nil {
+				log.Warn(err)
+			}
+			return done, nil // swallow error
+		}
+
+		err := wait.PollImmediate(30*time.Second, 15*time.Minute, dsReady)
+		Expect(err).NotTo(HaveOccurred())
+
+	})
+	Specify("routefix must be repaired if DaemonSet is deleted", func() {
 		dsReady := func() (bool, error) {
 			done, err := ready.CheckDaemonSetIsReady(context.Background(), clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix"), "routefix")()
 			if err != nil {
@@ -200,6 +227,19 @@ var _ = Describe("ARO Operator - Routefix Daemonset", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix").Get(context.Background(), "routefix", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+	})
+	Specify("routefix Pods must all be Running after testing DaemonSet deletion", func() {
+		dsReady := func() (bool, error) {
+			clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix")
+			done, err := ready.CheckPodsAreRunning(context.Background(), clients.Kubernetes.CoreV1().Pods("openshift-azure-routefix"), map[string]string{"app": "routefix"})()
+			if err != nil {
+				log.Warn(err)
+			}
+			return done, nil // swallow error
+		}
+
+		err := wait.PollImmediate(30*time.Second, 15*time.Minute, dsReady)
 		Expect(err).NotTo(HaveOccurred())
 	})
 })

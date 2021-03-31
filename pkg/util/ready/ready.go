@@ -119,6 +119,43 @@ func CheckPodIsRunning(ctx context.Context, cli corev1client.PodInterface, name 
 	}
 }
 
+// CheckPodsAreRunning returns a function which polls multiple Pods by label and returns if it is
+// running
+func CheckPodsAreRunning(ctx context.Context, cli corev1client.PodInterface, labels map[string]string) func() (bool, error) {
+	return func() (bool, error) {
+		// build the label selector
+		options := metav1.ListOptions{
+			LabelSelector: "",
+		}
+		for key, value := range labels {
+			options.LabelSelector += key + "=" + value
+		}
+
+		// get list of pods
+		podList, err := cli.List(ctx, options)
+
+		// check status from List
+		switch {
+		case kerrors.IsNotFound(err):
+			return false, nil
+		case err != nil:
+			return false, err
+		}
+
+		// Test if each pod is running
+		// 	return true if all pods are running
+		// 	else return false
+		for _, p := range podList.Items {
+			if !PodIsRunning(&p) {
+				return false, nil
+			}
+		}
+
+		// didn't fail any tests, return true
+		return true, nil
+	}
+}
+
 // StatefulSetIsReady returns true if a StatefulSet is considered ready
 func StatefulSetIsReady(s *appsv1.StatefulSet) bool {
 	specReplicas := int32(1)
