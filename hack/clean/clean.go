@@ -23,9 +23,10 @@ var (
 	dryRun = flag.Bool("dryRun", true, `Dry run`)
 )
 
+// denylist exists as belt and braces protection for important RGs, even though
+// they may already have the persist=true tag set, especially if it is easy to
+// accidentally redeploy the RG without the persist=true tag set.
 var denylist = []string{
-	"aro-v4-shared",
-	"aro-v4-shared-cluster",
 	"v4-eastus",
 	"v4-australiasoutheast",
 	"v4-westeurope",
@@ -92,6 +93,14 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	shouldDelete := func(resourceGroup mgmtfeatures.ResourceGroup, log *logrus.Entry) bool {
+		// don't mess with clusters in RGs managed by a production RP. Although
+		// the production deny assignment will prevent us from breaking most
+		// things, that does not include us potentially detaching the cluster's
+		// NSG from the vnet, thus breaking inbound access to the cluster.
+		if resourceGroup.ManagedBy != nil && *resourceGroup.ManagedBy != "" {
+			return false
+		}
+
 		// if prefix is set we check if we need to evaluate this group for purge
 		// before we check other fields.
 		if len(deleteGroupPrefixes) > 0 {
