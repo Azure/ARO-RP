@@ -5,6 +5,7 @@ package node
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -22,8 +23,10 @@ import (
 const (
 	annotationCurrentConfig  = "machineconfiguration.openshift.io/currentConfig"
 	annotationDesiredConfig  = "machineconfiguration.openshift.io/desiredConfig"
+	annotationReason         = "machineconfiguration.openshift.io/reason"
 	annotationState          = "machineconfiguration.openshift.io/state"
 	annotationDrainStartTime = "aro.openshift.io/drainStartTime"
+	stateDegraded            = "Degraded"
 	stateWorking             = "Working"
 	gracePeriod              = time.Hour
 )
@@ -153,10 +156,22 @@ func setAnnotation(m *metav1.ObjectMeta, k, v string) {
 }
 
 func isDraining(node *corev1.Node) bool {
-	return ready.NodeIsReady(node) &&
-		node.Spec.Unschedulable &&
-		getAnnotation(&node.ObjectMeta, annotationCurrentConfig) != "" &&
-		getAnnotation(&node.ObjectMeta, annotationDesiredConfig) != "" &&
-		getAnnotation(&node.ObjectMeta, annotationCurrentConfig) != getAnnotation(&node.ObjectMeta, annotationDesiredConfig) &&
-		getAnnotation(&node.ObjectMeta, annotationState) == stateWorking
+	if !ready.NodeIsReady(node) ||
+		!node.Spec.Unschedulable ||
+		getAnnotation(&node.ObjectMeta, annotationCurrentConfig) == "" ||
+		getAnnotation(&node.ObjectMeta, annotationDesiredConfig) == "" ||
+		getAnnotation(&node.ObjectMeta, annotationCurrentConfig) == getAnnotation(&node.ObjectMeta, annotationDesiredConfig) {
+		return false
+	}
+
+	if getAnnotation(&node.ObjectMeta, annotationState) == stateWorking {
+		return true
+	}
+
+	if getAnnotation(&node.ObjectMeta, annotationState) == stateDegraded &&
+		strings.HasPrefix(getAnnotation(&node.ObjectMeta, annotationReason), "failed to drain node") {
+		return true
+	}
+
+	return false
 }
