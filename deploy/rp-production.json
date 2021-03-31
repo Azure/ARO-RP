@@ -146,6 +146,7 @@
             "properties": {
                 "publicIPAllocationMethod": "Static"
             },
+            "zones": "[pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3)]",
             "name": "rp-pip",
             "type": "Microsoft.Network/publicIPAddresses",
             "location": "[resourceGroup().location]",
@@ -158,6 +159,7 @@
             "properties": {
                 "publicIPAllocationMethod": "Static"
             },
+            "zones": "[pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3)]",
             "name": "portal-pip",
             "type": "Microsoft.Network/publicIPAddresses",
             "location": "[resourceGroup().location]",
