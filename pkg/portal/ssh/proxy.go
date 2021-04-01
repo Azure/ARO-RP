@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 	cryptossh "golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -20,7 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 // This file handles smart proxying of SSH connections between SRE->portal and

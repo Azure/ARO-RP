@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
@@ -20,7 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -64,7 +64,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		}
 
 		doc = &api.OpenShiftClusterDocument{
-			ID:  uuid.NewV4().String(),
+			ID:  uuid.Must(uuid.NewV4()).String(),
 			Key: r.URL.Path,
 			OpenShiftCluster: &api.OpenShiftCluster{
 				ID:   originalPath,

@@ -10,10 +10,10 @@ import (
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/gofrs/uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/validate"
 )
@@ -755,8 +755,10 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles['default'].ip: Changing property 'properties.ingressProfiles['default'].ip' is not allowed.",
 		},
 		{
-			name:   "clientId change",
-			modify: func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientID = uuid.NewV4().String() },
+			name: "clientId change",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ServicePrincipalProfile.ClientID = uuid.Must(uuid.NewV4()).String()
+			},
 		},
 		{
 			name:   "clientSecret change",
