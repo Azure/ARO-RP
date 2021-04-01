@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	extensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -200,6 +201,10 @@ func merge(old, new runtime.Object) (runtime.Object, bool, string, error) {
 
 	case *extensionsv1beta1.CustomResourceDefinition:
 		old, new := old.(*extensionsv1beta1.CustomResourceDefinition), new.(*extensionsv1beta1.CustomResourceDefinition)
+		new.Status = old.Status
+
+	case *extensionsv1.CustomResourceDefinition:
+		old, new := old.(*extensionsv1.CustomResourceDefinition), new.(*extensionsv1.CustomResourceDefinition)
 		new.Status = old.Status
 
 	case *arov1alpha1.Cluster:
