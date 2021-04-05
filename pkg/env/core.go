@@ -7,11 +7,11 @@ import (
 	"context"
 	"errors"
 
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
-	"github.com/Azure/ARO-RP/pkg/util/rpauthorizer"
 )
 
 // Core collects basic configuration information which is expected to be
@@ -19,13 +19,12 @@ import (
 // etc.)
 type Core interface {
 	IsLocalDevelopmentMode() bool
+	NewMSIAuthorizer(MSIContext, string) (autorest.Authorizer, error)
 	instancemetadata.InstanceMetadata
-	rpauthorizer.RPAuthorizer
 }
 
 type core struct {
 	instancemetadata.InstanceMetadata
-	rpauthorizer.RPAuthorizer
 
 	isLocalDevelopmentMode bool
 }
@@ -51,14 +50,8 @@ func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 	}
 	log.Infof("running on %s", im.Environment().Name)
 
-	rpauthorizer, err := rpauthorizer.New(isLocalDevelopmentMode, im)
-	if err != nil {
-		return nil, err
-	}
-
 	return &core{
 		InstanceMetadata: im,
-		RPAuthorizer:     rpauthorizer,
 
 		isLocalDevelopmentMode: isLocalDevelopmentMode,
 	}, nil

@@ -25,12 +25,12 @@ steady state: manage ACR tokens, DNS zone records, private endpoints.
 The first party application, in the AME tenant, for use against the cluster key
 vault. Used in steady state: manage cluster serving certificates.
 
-## rpAuthorizer
+## msiAuthorizer
 
 The managed identity attached to the RP VM, in the AME tenant, for use against
 ARM. Used for bootstrapping: finding the CosmosDB key, populating the SKU list.
 
-## rpKVAuthorizer
+## msiKVAuthorizer
 
 The managed identity attached to the RP VM, in the AME tenant, for use against
 the service key vault. Used for bootstrapping: retrieving keys and secrets from
