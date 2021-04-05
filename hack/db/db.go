@@ -31,6 +31,11 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	authorizer, err := auth.NewAuthorizerFromCLIWithResource(_env.Environment().ResourceManagerEndpoint)
+	if err != nil {
+		return err
+	}
+
 	kvAuthorizer, err := auth.NewAuthorizerFromCLIWithResource(_env.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return err
@@ -53,7 +58,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env)
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, authorizer)
 	if err != nil {
 		return err
 	}
