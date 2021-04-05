@@ -37,6 +37,11 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
+	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerEndpoint)
+	if err != nil {
+		return err
+	}
+
 	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return err
@@ -44,7 +49,7 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 
 	m := statsd.New(ctx, log.WithField("component", "dbtoken"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
 
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env)
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer)
 	if err != nil {
 		return err
 	}
