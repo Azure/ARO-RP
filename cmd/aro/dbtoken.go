@@ -37,7 +37,7 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	rpKVAuthorizer, err := _env.NewRPAuthorizer(_env.Environment().ResourceIdentifiers.KeyVault)
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbtokenKeyvault := keyvault.NewManager(rpKVAuthorizer, dbtokenKeyvaultURI)
+	dbtokenKeyvault := keyvault.NewManager(msiKVAuthorizer, dbtokenKeyvaultURI)
 
 	servingKey, servingCerts, err := dbtokenKeyvault.GetCertificateSecret(ctx, env.DBTokenServerSecretName)
 	if err != nil {

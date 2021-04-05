@@ -53,7 +53,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 
 	clusterm := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"))
 
-	rpKVAuthorizer, err := _env.NewRPAuthorizer(_env.Environment().ResourceIdentifiers.KeyVault)
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	serviceKeyvault := keyvault.NewManager(rpKVAuthorizer, serviceKeyvaultURI)
+	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
 	key, err := serviceKeyvault.GetBase64Secret(ctx, env.EncryptionSecretName)
 	if err != nil {
