@@ -15,22 +15,22 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var t = template.Must(template.New("").Parse(`
-
-{{ define "dnsmasq.conf" }}
-resolv-file=/etc/resolv.conf.dnsmasq
+var (
+	configTemplate = template.Must(template.New("").Parse(`resolv-file=/etc/resolv.conf.dnsmasq
 strict-order
 address=/api.{{ .ClusterDomain }}/{{ .APIIntIP }}
 address=/api-int.{{ .ClusterDomain }}/{{ .APIIntIP }}
 address=/.apps.{{ .ClusterDomain }}/{{ .IngressIP }}
+{{- range $GatewayDomain := .GatewayDomains }}
+address=/{{ $GatewayDomain }}/{{ $.GatewayPrivateEndpointIP }}
+{{- end }}
 user=dnsmasq
 group=dnsmasq
 no-hosts
 cache-size=0
-{{ end }}
+`))
 
-{{ define "dnsmasq.service" }}
-[Unit]
+	service = `[Unit]
 Description=DNS caching server.
 After=network-online.target
 Before=bootkube.service
@@ -47,21 +47,24 @@ Restart=always
 
 [Install]
 WantedBy=multi-user.target
-{{ end }}
+`
+)
 
-`))
-
-func config(clusterDomain, apiIntIP, ingressIP string) ([]byte, error) {
+func config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string) ([]byte, error) {
 	buf := &bytes.Buffer{}
 
-	err := t.ExecuteTemplate(buf, "dnsmasq.conf", &struct {
-		ClusterDomain string
-		APIIntIP      string
-		IngressIP     string
+	err := configTemplate.ExecuteTemplate(buf, "", &struct {
+		ClusterDomain            string
+		APIIntIP                 string
+		IngressIP                string
+		GatewayDomains           []string
+		GatewayPrivateEndpointIP string
 	}{
-		ClusterDomain: clusterDomain,
-		APIIntIP:      apiIntIP,
-		IngressIP:     ingressIP,
+		ClusterDomain:            clusterDomain,
+		APIIntIP:                 apiIntIP,
+		IngressIP:                ingressIP,
+		GatewayDomains:           gatewayDomains,
+		GatewayPrivateEndpointIP: gatewayPrivateEndpointIP,
 	})
 	if err != nil {
 		return nil, err
@@ -70,24 +73,8 @@ func config(clusterDomain, apiIntIP, ingressIP string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func service() (string, error) {
-	buf := &bytes.Buffer{}
-
-	err := t.ExecuteTemplate(buf, "dnsmasq.service", nil)
-	if err != nil {
-		return "", err
-	}
-
-	return buf.String(), nil
-}
-
-func Ignition2Config(clusterDomain, apiIntIP, ingressIP string) (*ign2types.Config, error) {
-	service, err := service()
-	if err != nil {
-		return nil, err
-	}
-
-	config, err := config(clusterDomain, apiIntIP, ingressIP)
+func Ignition2Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIPteEndpointIP string) (*ign2types.Config, error) {
+	config, err := config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIPteEndpointIP)
 	if err != nil {
 		return nil, err
 	}
@@ -128,13 +115,8 @@ func Ignition2Config(clusterDomain, apiIntIP, ingressIP string) (*ign2types.Conf
 	}, nil
 }
 
-func Ignition3Config(clusterDomain, apiIntIP, ingressIP string) (*ign3types.Config, error) {
-	service, err := service()
-	if err != nil {
-		return nil, err
-	}
-
-	config, err := config(clusterDomain, apiIntIP, ingressIP)
+func Ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string) (*ign3types.Config, error) {
+	config, err := config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
 	if err != nil {
 		return nil, err
 	}
@@ -174,8 +156,8 @@ func Ignition3Config(clusterDomain, apiIntIP, ingressIP string) (*ign3types.Conf
 	}, nil
 }
 
-func MachineConfig(clusterDomain, apiIntIP, ingressIP, role string) (*mcfgv1.MachineConfig, error) {
-	ignConfig, err := Ignition2Config(clusterDomain, apiIntIP, ingressIP)
+func MachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string) (*mcfgv1.MachineConfig, error) {
+	ignConfig, err := Ignition2Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
 	if err != nil {
 		return nil, err
 	}

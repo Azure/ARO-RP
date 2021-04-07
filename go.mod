@@ -76,6 +76,7 @@ require (
 	github.com/operator-framework/operator-sdk v1.4.2
 	github.com/ovirt/go-ovirt v0.0.0-20210112072624-e4d3b104de71 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
+	github.com/pires/go-proxyproto v0.5.0
 	github.com/pquerna/cachecontrol v0.0.0-20201205024021-ac21108117ac // indirect
 	github.com/prometheus/client_golang v1.9.0 // indirect
 	github.com/prometheus/common v0.15.0
@@ -190,7 +191,7 @@ replace (
 	github.com/openshift/cluster-api-provider-libvirt => github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20200919090150-1ca52adab176
 	github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20210210114935-91f12f3f7dee
 	github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20210116095614-7fd78a283616
-	github.com/openshift/installer => github.com/mjudeikis/installer v0.9.0-master.0.20210423142443-7756cb69c32a
+	github.com/openshift/installer => github.com/jim-minter/installer v0.9.0-master.0.20210426214849-59276aa0a734
 	github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20210212025836-cb508cd8777d
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20210211205336-14a2b82d9f4c
 	github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.19.4

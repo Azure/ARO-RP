@@ -18,7 +18,7 @@ github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault
 github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault
 github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi
 github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-12-01/network
-github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network
+github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network
 github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization
 github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry
 github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights
@@ -776,7 +776,7 @@ github.com/openshift/cluster-api-provider-ovirt/pkg/apis/ovirtprovider/v1beta1
 # github.com/openshift/console-operator v0.0.0-20210216151626-6e1cbc849915 => github.com/openshift/console-operator v0.0.0-20210116095614-7fd78a283616
 ## explicit
 github.com/openshift/console-operator/pkg/api
-# github.com/openshift/installer v0.16.1 => github.com/mjudeikis/installer v0.9.0-master.0.20210423142443-7756cb69c32a
+# github.com/openshift/installer v0.16.1 => github.com/jim-minter/installer v0.9.0-master.0.20210426214849-59276aa0a734
 ## explicit
 github.com/openshift/installer/data
 github.com/openshift/installer/pkg/aro/dnsmasq
@@ -914,6 +914,9 @@ github.com/pelletier/go-toml
 github.com/peterbourgon/diskv
 # github.com/phayes/checkstyle v0.0.0-20170904204023-bfd46e6a821d
 github.com/phayes/checkstyle
+# github.com/pires/go-proxyproto v0.5.0
+## explicit
+github.com/pires/go-proxyproto
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
@@ -1836,7 +1839,7 @@ sigs.k8s.io/yaml
 # github.com/openshift/cluster-api-provider-libvirt => github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20200919090150-1ca52adab176
 # github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20210210114935-91f12f3f7dee
 # github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20210116095614-7fd78a283616
-# github.com/openshift/installer => github.com/mjudeikis/installer v0.9.0-master.0.20210423142443-7756cb69c32a
+# github.com/openshift/installer => github.com/jim-minter/installer v0.9.0-master.0.20210426214849-59276aa0a734
 # github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20210212025836-cb508cd8777d
 # github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20210211205336-14a2b82d9f4c
 # github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.19.4
