@@ -1245,6 +1245,8 @@ github.com/jim-minter/go-cosmosdb v0.0.0-20201119201311-b37af9b82812 h1:il0jxCpy
 github.com/jim-minter/go-cosmosdb v0.0.0-20201119201311-b37af9b82812/go.mod h1:n4wXKwl/rXS49qkPRFf3vovG0V6nkwAO4SbRwjGYibM=
 github.com/jim-minter/installer v0.9.0-master.0.20210303004247-74b5bf8dae14 h1:5+IlBfOlabr/PuxzsrMGQXNyQo3B6Y+4HhauEHI/vng=
 github.com/jim-minter/installer v0.9.0-master.0.20210303004247-74b5bf8dae14/go.mod h1:7VaPq04uNsqsSVgORCxZxNN7mq7FyhrvFBN2EPyk7iQ=
+github.com/jim-minter/installer v0.9.0-master.0.20210319162411-33cfe5f6d68b h1:EXjawBU5hn5QZnysvs4ERlulCBNpBZsLJGiA4MXVavQ=
+github.com/jim-minter/installer v0.9.0-master.0.20210319162411-33cfe5f6d68b/go.mod h1:7VaPq04uNsqsSVgORCxZxNN7mq7FyhrvFBN2EPyk7iQ=
 github.com/jimstudt/http-authentication v0.0.0-20140401203705-3eca13d6893a/go.mod h1:wK6yTYYcgjHE1Z1QtXACPDjcFJyBskHEdagmnq3vsP8=
 github.com/jingyugao/rowserrcheck v0.0.0-20191204022205-72ab7603b68a h1:GmsqmapfzSJkm28dhRoHz2tLRbJmqhU86IPgBtN3mmk=
 github.com/jingyugao/rowserrcheck v0.0.0-20191204022205-72ab7603b68a/go.mod h1:xRskid8CManxVta/ALEhJha/pweKBaVG6fWgc0yH25s=
