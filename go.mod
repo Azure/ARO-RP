@@ -6,8 +6,8 @@ require (
 	cloud.google.com/go v0.82.0 // indirect
 	github.com/AlekSi/gocov-xml v0.0.0-20190121064608-3a14fb1c4737
 	github.com/Azure/azure-sdk-for-go v54.3.0+incompatible
-	github.com/Azure/go-autorest/autorest v0.11.18
-	github.com/Azure/go-autorest/autorest/adal v0.9.13
+	github.com/Azure/go-autorest/autorest v0.11.19
+	github.com/Azure/go-autorest/autorest/adal v0.9.14
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.7
 	github.com/Azure/go-autorest/autorest/date v0.3.0
 	github.com/Azure/go-autorest/autorest/to v0.4.0
@@ -26,6 +26,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/coreos/ignition/v2 v2.10.1 // indirect
 	github.com/coreos/vcontext v0.0.0-20210511154938-8fbad538d364 // indirect
+	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/docker v20.10.6+incompatible // indirect
 	github.com/docker/spdystream v0.2.0 // indirect
 	github.com/emicklei/go-restful v2.15.0+incompatible // indirect
@@ -82,8 +83,9 @@ require (
 	github.com/openshift/machine-config-operator v4.2.0-alpha.0.0.20190917115525-033375cbe820+incompatible
 	github.com/operator-framework/operator-sdk v1.7.2
 	github.com/pborman/uuid v1.2.1 // indirect
+	github.com/pires/go-proxyproto v0.5.0
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
-	github.com/prometheus/client_golang v1.10.0 // indirect
+	github.com/prometheus/client_golang v1.10.0
 	github.com/prometheus/common v0.25.0
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/sirupsen/logrus v1.8.1
@@ -243,7 +245,7 @@ replace (
 	github.com/openshift/cluster-api-provider-libvirt => github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20210324200850-033be25ca038
 	github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20210409185359-01b9bf8368a3
 	github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20210323072657-4f933d59784b
-	github.com/openshift/installer => github.com/mjudeikis/installer v0.9.0-master.0.20210705104729-749222c33d4f
+	github.com/openshift/installer => github.com/bennerv/installer v0.9.0-master.0.20210707202634-4f660864eb4f
 	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20210205203934-9eb0d970f2f4
 	github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20210521181620-e179bb5ce397
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20210522053223-c4b7e3f5118d

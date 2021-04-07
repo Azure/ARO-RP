@@ -91,6 +91,8 @@ func (m *Manifests) Dependencies() []asset.Asset {
 		&bootkube.AROWorkerRegistries{},
 		&bootkube.AROIngressService{},
 		&bootkube.ARODNSConfig{},
+		&bootkube.AROImageRegistry{},
+		&bootkube.AROImageRegistryConfig{},
 	}
 }
 
@@ -157,6 +159,7 @@ func (m *Manifests) generateBootKubeManifests(dependencies asset.Parents) []*ass
 	etcdCABundle := &tls.EtcdCABundle{}
 	etcdSignerClientCertKey := &tls.EtcdSignerClientCertKey{}
 	aroDNSConfig := &bootkube.ARODNSConfig{}
+	aroImageRegistryConfig := &bootkube.AROImageRegistryConfig{}
 	dependencies.Get(
 		clusterID,
 		installConfig,
@@ -169,27 +172,32 @@ func (m *Manifests) generateBootKubeManifests(dependencies asset.Parents) []*ass
 		mcsCertKey,
 		rootCA,
 		aroDNSConfig,
+		aroImageRegistryConfig,
 	)
 
 	templateData := &bootkubeTemplateData{
-		CVOClusterID:               clusterID.UUID,
-		EtcdCaBundle:               string(etcdCABundle.Cert()),
-		EtcdMetricCaCert:           string(etcdMetricCABundle.Cert()),
-		EtcdMetricSignerCert:       base64.StdEncoding.EncodeToString(etcdMetricSignerCertKey.Cert()),
-		EtcdMetricSignerClientCert: base64.StdEncoding.EncodeToString(etcdMetricSignerClientCertKey.Cert()),
-		EtcdMetricSignerClientKey:  base64.StdEncoding.EncodeToString(etcdMetricSignerClientCertKey.Key()),
-		EtcdMetricSignerKey:        base64.StdEncoding.EncodeToString(etcdMetricSignerCertKey.Key()),
-		EtcdSignerCert:             base64.StdEncoding.EncodeToString(etcdSignerCertKey.Cert()),
-		EtcdSignerClientCert:       base64.StdEncoding.EncodeToString(etcdSignerClientCertKey.Cert()),
-		EtcdSignerClientKey:        base64.StdEncoding.EncodeToString(etcdSignerClientCertKey.Key()),
-		EtcdSignerKey:              base64.StdEncoding.EncodeToString(etcdSignerCertKey.Key()),
-		McsTLSCert:                 base64.StdEncoding.EncodeToString(mcsCertKey.Cert()),
-		McsTLSKey:                  base64.StdEncoding.EncodeToString(mcsCertKey.Key()),
-		PullSecretBase64:           base64.StdEncoding.EncodeToString([]byte(installConfig.Config.PullSecret)),
-		RootCaCert:                 string(rootCA.Cert()),
-		AROWorkerRegistries:        aroWorkerRegistries(installConfig.Config.ImageContentSources),
-		AROIngressIP:               aroDNSConfig.IngressIP,
-		AROIngressInternal:         installConfig.Config.Publish == types.InternalPublishingStrategy,
+		CVOClusterID:                  clusterID.UUID,
+		EtcdCaBundle:                  string(etcdCABundle.Cert()),
+		EtcdMetricCaCert:              string(etcdMetricCABundle.Cert()),
+		EtcdMetricSignerCert:          base64.StdEncoding.EncodeToString(etcdMetricSignerCertKey.Cert()),
+		EtcdMetricSignerClientCert:    base64.StdEncoding.EncodeToString(etcdMetricSignerClientCertKey.Cert()),
+		EtcdMetricSignerClientKey:     base64.StdEncoding.EncodeToString(etcdMetricSignerClientCertKey.Key()),
+		EtcdMetricSignerKey:           base64.StdEncoding.EncodeToString(etcdMetricSignerCertKey.Key()),
+		EtcdSignerCert:                base64.StdEncoding.EncodeToString(etcdSignerCertKey.Cert()),
+		EtcdSignerClientCert:          base64.StdEncoding.EncodeToString(etcdSignerClientCertKey.Cert()),
+		EtcdSignerClientKey:           base64.StdEncoding.EncodeToString(etcdSignerClientCertKey.Key()),
+		EtcdSignerKey:                 base64.StdEncoding.EncodeToString(etcdSignerCertKey.Key()),
+		McsTLSCert:                    base64.StdEncoding.EncodeToString(mcsCertKey.Cert()),
+		McsTLSKey:                     base64.StdEncoding.EncodeToString(mcsCertKey.Key()),
+		PullSecretBase64:              base64.StdEncoding.EncodeToString([]byte(installConfig.Config.PullSecret)),
+		RootCaCert:                    string(rootCA.Cert()),
+		AROWorkerRegistries:           aroWorkerRegistries(installConfig.Config.ImageContentSources),
+		AROIngressIP:                  aroDNSConfig.IngressIP,
+		AROIngressInternal:            installConfig.Config.Publish == types.InternalPublishingStrategy,
+		AROImageRegistryHTTPSecret:    aroImageRegistryConfig.HTTPSecret,
+		AROImageRegistryAccountName:   aroImageRegistryConfig.AccountName,
+		AROImageRegistryContainerName: aroImageRegistryConfig.ContainerName,
+		AROCloudName:                  installConfig.Azure.CloudName.Name(),
 	}
 
 	files := []*asset.File{}
@@ -212,6 +220,7 @@ func (m *Manifests) generateBootKubeManifests(dependencies asset.Parents) []*ass
 		&bootkube.KubevirtInfraNamespace{},
 		&bootkube.AROWorkerRegistries{},
 		&bootkube.AROIngressService{},
+		&bootkube.AROImageRegistry{},
 	} {
 		dependencies.Get(a)
 		for _, f := range a.Files() {
