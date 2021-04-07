@@ -111,7 +111,7 @@ require (
 	sigs.k8s.io/cluster-api-provider-azure v0.4.12
 	sigs.k8s.io/cluster-api-provider-openstack v0.3.3 // indirect
 	sigs.k8s.io/controller-runtime v0.8.2
-	sigs.k8s.io/controller-tools v0.3.1-0.20200617211605-651903477185
+	sigs.k8s.io/controller-tools v0.5.0
 )
 
 exclude (
@@ -226,7 +226,7 @@ replace (
 	sigs.k8s.io/cluster-api-provider-gcp => github.com/openshift/cluster-api-provider-gcp v0.0.1-0.20201002153134-a0fc9aa4ce81
 	sigs.k8s.io/cluster-api-provider-openstack => github.com/openshift/cluster-api-provider-openstack v0.0.0-20201002114634-3622a0ce6b56
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.6.4
-	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.3.0
+	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.5.0
 	// https://www.whitesourcesoftware.com/vulnerability-database/WS-2018-0594
 	github.com/satori/go.uuid => github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/satori/uuid => github.com/satori/uuid v1.2.1-0.20181028125025-b2ce2384e17b
