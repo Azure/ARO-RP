@@ -7,14 +7,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"strings"
 
 	"github.com/prometheus/common/model"
 
 	"github.com/Azure/ARO-RP/pkg/util/namespace"
-	"github.com/Azure/ARO-RP/pkg/util/portforward"
 )
 
 var ignoredAlerts = map[string]struct{}{
@@ -22,41 +20,7 @@ var ignoredAlerts = map[string]struct{}{
 }
 
 func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
-	var resp *http.Response
-	var err error
-
-	for i := 0; i < 3; i++ {
-		hc := &http.Client{
-			Transport: &http.Transport{
-				DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
-					_, port, err := net.SplitHostPort(address)
-					if err != nil {
-						return nil, err
-					}
-
-					return portforward.DialContext(ctx, mon.log, mon.restconfig, "openshift-monitoring", fmt.Sprintf("alertmanager-main-%d", i), port)
-				},
-				// HACK: without this, keepalive connections don't get closed,
-				// resulting in excessive open TCP connections, lots of
-				// goroutines not exiting and memory not being freed.
-				// TODO: consider persisting hc between calls to Monitor().  If
-				// this is done, take care in the future to call
-				// hc.CloseIdleConnections() when finally disposing of an hc.
-				DisableKeepAlives: true,
-			},
-		}
-
-		var req *http.Request
-		req, err = http.NewRequestWithContext(ctx, http.MethodGet, "http://alertmanager-main.openshift-monitoring.svc:9093/api/v2/alerts", nil)
-		if err != nil {
-			return err
-		}
-
-		resp, err = hc.Do(req)
-		if err == nil {
-			break
-		}
-	}
+	resp, err := mon.requestMetricHTTP(ctx, "alertmanager-main", "http://alertmanager-main.openshift-monitoring.svc:9093/api/v2/alerts")
 	if err != nil {
 		return err
 	}

@@ -134,6 +134,11 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitStatefulsetStatuses,
 		mon.emitJobConditions,
 		mon.emitSummary,
+		mon.emitEtcdHeapObjects,
+		mon.emitEtcdHeapAllocBytes,
+		mon.emitEtcdHasLeader,
+		mon.emitEtcdLeaderChanges,
+		mon.emitEtcdFsyncDurationSeconds,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 	} {
 		err = f(ctx)
