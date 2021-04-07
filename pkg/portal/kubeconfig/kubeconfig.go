@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -25,7 +26,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/portal/util/clientcache"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (
@@ -70,7 +70,7 @@ func New(baseLog *logrus.Entry,
 		dialer:      dialer,
 		clientCache: clientcache.New(time.Hour),
 
-		newToken: func() string { return uuid.NewV4().String() },
+		newToken: func() string { return uuid.Must(uuid.NewV4()).String() },
 	}
 
 	rp := &httputil.ReverseProxy{

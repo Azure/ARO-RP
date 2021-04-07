@@ -9,10 +9,11 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gofrs/uuid"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type monitors struct {
@@ -64,7 +65,7 @@ func NewMonitors(ctx context.Context, deploymentMode deployment.Mode, dbc cosmos
 
 	return &monitors{
 		c:    cosmosdb.NewMonitorDocumentClient(collc, collMonitors),
-		uuid: uuid.NewV4().String(),
+		uuid: uuid.Must(uuid.NewV4()).String(),
 	}, nil
 }
 

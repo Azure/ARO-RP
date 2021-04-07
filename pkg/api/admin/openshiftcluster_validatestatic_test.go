@@ -10,8 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gofrs/uuid"
+
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/test/validate"
 )
 
@@ -290,7 +291,9 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 					},
 				}
 			},
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientID = uuid.NewV4().String() },
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ServicePrincipalProfile.ClientID = uuid.Must(uuid.NewV4()).String()
+			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.clientId: Changing property 'properties.servicePrincipalProfile.clientId' is not allowed.",
 		},
 		{
@@ -304,7 +307,9 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 					},
 				}
 			},
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.SPObjectID = uuid.NewV4().String() },
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ServicePrincipalProfile.SPObjectID = uuid.Must(uuid.NewV4()).String()
+			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.spObjectId: Changing property 'properties.servicePrincipalProfile.spObjectId' is not allowed.",
 		},
 		{

@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -22,7 +23,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 func portal(ctx context.Context, log *logrus.Entry) error {

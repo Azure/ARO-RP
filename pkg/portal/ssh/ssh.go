@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	cryptossh "golang.org/x/crypto/ssh"
@@ -24,7 +25,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (
@@ -72,7 +72,7 @@ func New(env env.Core,
 		dialer: dialer,
 
 		baseServerConfig: &cryptossh.ServerConfig{},
-		newPassword:      func() string { return uuid.NewV4().String() },
+		newPassword:      func() string { return uuid.Must(uuid.NewV4()).String() },
 	}
 
 	signer, err := cryptossh.NewSignerFromSigner(hostKey)

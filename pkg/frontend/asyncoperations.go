@@ -9,14 +9,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 func (f *frontend) newAsyncOperation(ctx context.Context, r *http.Request, doc *api.OpenShiftClusterDocument) (string, error) {
-	id := uuid.NewV4().String()
+	id := uuid.Must(uuid.NewV4()).String()
 	_, err := f.dbAsyncOperations.Create(ctx, &api.AsyncOperationDocument{
 		ID:                  id,
 		OpenShiftClusterKey: doc.Key,

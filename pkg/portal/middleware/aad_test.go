@@ -444,8 +444,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "success",
 			request: func(a *aad) (*http.Request, error) {
-				u, _ := uuid.NewV4()
-				uuid := u.String()
+				uuid := uuid.Must(uuid.NewV4()).String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState:        uuid,

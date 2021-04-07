@@ -10,11 +10,11 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/gofrs/uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (
@@ -92,7 +92,7 @@ func NewOpenShiftClustersWithProvidedClient(client cosmosdb.OpenShiftClusterDocu
 	return &openShiftClusters{
 		c:     client,
 		collc: collectionClient,
-		uuid:  uuid.NewV4().String(),
+		uuid:  uuid.Must(uuid.NewV4()).String(),
 	}
 }
 

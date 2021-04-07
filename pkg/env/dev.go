@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
@@ -23,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -134,7 +134,7 @@ func (d *dev) EnsureARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 		return err
 	}
 
-	_, err = d.roleassignments.Create(ctx, "/subscriptions/"+d.SubscriptionID()+"/resourceGroups/"+resourceGroup, uuid.NewV4().String(), mgmtauthorization.RoleAssignmentCreateParameters{
+	_, err = d.roleassignments.Create(ctx, "/subscriptions/"+d.SubscriptionID()+"/resourceGroups/"+resourceGroup, uuid.Must(uuid.NewV4()).String(), mgmtauthorization.RoleAssignmentCreateParameters{
 		RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
 			RoleDefinitionID: to.StringPtr("/subscriptions/" + d.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleOwner),
 			PrincipalID:      res.Value,
