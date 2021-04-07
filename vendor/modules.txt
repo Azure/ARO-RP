@@ -18,7 +18,7 @@ github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault
 github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault
 github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi
 github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-12-01/network
-github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network
+github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network
 github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization
 github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry
 github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights
@@ -35,11 +35,11 @@ github.com/Azure/go-ansiterm
 github.com/Azure/go-ansiterm/winterm
 # github.com/Azure/go-autorest v14.2.0+incompatible
 github.com/Azure/go-autorest
-# github.com/Azure/go-autorest/autorest v0.11.18
+# github.com/Azure/go-autorest/autorest v0.11.19
 ## explicit
 github.com/Azure/go-autorest/autorest
 github.com/Azure/go-autorest/autorest/azure
-# github.com/Azure/go-autorest/autorest/adal v0.9.13
+# github.com/Azure/go-autorest/autorest/adal v0.9.14
 ## explicit
 github.com/Azure/go-autorest/autorest/adal
 # github.com/Azure/go-autorest/autorest/azure/auth v0.5.7
@@ -255,6 +255,7 @@ github.com/coreos/vcontext/tree
 # github.com/daixiang0/gci v0.2.4
 github.com/daixiang0/gci/pkg/gci
 # github.com/davecgh/go-spew v1.1.1
+## explicit
 github.com/davecgh/go-spew/spew
 # github.com/denis-tingajkin/go-header v0.3.1
 github.com/denis-tingajkin/go-header
@@ -793,7 +794,7 @@ github.com/openshift/console-operator/pkg/api
 # github.com/openshift/custom-resource-status v1.1.0
 ## explicit
 github.com/openshift/custom-resource-status/conditions/v1
-# github.com/openshift/installer v0.16.1 => github.com/mjudeikis/installer v0.9.0-master.0.20210705104729-749222c33d4f
+# github.com/openshift/installer v0.16.1 => github.com/bennerv/installer v0.9.0-master.0.20210707202634-4f660864eb4f
 ## explicit
 github.com/openshift/installer/data
 github.com/openshift/installer/pkg/aro/dnsmasq
@@ -939,6 +940,9 @@ github.com/pelletier/go-toml
 github.com/peterbourgon/diskv
 # github.com/phayes/checkstyle v0.0.0-20170904204023-bfd46e6a821d
 github.com/phayes/checkstyle
+# github.com/pires/go-proxyproto v0.5.0
+## explicit
+github.com/pires/go-proxyproto
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
@@ -1917,7 +1921,7 @@ sigs.k8s.io/yaml
 # github.com/openshift/cluster-api-provider-libvirt => github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20210324200850-033be25ca038
 # github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20210409185359-01b9bf8368a3
 # github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20210323072657-4f933d59784b
-# github.com/openshift/installer => github.com/mjudeikis/installer v0.9.0-master.0.20210705104729-749222c33d4f
+# github.com/openshift/installer => github.com/bennerv/installer v0.9.0-master.0.20210707202634-4f660864eb4f
 # github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20210205203934-9eb0d970f2f4
 # github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20210521181620-e179bb5ce397
 # github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20210522053223-c4b7e3f5118d
