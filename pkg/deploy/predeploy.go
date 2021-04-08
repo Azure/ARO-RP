@@ -88,7 +88,8 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 
 	// Due to https://github.com/Azure/azure-resource-manager-schemas/issues/1067
 	// we can't use conditions to define ACR replication object deployment.
-	if d.config.Configuration.ACRReplicaDisabled != nil && !*d.config.Configuration.ACRReplicaDisabled {
+	if d.config.Configuration.ACRReplicaDisabled == nil ||
+		!*d.config.Configuration.ACRReplicaDisabled {
 		err = d.deployRPGlobalACRReplication(ctx)
 		if err != nil {
 			return err
