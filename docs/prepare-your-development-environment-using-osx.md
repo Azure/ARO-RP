@@ -15,6 +15,7 @@ to ensure compatibility down the line.
 brew install coreutils
 brew install findutils
 brew install gnu-tar
+brew install grep
 
 # Install envsubst
 brew install gettext
@@ -31,4 +32,10 @@ export PATH="/usr/local/bin:$PATH"
 export PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"
 # findutils
 export PATH="/usr/local/opt/findutils/libexec/gnubin:$PATH"
+
+#grep
+export PATH="/usr/local/opt/grep/libexec/gnubin:$PATH"
+
+#python-virtualenv
+sudo pip3 install virtualenv
 ```
