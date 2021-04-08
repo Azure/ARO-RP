@@ -10,13 +10,12 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/rpauthorizer"
 )
 
 type Core interface {
-	DeploymentMode() deployment.Mode
+	IsDevelopmentMode() bool
 	instancemetadata.InstanceMetadata
 	rpauthorizer.RPAuthorizer
 }
@@ -25,18 +24,20 @@ type core struct {
 	instancemetadata.InstanceMetadata
 	rpauthorizer.RPAuthorizer
 
-	deploymentMode deployment.Mode
+	isDevelopmentMode bool
 }
 
-func (c *core) DeploymentMode() deployment.Mode {
-	return c.deploymentMode
+func (c *core) IsDevelopmentMode() bool {
+	return c.isDevelopmentMode
 }
 
 func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
-	deploymentMode := deployment.NewMode()
-	log.Infof("running in %s mode", deploymentMode)
+	isDevelopmentMode := IsDevelopmentMode()
+	if isDevelopmentMode {
+		log.Info("running in development mode")
+	}
 
-	im, err := instancemetadata.New(ctx, deploymentMode)
+	im, err := instancemetadata.New(ctx, isDevelopmentMode)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +48,7 @@ func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 	}
 	log.Infof("running on %s", im.Environment().Name)
 
-	rpauthorizer, err := rpauthorizer.New(deploymentMode, im)
+	rpauthorizer, err := rpauthorizer.New(isDevelopmentMode, im)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +57,7 @@ func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 		InstanceMetadata: im,
 		RPAuthorizer:     rpauthorizer,
 
-		deploymentMode: deploymentMode,
+		isDevelopmentMode: isDevelopmentMode,
 	}, nil
 }
 
@@ -66,8 +67,10 @@ func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 // resolve their tenant ID, and also may access resources in a different tenant
 // (e.g. AME).
 func NewCoreForCI(ctx context.Context, log *logrus.Entry) (Core, error) {
-	deploymentMode := deployment.NewMode()
-	log.Infof("running in %s mode", deploymentMode)
+	isDevelopmentMode := IsDevelopmentMode()
+	if isDevelopmentMode {
+		log.Info("running in development mode")
+	}
 
 	im, err := instancemetadata.NewDev(false)
 	if err != nil {
@@ -80,8 +83,8 @@ func NewCoreForCI(ctx context.Context, log *logrus.Entry) (Core, error) {
 	}
 
 	return &core{
-		InstanceMetadata: im,
-		deploymentMode:   deploymentMode,
+		InstanceMetadata:  im,
+		isDevelopmentMode: isDevelopmentMode,
 	}, nil
 }
 

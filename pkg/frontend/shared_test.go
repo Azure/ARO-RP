@@ -26,7 +26,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
@@ -90,7 +89,7 @@ func newTestInfra(t *testing.T) *testInfra {
 	keyvault.EXPECT().GetCertificateSecret(gomock.Any(), env.RPServerSecretName).AnyTimes().Return(serverkey, servercerts, nil)
 
 	_env := mock_env.NewMockInterface(controller)
-	_env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+	_env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
 	_env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
 	_env.EXPECT().Hostname().AnyTimes().Return("testhost")
 	_env.EXPECT().Location().AnyTimes().Return("eastus")

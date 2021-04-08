@@ -39,7 +39,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
 	redhatopenshift20210131preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-01-31-preview/redhatopenshift"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
 
@@ -63,11 +62,6 @@ type Cluster struct {
 	ciParentVnetPeerings              network.VirtualNetworkPeeringsClient
 }
 
-const (
-	firstPartyClientIDProduction  = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
-	firstPartyClientIDIntegration = "71cfb175-ea3a-444e-8c03-b119b2752ce4"
-)
-
 type errors []error
 
 func (errs errors) Error() string {
@@ -82,7 +76,7 @@ func (errs errors) Error() string {
 }
 
 func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
-	if env.DeploymentMode() == deployment.Development {
+	if env.IsDevelopmentMode() {
 		for _, key := range []string{
 			"AZURE_FP_CLIENT_ID",
 		} {
@@ -121,7 +115,7 @@ func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
 	}
 
 	if ci {
-		if env.DeploymentMode() == deployment.Development {
+		if env.IsDevelopmentMode() {
 			c.ciParentVnet = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.env.SubscriptionID(), c.env.ResourceGroup())
 		} else {
 			c.ciParentVnet = "/subscriptions/46626fc5-476d-41ad-8c76-2ec49c6994eb/resourceGroups/e2einfra-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet"
@@ -145,15 +139,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return nil
 	}
 
-	var fpClientID string
-	switch c.env.DeploymentMode() {
-	case deployment.Integration:
-		fpClientID = firstPartyClientIDIntegration
-	case deployment.Production:
-		fpClientID = firstPartyClientIDProduction
-	default:
-		fpClientID = os.Getenv("AZURE_FP_CLIENT_ID")
-	}
+	fpClientID := os.Getenv("AZURE_FP_CLIENT_ID")
 
 	fpSPID, err := c.getServicePrincipal(ctx, fpClientID)
 	if err != nil {
@@ -430,8 +416,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		Location: c.env.Location(),
 	}
 
-	switch c.env.DeploymentMode() {
-	case deployment.Development:
+	if c.env.IsDevelopmentMode() {
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 		ext := api.APIs[v20210131preview.APIVersion].OpenShiftClusterConverter().ToExternal(&oc)
 		data, err := json.Marshal(ext)
@@ -446,7 +431,8 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		}
 
 		return c.openshiftclustersv20210131preview.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
-	default:
+
+	} else {
 		ext := api.APIs[v20200430.APIVersion].OpenShiftClusterConverter().ToExternal(&oc)
 		data, err := json.Marshal(ext)
 		if err != nil {

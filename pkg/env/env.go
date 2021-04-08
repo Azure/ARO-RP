@@ -8,14 +8,23 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"net"
+	"os"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
+)
+
+type Feature int
+
+// At least to start with, features are intended to be used so that the
+// production default is not set (in production RP_FEATURES is unset).
+const (
+	FeatureDisableDenyAssignments Feature = iota
 )
 
 const (
@@ -49,6 +58,7 @@ type Interface interface {
 	ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
 	ClusterKeyvault() keyvault.Manager
 	Domain() string
+	FeatureIsSet(Feature) bool
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
 	Listen() (net.Listener, error)
 	ServiceKeyvault() keyvault.Manager
@@ -59,12 +69,13 @@ type Interface interface {
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
-	switch deployment.NewMode() {
-	case deployment.Development:
+	if IsDevelopmentMode() {
 		return newDev(ctx, log)
-	case deployment.Integration:
-		return newInt(ctx, log)
-	default:
-		return newProd(ctx, log)
 	}
+
+	return newProd(ctx, log)
+}
+
+func IsDevelopmentMode() bool {
+	return strings.EqualFold(os.Getenv("RP_MODE"), "development")
 }

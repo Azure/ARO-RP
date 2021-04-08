@@ -26,8 +26,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/bootstraplogging"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -70,9 +70,6 @@ func (m *manager) ensureResourceGroup(ctx context.Context) error {
 	group := mgmtfeatures.ResourceGroup{
 		Location:  &m.doc.OpenShiftCluster.Location,
 		ManagedBy: to.StringPtr(m.doc.OpenShiftCluster.ID),
-	}
-	if m.env.DeploymentMode() == deployment.Development {
-		group.ManagedBy = nil
 	}
 
 	_, err := m.resourceGroups.CreateOrUpdate(ctx, resourceGroup, group)
@@ -141,7 +138,7 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		Resources:      resources,
 	}
 
-	if m.env.DeploymentMode() == deployment.Production {
+	if !m.env.FeatureIsSet(env.FeatureDisableDenyAssignments) {
 		t.Resources = append(t.Resources, m.denyAssignment())
 	}
 

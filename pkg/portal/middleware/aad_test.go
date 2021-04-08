@@ -26,7 +26,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
@@ -160,7 +159,7 @@ func TestAAD(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+			env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
 			env.EXPECT().TenantID().AnyTimes().Return("")
 
 			a, err := NewAAD(logrus.NewEntry(logrus.StandardLogger()), env, logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
@@ -256,7 +255,7 @@ func TestRedirect(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+			env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
 			env.EXPECT().TenantID().AnyTimes().Return("")
 
 			a, err := NewAAD(logrus.NewEntry(logrus.StandardLogger()), env, logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
@@ -372,7 +371,7 @@ func TestLogout(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+			env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
 			env.EXPECT().TenantID().AnyTimes().Return("")
 
 			a, err := NewAAD(logrus.NewEntry(logrus.StandardLogger()), env, logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
@@ -734,7 +733,7 @@ func TestCallback(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+			env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
 			env.EXPECT().TenantID().AnyTimes().Return("")
 
 			a, err := NewAAD(logrus.NewEntry(logrus.StandardLogger()), env, logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), clientID, clientkey, clientcerts, groups, mux.NewRouter(), tt.verifier)
@@ -851,7 +850,7 @@ func TestClientAssertion(t *testing.T) {
 	defer controller.Finish()
 	env := mock_env.NewMockInterface(controller)
 	env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
-	env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+	env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
 	env.EXPECT().TenantID().AnyTimes().Return("")
 
 	clientID := "00000000-0000-0000-0000-000000000000"

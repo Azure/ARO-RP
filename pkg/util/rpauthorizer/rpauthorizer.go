@@ -10,7 +10,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
 
@@ -40,8 +39,8 @@ func (prodRPAuthorizer) NewRPAuthorizer(resource string) (autorest.Authorizer, e
 	return auth.NewAuthorizerFromEnvironmentWithResource(resource)
 }
 
-func New(deploymentMode deployment.Mode, im instancemetadata.InstanceMetadata) (RPAuthorizer, error) {
-	if deploymentMode == deployment.Development {
+func New(isDevelopmentMode bool, im instancemetadata.InstanceMetadata) (RPAuthorizer, error) {
+	if isDevelopmentMode {
 		for _, key := range []string{
 			"AZURE_RP_CLIENT_ID",
 			"AZURE_RP_CLIENT_SECRET",

@@ -18,8 +18,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
-
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 type Dialer interface {
@@ -110,8 +108,8 @@ func (d *dev) DialContext(ctx context.Context, network, address string) (net.Con
 	return &conn{Conn: c, r: r}, nil
 }
 
-func NewDialer(deploymentMode deployment.Mode) (Dialer, error) {
-	if deploymentMode != deployment.Development {
+func NewDialer(isDevelopmentMode bool) (Dialer, error) {
+	if !isDevelopmentMode {
 		return &prod{}, nil
 	}
 

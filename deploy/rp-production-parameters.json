@@ -11,7 +11,13 @@
         "adminApiClientCertCommonName": {
             "value": ""
         },
+        "billingE2EStorageAccountId": {
+            "value": ""
+        },
         "billingServicePrincipalId": {
+            "value": ""
+        },
+        "clusterMdsdConfigVersion": {
             "value": ""
         },
         "clusterParentDomainName": {
@@ -24,6 +30,9 @@
             "value": ""
         },
         "extraCosmosDBIPs": {
+            "value": ""
+        },
+        "fpClientId": {
             "value": ""
         },
         "fpServicePrincipalId": {
@@ -50,10 +59,10 @@
         "portalElevatedGroupIds": {
             "value": ""
         },
-        "rpImage": {
+        "rpFeatures": {
             "value": ""
         },
-        "rpMode": {
+        "rpImage": {
             "value": ""
         },
         "rpParentDomainName": {

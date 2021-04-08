@@ -40,7 +40,6 @@ func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	for _, key := range []string{
 		"AZURE_ARM_CLIENT_ID",
 		"AZURE_ARM_CLIENT_SECRET",
-		"AZURE_FP_CLIENT_ID",
 		"PROXY_HOSTNAME",
 	} {
 		if _, found := os.LookupEnv(key); !found {
@@ -55,6 +54,8 @@ func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	d.features[FeatureDisableDenyAssignments] = true
 
 	ccc := auth.ClientCredentialsConfig{
 		ClientID:     os.Getenv("AZURE_ARM_CLIENT_ID"),
@@ -118,7 +119,7 @@ func (d *dev) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, e
 		return nil, err
 	}
 
-	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_FP_CLIENT_ID"), d.fpCertificate, d.fpPrivateKey, resource)
+	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, d.fpClientID, d.fpCertificate, d.fpPrivateKey, resource)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +130,7 @@ func (d *dev) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, e
 func (d *dev) EnsureARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer refreshable.Authorizer, resourceGroup string) error {
 	d.log.Print("development mode: ensuring resource group role assignment")
 
-	res, err := d.applications.GetServicePrincipalsIDByAppID(ctx, os.Getenv("AZURE_FP_CLIENT_ID"))
+	res, err := d.applications.GetServicePrincipalsIDByAppID(ctx, d.fpClientID)
 	if err != nil {
 		return err
 	}

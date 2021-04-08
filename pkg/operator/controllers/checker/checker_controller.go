@@ -23,7 +23,6 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 // CheckerController runs a number of checkers
@@ -33,11 +32,11 @@ type CheckerController struct {
 	checkers []Checker
 }
 
-func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.Interface, role string, deploymentMode deployment.Mode) *CheckerController {
+func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.Interface, role string, isDevelopmentMode bool) *CheckerController {
 	checkers := []Checker{NewInternetChecker(log, arocli, role)}
 
 	if role == operator.RoleMaster {
-		checkers = append(checkers, NewMachineChecker(log, maocli, arocli, role, deploymentMode))
+		checkers = append(checkers, NewMachineChecker(log, maocli, arocli, role, isDevelopmentMode))
 	}
 
 	return &CheckerController{

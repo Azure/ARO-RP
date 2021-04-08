@@ -7,8 +7,6 @@ import (
 	"context"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 type InstanceMetadata interface {
@@ -53,8 +51,8 @@ func (im *instanceMetadata) Environment() *azure.Environment {
 	return im.environment
 }
 
-func New(ctx context.Context, deploymentMode deployment.Mode) (InstanceMetadata, error) {
-	if deploymentMode == deployment.Development {
+func New(ctx context.Context, isDevelopmentMode bool) (InstanceMetadata, error) {
+	if isDevelopmentMode {
 		return NewDev(true)
 	}
 

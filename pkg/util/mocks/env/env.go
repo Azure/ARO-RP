@@ -15,8 +15,8 @@ import (
 	azure "github.com/Azure/go-autorest/autorest/azure"
 	gomock "github.com/golang/mock/gomock"
 
+	env "github.com/Azure/ARO-RP/pkg/env"
 	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	deployment "github.com/Azure/ARO-RP/pkg/util/deployment"
 	keyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
 	refreshable "github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
@@ -42,20 +42,6 @@ func NewMockCore(ctrl *gomock.Controller) *MockCore {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockCore) EXPECT() *MockCoreMockRecorder {
 	return m.recorder
-}
-
-// DeploymentMode mocks base method
-func (m *MockCore) DeploymentMode() deployment.Mode {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeploymentMode")
-	ret0, _ := ret[0].(deployment.Mode)
-	return ret0
-}
-
-// DeploymentMode indicates an expected call of DeploymentMode
-func (mr *MockCoreMockRecorder) DeploymentMode() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeploymentMode", reflect.TypeOf((*MockCore)(nil).DeploymentMode))
 }
 
 // Environment mocks base method
@@ -84,6 +70,20 @@ func (m *MockCore) Hostname() string {
 func (mr *MockCoreMockRecorder) Hostname() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Hostname", reflect.TypeOf((*MockCore)(nil).Hostname))
+}
+
+// IsDevelopmentMode mocks base method
+func (m *MockCore) IsDevelopmentMode() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsDevelopmentMode")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsDevelopmentMode indicates an expected call of IsDevelopmentMode
+func (mr *MockCoreMockRecorder) IsDevelopmentMode() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDevelopmentMode", reflect.TypeOf((*MockCore)(nil).IsDevelopmentMode))
 }
 
 // Location mocks base method
@@ -307,20 +307,6 @@ func (mr *MockInterfaceMockRecorder) ClusterKeyvault() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterKeyvault", reflect.TypeOf((*MockInterface)(nil).ClusterKeyvault))
 }
 
-// DeploymentMode mocks base method
-func (m *MockInterface) DeploymentMode() deployment.Mode {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeploymentMode")
-	ret0, _ := ret[0].(deployment.Mode)
-	return ret0
-}
-
-// DeploymentMode indicates an expected call of DeploymentMode
-func (mr *MockInterfaceMockRecorder) DeploymentMode() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeploymentMode", reflect.TypeOf((*MockInterface)(nil).DeploymentMode))
-}
-
 // DialContext mocks base method
 func (m *MockInterface) DialContext(arg0 context.Context, arg1, arg2 string) (net.Conn, error) {
 	m.ctrl.T.Helper()
@@ -393,6 +379,20 @@ func (mr *MockInterfaceMockRecorder) FPAuthorizer(arg0, arg1 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FPAuthorizer", reflect.TypeOf((*MockInterface)(nil).FPAuthorizer), arg0, arg1)
 }
 
+// FeatureIsSet mocks base method
+func (m *MockInterface) FeatureIsSet(arg0 env.Feature) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FeatureIsSet", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// FeatureIsSet indicates an expected call of FeatureIsSet
+func (mr *MockInterfaceMockRecorder) FeatureIsSet(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FeatureIsSet", reflect.TypeOf((*MockInterface)(nil).FeatureIsSet), arg0)
+}
+
 // Hostname mocks base method
 func (m *MockInterface) Hostname() string {
 	m.ctrl.T.Helper()
@@ -419,6 +419,20 @@ func (m *MockInterface) InitializeAuthorizers() error {
 func (mr *MockInterfaceMockRecorder) InitializeAuthorizers() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeAuthorizers", reflect.TypeOf((*MockInterface)(nil).InitializeAuthorizers))
+}
+
+// IsDevelopmentMode mocks base method
+func (m *MockInterface) IsDevelopmentMode() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsDevelopmentMode")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsDevelopmentMode indicates an expected call of IsDevelopmentMode
+func (mr *MockInterfaceMockRecorder) IsDevelopmentMode() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDevelopmentMode", reflect.TypeOf((*MockInterface)(nil).IsDevelopmentMode))
 }
 
 // Listen mocks base method

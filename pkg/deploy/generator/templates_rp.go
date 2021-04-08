@@ -32,9 +32,12 @@ func (g *generator) rpTemplate() *arm.Template {
 			"acrResourceId",
 			"adminApiCaBundle",
 			"adminApiClientCertCommonName",
+			"billingE2EStorageAccountId",
 			"billingServicePrincipalId",
+			"clusterMdsdConfigVersion",
 			"encryptionAtHost",
 			"extraCosmosDBIPs",
+			"fpClientId",
 			"keyvaultPrefix",
 			"mdmFrontendUrl",
 			"mdsdConfigVersion",
@@ -42,8 +45,8 @@ func (g *generator) rpTemplate() *arm.Template {
 			"portalAccessGroupIds",
 			"portalClientId",
 			"portalElevatedGroupIds",
+			"rpFeatures",
 			"rpImage",
-			"rpMode",
 			"rpParentDomainName",
 			"sshPublicKey",
 			"storageAccountDomain",
@@ -58,7 +61,9 @@ func (g *generator) rpTemplate() *arm.Template {
 		switch param {
 		case "encryptionAtHost":
 			p.Type = "bool"
-		case "extraCosmosDBIPs", "rpMode":
+		case "billingE2EStorageAccountId",
+			"extraCosmosDBIPs",
+			"rpFeatures":
 			p.DefaultValue = ""
 		case "vmSize":
 			p.DefaultValue = "Standard_D2s_v3"

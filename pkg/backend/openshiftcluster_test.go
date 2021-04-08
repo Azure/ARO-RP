@@ -19,10 +19,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	mock_cluster "github.com/Azure/ARO-RP/pkg/util/mocks/cluster"
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -280,8 +278,6 @@ func TestBackendTry(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 			manager := mock_cluster.NewMockInterface(controller)
-			_env := mock_env.NewMockInterface(controller)
-			_env.EXPECT().DeploymentMode().Return(deployment.Development)
 
 			dbOpenShiftClusters, clientOpenShiftClusters := testdatabase.NewFakeOpenShiftClusters()
 			dbSubscriptions, _ := testdatabase.NewFakeSubscriptions()
@@ -298,7 +294,7 @@ func TestBackendTry(t *testing.T) {
 				return manager, nil
 			}
 
-			b, err := newBackend(ctx, log, _env, nil, nil, dbOpenShiftClusters, dbSubscriptions, nil, &noop.Noop{})
+			b, err := newBackend(ctx, log, nil, nil, nil, dbOpenShiftClusters, dbSubscriptions, nil, &noop.Noop{})
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -36,10 +36,6 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 
 	deployVersion, location := version.GitCommit, flag.Arg(2)
 
-	if os.Getenv("RP_VERSION") != "" {
-		deployVersion = os.Getenv("RP_VERSION")
-	}
-
 	log.Printf("deploying version %s to location %s", deployVersion, location)
 
 	if deployVersion == "unknown" || strings.Contains(deployVersion, "dirty") {

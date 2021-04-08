@@ -33,13 +33,16 @@ type Configuration struct {
 	ACRReplicaDisabled                 *bool         `json:"acrReplicaDisabled,omitempty"`
 	AdminAPICABundle                   *string       `json:"adminApiCaBundle,omitempty" value:"required"`
 	AdminAPIClientCertCommonName       *string       `json:"adminApiClientCertCommonName,omitempty" value:"required"`
+	BillingE2EStorageAccountID         *string       `json:"billingE2EStorageAccountId,omitempty"`
 	BillingServicePrincipalID          *string       `json:"billingServicePrincipalId,omitempty" value:"required"`
+	ClusterMDSDConfigVersion           *string       `json:"clusterMdsdConfigVersion,omitempty" value:"required"`
 	ClusterParentDomainName            *string       `json:"clusterParentDomainName,omitempty" value:"required"`
 	DatabaseAccountName                *string       `json:"databaseAccountName,omitempty" value:"required"`
 	ExtraClusterKeyvaultAccessPolicies []interface{} `json:"extraClusterKeyvaultAccessPolicies,omitempty" value:"required"`
 	ExtraCosmosDBIPs                   []string      `json:"extraCosmosDBIPs,omitempty" value:"required"`
 	ExtraPortalKeyvaultAccessPolicies  []interface{} `json:"extraPortalKeyvaultAccessPolicies,omitempty" value:"required"`
 	ExtraServiceKeyvaultAccessPolicies []interface{} `json:"extraServiceKeyvaultAccessPolicies,omitempty" value:"required"`
+	FPClientID                         *string       `json:"fpClientId,omitempty" value:"required"`
 	FPServerCertCommonName             *string       `json:"fpServerCertCommonName,omitempty"`
 	FPServicePrincipalID               *string       `json:"fpServicePrincipalId,omitempty" value:"required"`
 	GlobalResourceGroupName            *string       `json:"globalResourceGroupName,omitempty" value:"required"`
@@ -52,8 +55,8 @@ type Configuration struct {
 	PortalAccessGroupIDs               []string      `json:"portalAccessGroupIds,omitempty" value:"required"`
 	PortalClientID                     *string       `json:"portalClientId,omitempty" value:"required"`
 	PortalElevatedGroupIDs             []string      `json:"portalElevatedGroupIds,omitempty" value:"required"`
+	RPFeatures                         []string      `json:"rpFeatures,omitempty"`
 	RPImagePrefix                      *string       `json:"rpImagePrefix,omitempty" value:"required"`
-	RPMode                             *string       `json:"rpMode,omitempty"`
 	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty" value:"required"`
 	RPParentDomainName                 *string       `json:"rpParentDomainName,omitempty" value:"required"`
 	SubscriptionResourceGroupName      *string       `json:"subscriptionResourceGroupName,omitempty" value:"required"`

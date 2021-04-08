@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
@@ -19,7 +20,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/feature"
 )
 
@@ -31,14 +31,6 @@ const (
 	// to indicate if we need to save ARO cluster config into the E2E
 	// StorageAccount
 	featureSaveAROTestConfig = "Microsoft.RedHatOpenShift/SaveAROTestConfig"
-
-	prodE2ESubscriptionID     = "0923c7de-9fca-4d9e-baf3-131d0c5b2ea4"
-	prodE2EResourceGroupName  = "global"
-	prodE2EStorageAccountName = "arov4e2e"
-
-	intE2ESubscriptionID     = "0cc1cafa-578f-4fa5-8d6b-ddfd8d82e6ea"
-	intE2EResourceGroupName  = "global-infra"
-	intE2EStorageAccountName = "arov4e2eint"
 )
 
 type Manager interface {
@@ -47,7 +39,6 @@ type Manager interface {
 }
 
 type manager struct {
-	env           env.Interface
 	storageClient *azstorage.Client
 	billingDB     database.Billing
 	subDB         database.Subscriptions
@@ -61,7 +52,6 @@ func NewManager(env env.Interface, billing database.Billing, sub database.Subscr
 	}
 
 	return &manager{
-		env:           env,
 		storageClient: storageClient,
 		subDB:         sub,
 		billingDB:     billing,
@@ -70,18 +60,13 @@ func NewManager(env env.Interface, billing database.Billing, sub database.Subscr
 }
 
 func storageClient(env env.Interface, billing database.Billing, sub database.Subscriptions, log *logrus.Entry) (*azstorage.Client, error) {
-	subscriptionID := prodE2ESubscriptionID
-	resourceGroupName := prodE2EResourceGroupName
-	storageAccountName := prodE2EStorageAccountName
-
-	switch env.DeploymentMode() {
-	case deployment.Development:
+	if os.Getenv("BILLING_E2E_STORAGE_ACCOUNT_ID") == "" {
 		return nil, nil
+	}
 
-	case deployment.Integration:
-		subscriptionID = intE2ESubscriptionID
-		resourceGroupName = intE2EResourceGroupName
-		storageAccountName = intE2EStorageAccountName
+	r, err := azure.ParseResourceID(os.Getenv("BILLING_E2E_STORAGE_ACCOUNT_ID"))
+	if err != nil {
+		return nil, err
 	}
 
 	localFPAuthorizer, err := env.FPAuthorizer(env.TenantID(), env.Environment().ResourceManagerEndpoint)
@@ -89,14 +74,14 @@ func storageClient(env env.Interface, billing database.Billing, sub database.Sub
 		return nil, err
 	}
 
-	e2estorage := storage.NewAccountsClient(env.Environment(), subscriptionID, localFPAuthorizer)
+	e2estorage := storage.NewAccountsClient(env.Environment(), r.SubscriptionID, localFPAuthorizer)
 
-	keys, err := e2estorage.ListKeys(context.Background(), resourceGroupName, storageAccountName, "")
+	keys, err := e2estorage.ListKeys(context.Background(), r.ResourceGroup, r.ResourceName, "")
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := azstorage.NewBasicClient(storageAccountName, *(*keys.Keys)[0].Value)
+	client, err := azstorage.NewBasicClient(r.ResourceName, *(*keys.Keys)[0].Value)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +147,7 @@ func isSubscriptionRegisteredForE2E(sub *api.SubscriptionProperties) bool {
 // storage account. This is used later on by the billing e2e
 func (m *manager) createOrUpdateE2EBlob(ctx context.Context, doc *api.BillingDocument) error {
 	//skip updating the storage account if this is a dev scenario
-	if m.env.DeploymentMode() == deployment.Development {
+	if m.storageClient == nil {
 		return nil
 	}
 

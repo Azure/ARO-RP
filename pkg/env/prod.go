@@ -48,14 +48,28 @@ type prod struct {
 	clusterGenevaLoggingEnvironment   string
 
 	log *logrus.Entry
+
+	features map[Feature]bool
 }
 
 func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	for _, key := range []string{
+		"AZURE_FP_CLIENT_ID",
 		"DOMAIN_NAME",
 	} {
 		if _, found := os.LookupEnv(key); !found {
 			return nil, fmt.Errorf("environment variable %q unset", key)
+		}
+	}
+
+	if !IsDevelopmentMode() {
+		for _, key := range []string{
+			"CLUSTER_MDSD_CONFIG_VERSION",
+			"MDSD_ENVIRONMENT",
+		} {
+			if _, found := os.LookupEnv(key); !found {
+				return nil, fmt.Errorf("environment variable %q unset", key)
+			}
 		}
 	}
 
@@ -64,7 +78,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
-	dialer, err := proxy.NewDialer(core.DeploymentMode())
+	dialer, err := proxy.NewDialer(core.IsDevelopmentMode())
 	if err != nil {
 		return nil, err
 	}
@@ -73,10 +87,26 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		Core:   core,
 		Dialer: dialer,
 
-		clusterGenevaLoggingEnvironment:   "DiagnosticsProd",
-		clusterGenevaLoggingConfigVersion: "2.2",
+		fpClientID: os.Getenv("AZURE_FP_CLIENT_ID"),
+
+		clusterGenevaLoggingEnvironment:   os.Getenv("MDSD_ENVIRONMENT"),
+		clusterGenevaLoggingConfigVersion: os.Getenv("CLUSTER_MDSD_CONFIG_VERSION"),
 
 		log: log,
+
+		features: map[Feature]bool{},
+	}
+
+	features := os.Getenv("RP_FEATURES")
+	if features != "" {
+		for _, feature := range strings.Split(features, ",") {
+			f, err := FeatureString("Feature" + feature)
+			if err != nil {
+				return nil, err
+			}
+
+			p.features[f] = true
+		}
 	}
 
 	rpAuthorizer, err := p.NewRPAuthorizer(p.Environment().ResourceManagerEndpoint)
@@ -114,7 +144,6 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 
 	p.fpPrivateKey = fpPrivateKey
 	p.fpCertificate = fpCertificates[0]
-	p.fpClientID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
 
 	clusterGenevaLoggingPrivateKey, clusterGenevaLoggingCertificates, err := p.serviceKeyvault.GetCertificateSecret(ctx, ClusterLoggingSecretName)
 	if err != nil {
@@ -217,6 +246,10 @@ func (p *prod) ClusterKeyvault() keyvault.Manager {
 
 func (p *prod) Domain() string {
 	return os.Getenv("DOMAIN_NAME")
+}
+
+func (p *prod) FeatureIsSet(f Feature) bool {
+	return p.features[f]
 }
 
 func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {

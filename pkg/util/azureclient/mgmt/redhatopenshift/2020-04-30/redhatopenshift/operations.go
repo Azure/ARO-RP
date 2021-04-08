@@ -11,7 +11,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	mgmtredhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
 // OperationsClient is a minimal interface for azure OperationsClient
@@ -28,7 +28,7 @@ var _ OperationsClient = &operationsClient{}
 // NewOperationsClient creates a new OperationsClient
 func NewOperationsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) OperationsClient {
 	var client mgmtredhatopenshift20200430.OperationsClient
-	if deployment.NewMode() == deployment.Development {
+	if env.IsDevelopmentMode() {
 		client = mgmtredhatopenshift20200430.NewOperationsClientWithBaseURI("https://localhost:8443", subscriptionID)
 		client.Sender = &http.Client{
 			Transport: &http.Transport{

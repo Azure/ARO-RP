@@ -28,7 +28,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
@@ -39,7 +38,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	}
 
 	var keys []string
-	if _env.DeploymentMode() == deployment.Development {
+	if _env.IsDevelopmentMode() {
 		keys = []string{
 			"PULL_SECRET",
 		}
@@ -89,22 +88,22 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbAsyncOperations, err := database.NewAsyncOperations(ctx, _env.DeploymentMode(), dbc)
+	dbAsyncOperations, err := database.NewAsyncOperations(ctx, _env.IsDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}
 
-	dbBilling, err := database.NewBilling(ctx, _env.DeploymentMode(), dbc)
+	dbBilling, err := database.NewBilling(ctx, _env.IsDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}
 
-	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.DeploymentMode(), dbc)
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}
 
-	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.DeploymentMode(), dbc)
+	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.IsDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}

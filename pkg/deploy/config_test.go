@@ -111,27 +111,3 @@ func TestConfigNilable(t *testing.T) {
 		val.Field(i).IsNil()
 	}
 }
-
-func TestConfigRequiredValues(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		config  RPConfig
-		wantErr string
-	}{
-		{
-			name: "invalid config",
-			config: RPConfig{
-				Configuration: &Configuration{},
-			},
-			wantErr: "configuration has missing fields: ACRResourceID,RPVersionStorageAccountName,AdminAPICABundle,AdminAPIClientCertCommonName,BillingServicePrincipalID,ClusterParentDomainName,DatabaseAccountName,ExtraClusterKeyvaultAccessPolicies,ExtraCosmosDBIPs,ExtraPortalKeyvaultAccessPolicies,ExtraServiceKeyvaultAccessPolicies,FPServicePrincipalID,GlobalResourceGroupName,GlobalResourceGroupLocation,GlobalSubscriptionID,KeyvaultPrefix,MDMFrontendURL,MDSDConfigVersion,MDSDEnvironment,PortalAccessGroupIDs,PortalClientID,PortalElevatedGroupIDs,RPImagePrefix,RPNSGSourceAddressPrefixes,RPParentDomainName,SubscriptionResourceGroupName,SubscriptionResourceGroupLocation,SSHPublicKey,StorageAccountDomain,VMSize",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.config.validate()
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
-		})
-	}
-}

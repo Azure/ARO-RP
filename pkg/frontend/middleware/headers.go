@@ -6,11 +6,9 @@ package middleware
 import (
 	"net/http"
 	"strings"
-
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
-func Headers(deploymentMode deployment.Mode) func(http.Handler) http.Handler {
+func Headers(isDevelopmentMode bool) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -19,7 +17,7 @@ func Headers(deploymentMode deployment.Mode) func(http.Handler) http.Handler {
 				w.Header().Set("X-Ms-Client-Request-Id", r.Header.Get("X-Ms-Client-Request-Id"))
 			}
 
-			if deploymentMode == deployment.Development {
+			if isDevelopmentMode {
 				r.Header.Set("Referer", "https://localhost:8443"+r.URL.String())
 			}
 

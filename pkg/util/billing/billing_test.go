@@ -14,7 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -196,9 +195,6 @@ func TestDelete(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			_env := mock_env.NewMockInterface(controller)
-			_env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
-
 			log := logrus.NewEntry(logrus.StandardLogger())
 			openShiftClusterDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
 			billingDatabase, billingClient := testdatabase.NewFakeBilling()
@@ -224,7 +220,6 @@ func TestDelete(t *testing.T) {
 				log:       log,
 				billingDB: billingDatabase,
 				subDB:     subscriptionsDatabase,
-				env:       _env,
 			}
 
 			err = m.Delete(ctx, &api.OpenShiftClusterDocument{ID: docID})
@@ -389,7 +384,7 @@ func TestEnsure(t *testing.T) {
 			defer controller.Finish()
 
 			_env := mock_env.NewMockInterface(controller)
-			_env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+			_env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
 
 			log := logrus.NewEntry(logrus.StandardLogger())
 			openShiftClusterDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
@@ -416,7 +411,6 @@ func TestEnsure(t *testing.T) {
 				log:       log,
 				billingDB: billingDatabase,
 				subDB:     subscriptionsDatabase,
-				env:       _env,
 			}
 
 			doc, err := openShiftClusterDatabase.Get(ctx, strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName")))

@@ -11,7 +11,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 type portals struct {
@@ -26,8 +25,8 @@ type Portal interface {
 }
 
 // NewPortal returns a new Portal
-func NewPortal(ctx context.Context, deploymentMode deployment.Mode, dbc cosmosdb.DatabaseClient) (Portal, error) {
-	dbid, err := databaseName(deploymentMode)
+func NewPortal(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (Portal, error) {
+	dbid, err := databaseName(isDevelopmentMode)
 	if err != nil {
 		return nil, err
 	}

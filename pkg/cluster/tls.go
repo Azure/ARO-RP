@@ -15,14 +15,13 @@ import (
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
 func (m *manager) createCertificates(ctx context.Context) error {
-	if m.env.DeploymentMode() == deployment.Development {
+	if m.env.IsDevelopmentMode() {
 		return nil
 	}
 
@@ -120,7 +119,7 @@ func (m *manager) ensureSecret(ctx context.Context, secrets corev1client.SecretI
 }
 
 func (m *manager) configureAPIServerCertificate(ctx context.Context) error {
-	if m.env.DeploymentMode() == deployment.Development {
+	if m.env.IsDevelopmentMode() {
 		return nil
 	}
 
@@ -161,7 +160,7 @@ func (m *manager) configureAPIServerCertificate(ctx context.Context) error {
 }
 
 func (m *manager) configureIngressCertificate(ctx context.Context) error {
-	if m.env.DeploymentMode() == deployment.Development {
+	if m.env.IsDevelopmentMode() {
 		return nil
 	}
 

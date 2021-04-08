@@ -319,12 +319,15 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"mdsdConfigVersion",
 		"mdsdEnvironment",
 		"acrResourceId",
+		"billingE2EStorageAccountId",
+		"clusterMdsdConfigVersion",
 		"clusterParentDomainName",
+		"fpClientId",
 		"portalAccessGroupIds",
 		"portalClientId",
 		"portalElevatedGroupIds",
+		"rpFeatures",
 		"rpImage",
-		"rpMode",
 		"rpParentDomainName",
 		"adminApiClientCertCommonName",
 		"databaseAccountName",
@@ -512,12 +515,16 @@ EOF
 cat >/etc/sysconfig/aro-rp <<EOF
 ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
+AZURE_FP_CLIENT_ID='$FPCLIENTID'
+BILLING_E2E_STORAGE_ACCOUNT_ID='$BILLINGE2ESTORAGEACCOUNTID'
+CLUSTER_MDSD_CONFIG_VERSION='$CLUSTERMDSDCONFIGVERSION'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 DOMAIN_NAME='$LOCATION.$CLUSTERPARENTDOMAINNAME'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT=AzureRedHatOpenShiftRP
 MDM_NAMESPACE=RP
-RP_MODE='$RPMODE'
+MDSD_ENVIRONMENT='$MDSDENVIRONMENT'
+RP_FEATURES='$RPFEATURES'
 RPIMAGE='$RPIMAGE'
 EOF
 
@@ -535,12 +542,16 @@ ExecStart=/usr/bin/docker run \
   --rm \
   -e ACR_RESOURCE_ID \
   -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
+  -e AZURE_FP_CLIENT_ID \
+  -e BILLING_E2E_STORAGE_ACCOUNT_ID \
+  -e CLUSTER_MDSD_CONFIG_VERSION \
   -e DATABASE_ACCOUNT_NAME \
   -e DOMAIN_NAME \
   -e KEYVAULT_PREFIX \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
-  -e RP_MODE \
+  -e MDSD_ENVIRONMENT \
+  -e RP_FEATURES \
   -m 2g \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \
@@ -565,7 +576,6 @@ DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT=AzureRedHatOpenShiftRP
 MDM_NAMESPACE=BBM
-RP_MODE='$RPMODE'
 RPIMAGE='$RPIMAGE'
 EOF
 
@@ -587,7 +597,6 @@ ExecStart=/usr/bin/docker run \
   -e KEYVAULT_PREFIX \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
-  -e RP_MODE \
   -m 2g \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
@@ -610,7 +619,6 @@ KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT=AzureRedHatOpenShiftRP
 MDM_NAMESPACE=Portal
 PORTAL_HOSTNAME='$LOCATION.admin.$RPPARENTDOMAINNAME'
-RP_MODE='$RPMODE'
 RPIMAGE='$RPIMAGE'
 EOF
 
@@ -636,7 +644,6 @@ ExecStart=/usr/bin/docker run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -e PORTAL_HOSTNAME \
-  -e RP_MODE \
   -m 2g \
   -p 444:8444 \
   -p 2222:2222 \
