@@ -38,6 +38,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"billingE2EStorageAccountId",
 			"billingServicePrincipalId",
 			"clusterMdsdConfigVersion",
+			"disableCosmosDBFirewall",
 			"encryptionAtHost",
 			"extraCosmosDBIPs",
 			"fpClientId",
@@ -63,6 +64,9 @@ func (g *generator) rpTemplate() *arm.Template {
 	for _, param := range params {
 		p := &arm.TemplateParameter{Type: "string"}
 		switch param {
+		case "disableCosmosDBFirewall":
+			p.Type = "bool"
+			p.DefaultValue = false
 		case "encryptionAtHost":
 			p.Type = "bool"
 		case "armApiCaBundle",

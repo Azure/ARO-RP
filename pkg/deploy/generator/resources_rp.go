@@ -1310,13 +1310,9 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 	}
 
 	if g.production {
-		cosmosdb.IPRangeFilter = to.StringPtr("[concat('104.42.195.92,40.76.54.131,52.176.6.30,52.169.50.45,52.187.184.26', if(equals(parameters('extraCosmosDBIPs'), ''), '', ','), parameters('extraCosmosDBIPs'))]")
+		cosmosdb.IPRangeFilter = to.StringPtr("[if(parameters('disableCosmosDBFirewall'), '', concat('104.42.195.92,40.76.54.131,52.176.6.30,52.169.50.45,52.187.184.26', if(equals(parameters('extraCosmosDBIPs'), ''), '', ','), parameters('extraCosmosDBIPs')))]")
 		cosmosdb.IsVirtualNetworkFilterEnabled = to.BoolPtr(true)
-		cosmosdb.VirtualNetworkRules = &[]mgmtdocumentdb.VirtualNetworkRule{
-			{
-				ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
-			},
-		}
+		cosmosdb.VirtualNetworkRules = &[]mgmtdocumentdb.VirtualNetworkRule{}
 		cosmosdb.DisableKeyBasedMetadataWriteAccess = to.BoolPtr(true)
 
 		r.DependsOn = append(r.DependsOn, "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]")

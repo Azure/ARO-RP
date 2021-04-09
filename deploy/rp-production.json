@@ -40,6 +40,10 @@
         "databaseAccountName": {
             "type": "string"
         },
+        "disableCosmosDBFirewall": {
+            "type": "bool",
+            "defaultValue": false
+        },
         "encryptionAtHost": {
             "type": "bool"
         },
@@ -708,13 +712,9 @@
                     }
                 ],
                 "databaseAccountOfferType": "Standard",
-                "ipRangeFilter": "[concat('104.42.195.92,40.76.54.131,52.176.6.30,52.169.50.45,52.187.184.26', if(equals(parameters('extraCosmosDBIPs'), ''), '', ','), parameters('extraCosmosDBIPs'))]",
-                "isVirtualNetworkFilterEnabled": true,
-                "virtualNetworkRules": [
-                    {
-                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"
-                    }
-                ],
+                "ipRangeFilter": "[if(parameters('disableCosmosDBFirewall'), '', concat('104.42.195.92,40.76.54.131,52.176.6.30,52.169.50.45,52.187.184.26', if(equals(parameters('extraCosmosDBIPs'), ''), '', ','), parameters('extraCosmosDBIPs')))]",
+                "isVirtualNetworkFilterEnabled": "[not(parameters('disableCosmosDBFirewall'))]",
+                "virtualNetworkRules": "[if(parameters('disableCosmosDBFirewall'), createArray(), createArray(createObject('id', resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet'))))]",
                 "disableKeyBasedMetadataWriteAccess": true
             },
             "name": "[parameters('databaseAccountName')]",
