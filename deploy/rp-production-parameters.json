@@ -35,6 +35,9 @@
         "databaseAccountName": {
             "value": ""
         },
+        "disableCosmosDBFirewall": {
+            "value": false
+        },
         "encryptionAtHost": {
             "value": ""
         },
