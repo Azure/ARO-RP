@@ -42,6 +42,7 @@ func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		FeatureDisableDenyAssignments,
 		FeatureDisableSignedCertificates,
 		FeatureRequireD2sV3Workers,
+		FeatureDisableReadinessDelay,
 	} {
 		d.features[feature] = true
 	}

@@ -300,11 +300,13 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 
 			<-stop
 
-			// mark not ready and wait for ((#probes + 1) * interval + longest
-			// connection timeout + margin) to stop receiving new connections
-			f.baseLog.Print("marking not ready and waiting 80 seconds")
-			f.ready.Store(false)
-			time.Sleep(80 * time.Second)
+			if !f.env.FeatureIsSet(env.FeatureDisableReadinessDelay) {
+				// mark not ready and wait for ((#probes + 1) * interval + longest
+				// connection timeout + margin) to stop receiving new connections
+				f.baseLog.Print("marking not ready and waiting 80 seconds")
+				f.ready.Store(false)
+				time.Sleep(80 * time.Second)
+			}
 
 			f.baseLog.Print("exiting")
 			close(done)

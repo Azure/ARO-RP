@@ -130,7 +130,9 @@ func (b *backend) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		}
 	}
 
-	b.waitForWorkerCompletion()
+	if !b.env.FeatureIsSet(env.FeatureDisableReadinessDelay) {
+		b.waitForWorkerCompletion()
+	}
 	b.baseLog.Print("exiting")
 	close(done)
 }

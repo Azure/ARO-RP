@@ -143,6 +143,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"DisableSignedCertificates",
 				"EnableDevelopmentAuthorizer",
 				"RequireD2sV3Workers",
+				"DisableReadinessDelay",
 			},
 			RPImagePrefix:       to.StringPtr(os.Getenv("USER") + "aro.azurecr.io/aro"),
 			RPMDSDConfigVersion: to.StringPtr("3.3"),
