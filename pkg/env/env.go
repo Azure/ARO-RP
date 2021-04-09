@@ -28,6 +28,7 @@ const (
 	FeatureDisableSignedCertificates
 	FeatureEnableDevelopmentAuthorizer
 	FeatureRequireD2sV3Workers
+	FeatureDisableReadinessDelay
 )
 
 const (
