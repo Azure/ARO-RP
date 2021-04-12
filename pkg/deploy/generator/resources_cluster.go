@@ -12,7 +12,7 @@ import (
 )
 
 func (g *generator) clusterVnet() *arm.Resource {
-	return g.virtualNetwork("dev-vnet", "[parameters('vnetAddressPrefix')]", nil, "[parameters('ci')]")
+	return g.virtualNetwork("dev-vnet", "[parameters('vnetAddressPrefix')]", nil, "[parameters('ci')]", nil)
 }
 
 func (g *generator) clusterRouteTable() *arm.Resource {
