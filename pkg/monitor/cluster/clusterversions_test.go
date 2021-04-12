@@ -53,20 +53,20 @@ func TestEmitClusterVersion(t *testing.T) {
 				},
 				Status: configv1.ClusterVersionStatus{
 					Desired: configv1.Release{
-						Version: "4.3.3",
+						Version: "4.5.3",
 					},
 					History: []configv1.UpdateHistory{
 						{
 							State:   configv1.PartialUpdate,
-							Version: "4.3.2",
+							Version: "4.5.2",
 						},
 						{
 							State:   configv1.CompletedUpdate,
-							Version: "4.3.1",
+							Version: "4.5.1",
 						},
 						{
 							State:   configv1.CompletedUpdate,
-							Version: "4.3.0",
+							Version: "4.5.0",
 						},
 					},
 				},
@@ -74,10 +74,10 @@ func TestEmitClusterVersion(t *testing.T) {
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{},
 			},
-			wantActualVersion:                        "4.3.1",
-			wantDesiredVersion:                       "4.3.3",
+			wantActualVersion:                        "4.5.1",
+			wantDesiredVersion:                       "4.5.3",
 			wantProvisionedByResourceProviderVersion: "",
-			wantAvailableVersion:                     "4.3.40",
+			wantAvailableVersion:                     "4.5.36",
 			wantAvailableRP:                          "unknown",
 		},
 		{
@@ -88,19 +88,19 @@ func TestEmitClusterVersion(t *testing.T) {
 				},
 				Spec: configv1.ClusterVersionSpec{
 					DesiredUpdate: &configv1.Update{
-						Version: "4.3.4",
+						Version: "4.5.4",
 					},
 				},
 				Status: configv1.ClusterVersionStatus{
 					Desired: configv1.Release{
-						Version: "4.3.3",
+						Version: "4.5.3",
 					},
 				},
 			},
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{},
 			},
-			wantDesiredVersion:                       "4.3.4",
+			wantDesiredVersion:                       "4.5.4",
 			wantProvisionedByResourceProviderVersion: "",
 			wantAvailableRP:                          "unknown",
 		},
@@ -171,13 +171,13 @@ func TestEmitClusterVersion(t *testing.T) {
 func TestBaselineVersion(t *testing.T) {
 	streams := []*version.Stream{
 		{
-			Version: version.NewVersion(4, 3, 18),
-		},
-		{
 			Version: version.NewVersion(4, 4, 38),
 		},
 		{
 			Version: version.NewVersion(4, 5, 2),
+		},
+		{
+			Version: version.NewVersion(4, 6, 17),
 		},
 	}
 
@@ -192,12 +192,12 @@ func TestBaselineVersion(t *testing.T) {
 					History: []configv1.UpdateHistory{
 						{
 							State:   configv1.CompletedUpdate,
-							Version: "4.3.2",
+							Version: "4.4.2",
 						},
 					},
 				},
 			},
-			want: "4.3.18",
+			want: "4.4.38",
 		},
 		{
 			cv: configv1.ClusterVersion{
@@ -241,7 +241,7 @@ func TestBaselineVersion(t *testing.T) {
 	} {
 		bVersion := availableVersion(&tt.cv, streams)
 		if bVersion != tt.want {
-			t.Fatalf("Upgrade version does not match: %s\n", bVersion)
+			t.Fatalf("Upgrade version does not match. want==%s, got==%s\n", tt.want, bVersion)
 		}
 	}
 }
