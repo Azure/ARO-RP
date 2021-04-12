@@ -111,7 +111,6 @@ func (g *generator) rpTemplate() *arm.Template {
 	}
 
 	t.Resources = append(t.Resources, g.rpDNSZone(),
-		g.rpVnet(), g.rpPEVnet(),
 		g.virtualNetworkPeering("rp-vnet", "rp-pe-vnet-001"),
 		g.virtualNetworkPeering("rp-pe-vnet-001", "rp-vnet"))
 	t.Resources = append(t.Resources, g.rpCosmosDB()...)
@@ -264,6 +263,8 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 	t.Resources = append(t.Resources,
 		g.rpSecurityGroup(),
 		g.rpPESecurityGroup(),
+		g.rpVnet(),
+		g.rpPEVnet(),
 		g.rpClusterKeyvault(),
 		g.rpDBTokenKeyvault(),
 		g.rpPortalKeyvault(),
