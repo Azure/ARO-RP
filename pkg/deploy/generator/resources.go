@@ -4,8 +4,6 @@ package generator
 // Licensed under the Apache License 2.0.
 
 import (
-	"fmt"
-
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtinsights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
@@ -114,7 +112,7 @@ func (g *generator) virtualNetwork(name, addressPrefix string, subnets *[]mgmtne
 
 // virtualNetworkPeering configures vnetA to peer with vnetB, two symmetrical
 // configurations have to be applied for a peering to work
-func (g *generator) virtualNetworkPeering(vnetA, vnetB string) *arm.Resource {
+func (g *generator) virtualNetworkPeering(name, vnetB string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.VirtualNetworkPeering{
 			VirtualNetworkPeeringPropertiesFormat: &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
@@ -123,10 +121,10 @@ func (g *generator) virtualNetworkPeering(vnetA, vnetB string) *arm.Resource {
 				AllowGatewayTransit:       to.BoolPtr(false),
 				UseRemoteGateways:         to.BoolPtr(false),
 				RemoteVirtualNetwork: &mgmtnetwork.SubResource{
-					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/virtualNetworks', '%s')]", vnetB)),
+					ID: &vnetB,
 				},
 			},
-			Name: to.StringPtr(fmt.Sprintf("%s/peering-%s", vnetA, vnetB)),
+			Name: &name,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		Type:       "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
