@@ -28,14 +28,11 @@ steps:
     VERSION=$(curl -sf "https://${{ parameters.aroVersionStorageAccount }}.blob.core.windows.net/rpversion/$LOCATION")
 
     # TODO: get these into ADO variables, then remove rpMode
-    case ${{ parameters.rpMode }} in
-      prod)
-        export AZURE_FP_CLIENT_ID=f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875
-        ;;
-      int)
-        export AZURE_FP_CLIENT_ID=71cfb175-ea3a-444e-8c03-b119b2752ce4
-        ;;
-    esac
+    if [[ "${{ parameters.rpMode }}" = "int" ]]; then
+      export AZURE_FP_CLIENT_ID=71cfb175-ea3a-444e-8c03-b119b2752ce4
+    else
+      export AZURE_FP_CLIENT_ID=f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875
+    fi
 
     # TODO: remove --env RESOURCEGROUP after next RP deployment.
 
