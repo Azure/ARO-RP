@@ -111,8 +111,8 @@ func (g *generator) rpTemplate() *arm.Template {
 	}
 
 	t.Resources = append(t.Resources, g.rpDNSZone(),
-		g.virtualNetworkPeering("rp-vnet", "rp-pe-vnet-001"),
-		g.virtualNetworkPeering("rp-pe-vnet-001", "rp-vnet"))
+		g.virtualNetworkPeering("rp-vnet/peering-rp-pe-vnet-001", "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]"),
+		g.virtualNetworkPeering("rp-pe-vnet-001/peering-rp-vnet", "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"))
 	t.Resources = append(t.Resources, g.rpCosmosDB()...)
 	t.Resources = append(t.Resources, g.rpRBAC()...)
 
