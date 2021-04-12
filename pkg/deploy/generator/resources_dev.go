@@ -226,7 +226,7 @@ func (g *generator) devVnet() *arm.Resource {
 			},
 			Name: to.StringPtr("ToolingSubnet"),
 		},
-	}, nil)
+	}, nil, nil)
 }
 
 func (g *generator) devVPN() *arm.Resource {

@@ -91,7 +91,7 @@ func (g *generator) storageAccount(name string, accountProperties *mgmtstorage.A
 	}
 }
 
-func (g *generator) virtualNetwork(name, addressPrefix string, subnets *[]mgmtnetwork.Subnet, condition interface{}) *arm.Resource {
+func (g *generator) virtualNetwork(name, addressPrefix string, subnets *[]mgmtnetwork.Subnet, condition interface{}, dependsOn []string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.VirtualNetwork{
 			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
@@ -108,6 +108,7 @@ func (g *generator) virtualNetwork(name, addressPrefix string, subnets *[]mgmtne
 		},
 		Condition:  condition,
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
+		DependsOn:  dependsOn,
 	}
 }
 
@@ -128,11 +129,7 @@ func (g *generator) virtualNetworkPeering(vnetA, vnetB string) *arm.Resource {
 			Name: to.StringPtr(fmt.Sprintf("%s/peering-%s", vnetA, vnetB)),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
-		DependsOn: []string{
-			fmt.Sprintf("[resourceId('Microsoft.Network/virtualNetworks', '%s')]", vnetA),
-			fmt.Sprintf("[resourceId('Microsoft.Network/virtualNetworks', '%s')]", vnetB),
-		},
-		Type:     "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-		Location: "[resourceGroup().location]",
+		Type:       "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+		Location:   "[resourceGroup().location]",
 	}
 }

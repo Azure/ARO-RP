@@ -118,7 +118,7 @@ func (g *generator) rpVnet() *arm.Resource {
 		}
 	}
 
-	return g.virtualNetwork("rp-vnet", "10.0.0.0/24", &[]mgmtnetwork.Subnet{subnet}, nil)
+	return g.virtualNetwork("rp-vnet", "10.0.0.0/24", &[]mgmtnetwork.Subnet{subnet}, nil, []string{"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"})
 }
 
 func (g *generator) rpPEVnet() *arm.Resource {
@@ -133,7 +133,7 @@ func (g *generator) rpPEVnet() *arm.Resource {
 			},
 			Name: to.StringPtr("rp-pe-subnet"),
 		},
-	}, nil)
+	}, nil, []string{"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"})
 }
 
 func (g *generator) rpLB() *arm.Resource {
@@ -1047,7 +1047,6 @@ done
 		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
-			"[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb-internal')]",
 			"[resourceId('Microsoft.Storage/storageAccounts', substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')))]",
@@ -1350,8 +1349,6 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 		cosmosdb.IsVirtualNetworkFilterEnabled = to.BoolPtr(true)
 		cosmosdb.VirtualNetworkRules = &[]mgmtdocumentdb.VirtualNetworkRule{}
 		cosmosdb.DisableKeyBasedMetadataWriteAccess = to.BoolPtr(true)
-
-		r.DependsOn = append(r.DependsOn, "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]")
 	}
 
 	rs := []*arm.Resource{

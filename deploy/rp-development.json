@@ -28,57 +28,6 @@
         },
         {
             "properties": {
-                "addressSpace": {
-                    "addressPrefixes": [
-                        "10.0.0.0/24"
-                    ]
-                },
-                "subnets": [
-                    {
-                        "properties": {
-                            "addressPrefix": "10.0.0.0/24",
-                            "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]",
-                                "tags": null
-                            }
-                        },
-                        "name": "rp-subnet"
-                    }
-                ]
-            },
-            "name": "rp-vnet",
-            "type": "Microsoft.Network/virtualNetworks",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01"
-        },
-        {
-            "properties": {
-                "addressSpace": {
-                    "addressPrefixes": [
-                        "10.0.4.0/22"
-                    ]
-                },
-                "subnets": [
-                    {
-                        "properties": {
-                            "addressPrefix": "10.0.4.0/22",
-                            "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]",
-                                "tags": null
-                            },
-                            "privateEndpointNetworkPolicies": "Disabled"
-                        },
-                        "name": "rp-pe-subnet"
-                    }
-                ]
-            },
-            "name": "rp-pe-vnet-001",
-            "type": "Microsoft.Network/virtualNetworks",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01"
-        },
-        {
-            "properties": {
                 "allowVirtualNetworkAccess": true,
                 "allowForwardedTraffic": true,
                 "allowGatewayTransit": false,
@@ -90,10 +39,6 @@
             "name": "rp-vnet/peering-rp-pe-vnet-001",
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
             "apiVersion": "2020-08-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
-                "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]"
-            ],
             "location": "[resourceGroup().location]"
         },
         {
@@ -109,10 +54,6 @@
             "name": "rp-pe-vnet-001/peering-rp-vnet",
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
             "apiVersion": "2020-08-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]",
-                "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"
-            ],
             "location": "[resourceGroup().location]"
         },
         {
