@@ -99,15 +99,20 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 	t := templateStanza()
 
 	params := []string{
+		"acrLocationOverride",
 		"acrResourceId",
 		"fpServicePrincipalId",
 		"rpServicePrincipalId",
 		"rpVersionStorageAccountName",
-		"subscriptionResourceGroupLocation", // TODO(mjudeikis): we need to rebuild INT to have right locations
 	}
 
 	for _, param := range params {
-		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
+		p := &arm.TemplateParameter{Type: "string"}
+		switch param {
+		case "acrLocationOverride":
+			p.DefaultValue = ""
+		}
+		t.Parameters[param] = p
 	}
 	t.Resources = append(t.Resources,
 		g.rpACR(),
