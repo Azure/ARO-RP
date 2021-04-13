@@ -112,8 +112,8 @@ extends:
           inputs:
             targetType: inline
             script: |
-              mkdir -p $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
-              cp -rd $(Build.SourcesDirectory)/ $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP/
+              mkdir -p $(Agent.TempDirectory)/src/github.com/Azure/
+              cp -rd $(Build.SourcesDirectory) $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
               cd $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
               ls
               git rev-parse --short HEAD
