@@ -106,7 +106,7 @@ extends:
           displayName: 'Use Go 1.14'
           inputs:
             version: '1.14'
-            GO_PATH: '$(Agent.TemptDirectory)'
+            GOPATH: '$(Agent.TemptDirectory)'
         - task: Bash@3
           displayName: ⚙️ Make ARO
           inputs:
