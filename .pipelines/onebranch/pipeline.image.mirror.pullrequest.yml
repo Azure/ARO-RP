@@ -65,7 +65,7 @@ extends:
             pipeline: $(vso-deployer-pipeline-id)
             ${{ if eq(parameters.vsoDeployerBuildID, 'latest') }}:
               buildVersionToDownload: latestFromBranch
-              branchName: cloudfit/OnebranchPipelineWork
+              branchName: refs/head/cloudfit/OnebranchPipelineWork
             downloadType: specific
             downloadPath: '$(Build.SourcesDirectory)/deployer'
         - task: Bash@3
