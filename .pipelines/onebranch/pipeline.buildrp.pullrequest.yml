@@ -66,7 +66,7 @@ extends:
           displayName: ⚙️ Copy to ob_outputDirectory
           inputs:
             targetType: filePath
-            filePath: '.pipelines/scripts/deploymentpipeline.sh'
+            filePath: '.pipelines/onebranch/scripts/deploymentpipeline.sh'
 
 # https://onebranch.visualstudio.com/OneBranch/_wiki/wikis/OneBranch.wiki/4605/Artifacts
 
@@ -106,7 +106,6 @@ extends:
           displayName: 'Use Go 1.14'
           inputs:
             version: '1.14'
-            goPath: '$(Build.SourcesDirectory)'
         - task: Bash@3
           displayName: ⚙️ Make ARO
           inputs:
