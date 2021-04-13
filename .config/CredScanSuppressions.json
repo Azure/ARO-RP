@@ -28,6 +28,10 @@
         {
             "file": "doc.go",
             "_justification": "examples in comments"
+        },
+        {
+            "file": "cluster-predeploy.json",
+            "_justification": "for development use. not used in production"
         }
     ]
 }
