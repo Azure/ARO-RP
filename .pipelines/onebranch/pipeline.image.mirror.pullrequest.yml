@@ -64,8 +64,8 @@ extends:
             project: $(vso-project-id)
             pipeline: $(vso-deployer-pipeline-id)
             ${{ if eq(parameters.vsoDeployerBuildID, 'latest') }}:
-              buildVersionToDownload: latestFromBranch
-              branchName: refs/heads/master
+              buildVersionToDownload: latest #FromBranch
+              # branchName: refs/heads/master
             downloadType: specific
             downloadPath: '$(Build.SourcesDirectory)/deployer'
         - task: Bash@3
