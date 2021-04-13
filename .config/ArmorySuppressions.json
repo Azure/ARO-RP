@@ -1,0 +1,9 @@
+{
+    "tool": "ARMory",
+    "suppressions": [
+        {
+            "file": "cluster-predeploy.json",
+            "_justification": "for development use. not used in production"
+        }
+    ]
+}
