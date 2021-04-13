@@ -67,7 +67,6 @@ extends:
           inputs:
             targetType: filePath
             filePath: '.pipelines/scripts/deploymentpipeline.sh'
-          workingDirectory: $(Build.SourcesDirectory)
 
 # https://onebranch.visualstudio.com/OneBranch/_wiki/wikis/OneBranch.wiki/4605/Artifacts
 
