@@ -113,11 +113,10 @@ extends:
           inputs:
             targetType: inline
             script: |
-              ls -la
               git rev-parse --short HEAD
               git status --porcelain
-              # make aro
-              # mkdir -p $(ob_outputDirectory) 
-              # cp aro $(ob_outputDirectory)/aro
+              make aro
+              mkdir -p $(ob_outputDirectory) 
+              cp aro $(ob_outputDirectory)/aro
             workingDirectory: $(Build.SourcesDirectory)
 
