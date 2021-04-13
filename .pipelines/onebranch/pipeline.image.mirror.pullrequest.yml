@@ -29,6 +29,9 @@ resources:
       type: git
       name: OneBranch.Pipelines/GovernedTemplates
       ref: refs/heads/main
+    - repository: rhado
+      type: git
+      name: ARO.Pipelines
 
 extends:
   template: v2/OneBranch.NonOfficial.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
@@ -57,6 +60,7 @@ extends:
           ob_outputDirectory: '$(Build.SourcesDirectory)/out' # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
 
         steps:
+        - checkout: rhado
         - task: DownloadPipelineArtifact@2
           displayName: Download Deployer
           inputs:
