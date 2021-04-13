@@ -111,6 +111,7 @@ extends:
           inputs:
             targetType: inline
             script: |
+              mkdir -p $(System.DefaultWorkingDirectory)/src/github.com/Azure/ARO-RP
               cp -r $(Build.SourcesDirectory) $(System.DefaultWorkingDirectory)/src/github.com/Azure/ARO-RP
               cd $(System.DefaultWorkingDirectory)/src/github.com/Azure/ARO-RP
               git rev-parse --short HEAD

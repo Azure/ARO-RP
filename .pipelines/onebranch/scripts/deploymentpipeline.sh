@@ -20,7 +20,7 @@ popd
 echo "Copying required files to ob_outputdirectory: ${OB_OUTPUTDIRECTORY}"
 
 tar -rvf ./ARO.Pipelines/ev2/generator/deployment.tar -C "$OB_OUTPUTDIRECTORY/Shell" $(cd $OB_OUTPUTDIRECTORY/Shell; echo *)
-tar -rvf ./ARO.Pipelines/ev2/generator/deployment.tar -C "./ARO.Pipelines/RP-Config" $(cd ./RP-Config; echo *)
+tar -rvf ./ARO.Pipelines/ev2/generator/deployment.tar -C "./ARO.Pipelines/RP-Config" $(cd ./ARO.Pipelines/RP-Config; echo *)
 
 echo "Copy tar to ob_outputdirectory dir"
 cp -r ./ARO.Pipelines/ev2/Deployment/ServiceGroupRoot/ $OB_OUTPUTDIRECTORY/
