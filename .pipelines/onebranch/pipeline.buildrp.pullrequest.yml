@@ -111,10 +111,12 @@ extends:
           inputs:
             targetType: inline
             script: |
+              cp -r $(Build.SourcesDirectory) $(System.DefaultWorkingDirectory)/src/github.com/Azure/ARO-RP
+              cd $(System.DefaultWorkingDirectory)/src/github.com/Azure/ARO-RP
               git rev-parse --short HEAD
               git status --porcelain
               make aro
               mkdir -p $(ob_outputDirectory) 
               cp aro $(ob_outputDirectory)/aro
-            workingDirectory: $(Build.SourcesDirectory)
+            workingDirectory: $(System.DefaultWorkingDirectory)
 
