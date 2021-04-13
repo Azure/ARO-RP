@@ -68,6 +68,7 @@ extends:
               # branchName: refs/heads/master
             downloadType: specific
             downloadPath: '$(Build.SourcesDirectory)/deployer'
+            artifact: 'drop_Build_ARO_Build_ARO'
         - task: Bash@3
           displayName: ⚙️ Run Ev2 Manifest packaging
           inputs:
