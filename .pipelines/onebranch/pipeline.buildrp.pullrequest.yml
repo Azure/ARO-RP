@@ -60,13 +60,13 @@ extends:
             command: 'custom'
             customCommand: 'run'
             arguments: '. --config-path ./config/'
-            workingDirectory: '$(Build.SourcesDirectory)/ev2/generator/'
+            workingDirectory: '$(Build.SourcesDirectory)/ARO.Pipelines/ev2/generator/'
           displayName: '⚙️ Generate Ev2 Deployment Manifests'
         - task: Bash@3
           displayName: ⚙️ Copy to ob_outputDirectory
           inputs:
             targetType: filePath
-            filePath: .pipelines/scripts/deploymentpipeline.sh
+            filePath: '$(Build.SourcesDirectory)/ARO.Pipelines/.pipelines/scripts/deploymentpipeline.sh'
 
 # https://onebranch.visualstudio.com/OneBranch/_wiki/wikis/OneBranch.wiki/4605/Artifacts
 
@@ -76,13 +76,14 @@ extends:
         pool:
           type: docker
           os: linux
-
+        variables:
+          ob_git_checkout: true
         steps:
           - task: onebranch.pipeline.imagebuildinfo@1
             displayName: Build Multi Stage Dockerfile
             inputs:
               repositoryName: aro-rp
-              dockerFileRelPath: Dockerfile.aro-multistage
+              dockerFileRelPath: ./Dockerfile.aro-multistage
               dockerFileContextPath: ./
               registry: cdpxlinux.azurecr.io
               saveImageToPath: aro-rp.tar
