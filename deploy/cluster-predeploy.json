@@ -29,7 +29,16 @@
         {
             "apiVersion": "2020-05-01",
             "type": "Microsoft.Network/networkSecurityGroups",
-            "name": "dev-vnet-nsg",
+            "name": "dev-vnet-master-nsg",
+            "location": "[resourceGroup().location]",
+            "properties": {
+
+            }
+        },
+        {
+            "apiVersion": "2020-05-01",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "dev-vnet-worker-nsg",
             "location": "[resourceGroup().location]",
             "properties": {
 
@@ -75,7 +84,7 @@
             "dependsOn": [
                 "[resourceid('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
                 "[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]",
-                "[resourceId('Microsoft.Network/networkSecurityGroups/', 'dev-vnet-nsg')]"
+                "[resourceId('Microsoft.Network/networkSecurityGroups/', 'dev-vnet-master-nsg')]"
             ],
             "location": "[resourceGroup().location]"
         },
@@ -92,7 +101,8 @@
             "type": "Microsoft.Network/virtualNetworks/subnets",
             "apiVersion": "2019-07-01",
             "dependsOn": [
-                "[resourceid('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', concat(parameters('clusterName'), '-master'))]"
+                "[resourceid('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', concat(parameters('clusterName'), '-master'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups/', 'dev-vnet-worker-nsg')]"
             ],
             "location": "[resourceGroup().location]"
         }
