@@ -82,7 +82,7 @@ func TestServicePrincipalValid(t *testing.T) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			err := sp.servicePrincipalValid(ctx)
+			err := sp.Check(ctx)
 
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {

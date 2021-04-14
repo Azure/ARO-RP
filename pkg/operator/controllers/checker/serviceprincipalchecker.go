@@ -40,7 +40,18 @@ func NewServicePrincipalChecker(log *logrus.Entry, maocli maoclient.Interface, a
 	}
 }
 
-func (r *ServicePrincipalChecker) servicePrincipalValid(ctx context.Context) error {
+func (r *ServicePrincipalChecker) Name() string {
+	return "ServicePrincipalChecker"
+}
+
+func (r *ServicePrincipalChecker) Check(ctx context.Context) error {
+	cond := &status.Condition{
+		Type:    arov1alpha1.ServicePrincipalValid,
+		Status:  corev1.ConditionTrue,
+		Message: "service principal is valid",
+		Reason:  "CheckDone",
+	}
+
 	cluster, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -63,7 +74,7 @@ func (r *ServicePrincipalChecker) servicePrincipalValid(ctx context.Context) err
 
 	_, err = aad.GetToken(ctx, r.log, azCred.clientID, azCred.clientSecret, azCred.tenantID, azEnv.ActiveDirectoryEndpoint, azEnv.ResourceManagerEndpoint)
 	if err != nil {
-		return err
+		updateFailedCondition(cond, err)
 	}
 
 	spDynamic, err := dynamic.NewValidator(r.log, &azEnv, resource.SubscriptionID, nil, dynamic.AuthorizerClusterServicePrincipal)
@@ -71,30 +82,9 @@ func (r *ServicePrincipalChecker) servicePrincipalValid(ctx context.Context) err
 		return err
 	}
 
-	return spDynamic.ValidateServicePrincipal(ctx, azCred.clientID, azCred.clientSecret, azCred.tenantID)
-}
-
-func (r *ServicePrincipalChecker) Name() string {
-	return "ServicePrincipalChecker"
-}
-
-func (r *ServicePrincipalChecker) Check(ctx context.Context) error {
-	cond := &status.Condition{
-		Type:    arov1alpha1.ServicePrincipalValid,
-		Status:  corev1.ConditionTrue,
-		Message: "service principal is valid",
-		Reason:  "CheckDone",
-	}
-
-	err := r.servicePrincipalValid(ctx)
+	err = spDynamic.ValidateServicePrincipal(ctx, azCred.clientID, azCred.clientSecret, azCred.tenantID)
 	if err != nil {
-		cond.Status = corev1.ConditionFalse
-
-		if tErr, ok := err.(*api.CloudError); ok {
-			cond.Message = tErr.Message
-		} else {
-			cond.Message = err.Error()
-		}
+		updateFailedCondition(cond, err)
 	}
 
 	return controllers.SetCondition(ctx, r.arocli, cond, r.role)
@@ -119,4 +109,13 @@ func azCredentials(ctx context.Context, kubernetescli kubernetes.Interface) (*cr
 	creds.tenantID = string(mysec.Data["azure_tenant_id"])
 
 	return &creds, nil
+}
+
+func updateFailedCondition(cond *status.Condition, err error) {
+	cond.Status = corev1.ConditionFalse
+	if tErr, ok := err.(*api.CloudError); ok {
+		cond.Message = tErr.Message
+	} else {
+		cond.Message = err.Error()
+	}
 }
