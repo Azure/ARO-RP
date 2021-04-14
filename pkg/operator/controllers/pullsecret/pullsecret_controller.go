@@ -53,8 +53,8 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface) *PullS
 // * If the pull Secret object (which is not owned by the Cluster object)
 //   changes, we'll see the pull Secret object requested.
 func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO(mj): controller-runtime master fixes the need for this (https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/reconcile/reconcile.go#L93) but it's not yet released.
-	ctx := context.Background()
+	// TODO(mj): Reconcile will eventually be receiving a ctx (https://github.com/kubernetes-sigs/controller-runtime/blob/7ef2da0bc161d823f084ad21ff5f9c9bd6b0cc39/pkg/reconcile/reconcile.go#L93)
+	ctx := context.TODO()
 
 	mysec, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
 	if err != nil {

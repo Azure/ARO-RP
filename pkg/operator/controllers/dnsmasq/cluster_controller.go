@@ -42,8 +42,8 @@ func NewClusterReconciler(log *logrus.Entry, arocli aroclient.Interface, mcocli 
 // Reconcile watches the ARO object, and if it changes, reconciles all the
 // 99-%s-aro-dns machineconfigs
 func (r *ClusterReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO(mj): controller-runtime master fixes the need for this (https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/reconcile/reconcile.go#L93) but it's not yet released.
-	ctx := context.Background()
+	// TODO(mj): Reconcile will eventually be receiving a ctx (https://github.com/kubernetes-sigs/controller-runtime/blob/7ef2da0bc161d823f084ad21ff5f9c9bd6b0cc39/pkg/reconcile/reconcile.go#L93)
+	ctx := context.TODO()
 
 	mcps, err := r.mcocli.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{})
 	if err != nil {
