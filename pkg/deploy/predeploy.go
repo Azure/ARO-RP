@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"path/filepath"
+	"strings"
 	"time"
 
 	azkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
@@ -88,8 +89,13 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 
 	// Due to https://github.com/Azure/azure-resource-manager-schemas/issues/1067
 	// we can't use conditions to define ACR replication object deployment.
-	if d.config.Configuration.ACRReplicaDisabled == nil ||
-		!*d.config.Configuration.ACRReplicaDisabled {
+	// Also, an ACR replica cannot be defined in the home registry location.
+	acrLocation := *d.config.Configuration.GlobalResourceGroupLocation
+	if d.config.Configuration.ACRLocationOverride != nil && *d.config.Configuration.ACRLocationOverride != "" {
+		acrLocation = *d.config.Configuration.ACRLocationOverride
+	}
+	if !strings.EqualFold(d.config.Location, acrLocation) &&
+		(d.config.Configuration.ACRReplicaDisabled == nil || !*d.config.Configuration.ACRReplicaDisabled) {
 		err = d.deployRPGlobalACRReplication(ctx)
 		if err != nil {
 			return err

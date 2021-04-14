@@ -219,6 +219,10 @@ func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*apps
 										},
 									},
 								},
+								{ // https://stackoverflow.microsoft.com/questions/249827/251179#251179
+									Name:  "MDSD_MSGPACK_ARRAY_SIZE_ITEMS",
+									Value: "2048",
+								},
 								{
 									Name:  "RESOURCE_ID",
 									Value: strings.ToLower(cluster.Spec.ResourceID),

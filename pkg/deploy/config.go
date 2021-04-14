@@ -28,6 +28,7 @@ type RPConfig struct {
 
 // Configuration represents configuration structure
 type Configuration struct {
+	ACRLocationOverride                *string       `json:"acrLocationOverride,omitempty"`
 	ACRResourceID                      *string       `json:"acrResourceId,omitempty" value:"required"`
 	RPVersionStorageAccountName        *string       `json:"rpVersionStorageAccountName,omitempty" value:"required"`
 	ACRReplicaDisabled                 *bool         `json:"acrReplicaDisabled,omitempty"`

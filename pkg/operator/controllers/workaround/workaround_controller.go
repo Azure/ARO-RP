@@ -51,8 +51,9 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, config
 
 // Reconcile makes sure that the workarounds are applied or removed as per the OpenShift version.
 func (r *WorkaroundReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO(mj): controller-runtime master fixes the need for this (https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/reconcile/reconcile.go#L93) but it's not yet released.
-	ctx := context.Background()
+	// TODO(mj): Reconcile will eventually be receiving a ctx (https://github.com/kubernetes-sigs/controller-runtime/blob/7ef2da0bc161d823f084ad21ff5f9c9bd6b0cc39/pkg/reconcile/reconcile.go#L93)
+	ctx := context.TODO()
+
 	clusterVersion, err := version.GetClusterVersion(ctx, r.configcli)
 	if err != nil {
 		r.log.Errorf("error getting the OpenShift version: %v", err)

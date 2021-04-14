@@ -39,8 +39,8 @@ func NewMachineConfigPoolReconciler(log *logrus.Entry, arocli aroclient.Interfac
 // Reconcile watches MachineConfigPool objects, and if any changes,
 // reconciles the associated ARO DNS MachineConfig object
 func (r *MachineConfigPoolReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO(mj): controller-runtime master fixes the need for this (https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/reconcile/reconcile.go#L93) but it's not yet released.
-	ctx := context.Background()
+	// TODO(mj): Reconcile will eventually be receiving a ctx (https://github.com/kubernetes-sigs/controller-runtime/blob/7ef2da0bc161d823f084ad21ff5f9c9bd6b0cc39/pkg/reconcile/reconcile.go#L93)
+	ctx := context.TODO()
 
 	_, err := r.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, request.Name, metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
