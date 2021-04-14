@@ -1442,9 +1442,10 @@ func (g *generator) rpACR() *arm.Resource {
 			Sku: &mgmtcontainerregistry.Sku{
 				Name: mgmtcontainerregistry.Premium,
 			},
-			Name:     to.StringPtr("[substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))]"),
-			Type:     to.StringPtr("Microsoft.ContainerRegistry/registries"),
-			Location: to.StringPtr("[parameters('subscriptionResourceGroupLocation')]"), // TODO: INT has wrong RG location.
+			Name: to.StringPtr("[substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))]"),
+			Type: to.StringPtr("Microsoft.ContainerRegistry/registries"),
+			// TODO: INT ACR has wrong location - should be redeployed at globalResourceGroupLocation then remove acrLocationOverride configurable.
+			Location: to.StringPtr("[if(equals(parameters('acrLocationOverride'), ''), resourceGroup().location, parameters('acrLocationOverride'))]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.ContainerRegistry"),
 	}
