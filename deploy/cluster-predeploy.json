@@ -67,17 +67,9 @@
         {
             "properties": {
                 "addressPrefix": "[parameters('masterAddressPrefix')]",
-                "subnets": [
-                    {
-                        "name": "mastersubnet",
-                        "properties": {
-                            "addressPrefix": "[parameters('masterAddressPrefix')]",
-                            "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'dev-vnet-master-nsg')]"
-                            }
-                        }
-                    }
-                ],
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'dev-vnet-master-nsg')]"
+                },
                 "routeTable": {
                     "id": "[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]",
                     "tags": null
@@ -102,17 +94,9 @@
         {
             "properties": {
                 "addressPrefix": "[parameters('workerAddressPrefix')]",
-                "subnets": [
-                    {
-                        "name": "workersubnet",
-                        "properties": {
-                            "addressPrefix": "[parameters('workerAddressPrefix')]",
-                            "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'dev-vnet-worker-nsg')]"
-                            }
-                        }
-                    }
-                ],
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'dev-vnet-worker-nsg')]"
+                },
                 "serviceEndpoints": [
                     {
                         "service": "Microsoft.ContainerRegistry"
