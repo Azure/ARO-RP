@@ -209,7 +209,7 @@
   * First, get the admin kubeconfig and `export KUBECONFIG` as detailed above.
 
   ```bash
-  CLUSTER=cluster hack/ssh-agent.sh [master-{0,1,2}]
+  CLUSTER=cluster hack/ssh-agent.sh [master{0,1,2}]
   ```
 
 
