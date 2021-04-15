@@ -875,6 +875,9 @@ github.com/openshift/installer/pkg/types/vsphere/defaults
 github.com/openshift/installer/pkg/types/vsphere/validation
 github.com/openshift/installer/pkg/validate
 github.com/openshift/installer/pkg/version
+# github.com/openshift/library-go v0.0.0-20200909173121-1d055d971916
+## explicit
+github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers
 # github.com/openshift/machine-api-operator v0.2.1-0.20210104142355-8e6ae0acdfcf => github.com/openshift/machine-api-operator v0.2.1-0.20210212025836-cb508cd8777d
 ## explicit
 github.com/openshift/machine-api-operator/pkg/apis/machine
