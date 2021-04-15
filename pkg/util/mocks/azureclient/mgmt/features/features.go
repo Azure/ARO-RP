@@ -14,30 +14,30 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockClient is a mock of Client interface
+// MockClient is a mock of Client interface.
 type MockClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockClientMockRecorder
 }
 
-// MockClientMockRecorder is the mock recorder for MockClient
+// MockClientMockRecorder is the mock recorder for MockClient.
 type MockClientMockRecorder struct {
 	mock *MockClient
 }
 
-// NewMockClient creates a new mock instance
+// NewMockClient creates a new mock instance.
 func NewMockClient(ctrl *gomock.Controller) *MockClient {
 	mock := &MockClient{ctrl: ctrl}
 	mock.recorder = &MockClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockClient) EXPECT() *MockClientMockRecorder {
 	return m.recorder
 }
 
-// Get mocks base method
+// Get mocks base method.
 func (m *MockClient) Get(arg0 context.Context, arg1, arg2 string) (features.Result, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
@@ -46,13 +46,13 @@ func (m *MockClient) Get(arg0 context.Context, arg1, arg2 string) (features.Resu
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get
+// Get indicates an expected call of Get.
 func (mr *MockClientMockRecorder) Get(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockClient)(nil).Get), arg0, arg1, arg2)
 }
 
-// Register mocks base method
+// Register mocks base method.
 func (m *MockClient) Register(arg0 context.Context, arg1, arg2 string) (features.Result, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Register", arg0, arg1, arg2)
@@ -61,36 +61,36 @@ func (m *MockClient) Register(arg0 context.Context, arg1, arg2 string) (features
 	return ret0, ret1
 }
 
-// Register indicates an expected call of Register
+// Register indicates an expected call of Register.
 func (mr *MockClientMockRecorder) Register(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockClient)(nil).Register), arg0, arg1, arg2)
 }
 
-// MockDeploymentsClient is a mock of DeploymentsClient interface
+// MockDeploymentsClient is a mock of DeploymentsClient interface.
 type MockDeploymentsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockDeploymentsClientMockRecorder
 }
 
-// MockDeploymentsClientMockRecorder is the mock recorder for MockDeploymentsClient
+// MockDeploymentsClientMockRecorder is the mock recorder for MockDeploymentsClient.
 type MockDeploymentsClientMockRecorder struct {
 	mock *MockDeploymentsClient
 }
 
-// NewMockDeploymentsClient creates a new mock instance
+// NewMockDeploymentsClient creates a new mock instance.
 func NewMockDeploymentsClient(ctrl *gomock.Controller) *MockDeploymentsClient {
 	mock := &MockDeploymentsClient{ctrl: ctrl}
 	mock.recorder = &MockDeploymentsClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockDeploymentsClient) EXPECT() *MockDeploymentsClientMockRecorder {
 	return m.recorder
 }
 
-// CreateOrUpdateAndWait mocks base method
+// CreateOrUpdateAndWait mocks base method.
 func (m *MockDeploymentsClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2 string, arg3 features0.Deployment) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3)
@@ -98,13 +98,13 @@ func (m *MockDeploymentsClient) CreateOrUpdateAndWait(arg0 context.Context, arg1
 	return ret0
 }
 
-// CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait
+// CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
 func (mr *MockDeploymentsClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockDeploymentsClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3)
 }
 
-// CreateOrUpdateAtSubscriptionScopeAndWait mocks base method
+// CreateOrUpdateAtSubscriptionScopeAndWait mocks base method.
 func (m *MockDeploymentsClient) CreateOrUpdateAtSubscriptionScopeAndWait(arg0 context.Context, arg1 string, arg2 features0.Deployment) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateOrUpdateAtSubscriptionScopeAndWait", arg0, arg1, arg2)
@@ -112,13 +112,13 @@ func (m *MockDeploymentsClient) CreateOrUpdateAtSubscriptionScopeAndWait(arg0 co
 	return ret0
 }
 
-// CreateOrUpdateAtSubscriptionScopeAndWait indicates an expected call of CreateOrUpdateAtSubscriptionScopeAndWait
+// CreateOrUpdateAtSubscriptionScopeAndWait indicates an expected call of CreateOrUpdateAtSubscriptionScopeAndWait.
 func (mr *MockDeploymentsClientMockRecorder) CreateOrUpdateAtSubscriptionScopeAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAtSubscriptionScopeAndWait", reflect.TypeOf((*MockDeploymentsClient)(nil).CreateOrUpdateAtSubscriptionScopeAndWait), arg0, arg1, arg2)
 }
 
-// DeleteAndWait mocks base method
+// DeleteAndWait mocks base method.
 func (m *MockDeploymentsClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2)
@@ -126,13 +126,13 @@ func (m *MockDeploymentsClient) DeleteAndWait(arg0 context.Context, arg1, arg2 s
 	return ret0
 }
 
-// DeleteAndWait indicates an expected call of DeleteAndWait
+// DeleteAndWait indicates an expected call of DeleteAndWait.
 func (mr *MockDeploymentsClientMockRecorder) DeleteAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockDeploymentsClient)(nil).DeleteAndWait), arg0, arg1, arg2)
 }
 
-// Get mocks base method
+// Get mocks base method.
 func (m *MockDeploymentsClient) Get(arg0 context.Context, arg1, arg2 string) (features0.DeploymentExtended, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
@@ -141,13 +141,13 @@ func (m *MockDeploymentsClient) Get(arg0 context.Context, arg1, arg2 string) (fe
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get
+// Get indicates an expected call of Get.
 func (mr *MockDeploymentsClientMockRecorder) Get(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDeploymentsClient)(nil).Get), arg0, arg1, arg2)
 }
 
-// Wait mocks base method
+// Wait mocks base method.
 func (m *MockDeploymentsClient) Wait(arg0 context.Context, arg1, arg2 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Wait", arg0, arg1, arg2)
@@ -155,36 +155,36 @@ func (m *MockDeploymentsClient) Wait(arg0 context.Context, arg1, arg2 string) er
 	return ret0
 }
 
-// Wait indicates an expected call of Wait
+// Wait indicates an expected call of Wait.
 func (mr *MockDeploymentsClientMockRecorder) Wait(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockDeploymentsClient)(nil).Wait), arg0, arg1, arg2)
 }
 
-// MockProvidersClient is a mock of ProvidersClient interface
+// MockProvidersClient is a mock of ProvidersClient interface.
 type MockProvidersClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockProvidersClientMockRecorder
 }
 
-// MockProvidersClientMockRecorder is the mock recorder for MockProvidersClient
+// MockProvidersClientMockRecorder is the mock recorder for MockProvidersClient.
 type MockProvidersClientMockRecorder struct {
 	mock *MockProvidersClient
 }
 
-// NewMockProvidersClient creates a new mock instance
+// NewMockProvidersClient creates a new mock instance.
 func NewMockProvidersClient(ctrl *gomock.Controller) *MockProvidersClient {
 	mock := &MockProvidersClient{ctrl: ctrl}
 	mock.recorder = &MockProvidersClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockProvidersClient) EXPECT() *MockProvidersClientMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockProvidersClient) List(arg0 context.Context, arg1 *int32, arg2 string) ([]features0.Provider, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
@@ -193,13 +193,13 @@ func (m *MockProvidersClient) List(arg0 context.Context, arg1 *int32, arg2 strin
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockProvidersClientMockRecorder) List(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockProvidersClient)(nil).List), arg0, arg1, arg2)
 }
 
-// Register mocks base method
+// Register mocks base method.
 func (m *MockProvidersClient) Register(arg0 context.Context, arg1 string) (features0.Provider, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Register", arg0, arg1)
@@ -208,36 +208,36 @@ func (m *MockProvidersClient) Register(arg0 context.Context, arg1 string) (featu
 	return ret0, ret1
 }
 
-// Register indicates an expected call of Register
+// Register indicates an expected call of Register.
 func (mr *MockProvidersClientMockRecorder) Register(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockProvidersClient)(nil).Register), arg0, arg1)
 }
 
-// MockResourceGroupsClient is a mock of ResourceGroupsClient interface
+// MockResourceGroupsClient is a mock of ResourceGroupsClient interface.
 type MockResourceGroupsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockResourceGroupsClientMockRecorder
 }
 
-// MockResourceGroupsClientMockRecorder is the mock recorder for MockResourceGroupsClient
+// MockResourceGroupsClientMockRecorder is the mock recorder for MockResourceGroupsClient.
 type MockResourceGroupsClientMockRecorder struct {
 	mock *MockResourceGroupsClient
 }
 
-// NewMockResourceGroupsClient creates a new mock instance
+// NewMockResourceGroupsClient creates a new mock instance.
 func NewMockResourceGroupsClient(ctrl *gomock.Controller) *MockResourceGroupsClient {
 	mock := &MockResourceGroupsClient{ctrl: ctrl}
 	mock.recorder = &MockResourceGroupsClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockResourceGroupsClient) EXPECT() *MockResourceGroupsClientMockRecorder {
 	return m.recorder
 }
 
-// CreateOrUpdate mocks base method
+// CreateOrUpdate mocks base method.
 func (m *MockResourceGroupsClient) CreateOrUpdate(arg0 context.Context, arg1 string, arg2 features0.ResourceGroup) (features0.ResourceGroup, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0, arg1, arg2)
@@ -246,13 +246,13 @@ func (m *MockResourceGroupsClient) CreateOrUpdate(arg0 context.Context, arg1 str
 	return ret0, ret1
 }
 
-// CreateOrUpdate indicates an expected call of CreateOrUpdate
+// CreateOrUpdate indicates an expected call of CreateOrUpdate.
 func (mr *MockResourceGroupsClientMockRecorder) CreateOrUpdate(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockResourceGroupsClient)(nil).CreateOrUpdate), arg0, arg1, arg2)
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockResourceGroupsClient) Delete(arg0 context.Context, arg1 string) (features0.ResourceGroupsDeleteFuture, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
@@ -261,13 +261,13 @@ func (m *MockResourceGroupsClient) Delete(arg0 context.Context, arg1 string) (fe
 	return ret0, ret1
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockResourceGroupsClientMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockResourceGroupsClient)(nil).Delete), arg0, arg1)
 }
 
-// DeleteAndWait mocks base method
+// DeleteAndWait mocks base method.
 func (m *MockResourceGroupsClient) DeleteAndWait(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1)
@@ -275,13 +275,13 @@ func (m *MockResourceGroupsClient) DeleteAndWait(arg0 context.Context, arg1 stri
 	return ret0
 }
 
-// DeleteAndWait indicates an expected call of DeleteAndWait
+// DeleteAndWait indicates an expected call of DeleteAndWait.
 func (mr *MockResourceGroupsClientMockRecorder) DeleteAndWait(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockResourceGroupsClient)(nil).DeleteAndWait), arg0, arg1)
 }
 
-// Get mocks base method
+// Get mocks base method.
 func (m *MockResourceGroupsClient) Get(arg0 context.Context, arg1 string) (features0.ResourceGroup, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0, arg1)
@@ -290,13 +290,13 @@ func (m *MockResourceGroupsClient) Get(arg0 context.Context, arg1 string) (featu
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get
+// Get indicates an expected call of Get.
 func (mr *MockResourceGroupsClientMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockResourceGroupsClient)(nil).Get), arg0, arg1)
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockResourceGroupsClient) List(arg0 context.Context, arg1 string, arg2 *int32) ([]features0.ResourceGroup, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
@@ -305,36 +305,36 @@ func (m *MockResourceGroupsClient) List(arg0 context.Context, arg1 string, arg2 
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockResourceGroupsClientMockRecorder) List(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockResourceGroupsClient)(nil).List), arg0, arg1, arg2)
 }
 
-// MockResourcesClient is a mock of ResourcesClient interface
+// MockResourcesClient is a mock of ResourcesClient interface.
 type MockResourcesClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockResourcesClientMockRecorder
 }
 
-// MockResourcesClientMockRecorder is the mock recorder for MockResourcesClient
+// MockResourcesClientMockRecorder is the mock recorder for MockResourcesClient.
 type MockResourcesClientMockRecorder struct {
 	mock *MockResourcesClient
 }
 
-// NewMockResourcesClient creates a new mock instance
+// NewMockResourcesClient creates a new mock instance.
 func NewMockResourcesClient(ctrl *gomock.Controller) *MockResourcesClient {
 	mock := &MockResourcesClient{ctrl: ctrl}
 	mock.recorder = &MockResourcesClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockResourcesClient) EXPECT() *MockResourcesClientMockRecorder {
 	return m.recorder
 }
 
-// Client mocks base method
+// Client mocks base method.
 func (m *MockResourcesClient) Client() autorest.Client {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Client")
@@ -342,13 +342,13 @@ func (m *MockResourcesClient) Client() autorest.Client {
 	return ret0
 }
 
-// Client indicates an expected call of Client
+// Client indicates an expected call of Client.
 func (mr *MockResourcesClientMockRecorder) Client() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Client", reflect.TypeOf((*MockResourcesClient)(nil).Client))
 }
 
-// DeleteByID mocks base method
+// DeleteByID mocks base method.
 func (m *MockResourcesClient) DeleteByID(arg0 context.Context, arg1, arg2 string) (features0.ResourcesDeleteByIDFuture, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteByID", arg0, arg1, arg2)
@@ -357,13 +357,13 @@ func (m *MockResourcesClient) DeleteByID(arg0 context.Context, arg1, arg2 string
 	return ret0, ret1
 }
 
-// DeleteByID indicates an expected call of DeleteByID
+// DeleteByID indicates an expected call of DeleteByID.
 func (mr *MockResourcesClientMockRecorder) DeleteByID(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByID", reflect.TypeOf((*MockResourcesClient)(nil).DeleteByID), arg0, arg1, arg2)
 }
 
-// GetByID mocks base method
+// GetByID mocks base method.
 func (m *MockResourcesClient) GetByID(arg0 context.Context, arg1, arg2 string) (features0.GenericResource, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetByID", arg0, arg1, arg2)
@@ -372,13 +372,13 @@ func (m *MockResourcesClient) GetByID(arg0 context.Context, arg1, arg2 string) (
 	return ret0, ret1
 }
 
-// GetByID indicates an expected call of GetByID
+// GetByID indicates an expected call of GetByID.
 func (mr *MockResourcesClientMockRecorder) GetByID(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockResourcesClient)(nil).GetByID), arg0, arg1, arg2)
 }
 
-// ListByResourceGroup mocks base method
+// ListByResourceGroup mocks base method.
 func (m *MockResourcesClient) ListByResourceGroup(arg0 context.Context, arg1, arg2, arg3 string, arg4 *int32) ([]features0.GenericResourceExpanded, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListByResourceGroup", arg0, arg1, arg2, arg3, arg4)
@@ -387,7 +387,7 @@ func (m *MockResourcesClient) ListByResourceGroup(arg0 context.Context, arg1, ar
 	return ret0, ret1
 }
 
-// ListByResourceGroup indicates an expected call of ListByResourceGroup
+// ListByResourceGroup indicates an expected call of ListByResourceGroup.
 func (mr *MockResourcesClientMockRecorder) ListByResourceGroup(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByResourceGroup", reflect.TypeOf((*MockResourcesClient)(nil).ListByResourceGroup), arg0, arg1, arg2, arg3, arg4)

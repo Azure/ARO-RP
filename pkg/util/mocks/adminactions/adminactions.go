@@ -14,30 +14,30 @@ import (
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// MockKubeActions is a mock of KubeActions interface
+// MockKubeActions is a mock of KubeActions interface.
 type MockKubeActions struct {
 	ctrl     *gomock.Controller
 	recorder *MockKubeActionsMockRecorder
 }
 
-// MockKubeActionsMockRecorder is the mock recorder for MockKubeActions
+// MockKubeActionsMockRecorder is the mock recorder for MockKubeActions.
 type MockKubeActionsMockRecorder struct {
 	mock *MockKubeActions
 }
 
-// NewMockKubeActions creates a new mock instance
+// NewMockKubeActions creates a new mock instance.
 func NewMockKubeActions(ctrl *gomock.Controller) *MockKubeActions {
 	mock := &MockKubeActions{ctrl: ctrl}
 	mock.recorder = &MockKubeActionsMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockKubeActions) EXPECT() *MockKubeActionsMockRecorder {
 	return m.recorder
 }
 
-// KubeCreateOrUpdate mocks base method
+// KubeCreateOrUpdate mocks base method.
 func (m *MockKubeActions) KubeCreateOrUpdate(arg0 context.Context, arg1 *unstructured.Unstructured) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "KubeCreateOrUpdate", arg0, arg1)
@@ -45,13 +45,13 @@ func (m *MockKubeActions) KubeCreateOrUpdate(arg0 context.Context, arg1 *unstruc
 	return ret0
 }
 
-// KubeCreateOrUpdate indicates an expected call of KubeCreateOrUpdate
+// KubeCreateOrUpdate indicates an expected call of KubeCreateOrUpdate.
 func (mr *MockKubeActionsMockRecorder) KubeCreateOrUpdate(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeCreateOrUpdate", reflect.TypeOf((*MockKubeActions)(nil).KubeCreateOrUpdate), arg0, arg1)
 }
 
-// KubeDelete mocks base method
+// KubeDelete mocks base method.
 func (m *MockKubeActions) KubeDelete(arg0 context.Context, arg1, arg2, arg3 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "KubeDelete", arg0, arg1, arg2, arg3)
@@ -59,13 +59,13 @@ func (m *MockKubeActions) KubeDelete(arg0 context.Context, arg1, arg2, arg3 stri
 	return ret0
 }
 
-// KubeDelete indicates an expected call of KubeDelete
+// KubeDelete indicates an expected call of KubeDelete.
 func (mr *MockKubeActionsMockRecorder) KubeDelete(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeDelete", reflect.TypeOf((*MockKubeActions)(nil).KubeDelete), arg0, arg1, arg2, arg3)
 }
 
-// KubeGet mocks base method
+// KubeGet mocks base method.
 func (m *MockKubeActions) KubeGet(arg0 context.Context, arg1, arg2, arg3 string) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "KubeGet", arg0, arg1, arg2, arg3)
@@ -74,13 +74,13 @@ func (m *MockKubeActions) KubeGet(arg0 context.Context, arg1, arg2, arg3 string)
 	return ret0, ret1
 }
 
-// KubeGet indicates an expected call of KubeGet
+// KubeGet indicates an expected call of KubeGet.
 func (mr *MockKubeActionsMockRecorder) KubeGet(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeGet", reflect.TypeOf((*MockKubeActions)(nil).KubeGet), arg0, arg1, arg2, arg3)
 }
 
-// KubeList mocks base method
+// KubeList mocks base method.
 func (m *MockKubeActions) KubeList(arg0 context.Context, arg1, arg2 string) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "KubeList", arg0, arg1, arg2)
@@ -89,13 +89,13 @@ func (m *MockKubeActions) KubeList(arg0 context.Context, arg1, arg2 string) ([]b
 	return ret0, ret1
 }
 
-// KubeList indicates an expected call of KubeList
+// KubeList indicates an expected call of KubeList.
 func (mr *MockKubeActionsMockRecorder) KubeList(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeList", reflect.TypeOf((*MockKubeActions)(nil).KubeList), arg0, arg1, arg2)
 }
 
-// Upgrade mocks base method
+// Upgrade mocks base method.
 func (m *MockKubeActions) Upgrade(arg0 context.Context, arg1 bool) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Upgrade", arg0, arg1)
@@ -103,36 +103,36 @@ func (m *MockKubeActions) Upgrade(arg0 context.Context, arg1 bool) error {
 	return ret0
 }
 
-// Upgrade indicates an expected call of Upgrade
+// Upgrade indicates an expected call of Upgrade.
 func (mr *MockKubeActionsMockRecorder) Upgrade(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upgrade", reflect.TypeOf((*MockKubeActions)(nil).Upgrade), arg0, arg1)
 }
 
-// MockAzureActions is a mock of AzureActions interface
+// MockAzureActions is a mock of AzureActions interface.
 type MockAzureActions struct {
 	ctrl     *gomock.Controller
 	recorder *MockAzureActionsMockRecorder
 }
 
-// MockAzureActionsMockRecorder is the mock recorder for MockAzureActions
+// MockAzureActionsMockRecorder is the mock recorder for MockAzureActions.
 type MockAzureActionsMockRecorder struct {
 	mock *MockAzureActions
 }
 
-// NewMockAzureActions creates a new mock instance
+// NewMockAzureActions creates a new mock instance.
 func NewMockAzureActions(ctrl *gomock.Controller) *MockAzureActions {
 	mock := &MockAzureActions{ctrl: ctrl}
 	mock.recorder = &MockAzureActionsMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockAzureActions) EXPECT() *MockAzureActionsMockRecorder {
 	return m.recorder
 }
 
-// ResourcesList mocks base method
+// ResourcesList mocks base method.
 func (m *MockAzureActions) ResourcesList(arg0 context.Context) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResourcesList", arg0)
@@ -141,13 +141,13 @@ func (m *MockAzureActions) ResourcesList(arg0 context.Context) ([]byte, error) {
 	return ret0, ret1
 }
 
-// ResourcesList indicates an expected call of ResourcesList
+// ResourcesList indicates an expected call of ResourcesList.
 func (mr *MockAzureActionsMockRecorder) ResourcesList(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourcesList", reflect.TypeOf((*MockAzureActions)(nil).ResourcesList), arg0)
 }
 
-// VMRedeployAndWait mocks base method
+// VMRedeployAndWait mocks base method.
 func (m *MockAzureActions) VMRedeployAndWait(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VMRedeployAndWait", arg0, arg1)
@@ -155,13 +155,13 @@ func (m *MockAzureActions) VMRedeployAndWait(arg0 context.Context, arg1 string) 
 	return ret0
 }
 
-// VMRedeployAndWait indicates an expected call of VMRedeployAndWait
+// VMRedeployAndWait indicates an expected call of VMRedeployAndWait.
 func (mr *MockAzureActionsMockRecorder) VMRedeployAndWait(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMRedeployAndWait", reflect.TypeOf((*MockAzureActions)(nil).VMRedeployAndWait), arg0, arg1)
 }
 
-// VMSerialConsole mocks base method
+// VMSerialConsole mocks base method.
 func (m *MockAzureActions) VMSerialConsole(arg0 context.Context, arg1 http.ResponseWriter, arg2 *logrus.Entry, arg3 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VMSerialConsole", arg0, arg1, arg2, arg3)
@@ -169,7 +169,7 @@ func (m *MockAzureActions) VMSerialConsole(arg0 context.Context, arg1 http.Respo
 	return ret0
 }
 
-// VMSerialConsole indicates an expected call of VMSerialConsole
+// VMSerialConsole indicates an expected call of VMSerialConsole.
 func (mr *MockAzureActionsMockRecorder) VMSerialConsole(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSerialConsole", reflect.TypeOf((*MockAzureActions)(nil).VMSerialConsole), arg0, arg1, arg2, arg3)

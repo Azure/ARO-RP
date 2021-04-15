@@ -12,30 +12,30 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockPermissionsClient is a mock of PermissionsClient interface
+// MockPermissionsClient is a mock of PermissionsClient interface.
 type MockPermissionsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockPermissionsClientMockRecorder
 }
 
-// MockPermissionsClientMockRecorder is the mock recorder for MockPermissionsClient
+// MockPermissionsClientMockRecorder is the mock recorder for MockPermissionsClient.
 type MockPermissionsClientMockRecorder struct {
 	mock *MockPermissionsClient
 }
 
-// NewMockPermissionsClient creates a new mock instance
+// NewMockPermissionsClient creates a new mock instance.
 func NewMockPermissionsClient(ctrl *gomock.Controller) *MockPermissionsClient {
 	mock := &MockPermissionsClient{ctrl: ctrl}
 	mock.recorder = &MockPermissionsClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockPermissionsClient) EXPECT() *MockPermissionsClientMockRecorder {
 	return m.recorder
 }
 
-// ListForResource mocks base method
+// ListForResource mocks base method.
 func (m *MockPermissionsClient) ListForResource(arg0 context.Context, arg1, arg2, arg3, arg4, arg5 string) ([]authorization.Permission, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListForResource", arg0, arg1, arg2, arg3, arg4, arg5)
@@ -44,13 +44,13 @@ func (m *MockPermissionsClient) ListForResource(arg0 context.Context, arg1, arg2
 	return ret0, ret1
 }
 
-// ListForResource indicates an expected call of ListForResource
+// ListForResource indicates an expected call of ListForResource.
 func (mr *MockPermissionsClientMockRecorder) ListForResource(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForResource", reflect.TypeOf((*MockPermissionsClient)(nil).ListForResource), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
-// ListForResourceGroup mocks base method
+// ListForResourceGroup mocks base method.
 func (m *MockPermissionsClient) ListForResourceGroup(arg0 context.Context, arg1 string) ([]authorization.Permission, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListForResourceGroup", arg0, arg1)
@@ -59,36 +59,36 @@ func (m *MockPermissionsClient) ListForResourceGroup(arg0 context.Context, arg1 
 	return ret0, ret1
 }
 
-// ListForResourceGroup indicates an expected call of ListForResourceGroup
+// ListForResourceGroup indicates an expected call of ListForResourceGroup.
 func (mr *MockPermissionsClientMockRecorder) ListForResourceGroup(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForResourceGroup", reflect.TypeOf((*MockPermissionsClient)(nil).ListForResourceGroup), arg0, arg1)
 }
 
-// MockRoleAssignmentsClient is a mock of RoleAssignmentsClient interface
+// MockRoleAssignmentsClient is a mock of RoleAssignmentsClient interface.
 type MockRoleAssignmentsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockRoleAssignmentsClientMockRecorder
 }
 
-// MockRoleAssignmentsClientMockRecorder is the mock recorder for MockRoleAssignmentsClient
+// MockRoleAssignmentsClientMockRecorder is the mock recorder for MockRoleAssignmentsClient.
 type MockRoleAssignmentsClientMockRecorder struct {
 	mock *MockRoleAssignmentsClient
 }
 
-// NewMockRoleAssignmentsClient creates a new mock instance
+// NewMockRoleAssignmentsClient creates a new mock instance.
 func NewMockRoleAssignmentsClient(ctrl *gomock.Controller) *MockRoleAssignmentsClient {
 	mock := &MockRoleAssignmentsClient{ctrl: ctrl}
 	mock.recorder = &MockRoleAssignmentsClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockRoleAssignmentsClient) EXPECT() *MockRoleAssignmentsClientMockRecorder {
 	return m.recorder
 }
 
-// Create mocks base method
+// Create mocks base method.
 func (m *MockRoleAssignmentsClient) Create(arg0 context.Context, arg1, arg2 string, arg3 authorization.RoleAssignmentCreateParameters) (authorization.RoleAssignment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2, arg3)
@@ -97,13 +97,13 @@ func (m *MockRoleAssignmentsClient) Create(arg0 context.Context, arg1, arg2 stri
 	return ret0, ret1
 }
 
-// Create indicates an expected call of Create
+// Create indicates an expected call of Create.
 func (mr *MockRoleAssignmentsClientMockRecorder) Create(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).Create), arg0, arg1, arg2, arg3)
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockRoleAssignmentsClient) Delete(arg0 context.Context, arg1, arg2 string) (authorization.RoleAssignment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
@@ -112,13 +112,13 @@ func (m *MockRoleAssignmentsClient) Delete(arg0 context.Context, arg1, arg2 stri
 	return ret0, ret1
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockRoleAssignmentsClientMockRecorder) Delete(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).Delete), arg0, arg1, arg2)
 }
 
-// ListForResource mocks base method
+// ListForResource mocks base method.
 func (m *MockRoleAssignmentsClient) ListForResource(arg0 context.Context, arg1, arg2, arg3, arg4, arg5, arg6 string) ([]authorization.RoleAssignment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListForResource", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
@@ -127,13 +127,13 @@ func (m *MockRoleAssignmentsClient) ListForResource(arg0 context.Context, arg1, 
 	return ret0, ret1
 }
 
-// ListForResource indicates an expected call of ListForResource
+// ListForResource indicates an expected call of ListForResource.
 func (mr *MockRoleAssignmentsClientMockRecorder) ListForResource(arg0, arg1, arg2, arg3, arg4, arg5, arg6 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForResource", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).ListForResource), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 }
 
-// ListForResourceGroup mocks base method
+// ListForResourceGroup mocks base method.
 func (m *MockRoleAssignmentsClient) ListForResourceGroup(arg0 context.Context, arg1, arg2 string) ([]authorization.RoleAssignment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListForResourceGroup", arg0, arg1, arg2)
@@ -142,36 +142,36 @@ func (m *MockRoleAssignmentsClient) ListForResourceGroup(arg0 context.Context, a
 	return ret0, ret1
 }
 
-// ListForResourceGroup indicates an expected call of ListForResourceGroup
+// ListForResourceGroup indicates an expected call of ListForResourceGroup.
 func (mr *MockRoleAssignmentsClientMockRecorder) ListForResourceGroup(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForResourceGroup", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).ListForResourceGroup), arg0, arg1, arg2)
 }
 
-// MockDenyAssignmentClient is a mock of DenyAssignmentClient interface
+// MockDenyAssignmentClient is a mock of DenyAssignmentClient interface.
 type MockDenyAssignmentClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockDenyAssignmentClientMockRecorder
 }
 
-// MockDenyAssignmentClientMockRecorder is the mock recorder for MockDenyAssignmentClient
+// MockDenyAssignmentClientMockRecorder is the mock recorder for MockDenyAssignmentClient.
 type MockDenyAssignmentClientMockRecorder struct {
 	mock *MockDenyAssignmentClient
 }
 
-// NewMockDenyAssignmentClient creates a new mock instance
+// NewMockDenyAssignmentClient creates a new mock instance.
 func NewMockDenyAssignmentClient(ctrl *gomock.Controller) *MockDenyAssignmentClient {
 	mock := &MockDenyAssignmentClient{ctrl: ctrl}
 	mock.recorder = &MockDenyAssignmentClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockDenyAssignmentClient) EXPECT() *MockDenyAssignmentClientMockRecorder {
 	return m.recorder
 }
 
-// ListForResourceGroup mocks base method
+// ListForResourceGroup mocks base method.
 func (m *MockDenyAssignmentClient) ListForResourceGroup(arg0 context.Context, arg1, arg2 string) ([]authorization.DenyAssignment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListForResourceGroup", arg0, arg1, arg2)
@@ -180,36 +180,36 @@ func (m *MockDenyAssignmentClient) ListForResourceGroup(arg0 context.Context, ar
 	return ret0, ret1
 }
 
-// ListForResourceGroup indicates an expected call of ListForResourceGroup
+// ListForResourceGroup indicates an expected call of ListForResourceGroup.
 func (mr *MockDenyAssignmentClientMockRecorder) ListForResourceGroup(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForResourceGroup", reflect.TypeOf((*MockDenyAssignmentClient)(nil).ListForResourceGroup), arg0, arg1, arg2)
 }
 
-// MockRoleDefinitionsClient is a mock of RoleDefinitionsClient interface
+// MockRoleDefinitionsClient is a mock of RoleDefinitionsClient interface.
 type MockRoleDefinitionsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockRoleDefinitionsClientMockRecorder
 }
 
-// MockRoleDefinitionsClientMockRecorder is the mock recorder for MockRoleDefinitionsClient
+// MockRoleDefinitionsClientMockRecorder is the mock recorder for MockRoleDefinitionsClient.
 type MockRoleDefinitionsClientMockRecorder struct {
 	mock *MockRoleDefinitionsClient
 }
 
-// NewMockRoleDefinitionsClient creates a new mock instance
+// NewMockRoleDefinitionsClient creates a new mock instance.
 func NewMockRoleDefinitionsClient(ctrl *gomock.Controller) *MockRoleDefinitionsClient {
 	mock := &MockRoleDefinitionsClient{ctrl: ctrl}
 	mock.recorder = &MockRoleDefinitionsClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockRoleDefinitionsClient) EXPECT() *MockRoleDefinitionsClientMockRecorder {
 	return m.recorder
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockRoleDefinitionsClient) Delete(arg0 context.Context, arg1, arg2 string) (authorization.RoleDefinition, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
@@ -218,13 +218,13 @@ func (m *MockRoleDefinitionsClient) Delete(arg0 context.Context, arg1, arg2 stri
 	return ret0, ret1
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockRoleDefinitionsClientMockRecorder) Delete(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRoleDefinitionsClient)(nil).Delete), arg0, arg1, arg2)
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockRoleDefinitionsClient) List(arg0 context.Context, arg1, arg2 string) ([]authorization.RoleDefinition, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
@@ -233,7 +233,7 @@ func (m *MockRoleDefinitionsClient) List(arg0 context.Context, arg1, arg2 string
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockRoleDefinitionsClientMockRecorder) List(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRoleDefinitionsClient)(nil).List), arg0, arg1, arg2)

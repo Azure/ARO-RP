@@ -13,30 +13,30 @@ import (
 	api "github.com/Azure/ARO-RP/pkg/api"
 )
 
-// MockManager is a mock of Manager interface
+// MockManager is a mock of Manager interface.
 type MockManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockManagerMockRecorder
 }
 
-// MockManagerMockRecorder is the mock recorder for MockManager
+// MockManagerMockRecorder is the mock recorder for MockManager.
 type MockManagerMockRecorder struct {
 	mock *MockManager
 }
 
-// NewMockManager creates a new mock instance
+// NewMockManager creates a new mock instance.
 func NewMockManager(ctrl *gomock.Controller) *MockManager {
 	mock := &MockManager{ctrl: ctrl}
 	mock.recorder = &MockManagerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 	return m.recorder
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockManager) Delete(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
@@ -44,13 +44,13 @@ func (m *MockManager) Delete(arg0 context.Context, arg1 *api.OpenShiftClusterDoc
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockManagerMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockManager)(nil).Delete), arg0, arg1)
 }
 
-// Ensure mocks base method
+// Ensure mocks base method.
 func (m *MockManager) Ensure(arg0 context.Context, arg1 *api.OpenShiftClusterDocument, arg2 *api.SubscriptionDocument) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Ensure", arg0, arg1, arg2)
@@ -58,7 +58,7 @@ func (m *MockManager) Ensure(arg0 context.Context, arg1 *api.OpenShiftClusterDoc
 	return ret0
 }
 
-// Ensure indicates an expected call of Ensure
+// Ensure indicates an expected call of Ensure.
 func (mr *MockManagerMockRecorder) Ensure(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ensure", reflect.TypeOf((*MockManager)(nil).Ensure), arg0, arg1, arg2)
