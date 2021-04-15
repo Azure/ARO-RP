@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -74,6 +75,9 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 			}
 
 			w.Header().Set("X-Ms-Request-Id", correlationData.RequestID)
+
+			systemData := w.Header().Get("x-ms-arm-resource-system-data")
+			log.Println(systemData)
 
 			if strings.EqualFold(r.Header.Get("X-Ms-Return-Client-Request-Id"), "true") {
 				w.Header().Set("X-Ms-Client-Request-Id", correlationData.ClientRequestID)
