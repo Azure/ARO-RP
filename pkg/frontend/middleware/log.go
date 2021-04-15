@@ -76,7 +76,7 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 
 			w.Header().Set("X-Ms-Request-Id", correlationData.RequestID)
 
-			systemData := w.Header().Get("x-ms-arm-resource-system-data")
+			systemData := w.Header().Get("X-Ms-Arm-Resource-System-Data")
 			log.Println(systemData)
 
 			if strings.EqualFold(r.Header.Get("X-Ms-Return-Client-Request-Id"), "true") {
