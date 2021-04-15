@@ -9,7 +9,7 @@
   "results": [
     {
       "signature": "017e22ee8065c406dd075aff23b3e1ff932319522fe3628a29e1d659c6887254",
-      "toolInfoId": "credscan>>0>>202104142141",
+      "toolInfoId": "credscan>>0>>202104142203",
       "ruleId": "CSCAN-GENERAL0060",
       "level": "error",
       "message": {
@@ -48,7 +48,7 @@
     },
     {
       "signature": "c86683d26606e956e4eea4de641be21a08bfb3b4530a8936ef07874d882007e8",
-      "toolInfoId": "credscan>>0>>202104142141",
+      "toolInfoId": "credscan>>0>>202104142203",
       "ruleId": "CSCAN-GENERAL0060",
       "level": "error",
       "message": {
