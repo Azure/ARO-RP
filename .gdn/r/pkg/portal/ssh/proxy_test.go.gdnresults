@@ -1,0 +1,50 @@
+{
+  "version": "1.0.0",
+  "locationUri": "pkg/portal/ssh/proxy_test.go",
+  "originalUriBaseIds": {
+    "file:///D:/source/ARO/ARO-RP/": {
+      "uri": "file:///D:/source/ARO/ARO-RP/"
+    }
+  },
+  "results": [
+    {
+      "signature": "0ff422b23b28f0ada1fee810725512b0e12907838c021244f75ae4240a5d37d8",
+      "toolInfoId": "credscan>>0>>202104142141",
+      "ruleId": "CSCAN-GENERAL0060",
+      "level": "error",
+      "message": {
+        "text": "{{Searcher}}CSCAN-GENERAL0060\n{{Code}}See proxy_test.go line 139 for the code resulting in match\n{{Info}}Found General Password.\n{{Suggest}}Validate file contains secrets, remove, roll credential, and use approved store. For additional information on secret remediation see https://aka.ms/credscan "
+      },
+      "locations": [
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "pkg/portal/ssh/proxy_test.go",
+              "uriBaseId": "file:///D:/source/ARO/ARO-RP/"
+            },
+            "region": {
+              "startLine": 139,
+              "startColumn": 1
+            }
+          },
+          "logicalLocations": [
+            {}
+          ]
+        }
+      ],
+      "suppressions": [
+        {
+          "kind": "external",
+          "justification": "sample login for testing",
+          "properties": {
+            "MatchingScore": "71",
+            "HashKey": "YAJf0FjI1u+q1SG90GHqR7kBQw40hjkD0HHW+Z5kL70="
+          }
+        }
+      ],
+      "properties": {
+        "rank": "2"
+      }
+    }
+  ]
+}

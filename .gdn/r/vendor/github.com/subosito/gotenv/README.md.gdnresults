@@ -1,0 +1,50 @@
+{
+  "version": "1.0.0",
+  "locationUri": "vendor/github.com/subosito/gotenv/README.md",
+  "originalUriBaseIds": {
+    "file:///D:/source/ARO/ARO-RP/": {
+      "uri": "file:///D:/source/ARO/ARO-RP/"
+    }
+  },
+  "results": [
+    {
+      "signature": "6c9e9f6760c2826ec514e8b06912cbc2b6f35118f9ffae623e28e82c62ba1273",
+      "toolInfoId": "credscan>>0>>202104142141",
+      "ruleId": "CSCAN-GENERAL0130",
+      "level": "error",
+      "message": {
+        "text": "{{Searcher}}CSCAN-GENERAL0130\n{{Code}}See README.md line 34 for the code resulting in match\n{{Info}}Found Client Secret / Api Key.\n{{Suggest}}Validate file contains secrets, remove, roll credential, and use approved store. For additional information on secret remediation see https://aka.ms/credscan "
+      },
+      "locations": [
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "vendor/github.com/subosito/gotenv/README.md",
+              "uriBaseId": "file:///D:/source/ARO/ARO-RP/"
+            },
+            "region": {
+              "startLine": 34,
+              "startColumn": 1
+            }
+          },
+          "logicalLocations": [
+            {}
+          ]
+        }
+      ],
+      "suppressions": [
+        {
+          "kind": "external",
+          "justification": "example login from comments",
+          "properties": {
+            "MatchingScore": "99.4",
+            "HashKey": "pSf177CksVxnfMmnCSN1vpyNvup5si+z86m3krRHUSU="
+          }
+        }
+      ],
+      "properties": {
+        "rank": "2"
+      }
+    }
+  ]
+}

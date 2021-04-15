@@ -27,24 +27,6 @@
     },
     "resources": [
         {
-            "apiVersion": "2020-05-01",
-            "type": "Microsoft.Network/networkSecurityGroups",
-            "name": "dev-vnet-master-nsg",
-            "location": "[resourceGroup().location]",
-            "properties": {
-
-            }
-        },
-        {
-            "apiVersion": "2020-05-01",
-            "type": "Microsoft.Network/networkSecurityGroups",
-            "name": "dev-vnet-worker-nsg",
-            "location": "[resourceGroup().location]",
-            "properties": {
-
-            }
-        },
-        {
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
@@ -67,9 +49,6 @@
         {
             "properties": {
                 "addressPrefix": "[parameters('masterAddressPrefix')]",
-                "networkSecurityGroup": {
-                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'dev-vnet-master-nsg')]"
-                },
                 "routeTable": {
                     "id": "[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]",
                     "tags": null
@@ -86,17 +65,13 @@
             "apiVersion": "2019-07-01",
             "dependsOn": [
                 "[resourceid('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
-                "[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]",
-                "[resourceId('Microsoft.Network/networkSecurityGroups/', 'dev-vnet-master-nsg')]"
+                "[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"
             ],
             "location": "[resourceGroup().location]"
         },
         {
             "properties": {
                 "addressPrefix": "[parameters('workerAddressPrefix')]",
-                "networkSecurityGroup": {
-                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'dev-vnet-worker-nsg')]"
-                },
                 "serviceEndpoints": [
                     {
                         "service": "Microsoft.ContainerRegistry"
@@ -107,8 +82,7 @@
             "type": "Microsoft.Network/virtualNetworks/subnets",
             "apiVersion": "2019-07-01",
             "dependsOn": [
-                "[resourceid('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', concat(parameters('clusterName'), '-master'))]",
-                "[resourceId('Microsoft.Network/networkSecurityGroups/', 'dev-vnet-worker-nsg')]"
+                "[resourceid('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', concat(parameters('clusterName'), '-master'))]"
             ],
             "location": "[resourceGroup().location]"
         }

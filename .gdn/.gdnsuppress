@@ -1,0 +1,168 @@
+{
+  "version": "1.0.0",
+  "suppressionSets": {
+    "default": {
+      "name": "default",
+      "createdDate": "2021-04-15 04:19:37Z",
+      "lastUpdatedDate": "2021-04-15 04:19:37Z"
+    }
+  },
+  "results": {
+    "0ff422b23b28f0ada1fee810725512b0e12907838c021244f75ae4240a5d37d8": {
+      "signature": "0ff422b23b28f0ada1fee810725512b0e12907838c021244f75ae4240a5d37d8",
+      "target": "pkg/portal/ssh/proxy_test.go",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "justification": null,
+      "createdDate": "2021-04-15 04:19:37Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "7f922c212e41c68809df4a7aa410b96e39c2ec72f62f61a28b9e75e9e4ef8ba8": {
+      "signature": "7f922c212e41c68809df4a7aa410b96e39c2ec72f62f61a28b9e75e9e4ef8ba8",
+      "target": "pkg/util/pullsecret/pullsecret_test.go",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "justification": null,
+      "createdDate": "2021-04-15 04:19:37Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "017e22ee8065c406dd075aff23b3e1ff932319522fe3628a29e1d659c6887254": {
+      "signature": "017e22ee8065c406dd075aff23b3e1ff932319522fe3628a29e1d659c6887254",
+      "target": "vendor/github.com/spf13/viper/viper.go",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "justification": null,
+      "createdDate": "2021-04-15 04:19:37Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "c86683d26606e956e4eea4de641be21a08bfb3b4530a8936ef07874d882007e8": {
+      "signature": "c86683d26606e956e4eea4de641be21a08bfb3b4530a8936ef07874d882007e8",
+      "target": "vendor/github.com/spf13/viper/viper.go",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "justification": null,
+      "createdDate": "2021-04-15 04:19:37Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "6c9e9f6760c2826ec514e8b06912cbc2b6f35118f9ffae623e28e82c62ba1273": {
+      "signature": "6c9e9f6760c2826ec514e8b06912cbc2b6f35118f9ffae623e28e82c62ba1273",
+      "target": "vendor/github.com/subosito/gotenv/README.md",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0130",
+      "justification": null,
+      "createdDate": "2021-04-15 04:19:37Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "3bce0853a77a7f1bb3183a5fa1e49a4d9fa44c737116e4f709bfa2a6f78807c2": {
+      "signature": "3bce0853a77a7f1bb3183a5fa1e49a4d9fa44c737116e4f709bfa2a6f78807c2",
+      "target": "vendor/github.com/aws/aws-sdk-go/service/sts/api.go",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-AWS0010",
+      "justification": null,
+      "createdDate": "2021-04-15 04:19:37Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "811f182a7b4285bb59ec14d6fb786496419726bb1942a8a6e596e2216894561b": {
+      "signature": "811f182a7b4285bb59ec14d6fb786496419726bb1942a8a6e596e2216894561b",
+      "target": "vendor/github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1/machine_webhook.go",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "justification": null,
+      "createdDate": "2021-04-15 04:19:37Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "b5cb24370a84b9d5bb1ed3bf8fff8b4af20b8f5213987c3eae8a661d8b5e94ba": {
+      "signature": "b5cb24370a84b9d5bb1ed3bf8fff8b4af20b8f5213987c3eae8a661d8b5e94ba",
+      "target": "vendor/github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1/machine_webhook.go",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "justification": null,
+      "createdDate": "2021-04-15 04:19:37Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "06a695375a72a27227e770ab9ffd888358f7cdc63fe31ec84ac6a6b45b5fafea": {
+      "signature": "06a695375a72a27227e770ab9ffd888358f7cdc63fe31ec84ac6a6b45b5fafea",
+      "target": "vendor/github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1/machine_webhook.go",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "justification": null,
+      "createdDate": "2021-04-15 04:19:37Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "9073e8108eeb861175841838803a90283ad74b0a0c44e81db31037a2ae531d78": {
+      "signature": "9073e8108eeb861175841838803a90283ad74b0a0c44e81db31037a2ae531d78",
+      "target": "vendor/github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1/machine_webhook.go",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "justification": null,
+      "createdDate": "2021-04-15 04:19:37Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "aa3d7d5694bdea7d7da0142a35ce65f116760ab7e0e4b71a718ee9ed37fd6f91": {
+      "signature": "aa3d7d5694bdea7d7da0142a35ce65f116760ab7e0e4b71a718ee9ed37fd6f91",
+      "target": "vendor/github.com/gophercloud/gophercloud/openstack/identity/v3/extensions/ec2tokens/doc.go",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "justification": null,
+      "createdDate": "2021-04-15 04:19:37Z",
+      "expirationDate": null,
+      "type": null
+    },
+    "8cae156ab1eba9e4beaaa35e2b909fb3f0d4938292b78c900faac2fdced351b4": {
+      "signature": "8cae156ab1eba9e4beaaa35e2b909fb3f0d4938292b78c900faac2fdced351b4",
+      "target": "vendor/github.com/gophercloud/gophercloud/openstack/identity/v3/extensions/ec2tokens/doc.go",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "justification": null,
+      "createdDate": "2021-04-15 04:19:37Z",
+      "expirationDate": null,
+      "type": null
+    }
+  }
+}
