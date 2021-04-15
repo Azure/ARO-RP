@@ -208,7 +208,7 @@
 
   * Get the admin kubeconfig and `export KUBECONFIG` as detailed above.
   * Run the ssh-agent.sh script. This takes the argument is the name of the NIC attached to the VM you are trying to ssh to.
-   * Given the following nodes these commands would be used to connect to the respected node
+   * Given the following nodes these commands would be used to connect to the respective node
 
     ```
    $ oc get nodes
