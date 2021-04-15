@@ -7,10 +7,10 @@
 usage() {
     echo "usage: CLUSTER=cluster $0 hostname_pattern" >&2
     echo "       Examples: CLUSTER=cluster $0 master1" >&2
+    echo "                 CLUSTER=cluster $0 eastus1 # worker node 1" >&2
     echo "                 CLUSTER=cluster $0 bootstrap" >&2
     exit 1
 }
-
 
 if [[ "$#" -ne 1 ]]; then
    usage
