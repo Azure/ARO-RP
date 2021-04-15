@@ -160,7 +160,7 @@ def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
     # Customers frequently remove the Cluster or RP's service principal permissions.
     # Attempt to fix this before performing any action against the cluster
     if rp_client_sp:
-        ensure_resource_permissions(cmd.cli_ctx, oc, None, [rp_client_sp.object_id])
+        ensure_resource_permissions(cmd.cli_ctx, oc, False, [rp_client_sp.object_id])
 
     return sdk_no_wait(no_wait, client.delete,
                        resource_group_name=resource_group_name,
@@ -185,7 +185,7 @@ def aro_update(cmd,
                client,
                resource_group_name,
                resource_name,
-               refresh_cluster_service_principal=None,
+               refresh_cluster_service_principal=False,
                client_id=None,
                client_secret=None,
                no_wait=False):
@@ -285,23 +285,20 @@ def get_network_resources(cli_ctx, subnets, vnet):
 # cluster service principal application and acquire client_id, client_secret
 # 4. Reuse/Recreate service principal.
 # 5. Sort out required rbac
-def service_principal_update(cli_ctx, oc,
-                             client_id=None,
-                             client_secret=None,
-                             cluster_resource_group=None,
-                             refresh_cluster_service_principal=None):
+def service_principal_update(cli_ctx,
+                             oc,
+                             client_id,
+                             client_secret,
+                             refresh_cluster_service_principal):
+    # QUESTION: is there possible unification with the create path?
+
     rp_client_sp = None
     client_sp = None
     random_id = generate_random_id()
 
     # if any of these are set - we expect users to have access to fix rbac so we fail
     # common for 1 and 2 flows
-    fail = client_id is not None or client_secret is not None or refresh_cluster_service_principal is not None
-
-    # if only secret is provided, we assume we re-use existing application
-    # it is users responsibility to vet it.
-    if client_id is None:
-        client_id = oc.service_principal_profile.client_id
+    fail = client_id or client_secret or refresh_cluster_service_principal
 
     aad = AADManager(cli_ctx)
 
@@ -317,18 +314,20 @@ def service_principal_update(cli_ctx, oc,
         logger.info(e.message)
 
 
-# refresh_cluster_service_principal refreshes cluster SP application.
-# At firsts it tries to re-use existing application and generate new password.
-# If application does not exist - creates new one
+    # refresh_cluster_service_principal refreshes cluster SP application.
+    # At firsts it tries to re-use existing application and generate new password.
+    # If application does not exist - creates new one
     if refresh_cluster_service_principal:
         try:
-            app = aad.get_application_by_client_id(client_id)
+            app = aad.get_application_by_client_id(client_id or oc.service_principal_profile.client_id)
             if not app:
                 # we were not able to find and applications, create new one
+                parts = parse_resource_id(oc.cluster_profile.resource_group_id)
+                cluster_resource_group = parts['resource_group']
+
                 app, client_secret = aad.create_application(cluster_resource_group or 'aro-' + random_id)
                 client_id = app.app_id
             else:
-                app = aad.get_application_by_client_id(client_id)
                 client_secret = aad.refresh_application_credentials(app.object_id)
         except GraphErrorException as e:
             logger.error(e.message)
@@ -336,17 +335,15 @@ def service_principal_update(cli_ctx, oc,
 
     # attempt to get/create SP if one was not found.
     try:
-        client_sp = aad.get_service_principal(client_id)
-        if not client_sp and fail:  # if we are in hard fail - attempt to re-create
-            logger.info("Cluster service principal not found. Will attempt to re-create")
-            client_sp = aad.create_service_principal(client_id)
-            if not client_sp:
-                raise ResourceNotFoundError("Cluster service principal creation failed")
+        client_sp = aad.get_service_principal(client_id or oc.service_principal_profile.client_id)
     except GraphErrorException as e:
         if fail:
             logger.error(e.message)
             raise
         logger.info(e.message)
+
+    if fail and not client_sp:
+        client_sp = aad.create_service_principal(client_id or oc.service_principal_profile.client_id)
 
     sp_obj_ids = [sp.object_id for sp in [rp_client_sp, client_sp] if sp]
     ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids)
@@ -361,15 +358,16 @@ def resolve_rp_client_id():
     return os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
 
 
-def ensure_resource_permissions(ctx, oc=None, fail=None, sp_obj_ids=[]):  # pylint: disable=dangerous-default-value
+def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
     try:
         # Get cluster resources we need to assign network contributor on
-        resources = get_cluster_network_resources(ctx, oc)
+        resources = get_cluster_network_resources(cli_ctx, oc)
     except (CloudError, HttpOperationError) as e:
         if fail:
             logger.error(e.message)
             raise
         logger.info(e.message)
+        return
 
     for sp_id in sp_obj_ids:
         for resource in sorted(resources):
@@ -378,7 +376,7 @@ def ensure_resource_permissions(ctx, oc=None, fail=None, sp_obj_ids=[]):  # pyli
             resource_contributor_exists = True
 
             try:
-                resource_contributor_exists = has_network_contributor_on_resource(ctx, resource, sp_id)
+                resource_contributor_exists = has_network_contributor_on_resource(cli_ctx, resource, sp_id)
             except CloudError as e:
                 if fail:
                     logger.error(e.message)
@@ -386,4 +384,4 @@ def ensure_resource_permissions(ctx, oc=None, fail=None, sp_obj_ids=[]):  # pyli
                 logger.info(e.message)
 
             if not resource_contributor_exists:
-                assign_network_contributor_to_resource(ctx, resource, sp_id)
+                assign_network_contributor_to_resource(cli_ctx, resource, sp_id)

@@ -84,12 +84,13 @@ class AADManager:
         try:
             credentials = list(self.client.applications.list_password_credentials(object_id))
         except GraphErrorException as e:
-            raise logger.error(e.message)
+            logger.error(e.message)
+            raise
 
         # when appending credentials ALL fields must be present, otherwise
         # azure gives ambiguous errors about not being able to update old keys
         credentials.append(PasswordCredential(
-            custom_key_identifier=str(start_date).encode(),
+            custom_key_identifier=str(start_date).encode(), # CHECK: encode() call looks dodgy to me
             key_id=str(key_id),
             start_date=start_date,
             end_date=end_date,

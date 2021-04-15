@@ -43,9 +43,11 @@ def validate_client_id(namespace):
 
 def validate_client_secret(isCreate):
     def _validate_client_secret(namespace):
-        if namespace.client_secret is not None and isCreate:
+        if isCreate and namespace.client_secret is not None:
             if namespace.client_id is None or not str(namespace.client_id):
                 raise RequiredArgumentMissingError('Must specify --client-id with --client-secret.')
+
+    return _validate_client_secret
 
 
 def validate_cluster_resource_group(cmd, namespace):
@@ -153,14 +155,6 @@ def validate_subnets(master_subnet, worker_subnet):
         raise InvalidArgumentValueError("--master-subnet name '%s' must not equal --worker-subnet name '%s'." %
                                         (master_parts['child_name_1'], worker_parts['child_name_1']))
 
-    return resource_id(
-        subscription=master_parts['subscription'],
-        resource_group=master_parts['resource_group'],
-        namespace='Microsoft.Network',
-        type='virtualNetworks',
-        name=master_parts['name'],
-    )
-
 
 def validate_visibility(key):
     def _validate_visibility(namespace):
@@ -206,6 +200,6 @@ def validate_worker_vm_disk_size_gb(namespace):
 
 
 def validate_refresh_cluster_service_principal(namespace):
-    if namespace.refresh_cluster_service_principal is not None:
+    if namespace.refresh_cluster_service_principal:
         if namespace.client_secret is not None or namespace.client_id is not None:
             raise RequiredArgumentMissingError('--client-id and --client-secret must be not set with --refresh-cluster-service-principal.')  # pylint: disable=line-too-long
