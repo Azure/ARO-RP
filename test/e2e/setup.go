@@ -213,6 +213,8 @@ var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
 
 	if err := done(context.Background()); err != nil {
+		// The error is a result of Azure timeouts on deletion of RG
+		// TODO: Investigate the upstream provider timeouts and/or provide better logic in deletion of RG
 		log.Error(err)
 	}
 })
