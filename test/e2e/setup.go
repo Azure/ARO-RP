@@ -213,8 +213,9 @@ var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
 
 	if err := done(context.Background()); err != nil {
-		// The error is a result of Azure timeouts on deletion of RG
-		// TODO: Investigate the upstream provider timeouts and/or provide better logic in deletion of RG
+		// Not handling error as it fails out entire E2E test on ResourceGroup delete even if setup is successful
+		// TODO: Investigate root cause and provide better logic in delete
+		// TODO: Split out setup and delete of cluster into separate E2E jobs
 		log.Error(err)
 	}
 })
