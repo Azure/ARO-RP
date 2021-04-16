@@ -24,12 +24,12 @@ trap cleanup EXIT
 
 eval "$(ssh-agent | grep -v '^echo ')"
 
-if [[ -z "$CLUSTER" ]]; then
-    echo "CLUSTER must be specified"
-    usage
-fi
-
 if [[ -z "$RESOURCEID" ]]; then
+    if [[ -z "$CLUSTER" ]]; then
+        echo "CLUSTER must be specified"
+        usage
+    fi
+    
     RESOURCEID="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER}"
 fi
 
