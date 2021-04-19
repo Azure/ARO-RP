@@ -76,9 +76,6 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 
 			w.Header().Set("X-Ms-Request-Id", correlationData.RequestID)
 
-			systemData := w.Header().Get("X-Ms-Arm-Resource-System-Data")
-			log.Println(systemData)
-
 			if strings.EqualFold(r.Header.Get("X-Ms-Return-Client-Request-Id"), "true") {
 				w.Header().Set("X-Ms-Client-Request-Id", correlationData.ClientRequestID)
 			}
@@ -100,7 +97,10 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 				"request_remote_addr": r.RemoteAddr,
 				"request_user_agent":  r.UserAgent(),
 			})
+			
 			log.Print("read request")
+			systemData := w.Header().Get("X-Ms-Arm-Resource-System-Data")
+			log.Print(systemData)
 
 			var (
 				auditCallerIdentity = r.UserAgent()
