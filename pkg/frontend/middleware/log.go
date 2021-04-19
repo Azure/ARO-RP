@@ -98,9 +98,9 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 			})
 			
 			log.Print("read request")
-			systemData := w.Header().Get("X-Ms-Arm-Resource-System-Data")
+			systemData := r.Header().Get("X-Ms-Arm-Resource-System-Data")
 			log.Print(systemData)
-			systemData = w.Header().Get("x-ms-arm-resource-system-data")
+			systemData = r.Header().Get("x-ms-arm-resource-system-data")
 			log.Print(systemData)
 
 			var (
