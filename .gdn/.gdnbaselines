@@ -14,7 +14,7 @@
       "memberOf": [
         "default"
       ],
-      "tool": "ARMory",
+      "tool": "Armory",
       "ruleId": "ARM1005",
       "justification": null,
       "createdDate": "2021-04-19 17:24:29Z",
