@@ -90,7 +90,7 @@ class AADManager:
         # when appending credentials ALL fields must be present, otherwise
         # azure gives ambiguous errors about not being able to update old keys
         credentials.append(PasswordCredential(
-            custom_key_identifier=str(start_date).encode(), # CHECK: encode() call looks dodgy to me
+            custom_key_identifier=str(start_date).encode(),  # bytearray
             key_id=str(key_id),
             start_date=start_date,
             end_date=end_date,

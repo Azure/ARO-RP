@@ -94,7 +94,7 @@ def load_arguments(self, _):
     with self.argument_context('aro update') as c:
         c.argument('client_secret',
                    help='Client secret of cluster service principal.',
-                   validator=validate_client_secret(isCreate=None))
+                   validator=validate_client_secret(isCreate=False))
         c.argument('refresh_cluster_service_principal',
                    arg_type=get_three_state_flag(),
                    help='Refresh cluster service principal.',

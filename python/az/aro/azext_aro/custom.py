@@ -313,7 +313,6 @@ def service_principal_update(cli_ctx,
             raise
         logger.info(e.message)
 
-
     # refresh_cluster_service_principal refreshes cluster SP application.
     # At firsts it tries to re-use existing application and generate new password.
     # If application does not exist - creates new one
