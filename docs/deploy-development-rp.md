@@ -206,12 +206,27 @@
 
 * "SSH" to a cluster node:
 
-  * First, get the admin kubeconfig and `export KUBECONFIG` as detailed above.
+  * Get the admin kubeconfig and `export KUBECONFIG` as detailed above.
+  * Run the ssh-agent.sh script. This takes the argument is the name of the NIC attached to the VM you are trying to ssh to.
+   * Given the following nodes these commands would be used to connect to the respective node
 
-  ```bash
-  CLUSTER=cluster hack/ssh-agent.sh [master-{0,1,2}]
-  ```
+    ```
+   $ oc get nodes
+   NAME                                     STATUS     ROLES    AGE   VERSION
+   aro-dev-abc123-master-0               Ready      master   47h   v1.19.0+2f3101c
+   aro-dev-abc123-master-1               Ready      master   47h   v1.19.0+2f3101c
+   aro-dev-abc123-master-2               Ready      master   47h   v1.19.0+2f3101c
+   aro-dev-abc123-worker-eastus1-2s5rb   Ready      worker   47h   v1.19.0+2f3101c
+   aro-dev-abc123-worker-eastus2-php82   Ready      worker   47h   v1.19.0+2f3101c
+   aro-dev-abc123-worker-eastus3-cbqs2   Ready      worker   47h   v1.19.0+2f3101c
 
+
+   CLUSTER=cluster hack/ssh-agent.sh master0 # master node aro-dev-abc123-master-0
+   CLUSTER=cluster hack/ssh-agent.sh aro-dev-abc123-worker-eastus1-2s5rb # worker aro-dev-abc123-worker-eastus1-2s5rb
+   CLUSTER=cluster hack/ssh-agent.sh eastus1 # worker aro-dev-abc123-worker-eastus1-2s5rb
+   CLUSTER=cluster hack/ssh-agent.sh 2s5rb  # worker aro-dev-abc123-worker-eastus1-2s5rb
+   CLUSTER=cluster hack/ssh-agent.sh bootstrap # the bootstrap node used to provision cluster
+   ```
 
 ### Metrics
 
