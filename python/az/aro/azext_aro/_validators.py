@@ -40,6 +40,9 @@ def validate_client_id(namespace):
         except ValueError:
             raise InvalidArgumentValueError("Invalid --client-id '%s'." % namespace.client_id)
 
+        if namespace.client_secret is None or not str(namespace.client_secret):
+            raise RequiredArgumentMissingError('Must specify --client-secret with --client-id.')
+
 
 def validate_client_secret(isCreate):
     def _validate_client_secret(namespace):

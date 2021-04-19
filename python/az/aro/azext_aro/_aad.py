@@ -7,6 +7,7 @@ import uuid
 
 from azure.cli.core._profile import Profile
 from azure.cli.core.commands.client_factory import configure_common_settings
+from azure.cli.core.azclierror import BadRequestError
 from azure.graphrbac import GraphRbacManagementClient
 from azure.graphrbac.models import ApplicationCreateParameters
 from azure.graphrbac.models import GraphErrorException
@@ -30,6 +31,7 @@ class AADManager:
 
     def create_application(self, display_name):
         password = uuid.uuid4()
+        start_date = datetime.datetime.utcnow()
         end_date = datetime.datetime(2299, 12, 31, tzinfo=datetime.timezone.utc)
 
         app = self.client.applications.create(ApplicationCreateParameters(
@@ -39,6 +41,8 @@ class AADManager:
             ],
             password_credentials=[
                 PasswordCredential(
+                    custom_key_identifier=str(start_date).encode(),
+                    start_date=start_date,
                     end_date=end_date,
                     value=password,
                 ),
@@ -96,6 +100,13 @@ class AADManager:
             end_date=end_date,
             value=password))
 
-        self.client.applications.update_password_credentials(object_id, credentials)
+        # keys created with older version of cli are not updatable
+        # https://github.com/Azure/azure-sdk-for-python/issues/18131
+        try:
+            self.client.applications.update_password_credentials(object_id, credentials)
+        except GraphErrorException:
+            raise BadRequestError("failed to update an application.\n \
+Please consider using the command below to trigger credential rotation manually: \n \
+az aro update --name MyCluster --resource-group MyResourceGroup --client-id ClientId --client-secret ClientSecret")
 
         return password
