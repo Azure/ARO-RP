@@ -4,6 +4,7 @@ package scheme
 // Licensed under the Apache License 2.0.
 
 import (
+	configv1 "github.com/openshift/api/config/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
@@ -27,6 +28,7 @@ func init() {
 	utilruntime.Must(arov1alpha1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(azureproviderv1beta1.SchemeBuilder.AddToScheme(scheme.Scheme))
 	utilruntime.Must(mcv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(configv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(corev1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(corev1defaults.RegisterDefaults(scheme.Scheme))
 	utilruntime.Must(appsv1.AddToScheme(scheme.Scheme))

@@ -1657,6 +1657,7 @@ github.com/openshift/library-go v0.0.0-20191003152030-97c62d8a2901/go.mod h1:NBt
 github.com/openshift/library-go v0.0.0-20200324092245-db2a8546af81/go.mod h1:Qc5duoXHzAKyUfA0REIlG/rdfWzknOpp9SiDiyg5Y7A=
 github.com/openshift/library-go v0.0.0-20200831114015-2ab0c61c15de/go.mod h1:6vwp+YhYOIlj8MpkQKkebTTSn2TuYyvgiAFQ206jIEQ=
 github.com/openshift/library-go v0.0.0-20200907120738-ea57b121ba1a/go.mod h1:6vwp+YhYOIlj8MpkQKkebTTSn2TuYyvgiAFQ206jIEQ=
+github.com/openshift/library-go v0.0.0-20200909173121-1d055d971916 h1:H9XwZlu78Pn87KNBGGjZY0L2fLOoPnzEajigVur5ZOY=
 github.com/openshift/library-go v0.0.0-20200909173121-1d055d971916/go.mod h1:6vwp+YhYOIlj8MpkQKkebTTSn2TuYyvgiAFQ206jIEQ=
 github.com/openshift/machine-api-operator v0.2.1-0.20210212025836-cb508cd8777d h1:HPsOufOinE9dt/EtqY20gigk+es+y53GtcQPj4ItRl0=
 github.com/openshift/machine-api-operator v0.2.1-0.20210212025836-cb508cd8777d/go.mod h1:UZK7t/t3dO73RqC9MsXM/BAIMWRsNaE9NEKUXBBY8y8=

@@ -1,7 +1,7 @@
 ### Which issue this PR addresses:
 
 <!--
-Please include a link to the VSTS work item as well as any GitHub issues.
+Please include a link to the ADO work item as well as any GitHub issues.
 
 Usage: `Fixes #<GitHub issue number>`, or `Fixes (paste link of issue)`.
 -->
@@ -29,7 +29,7 @@ How did you test that this PR works?
 
 <!--
 - If yes and the docs are in GitHub, include doc updates in the PR.
-- If yes and the docs are not in GitHub (i.e. VSTS wiki), include a link to the
+- If yes and the docs are not in GitHub (i.e. ADO wiki), include a link to the
   docs.
 - If no, explain why (e.g. "tech debt cleanup, N/A").
 -->

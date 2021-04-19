@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/alertwebhook"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checker"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
@@ -100,6 +101,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			restConfig)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller Genevalogging: %v", err)
 		}
+		if err = (clusteroperatoraro.NewReconciler(
+			log.WithField("controller", controllers.ClusterOperatorAROName),
+			arocli, configcli)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller ClusterOperatorARO: %v", err)
+		}
 		if err = (pullsecret.NewReconciler(
 			log.WithField("controller", controllers.PullSecretControllerName),
 			kubernetescli)).SetupWithManager(mgr); err != nil {
@@ -154,7 +160,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 
 	if err = (checker.NewReconciler(
 		log.WithField("controller", controllers.CheckerControllerName),
-		maocli, arocli, role, isDevelopmentMode)).SetupWithManager(mgr); err != nil {
+		maocli, arocli, kubernetescli, role, isDevelopmentMode)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller InternetChecker: %v", err)
 	}
 

@@ -13,17 +13,18 @@ const (
 	InternetReachableFromMaster status.ConditionType = "InternetReachableFromMaster"
 	InternetReachableFromWorker status.ConditionType = "InternetReachableFromWorker"
 	MachineValid                status.ConditionType = "MachineValid"
+	ServicePrincipalValid       status.ConditionType = "ServicePrincipalValid"
 )
 
 // AllConditionTypes is a operator conditions currently in use, any condition not in this list is not
 // added to the operator.status.conditions list
 func AllConditionTypes() []status.ConditionType {
-	return []status.ConditionType{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid}
+	return []status.ConditionType{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid, ServicePrincipalValid}
 }
 
 // ClusterChecksTypes represents checks performed on the cluster to verify basic functionality
 func ClusterChecksTypes() []status.ConditionType {
-	return []status.ConditionType{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid}
+	return []status.ConditionType{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid, ServicePrincipalValid}
 }
 
 type GenevaLoggingSpec struct {
