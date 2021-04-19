@@ -9,6 +9,11 @@ import (
 
 const InstallArchitectureVersion = api.ArchitectureVersionV2
 
+const (
+	DevClusterGenevaLoggingEnvironment   = "Test"
+	DevClusterGenevaLoggingConfigVersion = "2.3"
+)
+
 var GitCommit = "unknown"
 
 // InstallStream describes stream we are defaulting to for all new clusters

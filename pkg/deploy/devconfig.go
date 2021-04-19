@@ -12,6 +12,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func adminKeyvaultAccessPolicy(_env env.Core) map[string]interface{} {
@@ -105,7 +106,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			ARMAPICABundle:               to.StringPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
 			ARMAPIClientCertCommonName:   to.StringPtr(clientCert.Subject.CommonName),
 			ARMClientID:                  to.StringPtr(os.Getenv("AZURE_ARM_CLIENT_ID")),
-			ClusterMDSDConfigVersion:     to.StringPtr("2.3"),
+			ClusterMDSDConfigVersion:     to.StringPtr(version.DevClusterGenevaLoggingConfigVersion),
 			ClusterParentDomainName:      to.StringPtr(os.Getenv("USER") + "-clusters." + os.Getenv("PARENT_DOMAIN_NAME")),
 			ExtraClusterKeyvaultAccessPolicies: []interface{}{
 				adminKeyvaultAccessPolicy(_env),
@@ -124,7 +125,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			GlobalResourceGroupName:     to.StringPtr(os.Getenv("USER") + "-global"),
 			GlobalSubscriptionID:        to.StringPtr(_env.SubscriptionID()),
 			MDMFrontendURL:              to.StringPtr("https://int2.int.microsoftmetrics.com/"),
-			MDSDEnvironment:             to.StringPtr("Test"),
+			MDSDEnvironment:             to.StringPtr(version.DevClusterGenevaLoggingEnvironment),
 			PortalAccessGroupIDs: []string{
 				os.Getenv("AZURE_PORTAL_ACCESS_GROUP_IDS"),
 			},
