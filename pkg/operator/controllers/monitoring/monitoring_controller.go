@@ -84,12 +84,6 @@ func (r *Reconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	// TODO(mj): Reconcile will eventually be receiving a ctx (https://github.com/kubernetes-sigs/controller-runtime/blob/7ef2da0bc161d823f084ad21ff5f9c9bd6b0cc39/pkg/reconcile/reconcile.go#L93)
 	ctx := context.TODO()
 
-	// check feature gates and if set to false remove any persistence
-	cluster, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
 	return reconcile.Result{}, retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		cm, isCreate, err := r.monitoringConfigMap(ctx)
 		if err != nil {
@@ -111,28 +105,15 @@ func (r *Reconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 		}
 
 		changed := false
-		switch cluster.Spec.Features.PersistentPrometheus {
-		case true:
-			// we are enabling persistence
-			if configData.PrometheusK8s.Retention != "15d" {
-				configData.PrometheusK8s.Retention = "15d"
-				changed = true
-			}
-			if configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage != "100Gi" {
-				configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage = "100Gi"
-				changed = true
-			}
-			// we are disabling persistence. We use omitempty on the struct to
-			// clean the fields
-		case false:
-			if configData.PrometheusK8s.Retention != "" {
-				configData.PrometheusK8s.Retention = ""
-				changed = true
-			}
-			if configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage != "" {
-				configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage = ""
-				changed = true
-			}
+		// we are disabling persistence. We use omitempty on the struct to
+		// clean the fields
+		if configData.PrometheusK8s.Retention != "" {
+			configData.PrometheusK8s.Retention = ""
+			changed = true
+		}
+		if configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage != "" {
+			configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage = ""
+			changed = true
 		}
 
 		if !isCreate && !changed {
@@ -152,10 +133,10 @@ func (r *Reconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 		cm.Data["config.yaml"] = string(cmYaml)
 
 		if isCreate {
-			r.log.Infof("re-creating monitoring configmap. featureFlag %t", cluster.Spec.Features.PersistentPrometheus)
+			r.log.Infof("re-creating monitoring configmap. %s", monitoringName.Name)
 			_, err = r.kubernetescli.CoreV1().ConfigMaps(monitoringName.Namespace).Create(ctx, cm, metav1.CreateOptions{})
 		} else {
-			r.log.Infof("updating monitoring configmap. featureFlag %t", cluster.Spec.Features.PersistentPrometheus)
+			r.log.Infof("updating monitoring configmap. %s", monitoringName.Name)
 			_, err = r.kubernetescli.CoreV1().ConfigMaps(monitoringName.Namespace).Update(ctx, cm, metav1.UpdateOptions{})
 		}
 		return err
@@ -185,12 +166,12 @@ func (r *Reconciler) monitoringConfigMap(ctx context.Context) (*corev1.ConfigMap
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.log.Info("starting starting cluster monitoring controller")
 
-	monitoringConfigMapPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
-		return meta.GetName() == monitoringName.Name && meta.GetNamespace() == monitoringName.Namespace
-	})
-
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
 		return meta.GetName() == arov1alpha1.SingletonClusterName
+	})
+
+	monitoringConfigMapPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
+		return meta.GetName() == monitoringName.Name && meta.GetNamespace() == monitoringName.Namespace
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
