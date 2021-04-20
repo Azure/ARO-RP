@@ -69,8 +69,8 @@ extends:
             project: $(vso-project-id)
             pipeline: $(vso-deployer-pipeline-id)
             ${{ if eq(parameters.vsoDeployerBuildID, 'latest') }}:
-              buildVersionToDownload: latest #FromBranch
-              # branchName: refs/heads/master
+              buildVersionToDownload: FromBranch
+              branchName: refs/heads/master
             downloadType: specific
             downloadPath: $(Build.SourcesDirectory)/deployer
             artifact: drop_Build_ARO_Build_ARO
