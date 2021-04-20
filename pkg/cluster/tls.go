@@ -60,6 +60,7 @@ func (m *manager) createCertificates(ctx context.Context) error {
 		m.log.Printf("waiting for certificate %s", c.certificateName)
 		err = m.env.ClusterKeyvault().WaitForCertificateOperation(ctx, c.certificateName)
 		if err != nil {
+			m.log.Errorf("error when waiting for certificate %s: %s", c.certificateName, err.Error())
 			return err
 		}
 	}
