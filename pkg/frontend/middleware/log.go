@@ -96,11 +96,11 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 				"request_remote_addr": r.RemoteAddr,
 				"request_user_agent":  r.UserAgent(),
 			})
-			
+
 			log.Print("read request")
-			systemData := r.Header().Get("X-Ms-Arm-Resource-System-Data")
+			systemData := r.Header.Get("X-Ms-Arm-Resource-System-Data")
 			log.Print(systemData)
-			systemData = r.Header().Get("x-ms-arm-resource-system-data")
+			systemData = r.Header.Get("x-ms-arm-resource-system-data")
 			log.Print(systemData)
 
 			var (
