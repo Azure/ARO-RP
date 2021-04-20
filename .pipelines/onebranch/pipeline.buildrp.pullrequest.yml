@@ -123,4 +123,3 @@ extends:
               mkdir -p $(ob_outputDirectory) 
               cp aro $(ob_outputDirectory)/aro
             workingDirectory: $(Build.SourcesDirectory)
-
