@@ -1,0 +1,81 @@
+#################################################################################
+#                               OneBranch Pipelines                             #
+# This pipeline was created by EasyStart from a sample located at:              #
+#   https://aka.ms/obpipelines/easystart/samples                                #
+# Documentation:  https://aka.ms/obpipelines                                    #
+# Yaml Schema:    https://aka.ms/obpipelines/yaml/schema                        #
+# Retail Tasks:   https://aka.ms/obpipelines/tasks                              #
+# Support:        https://aka.ms/onebranchsup                                   #
+#################################################################################
+
+trigger: none
+pr: none
+
+parameters:
+- name: vsoDeployerBuildID
+  type: string
+  default: latest
+
+variables:
+  CDP_DEFINITION_BUILD_COUNT: $[counter('', 0)] # needed for onebranch.pipeline.version task https://aka.ms/obpipelines/versioning
+  LinuxContainerImage: centos:centos7   # Docker image which is used to build the project https://aka.ms/obpipelines/containers
+  DEBIAN_FRONTEND: noninteractive
+  vso-deployer-pipeline-id: 206753
+  vso-project-id: 5d69ab04-7ded-49dc-84d5-bbbcac4add8d
+
+resources:
+  repositories:
+  - repository: templates
+    type: git
+    name: OneBranch.Pipelines/GovernedTemplates
+    ref: refs/heads/main
+  - repository: rhado
+    type: git
+    name: ARO.Pipelines
+
+extends:
+  template: v2/OneBranch.Official.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
+  parameters:
+    globalSdl: # https://aka.ms/obpipelines/sdl
+      # tsa:
+      #  enabled: true # SDL results of non-official builds aren't uploaded to TSA by default.
+      # credscan:
+      #   suppressionsFile: $(Build.SourcesDirectory)\.config\CredScanSuppressions.json
+      policheck:
+        break: true # always break the build on policheck issues. You can disable it by setting to 'false'
+      suppression:
+        suppressionFile: $(Build.SourcesDirectory)\.gdn\.gdnsuppress
+        suppressionSet: default
+
+    stages:
+    - stage: Mirror_Images
+      variables:
+      - group: INT RP Service Secrets
+      jobs:
+      - job: Mirror_Images
+        timeoutInMinutes: 360
+        pool:
+          type: linux
+
+        variables: # More settings at https://aka.ms/obpipelines/yaml/jobs
+          ob_outputDirectory: $(Build.SourcesDirectory)/out   # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
+
+        steps:
+        - checkout: rhado
+        - task: DownloadPipelineArtifact@2
+          displayName: Download Deployer
+          inputs:
+            buildType: specific
+            project: $(vso-project-id)
+            pipeline: $(vso-deployer-pipeline-id)
+            ${{ if eq(parameters.vsoDeployerBuildID, 'latest') }}:
+              buildVersionToDownload: latest #FromBranch
+              # branchName: refs/heads/master
+            downloadType: specific
+            downloadPath: $(Build.SourcesDirectory)/deployer
+            artifact: drop_Build_ARO_Build_ARO
+        - task: Bash@3
+          displayName: ⚙️ Run Ev2 Manifest packaging
+          inputs:
+            targetType: filePath
+            filePath: .pipelines/onebranch/scripts/mirrorpipeline.sh

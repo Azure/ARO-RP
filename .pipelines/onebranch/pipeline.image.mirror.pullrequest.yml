@@ -18,20 +18,20 @@ parameters:
 
 variables:
   CDP_DEFINITION_BUILD_COUNT: $[counter('', 0)] # needed for onebranch.pipeline.version task https://aka.ms/obpipelines/versioning
-  LinuxContainerImage: 'centos:centos7' # Docker image which is used to build the project https://aka.ms/obpipelines/containers
+  LinuxContainerImage: centos:centos7   # Docker image which is used to build the project https://aka.ms/obpipelines/containers
   DEBIAN_FRONTEND: noninteractive
   vso-deployer-pipeline-id: 206753
   vso-project-id: 5d69ab04-7ded-49dc-84d5-bbbcac4add8d
 
 resources:
-  repositories: 
-    - repository: templates
-      type: git
-      name: OneBranch.Pipelines/GovernedTemplates
-      ref: refs/heads/main
-    - repository: rhado
-      type: git
-      name: ARO.Pipelines
+  repositories:
+  - repository: templates
+    type: git
+    name: OneBranch.Pipelines/GovernedTemplates
+    ref: refs/heads/main
+  - repository: rhado
+    type: git
+    name: ARO.Pipelines
 
 extends:
   template: v2/OneBranch.NonOfficial.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
@@ -50,7 +50,7 @@ extends:
     stages:
     - stage: Mirror_Images
       variables:
-      - group: 'INT RP Service Secrets'
+      - group: INT RP Service Secrets
       jobs:
       - job: Mirror_Images
         timeoutInMinutes: 360
@@ -58,7 +58,7 @@ extends:
           type: linux
 
         variables: # More settings at https://aka.ms/obpipelines/yaml/jobs
-          ob_outputDirectory: '$(Build.SourcesDirectory)/out' # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
+          ob_outputDirectory: $(Build.SourcesDirectory)/out   # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
 
         steps:
         - checkout: rhado
@@ -72,8 +72,8 @@ extends:
               buildVersionToDownload: latest #FromBranch
               # branchName: refs/heads/master
             downloadType: specific
-            downloadPath: '$(Build.SourcesDirectory)/deployer'
-            artifact: 'drop_Build_ARO_Build_ARO'
+            downloadPath: $(Build.SourcesDirectory)/deployer
+            artifact: drop_Build_ARO_Build_ARO
         - task: Bash@3
           displayName: ⚙️ Run Ev2 Manifest packaging
           inputs:
