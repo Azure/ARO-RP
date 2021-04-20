@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/portal/util/clientcache"
 	"github.com/Azure/ARO-RP/pkg/proxy"
@@ -49,6 +50,8 @@ type kubeconfig struct {
 }
 
 func New(baseLog *logrus.Entry,
+	audit *logrus.Entry,
+	env env.Core,
 	baseAccessLog *logrus.Entry,
 	servingCert *x509.Certificate,
 	elevatedGroupIDs []string,
@@ -83,7 +86,7 @@ func New(baseLog *logrus.Entry,
 
 	bearerAuthenticatedRouter := unauthenticatedRouter.NewRoute().Subrouter()
 	bearerAuthenticatedRouter.Use(middleware.Bearer(k.dbPortal))
-	bearerAuthenticatedRouter.Use(middleware.Log(k.baseAccessLog))
+	bearerAuthenticatedRouter.Use(middleware.Log(env, audit, k.baseAccessLog))
 
 	bearerAuthenticatedRouter.PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/kubeconfig/proxy/").Handler(rp)
 

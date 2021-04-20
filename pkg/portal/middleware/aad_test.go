@@ -23,12 +23,12 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
@@ -81,7 +81,7 @@ func (c noopClaims) Claims(v interface{}) error {
 }
 
 func TestNewAAD(t *testing.T) {
-	_, err := NewAAD(nil, nil, nil, "", nil, "", nil, nil, nil, nil, nil)
+	_, err := NewAAD(nil, nil, nil, nil, "", nil, "", nil, nil, nil, nil, nil)
 	if err.Error() != "invalid sessionKey" {
 		t.Error(err)
 	}
@@ -162,7 +162,10 @@ func TestAAD(t *testing.T) {
 			env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
 			env.EXPECT().TenantID().AnyTimes().Return("")
 
-			a, err := NewAAD(logrus.NewEntry(logrus.StandardLogger()), env, logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
+			_, audit := testlog.NewAudit()
+			_, baseLog := testlog.New()
+			_, baseAccessLog := testlog.New()
+			a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -258,7 +261,10 @@ func TestRedirect(t *testing.T) {
 			env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
 			env.EXPECT().TenantID().AnyTimes().Return("")
 
-			a, err := NewAAD(logrus.NewEntry(logrus.StandardLogger()), env, logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
+			_, audit := testlog.NewAudit()
+			_, baseLog := testlog.New()
+			_, baseAccessLog := testlog.New()
+			a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -374,7 +380,10 @@ func TestLogout(t *testing.T) {
 			env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
 			env.EXPECT().TenantID().AnyTimes().Return("")
 
-			a, err := NewAAD(logrus.NewEntry(logrus.StandardLogger()), env, logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
+			_, audit := testlog.NewAudit()
+			_, baseLog := testlog.New()
+			_, baseAccessLog := testlog.New()
+			a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -736,7 +745,10 @@ func TestCallback(t *testing.T) {
 			env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
 			env.EXPECT().TenantID().AnyTimes().Return("")
 
-			a, err := NewAAD(logrus.NewEntry(logrus.StandardLogger()), env, logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), clientID, clientkey, clientcerts, groups, mux.NewRouter(), tt.verifier)
+			_, audit := testlog.NewAudit()
+			_, baseLog := testlog.New()
+			_, baseAccessLog := testlog.New()
+			a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), clientID, clientkey, clientcerts, groups, mux.NewRouter(), tt.verifier)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -854,8 +866,10 @@ func TestClientAssertion(t *testing.T) {
 	env.EXPECT().TenantID().AnyTimes().Return("")
 
 	clientID := "00000000-0000-0000-0000-000000000000"
-
-	a, err := NewAAD(logrus.NewEntry(logrus.StandardLogger()), env, logrus.NewEntry(logrus.StandardLogger()), "", make([]byte, 32), clientID, clientkey, clientcerts, nil, mux.NewRouter(), nil)
+	_, audit := testlog.NewAudit()
+	_, baseLog := testlog.New()
+	_, baseAccessLog := testlog.New()
+	a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), clientID, clientkey, clientcerts, nil, mux.NewRouter(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

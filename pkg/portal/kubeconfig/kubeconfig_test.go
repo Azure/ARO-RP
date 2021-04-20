@@ -12,15 +12,17 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/portal/util/responsewriter"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestNew(t *testing.T) {
@@ -136,9 +138,17 @@ func TestNew(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
+			_env := mock_env.NewMockInterface(ctrl)
+			_env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+			_env.EXPECT().Hostname().AnyTimes().Return("testhost")
+			_env.EXPECT().Location().AnyTimes().Return("eastus")
+
 			aadAuthenticatedRouter := &mux.Router{}
 
-			k := New(logrus.NewEntry(logrus.StandardLogger()), nil, servingCert, elevatedGroupIDs, nil, dbPortal, nil, aadAuthenticatedRouter, &mux.Router{})
+			_, audit := testlog.NewAudit()
+			_, baseLog := testlog.New()
+			_, baseAccessLog := testlog.New()
+			k := New(baseLog, audit, _env, baseAccessLog, servingCert, elevatedGroupIDs, nil, dbPortal, nil, aadAuthenticatedRouter, &mux.Router{})
 
 			k.newToken = func() string { return password }
 

@@ -5,6 +5,7 @@ package middleware
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -12,7 +13,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 )
 
 type logResponseWriter struct {
@@ -50,7 +53,7 @@ func (rc *logReadCloser) Read(b []byte) (int, error) {
 	return n, err
 }
 
-func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
+func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t := time.Now()
@@ -73,16 +76,64 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 			})
 			log.Print("read request")
 
+			auditEntry := auditLog.WithFields(logrus.Fields{
+				audit.MetadataAdminOperation:  true,
+				audit.MetadataCreatedTime:     time.Now().UTC().Format(time.RFC3339),
+				audit.MetadataLogKind:         audit.IFXAuditLogKind,
+				audit.MetadataSource:          audit.SourceAdminPortal,
+				audit.EnvKeyAppID:             audit.SourceAdminPortal,
+				audit.EnvKeyCloudRole:         audit.CloudRoleRP,
+				audit.EnvKeyEnvironment:       env.Environment().Name,
+				audit.EnvKeyHostname:          env.Hostname(),
+				audit.EnvKeyLocation:          env.Location(),
+				audit.PayloadKeyCategory:      audit.CategoryResourceManagement,
+				audit.PayloadKeyOperationName: fmt.Sprintf("%s %s", r.Method, r.URL.Path),
+				audit.PayloadKeyCallerIdentities: []audit.CallerIdentity{
+					{
+						CallerIdentityType:  audit.CallerIdentityTypeUsername,
+						CallerIdentityValue: username,
+						CallerIPAddress:     r.RemoteAddr,
+					},
+				},
+				audit.PayloadKeyTargetResources: []audit.TargetResource{
+					{
+						TargetResourceName: r.URL.Path,
+						TargetResourceType: auditTargetResourceType(r),
+					},
+				},
+			})
+
 			defer func() {
+				statusCode := w.(*logResponseWriter).statusCode
 				log.WithFields(logrus.Fields{
 					"body_read_bytes":      r.Body.(*logReadCloser).bytes,
 					"body_written_bytes":   w.(*logResponseWriter).bytes,
 					"duration":             time.Since(t).Seconds(),
-					"response_status_code": w.(*logResponseWriter).statusCode,
+					"response_status_code": statusCode,
 				}).Print("sent response")
+
+				resultType := audit.ResultTypeSuccess
+				if statusCode >= http.StatusBadRequest {
+					resultType = audit.ResultTypeFail
+				}
+
+				auditEntry.WithFields(logrus.Fields{
+					audit.PayloadKeyResult: audit.Result{
+						ResultType:        resultType,
+						ResultDescription: fmt.Sprintf("Status code: %d", statusCode),
+					},
+				}).Info(audit.DefaultLogMessage)
 			}()
 
 			h.ServeHTTP(w, r)
 		})
 	}
+}
+
+func auditTargetResourceType(r *http.Request) string {
+	if matches := utillog.RXTolerantSubResourceID.FindStringSubmatch(r.URL.Path); matches != nil {
+		return matches[len(matches)-1]
+	}
+
+	return ""
 }

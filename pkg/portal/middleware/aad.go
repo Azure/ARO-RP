@@ -106,6 +106,7 @@ type aad struct {
 }
 
 func NewAAD(log *logrus.Entry,
+	audit *logrus.Entry,
 	env env.Core,
 	baseAccessLog *logrus.Entry,
 	hostname string,
@@ -151,7 +152,7 @@ func NewAAD(log *logrus.Entry,
 	a.store.Options.HttpOnly = true
 	a.store.Options.SameSite = http.SameSiteLaxMode
 
-	unauthenticatedRouter.NewRoute().Methods(http.MethodGet).Path("/callback").Handler(Log(baseAccessLog)(http.HandlerFunc(a.callback)))
+	unauthenticatedRouter.NewRoute().Methods(http.MethodGet).Path("/callback").Handler(Log(env, audit, baseAccessLog)(http.HandlerFunc(a.callback)))
 
 	return a, nil
 }

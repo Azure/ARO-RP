@@ -9,21 +9,25 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/listener"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 var (
@@ -34,6 +38,10 @@ func TestSecurity(t *testing.T) {
 	ctx := context.Background()
 	log := logrus.NewEntry(logrus.StandardLogger())
 
+	_, portalAccessLog := testlog.New()
+	_, portalLog := testlog.New()
+	auditHook, portalAuditLog := testlog.NewAudit()
+
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
@@ -41,6 +49,8 @@ func TestSecurity(t *testing.T) {
 	_env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
 	_env.EXPECT().Location().AnyTimes().Return("eastus")
 	_env.EXPECT().TenantID().AnyTimes().Return("00000000-0000-0000-0000-000000000001")
+	_env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+	_env.EXPECT().Hostname().AnyTimes().Return("testhost")
 
 	l := listener.NewListener()
 	defer l.Close()
@@ -76,7 +86,7 @@ func TestSecurity(t *testing.T) {
 		},
 	}
 
-	p := NewPortal(_env, log, log, l, sshl, nil, "", serverkey, servercerts, "", nil, nil, make([]byte, 32), sshkey, nil, elevatedGroupIDs, dbOpenShiftClusters, dbPortal, nil)
+	p := NewPortal(_env, portalAuditLog, portalLog, portalAccessLog, l, sshl, nil, "", serverkey, servercerts, "", nil, nil, make([]byte, 32), sshkey, nil, elevatedGroupIDs, dbOpenShiftClusters, dbPortal, nil)
 	go func() {
 		err := p.Run(ctx)
 		if err != nil {
@@ -90,11 +100,20 @@ func TestSecurity(t *testing.T) {
 		checkResponse                 func(*testing.T, bool, bool, *http.Response)
 		unauthenticatedWantStatusCode int
 		authenticatedWantStatusCode   int
+		wantAuditOperation            string
+		wantAuditTargetResources      []audit.TargetResource
 	}{
 		{
 			name: "/",
 			request: func() (*http.Request, error) {
 				return http.NewRequest(http.MethodGet, "https://server/", nil)
+			},
+			wantAuditOperation: "GET /",
+			wantAuditTargetResources: []audit.TargetResource{
+				{
+					TargetResourceType: "",
+					TargetResourceName: "/",
+				},
 			},
 		},
 		{
@@ -102,11 +121,25 @@ func TestSecurity(t *testing.T) {
 			request: func() (*http.Request, error) {
 				return http.NewRequest(http.MethodGet, "https://server/index.js", nil)
 			},
+			wantAuditOperation: "GET /index.js",
+			wantAuditTargetResources: []audit.TargetResource{
+				{
+					TargetResourceType: "",
+					TargetResourceName: "/index.js",
+				},
+			},
 		},
 		{
 			name: "/api/clusters",
 			request: func() (*http.Request, error) {
 				return http.NewRequest(http.MethodGet, "https://server/api/clusters", nil)
+			},
+			wantAuditOperation: "GET /api/clusters",
+			wantAuditTargetResources: []audit.TargetResource{
+				{
+					TargetResourceType: "",
+					TargetResourceName: "/api/clusters",
+				},
 			},
 		},
 		{
@@ -115,6 +148,13 @@ func TestSecurity(t *testing.T) {
 				return http.NewRequest(http.MethodPost, "https://server/api/logout", nil)
 			},
 			authenticatedWantStatusCode: http.StatusSeeOther,
+			wantAuditOperation:          "POST /api/logout",
+			wantAuditTargetResources: []audit.TargetResource{
+				{
+					TargetResourceType: "",
+					TargetResourceName: "/api/logout",
+				},
+			},
 		},
 		{
 			name: "/callback",
@@ -122,6 +162,13 @@ func TestSecurity(t *testing.T) {
 				return http.NewRequest(http.MethodGet, "https://server/callback", nil)
 			},
 			authenticatedWantStatusCode: http.StatusTemporaryRedirect,
+			wantAuditOperation:          "GET /callback",
+			wantAuditTargetResources: []audit.TargetResource{
+				{
+					TargetResourceType: "",
+					TargetResourceName: "/callback",
+				},
+			},
 		},
 		{
 			name: "/healthz/ready",
@@ -129,11 +176,25 @@ func TestSecurity(t *testing.T) {
 				return http.NewRequest(http.MethodGet, "https://server/healthz/ready", nil)
 			},
 			unauthenticatedWantStatusCode: http.StatusOK,
+			wantAuditOperation:            "GET /healthz/ready",
+			wantAuditTargetResources: []audit.TargetResource{
+				{
+					TargetResourceType: "",
+					TargetResourceName: "/healthz/ready",
+				},
+			},
 		},
 		{
 			name: "/kubeconfig/new",
 			request: func() (*http.Request, error) {
 				return http.NewRequest(http.MethodPost, "https://server/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/resourceName/kubeconfig/new", nil)
+			},
+			wantAuditOperation: "POST /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroupname/providers/microsoft.redhatopenshift/openshiftclusters/resourcename/kubeconfig/new",
+			wantAuditTargetResources: []audit.TargetResource{
+				{
+					TargetResourceType: "kubeconfig",
+					TargetResourceName: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroupname/providers/microsoft.redhatopenshift/openshiftclusters/resourcename/kubeconfig/new",
+				},
 			},
 		},
 		{
@@ -142,6 +203,13 @@ func TestSecurity(t *testing.T) {
 				return http.NewRequest(http.MethodPost, "https://server/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/resourceName/prometheus", nil)
 			},
 			authenticatedWantStatusCode: http.StatusTemporaryRedirect,
+			wantAuditOperation:          "POST /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroupname/providers/microsoft.redhatopenshift/openshiftclusters/resourcename/prometheus",
+			wantAuditTargetResources: []audit.TargetResource{
+				{
+					TargetResourceType: "prometheus",
+					TargetResourceName: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroupname/providers/microsoft.redhatopenshift/openshiftclusters/resourcename/prometheus",
+				},
+			},
 		},
 		{
 			name: "/ssh/new",
@@ -167,6 +235,13 @@ func TestSecurity(t *testing.T) {
 						t.Error(e.Error)
 					}
 				}
+			},
+			wantAuditOperation: "POST /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroupname/providers/microsoft.redhatopenshift/openshiftclusters/resourcename/ssh/new",
+			wantAuditTargetResources: []audit.TargetResource{
+				{
+					TargetResourceType: "ssh",
+					TargetResourceName: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroupname/providers/microsoft.redhatopenshift/openshiftclusters/resourcename/ssh/new",
+				},
 			},
 		},
 		{
@@ -201,6 +276,8 @@ func TestSecurity(t *testing.T) {
 			},
 		} {
 			t.Run(tt2.name+tt.name, func(t *testing.T) {
+				defer auditHook.Reset()
+
 				req, err := tt.request()
 				if err != nil {
 					t.Fatal(err)
@@ -243,6 +320,36 @@ func TestSecurity(t *testing.T) {
 				if tt.checkResponse != nil {
 					tt.checkResponse(t, tt2.authenticated, tt2.elevated, resp)
 				}
+
+				// no audit logs for https://server/doesnotexist
+				if tt.authenticatedWantStatusCode == http.StatusNotFound {
+					return
+				}
+
+				// skipping https://server because the http.ServeContent() calls in the
+				// portal's serve() and index() handlers[1] issued a call to io.Copy()[2]
+				// causes a race condition with the audit hook. The response was returned
+				// to the client and the testlog.AssertAuditPayloads() was called immediately,
+				// while the audit hook was still in-flight.
+				//
+				// note that the audit logs will still be recorded and emitted by the audit
+				// hook, so this is a non-issue in the Geneva environment.
+				//
+				// [1] https://github.com/Azure/ARO-RP/blob/master/pkg/portal/portal.go#L222-L247
+				// [2] https://go.googlesource.com/go/+/go1.16.2/src/net/http/fs.go#337
+				if tt.name == "/" || tt.name == "/index.js" {
+					return
+				}
+
+				payload := auditPayloadFixture()
+				payload.OperationName = tt.wantAuditOperation
+				payload.TargetResources = tt.wantAuditTargetResources
+				payload.Result.ResultDescription = fmt.Sprintf("Status code: %d", tt2.wantStatusCode)
+				if tt2.authenticated && tt.name != "/callback" && tt.name != "/healthz/ready" {
+					payload.CallerIdentities[0].CallerIdentityValue = "username"
+				}
+
+				testlog.AssertAuditPayloads(t, auditHook, []*audit.Payload{payload})
 			})
 		}
 	}
@@ -281,4 +388,30 @@ func addAuth(req *http.Request, groups []string) error {
 	req.Header.Add("Cookie", middleware.SessionName+"="+cookie)
 
 	return nil
+}
+
+func auditPayloadFixture() *audit.Payload {
+	return &audit.Payload{
+		EnvVer:               audit.IFXAuditVersion,
+		EnvName:              audit.IFXAuditName,
+		EnvFlags:             257,
+		EnvAppID:             audit.SourceAdminPortal,
+		EnvCloudName:         azure.PublicCloud.Name,
+		EnvCloudRole:         audit.CloudRoleRP,
+		EnvCloudRoleInstance: "testhost",
+		EnvCloudEnvironment:  azure.PublicCloud.Name,
+		EnvCloudLocation:     "eastus",
+		EnvCloudVer:          1,
+		CallerIdentities: []audit.CallerIdentity{
+			{
+				CallerDisplayName:  "",
+				CallerIdentityType: audit.CallerIdentityTypeUsername,
+				CallerIPAddress:    "bufferedpipe",
+			},
+		},
+		Category: audit.CategoryResourceManagement,
+		Result: audit.Result{
+			ResultType: audit.ResultTypeSuccess,
+		},
+	}
 }

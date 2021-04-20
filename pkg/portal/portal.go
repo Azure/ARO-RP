@@ -38,6 +38,7 @@ type Runnable interface {
 
 type portal struct {
 	env           env.Core
+	audit         *logrus.Entry
 	log           *logrus.Entry
 	baseAccessLog *logrus.Entry
 	l             net.Listener
@@ -67,6 +68,7 @@ type portal struct {
 }
 
 func NewPortal(env env.Core,
+	audit *logrus.Entry,
 	log *logrus.Entry,
 	baseAccessLog *logrus.Entry,
 	l net.Listener,
@@ -87,6 +89,7 @@ func NewPortal(env env.Core,
 	dialer proxy.Dialer) Runnable {
 	return &portal{
 		env:           env,
+		audit:         audit,
 		log:           log,
 		baseAccessLog: baseAccessLog,
 		l:             l,
@@ -160,14 +163,14 @@ func (p *portal) Run(ctx context.Context) error {
 	allGroups := append([]string{}, p.groupIDs...)
 	allGroups = append(allGroups, p.elevatedGroupIDs...)
 
-	p.aad, err = middleware.NewAAD(p.log, p.env, p.baseAccessLog, p.hostname, p.sessionKey, p.clientID, p.clientKey, p.clientCerts, allGroups, unauthenticatedRouter, p.verifier)
+	p.aad, err = middleware.NewAAD(p.log, p.audit, p.env, p.baseAccessLog, p.hostname, p.sessionKey, p.clientID, p.clientKey, p.clientCerts, allGroups, unauthenticatedRouter, p.verifier)
 	if err != nil {
 		return err
 	}
 
 	aadAuthenticatedRouter := r.NewRoute().Subrouter()
 	aadAuthenticatedRouter.Use(p.aad.AAD)
-	aadAuthenticatedRouter.Use(middleware.Log(p.baseAccessLog))
+	aadAuthenticatedRouter.Use(middleware.Log(p.env, p.audit, p.baseAccessLog))
 	aadAuthenticatedRouter.Use(p.aad.Redirect)
 	aadAuthenticatedRouter.Use(csrf.Protect(p.sessionKey, csrf.SameSite(csrf.SameSiteStrictMode), csrf.MaxAge(0)))
 
@@ -183,7 +186,7 @@ func (p *portal) Run(ctx context.Context) error {
 		return err
 	}
 
-	kubeconfig.New(p.log, p.baseAccessLog, p.servingCerts[0], p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer, aadAuthenticatedRouter, unauthenticatedRouter)
+	kubeconfig.New(p.log, p.audit, p.env, p.baseAccessLog, p.servingCerts[0], p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer, aadAuthenticatedRouter, unauthenticatedRouter)
 
 	prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer, aadAuthenticatedRouter)
 
@@ -199,7 +202,7 @@ func (p *portal) Run(ctx context.Context) error {
 }
 
 func (p *portal) unauthenticatedRoutes(r *mux.Router) {
-	logger := middleware.Log(p.baseAccessLog)
+	logger := middleware.Log(p.env, p.audit, p.baseAccessLog)
 
 	r.NewRoute().Methods(http.MethodGet).Path("/healthz/ready").Handler(logger(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
 }
