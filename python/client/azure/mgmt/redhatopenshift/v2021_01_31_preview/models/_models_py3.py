@@ -50,18 +50,19 @@ class APIServerProfile(Model):
 
 
 class Resource(Model):
-    """Resource.
+    """Common fields that are returned in the response for all Azure Resource
+    Manager resources.
 
     Variables are only populated by the server, and will be ignored when
     sending a request.
 
-    :ivar id: Fully qualified resource Id for the resource. Ex -
+    :ivar id: Fully qualified resource ID for the resource. Ex -
      /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
     :vartype id: str
     :ivar name: The name of the resource
     :vartype name: str
-    :ivar type: The type of the resource. Ex-
-     Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+    :ivar type: The type of the resource. E.g.
+     "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
     :vartype type: str
     """
 
@@ -85,19 +86,19 @@ class Resource(Model):
 
 
 class AzureEntityResource(Resource):
-    """The resource model definition for a Azure Resource Manager resource with an
-    etag.
+    """The resource model definition for an Azure Resource Manager resource with
+    an etag.
 
     Variables are only populated by the server, and will be ignored when
     sending a request.
 
-    :ivar id: Fully qualified resource Id for the resource. Ex -
+    :ivar id: Fully qualified resource ID for the resource. Ex -
      /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
     :vartype id: str
     :ivar name: The name of the resource
     :vartype name: str
-    :ivar type: The type of the resource. Ex-
-     Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+    :ivar type: The type of the resource. E.g.
+     "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
     :vartype type: str
     :ivar etag: Resource Etag.
     :vartype etag: str
@@ -296,17 +297,28 @@ class MasterProfile(Model):
      ~azure.mgmt.redhatopenshift.v2021_01_31_preview.models.VMSize
     :param subnet_id: The Azure resource ID of the master subnet.
     :type subnet_id: str
+    :param encryption_at_host: Whether master virtual machines are encrypted
+     at host. Possible values include: 'Disabled', 'Enabled'
+    :type encryption_at_host: str or
+     ~azure.mgmt.redhatopenshift.v2021_01_31_preview.models.enum
+    :param disk_encryption_set_id: The resource ID of an associated
+     DiskEncryptionSet, if applicable.
+    :type disk_encryption_set_id: str
     """
 
     _attribute_map = {
         'vm_size': {'key': 'vmSize', 'type': 'str'},
         'subnet_id': {'key': 'subnetId', 'type': 'str'},
+        'encryption_at_host': {'key': 'encryptionAtHost', 'type': 'str'},
+        'disk_encryption_set_id': {'key': 'diskEncryptionSetId', 'type': 'str'},
     }
 
-    def __init__(self, *, vm_size=None, subnet_id: str=None, **kwargs) -> None:
+    def __init__(self, *, vm_size=None, subnet_id: str=None, encryption_at_host=None, disk_encryption_set_id: str=None, **kwargs) -> None:
         super(MasterProfile, self).__init__(**kwargs)
         self.vm_size = vm_size
         self.subnet_id = subnet_id
+        self.encryption_at_host = encryption_at_host
+        self.disk_encryption_set_id = disk_encryption_set_id
 
 
 class NetworkProfile(Model):
@@ -316,34 +328,41 @@ class NetworkProfile(Model):
     :type pod_cidr: str
     :param service_cidr: The CIDR used for OpenShift/Kubernetes Services.
     :type service_cidr: str
+    :param sdn_provider: The SDN plugin used in the cluster. Possible values
+     include: 'OVNKubernetes', 'OpenShiftSDN'
+    :type sdn_provider: str or
+     ~azure.mgmt.redhatopenshift.v2021_01_31_preview.models.SDNProvider
     """
 
     _attribute_map = {
         'pod_cidr': {'key': 'podCidr', 'type': 'str'},
         'service_cidr': {'key': 'serviceCidr', 'type': 'str'},
+        'sdn_provider': {'key': 'sdnProvider', 'type': 'str'},
     }
 
-    def __init__(self, *, pod_cidr: str=None, service_cidr: str=None, **kwargs) -> None:
+    def __init__(self, *, pod_cidr: str=None, service_cidr: str=None, sdn_provider=None, **kwargs) -> None:
         super(NetworkProfile, self).__init__(**kwargs)
         self.pod_cidr = pod_cidr
         self.service_cidr = service_cidr
+        self.sdn_provider = sdn_provider
 
 
 class TrackedResource(Resource):
-    """The resource model definition for a ARM tracked top level resource.
+    """The resource model definition for an Azure Resource Manager tracked top
+    level resource.
 
     Variables are only populated by the server, and will be ignored when
     sending a request.
 
     All required parameters must be populated in order to send to Azure.
 
-    :ivar id: Fully qualified resource Id for the resource. Ex -
+    :ivar id: Fully qualified resource ID for the resource. Ex -
      /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
     :vartype id: str
     :ivar name: The name of the resource
     :vartype name: str
-    :ivar type: The type of the resource. Ex-
-     Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+    :ivar type: The type of the resource. E.g.
+     "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
     :vartype type: str
     :param tags: Resource tags.
     :type tags: dict[str, str]
@@ -380,13 +399,13 @@ class OpenShiftCluster(TrackedResource):
 
     All required parameters must be populated in order to send to Azure.
 
-    :ivar id: Fully qualified resource Id for the resource. Ex -
+    :ivar id: Fully qualified resource ID for the resource. Ex -
      /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
     :vartype id: str
     :ivar name: The name of the resource
     :vartype name: str
-    :ivar type: The type of the resource. Ex-
-     Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+    :ivar type: The type of the resource. E.g.
+     "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
     :vartype type: str
     :param tags: Resource tags.
     :type tags: dict[str, str]
@@ -421,6 +440,9 @@ class OpenShiftCluster(TrackedResource):
     :param ingress_profiles: The cluster ingress profiles.
     :type ingress_profiles:
      list[~azure.mgmt.redhatopenshift.v2021_01_31_preview.models.IngressProfile]
+    :ivar system_data: The system meta data relating to this resource.
+    :vartype system_data:
+     ~azure.mgmt.redhatopenshift.v2021_01_31_preview.models.SystemData
     """
 
     _validation = {
@@ -428,6 +450,7 @@ class OpenShiftCluster(TrackedResource):
         'name': {'readonly': True},
         'type': {'readonly': True},
         'location': {'required': True},
+        'system_data': {'readonly': True},
     }
 
     _attribute_map = {
@@ -445,6 +468,7 @@ class OpenShiftCluster(TrackedResource):
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
+        'system_data': {'key': 'systemData', 'type': 'SystemData'},
     }
 
     def __init__(self, *, location: str, tags=None, provisioning_state=None, cluster_profile=None, console_profile=None, service_principal_profile=None, network_profile=None, master_profile=None, worker_profiles=None, apiserver_profile=None, ingress_profiles=None, **kwargs) -> None:
@@ -458,6 +482,24 @@ class OpenShiftCluster(TrackedResource):
         self.worker_profiles = worker_profiles
         self.apiserver_profile = apiserver_profile
         self.ingress_profiles = ingress_profiles
+        self.system_data = None
+
+
+class OpenShiftClusterAdminKubeconfig(Model):
+    """OpenShiftClusterAdminKubeconfig represents an OpenShift cluster's admin
+    kubeconfig.
+
+    :param kubeconfig: The base64-encoded kubeconfig file.
+    :type kubeconfig: str
+    """
+
+    _attribute_map = {
+        'kubeconfig': {'key': 'kubeconfig', 'type': 'str'},
+    }
+
+    def __init__(self, *, kubeconfig: str=None, **kwargs) -> None:
+        super(OpenShiftClusterAdminKubeconfig, self).__init__(**kwargs)
+        self.kubeconfig = kubeconfig
 
 
 class OpenShiftClusterCredentials(Model):
@@ -570,19 +612,19 @@ class Operation(Model):
 
 
 class ProxyResource(Resource):
-    """The resource model definition for a ARM proxy resource. It will have
-    everything other than required location and tags.
+    """The resource model definition for an Azure Resource Manager proxy resource.
+    It will have everything other than required location and tags.
 
     Variables are only populated by the server, and will be ignored when
     sending a request.
 
-    :ivar id: Fully qualified resource Id for the resource. Ex -
+    :ivar id: Fully qualified resource ID for the resource. Ex -
      /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
     :vartype id: str
     :ivar name: The name of the resource
     :vartype name: str
-    :ivar type: The type of the resource. Ex-
-     Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+    :ivar type: The type of the resource. E.g.
+     "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
     :vartype type: str
     """
 
@@ -622,6 +664,48 @@ class ServicePrincipalProfile(Model):
         self.client_secret = client_secret
 
 
+class SystemData(Model):
+    """Metadata pertaining to creation and last modification of the resource.
+
+    :param created_by: The identity that created the resource.
+    :type created_by: str
+    :param created_by_type: The type of identity that created the resource.
+     Possible values include: 'User', 'Application', 'ManagedIdentity', 'Key'
+    :type created_by_type: str or
+     ~azure.mgmt.redhatopenshift.v2021_01_31_preview.models.CreatedByType
+    :param created_at: The timestamp of resource creation (UTC).
+    :type created_at: datetime
+    :param last_modified_by: The identity that last modified the resource.
+    :type last_modified_by: str
+    :param last_modified_by_type: The type of identity that last modified the
+     resource. Possible values include: 'User', 'Application',
+     'ManagedIdentity', 'Key'
+    :type last_modified_by_type: str or
+     ~azure.mgmt.redhatopenshift.v2021_01_31_preview.models.CreatedByType
+    :param last_modified_at: The type of identity that last modified the
+     resource.
+    :type last_modified_at: datetime
+    """
+
+    _attribute_map = {
+        'created_by': {'key': 'createdBy', 'type': 'str'},
+        'created_by_type': {'key': 'createdByType', 'type': 'str'},
+        'created_at': {'key': 'createdAt', 'type': 'iso-8601'},
+        'last_modified_by': {'key': 'lastModifiedBy', 'type': 'str'},
+        'last_modified_by_type': {'key': 'lastModifiedByType', 'type': 'str'},
+        'last_modified_at': {'key': 'lastModifiedAt', 'type': 'iso-8601'},
+    }
+
+    def __init__(self, *, created_by: str=None, created_by_type=None, created_at=None, last_modified_by: str=None, last_modified_by_type=None, last_modified_at=None, **kwargs) -> None:
+        super(SystemData, self).__init__(**kwargs)
+        self.created_by = created_by
+        self.created_by_type = created_by_type
+        self.created_at = created_at
+        self.last_modified_by = last_modified_by
+        self.last_modified_by_type = last_modified_by_type
+        self.last_modified_at = last_modified_at
+
+
 class WorkerProfile(Model):
     """WorkerProfile represents a worker profile.
 
@@ -642,6 +726,13 @@ class WorkerProfile(Model):
     :type subnet_id: str
     :param count: The number of worker VMs.
     :type count: int
+    :param encryption_at_host: Whether master virtual machines are encrypted
+     at host. Possible values include: 'Disabled', 'Enabled'
+    :type encryption_at_host: str or
+     ~azure.mgmt.redhatopenshift.v2021_01_31_preview.models.enum
+    :param disk_encryption_set_id: The resource ID of an associated
+     DiskEncryptionSet, if applicable.
+    :type disk_encryption_set_id: str
     """
 
     _attribute_map = {
@@ -650,12 +741,16 @@ class WorkerProfile(Model):
         'disk_size_gb': {'key': 'diskSizeGB', 'type': 'int'},
         'subnet_id': {'key': 'subnetId', 'type': 'str'},
         'count': {'key': 'count', 'type': 'int'},
+        'encryption_at_host': {'key': 'encryptionAtHost', 'type': 'str'},
+        'disk_encryption_set_id': {'key': 'diskEncryptionSetId', 'type': 'str'},
     }
 
-    def __init__(self, *, name: str=None, vm_size=None, disk_size_gb: int=None, subnet_id: str=None, count: int=None, **kwargs) -> None:
+    def __init__(self, *, name: str=None, vm_size=None, disk_size_gb: int=None, subnet_id: str=None, count: int=None, encryption_at_host=None, disk_encryption_set_id: str=None, **kwargs) -> None:
         super(WorkerProfile, self).__init__(**kwargs)
         self.name = name
         self.vm_size = vm_size
         self.disk_size_gb = disk_size_gb
         self.subnet_id = subnet_id
         self.count = count
+        self.encryption_at_host = encryption_at_host
+        self.disk_encryption_set_id = disk_encryption_set_id

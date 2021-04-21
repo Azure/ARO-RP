@@ -24,6 +24,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/go-autorest/tracing"
 )
@@ -41,15 +42,15 @@ type APIServerProfile struct {
 	IP *string `json:"ip,omitempty"`
 }
 
-// AzureEntityResource the resource model definition for a Azure Resource Manager resource with an etag.
+// AzureEntityResource the resource model definition for an Azure Resource Manager resource with an etag.
 type AzureEntityResource struct {
 	// Etag - READ-ONLY; Resource Etag.
 	Etag *string `json:"etag,omitempty"`
-	// ID - READ-ONLY; Fully qualified resource Id for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
 	ID *string `json:"id,omitempty"`
 	// Name - READ-ONLY; The name of the resource
 	Name *string `json:"name,omitempty"`
-	// Type - READ-ONLY; The type of the resource. Ex- Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
 	Type *string `json:"type,omitempty"`
 }
 
@@ -117,6 +118,10 @@ type MasterProfile struct {
 	VMSize VMSize `json:"vmSize,omitempty"`
 	// SubnetID - The Azure resource ID of the master subnet.
 	SubnetID *string `json:"subnetId,omitempty"`
+	// EncryptionAtHost - Whether master virtual machines are encrypted at host. Possible values include: 'Disabled', 'Enabled'
+	EncryptionAtHost EncryptionAtHost `json:"encryptionAtHost,omitempty"`
+	// DiskEncryptionSetID - The resource ID of an associated DiskEncryptionSet, if applicable.
+	DiskEncryptionSetID *string `json:"diskEncryptionSetId,omitempty"`
 }
 
 // NetworkProfile networkProfile represents a network profile.
@@ -125,6 +130,8 @@ type NetworkProfile struct {
 	PodCidr *string `json:"podCidr,omitempty"`
 	// ServiceCidr - The CIDR used for OpenShift/Kubernetes Services.
 	ServiceCidr *string `json:"serviceCidr,omitempty"`
+	// SdnProvider - The SDN plugin used in the cluster. Possible values include: 'OVNKubernetes', 'OpenShiftSDN'
+	SdnProvider SDNProvider `json:"sdnProvider,omitempty"`
 }
 
 // OpenShiftCluster openShiftCluster represents an Azure Red Hat OpenShift cluster.
@@ -132,15 +139,17 @@ type OpenShiftCluster struct {
 	autorest.Response `json:"-"`
 	// OpenShiftClusterProperties - The cluster properties.
 	*OpenShiftClusterProperties `json:"properties,omitempty"`
+	// SystemData - READ-ONLY; The system meta data relating to this resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
 	// Tags - Resource tags.
 	Tags map[string]*string `json:"tags"`
 	// Location - The geo-location where the resource lives
 	Location *string `json:"location,omitempty"`
-	// ID - READ-ONLY; Fully qualified resource Id for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
 	ID *string `json:"id,omitempty"`
 	// Name - READ-ONLY; The name of the resource
 	Name *string `json:"name,omitempty"`
-	// Type - READ-ONLY; The type of the resource. Ex- Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
 	Type *string `json:"type,omitempty"`
 }
 
@@ -176,6 +185,15 @@ func (osc *OpenShiftCluster) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				osc.OpenShiftClusterProperties = &openShiftClusterProperties
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				osc.SystemData = &systemData
 			}
 		case "tags":
 			if v != nil {
@@ -226,6 +244,14 @@ func (osc *OpenShiftCluster) UnmarshalJSON(body []byte) error {
 	}
 
 	return nil
+}
+
+// OpenShiftClusterAdminKubeconfig openShiftClusterAdminKubeconfig represents an OpenShift cluster's admin
+// kubeconfig.
+type OpenShiftClusterAdminKubeconfig struct {
+	autorest.Response `json:"-"`
+	// Kubeconfig - The base64-encoded kubeconfig file.
+	Kubeconfig *string `json:"kubeconfig,omitempty"`
 }
 
 // OpenShiftClusterCredentials openShiftClusterCredentials represents an OpenShift cluster's credentials.
@@ -421,12 +447,25 @@ type OpenShiftClusterProperties struct {
 // OpenShiftClustersCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type OpenShiftClustersCreateOrUpdateFuture struct {
-	azure.Future
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(OpenShiftClustersClient) (OpenShiftCluster, error)
 }
 
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *OpenShiftClustersCreateOrUpdateFuture) Result(client OpenShiftClustersClient) (osc OpenShiftCluster, err error) {
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *OpenShiftClustersCreateOrUpdateFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for OpenShiftClustersCreateOrUpdateFuture.Result.
+func (future *OpenShiftClustersCreateOrUpdateFuture) result(client OpenShiftClustersClient) (osc OpenShiftCluster, err error) {
 	var done bool
 	done, err = future.DoneWithContext(context.Background(), client)
 	if err != nil {
@@ -434,6 +473,7 @@ func (future *OpenShiftClustersCreateOrUpdateFuture) Result(client OpenShiftClus
 		return
 	}
 	if !done {
+		osc.Response.Response = future.Response()
 		err = azure.NewAsyncOpIncompleteError("redhatopenshift.OpenShiftClustersCreateOrUpdateFuture")
 		return
 	}
@@ -450,12 +490,25 @@ func (future *OpenShiftClustersCreateOrUpdateFuture) Result(client OpenShiftClus
 // OpenShiftClustersDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type OpenShiftClustersDeleteFuture struct {
-	azure.Future
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(OpenShiftClustersClient) (autorest.Response, error)
 }
 
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *OpenShiftClustersDeleteFuture) Result(client OpenShiftClustersClient) (ar autorest.Response, err error) {
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *OpenShiftClustersDeleteFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for OpenShiftClustersDeleteFuture.Result.
+func (future *OpenShiftClustersDeleteFuture) result(client OpenShiftClustersClient) (ar autorest.Response, err error) {
 	var done bool
 	done, err = future.DoneWithContext(context.Background(), client)
 	if err != nil {
@@ -463,6 +516,7 @@ func (future *OpenShiftClustersDeleteFuture) Result(client OpenShiftClustersClie
 		return
 	}
 	if !done {
+		ar.Response = future.Response()
 		err = azure.NewAsyncOpIncompleteError("redhatopenshift.OpenShiftClustersDeleteFuture")
 		return
 	}
@@ -473,12 +527,25 @@ func (future *OpenShiftClustersDeleteFuture) Result(client OpenShiftClustersClie
 // OpenShiftClustersUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type OpenShiftClustersUpdateFuture struct {
-	azure.Future
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(OpenShiftClustersClient) (OpenShiftCluster, error)
 }
 
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *OpenShiftClustersUpdateFuture) Result(client OpenShiftClustersClient) (osc OpenShiftCluster, err error) {
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *OpenShiftClustersUpdateFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for OpenShiftClustersUpdateFuture.Result.
+func (future *OpenShiftClustersUpdateFuture) result(client OpenShiftClustersClient) (osc OpenShiftCluster, err error) {
 	var done bool
 	done, err = future.DoneWithContext(context.Background(), client)
 	if err != nil {
@@ -486,6 +553,7 @@ func (future *OpenShiftClustersUpdateFuture) Result(client OpenShiftClustersClie
 		return
 	}
 	if !done {
+		osc.Response.Response = future.Response()
 		err = azure.NewAsyncOpIncompleteError("redhatopenshift.OpenShiftClustersUpdateFuture")
 		return
 	}
@@ -721,24 +789,24 @@ func NewOperationListPage(cur OperationList, getNextPage func(context.Context, O
 	}
 }
 
-// ProxyResource the resource model definition for a ARM proxy resource. It will have everything other than
-// required location and tags
+// ProxyResource the resource model definition for an Azure Resource Manager proxy resource. It will have
+// everything other than required location and tags
 type ProxyResource struct {
-	// ID - READ-ONLY; Fully qualified resource Id for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
 	ID *string `json:"id,omitempty"`
 	// Name - READ-ONLY; The name of the resource
 	Name *string `json:"name,omitempty"`
-	// Type - READ-ONLY; The type of the resource. Ex- Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
 	Type *string `json:"type,omitempty"`
 }
 
-// Resource ...
+// Resource common fields that are returned in the response for all Azure Resource Manager resources
 type Resource struct {
-	// ID - READ-ONLY; Fully qualified resource Id for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
 	ID *string `json:"id,omitempty"`
 	// Name - READ-ONLY; The name of the resource
 	Name *string `json:"name,omitempty"`
-	// Type - READ-ONLY; The type of the resource. Ex- Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
 	Type *string `json:"type,omitempty"`
 }
 
@@ -750,17 +818,33 @@ type ServicePrincipalProfile struct {
 	ClientSecret *string `json:"clientSecret,omitempty"`
 }
 
-// TrackedResource the resource model definition for a ARM tracked top level resource
+// SystemData metadata pertaining to creation and last modification of the resource.
+type SystemData struct {
+	// CreatedBy - The identity that created the resource.
+	CreatedBy *string `json:"createdBy,omitempty"`
+	// CreatedByType - The type of identity that created the resource. Possible values include: 'User', 'Application', 'ManagedIdentity', 'Key'
+	CreatedByType CreatedByType `json:"createdByType,omitempty"`
+	// CreatedAt - The timestamp of resource creation (UTC).
+	CreatedAt *date.Time `json:"createdAt,omitempty"`
+	// LastModifiedBy - The identity that last modified the resource.
+	LastModifiedBy *string `json:"lastModifiedBy,omitempty"`
+	// LastModifiedByType - The type of identity that last modified the resource. Possible values include: 'User', 'Application', 'ManagedIdentity', 'Key'
+	LastModifiedByType CreatedByType `json:"lastModifiedByType,omitempty"`
+	// LastModifiedAt - The type of identity that last modified the resource.
+	LastModifiedAt *date.Time `json:"lastModifiedAt,omitempty"`
+}
+
+// TrackedResource the resource model definition for an Azure Resource Manager tracked top level resource
 type TrackedResource struct {
 	// Tags - Resource tags.
 	Tags map[string]*string `json:"tags"`
 	// Location - The geo-location where the resource lives
 	Location *string `json:"location,omitempty"`
-	// ID - READ-ONLY; Fully qualified resource Id for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
 	ID *string `json:"id,omitempty"`
 	// Name - READ-ONLY; The name of the resource
 	Name *string `json:"name,omitempty"`
-	// Type - READ-ONLY; The type of the resource. Ex- Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
 	Type *string `json:"type,omitempty"`
 }
 
@@ -788,4 +872,8 @@ type WorkerProfile struct {
 	SubnetID *string `json:"subnetId,omitempty"`
 	// Count - The number of worker VMs.
 	Count *int32 `json:"count,omitempty"`
+	// EncryptionAtHost - Whether master virtual machines are encrypted at host. Possible values include: 'EncryptionAtHost1Disabled', 'EncryptionAtHost1Enabled'
+	EncryptionAtHost EncryptionAtHost1 `json:"encryptionAtHost,omitempty"`
+	// DiskEncryptionSetID - The resource ID of an associated DiskEncryptionSet, if applicable.
+	DiskEncryptionSetID *string `json:"diskEncryptionSetId,omitempty"`
 }

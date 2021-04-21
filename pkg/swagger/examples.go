@@ -94,6 +94,8 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 						body = g.exampleOpenShiftClusterResponse()
 					case "#/definitions/OpenShiftClusterCredentials":
 						body = g.exampleOpenShiftClusterCredentialsResponse()
+					case "#/definitions/OpenShiftClusterAdminKubeconfig":
+						body = g.exampleOpenShiftClusterAdminKubeconfigResponse()
 					case "#/definitions/OpenShiftClusterList":
 						body = g.exampleOpenShiftClusterListResponse()
 					case "#/definitions/OperationList":

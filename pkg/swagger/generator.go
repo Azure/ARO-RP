@@ -15,12 +15,13 @@ const apiv20200430Path = "github.com/Azure/ARO-RP/pkg/api/v20200430"
 const apiv20210131previewPath = "github.com/Azure/ARO-RP/pkg/api/v20210131preview"
 
 type generator struct {
-	exampleOpenShiftClusterPutParameter        func() interface{}
-	exampleOpenShiftClusterPatchParameter      func() interface{}
-	exampleOpenShiftClusterResponse            func() interface{}
-	exampleOpenShiftClusterCredentialsResponse func() interface{}
-	exampleOpenShiftClusterListResponse        func() interface{}
-	exampleOperationListResponse               func() interface{}
+	exampleOpenShiftClusterPutParameter            func() interface{}
+	exampleOpenShiftClusterPatchParameter          func() interface{}
+	exampleOpenShiftClusterResponse                func() interface{}
+	exampleOpenShiftClusterCredentialsResponse     func() interface{}
+	exampleOpenShiftClusterAdminKubeconfigResponse func() interface{}
+	exampleOpenShiftClusterListResponse            func() interface{}
+	exampleOperationListResponse                   func() interface{}
 
 	kubeconfig         bool
 	systemData         bool
@@ -41,15 +42,16 @@ var apis = map[string]*generator{
 		xmsEnum:            []string{},
 	},
 	apiv20210131previewPath: {
-		exampleOpenShiftClusterPutParameter:        v20210131preview.ExampleOpenShiftClusterPutParameter,
-		exampleOpenShiftClusterPatchParameter:      v20210131preview.ExampleOpenShiftClusterPatchParameter,
-		exampleOpenShiftClusterResponse:            v20210131preview.ExampleOpenShiftClusterResponse,
-		exampleOpenShiftClusterCredentialsResponse: v20210131preview.ExampleOpenShiftClusterCredentialsResponse,
-		exampleOpenShiftClusterListResponse:        v20210131preview.ExampleOpenShiftClusterListResponse,
-		exampleOperationListResponse:               api.ExampleOperationListResponse,
+		exampleOpenShiftClusterPutParameter:            v20210131preview.ExampleOpenShiftClusterPutParameter,
+		exampleOpenShiftClusterPatchParameter:          v20210131preview.ExampleOpenShiftClusterPatchParameter,
+		exampleOpenShiftClusterResponse:                v20210131preview.ExampleOpenShiftClusterResponse,
+		exampleOpenShiftClusterCredentialsResponse:     v20210131preview.ExampleOpenShiftClusterCredentialsResponse,
+		exampleOpenShiftClusterAdminKubeconfigResponse: v20210131preview.ExampleOpenShiftClusterAdminKubeconfigResponse,
+		exampleOpenShiftClusterListResponse:            v20210131preview.ExampleOpenShiftClusterListResponse,
+		exampleOperationListResponse:                   api.ExampleOperationListResponse,
 
 		kubeconfig:         true,
-		xmsEnum:            []string{"VMSize"},
+		xmsEnum:            []string{"VMSize", "SDNProvider"},
 		commonTypesVersion: "v2",
 		systemData:         true,
 	},
