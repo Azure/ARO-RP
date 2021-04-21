@@ -8,12 +8,10 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/v20191231preview"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-func generateExamples(outputDir string, s *Swagger) error {
+func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 	err := os.RemoveAll(outputDir + "/examples")
 	if err != nil {
 		return err
@@ -41,17 +39,17 @@ func generateExamples(outputDir string, s *Swagger) error {
 				switch param := param.(type) {
 				case Reference:
 					switch param.Ref {
-					case "../../../../../common-types/resource-management/v1/types.json#/parameters/ApiVersionParameter":
+					case "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ApiVersionParameter":
 						example.Parameters = append(example.Parameters, NameParameter{
 							Name:      "api-version",
 							Parameter: stringutils.LastTokenByte(outputDir, '/'),
 						})
-					case "../../../../../common-types/resource-management/v1/types.json#/parameters/SubscriptionIdParameter":
+					case "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/SubscriptionIdParameter":
 						example.Parameters = append(example.Parameters, NameParameter{
 							Name:      "subscriptionId",
 							Parameter: "subscriptionId",
 						})
-					case "../../../../../common-types/resource-management/v1/types.json#/parameters/ResourceGroupNameParameter":
+					case "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ResourceGroupNameParameter":
 						example.Parameters = append(example.Parameters, NameParameter{
 							Name:      "resourceGroupName",
 							Parameter: "resourceGroup",
@@ -69,12 +67,12 @@ func generateExamples(outputDir string, s *Swagger) error {
 						case "#/definitions/OpenShiftCluster":
 							example.Parameters = append(example.Parameters, NameParameter{
 								Name:      param.Name,
-								Parameter: v20191231preview.ExampleOpenShiftClusterPutParameter(),
+								Parameter: g.exampleOpenShiftClusterPutParameter(),
 							})
 						case "#/definitions/OpenShiftClusterUpdate":
 							example.Parameters = append(example.Parameters, NameParameter{
 								Name:      param.Name,
-								Parameter: v20191231preview.ExampleOpenShiftClusterPatchParameter(),
+								Parameter: g.exampleOpenShiftClusterPatchParameter(),
 							})
 						}
 					}
@@ -93,13 +91,15 @@ func generateExamples(outputDir string, s *Swagger) error {
 				if response.Schema != nil {
 					switch response.Schema.Ref {
 					case "#/definitions/OpenShiftCluster":
-						body = v20191231preview.ExampleOpenShiftClusterResponse()
+						body = g.exampleOpenShiftClusterResponse()
 					case "#/definitions/OpenShiftClusterCredentials":
-						body = v20191231preview.ExampleOpenShiftClusterCredentialsResponse()
+						body = g.exampleOpenShiftClusterCredentialsResponse()
+					case "#/definitions/OpenShiftClusterAdminKubeconfig":
+						body = g.exampleOpenShiftClusterAdminKubeconfigResponse()
 					case "#/definitions/OpenShiftClusterList":
-						body = v20191231preview.ExampleOpenShiftClusterListResponse()
+						body = g.exampleOpenShiftClusterListResponse()
 					case "#/definitions/OperationList":
-						body = api.ExampleOperationListResponse()
+						body = g.exampleOperationListResponse()
 					}
 				}
 

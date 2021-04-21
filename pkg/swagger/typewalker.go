@@ -22,10 +22,10 @@ type ModelAsString bool
 type typeWalker struct {
 	pkg         *packages.Package
 	enums       map[types.Type][]interface{}
-	xmsEnumList map[string]struct{}
+	xmsEnumList []string
 }
 
-func newTypeWalker(pkgname string, xmsEnumList map[string]struct{}) (*typeWalker, error) {
+func newTypeWalker(pkgname string, xmsEnumList []string) (*typeWalker, error) {
 	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo}, pkgname)
 	if err != nil {
 		return nil, err
@@ -159,10 +159,12 @@ func (tw *typeWalker) _define(definitions Definitions, t *types.Named) {
 	// https://github.com/Azure/autorest/tree/master/docs/extensions#x-ms-enum
 	c := strings.Split(t.String(), ".")
 	name := c[(len(c) - 1)]
-	if _, ok := tw.xmsEnumList[name]; ok {
-		s.XMSEnum = &XMSEnum{
-			ModelAsString: true,
-			Name:          name,
+	for _, xname := range tw.xmsEnumList {
+		if xname == name {
+			s.XMSEnum = &XMSEnum{
+				ModelAsString: true,
+				Name:          name,
+			}
 		}
 	}
 
@@ -183,7 +185,7 @@ func (tw *typeWalker) define(definitions Definitions, name string) {
 }
 
 // define adds a Definition for the named types in the given package
-func define(definitions Definitions, pkgname string, xmsEnumList map[string]struct{}, names ...string) error {
+func define(definitions Definitions, pkgname string, xmsEnumList []string, names ...string) error {
 	th, err := newTypeWalker(pkgname, xmsEnumList)
 	if err != nil {
 		return err
