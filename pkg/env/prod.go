@@ -177,7 +177,7 @@ func (p *prod) InitializeAuthorizers() error {
 		p.armClientAuthorizer = clientauthorizer.NewARM(p.log, p.Core)
 
 	} else {
-		armClientAuthorizer, err := clientauthorizer.NewAdmin(
+		armClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
 			p.log,
 			"/etc/aro-rp/arm-ca-bundle.pem",
 			os.Getenv("ARM_API_CLIENT_CERT_COMMON_NAME"),
@@ -189,7 +189,7 @@ func (p *prod) InitializeAuthorizers() error {
 		p.armClientAuthorizer = armClientAuthorizer
 	}
 
-	adminClientAuthorizer, err := clientauthorizer.NewAdmin(
+	adminClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
 		p.log,
 		"/etc/aro-rp/admin-ca-bundle.pem",
 		os.Getenv("ADMIN_API_CLIENT_CERT_COMMON_NAME"),

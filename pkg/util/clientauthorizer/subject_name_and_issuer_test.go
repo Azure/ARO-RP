@@ -13,7 +13,7 @@ import (
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 )
 
-func TestAdminClientAuthorizer(t *testing.T) {
+func TestSubjectNameAndIssuer(t *testing.T) {
 	caBundlePath := "/fake/path/to/ca/cert.pem"
 	log := logrus.NewEntry(logrus.StandardLogger())
 
@@ -119,7 +119,7 @@ func TestAdminClientAuthorizer(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			adminAuthorizer := &admin{
+			authorizer := &subjectNameAndIssuer{
 				clientCertCommonName: "validclient",
 
 				log: log,
@@ -132,7 +132,7 @@ func TestAdminClientAuthorizer(t *testing.T) {
 					return utiltls.CertAsBytes(validCaCerts...)
 				},
 			}
-			err := adminAuthorizer.readCABundle(caBundlePath)
+			err := authorizer.readCABundle(caBundlePath)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -142,7 +142,7 @@ func TestAdminClientAuthorizer(t *testing.T) {
 				t.Error(err)
 			}
 
-			result := adminAuthorizer.IsAuthorized(cs)
+			result := authorizer.IsAuthorized(cs)
 			if result != tt.want {
 				t.Error(result)
 			}
@@ -150,7 +150,7 @@ func TestAdminClientAuthorizer(t *testing.T) {
 	}
 }
 
-func TestAdminClientAuthorizerReadCABundle(t *testing.T) {
+func TestSubjectNameAndIssuerReadCABundle(t *testing.T) {
 	validCaKey, validCaCerts, err := utiltls.GenerateKeyAndCertificate("validca", nil, nil, true, false)
 	if err != nil {
 		t.Fatal(err)
@@ -189,19 +189,19 @@ func TestAdminClientAuthorizerReadCABundle(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			adminAuthorizer := &admin{
+			authorizer := &subjectNameAndIssuer{
 				clientCertCommonName: "validclient",
 
 				log:      logrus.NewEntry(logrus.StandardLogger()),
 				readFile: tt.readFile,
 			}
 
-			if adminAuthorizer.IsAuthorized(cs) {
+			if authorizer.IsAuthorized(cs) {
 				t.Error("expected deny before the readCABundle call")
 			}
 
-			readCABundleErr := adminAuthorizer.readCABundle("/fake/path/to/ca/cert.pem")
-			IsAuthorized := adminAuthorizer.IsAuthorized(cs)
+			readCABundleErr := authorizer.readCABundle("/fake/path/to/ca/cert.pem")
+			IsAuthorized := authorizer.IsAuthorized(cs)
 
 			if tt.want {
 				if readCABundleErr != nil {
