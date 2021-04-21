@@ -109,6 +109,14 @@ type ServicePrincipalProfile struct {
 	ClientSecret string `json:"clientSecret,omitempty" mutable:"true"`
 }
 
+// SDNProvider constants.
+type SDNProvider string
+
+const (
+	OpenShiftSDN  SDNProvider = "OpenShiftSDN"
+	OVNKubernetes SDNProvider = "OVNKubernetes"
+)
+
 // NetworkProfile represents a network profile.
 type NetworkProfile struct {
 	// The CIDR used for OpenShift/Kubernetes Pods.
@@ -116,7 +124,18 @@ type NetworkProfile struct {
 
 	// The CIDR used for OpenShift/Kubernetes Services.
 	ServiceCIDR string `json:"serviceCidr,omitempty"`
+
+	// The SDN plugin used in the cluster.
+	SDNProvider SDNProvider `json:"sdnProvider,omitempty"`
 }
+
+// EncryptionAtHost constants.
+type EncryptionAtHost string
+
+const (
+	EncryptionAtHostDisabled EncryptionAtHost = "Disabled"
+	EncryptionAtHostEnabled  EncryptionAtHost = "Enabled"
+)
 
 // MasterProfile represents a master profile.
 type MasterProfile struct {
@@ -125,6 +144,12 @@ type MasterProfile struct {
 
 	// The Azure resource ID of the master subnet.
 	SubnetID string `json:"subnetId,omitempty"`
+
+	// Whether master virtual machines are encrypted at host.
+	EncryptionAtHost EncryptionAtHost `json:"encryptionAtHost,omitempty"`
+
+	// The resource ID of an associated DiskEncryptionSet, if applicable.
+	DiskEncryptionSetID string `json:"diskEncryptionSetId,omitempty"`
 }
 
 // VMSize represents a VM size.
@@ -171,6 +196,12 @@ type WorkerProfile struct {
 
 	// The number of worker VMs.
 	Count int `json:"count,omitempty"`
+
+	// Whether master virtual machines are encrypted at host.
+	EncryptionAtHost EncryptionAtHost `json:"encryptionAtHost,omitempty"`
+
+	// The resource ID of an associated DiskEncryptionSet, if applicable.
+	DiskEncryptionSetID string `json:"diskEncryptionSetId,omitempty"`
 }
 
 // APIServerProfile represents an API server profile.
