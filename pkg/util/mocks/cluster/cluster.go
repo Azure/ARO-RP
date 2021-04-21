@@ -11,30 +11,30 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockInterface is a mock of Interface interface
+// MockInterface is a mock of Interface interface.
 type MockInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfaceMockRecorder
 }
 
-// MockInterfaceMockRecorder is the mock recorder for MockInterface
+// MockInterfaceMockRecorder is the mock recorder for MockInterface.
 type MockInterfaceMockRecorder struct {
 	mock *MockInterface
 }
 
-// NewMockInterface creates a new mock instance
+// NewMockInterface creates a new mock instance.
 func NewMockInterface(ctrl *gomock.Controller) *MockInterface {
 	mock := &MockInterface{ctrl: ctrl}
 	mock.recorder = &MockInterfaceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 	return m.recorder
 }
 
-// AdminUpdate mocks base method
+// AdminUpdate mocks base method.
 func (m *MockInterface) AdminUpdate(arg0 context.Context) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AdminUpdate", arg0)
@@ -42,13 +42,13 @@ func (m *MockInterface) AdminUpdate(arg0 context.Context) error {
 	return ret0
 }
 
-// AdminUpdate indicates an expected call of AdminUpdate
+// AdminUpdate indicates an expected call of AdminUpdate.
 func (mr *MockInterfaceMockRecorder) AdminUpdate(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdminUpdate", reflect.TypeOf((*MockInterface)(nil).AdminUpdate), arg0)
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockInterface) Delete(arg0 context.Context) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0)
@@ -56,13 +56,13 @@ func (m *MockInterface) Delete(arg0 context.Context) error {
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockInterfaceMockRecorder) Delete(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockInterface)(nil).Delete), arg0)
 }
 
-// Install mocks base method
+// Install mocks base method.
 func (m *MockInterface) Install(arg0 context.Context) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Install", arg0)
@@ -70,13 +70,13 @@ func (m *MockInterface) Install(arg0 context.Context) error {
 	return ret0
 }
 
-// Install indicates an expected call of Install
+// Install indicates an expected call of Install.
 func (mr *MockInterfaceMockRecorder) Install(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockInterface)(nil).Install), arg0)
 }
 
-// Update mocks base method
+// Update mocks base method.
 func (m *MockInterface) Update(arg0 context.Context) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", arg0)
@@ -84,7 +84,7 @@ func (m *MockInterface) Update(arg0 context.Context) error {
 	return ret0
 }
 
-// Update indicates an expected call of Update
+// Update indicates an expected call of Update.
 func (mr *MockInterfaceMockRecorder) Update(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockInterface)(nil).Update), arg0)

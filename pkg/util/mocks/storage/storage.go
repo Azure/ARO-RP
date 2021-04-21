@@ -13,30 +13,30 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockManager is a mock of Manager interface
+// MockManager is a mock of Manager interface.
 type MockManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockManagerMockRecorder
 }
 
-// MockManagerMockRecorder is the mock recorder for MockManager
+// MockManagerMockRecorder is the mock recorder for MockManager.
 type MockManagerMockRecorder struct {
 	mock *MockManager
 }
 
-// NewMockManager creates a new mock instance
+// NewMockManager creates a new mock instance.
 func NewMockManager(ctrl *gomock.Controller) *MockManager {
 	mock := &MockManager{ctrl: ctrl}
 	mock.recorder = &MockManagerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 	return m.recorder
 }
 
-// BlobService mocks base method
+// BlobService mocks base method.
 func (m *MockManager) BlobService(arg0 context.Context, arg1, arg2 string, arg3 storage.Permissions, arg4 storage.SignedResourceTypes) (*storage0.BlobStorageClient, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BlobService", arg0, arg1, arg2, arg3, arg4)
@@ -45,7 +45,7 @@ func (m *MockManager) BlobService(arg0 context.Context, arg1, arg2 string, arg3 
 	return ret0, ret1
 }
 
-// BlobService indicates an expected call of BlobService
+// BlobService indicates an expected call of BlobService.
 func (mr *MockManagerMockRecorder) BlobService(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlobService", reflect.TypeOf((*MockManager)(nil).BlobService), arg0, arg1, arg2, arg3, arg4)

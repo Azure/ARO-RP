@@ -13,30 +13,30 @@ import (
 	version "github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-// MockWorkaround is a mock of Workaround interface
+// MockWorkaround is a mock of Workaround interface.
 type MockWorkaround struct {
 	ctrl     *gomock.Controller
 	recorder *MockWorkaroundMockRecorder
 }
 
-// MockWorkaroundMockRecorder is the mock recorder for MockWorkaround
+// MockWorkaroundMockRecorder is the mock recorder for MockWorkaround.
 type MockWorkaroundMockRecorder struct {
 	mock *MockWorkaround
 }
 
-// NewMockWorkaround creates a new mock instance
+// NewMockWorkaround creates a new mock instance.
 func NewMockWorkaround(ctrl *gomock.Controller) *MockWorkaround {
 	mock := &MockWorkaround{ctrl: ctrl}
 	mock.recorder = &MockWorkaroundMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockWorkaround) EXPECT() *MockWorkaroundMockRecorder {
 	return m.recorder
 }
 
-// Ensure mocks base method
+// Ensure mocks base method.
 func (m *MockWorkaround) Ensure(arg0 context.Context) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Ensure", arg0)
@@ -44,13 +44,13 @@ func (m *MockWorkaround) Ensure(arg0 context.Context) error {
 	return ret0
 }
 
-// Ensure indicates an expected call of Ensure
+// Ensure indicates an expected call of Ensure.
 func (mr *MockWorkaroundMockRecorder) Ensure(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ensure", reflect.TypeOf((*MockWorkaround)(nil).Ensure), arg0)
 }
 
-// IsRequired mocks base method
+// IsRequired mocks base method.
 func (m *MockWorkaround) IsRequired(arg0 *version.Version) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsRequired", arg0)
@@ -58,13 +58,13 @@ func (m *MockWorkaround) IsRequired(arg0 *version.Version) bool {
 	return ret0
 }
 
-// IsRequired indicates an expected call of IsRequired
+// IsRequired indicates an expected call of IsRequired.
 func (mr *MockWorkaroundMockRecorder) IsRequired(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRequired", reflect.TypeOf((*MockWorkaround)(nil).IsRequired), arg0)
 }
 
-// Name mocks base method
+// Name mocks base method.
 func (m *MockWorkaround) Name() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Name")
@@ -72,13 +72,13 @@ func (m *MockWorkaround) Name() string {
 	return ret0
 }
 
-// Name indicates an expected call of Name
+// Name indicates an expected call of Name.
 func (mr *MockWorkaroundMockRecorder) Name() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockWorkaround)(nil).Name))
 }
 
-// Remove mocks base method
+// Remove mocks base method.
 func (m *MockWorkaround) Remove(arg0 context.Context) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Remove", arg0)
@@ -86,7 +86,7 @@ func (m *MockWorkaround) Remove(arg0 context.Context) error {
 	return ret0
 }
 
-// Remove indicates an expected call of Remove
+// Remove indicates an expected call of Remove.
 func (mr *MockWorkaroundMockRecorder) Remove(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Remove", reflect.TypeOf((*MockWorkaround)(nil).Remove), arg0)

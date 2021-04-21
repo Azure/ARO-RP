@@ -13,30 +13,30 @@ import (
 	graph "github.com/Azure/ARO-RP/pkg/cluster/graph"
 )
 
-// MockManager is a mock of Manager interface
+// MockManager is a mock of Manager interface.
 type MockManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockManagerMockRecorder
 }
 
-// MockManagerMockRecorder is the mock recorder for MockManager
+// MockManagerMockRecorder is the mock recorder for MockManager.
 type MockManagerMockRecorder struct {
 	mock *MockManager
 }
 
-// NewMockManager creates a new mock instance
+// NewMockManager creates a new mock instance.
 func NewMockManager(ctrl *gomock.Controller) *MockManager {
 	mock := &MockManager{ctrl: ctrl}
 	mock.recorder = &MockManagerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 	return m.recorder
 }
 
-// Exists mocks base method
+// Exists mocks base method.
 func (m *MockManager) Exists(arg0 context.Context, arg1, arg2 string) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Exists", arg0, arg1, arg2)
@@ -45,13 +45,13 @@ func (m *MockManager) Exists(arg0 context.Context, arg1, arg2 string) (bool, err
 	return ret0, ret1
 }
 
-// Exists indicates an expected call of Exists
+// Exists indicates an expected call of Exists.
 func (mr *MockManagerMockRecorder) Exists(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockManager)(nil).Exists), arg0, arg1, arg2)
 }
 
-// LoadPersisted mocks base method
+// LoadPersisted mocks base method.
 func (m *MockManager) LoadPersisted(arg0 context.Context, arg1, arg2 string) (graph.PersistedGraph, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LoadPersisted", arg0, arg1, arg2)
@@ -60,13 +60,13 @@ func (m *MockManager) LoadPersisted(arg0 context.Context, arg1, arg2 string) (gr
 	return ret0, ret1
 }
 
-// LoadPersisted indicates an expected call of LoadPersisted
+// LoadPersisted indicates an expected call of LoadPersisted.
 func (mr *MockManagerMockRecorder) LoadPersisted(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadPersisted", reflect.TypeOf((*MockManager)(nil).LoadPersisted), arg0, arg1, arg2)
 }
 
-// Save mocks base method
+// Save mocks base method.
 func (m *MockManager) Save(arg0 context.Context, arg1, arg2 string, arg3 graph.Graph) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Save", arg0, arg1, arg2, arg3)
@@ -74,7 +74,7 @@ func (m *MockManager) Save(arg0 context.Context, arg1, arg2 string, arg3 graph.G
 	return ret0
 }
 
-// Save indicates an expected call of Save
+// Save indicates an expected call of Save.
 func (mr *MockManagerMockRecorder) Save(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockManager)(nil).Save), arg0, arg1, arg2, arg3)

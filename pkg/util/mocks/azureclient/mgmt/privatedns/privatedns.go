@@ -12,30 +12,30 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockPrivateZonesClient is a mock of PrivateZonesClient interface
+// MockPrivateZonesClient is a mock of PrivateZonesClient interface.
 type MockPrivateZonesClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockPrivateZonesClientMockRecorder
 }
 
-// MockPrivateZonesClientMockRecorder is the mock recorder for MockPrivateZonesClient
+// MockPrivateZonesClientMockRecorder is the mock recorder for MockPrivateZonesClient.
 type MockPrivateZonesClientMockRecorder struct {
 	mock *MockPrivateZonesClient
 }
 
-// NewMockPrivateZonesClient creates a new mock instance
+// NewMockPrivateZonesClient creates a new mock instance.
 func NewMockPrivateZonesClient(ctrl *gomock.Controller) *MockPrivateZonesClient {
 	mock := &MockPrivateZonesClient{ctrl: ctrl}
 	mock.recorder = &MockPrivateZonesClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockPrivateZonesClient) EXPECT() *MockPrivateZonesClientMockRecorder {
 	return m.recorder
 }
 
-// DeleteAndWait mocks base method
+// DeleteAndWait mocks base method.
 func (m *MockPrivateZonesClient) DeleteAndWait(arg0 context.Context, arg1, arg2, arg3 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3)
@@ -43,13 +43,13 @@ func (m *MockPrivateZonesClient) DeleteAndWait(arg0 context.Context, arg1, arg2,
 	return ret0
 }
 
-// DeleteAndWait indicates an expected call of DeleteAndWait
+// DeleteAndWait indicates an expected call of DeleteAndWait.
 func (mr *MockPrivateZonesClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockPrivateZonesClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3)
 }
 
-// ListByResourceGroup mocks base method
+// ListByResourceGroup mocks base method.
 func (m *MockPrivateZonesClient) ListByResourceGroup(arg0 context.Context, arg1 string, arg2 *int32) ([]privatedns.PrivateZone, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListByResourceGroup", arg0, arg1, arg2)
@@ -58,36 +58,36 @@ func (m *MockPrivateZonesClient) ListByResourceGroup(arg0 context.Context, arg1 
 	return ret0, ret1
 }
 
-// ListByResourceGroup indicates an expected call of ListByResourceGroup
+// ListByResourceGroup indicates an expected call of ListByResourceGroup.
 func (mr *MockPrivateZonesClientMockRecorder) ListByResourceGroup(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByResourceGroup", reflect.TypeOf((*MockPrivateZonesClient)(nil).ListByResourceGroup), arg0, arg1, arg2)
 }
 
-// MockVirtualNetworkLinksClient is a mock of VirtualNetworkLinksClient interface
+// MockVirtualNetworkLinksClient is a mock of VirtualNetworkLinksClient interface.
 type MockVirtualNetworkLinksClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockVirtualNetworkLinksClientMockRecorder
 }
 
-// MockVirtualNetworkLinksClientMockRecorder is the mock recorder for MockVirtualNetworkLinksClient
+// MockVirtualNetworkLinksClientMockRecorder is the mock recorder for MockVirtualNetworkLinksClient.
 type MockVirtualNetworkLinksClientMockRecorder struct {
 	mock *MockVirtualNetworkLinksClient
 }
 
-// NewMockVirtualNetworkLinksClient creates a new mock instance
+// NewMockVirtualNetworkLinksClient creates a new mock instance.
 func NewMockVirtualNetworkLinksClient(ctrl *gomock.Controller) *MockVirtualNetworkLinksClient {
 	mock := &MockVirtualNetworkLinksClient{ctrl: ctrl}
 	mock.recorder = &MockVirtualNetworkLinksClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockVirtualNetworkLinksClient) EXPECT() *MockVirtualNetworkLinksClientMockRecorder {
 	return m.recorder
 }
 
-// DeleteAndWait mocks base method
+// DeleteAndWait mocks base method.
 func (m *MockVirtualNetworkLinksClient) DeleteAndWait(arg0 context.Context, arg1, arg2, arg3, arg4 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3, arg4)
@@ -95,13 +95,13 @@ func (m *MockVirtualNetworkLinksClient) DeleteAndWait(arg0 context.Context, arg1
 	return ret0
 }
 
-// DeleteAndWait indicates an expected call of DeleteAndWait
+// DeleteAndWait indicates an expected call of DeleteAndWait.
 func (mr *MockVirtualNetworkLinksClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockVirtualNetworkLinksClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3, arg4)
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockVirtualNetworkLinksClient) List(arg0 context.Context, arg1, arg2 string, arg3 *int32) ([]privatedns.VirtualNetworkLink, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3)
@@ -110,7 +110,7 @@ func (m *MockVirtualNetworkLinksClient) List(arg0 context.Context, arg1, arg2 st
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockVirtualNetworkLinksClientMockRecorder) List(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVirtualNetworkLinksClient)(nil).List), arg0, arg1, arg2, arg3)
