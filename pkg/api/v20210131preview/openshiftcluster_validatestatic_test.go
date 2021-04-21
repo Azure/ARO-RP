@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gofrs/uuid"
@@ -38,6 +39,11 @@ var (
 )
 
 func validOpenShiftCluster() *OpenShiftCluster {
+	timestamp, err := time.Parse(time.RFC3339, "2021-01-23T12:34:54.0000000Z")
+	if err != nil {
+		panic(err)
+	}
+
 	oc := &OpenShiftCluster{
 		ID:       id,
 		Name:     "resourceName",
@@ -45,6 +51,14 @@ func validOpenShiftCluster() *OpenShiftCluster {
 		Location: "location",
 		Tags: Tags{
 			"key": "value",
+		},
+		SystemData: SystemData{
+			CreatedBy:          "00000000-0000-0000-0000-000000000000",
+			CreatedByType:      ActorTypeApplication,
+			CreatedAt:          &timestamp,
+			LastModifiedBy:     "00000000-0000-0000-0000-000000000000",
+			LastModifiedByType: ActorTypeApplication,
+			LastModifiedAt:     &timestamp,
 		},
 		Properties: OpenShiftClusterProperties{
 			ProvisioningState: ProvisioningStateSucceeded,
@@ -820,6 +834,20 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				oc.Properties.WorkerProfiles = nil
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles: Changing property 'properties.workerProfiles' is not allowed.",
+		},
+		{
+			name: "systemData set to empty",
+			modify: func(oc *OpenShiftCluster) {
+				oc.SystemData = SystemData{}
+			},
+			wantErr: "400: PropertyChangeNotAllowed: systemData.createdBy: Changing property 'systemData.createdBy' is not allowed.",
+		},
+		{
+			name: "systemData LastUpdated changed",
+			modify: func(oc *OpenShiftCluster) {
+				oc.SystemData.LastModifiedBy = "Bob"
+			},
+			wantErr: "400: PropertyChangeNotAllowed: systemData.lastModifiedBy: Changing property 'systemData.lastModifiedBy' is not allowed.",
 		},
 	}
 

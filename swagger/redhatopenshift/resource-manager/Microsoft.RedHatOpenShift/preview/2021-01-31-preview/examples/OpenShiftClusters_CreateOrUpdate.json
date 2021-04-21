@@ -6,6 +6,7 @@
     "resourceName": "resourceName",
     "parameters": {
       "location": "location",
+      "systemData": {},
       "tags": {
         "key": "value"
       },
@@ -56,6 +57,7 @@
         "name": "resourceName",
         "type": "Microsoft.RedHatOpenShift/OpenShiftClusters",
         "location": "location",
+        "systemData": {},
         "tags": {
           "key": "value"
         },
@@ -110,6 +112,7 @@
         "name": "resourceName",
         "type": "Microsoft.RedHatOpenShift/OpenShiftClusters",
         "location": "location",
+        "systemData": {},
         "tags": {
           "key": "value"
         },

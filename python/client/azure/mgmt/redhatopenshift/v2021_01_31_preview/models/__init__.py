@@ -64,6 +64,7 @@ except (SyntaxError, ImportError):
 from ._paged_models import OpenShiftClusterPaged
 from ._paged_models import OperationPaged
 from ._azure_red_hat_open_shift_client_enums import (
+    ActorType,
     VMSize,
     CreatedByType,
 )
@@ -91,6 +92,7 @@ __all__ = [
     'WorkerProfile',
     'OperationPaged',
     'OpenShiftClusterPaged',
+    'ActorType',
     'VMSize',
     'CreatedByType',
 ]

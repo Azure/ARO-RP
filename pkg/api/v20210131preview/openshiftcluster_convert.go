@@ -81,6 +81,17 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 		}
 	}
 
+	// systemData is a bit different object. Internal model has pointers, so conversion
+	// required checks for the fields like data
+	out.SystemData = SystemData{
+		CreatedBy:          oc.SystemData.CreatedBy,
+		CreatedAt:          oc.SystemData.CreatedAt,
+		CreatedByType:      ActorType(oc.SystemData.CreatedByType),
+		LastModifiedBy:     oc.SystemData.LastModifiedBy,
+		LastModifiedAt:     oc.SystemData.LastModifiedAt,
+		LastModifiedByType: ActorType(oc.SystemData.LastModifiedByType),
+	}
+
 	return out
 }
 
@@ -151,5 +162,14 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 			out.Properties.IngressProfiles[i].Visibility = api.Visibility(oc.Properties.IngressProfiles[i].Visibility)
 			out.Properties.IngressProfiles[i].IP = oc.Properties.IngressProfiles[i].IP
 		}
+	}
+
+	out.SystemData = api.SystemData{
+		CreatedBy:          oc.SystemData.CreatedBy,
+		CreatedAt:          oc.SystemData.CreatedAt,
+		CreatedByType:      api.ActorType(oc.SystemData.CreatedByType),
+		LastModifiedBy:     oc.SystemData.LastModifiedBy,
+		LastModifiedAt:     oc.SystemData.LastModifiedAt,
+		LastModifiedByType: api.ActorType(oc.SystemData.CreatedByType),
 	}
 }

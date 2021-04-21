@@ -44,7 +44,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, r *http.Request, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
-	systemData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.SystemData)
+	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 
 	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
@@ -87,7 +87,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	}
 
 	doc.CorrelationData = correlationData
-	doc.OpenShiftCluster.SystemData = systemData
 
 	err = validateTerminalProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState)
 	if err != nil {
@@ -124,10 +123,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// think is required. We expect payload to have everything else required.
 	case http.MethodPut:
 		ext = converter.ToExternal(&api.OpenShiftCluster{
-			ID:         doc.OpenShiftCluster.ID,
-			Name:       doc.OpenShiftCluster.Name,
-			Type:       doc.OpenShiftCluster.Type,
-			SystemData: systemData,
+			ID:   doc.OpenShiftCluster.ID,
+			Name: doc.OpenShiftCluster.Name,
+			Type: doc.OpenShiftCluster.Type,
 			Properties: api.OpenShiftClusterProperties{
 				ProvisioningState: doc.OpenShiftCluster.Properties.ProvisioningState,
 				ClusterProfile: api.ClusterProfile{
@@ -162,9 +160,13 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		return nil, err
 	}
 
-	oldID, oldName, oldType := doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type
+	oldID, oldName, oldType, oldSystemData := doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type, doc.OpenShiftCluster.SystemData
 	converter.ToInternal(ext, doc.OpenShiftCluster)
-	doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type = oldID, oldName, oldType
+	doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type, doc.OpenShiftCluster.SystemData = oldID, oldName, oldType, oldSystemData
+
+	// This will update systemData from the values in the header. Old values, which
+	// is not provided in the header must be preserved
+	stompSystemData(doc, systemData)
 
 	if isCreate {
 		// on create, make the cluster resourcegroup ID lower case to work
@@ -236,4 +238,30 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		err = statusCodeError(http.StatusCreated)
 	}
 	return b, err
+}
+
+// stompSystemData will selectively overwrite systemData fields based on
+// arm inputs
+func stompSystemData(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+	if systemData == nil {
+		return
+	}
+	if systemData.CreatedAt != nil {
+		doc.OpenShiftCluster.SystemData.CreatedAt = systemData.CreatedAt
+	}
+	if systemData.CreatedBy != "" {
+		doc.OpenShiftCluster.SystemData.CreatedBy = systemData.CreatedBy
+	}
+	if systemData.CreatedByType != "" {
+		doc.OpenShiftCluster.SystemData.CreatedByType = systemData.CreatedByType
+	}
+	if systemData.LastModifiedAt != nil {
+		doc.OpenShiftCluster.SystemData.LastModifiedAt = systemData.LastModifiedAt
+	}
+	if systemData.LastModifiedBy != "" {
+		doc.OpenShiftCluster.SystemData.LastModifiedBy = systemData.LastModifiedBy
+	}
+	if systemData.LastModifiedByType != "" {
+		doc.OpenShiftCluster.SystemData.LastModifiedByType = systemData.LastModifiedByType
+	}
 }
