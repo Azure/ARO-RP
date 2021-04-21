@@ -3,12 +3,6 @@ package cluster
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-/***
-Count the number of nodes available
-Total the nodes under machineconfigpool control
-Alert if different
-*/
-
 import (
 	"context"
 
@@ -47,6 +41,11 @@ func (mon *Monitor) getNodeCounts(ctx context.Context) (int64, error) {
 	return int64(len(ns.Items)), nil
 }
 
+/***
+Count the number of nodes available
+Total the nodes under machineconfigpool control
+Alert if different
+*/
 func (mon *Monitor) emitMachineConfigPoolUnmanagedNodeCounts(ctx context.Context) error {
 	mcpcount, err := mon.getMachineConfigPoolNodeCounts(ctx)
 	if err != nil {
