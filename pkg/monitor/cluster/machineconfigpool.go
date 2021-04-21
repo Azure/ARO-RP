@@ -58,20 +58,20 @@ func (mon *Monitor) emitMachineConfigPoolUnmanagedNodeCounts(ctx context.Context
 		return err
 	}
 
-	// alertcount of 0 is normal (machineconfigpool nodes == nodes)
+	// unmanagednodescount of 0 is normal (machineconfigpool nodes == nodes)
 	// also report if there are missing nodes with too many machineconfigs
-	alertcount := getnodescount - mcpcount
+	unmanagednodescount := getnodescount - mcpcount
 
 	// emit count of nodes which are not managed by MCP
 	// =0 is expected normal (all nodes are managed)
 	// >0 mcp isn't managing all nodes
 	// <0 nodes are missing from mcp
-	if alertcount != 0 {
-		mon.emitGauge("machineconfigpool.unmanagednodescount", alertcount, nil)
+	if unmanagednodescount != 0 {
+		mon.emitGauge("machineconfigpool.unmanagednodescount", unmanagednodescount, nil)
 	}
 
 	if mon.hourlyRun {
-		mon.log.Printf("machineconfigpool.unmanagednodescount: %d", alertcount)
+		mon.log.Printf("machineconfigpool.unmanagednodescount: %d", unmanagednodescount)
 	}
 
 	return nil
