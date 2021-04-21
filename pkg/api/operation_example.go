@@ -5,7 +5,7 @@ package api
 
 // ExampleOperationListResponse returns an example OperationList object that the
 // RP might return to an end-user
-func ExampleOperationListResponse() *OperationList {
+func ExampleOperationListResponse() interface{} {
 	return &OperationList{
 		Operations: []Operation{
 			{

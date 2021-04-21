@@ -14,8 +14,8 @@ func exampleOpenShiftCluster() *OpenShiftCluster {
 
 // ExampleOpenShiftClusterPatchParameter returns an example OpenShiftCluster
 // object that an end-user might send to create a cluster in a PATCH request
-func ExampleOpenShiftClusterPatchParameter() *OpenShiftCluster {
-	oc := ExampleOpenShiftClusterPutParameter()
+func ExampleOpenShiftClusterPatchParameter() interface{} {
+	oc := ExampleOpenShiftClusterPutParameter().(*OpenShiftCluster)
 	oc.Location = ""
 
 	return oc
@@ -23,7 +23,7 @@ func ExampleOpenShiftClusterPatchParameter() *OpenShiftCluster {
 
 // ExampleOpenShiftClusterPutParameter returns an example OpenShiftCluster
 // object that an end-user might send to create a cluster in a PUT request
-func ExampleOpenShiftClusterPutParameter() *OpenShiftCluster {
+func ExampleOpenShiftClusterPutParameter() interface{} {
 	oc := exampleOpenShiftCluster()
 	oc.ID = ""
 	oc.Name = ""
@@ -40,7 +40,7 @@ func ExampleOpenShiftClusterPutParameter() *OpenShiftCluster {
 
 // ExampleOpenShiftClusterResponse returns an example OpenShiftCluster object
 // that the RP might return to an end-user
-func ExampleOpenShiftClusterResponse() *OpenShiftCluster {
+func ExampleOpenShiftClusterResponse() interface{} {
 	oc := exampleOpenShiftCluster()
 	oc.Properties.ClusterProfile.PullSecret = ""
 	oc.Properties.ServicePrincipalProfile.ClientSecret = ""
@@ -50,10 +50,10 @@ func ExampleOpenShiftClusterResponse() *OpenShiftCluster {
 
 // ExampleOpenShiftClusterListResponse returns an example OpenShiftClusterList
 // object that the RP might return to an end-user
-func ExampleOpenShiftClusterListResponse() *OpenShiftClusterList {
+func ExampleOpenShiftClusterListResponse() interface{} {
 	return &OpenShiftClusterList{
 		OpenShiftClusters: []*OpenShiftCluster{
-			ExampleOpenShiftClusterResponse(),
+			ExampleOpenShiftClusterResponse().(*OpenShiftCluster),
 		},
 	}
 }

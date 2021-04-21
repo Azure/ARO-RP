@@ -164,6 +164,7 @@ type Response struct {
 	Schema      *Schema `json:"schema,omitempty"`
 	Headers     Headers `json:"headers,omitempty"`
 	Examples    Example `json:"examples,omitempty"`
+	SystemData  *Schema `json:"systemData,omitempty"`
 }
 
 // Headers represents a Headers object
@@ -244,6 +245,7 @@ type Schema struct {
 	XML                  *XML                   `json:"xml,omitempty"`
 	ExternalDocs         *ExternalDocumentation `json:"externalDocs,omitempty"`
 	Example              interface{}            `json:"example,omitempty"`
+	SystemData           *Schema                `json:"systemData,omitempty"`
 
 	ClientFlatten bool     `json:"x-ms-client-flatten,omitempty"`
 	XMSEnum       *XMSEnum `json:"x-ms-enum,omitempty"`

@@ -5,7 +5,7 @@ package v20210131preview
 
 // ExampleOpenShiftClusterCredentialsResponse returns an example
 // OpenShiftClusterCredentials object that the RP might return to an end-user
-func ExampleOpenShiftClusterCredentialsResponse() *OpenShiftClusterCredentials {
+func ExampleOpenShiftClusterCredentialsResponse() interface{} {
 	return &OpenShiftClusterCredentials{
 		KubeadminUsername: "kubeadmin",
 		KubeadminPassword: "password",
