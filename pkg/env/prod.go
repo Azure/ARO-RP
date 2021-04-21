@@ -63,7 +63,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		}
 	}
 
-	if !IsDevelopmentMode() {
+	if !IsLocalDevelopmentMode() {
 		for _, key := range []string{
 			"CLUSTER_MDSD_CONFIG_VERSION",
 			"MDSD_ENVIRONMENT",
@@ -79,7 +79,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
-	dialer, err := proxy.NewDialer(core.IsDevelopmentMode())
+	dialer, err := proxy.NewDialer(core.IsLocalDevelopmentMode())
 	if err != nil {
 		return nil, err
 	}

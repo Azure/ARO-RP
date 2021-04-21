@@ -108,8 +108,8 @@ func (d *dev) DialContext(ctx context.Context, network, address string) (net.Con
 	return &conn{Conn: c, r: r}, nil
 }
 
-func NewDialer(isDevelopmentMode bool) (Dialer, error) {
-	if !isDevelopmentMode {
+func NewDialer(isLocalDevelopmentMode bool) (Dialer, error) {
+	if !isLocalDevelopmentMode {
 		return &prod{}, nil
 	}
 

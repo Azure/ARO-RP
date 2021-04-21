@@ -15,7 +15,7 @@ import (
 )
 
 type Core interface {
-	IsDevelopmentMode() bool
+	IsLocalDevelopmentMode() bool
 	instancemetadata.InstanceMetadata
 	rpauthorizer.RPAuthorizer
 }
@@ -24,20 +24,20 @@ type core struct {
 	instancemetadata.InstanceMetadata
 	rpauthorizer.RPAuthorizer
 
-	isDevelopmentMode bool
+	isLocalDevelopmentMode bool
 }
 
-func (c *core) IsDevelopmentMode() bool {
-	return c.isDevelopmentMode
+func (c *core) IsLocalDevelopmentMode() bool {
+	return c.isLocalDevelopmentMode
 }
 
 func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
-	isDevelopmentMode := IsDevelopmentMode()
-	if isDevelopmentMode {
-		log.Info("running in development mode")
+	isLocalDevelopmentMode := IsLocalDevelopmentMode()
+	if isLocalDevelopmentMode {
+		log.Info("running in local development mode")
 	}
 
-	im, err := instancemetadata.New(ctx, isDevelopmentMode)
+	im, err := instancemetadata.New(ctx, isLocalDevelopmentMode)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 	}
 	log.Infof("running on %s", im.Environment().Name)
 
-	rpauthorizer, err := rpauthorizer.New(isDevelopmentMode, im)
+	rpauthorizer, err := rpauthorizer.New(isLocalDevelopmentMode, im)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 		InstanceMetadata: im,
 		RPAuthorizer:     rpauthorizer,
 
-		isDevelopmentMode: isDevelopmentMode,
+		isLocalDevelopmentMode: isLocalDevelopmentMode,
 	}, nil
 }
 
@@ -67,9 +67,9 @@ func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 // resolve their tenant ID, and also may access resources in a different tenant
 // (e.g. AME).
 func NewCoreForCI(ctx context.Context, log *logrus.Entry) (Core, error) {
-	isDevelopmentMode := IsDevelopmentMode()
-	if isDevelopmentMode {
-		log.Info("running in development mode")
+	isLocalDevelopmentMode := IsLocalDevelopmentMode()
+	if isLocalDevelopmentMode {
+		log.Info("running in local development mode")
 	}
 
 	im, err := instancemetadata.NewDev(false)
@@ -83,8 +83,8 @@ func NewCoreForCI(ctx context.Context, log *logrus.Entry) (Core, error) {
 	}
 
 	return &core{
-		InstanceMetadata:  im,
-		isDevelopmentMode: isDevelopmentMode,
+		InstanceMetadata:       im,
+		isLocalDevelopmentMode: isLocalDevelopmentMode,
 	}, nil
 }
 

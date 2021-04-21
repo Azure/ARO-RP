@@ -74,13 +74,13 @@ type Interface interface {
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
-	if IsDevelopmentMode() {
+	if IsLocalDevelopmentMode() {
 		return newDev(ctx, log)
 	}
 
 	return newProd(ctx, log)
 }
 
-func IsDevelopmentMode() bool {
+func IsLocalDevelopmentMode() bool {
 	return strings.EqualFold(os.Getenv("RP_MODE"), "development")
 }

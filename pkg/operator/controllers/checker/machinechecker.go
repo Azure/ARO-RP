@@ -27,20 +27,20 @@ import (
 
 // MachineChecker reconciles the alertmanager webhook
 type MachineChecker struct {
-	clustercli        maoclient.Interface
-	arocli            aroclient.Interface
-	log               *logrus.Entry
-	isDevelopmentMode bool
-	role              string
+	clustercli             maoclient.Interface
+	arocli                 aroclient.Interface
+	log                    *logrus.Entry
+	isLocalDevelopmentMode bool
+	role                   string
 }
 
-func NewMachineChecker(log *logrus.Entry, clustercli maoclient.Interface, arocli aroclient.Interface, role string, isDevelopmentMode bool) *MachineChecker {
+func NewMachineChecker(log *logrus.Entry, clustercli maoclient.Interface, arocli aroclient.Interface, role string, isLocalDevelopmentMode bool) *MachineChecker {
 	return &MachineChecker{
-		clustercli:        clustercli,
-		arocli:            arocli,
-		log:               log,
-		isDevelopmentMode: isDevelopmentMode,
-		role:              role,
+		clustercli:             clustercli,
+		arocli:                 arocli,
+		log:                    log,
+		isLocalDevelopmentMode: isLocalDevelopmentMode,
+		role:                   role,
 	}
 }
 
@@ -75,7 +75,7 @@ func (r *MachineChecker) machineValid(ctx context.Context, machine *machinev1bet
 		return []error{fmt.Errorf("machine %s: failed to read provider spec: %T", machine.Name, o)}
 	}
 
-	if !validate.VMSizeIsValid(api.VMSize(machineProviderSpec.VMSize), r.isDevelopmentMode, isMaster) {
+	if !validate.VMSizeIsValid(api.VMSize(machineProviderSpec.VMSize), r.isLocalDevelopmentMode, isMaster) {
 		errs = append(errs, fmt.Errorf("machine %s: invalid VM size '%s'", machine.Name, machineProviderSpec.VMSize))
 	}
 

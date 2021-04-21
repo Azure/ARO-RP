@@ -31,8 +31,8 @@ type Monitors interface {
 }
 
 // NewMonitors returns a new Monitors
-func NewMonitors(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (Monitors, error) {
-	dbid, err := databaseName(isDevelopmentMode)
+func NewMonitors(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (Monitors, error) {
+	dbid, err := databaseName(isLocalDevelopmentMode)
 	if err != nil {
 		return nil, err
 	}

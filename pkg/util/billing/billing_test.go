@@ -384,7 +384,7 @@ func TestEnsure(t *testing.T) {
 			defer controller.Finish()
 
 			_env := mock_env.NewMockInterface(controller)
-			_env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
+			_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 
 			log := logrus.NewEntry(logrus.StandardLogger())
 			openShiftClusterDatabase, _ := testdatabase.NewFakeOpenShiftClusters()

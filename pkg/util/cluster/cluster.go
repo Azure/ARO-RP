@@ -78,7 +78,7 @@ func (errs errors) Error() string {
 }
 
 func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
-	if env.IsDevelopmentMode() {
+	if env.IsLocalDevelopmentMode() {
 		for _, key := range []string{
 			"AZURE_FP_CLIENT_ID",
 		} {
@@ -117,7 +117,7 @@ func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
 	}
 
 	if ci {
-		if env.IsDevelopmentMode() {
+		if env.IsLocalDevelopmentMode() {
 			c.ciParentVnet = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.env.SubscriptionID(), c.env.ResourceGroup())
 		} else {
 			c.ciParentVnet = "/subscriptions/46626fc5-476d-41ad-8c76-2ec49c6994eb/resourceGroups/e2einfra-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet"
@@ -418,7 +418,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		Location: c.env.Location(),
 	}
 
-	if c.env.IsDevelopmentMode() {
+	if c.env.IsLocalDevelopmentMode() {
 		err := c.registerSubscription(ctx)
 		if err != nil {
 			return err

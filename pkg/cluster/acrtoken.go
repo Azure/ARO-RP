@@ -11,7 +11,7 @@ import (
 )
 
 func (m *manager) ensureACRToken(ctx context.Context) error {
-	if m.env.IsDevelopmentMode() {
+	if m.env.IsLocalDevelopmentMode() {
 		return nil
 	}
 

@@ -105,7 +105,7 @@ func (s *statsd) run() {
 
 func (s *statsd) dial() (err error) {
 	path := "/var/etw/mdm_statsd.socket"
-	if s.env.IsDevelopmentMode() {
+	if s.env.IsLocalDevelopmentMode() {
 		path = "mdm_statsd.socket"
 	}
 
@@ -126,7 +126,7 @@ func (s *statsd) write(m *metric) (err error) {
 	if s.conn == nil {
 		err = s.dial()
 		if err != nil {
-			if s.env.IsDevelopmentMode() {
+			if s.env.IsLocalDevelopmentMode() {
 				err = nil
 			}
 			return

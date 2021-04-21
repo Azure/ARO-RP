@@ -159,7 +159,7 @@ func TestAAD(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
+			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 			env.EXPECT().TenantID().AnyTimes().Return("")
 
 			_, audit := testlog.NewAudit()
@@ -258,7 +258,7 @@ func TestRedirect(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
+			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 			env.EXPECT().TenantID().AnyTimes().Return("")
 
 			_, audit := testlog.NewAudit()
@@ -377,7 +377,7 @@ func TestLogout(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
+			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 			env.EXPECT().TenantID().AnyTimes().Return("")
 
 			_, audit := testlog.NewAudit()
@@ -742,7 +742,7 @@ func TestCallback(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
+			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 			env.EXPECT().TenantID().AnyTimes().Return("")
 
 			_, audit := testlog.NewAudit()
@@ -862,7 +862,7 @@ func TestClientAssertion(t *testing.T) {
 	defer controller.Finish()
 	env := mock_env.NewMockInterface(controller)
 	env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
-	env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
+	env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 	env.EXPECT().TenantID().AnyTimes().Return("")
 
 	clientID := "00000000-0000-0000-0000-000000000000"

@@ -72,18 +72,18 @@ func (mr *MockCoreMockRecorder) Hostname() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Hostname", reflect.TypeOf((*MockCore)(nil).Hostname))
 }
 
-// IsDevelopmentMode mocks base method
-func (m *MockCore) IsDevelopmentMode() bool {
+// IsLocalDevelopmentMode mocks base method
+func (m *MockCore) IsLocalDevelopmentMode() bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsDevelopmentMode")
+	ret := m.ctrl.Call(m, "IsLocalDevelopmentMode")
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// IsDevelopmentMode indicates an expected call of IsDevelopmentMode
-func (mr *MockCoreMockRecorder) IsDevelopmentMode() *gomock.Call {
+// IsLocalDevelopmentMode indicates an expected call of IsLocalDevelopmentMode
+func (mr *MockCoreMockRecorder) IsLocalDevelopmentMode() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDevelopmentMode", reflect.TypeOf((*MockCore)(nil).IsDevelopmentMode))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsLocalDevelopmentMode", reflect.TypeOf((*MockCore)(nil).IsLocalDevelopmentMode))
 }
 
 // Location mocks base method
@@ -435,18 +435,18 @@ func (mr *MockInterfaceMockRecorder) InitializeAuthorizers() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeAuthorizers", reflect.TypeOf((*MockInterface)(nil).InitializeAuthorizers))
 }
 
-// IsDevelopmentMode mocks base method
-func (m *MockInterface) IsDevelopmentMode() bool {
+// IsLocalDevelopmentMode mocks base method
+func (m *MockInterface) IsLocalDevelopmentMode() bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsDevelopmentMode")
+	ret := m.ctrl.Call(m, "IsLocalDevelopmentMode")
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// IsDevelopmentMode indicates an expected call of IsDevelopmentMode
-func (mr *MockInterfaceMockRecorder) IsDevelopmentMode() *gomock.Call {
+// IsLocalDevelopmentMode indicates an expected call of IsLocalDevelopmentMode
+func (mr *MockInterfaceMockRecorder) IsLocalDevelopmentMode() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDevelopmentMode", reflect.TypeOf((*MockInterface)(nil).IsDevelopmentMode))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsLocalDevelopmentMode", reflect.TypeOf((*MockInterface)(nil).IsLocalDevelopmentMode))
 }
 
 // Listen mocks base method

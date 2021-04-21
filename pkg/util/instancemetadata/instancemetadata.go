@@ -51,8 +51,8 @@ func (im *instanceMetadata) Environment() *azure.Environment {
 	return im.environment
 }
 
-func New(ctx context.Context, isDevelopmentMode bool) (InstanceMetadata, error) {
-	if isDevelopmentMode {
+func New(ctx context.Context, isLocalDevelopmentMode bool) (InstanceMetadata, error) {
+	if isLocalDevelopmentMode {
 		return NewDev(true)
 	}
 

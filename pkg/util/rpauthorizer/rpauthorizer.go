@@ -39,8 +39,8 @@ func (prodRPAuthorizer) NewRPAuthorizer(resource string) (autorest.Authorizer, e
 	return auth.NewAuthorizerFromEnvironmentWithResource(resource)
 }
 
-func New(isDevelopmentMode bool, im instancemetadata.InstanceMetadata) (RPAuthorizer, error) {
-	if isDevelopmentMode {
+func New(isLocalDevelopmentMode bool, im instancemetadata.InstanceMetadata) (RPAuthorizer, error) {
+	if isLocalDevelopmentMode {
 		for _, key := range []string{
 			"AZURE_RP_CLIENT_ID",
 			"AZURE_RP_CLIENT_SECRET",

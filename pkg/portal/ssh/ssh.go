@@ -165,7 +165,7 @@ func (s *ssh) new(w http.ResponseWriter, r *http.Request) {
 	}
 
 	port := ""
-	if s.env.IsDevelopmentMode() {
+	if s.env.IsLocalDevelopmentMode() {
 		port = "-p 2222 "
 	}
 

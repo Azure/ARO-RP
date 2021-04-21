@@ -25,8 +25,8 @@ type AsyncOperations interface {
 }
 
 // NewAsyncOperations returns a new AsyncOperations
-func NewAsyncOperations(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (AsyncOperations, error) {
-	dbid, err := databaseName(isDevelopmentMode)
+func NewAsyncOperations(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (AsyncOperations, error) {
+	dbid, err := databaseName(isLocalDevelopmentMode)
 	if err != nil {
 		return nil, err
 	}

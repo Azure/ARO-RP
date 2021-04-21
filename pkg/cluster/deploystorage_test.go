@@ -78,7 +78,7 @@ func TestCreateAndUpdateErrors(t *testing.T) {
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().Location().AnyTimes().Return(location)
 			env.EXPECT().EnsureARMResourceGroupRoleAssignment(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
-			env.EXPECT().IsDevelopmentMode().Return(false)
+			env.EXPECT().IsLocalDevelopmentMode().Return(false)
 
 			m := &manager{
 				log:            logrus.NewEntry(logrus.StandardLogger()),

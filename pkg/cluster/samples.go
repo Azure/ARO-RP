@@ -14,7 +14,7 @@ import (
 
 // disableSamples disables the samples if there's no appropriate pull secret
 func (m *manager) disableSamples(ctx context.Context) error {
-	if !m.env.IsDevelopmentMode() &&
+	if !m.env.IsLocalDevelopmentMode() &&
 		m.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret != "" {
 		return nil
 	}
@@ -35,7 +35,7 @@ func (m *manager) disableSamples(ctx context.Context) error {
 // disableOperatorHubSources disables operator hub sources if there's no
 // appropriate pull secret
 func (m *manager) disableOperatorHubSources(ctx context.Context) error {
-	if !m.env.IsDevelopmentMode() &&
+	if !m.env.IsLocalDevelopmentMode() &&
 		m.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret != "" {
 		return nil
 	}
