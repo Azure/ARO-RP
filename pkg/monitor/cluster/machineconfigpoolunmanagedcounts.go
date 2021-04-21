@@ -66,7 +66,9 @@ func (mon *Monitor) emitMachineConfigPoolUnmanagedNodeCounts(ctx context.Context
 	// =0 is expected normal (all nodes are managed)
 	// >0 mcp isn't managing all nodes
 	// <0 nodes are missing from mcp
-	mon.emitGauge("machineconfigpool.unmanagednodescount", alertcount, nil)
+	if alertcount != 0 {
+		mon.emitGauge("machineconfigpool.unmanagednodescount", alertcount, nil)
+	}
 
 	if mon.hourlyRun {
 		mon.log.Printf("machineconfigpool.unmanagednodescount: %d", alertcount)
