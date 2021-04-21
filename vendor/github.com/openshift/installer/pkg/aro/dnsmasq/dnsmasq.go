@@ -36,9 +36,9 @@ After=network-online.target
 Before=bootkube.service
 
 [Service]
-ExecStartPre=/bin/bash -c '/bin/cp /etc/resolv.conf /etc/resolv.conf.dnsmasq; /bin/sed -ni -e "/^nameserver /!p; \\$$a nameserver $$(hostname -I)" /etc/resolv.conf; /usr/sbin/restorecon /etc/resolv.conf'
+ExecStartPre=/bin/bash -c 'if /usr/bin/test -f "/etc/resolv.conf.dnsmasq"; then echo "already replaced resolv.conf.dnsmasq"; else /bin/cp /etc/resolv.conf /etc/resolv.conf.dnsmasq; fi; /bin/sed -ni -e "/^nameserver /!p; \\$$a nameserver $$(hostname -I)" /etc/resolv.conf; /usr/sbin/restorecon /etc/resolv.conf'
 ExecStart=/usr/sbin/dnsmasq -k
-ExecStop=/bin/bash -c '/bin/mv /etc/resolv.conf.dnsmasq /etc/resolv.conf; /usr/sbin/restorecon /etc/resolv.conf'
+ExecStopPost=/bin/bash -c '/bin/mv /etc/resolv.conf.dnsmasq /etc/resolv.conf; /usr/sbin/restorecon /etc/resolv.conf'
 Restart=always
 
 [Install]
