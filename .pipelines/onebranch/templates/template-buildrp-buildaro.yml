@@ -1,0 +1,21 @@
+steps:
+- task: GoTool@0
+  displayName: Use Go 1.14
+  inputs:
+    version: '1.14'
+    GOPATH: $(Agent.TempDirectory)
+- task: Bash@3
+  displayName: ⚙️ Make ARO
+  inputs:
+    targetType: inline
+    script: |
+      mkdir -p $(Agent.TempDirectory)/src/github.com/Azure/
+      cp -rd $(Build.SourcesDirectory) $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
+      cd $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
+      ls
+      git rev-parse --short HEAD
+      git status --porcelain
+      make aro
+      mkdir -p $(ob_outputDirectory) 
+      cp aro $(ob_outputDirectory)/aro
+    workingDirectory: $(Build.SourcesDirectory)

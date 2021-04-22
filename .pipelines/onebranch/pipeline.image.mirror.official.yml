@@ -61,21 +61,4 @@ extends:
           ob_outputDirectory: $(Build.SourcesDirectory)/out   # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
 
         steps:
-        - checkout: rhado
-        - task: DownloadPipelineArtifact@2
-          displayName: Download Deployer
-          inputs:
-            buildType: specific
-            project: $(vso-project-id)
-            pipeline: $(vso-deployer-pipeline-id)
-            ${{ if eq(parameters.vsoDeployerBuildID, 'latest') }}:
-              buildVersionToDownload: FromBranch
-              branchName: refs/heads/master
-            downloadType: specific
-            downloadPath: $(Build.SourcesDirectory)/deployer
-            artifact: drop_Build_ARO_Build_ARO
-        - task: Bash@3
-          displayName: ⚙️ Run Ev2 Manifest packaging
-          inputs:
-            targetType: filePath
-            filePath: .pipelines/onebranch/scripts/mirrorpipeline.sh
+        - template: .pipelines/onebranch/templates/template-image-mirror.yml@self
