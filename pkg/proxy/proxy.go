@@ -111,6 +111,10 @@ func (s *Server) Run() error {
 	}))
 }
 
+// proxy takes an HTTP/1.x CONNECT Request and ResponseWriter from the Golang
+// HTTP stack and uses Hijack() to get the underlying Connection (c1).  It dials
+// a second Connection (c2) to the requested end Host and then copies data in
+// both directions (c1->c2 and c2->c1).
 func proxy(log *logrus.Entry, w http.ResponseWriter, r *http.Request) {
 	c2, err := net.Dial("tcp", r.Host)
 	if err != nil {
@@ -126,6 +130,10 @@ func proxy(log *logrus.Entry, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Do as much setup as possible before calling Hijack(), because after
+	// Hijack() is called we have no mechanism to report errors back to the
+	// caller.
+
 	w.WriteHeader(http.StatusOK)
 
 	c1, buf, err := hijacker.Hijack()
@@ -138,6 +146,7 @@ func proxy(log *logrus.Entry, w http.ResponseWriter, r *http.Request) {
 	ch := make(chan struct{})
 
 	go func() {
+		// use a goroutine to copy from c1->c2.  Call c2.CloseWrite() when done.
 		defer recover.Panic(log)
 		defer close(ch)
 		defer func() {
@@ -147,11 +156,14 @@ func proxy(log *logrus.Entry, w http.ResponseWriter, r *http.Request) {
 	}()
 
 	func() {
+		// copy from c2->c1.  Call c1.CloseWrite() when done.
 		defer func() {
 			_ = c1.(*tls.Conn).CloseWrite()
 		}()
 		_, _ = io.Copy(c1, c2)
 	}()
 
+	// wait for the c1->c2 goroutine to complete.  Then the deferred c1.Close()
+	// and c2.Close() will be called.
 	<-ch
 }

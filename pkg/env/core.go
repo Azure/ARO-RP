@@ -14,6 +14,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/rpauthorizer"
 )
 
+// Core collects basic configuration information which is expected to be
+// available on any PROD service VMSS (i.e. instance metadata, MSI authorizer,
+// etc.)
 type Core interface {
 	IsLocalDevelopmentMode() bool
 	instancemetadata.InstanceMetadata

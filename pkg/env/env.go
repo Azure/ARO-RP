@@ -49,6 +49,14 @@ const (
 	RPPrivateEndpointPrefix          = "rp-pe-"
 )
 
+// Interface is clunky and somewhat legacy and only used in the RP codebase (not
+// monitor/portal/gateway, etc.).  It is a grab-bag of items which modify RP
+// behaviour depending on where it is running (dev, prod, etc.)  Outside of the
+// RP codebase, use Core.  Ideally we might break Interface into smaller pieces,
+// either closer to their point of use, or maybe using dependency injection. Try
+// to remove methods, not add more.  A refactored approach to configuration is
+// generally necessary across all of the ARO services; dealing with Interface
+// should be part of that.
 type Interface interface {
 	Core
 	proxy.Dialer
