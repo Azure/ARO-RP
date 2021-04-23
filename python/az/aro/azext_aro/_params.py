@@ -13,7 +13,7 @@ from azext_aro._validators import validate_vnet
 from azext_aro._validators import validate_vnet_resource_group_name
 from azext_aro._validators import validate_worker_count
 from azext_aro._validators import validate_worker_vm_disk_size_gb
-from azext_aro._validators import validate_refresh_cluster_service_principal
+from azext_aro._validators import validate_refresh_cluster_credentials
 from azure.cli.core.commands.parameters import name_type
 from azure.cli.core.commands.parameters import get_enum_type, get_three_state_flag
 from azure.cli.core.commands.parameters import resource_group_name_type
@@ -95,8 +95,8 @@ def load_arguments(self, _):
         c.argument('client_secret',
                    help='Client secret of cluster service principal.',
                    validator=validate_client_secret(isCreate=False))
-        c.argument('refresh_cluster_service_principal',
+        c.argument('refresh_cluster_credentials',
                    arg_type=get_three_state_flag(),
-                   help='Refresh cluster service principal.',
-                   options_list=['--refresh-cluster-service-principal', '--refresh-csp'],
-                   validator=validate_refresh_cluster_service_principal)
+                   help='Refresh cluster application credentials.',
+                   options_list=['--refresh-credentials'],
+                   validator=validate_refresh_cluster_credentials)

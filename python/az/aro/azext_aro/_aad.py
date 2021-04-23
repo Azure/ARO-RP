@@ -91,6 +91,14 @@ class AADManager:
             logger.error(e.message)
             raise
 
+        # keys created with older version of cli are not updatable
+        # https://github.com/Azure/azure-sdk-for-python/issues/18131
+        for c in credentials:
+            if c.custom_key_identifier is None:
+                raise BadRequestError("Cluster AAD application contains a client secret with an empty description.\n\
+Please either manually remove the existing client secret and run `az aro update --refresh-credentials`, \n\
+or manually create a new client secret and run `az aro update --client-secret <ClientSecret>`.")
+
         # when appending credentials ALL fields must be present, otherwise
         # azure gives ambiguous errors about not being able to update old keys
         credentials.append(PasswordCredential(
@@ -100,13 +108,6 @@ class AADManager:
             end_date=end_date,
             value=password))
 
-        # keys created with older version of cli are not updatable
-        # https://github.com/Azure/azure-sdk-for-python/issues/18131
-        try:
-            self.client.applications.update_password_credentials(object_id, credentials)
-        except GraphErrorException:
-            raise BadRequestError("failed to update an application.\n \
-Please consider using the command below to trigger credential rotation manually: \n \
-az aro update --name MyCluster --resource-group MyResourceGroup --client-id ClientId --client-secret ClientSecret")
+        self.client.applications.update_password_credentials(object_id, credentials)
 
         return password

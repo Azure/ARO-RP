@@ -185,7 +185,7 @@ def aro_update(cmd,
                client,
                resource_group_name,
                resource_name,
-               refresh_cluster_service_principal=False,
+               refresh_cluster_credentials=False,
                client_id=None,
                client_secret=None,
                no_wait=False):
@@ -194,7 +194,7 @@ def aro_update(cmd,
 
     ocUpdate = openshiftcluster.OpenShiftClusterUpdate()
 
-    client_id, client_secret = service_principal_update(cmd.cli_ctx, oc, client_id, client_secret, refresh_cluster_service_principal)  # pylint: disable=line-too-long
+    client_id, client_secret = cluster_application_update(cmd.cli_ctx, oc, client_id, client_secret, refresh_cluster_credentials)  # pylint: disable=line-too-long
 
     if client_id is not None or client_secret is not None:
         # construct update payload
@@ -275,21 +275,21 @@ def get_network_resources(cli_ctx, subnets, vnet):
     return resources
 
 
-# service_principal_update manages cluster service principal update
+# cluster_application_update manages cluster application & service principal update
 # If called without parameters it should be best-effort
 # If called with parameters it fails if something is not possible
 # Flow:
 # 1. Set fail - if we are in fail mode or best effort.
 # 2. Sort out client_id, rp_client_sp, resources we care for RBAC.
-# 3. If we are in refresh_cluster_service_principal mode - attempt to reuse/recreate
+# 3. If we are in refresh_cluster_credentials mode - attempt to reuse/recreate
 # cluster service principal application and acquire client_id, client_secret
 # 4. Reuse/Recreate service principal.
 # 5. Sort out required rbac
-def service_principal_update(cli_ctx,
-                             oc,
-                             client_id,
-                             client_secret,
-                             refresh_cluster_service_principal):
+def cluster_application_update(cli_ctx,
+                               oc,
+                               client_id,
+                               client_secret,
+                               refresh_cluster_credentials):
     # QUESTION: is there possible unification with the create path?
 
     rp_client_sp = None
@@ -298,7 +298,7 @@ def service_principal_update(cli_ctx,
 
     # if any of these are set - we expect users to have access to fix rbac so we fail
     # common for 1 and 2 flows
-    fail = client_id or client_secret or refresh_cluster_service_principal
+    fail = client_id or client_secret or refresh_cluster_credentials
 
     aad = AADManager(cli_ctx)
 
@@ -313,10 +313,10 @@ def service_principal_update(cli_ctx,
             raise
         logger.info(e.message)
 
-    # refresh_cluster_service_principal refreshes cluster SP application.
+    # refresh_cluster_credentials refreshes cluster SP application.
     # At firsts it tries to re-use existing application and generate new password.
     # If application does not exist - creates new one
-    if refresh_cluster_service_principal:
+    if refresh_cluster_credentials:
         try:
             app = aad.get_application_by_client_id(client_id or oc.service_principal_profile.client_id)
             if not app:

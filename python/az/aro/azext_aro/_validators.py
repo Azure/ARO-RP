@@ -202,7 +202,7 @@ def validate_worker_vm_disk_size_gb(namespace):
             raise InvalidArgumentValueError('--worker-vm-disk-size-gb must be greater than or equal to 128.')
 
 
-def validate_refresh_cluster_service_principal(namespace):
-    if namespace.refresh_cluster_service_principal:
+def validate_refresh_cluster_credentials(namespace):
+    if namespace.refresh_cluster_credentials:
         if namespace.client_secret is not None or namespace.client_id is not None:
-            raise RequiredArgumentMissingError('--client-id and --client-secret must be not set with --refresh-cluster-service-principal.')  # pylint: disable=line-too-long
+            raise RequiredArgumentMissingError('--client-id and --client-secret must be not set with --refresh-credentials.')  # pylint: disable=line-too-long
