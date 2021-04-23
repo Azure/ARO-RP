@@ -5,6 +5,7 @@ package azureerrors
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -68,4 +69,23 @@ func IsDeploymentActiveError(err error) bool {
 		}
 	}
 	return false
+}
+
+// IsInvalidSecretError returns if errors is InvalidCredentials error
+// Example: (adal.tokenRefreshError) adal: Refresh request failed. Status Code = '401'.
+// Response body: {"error":"invalid_client","error_description":"AADSTS7000215:
+// Invalid client secret is provided.
+func IsInvalidSecretError(err error) bool {
+	return strings.Contains(err.Error(), "AADSTS7000215")
+}
+
+// IsUnauthorizedClientError return if errors is UnauthorizedClient
+// Example: {"error": "unauthorized_client", "error_description": "AADSTS700016:
+// Application with identifier 'xxx' was not found in the directory 'xxx'. This
+// can happen if the application has not been installed by the administrator of
+// the tenant or consented to by any user in the tenant. You may have sent your
+// authentication request to the wrong tenant. ...", "error_codes": [700016]}`.
+// This can be an indicator of AAD propagation delay.
+func IsUnauthorizedClientError(err error) bool {
+	return strings.Contains(err.Error(), "AADSTS700016")
 }

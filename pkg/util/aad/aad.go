@@ -36,7 +36,8 @@ func GetToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, te
 
 	authorizer := refreshable.NewAuthorizer(sp)
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	// during credentials rotation this can take time to propagate
+	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
 	// NOTE: Do not override err with the error returned by
