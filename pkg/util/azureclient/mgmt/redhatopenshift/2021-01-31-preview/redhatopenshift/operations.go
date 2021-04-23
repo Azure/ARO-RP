@@ -28,7 +28,7 @@ var _ OperationsClient = &operationsClient{}
 // NewOperationsClient creates a new OperationsClient
 func NewOperationsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) OperationsClient {
 	var client mgmtredhatopenshift20210131preview.OperationsClient
-	if env.IsDevelopmentMode() {
+	if env.IsLocalDevelopmentMode() {
 		client = mgmtredhatopenshift20210131preview.NewOperationsClientWithBaseURI("https://localhost:8443", subscriptionID)
 		client.Sender = &http.Client{
 			Transport: &http.Transport{

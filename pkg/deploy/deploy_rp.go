@@ -49,6 +49,11 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
 		Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.AdminAPICABundle)),
 	}
+	if d.config.Configuration.ARMAPICABundle != nil {
+		parameters.Parameters["armApiCaBundle"] = &arm.ParametersParameter{
+			Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.ARMAPICABundle)),
+		}
+	}
 	parameters.Parameters["encryptionAtHost"] = &arm.ParametersParameter{
 		Value: encryptionAtHostSupported,
 	}

@@ -4,7 +4,9 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -76,7 +78,7 @@ func (errs errors) Error() string {
 }
 
 func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
-	if env.IsDevelopmentMode() {
+	if env.IsLocalDevelopmentMode() {
 		for _, key := range []string{
 			"AZURE_FP_CLIENT_ID",
 		} {
@@ -115,7 +117,7 @@ func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
 	}
 
 	if ci {
-		if env.IsDevelopmentMode() {
+		if env.IsLocalDevelopmentMode() {
 			c.ciParentVnet = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.env.SubscriptionID(), c.env.ResourceGroup())
 		} else {
 			c.ciParentVnet = "/subscriptions/46626fc5-476d-41ad-8c76-2ec49c6994eb/resourceGroups/e2einfra-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet"
@@ -416,7 +418,12 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		Location: c.env.Location(),
 	}
 
-	if c.env.IsDevelopmentMode() {
+	if c.env.IsLocalDevelopmentMode() {
+		err := c.registerSubscription(ctx)
+		if err != nil {
+			return err
+		}
+
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 		ext := api.APIs[v20210131preview.APIVersion].OpenShiftClusterConverter().ToExternal(&oc)
 		data, err := json.Marshal(ext)
@@ -447,6 +454,46 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 
 		return c.openshiftclustersv20200430.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
 	}
+}
+
+func (c *Cluster) registerSubscription(ctx context.Context) error {
+	b, err := json.Marshal(&api.Subscription{
+		State: api.SubscriptionStateRegistered,
+		Properties: &api.SubscriptionProperties{
+			TenantID: c.env.TenantID(),
+			RegisteredFeatures: []api.RegisteredFeatureProfile{
+				{
+					Name:  "Microsoft.RedHatOpenShift/RedHatEngineering",
+					State: "Registered",
+				},
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, "https://localhost:8443/subscriptions/"+c.env.SubscriptionID()+"?api-version=2.0", bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	cli := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+
+	resp, err := cli.Do(req)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
 }
 
 func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName string) error {

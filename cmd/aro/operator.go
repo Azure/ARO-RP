@@ -45,9 +45,9 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	default:
 		return fmt.Errorf("invalid role %s", role)
 	}
-	isDevelopmentMode := env.IsDevelopmentMode()
-	if isDevelopmentMode {
-		log.Info("running in development mode")
+	isLocalDevelopmentMode := env.IsLocalDevelopmentMode()
+	if isLocalDevelopmentMode {
+		log.Info("running in local development mode")
 	}
 
 	ctrl.SetLogger(utillog.LogrWrapper(log))
@@ -160,7 +160,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 
 	if err = (checker.NewReconciler(
 		log.WithField("controller", controllers.CheckerControllerName),
-		maocli, arocli, kubernetescli, role, isDevelopmentMode)).SetupWithManager(mgr); err != nil {
+		maocli, arocli, kubernetescli, role, isLocalDevelopmentMode)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller InternetChecker: %v", err)
 	}
 

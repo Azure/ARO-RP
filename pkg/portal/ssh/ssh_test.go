@@ -136,7 +136,7 @@ func TestNew(t *testing.T) {
 			defer ctrl.Finish()
 
 			env := mock_env.NewMockCore(ctrl)
-			env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
+			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 
 			aadAuthenticatedRouter := &mux.Router{}
 

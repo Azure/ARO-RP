@@ -25,9 +25,13 @@ type Feature int
 // production default is not set (in production RP_FEATURES is unset).
 const (
 	FeatureDisableDenyAssignments Feature = iota
+	FeatureDisableSignedCertificates
+	FeatureEnableDevelopmentAuthorizer
+	FeatureRequireD2sV3Workers
 )
 
 const (
+	RPDevARMSecretName               = "dev-arm"
 	RPFirstPartySecretName           = "rp-firstparty"
 	RPServerSecretName               = "rp-server"
 	ClusterLoggingSecretName         = "cluster-mdsd"
@@ -45,14 +49,22 @@ const (
 	RPPrivateEndpointPrefix          = "rp-pe-"
 )
 
+// Interface is clunky and somewhat legacy and only used in the RP codebase (not
+// monitor/portal/gateway, etc.).  It is a grab-bag of items which modify RP
+// behaviour depending on where it is running (dev, prod, etc.)  Outside of the
+// RP codebase, use Core.  Ideally we might break Interface into smaller pieces,
+// either closer to their point of use, or maybe using dependency injection. Try
+// to remove methods, not add more.  A refactored approach to configuration is
+// generally necessary across all of the ARO services; dealing with Interface
+// should be part of that.
 type Interface interface {
 	Core
 	proxy.Dialer
+	ARMHelper
 
 	InitializeAuthorizers() error
 	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
 	AdminClientAuthorizer() clientauthorizer.ClientAuthorizer
-	EnsureARMResourceGroupRoleAssignment(context.Context, refreshable.Authorizer, string) error
 	ClusterGenevaLoggingConfigVersion() string
 	ClusterGenevaLoggingEnvironment() string
 	ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
@@ -60,6 +72,7 @@ type Interface interface {
 	Domain() string
 	FeatureIsSet(Feature) bool
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
+	FPClientID() string
 	Listen() (net.Listener, error)
 	ServiceKeyvault() keyvault.Manager
 	Zones(vmSize string) ([]string, error)
@@ -69,13 +82,13 @@ type Interface interface {
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
-	if IsDevelopmentMode() {
+	if IsLocalDevelopmentMode() {
 		return newDev(ctx, log)
 	}
 
 	return newProd(ctx, log)
 }
 
-func IsDevelopmentMode() bool {
+func IsLocalDevelopmentMode() bool {
 	return strings.EqualFold(os.Getenv("RP_MODE"), "development")
 }

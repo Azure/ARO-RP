@@ -11,7 +11,7 @@ func DiskSizeIsValid(sizeGB int) bool {
 	return sizeGB >= 128
 }
 
-func VMSizeIsValid(vmSize api.VMSize, isDevelopmentMode, isMaster bool) bool {
+func VMSizeIsValid(vmSize api.VMSize, requireD2sV3Workers, isMaster bool) bool {
 	if isMaster {
 		switch vmSize {
 		case api.VMSizeStandardD8sV3,
@@ -20,7 +20,7 @@ func VMSizeIsValid(vmSize api.VMSize, isDevelopmentMode, isMaster bool) bool {
 			return true
 		}
 	} else {
-		if isDevelopmentMode {
+		if requireD2sV3Workers {
 			switch vmSize {
 			case api.VMSizeStandardD2sV3:
 				return true

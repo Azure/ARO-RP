@@ -20,7 +20,7 @@ import (
 )
 
 func adminRequest(ctx context.Context, method, path string, params url.Values, in, out interface{}) (*http.Response, error) {
-	if !env.IsDevelopmentMode() {
+	if !env.IsLocalDevelopmentMode() {
 		return nil, errors.New("only development RP mode is supported")
 	}
 

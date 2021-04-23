@@ -101,7 +101,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 			for i := range d.Spec.Template.Spec.Containers {
 				d.Spec.Template.Spec.Containers[i].Image = o.env.AROOperatorImage()
 
-				if o.env.IsDevelopmentMode() {
+				if o.env.IsLocalDevelopmentMode() {
 					d.Spec.Template.Spec.Containers[i].Env = append(d.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
 						Name:  "RP_MODE",
 						Value: "development",

@@ -131,10 +131,10 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 			location := resp.Header.Get("Location")
 			azureAsyncOperation := resp.Header.Get("Azure-AsyncOperation")
 			if tt.wantAsync {
-				if !strings.HasPrefix(location, fmt.Sprintf("/subscriptions/%s/providers/microsoft.redhatopenshift/locations/%s/operationresults/", mockSubID, ti.env.Location())) {
+				if !strings.HasPrefix(location, fmt.Sprintf("https://localhost:8443/subscriptions/%s/providers/microsoft.redhatopenshift/locations/%s/operationresults/", mockSubID, ti.env.Location())) {
 					t.Error(location)
 				}
-				if !strings.HasPrefix(azureAsyncOperation, fmt.Sprintf("/subscriptions/%s/providers/microsoft.redhatopenshift/locations/%s/operationsstatus/", mockSubID, ti.env.Location())) {
+				if !strings.HasPrefix(azureAsyncOperation, fmt.Sprintf("https://localhost:8443/subscriptions/%s/providers/microsoft.redhatopenshift/locations/%s/operationsstatus/", mockSubID, ti.env.Location())) {
 					t.Error(azureAsyncOperation)
 				}
 			} else {

@@ -18,11 +18,11 @@ import (
 )
 
 type validateTest struct {
-	name              string
-	current           func(oc *OpenShiftCluster)
-	modify            func(oc *OpenShiftCluster)
-	isDevelopmentMode bool
-	wantErr           string
+	name                string
+	current             func(oc *OpenShiftCluster)
+	modify              func(oc *OpenShiftCluster)
+	requireD2sV3Workers bool
+	wantErr             string
 }
 
 type testMode string
@@ -101,10 +101,10 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				v := &openShiftClusterStaticValidator{
-					location:          "location",
-					domain:            "location.aroapp.io",
-					isDevelopmentMode: tt.isDevelopmentMode,
-					resourceID:        id,
+					location:            "location",
+					domain:              "location.aroapp.io",
+					requireD2sV3Workers: tt.requireD2sV3Workers,
+					resourceID:          id,
 					r: azure.Resource{
 						SubscriptionID: subscriptionID,
 						ResourceGroup:  "resourceGroup",
@@ -511,8 +511,8 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D4s_v3"
 			},
-			isDevelopmentMode: true,
-			wantErr:           "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D4s_v3' is invalid.",
+			requireD2sV3Workers: true,
+			wantErr:             "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D4s_v3' is invalid.",
 		},
 		{
 			name: "disk too small",

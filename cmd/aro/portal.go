@@ -30,7 +30,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	if !_env.IsDevelopmentMode() {
+	if !_env.IsLocalDevelopmentMode() {
 		for _, key := range []string{
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
@@ -92,12 +92,12 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsDevelopmentMode(), dbc)
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}
 
-	dbPortal, err := database.NewPortal(ctx, _env.IsDevelopmentMode(), dbc)
+	dbPortal, err := database.NewPortal(ctx, _env.IsLocalDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	dialer, err := proxy.NewDialer(_env.IsDevelopmentMode())
+	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}
@@ -148,7 +148,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 	hostname := "localhost:8444"
 	address := "localhost:8444"
 	sshAddress := "localhost:2222"
-	if !_env.IsDevelopmentMode() {
+	if !_env.IsLocalDevelopmentMode() {
 		hostname = os.Getenv("PORTAL_HOSTNAME")
 		address = ":8444"
 		sshAddress = ":2222"

@@ -146,7 +146,7 @@
             "sku": {
                 "name": "Standard_D2s_v3",
                 "tier": "Standard",
-                "capacity": "[int(parameters('ciCapacity'))]"
+                "capacity": "[parameters('ciCapacity')]"
             },
             "properties": {
                 "upgradePolicy": {

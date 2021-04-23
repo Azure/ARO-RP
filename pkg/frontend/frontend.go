@@ -267,7 +267,7 @@ func (f *frontend) setupRouter() *mux.Router {
 	r.Use(middleware.Log(f.env, f.auditLog, f.baseLog.WithField("component", "access")))
 	r.Use(middleware.Metrics(f.m))
 	r.Use(middleware.Panic)
-	r.Use(middleware.Headers(f.env.IsDevelopmentMode()))
+	r.Use(middleware.Headers)
 	r.Use(middleware.Validate(f.env, f.apis))
 	r.Use(middleware.Body)
 

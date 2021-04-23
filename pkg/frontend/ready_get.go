@@ -15,7 +15,7 @@ import (
 // minutes before indicating health.  This ensures that there will be a gap in
 // our health metric if we crash or restart.
 func (f *frontend) checkReady() bool {
-	if !f.env.IsDevelopmentMode() &&
+	if !f.env.IsLocalDevelopmentMode() &&
 		time.Since(f.startTime) < 2*time.Minute {
 		return false
 	}

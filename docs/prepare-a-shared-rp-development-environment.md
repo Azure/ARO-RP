@@ -78,16 +78,24 @@ locations.
 
 1. Create an AAD application which will fake up the ARM layer:
 
+   This application requires client certificate authentication to be enabled.  A
+   suitable key/certificate file can be generated using the following helper
+   utility:
+
    ```bash
-   AZURE_ARM_CLIENT_SECRET="$(uuidgen)"
+   go run ./hack/genkey -client arm
+   mv arm.* secrets
+   ```
+
+   ```bash
    AZURE_ARM_CLIENT_ID="$(az ad app create \
      --display-name aro-v4-arm-shared \
-     --end-date '2299-12-31T11:59:59+00:00' \
      --identifier-uris "https://$(uuidgen)/" \
-     --key-type password \
-     --password "$AZURE_ARM_CLIENT_SECRET" \
      --query appId \
      -o tsv)"
+   az ad app credential reset \
+     --id "$AZURE_ARM_CLIENT_ID" \
+     --cert "$(base64 -w0 <secrets/arm.crt)" >/dev/null
    az ad sp create --id "$AZURE_ARM_CLIENT_ID" >/dev/null
    ```
 
@@ -270,6 +278,22 @@ locations.
    mv localhost.* secrets
    ```
 
+1. Create the dev CA key/certificate.  A suitable key/certificate file can be
+   generated using the following helper utility:
+
+   ```bash
+   go run ./hack/genkey -ca dev-ca
+   mv dev-ca.* secrets
+   ```
+
+1. Create the dev client key/certificate.  A suitable key/certificate file can
+   be generated using the following helper utility:
+
+   ```bash
+   go run ./hack/genkey -client -keyFile secrets/dev-ca.key -certFile secrets/dev-ca.crt dev-client
+   mv dev-client.* secrets
+   ```
+
 
 # Environment file
 
@@ -294,12 +318,13 @@ locations.
    export AZURE_TENANT_ID='$AZURE_TENANT_ID'
    export AZURE_SUBSCRIPTION_ID='$AZURE_SUBSCRIPTION_ID'
    export AZURE_ARM_CLIENT_ID='$AZURE_ARM_CLIENT_ID'
-   export AZURE_ARM_CLIENT_SECRET='$AZURE_ARM_CLIENT_SECRET'
    export AZURE_FP_CLIENT_ID='$AZURE_FP_CLIENT_ID'
+   export AZURE_FP_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)'
    export AZURE_PORTAL_CLIENT_ID='$AZURE_PORTAL_CLIENT_ID'
    export AZURE_PORTAL_ACCESS_GROUP_IDS='$ADMIN_OBJECT_ID'
    export AZURE_PORTAL_ELEVATED_GROUP_IDS='$ADMIN_OBJECT_ID'
    export AZURE_CLIENT_ID='$AZURE_CLIENT_ID'
+   export AZURE_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)'
    export AZURE_CLIENT_SECRET='$AZURE_CLIENT_SECRET'
    export AZURE_RP_CLIENT_ID='$AZURE_RP_CLIENT_ID'
    export AZURE_RP_CLIENT_SECRET='$AZURE_RP_CLIENT_SECRET'
@@ -311,8 +336,8 @@ locations.
    export SECRET_SA_ACCOUNT_NAME='$SECRET_SA_ACCOUNT_NAME'
    export DATABASE_ACCOUNT_NAME="\$RESOURCEGROUP"
    export KEYVAULT_PREFIX="\$RESOURCEGROUP"
-   ADMIN_OBJECT_ID='$ADMIN_OBJECT_ID'
-   PARENT_DOMAIN_NAME='$PARENT_DOMAIN_NAME'
+   export ADMIN_OBJECT_ID='$ADMIN_OBJECT_ID'
+   export PARENT_DOMAIN_NAME='$PARENT_DOMAIN_NAME'
    PARENT_DOMAIN_RESOURCEGROUP='$PARENT_DOMAIN_RESOURCEGROUP'
    export DOMAIN_NAME="\$LOCATION.\$PARENT_DOMAIN_NAME"
    export AZURE_ENVIRONMENT='AzurePublicCloud'

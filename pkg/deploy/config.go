@@ -12,6 +12,9 @@ import (
 	"github.com/ghodss/yaml"
 )
 
+// NOTICE: when modifying the config definition here, don't forget to update
+// DevConfig().
+
 // Config represents configuration object for deployer tooling
 type Config struct {
 	RPs           []RPConfig     `json:"rps,omitempty"`
@@ -22,7 +25,7 @@ type Config struct {
 type RPConfig struct {
 	Location            string         `json:"location,omitempty"`
 	SubscriptionID      string         `json:"subscriptionId,omitempty"`
-	RPResourceGroupName string         `json:"resourceGroupName,omitempty"`
+	RPResourceGroupName string         `json:"rpResourceGroupName,omitempty"`
 	Configuration       *Configuration `json:"configuration,omitempty"`
 }
 
@@ -34,13 +37,16 @@ type Configuration struct {
 	ACRReplicaDisabled                 *bool         `json:"acrReplicaDisabled,omitempty"`
 	AdminAPICABundle                   *string       `json:"adminApiCaBundle,omitempty" value:"required"`
 	AdminAPIClientCertCommonName       *string       `json:"adminApiClientCertCommonName,omitempty" value:"required"`
+	ARMAPICABundle                     *string       `json:"armApiCaBundle,omitempty"`
+	ARMAPIClientCertCommonName         *string       `json:"armApiClientCertCommonName,omitempty"`
+	ARMClientID                        *string       `json:"armClientId,omitempty"`
 	BillingE2EStorageAccountID         *string       `json:"billingE2EStorageAccountId,omitempty"`
-	BillingServicePrincipalID          *string       `json:"billingServicePrincipalId,omitempty" value:"required"`
+	BillingServicePrincipalID          *string       `json:"billingServicePrincipalId,omitempty"`
 	ClusterMDSDConfigVersion           *string       `json:"clusterMdsdConfigVersion,omitempty" value:"required"`
 	ClusterParentDomainName            *string       `json:"clusterParentDomainName,omitempty" value:"required"`
 	DatabaseAccountName                *string       `json:"databaseAccountName,omitempty" value:"required"`
 	ExtraClusterKeyvaultAccessPolicies []interface{} `json:"extraClusterKeyvaultAccessPolicies,omitempty" value:"required"`
-	ExtraCosmosDBIPs                   []string      `json:"extraCosmosDBIPs,omitempty" value:"required"`
+	ExtraCosmosDBIPs                   []string      `json:"extraCosmosDBIPs,omitempty"`
 	ExtraPortalKeyvaultAccessPolicies  []interface{} `json:"extraPortalKeyvaultAccessPolicies,omitempty" value:"required"`
 	ExtraServiceKeyvaultAccessPolicies []interface{} `json:"extraServiceKeyvaultAccessPolicies,omitempty" value:"required"`
 	FPClientID                         *string       `json:"fpClientId,omitempty" value:"required"`
@@ -51,17 +57,18 @@ type Configuration struct {
 	GlobalSubscriptionID               *string       `json:"globalSubscriptionId,omitempty" value:"required"`
 	KeyvaultPrefix                     *string       `json:"keyvaultPrefix,omitempty" value:"required"`
 	MDMFrontendURL                     *string       `json:"mdmFrontendUrl,omitempty" value:"required"`
-	MDSDConfigVersion                  *string       `json:"mdsdConfigVersion,omitempty" value:"required"`
 	MDSDEnvironment                    *string       `json:"mdsdEnvironment,omitempty" value:"required"`
 	PortalAccessGroupIDs               []string      `json:"portalAccessGroupIds,omitempty" value:"required"`
 	PortalClientID                     *string       `json:"portalClientId,omitempty" value:"required"`
 	PortalElevatedGroupIDs             []string      `json:"portalElevatedGroupIds,omitempty" value:"required"`
 	RPFeatures                         []string      `json:"rpFeatures,omitempty"`
 	RPImagePrefix                      *string       `json:"rpImagePrefix,omitempty" value:"required"`
+	RPMDSDConfigVersion                *string       `json:"rpMdsdConfigVersion,omitempty" value:"required"`
 	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty" value:"required"`
 	RPParentDomainName                 *string       `json:"rpParentDomainName,omitempty" value:"required"`
 	SubscriptionResourceGroupName      *string       `json:"subscriptionResourceGroupName,omitempty" value:"required"`
 	SubscriptionResourceGroupLocation  *string       `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
+	RPVMSSCapacity                     *int          `json:"rpVmssCapacity,omitempty"`
 	SSHPublicKey                       *string       `json:"sshPublicKey,omitempty" value:"required"`
 	StorageAccountDomain               *string       `json:"storageAccountDomain,omitempty" value:"required"`
 	VMSize                             *string       `json:"vmSize,omitempty" value:"required"`

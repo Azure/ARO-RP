@@ -6,6 +6,7 @@ package generator
 import (
 	"fmt"
 
+	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtinsights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
@@ -27,6 +28,18 @@ func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
 			Location: to.StringPtr("Global"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Insights"),
+	}
+}
+
+func (g *generator) dnsZone(name string) *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtdns.Zone{
+			ZoneProperties: &mgmtdns.ZoneProperties{},
+			Name:           &name,
+			Type:           to.StringPtr("Microsoft.Network/dnsZones"),
+			Location:       to.StringPtr("global"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Network/dnsZones"),
 	}
 }
 

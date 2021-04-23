@@ -46,7 +46,7 @@ func TestSecurity(t *testing.T) {
 	defer controller.Finish()
 
 	_env := mock_env.NewMockCore(controller)
-	_env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
+	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 	_env.EXPECT().Location().AnyTimes().Return("eastus")
 	_env.EXPECT().TenantID().AnyTimes().Return("00000000-0000-0000-0000-000000000001")
 	_env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)

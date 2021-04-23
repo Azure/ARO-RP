@@ -30,7 +30,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if !_env.IsDevelopmentMode() {
+	if !_env.IsLocalDevelopmentMode() {
 		for _, key := range []string{
 			"CLUSTER_MDM_ACCOUNT",
 			"CLUSTER_MDM_NAMESPACE",
@@ -81,22 +81,22 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbMonitors, err := database.NewMonitors(ctx, _env.IsDevelopmentMode(), dbc)
+	dbMonitors, err := database.NewMonitors(ctx, _env.IsLocalDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}
 
-	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsDevelopmentMode(), dbc)
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}
 
-	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.IsDevelopmentMode(), dbc)
+	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.IsLocalDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}
 
-	dialer, err := proxy.NewDialer(_env.IsDevelopmentMode())
+	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}

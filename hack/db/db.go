@@ -57,7 +57,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	openShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsDevelopmentMode(), dbc)
+	openShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}

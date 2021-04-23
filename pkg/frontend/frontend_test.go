@@ -175,7 +175,7 @@ func TestRoutesAreNamedWithLowerCasePaths(t *testing.T) {
 	defer controller.Finish()
 
 	_env := mock_env.NewMockInterface(controller)
-	_env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
+	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 
 	f := &frontend{
 		baseLog: logrus.NewEntry(logrus.StandardLogger()),

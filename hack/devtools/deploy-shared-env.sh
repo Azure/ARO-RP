@@ -94,6 +94,10 @@ import_certs_secrets() {
         --name rp-server \
         --file secrets/localhost.pem >/dev/null
     az keyvault certificate import \
+        --vault-name "$KEYVAULT_PREFIX-svc" \
+        --name dev-arm \
+        --file secrets/arm.pem >/dev/null
+    az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-por" \
         --name portal-server \
         --file secrets/localhost.pem >/dev/null

@@ -32,6 +32,9 @@ func (g *generator) rpTemplate() *arm.Template {
 			"acrResourceId",
 			"adminApiCaBundle",
 			"adminApiClientCertCommonName",
+			"armApiCaBundle",
+			"armApiClientCertCommonName",
+			"armClientId",
 			"billingE2EStorageAccountId",
 			"billingServicePrincipalId",
 			"clusterMdsdConfigVersion",
@@ -40,14 +43,15 @@ func (g *generator) rpTemplate() *arm.Template {
 			"fpClientId",
 			"keyvaultPrefix",
 			"mdmFrontendUrl",
-			"mdsdConfigVersion",
 			"mdsdEnvironment",
 			"portalAccessGroupIds",
 			"portalClientId",
 			"portalElevatedGroupIds",
 			"rpFeatures",
 			"rpImage",
+			"rpMdsdConfigVersion",
 			"rpParentDomainName",
+			"rpVmssCapacity",
 			"sshPublicKey",
 			"storageAccountDomain",
 			"subscriptionResourceGroupName",
@@ -61,12 +65,19 @@ func (g *generator) rpTemplate() *arm.Template {
 		switch param {
 		case "encryptionAtHost":
 			p.Type = "bool"
-		case "billingE2EStorageAccountId",
+		case "armApiCaBundle",
+			"armApiClientCertCommonName",
+			"armClientId",
+			"billingServicePrincipalId",
+			"billingE2EStorageAccountId",
 			"extraCosmosDBIPs",
 			"rpFeatures":
 			p.DefaultValue = ""
 		case "vmSize":
 			p.DefaultValue = "Standard_D2s_v3"
+		case "rpVmssCapacity":
+			p.Type = "int"
+			p.DefaultValue = 3
 		}
 		t.Parameters[param] = p
 	}
@@ -102,6 +113,8 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 		"acrLocationOverride",
 		"acrResourceId",
 		"fpServicePrincipalId",
+		"clusterParentDomainName",
+		"rpParentDomainName",
 		"rpServicePrincipalId",
 		"rpVersionStorageAccountName",
 	}
@@ -116,6 +129,8 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 	}
 	t.Resources = append(t.Resources,
 		g.rpACR(),
+		g.rpParentDNSZone(),
+		g.rpClusterParentDNSZone(),
 	)
 	t.Resources = append(t.Resources,
 		g.rpACRRBAC()...,

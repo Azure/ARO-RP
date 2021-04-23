@@ -32,7 +32,7 @@ var _ OpenShiftClustersClient = &openShiftClustersClient{}
 // NewOpenShiftClustersClient creates a new OpenShiftClustersClient
 func NewOpenShiftClustersClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) OpenShiftClustersClient {
 	var client mgmtredhatopenshift20200430.OpenShiftClustersClient
-	if env.IsDevelopmentMode() {
+	if env.IsLocalDevelopmentMode() {
 		client = mgmtredhatopenshift20200430.NewOpenShiftClustersClientWithBaseURI("https://localhost:8443", subscriptionID)
 		client.Sender = &http.Client{
 			Transport: &http.Transport{

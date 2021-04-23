@@ -89,7 +89,7 @@ func newTestInfra(t *testing.T) *testInfra {
 	keyvault.EXPECT().GetCertificateSecret(gomock.Any(), env.RPServerSecretName).AnyTimes().Return(serverkey, servercerts, nil)
 
 	_env := mock_env.NewMockInterface(controller)
-	_env.EXPECT().IsDevelopmentMode().AnyTimes().Return(false)
+	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 	_env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
 	_env.EXPECT().Hostname().AnyTimes().Return("testhost")
 	_env.EXPECT().Location().AnyTimes().Return("eastus")
@@ -98,6 +98,7 @@ func newTestInfra(t *testing.T) *testInfra {
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
 	_env.EXPECT().Domain().AnyTimes().Return("")
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
+	_env.EXPECT().FeatureIsSet(env.FeatureRequireD2sV3Workers).AnyTimes().Return(false)
 
 	_, auditEntry := testlog.NewAudit()
 	log := logrus.NewEntry(logrus.StandardLogger())

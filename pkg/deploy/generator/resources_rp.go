@@ -10,7 +10,6 @@ import (
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb"
-	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
@@ -315,10 +314,12 @@ func (g *generator) rpVMSS() *arm.Resource {
 	}
 
 	for _, variable := range []string{
+		"armClientId",
 		"mdmFrontendUrl",
-		"mdsdConfigVersion",
 		"mdsdEnvironment",
 		"acrResourceId",
+		"adminApiClientCertCommonName",
+		"armApiClientCertCommonName",
 		"billingE2EStorageAccountId",
 		"clusterMdsdConfigVersion",
 		"clusterParentDomainName",
@@ -328,8 +329,8 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"portalElevatedGroupIds",
 		"rpFeatures",
 		"rpImage",
+		"rpMdsdConfigVersion",
 		"rpParentDomainName",
-		"adminApiClientCertCommonName",
 		"databaseAccountName",
 		"keyvaultPrefix",
 	} {
@@ -342,6 +343,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 
 	for _, variable := range []string{
 		"adminApiCaBundle",
+		"armApiCaBundle",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s='''", strings.ToUpper(variable)),
@@ -467,6 +469,9 @@ az logout
 
 mkdir /etc/aro-rp
 base64 -d <<<"$ADMINAPICABUNDLE" >/etc/aro-rp/admin-ca-bundle.pem
+if [[ -n "$ARMAPICABUNDLE" ]]; then
+  base64 -d <<<"$ARMAPICABUNDLE" >/etc/aro-rp/arm-ca-bundle.pem
+fi
 chown -R 1000:1000 /etc/aro-rp
 
 cat >/etc/sysconfig/mdm <<EOF
@@ -515,6 +520,8 @@ EOF
 cat >/etc/sysconfig/aro-rp <<EOF
 ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
+ARM_API_CLIENT_CERT_COMMON_NAME='$ARMAPICLIENTCERTCOMMONNAME'
+AZURE_ARM_CLIENT_ID='$ARMCLIENTID'
 AZURE_FP_CLIENT_ID='$FPCLIENTID'
 BILLING_E2E_STORAGE_ACCOUNT_ID='$BILLINGE2ESTORAGEACCOUNTID'
 CLUSTER_MDSD_CONFIG_VERSION='$CLUSTERMDSDCONFIGVERSION'
@@ -542,6 +549,8 @@ ExecStart=/usr/bin/docker run \
   --rm \
   -e ACR_RESOURCE_ID \
   -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
+  -e ARM_API_CLIENT_CERT_COMMON_NAME \
+  -e AZURE_ARM_CLIENT_ID \
   -e AZURE_FP_CLIENT_ID \
   -e BILLING_E2E_STORAGE_ACCOUNT_ID \
   -e CLUSTER_MDSD_CONFIG_VERSION \
@@ -635,7 +644,6 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
-  -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
   -e AZURE_PORTAL_ACCESS_GROUP_IDS \
   -e AZURE_PORTAL_CLIENT_ID \
   -e AZURE_PORTAL_ELEVATED_GROUP_IDS \
@@ -759,7 +767,7 @@ export MONITORING_GCS_REGION='$LOCATION'
 export MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault
 export MONITORING_GCS_AUTH_ID='$MDSDCERTIFICATESAN'
 export MONITORING_GCS_NAMESPACE=ARORPLogs
-export MONITORING_CONFIG_VERSION='$MDSDCONFIGVERSION'
+export MONITORING_CONFIG_VERSION='$RPMDSDCONFIGVERSION'
 export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
 
 export MONITORING_TENANT='$LOCATION'
@@ -793,7 +801,7 @@ done
 			Sku: &mgmtcompute.Sku{
 				Name:     to.StringPtr("[parameters('vmSize')]"),
 				Tier:     to.StringPtr("Standard"),
-				Capacity: to.Int64Ptr(3),
+				Capacity: to.Int64Ptr(1338),
 			},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
 				UpgradePolicy: &mgmtcompute.UpgradePolicy{
@@ -910,16 +918,16 @@ done
 	}
 }
 
+func (g *generator) rpParentDNSZone() *arm.Resource {
+	return g.dnsZone("[parameters('rpParentDomainName')]")
+}
+
+func (g *generator) rpClusterParentDNSZone() *arm.Resource {
+	return g.dnsZone("[parameters('clusterParentDomainName')]")
+}
+
 func (g *generator) rpDNSZone() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtdns.Zone{
-			ZoneProperties: &mgmtdns.ZoneProperties{},
-			Name:           to.StringPtr("[concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))]"),
-			Type:           to.StringPtr("Microsoft.Network/dnsZones"),
-			Location:       to.StringPtr("global"),
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Network/dnsZones"),
-	}
+	return g.dnsZone("[concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))]")
 }
 
 func (g *generator) rpClusterKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
@@ -1432,6 +1440,7 @@ func (g *generator) rpBillingContributorRbac() []*arm.Resource {
 			"Microsoft.DocumentDB/databaseAccounts",
 			"parameters('databaseAccountName')",
 			"concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('billingServicePrincipalId') , 'Billing / DocumentDB Account Contributor'))",
+			"[greater(length(parameters('billingServicePrincipalId')), 0)]",
 		),
 	}
 }

@@ -108,8 +108,13 @@ func (d *dev) DialContext(ctx context.Context, network, address string) (net.Con
 	return &conn{Conn: c, r: r}, nil
 }
 
-func NewDialer(isDevelopmentMode bool) (Dialer, error) {
-	if !isDevelopmentMode {
+// NewDialer returns a Dialer which can dial a customer cluster API server. When
+// not in local development mode, there is no magic here.  In local development
+// mode, this dials the development proxy, which proxies to the requested
+// endpoint.  This enables the RP to run without routeability to its vnet in
+// local development mode.
+func NewDialer(isLocalDevelopmentMode bool) (Dialer, error) {
+	if !isLocalDevelopmentMode {
 		return &prod{}, nil
 	}
 

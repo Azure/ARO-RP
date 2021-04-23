@@ -146,7 +146,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().IsDevelopmentMode().Return(false)
+			env.EXPECT().IsLocalDevelopmentMode().Return(false)
 
 			h, log := testlog.New()
 			m := &manager{

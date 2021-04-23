@@ -38,7 +38,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	}
 
 	var keys []string
-	if _env.IsDevelopmentMode() {
+	if _env.IsLocalDevelopmentMode() {
 		keys = []string{
 			"PULL_SECRET",
 		}
@@ -88,22 +88,22 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbAsyncOperations, err := database.NewAsyncOperations(ctx, _env.IsDevelopmentMode(), dbc)
+	dbAsyncOperations, err := database.NewAsyncOperations(ctx, _env.IsLocalDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}
 
-	dbBilling, err := database.NewBilling(ctx, _env.IsDevelopmentMode(), dbc)
+	dbBilling, err := database.NewBilling(ctx, _env.IsLocalDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}
 
-	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsDevelopmentMode(), dbc)
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}
 
-	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.IsDevelopmentMode(), dbc)
+	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.IsLocalDevelopmentMode(), dbc)
 	if err != nil {
 		return err
 	}

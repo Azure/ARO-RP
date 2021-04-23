@@ -9,6 +9,7 @@ gomock_reflect_*
 /*.kubeconfig
 /*.pem
 /aro
+/dev-config.yaml
 /e2e.test
 /env*
 !/env.example
