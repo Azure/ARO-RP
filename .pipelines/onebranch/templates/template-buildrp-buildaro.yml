@@ -12,9 +12,6 @@ steps:
       mkdir -p $(Agent.TempDirectory)/src/github.com/Azure/
       cp -rd $(Build.SourcesDirectory) $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
       cd $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
-      ls
-      git rev-parse --short HEAD
-      git status --porcelain
       make aro
       mkdir -p $(ob_outputDirectory) 
       cp aro $(ob_outputDirectory)/aro
