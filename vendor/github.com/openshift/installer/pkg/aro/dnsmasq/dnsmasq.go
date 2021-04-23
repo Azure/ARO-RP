@@ -36,7 +36,11 @@ After=network-online.target
 Before=bootkube.service
 
 [Service]
-ExecStartPre=/bin/bash -c 'if /usr/bin/test -f "/etc/resolv.conf.dnsmasq"; then echo "already replaced resolv.conf.dnsmasq"; else /bin/cp /etc/resolv.conf /etc/resolv.conf.dnsmasq; fi; /bin/sed -ni -e "/^nameserver /!p; \\$$a nameserver $$(hostname -I)" /etc/resolv.conf; /usr/sbin/restorecon /etc/resolv.conf'
+# ExecStartPre will create a copy of the customer current resolv.conf file and make it upstream DNS.
+# This file is a product of user DNS settings on the VNET. We will replace this file to point to
+# dnsmasq instance on the node. dnsmasq will inject certain dns records we need and forward rest of the queries to
+# resolv.conf.dnsmasq upstream customer dns.
+ExecStartPre=/bin/bash -c 'if /usr/bin/test -f "/etc/resolv.conf.dnsmasq"; then echo "already replaced resolv.conf.dnsmasq"; else /bin/cp /etc/resolv.conf /etc/resolv.conf.dnsmasq; fi; /bin/sed -ni -e "/^nameserver /!p; \\$$a nameserver $$(ip -f inet -o addr show eth0|cut -d\  -f 7 | cut -d/ -f 1)" /etc/resolv.conf; /usr/sbin/restorecon /etc/resolv.conf'
 ExecStart=/usr/sbin/dnsmasq -k
 ExecStopPost=/bin/bash -c '/bin/mv /etc/resolv.conf.dnsmasq /etc/resolv.conf; /usr/sbin/restorecon /etc/resolv.conf'
 Restart=always

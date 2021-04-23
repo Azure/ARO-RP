@@ -1503,8 +1503,8 @@ github.com/mitchellh/pointerstructure v0.0.0-20190430161007-f252a8fd71c8/go.mod 
 github.com/mitchellh/prefixedio v0.0.0-20190213213902-5733675afd51/go.mod h1:kB1naBgV9ORnkiTVeyJOI1DavaJkG4oNIq0Af6ZVKUo=
 github.com/mitchellh/reflectwalk v1.0.0/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
 github.com/mitchellh/reflectwalk v1.0.1/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
-github.com/mjudeikis/installer v0.9.0-master.0.20210422083719-c85b1106c3f3 h1:Zh+iSrrcBwo5korHRbdfCm+Si3aojzjiFagQDVAUdL4=
-github.com/mjudeikis/installer v0.9.0-master.0.20210422083719-c85b1106c3f3/go.mod h1:7VaPq04uNsqsSVgORCxZxNN7mq7FyhrvFBN2EPyk7iQ=
+github.com/mjudeikis/installer v0.9.0-master.0.20210423142443-7756cb69c32a h1:Sgx14vkKBwXgIOv3wBrqANgHalgr9TwiXnrm5h19c9s=
+github.com/mjudeikis/installer v0.9.0-master.0.20210423142443-7756cb69c32a/go.mod h1:7VaPq04uNsqsSVgORCxZxNN7mq7FyhrvFBN2EPyk7iQ=
 github.com/moby/ipvs v1.0.1/go.mod h1:2pngiyseZbIKXNv7hsKj3O9UEz30c53MT9005gt2hxQ=
 github.com/moby/sys/mountinfo v0.1.3/go.mod h1:w2t2Avltqx8vE7gX5l+QiBKxODu2TX0+Syr3h52Tw4o=
 github.com/moby/sys/mountinfo v0.4.0 h1:1KInV3Huv18akCu58V7lzNlt+jFmqlu1EaErnEHE/VM=
