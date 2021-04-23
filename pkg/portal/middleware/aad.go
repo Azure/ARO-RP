@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/coreos/go-oidc"
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -24,6 +23,7 @@ import (
 	"golang.org/x/oauth2/microsoft"
 
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 )
 
@@ -52,35 +52,6 @@ type oauther interface {
 	Exchange(context.Context, string, ...oauth2.AuthCodeOption) (*oauth2.Token, error)
 }
 
-type Verifier interface {
-	Verify(context.Context, string) (oidctoken, error)
-}
-
-type idTokenVerifier struct {
-	*oidc.IDTokenVerifier
-}
-
-func (v *idTokenVerifier) Verify(ctx context.Context, rawIDToken string) (oidctoken, error) {
-	return v.IDTokenVerifier.Verify(ctx, rawIDToken)
-}
-
-type oidctoken interface {
-	Claims(interface{}) error
-}
-
-func NewVerifier(ctx context.Context, env env.Core, clientID string) (Verifier, error) {
-	provider, err := oidc.NewProvider(ctx, env.Environment().ActiveDirectoryEndpoint+env.TenantID()+"/v2.0")
-	if err != nil {
-		return nil, err
-	}
-
-	return &idTokenVerifier{
-		provider.Verifier(&oidc.Config{
-			ClientID: clientID,
-		}),
-	}, nil
-}
-
 type claims struct {
 	Groups            []string `json:"groups,omitempty"`
 	PreferredUsername string   `json:"preferred_username,omitempty"`
@@ -99,7 +70,7 @@ type aad struct {
 
 	store     *sessions.CookieStore
 	oauther   oauther
-	verifier  Verifier
+	verifier  oidc.Verifier
 	allGroups []string
 
 	sessionTimeout time.Duration
@@ -116,7 +87,7 @@ func NewAAD(log *logrus.Entry,
 	clientCerts []*x509.Certificate,
 	allGroups []string,
 	unauthenticatedRouter *mux.Router,
-	verifier Verifier) (AAD, error) {
+	verifier oidc.Verifier) (AAD, error) {
 	if len(sessionKey) != 32 {
 		return nil, errors.New("invalid sessionKey")
 	}

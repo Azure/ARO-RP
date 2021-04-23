@@ -18,10 +18,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	pkgportal "github.com/Azure/ARO-RP/pkg/portal"
-	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/oidc"
 )
 
 func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
@@ -145,7 +145,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 	}
 
 	clientID := os.Getenv("AZURE_PORTAL_CLIENT_ID")
-	verifier, err := middleware.NewVerifier(ctx, _env, clientID)
+	verifier, err := oidc.NewVerifier(ctx, _env.Environment().ActiveDirectoryEndpoint+_env.TenantID()+"/v2.0", clientID)
 	if err != nil {
 		return err
 	}

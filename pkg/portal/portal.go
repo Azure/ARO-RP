@@ -30,6 +30,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/portal/prometheus"
 	"github.com/Azure/ARO-RP/pkg/portal/ssh"
 	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/oidc"
 )
 
 type Runnable interface {
@@ -43,7 +44,7 @@ type portal struct {
 	baseAccessLog *logrus.Entry
 	l             net.Listener
 	sshl          net.Listener
-	verifier      middleware.Verifier
+	verifier      oidc.Verifier
 
 	hostname     string
 	servingKey   *rsa.PrivateKey
@@ -73,7 +74,7 @@ func NewPortal(env env.Core,
 	baseAccessLog *logrus.Entry,
 	l net.Listener,
 	sshl net.Listener,
-	verifier middleware.Verifier,
+	verifier oidc.Verifier,
 	hostname string,
 	servingKey *rsa.PrivateKey,
 	servingCerts []*x509.Certificate,
