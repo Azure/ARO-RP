@@ -140,10 +140,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 				_, _ = io.Copy(c2, c)
 			}()
 
-			defer func() {
-				_ = c.(*tls.Conn).CloseWrite()
+			func() {
+				defer func() {
+					_ = c.(*tls.Conn).CloseWrite()
+				}()
+				_, _ = io.Copy(c, c2)
 			}()
-			_, _ = io.Copy(c, c2)
 
 			<-ch
 		}(c)
