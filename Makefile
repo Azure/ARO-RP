@@ -129,6 +129,25 @@ test-go: generate
 	go vet ./...
 	set -o pipefail && go test -v ./... -coverprofile cover.out | tee uts.txt
 
+.PHONY: validate-go
+validate-go:
+	gofmt -s -w cmd hack pkg test
+	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg test
+	go run ./hack/validate-imports cmd hack pkg test
+	go run ./hack/licenses
+	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
+	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
+	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
+	go vet ./...
+
+.PHONY: unit-test-go
+unit-test-go:
+	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml
+
+.PHONY: coverage-go
+coverage-go:
+	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname -- -coverprofile=cover.out ./...
+
 lint-go:
 	go run ./vendor/github.com/golangci/golangci-lint/cmd/golangci-lint run
 
