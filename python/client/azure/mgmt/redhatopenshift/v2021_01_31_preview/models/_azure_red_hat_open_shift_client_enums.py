@@ -22,14 +22,6 @@
 from enum import Enum
 
 
-class ActorType(str, Enum):
-
-    application = "Application"
-    key = "Key"
-    managed_identity = "ManagedIdentity"
-    user = "User"
-
-
 class VMSize(str, Enum):
 
     standard_d16as_v4 = "Standard_D16as_v4"

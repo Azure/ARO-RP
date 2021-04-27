@@ -51,9 +51,9 @@ func TestSystemData(t *testing.T) {
 			systemData: systemDataCreate,
 			expect: &api.SystemData{
 				CreatedBy:          "foo@bar.com",
-				CreatedByType:      api.ActorTypeApplication,
+				CreatedByType:      api.CreatedByTypeApplication,
 				CreatedAt:          &timestamp,
-				LastModifiedByType: api.ActorTypeApplication,
+				LastModifiedByType: api.CreatedByTypeApplication,
 				LastModifiedBy:     "00000000-0000-0000-0000-000000000000",
 				LastModifiedAt:     &timestamp,
 			},
@@ -62,7 +62,7 @@ func TestSystemData(t *testing.T) {
 			name:       "Partial systemData provided",
 			systemData: systemDataUpdate,
 			expect: &api.SystemData{
-				LastModifiedByType: api.ActorTypeApplication,
+				LastModifiedByType: api.CreatedByTypeApplication,
 				LastModifiedBy:     "00000000-0000-0000-0000-000000000000",
 				LastModifiedAt:     &timestamp,
 			},

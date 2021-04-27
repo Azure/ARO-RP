@@ -1084,10 +1084,10 @@ func TestPutOrPatchOpenShiftClusterV20210131preview(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						SystemData: api.SystemData{
 							CreatedBy:          accountID1,
-							CreatedByType:      api.ActorTypeApplication,
+							CreatedByType:      api.CreatedByTypeApplication,
 							CreatedAt:          &timestamp,
 							LastModifiedBy:     accountID1,
-							LastModifiedByType: api.ActorTypeApplication,
+							LastModifiedByType: api.CreatedByTypeApplication,
 							LastModifiedAt:     &timestamp,
 						},
 						Properties: api.OpenShiftClusterProperties{
@@ -1112,10 +1112,10 @@ func TestPutOrPatchOpenShiftClusterV20210131preview(t *testing.T) {
 				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 				SystemData: v20210131preview.SystemData{
 					CreatedBy:          accountID1,
-					CreatedByType:      v20210131preview.ActorTypeApplication,
+					CreatedByType:      v20210131preview.CreatedByTypeApplication,
 					CreatedAt:          &timestamp,
 					LastModifiedBy:     accountID1,
-					LastModifiedByType: v20210131preview.ActorTypeApplication,
+					LastModifiedByType: v20210131preview.CreatedByTypeApplication,
 					LastModifiedAt:     &timestamp,
 				},
 				Properties: v20210131preview.OpenShiftClusterProperties{
@@ -1150,10 +1150,10 @@ func TestPutOrPatchOpenShiftClusterV20210131preview(t *testing.T) {
 						Tags: map[string]string{"tag": "will-be-removed"},
 						SystemData: api.SystemData{
 							CreatedBy:          accountID1,
-							CreatedByType:      api.ActorTypeApplication,
+							CreatedByType:      api.CreatedByTypeApplication,
 							CreatedAt:          &timestamp,
 							LastModifiedBy:     accountID1,
-							LastModifiedByType: api.ActorTypeApplication,
+							LastModifiedByType: api.CreatedByTypeApplication,
 							LastModifiedAt:     &timestamp,
 						},
 						Properties: api.OpenShiftClusterProperties{
@@ -1190,10 +1190,10 @@ func TestPutOrPatchOpenShiftClusterV20210131preview(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						SystemData: api.SystemData{
 							CreatedBy:          accountID1,
-							CreatedByType:      api.ActorTypeApplication,
+							CreatedByType:      api.CreatedByTypeApplication,
 							CreatedAt:          &timestamp,
 							LastModifiedBy:     accountID2,
-							LastModifiedByType: api.ActorTypeApplication,
+							LastModifiedByType: api.CreatedByTypeApplication,
 							LastModifiedAt:     &timestamp,
 						},
 						Properties: api.OpenShiftClusterProperties{
@@ -1219,10 +1219,10 @@ func TestPutOrPatchOpenShiftClusterV20210131preview(t *testing.T) {
 				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 				SystemData: v20210131preview.SystemData{
 					CreatedBy:          accountID1,
-					CreatedByType:      v20210131preview.ActorTypeApplication,
+					CreatedByType:      v20210131preview.CreatedByTypeApplication,
 					CreatedAt:          &timestamp,
 					LastModifiedBy:     accountID2,
-					LastModifiedByType: v20210131preview.ActorTypeApplication,
+					LastModifiedByType: v20210131preview.CreatedByTypeApplication,
 					LastModifiedAt:     &timestamp,
 				},
 				Properties: v20210131preview.OpenShiftClusterProperties{

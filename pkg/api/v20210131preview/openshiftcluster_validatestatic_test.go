@@ -54,10 +54,10 @@ func validOpenShiftCluster() *OpenShiftCluster {
 		},
 		SystemData: SystemData{
 			CreatedBy:          "00000000-0000-0000-0000-000000000000",
-			CreatedByType:      ActorTypeApplication,
+			CreatedByType:      CreatedByTypeApplication,
 			CreatedAt:          &timestamp,
 			LastModifiedBy:     "00000000-0000-0000-0000-000000000000",
-			LastModifiedByType: ActorTypeApplication,
+			LastModifiedByType: CreatedByTypeApplication,
 			LastModifiedAt:     &timestamp,
 		},
 		Properties: OpenShiftClusterProperties{

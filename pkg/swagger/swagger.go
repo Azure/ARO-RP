@@ -172,6 +172,7 @@ func (s *Swagger) defineSystemData(resources []string, commonVersion string) {
 		// SystemData is not user side consumable type. It is being returned as Read-Only,
 		// but should not be generated into API or swagger as API/SDK type
 		delete(s.Definitions, "SystemData")
+		delete(s.Definitions, "CreatedByType")
 		s.Definitions[resource].Properties = append(s.Definitions[resource].Properties,
 			NameSchema{
 				Name: "systemData",

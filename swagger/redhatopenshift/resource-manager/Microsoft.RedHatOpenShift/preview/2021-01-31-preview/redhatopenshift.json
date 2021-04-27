@@ -417,20 +417,6 @@
         }
       }
     },
-    "ActorType": {
-      "description": "ActorType enumerates the values for create or update by type.",
-      "enum": [
-        "Application",
-        "Key",
-        "ManagedIdentity",
-        "User"
-      ],
-      "type": "string",
-      "x-ms-enum": {
-        "name": "ActorType",
-        "modelAsString": true
-      }
-    },
     "CloudError": {
       "description": "CloudError represents a cloud error.",
       "properties": {

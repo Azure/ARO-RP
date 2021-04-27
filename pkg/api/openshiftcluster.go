@@ -22,25 +22,25 @@ type OpenShiftCluster struct {
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
 }
 
-type ActorType string
+type CreatedByType string
 
 const (
-	ActorTypeApplication     ActorType = "Application"
-	ActorTypeKey             ActorType = "Key"
-	ActorTypeManagedIdentity ActorType = "ManagedIdentity"
-	ActorTypeUser            ActorType = "User"
+	CreatedByTypeApplication     CreatedByType = "Application"
+	CreatedByTypeKey             CreatedByType = "Key"
+	CreatedByTypeManagedIdentity CreatedByType = "ManagedIdentity"
+	CreatedByTypeUser            CreatedByType = "User"
 )
 
 // SystemData represets metadata provided by arm. Add fields inside the struct are pointers
 // so we could better verify which fields are provided to use by ARM. More details on this:
 // https://github.com/Azure/azure-resource-manager-rpc/blob/master/v1.0/common-api-contracts.md#system-metadata-for-all-azure-resources
 type SystemData struct {
-	CreatedBy          string     `json:"createdBy,omitempty"`
-	CreatedByType      ActorType  `json:"createdByType,omitempty"`
-	CreatedAt          *time.Time `json:"createdAt,omitempty"`
-	LastModifiedBy     string     `json:"lastModifiedBy,omitempty"`
-	LastModifiedByType ActorType  `json:"lastModifiedByType,omitempty"`
-	LastModifiedAt     *time.Time `json:"lastModifiedAt,omitempty"`
+	CreatedBy          string        `json:"createdBy,omitempty"`
+	CreatedByType      CreatedByType `json:"createdByType,omitempty"`
+	CreatedAt          *time.Time    `json:"createdAt,omitempty"`
+	LastModifiedBy     string        `json:"lastModifiedBy,omitempty"`
+	LastModifiedByType CreatedByType `json:"lastModifiedByType,omitempty"`
+	LastModifiedAt     *time.Time    `json:"lastModifiedAt,omitempty"`
 }
 
 // SecureBytes represents an encrypted []byte

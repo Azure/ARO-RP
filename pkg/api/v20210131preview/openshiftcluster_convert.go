@@ -86,10 +86,10 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 	out.SystemData = SystemData{
 		CreatedBy:          oc.SystemData.CreatedBy,
 		CreatedAt:          oc.SystemData.CreatedAt,
-		CreatedByType:      ActorType(oc.SystemData.CreatedByType),
+		CreatedByType:      CreatedByType(oc.SystemData.CreatedByType),
 		LastModifiedBy:     oc.SystemData.LastModifiedBy,
 		LastModifiedAt:     oc.SystemData.LastModifiedAt,
-		LastModifiedByType: ActorType(oc.SystemData.LastModifiedByType),
+		LastModifiedByType: CreatedByType(oc.SystemData.LastModifiedByType),
 	}
 
 	return out
@@ -167,9 +167,9 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.SystemData = api.SystemData{
 		CreatedBy:          oc.SystemData.CreatedBy,
 		CreatedAt:          oc.SystemData.CreatedAt,
-		CreatedByType:      api.ActorType(oc.SystemData.CreatedByType),
+		CreatedByType:      api.CreatedByType(oc.SystemData.CreatedByType),
 		LastModifiedBy:     oc.SystemData.LastModifiedBy,
 		LastModifiedAt:     oc.SystemData.LastModifiedAt,
-		LastModifiedByType: api.ActorType(oc.SystemData.CreatedByType),
+		LastModifiedByType: api.CreatedByType(oc.SystemData.CreatedByType),
 	}
 }

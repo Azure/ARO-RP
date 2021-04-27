@@ -211,18 +211,18 @@ type IngressProfile struct {
 	IP string `json:"ip,omitempty"`
 }
 
-// ActorType enumerates the values for create or update by type.
-type ActorType string
+// CreatedByType stores metadata pertaining to creation and last modification of the resource.
+type CreatedByType string
 
 const (
 	// Application ...
-	ActorTypeApplication ActorType = "Application"
+	CreatedByTypeApplication CreatedByType = "Application"
 	// Key ...
-	ActorTypeKey ActorType = "Key"
+	CreatedByTypeKey CreatedByType = "Key"
 	// ManagedIdentity ...
-	ActorTypeManagedIdentity ActorType = "ManagedIdentity"
+	CreatedByTypeManagedIdentity CreatedByType = "ManagedIdentity"
 	// User ...
-	ActorTypeUser ActorType = "User"
+	CreatedByTypeUser CreatedByType = "User"
 )
 
 // SystemData metadata pertaining to creation and last modification of the resource.
@@ -230,13 +230,13 @@ type SystemData struct {
 	// The identity that created the resource.
 	CreatedBy string `json:"createdBy,omitempty"`
 	// The type of identity that created the resource. Possible values include: 'User', 'Application', 'ManagedIdentity', 'Key'
-	CreatedByType ActorType `json:"createdByType,omitempty"`
+	CreatedByType CreatedByType `json:"createdByType,omitempty"`
 	// The timestamp of resource creation (UTC).
 	CreatedAt *time.Time `json:"createdAt,omitempty"`
 	// The identity that last modified the resource.
 	LastModifiedBy string `json:"lastModifiedBy,omitempty"`
 	// The type of identity that last modified the resource. Possible values include: 'User', 'Application', 'ManagedIdentity', 'Key'
-	LastModifiedByType ActorType `json:"lastModifiedByType,omitempty"`
+	LastModifiedByType CreatedByType `json:"lastModifiedByType,omitempty"`
 	// The type of identity that last modified the resource.
 	LastModifiedAt *time.Time `json:"lastModifiedAt,omitempty"`
 }

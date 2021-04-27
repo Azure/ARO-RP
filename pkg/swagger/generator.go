@@ -48,7 +48,7 @@ var apis = map[string]*generator{
 		exampleOpenShiftClusterListResponse:        v20210131preview.ExampleOpenShiftClusterListResponse,
 		exampleOperationListResponse:               api.ExampleOperationListResponse,
 
-		xmsEnum:            []string{"VMSize", "SDNProvider", "ActorType"},
+		xmsEnum:            []string{"VMSize", "SDNProvider"},
 		commonTypesVersion: "v2",
 		systemData:         true,
 	},
