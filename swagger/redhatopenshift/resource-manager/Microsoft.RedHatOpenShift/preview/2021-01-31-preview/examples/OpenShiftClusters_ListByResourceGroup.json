@@ -13,7 +13,14 @@
             "name": "resourceName",
             "type": "Microsoft.RedHatOpenShift/OpenShiftClusters",
             "location": "location",
-            "systemData": {},
+            "systemData": {
+              "createdBy": "string",
+              "createdByType": "Application",
+              "createdAt": "2020-02-03T01:01:01.1075056Z",
+              "lastModifiedBy": "string",
+              "lastModifiedByType": "Application",
+              "lastModifiedAt": "2020-02-03T01:01:01.1075056Z"
+            },
             "tags": {
               "key": "value"
             },
