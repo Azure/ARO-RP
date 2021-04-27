@@ -17,22 +17,22 @@ import (
 // n==3 action on resource not expecting input payload
 // n==4 action on resource expecting input payload
 // n==5 patch action on resource expecting input payload
-func populateParameters(n int, typ, friendlyName string) (s []interface{}) {
+func (g *generator) populateParameters(n int, typ, friendlyName string) (s []interface{}) {
 	s = []interface{}{
 		Reference{
-			Ref: "../../../../../common-types/resource-management/v1/types.json#/parameters/ApiVersionParameter",
+			Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ApiVersionParameter",
 		},
 	}
 
 	if n > 0 {
 		s = append(s, Reference{
-			Ref: "../../../../../common-types/resource-management/v1/types.json#/parameters/SubscriptionIdParameter",
+			Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/SubscriptionIdParameter",
 		})
 	}
 
 	if n > 1 {
 		s = append(s, Reference{
-			Ref: "../../../../../common-types/resource-management/v1/types.json#/parameters/ResourceGroupNameParameter",
+			Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ResourceGroupNameParameter",
 		})
 	}
 
@@ -67,7 +67,7 @@ func populateParameters(n int, typ, friendlyName string) (s []interface{}) {
 
 // populateResponses populates a responses block.  Always include the default
 // error response.
-func populateResponses(typ string, isDelete bool, statusCodes ...int) (responses map[string]interface{}) {
+func (g *generator) populateResponses(typ string, isDelete bool, statusCodes ...int) (responses map[string]interface{}) {
 	responses = map[string]interface{}{
 		"default": Response{
 			Description: "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
@@ -96,7 +96,7 @@ func populateResponses(typ string, isDelete bool, statusCodes ...int) (responses
 }
 
 // populateTopLevelPaths populates the paths for a top level ARM resource
-func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName string) (ps Paths) {
+func (g *generator) populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName string) (ps Paths) {
 	ps = Paths{}
 
 	ps["/subscriptions/{subscriptionId}/providers/"+resourceProviderNamespace+"/"+resourceType+"s"] = &PathItem{
@@ -105,8 +105,8 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			Summary:     "Lists " + friendlyName + "s in the specified subscription.",
 			Description: "The operation returns properties of each " + friendlyName + ".",
 			OperationID: strings.Title(resourceType) + "s_List",
-			Parameters:  populateParameters(1, strings.Title(resourceType), friendlyName),
-			Responses:   populateResponses(strings.Title(resourceType)+"List", false, http.StatusOK),
+			Parameters:  g.populateParameters(1, strings.Title(resourceType), friendlyName),
+			Responses:   g.populateResponses(strings.Title(resourceType)+"List", false, http.StatusOK),
 			Pageable: &Pageable{
 				NextLinkName: "nextLink",
 			},
@@ -119,8 +119,8 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			Summary:     "Lists " + friendlyName + "s in the specified subscription and resource group.",
 			Description: "The operation returns properties of each " + friendlyName + ".",
 			OperationID: strings.Title(resourceType) + "s_ListByResourceGroup",
-			Parameters:  populateParameters(2, strings.Title(resourceType), friendlyName),
-			Responses:   populateResponses(strings.Title(resourceType)+"List", false, http.StatusOK),
+			Parameters:  g.populateParameters(2, strings.Title(resourceType), friendlyName),
+			Responses:   g.populateResponses(strings.Title(resourceType)+"List", false, http.StatusOK),
 			Pageable: &Pageable{
 				NextLinkName: "nextLink",
 			},
@@ -133,16 +133,16 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			Summary:     "Gets a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description: "The operation returns properties of a " + friendlyName + ".",
 			OperationID: strings.Title(resourceType) + "s_Get",
-			Parameters:  populateParameters(3, strings.Title(resourceType), friendlyName),
-			Responses:   populateResponses(strings.Title(resourceType), false, http.StatusOK),
+			Parameters:  g.populateParameters(3, strings.Title(resourceType), friendlyName),
+			Responses:   g.populateResponses(strings.Title(resourceType), false, http.StatusOK),
 		},
 		Put: &Operation{
 			Tags:                 []string{strings.Title(resourceType) + "s"},
 			Summary:              "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description:          "The operation returns properties of a " + friendlyName + ".",
 			OperationID:          strings.Title(resourceType) + "s_CreateOrUpdate",
-			Parameters:           populateParameters(4, strings.Title(resourceType), friendlyName),
-			Responses:            populateResponses(strings.Title(resourceType), false, http.StatusOK, http.StatusCreated),
+			Parameters:           g.populateParameters(4, strings.Title(resourceType), friendlyName),
+			Responses:            g.populateResponses(strings.Title(resourceType), false, http.StatusOK, http.StatusCreated),
 			LongRunningOperation: true,
 		},
 		Delete: &Operation{
@@ -150,8 +150,8 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			Summary:              "Deletes a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description:          "The operation returns nothing.",
 			OperationID:          strings.Title(resourceType) + "s_Delete",
-			Parameters:           populateParameters(3, strings.Title(resourceType), friendlyName),
-			Responses:            populateResponses(strings.Title(resourceType), true, http.StatusAccepted, http.StatusNoContent),
+			Parameters:           g.populateParameters(3, strings.Title(resourceType), friendlyName),
+			Responses:            g.populateResponses(strings.Title(resourceType), true, http.StatusAccepted, http.StatusNoContent),
 			LongRunningOperation: true,
 		},
 		Patch: &Operation{
@@ -159,8 +159,8 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			Summary:              "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description:          "The operation returns properties of a " + friendlyName + ".",
 			OperationID:          strings.Title(resourceType) + "s_Update",
-			Parameters:           populateParameters(5, strings.Title(resourceType), friendlyName),
-			Responses:            populateResponses(strings.Title(resourceType), false, http.StatusOK, http.StatusCreated),
+			Parameters:           g.populateParameters(5, strings.Title(resourceType), friendlyName),
+			Responses:            g.populateResponses(strings.Title(resourceType), false, http.StatusOK, http.StatusCreated),
 			LongRunningOperation: true,
 		},
 	}

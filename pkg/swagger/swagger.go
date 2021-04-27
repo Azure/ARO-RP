@@ -13,6 +13,11 @@ import (
 )
 
 func Run(api, outputDir string) error {
+	g, err := New(api)
+	if err != nil {
+		return err
+	}
+
 	s := &Swagger{
 		Swagger: "2.0",
 		Info: &Info{
@@ -24,7 +29,7 @@ func Run(api, outputDir string) error {
 		Schemes:     []string{"https"},
 		Consumes:    []string{"application/json"},
 		Produces:    []string{"application/json"},
-		Paths:       populateTopLevelPaths("Microsoft.RedHatOpenShift", "openShiftCluster", "OpenShift cluster"),
+		Paths:       g.populateTopLevelPaths("Microsoft.RedHatOpenShift", "openShiftCluster", "OpenShift cluster"),
 		Definitions: Definitions{},
 		SecurityDefinitions: SecurityDefinitions{
 			"azure_auth": {
@@ -50,8 +55,8 @@ func Run(api, outputDir string) error {
 			Summary:     "Lists credentials of an OpenShift cluster with the specified subscription, resource group and resource name.",
 			Description: "The operation returns the credentials.",
 			OperationID: "OpenShiftClusters_ListCredentials",
-			Parameters:  populateParameters(3, "OpenShiftCluster", "OpenShift cluster"),
-			Responses:   populateResponses("OpenShiftClusterCredentials", false, http.StatusOK),
+			Parameters:  g.populateParameters(3, "OpenShiftCluster", "OpenShift cluster"),
+			Responses:   g.populateResponses("OpenShiftClusterCredentials", false, http.StatusOK),
 		},
 	}
 
@@ -61,8 +66,8 @@ func Run(api, outputDir string) error {
 			Summary:     "Lists all of the available RP operations.",
 			Description: "The operation returns the RP operations.",
 			OperationID: "Operations_List",
-			Parameters:  populateParameters(0, "Operation", "Operation"),
-			Responses:   populateResponses("OperationList", false, http.StatusOK),
+			Parameters:  g.populateParameters(0, "Operation", "Operation"),
+			Responses:   g.populateResponses("OperationList", false, http.StatusOK),
 			Pageable: &Pageable{
 				NextLinkName: "nextLink",
 			},
@@ -71,18 +76,13 @@ func Run(api, outputDir string) error {
 
 	populateExamples(s.Paths)
 
-	xmsEnumList := map[string]struct{}{}
-
-	if api != "github.com/Azure/ARO-RP/pkg/api/v20200430" {
-		xmsEnumList["VMSize"] = struct{}{}
-	}
-
-	err := define(s.Definitions, api, xmsEnumList, "OpenShiftClusterList", "OpenShiftClusterCredentials")
+	names := []string{"OpenShiftClusterList", "OpenShiftClusterCredentials"}
+	err = define(s.Definitions, api, g.xmsEnum, names...)
 	if err != nil {
 		return err
 	}
-
-	err = define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api", xmsEnumList, "CloudError", "OperationList")
+	names = []string{"CloudError", "OperationList"}
+	err = define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api", g.xmsEnum, names...)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func Run(api, outputDir string) error {
 
 		s.Definitions[azureResource].AllOf = []Schema{
 			{
-				Ref: "../../../../../common-types/resource-management/v1/types.json#/definitions/TrackedResource",
+				Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/definitions/TrackedResource",
 			},
 		}
 
@@ -126,6 +126,19 @@ func Run(api, outputDir string) error {
 		}
 
 		s.Definitions[azureResource].Properties = properties
+
+		if g.systemData {
+			s.Definitions[azureResource].Properties = append(s.Definitions[azureResource].Properties,
+				NameSchema{
+					Name: "systemData",
+					Schema: &Schema{
+						ReadOnly:    true,
+						Description: "The system meta data relating to this resource.",
+						Ref:         "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/definitions/systemData",
+					},
+				})
+		}
+
 	}
 
 	b, err := json.MarshalIndent(s, "", "  ")
@@ -135,7 +148,7 @@ func Run(api, outputDir string) error {
 
 	b = append(b, '\n')
 
-	err = generateExamples(outputDir, s)
+	err = g.generateExamples(outputDir, s)
 	if err != nil {
 		return err
 	}

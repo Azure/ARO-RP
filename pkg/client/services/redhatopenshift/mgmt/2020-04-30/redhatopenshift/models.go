@@ -421,12 +421,25 @@ type OpenShiftClusterProperties struct {
 // OpenShiftClustersCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type OpenShiftClustersCreateOrUpdateFuture struct {
-	azure.Future
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(OpenShiftClustersClient) (OpenShiftCluster, error)
 }
 
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *OpenShiftClustersCreateOrUpdateFuture) Result(client OpenShiftClustersClient) (osc OpenShiftCluster, err error) {
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *OpenShiftClustersCreateOrUpdateFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for OpenShiftClustersCreateOrUpdateFuture.Result.
+func (future *OpenShiftClustersCreateOrUpdateFuture) result(client OpenShiftClustersClient) (osc OpenShiftCluster, err error) {
 	var done bool
 	done, err = future.DoneWithContext(context.Background(), client)
 	if err != nil {
@@ -434,6 +447,7 @@ func (future *OpenShiftClustersCreateOrUpdateFuture) Result(client OpenShiftClus
 		return
 	}
 	if !done {
+		osc.Response.Response = future.Response()
 		err = azure.NewAsyncOpIncompleteError("redhatopenshift.OpenShiftClustersCreateOrUpdateFuture")
 		return
 	}
@@ -450,12 +464,25 @@ func (future *OpenShiftClustersCreateOrUpdateFuture) Result(client OpenShiftClus
 // OpenShiftClustersDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type OpenShiftClustersDeleteFuture struct {
-	azure.Future
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(OpenShiftClustersClient) (autorest.Response, error)
 }
 
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *OpenShiftClustersDeleteFuture) Result(client OpenShiftClustersClient) (ar autorest.Response, err error) {
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *OpenShiftClustersDeleteFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for OpenShiftClustersDeleteFuture.Result.
+func (future *OpenShiftClustersDeleteFuture) result(client OpenShiftClustersClient) (ar autorest.Response, err error) {
 	var done bool
 	done, err = future.DoneWithContext(context.Background(), client)
 	if err != nil {
@@ -463,6 +490,7 @@ func (future *OpenShiftClustersDeleteFuture) Result(client OpenShiftClustersClie
 		return
 	}
 	if !done {
+		ar.Response = future.Response()
 		err = azure.NewAsyncOpIncompleteError("redhatopenshift.OpenShiftClustersDeleteFuture")
 		return
 	}
@@ -473,12 +501,25 @@ func (future *OpenShiftClustersDeleteFuture) Result(client OpenShiftClustersClie
 // OpenShiftClustersUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
 // operation.
 type OpenShiftClustersUpdateFuture struct {
-	azure.Future
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(OpenShiftClustersClient) (OpenShiftCluster, error)
 }
 
-// Result returns the result of the asynchronous operation.
-// If the operation has not completed it will return an error.
-func (future *OpenShiftClustersUpdateFuture) Result(client OpenShiftClustersClient) (osc OpenShiftCluster, err error) {
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *OpenShiftClustersUpdateFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for OpenShiftClustersUpdateFuture.Result.
+func (future *OpenShiftClustersUpdateFuture) result(client OpenShiftClustersClient) (osc OpenShiftCluster, err error) {
 	var done bool
 	done, err = future.DoneWithContext(context.Background(), client)
 	if err != nil {
@@ -486,6 +527,7 @@ func (future *OpenShiftClustersUpdateFuture) Result(client OpenShiftClustersClie
 		return
 	}
 	if !done {
+		osc.Response.Response = future.Response()
 		err = azure.NewAsyncOpIncompleteError("redhatopenshift.OpenShiftClustersUpdateFuture")
 		return
 	}

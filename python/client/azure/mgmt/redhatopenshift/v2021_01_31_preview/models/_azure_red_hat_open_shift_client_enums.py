@@ -41,3 +41,11 @@ class VMSize(str, Enum):
     standard_f32s_v2 = "Standard_F32s_v2"
     standard_f4s_v2 = "Standard_F4s_v2"
     standard_f8s_v2 = "Standard_F8s_v2"
+
+
+class CreatedByType(str, Enum):
+
+    user = "User"
+    application = "Application"
+    managed_identity = "ManagedIdentity"
+    key = "Key"
