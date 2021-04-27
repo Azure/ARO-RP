@@ -81,8 +81,6 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 		}
 	}
 
-	// systemData is a bit different object. Internal model has pointers, so conversion
-	// required checks for the fields like data
 	out.SystemData = SystemData{
 		CreatedBy:          oc.SystemData.CreatedBy,
 		CreatedAt:          oc.SystemData.CreatedAt,
