@@ -101,6 +101,9 @@ questions or comments.
       * serviceprincipalchecker: validate cluster service principal has the
         correct role/permissions
 
+    * clusteroperatoraro: Ensures that the ARO cluster object is consistent and
+      immutable
+
     * dnsmasq: Ensures that a dnsmasq systemd service is defined as a machineconfig for all
       nodes to allow for api-int and *.apps domains resolve even if custom DNS on the VNET is set.
 
