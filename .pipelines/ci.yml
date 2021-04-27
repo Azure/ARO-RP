@@ -1,20 +1,24 @@
 # Azure DevOps Pipeline running CI
 trigger:
-- master
+  branches:
+    include:
+    - master
+  paths:
+    exclude:
+    - docs/*
+
+pr:
+  branches:
+    include:
+    - master
+  paths:
+    exclude:
+    - docs/*
 
 variables:
 - template: vars.yml
 
 jobs:
-- job: Golang_Code_Lint
-  pool: ARO-CI
-  steps:
-  - template: ./templates/template-checkout.yml
-  - script: |
-      set -xe
-      make lint-go
-      [[ -z "$(git status -s)" ]]
-    displayName: 🕵️Run Golang Linters
 
 - job: Python_Unit_Tests
   pool:
@@ -32,23 +36,46 @@ jobs:
     name: ARO-CI
   steps:
   - template: ./templates/template-checkout.yml
-  - script: |
-      set -xe
-      make test-go
-      [[ -z "$(git status -s)" ]]
-    displayName: 🧪Run Golang Unit Tests
 
   - script: |
-      go run ./vendor/github.com/jstemmer/go-junit-report/go-junit-report.go < uts.txt > report.xml
-      go run ./vendor/github.com/axw/gocov/gocov/*.go convert cover.out > coverage.json
-      go run ./vendor/github.com/AlekSi/gocov-xml/gocov-xml.go < coverage.json > coverage.xml
-    displayName: ⚙️ Process Reports
-    condition: succeededOrFailed()
+      set -xe
+      make generate
+      [[ -z "$(git status -s)" ]]
+    displayName: ⚙️ Run Golang code generate
+
+  - script: |
+      set -xe
+      make validate-go
+      [[ -z "$(git status -s)" ]]
+    displayName: 🕵️ Validate Golang code
+
+  - script: |
+      set -xe
+      make lint-go
+      [[ -z "$(git status -s)" ]]
+    displayName: 🕵️ Lint Golang code
+
+  - script: |
+      set -xe
+      make build-all
+      [[ -z "$(git status -s)" ]]
+    displayName: 🕵️ Build Golang code
+
+  - script: |
+      set -xe
+      make unit-test-go
+    displayName: 🧪 Run Golang unit tests
 
   - task: PublishTestResults@2
     displayName: 📊 Publish tests results
     inputs:
       testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
+    condition: succeededOrFailed()
+
+  - script: |
+      go run ./vendor/github.com/axw/gocov/gocov/*.go convert cover.out > coverage.json
+      go run ./vendor/github.com/AlekSi/gocov-xml/gocov-xml.go < coverage.json > coverage.xml
+    displayName: ⚙️ Process Reports
     condition: succeededOrFailed()
 
   - task: PublishCodeCoverageResults@1
