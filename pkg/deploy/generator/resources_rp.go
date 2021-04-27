@@ -263,6 +263,68 @@ func (g *generator) rpLB() *arm.Resource {
 	}
 }
 
+func (g *generator) rpLBInternal() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtnetwork.LoadBalancer{
+			Sku: &mgmtnetwork.LoadBalancerSku{
+				Name: mgmtnetwork.LoadBalancerSkuNameStandard,
+			},
+			LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+				FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+					{
+						FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+							Subnet: &mgmtnetwork.Subnet{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
+							},
+						},
+						Name: to.StringPtr("dbtoken-frontend"),
+					},
+				},
+				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
+					{
+						Name: to.StringPtr("rp-backend"),
+					},
+				},
+				LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
+					{
+						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &mgmtnetwork.SubResource{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb-internal', 'dbtoken-frontend')]"),
+							},
+							BackendAddressPool: &mgmtnetwork.SubResource{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb-internal', 'rp-backend')]"),
+							},
+							Probe: &mgmtnetwork.SubResource{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb-internal', 'dbtoken-probe')]"),
+							},
+							Protocol:         mgmtnetwork.TransportProtocolTCP,
+							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
+							FrontendPort:     to.Int32Ptr(443),
+							BackendPort:      to.Int32Ptr(445),
+						},
+						Name: to.StringPtr("dbtoken-lbrule"),
+					},
+				},
+				Probes: &[]mgmtnetwork.Probe{
+					{
+						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+							Protocol:       mgmtnetwork.ProbeProtocolHTTPS,
+							Port:           to.Int32Ptr(445),
+							NumberOfProbes: to.Int32Ptr(2),
+							RequestPath:    to.StringPtr("/healthz/ready"),
+						},
+						Name: to.StringPtr("dbtoken-probe"),
+					},
+				},
+			},
+			Name:     to.StringPtr("rp-lb-internal"),
+			Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
+	}
+}
+
 // rpLBAlert generates an alert resource for the rp-lb healthprobe metric
 func (g *generator) rpLBAlert(threshold float64, severity int32, name string, evalFreq string, windowSize string, metric string) *arm.Resource {
 	return &arm.Resource{
@@ -430,6 +492,7 @@ sysctl --system
 
 firewall-cmd --add-port=443/tcp --permanent
 firewall-cmd --add-port=444/tcp --permanent
+firewall-cmd --add-port=445/tcp --permanent
 firewall-cmd --add-port=2222/tcp --permanent
 
 cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
@@ -568,6 +631,46 @@ ExecStart=/usr/bin/docker run \
   -v /var/etw:/var/etw:z \
   $RPIMAGE \
   rp
+ExecStop=/usr/bin/docker stop -t 3600 %N
+TimeoutStopSec=3600
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+cat >/etc/sysconfig/aro-dbtoken <<EOF
+DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
+KEYVAULT_PREFIX='$KEYVAULTPREFIX'
+MDM_ACCOUNT=AzureRedHatOpenShiftRP
+MDM_NAMESPACE=DBToken
+RPIMAGE='$RPIMAGE'
+EOF
+
+cat >/etc/systemd/system/aro-dbtoken.service <<'EOF'
+[Unit]
+After=docker.service
+Requires=docker.service
+
+[Service]
+EnvironmentFile=/etc/sysconfig/aro-dbtoken
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStart=/usr/bin/docker run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  -e DATABASE_ACCOUNT_NAME \
+  -e KEYVAULT_PREFIX \
+  -e MDM_ACCOUNT \
+  -e MDM_NAMESPACE \
+  -m 2g \
+  -p 445:8445 \
+  -v /run/systemd/journal:/run/systemd/journal \
+  -v /var/etw:/var/etw:z \
+  $RPIMAGE \
+  dbtoken
 ExecStop=/usr/bin/docker stop -t 3600 %N
 TimeoutStopSec=3600
 Restart=always
@@ -781,7 +884,7 @@ mkdir -p /usr/lib/ssl/certs
 csplit -f /usr/lib/ssl/certs/cert- -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 {*} >/dev/null
 c_rehash /usr/lib/ssl/certs
 
-for service in aro-monitor aro-portal aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-agent-bit; do
+for service in aro-dbtoken aro-monitor aro-portal aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-agent-bit; do
   systemctl enable $service.service
 done
 
@@ -861,6 +964,9 @@ done
 													{
 														ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
 													},
+													{
+														ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb-internal', 'rp-backend')]"),
+													},
 												},
 											},
 										},
@@ -913,6 +1019,7 @@ done
 			"[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
 			"[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
+			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb-internal')]",
 			"[resourceId('Microsoft.Storage/storageAccounts', substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')))]",
 		},
 	}
@@ -960,6 +1067,20 @@ func (g *generator) rpClusterKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolic
 					mgmtkeyvault.Delete,
 					mgmtkeyvault.Get,
 					mgmtkeyvault.Update,
+				},
+			},
+		},
+	}
+}
+
+func (g *generator) rpDBTokenKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
+	return []mgmtkeyvault.AccessPolicyEntry{
+		{
+			TenantID: &tenantUUIDHack,
+			ObjectID: to.StringPtr("[parameters('rpServicePrincipalId')]"),
+			Permissions: &mgmtkeyvault.Permissions{
+				Secrets: &[]mgmtkeyvault.SecretPermissions{
+					mgmtkeyvault.SecretPermissionsGet,
 				},
 			},
 		},
@@ -1023,6 +1144,53 @@ func (g *generator) rpClusterKeyvault() *arm.Resource {
 					Certificates: &[]mgmtkeyvault.CertificatePermissions{
 						mgmtkeyvault.Get,
 						mgmtkeyvault.List,
+					},
+				},
+			},
+		)
+	}
+
+	return &arm.Resource{
+		Resource:   vault,
+		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
+	}
+}
+
+func (g *generator) rpDBTokenKeyvault() *arm.Resource {
+	vault := &mgmtkeyvault.Vault{
+		Properties: &mgmtkeyvault.VaultProperties{
+			EnableSoftDelete: to.BoolPtr(true),
+			TenantID:         &tenantUUIDHack,
+			Sku: &mgmtkeyvault.Sku{
+				Name:   mgmtkeyvault.Standard,
+				Family: to.StringPtr("A"),
+			},
+			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
+				{
+					ObjectID: to.StringPtr(dbTokenAccessPolicyHack),
+				},
+			},
+		},
+		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + env.DBTokenKeyvaultSuffix + "')]"),
+		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
+		Location: to.StringPtr("[resourceGroup().location]"),
+	}
+
+	if !g.production {
+		*vault.Properties.AccessPolicies = append(g.rpDBTokenKeyvaultAccessPolicies(),
+			mgmtkeyvault.AccessPolicyEntry{
+				TenantID: &tenantUUIDHack,
+				ObjectID: to.StringPtr("[parameters('adminObjectId')]"),
+				Permissions: &mgmtkeyvault.Permissions{
+					Certificates: &[]mgmtkeyvault.CertificatePermissions{
+						mgmtkeyvault.Delete,
+						mgmtkeyvault.Get,
+						mgmtkeyvault.Import,
+						mgmtkeyvault.List,
+					},
+					Secrets: &[]mgmtkeyvault.SecretPermissions{
+						mgmtkeyvault.SecretPermissionsSet,
+						mgmtkeyvault.SecretPermissionsList,
 					},
 				},
 			},

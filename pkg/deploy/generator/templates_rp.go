@@ -87,6 +87,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			g.publicIPAddress("rp-pip"),
 			g.publicIPAddress("portal-pip"),
 			g.rpLB(),
+			g.rpLBInternal(),
 			g.rpVMSS(),
 			g.rpStorageAccount(),
 			g.rpLBAlert(30.0, 2, "rp-availability-alert", "PT5M", "PT15M", "DipAvailability"), // triggers on all 3 RPs being down for 10min, can't be >=0.3 due to deploys going down to 32% at times.
@@ -199,6 +200,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 	if g.production {
 		t.Variables = map[string]interface{}{
 			"clusterKeyvaultAccessPolicies": g.rpClusterKeyvaultAccessPolicies(),
+			"dbTokenKeyvaultAccessPolicies": g.rpDBTokenKeyvaultAccessPolicies(),
 			"portalKeyvaultAccessPolicies":  g.rpPortalKeyvaultAccessPolicies(),
 			"serviceKeyvaultAccessPolicies": g.rpServiceKeyvaultAccessPolicies(),
 		}
@@ -214,6 +216,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		params = append(params,
 			"deployNSGs",
 			"extraClusterKeyvaultAccessPolicies",
+			"extraDBTokenKeyvaultAccessPolicies",
 			"extraPortalKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies",
 			"rpNsgSourceAddressPrefixes",
@@ -231,6 +234,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 			p.Type = "bool"
 			p.DefaultValue = false
 		case "extraClusterKeyvaultAccessPolicies",
+			"extraDBTokenKeyvaultAccessPolicies",
 			"extraPortalKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies":
 			p.Type = "array"
@@ -248,6 +252,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		g.rpSecurityGroup(),
 		g.rpPESecurityGroup(),
 		g.rpClusterKeyvault(),
+		g.rpDBTokenKeyvault(),
 		g.rpPortalKeyvault(),
 		g.rpServiceKeyvault(),
 	)

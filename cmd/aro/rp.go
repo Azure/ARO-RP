@@ -83,7 +83,12 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClient(ctx, log.WithField("component", "database"), _env, m, aead)
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env)
+	if err != nil {
+		return err
+	}
+
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead)
 	if err != nil {
 		return err
 	}

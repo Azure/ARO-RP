@@ -43,6 +43,7 @@ type deployer struct {
 	deployments            features.DeploymentsClient
 	features               features.Client
 	groups                 features.ResourceGroupsClient
+	loadbalancers          network.LoadBalancersClient
 	userassignedidentities msi.UserAssignedIdentitiesClient
 	providers              features.ProvidersClient
 	publicipaddresses      network.PublicIPAddressesClient
@@ -86,6 +87,7 @@ func New(ctx context.Context, log *logrus.Entry, env env.Core, config *RPConfig,
 		deployments:            features.NewDeploymentsClient(env.Environment(), config.SubscriptionID, authorizer),
 		features:               features.NewClient(env.Environment(), config.SubscriptionID, authorizer),
 		groups:                 features.NewResourceGroupsClient(env.Environment(), config.SubscriptionID, authorizer),
+		loadbalancers:          network.NewLoadBalancersClient(env.Environment(), config.SubscriptionID, authorizer),
 		userassignedidentities: msi.NewUserAssignedIdentitiesClient(env.Environment(), config.SubscriptionID, authorizer),
 		providers:              features.NewProvidersClient(env.Environment(), config.SubscriptionID, authorizer),
 		roleassignments:        authorization.NewRoleAssignmentsClient(env.Environment(), config.SubscriptionID, authorizer),

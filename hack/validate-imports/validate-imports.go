@@ -52,7 +52,7 @@ func acceptableNames(path string) []string {
 		return []string{"mgmtredhatopenshift" + strings.ReplaceAll(m[1], "-", "")}
 	}
 
-	m = regexp.MustCompile(`^github.com/Azure/ARO-RP/pkg/(deploy|mirror|monitor|operator|portal)$`).FindStringSubmatch(path)
+	m = regexp.MustCompile(`^github.com/Azure/ARO-RP/pkg/(dbtoken|deploy|mirror|monitor|operator|portal)$`).FindStringSubmatch(path)
 	if m != nil {
 		return []string{"", "pkg" + m[1]}
 	}

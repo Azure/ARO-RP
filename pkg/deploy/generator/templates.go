@@ -16,6 +16,7 @@ import (
 const (
 	tenantIDHack            = "13805ec3-a223-47ad-ad65-8b2baf92c0fb"
 	clusterAccessPolicyHack = "e1992efe-4835-46cf-8c08-d8b8451044b8"
+	dbTokenAccessPolicyHack = "bb6c76fd-76ea-43c9-8ee3-ca568ae1c226"
 	portalAccessPolicyHack  = "e5e11dae-7c49-4118-9628-e0afa4d6a502"
 	serviceAccessPolicyHack = "533a94d0-d6c2-4fca-9af1-374aa6493468"
 )
@@ -46,6 +47,7 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 	b = bytes.ReplaceAll(b, []byte(`"capacity": 1338`), []byte(`"capacity": "[parameters('rpVmssCapacity')]"`))
 	if g.production {
 		b = regexp.MustCompile(`(?m)"accessPolicies": \[[^]]*`+clusterAccessPolicyHack+`[^]]*\]`).ReplaceAll(b, []byte(`"accessPolicies": "[concat(variables('clusterKeyvaultAccessPolicies'), parameters('extraClusterKeyvaultAccessPolicies'))]"`))
+		b = regexp.MustCompile(`(?m)"accessPolicies": \[[^]]*`+dbTokenAccessPolicyHack+`[^]]*\]`).ReplaceAll(b, []byte(`"accessPolicies": "[concat(variables('dbTokenKeyvaultAccessPolicies'), parameters('extraDBTokenKeyvaultAccessPolicies'))]"`))
 		b = regexp.MustCompile(`(?m)"accessPolicies": \[[^]]*`+portalAccessPolicyHack+`[^]]*\]`).ReplaceAll(b, []byte(`"accessPolicies": "[concat(variables('portalKeyvaultAccessPolicies'), parameters('extraPortalKeyvaultAccessPolicies'))]"`))
 		b = regexp.MustCompile(`(?m)"accessPolicies": \[[^]]*`+serviceAccessPolicyHack+`[^]]*\]`).ReplaceAll(b, []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraServiceKeyvaultAccessPolicies'))]"`))
 		b = bytes.Replace(b, []byte(`"sourceAddressPrefixes": []`), []byte(`"sourceAddressPrefixes": "[parameters('rpNsgSourceAddressPrefixes')]"`), 1)

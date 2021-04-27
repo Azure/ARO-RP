@@ -111,6 +111,9 @@ func DevConfig(_env env.Core) (*Config, error) {
 			ExtraClusterKeyvaultAccessPolicies: []interface{}{
 				adminKeyvaultAccessPolicy(_env),
 			},
+			ExtraDBTokenKeyvaultAccessPolicies: []interface{}{
+				adminKeyvaultAccessPolicy(_env),
+			},
 			ExtraPortalKeyvaultAccessPolicies: []interface{}{
 				adminKeyvaultAccessPolicy(_env),
 				deployKeyvaultAccessPolicy(_env),

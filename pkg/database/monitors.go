@@ -32,7 +32,7 @@ type Monitors interface {
 
 // NewMonitors returns a new Monitors
 func NewMonitors(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (Monitors, error) {
-	dbid, err := databaseName(isLocalDevelopmentMode)
+	dbid, err := Name(isLocalDevelopmentMode)
 	if err != nil {
 		return nil, err
 	}

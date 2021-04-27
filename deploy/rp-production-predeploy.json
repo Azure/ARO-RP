@@ -34,6 +34,17 @@
                 }
             }
         ],
+        "dbTokenKeyvaultAccessPolicies": [
+            {
+                "tenantId": "[subscription().tenantId]",
+                "objectId": "[parameters('rpServicePrincipalId')]",
+                "permissions": {
+                    "secrets": [
+                        "get"
+                    ]
+                }
+            }
+        ],
         "portalKeyvaultAccessPolicies": [
             {
                 "tenantId": "[subscription().tenantId]",
@@ -63,6 +74,10 @@
             "defaultValue": false
         },
         "extraClusterKeyvaultAccessPolicies": {
+            "type": "array",
+            "defaultValue": []
+        },
+        "extraDBTokenKeyvaultAccessPolicies": {
             "type": "array",
             "defaultValue": []
         },
@@ -146,6 +161,21 @@
                 "enableSoftDelete": true
             },
             "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2016-10-01"
+        },
+        {
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": "[concat(variables('dbTokenKeyvaultAccessPolicies'), parameters('extraDBTokenKeyvaultAccessPolicies'))]",
+                "enableSoftDelete": true
+            },
+            "name": "[concat(parameters('keyvaultPrefix'), '-dbt')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
             "apiVersion": "2016-10-01"

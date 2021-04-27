@@ -30,7 +30,7 @@ type Billing interface {
 
 // NewBilling returns a new Billing
 func NewBilling(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (Billing, error) {
-	dbid, err := databaseName(isLocalDevelopmentMode)
+	dbid, err := Name(isLocalDevelopmentMode)
 	if err != nil {
 		return nil, err
 	}

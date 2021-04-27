@@ -21,6 +21,7 @@ import (
 
 func usage() {
 	fmt.Fprint(flag.CommandLine.Output(), "usage:\n")
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s dbtoken\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s deploy config.yaml location\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s mirror [release_image...]\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s monitor\n", os.Args[0])
@@ -48,6 +49,9 @@ func main() {
 
 	var err error
 	switch strings.ToLower(flag.Arg(0)) {
+	case "dbtoken":
+		checkArgs(1)
+		err = dbtoken(ctx, log)
 	case "deploy":
 		checkArgs(3)
 		err = deploy(ctx, log)

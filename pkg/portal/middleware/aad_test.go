@@ -26,6 +26,7 @@ import (
 	"golang.org/x/oauth2"
 
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -61,23 +62,6 @@ func (o *noopOauther) Exchange(context.Context, string, ...oauth2.AuthCodeOption
 
 	t := oauth2.Token{}
 	return t.WithExtra(o.tokenMap), nil
-}
-
-type noopVerifier struct {
-	err error
-}
-
-func (v *noopVerifier) Verify(ctx context.Context, rawtoken string) (oidctoken, error) {
-	if v.err != nil {
-		return nil, v.err
-	}
-	return noopClaims(rawtoken), nil
-}
-
-type noopClaims []byte
-
-func (c noopClaims) Claims(v interface{}) error {
-	return json.Unmarshal(c, v)
 }
 
 func TestNewAAD(t *testing.T) {
@@ -444,7 +428,7 @@ func TestCallback(t *testing.T) {
 		name              string
 		request           func(*aad) (*http.Request, error)
 		oauther           oauther
-		verifier          Verifier
+		verifier          oidc.Verifier
 		wantAuthenticated bool
 		wantError         string
 		wantForbidden     bool
@@ -477,7 +461,7 @@ func TestCallback(t *testing.T) {
 					"id_token": string(idToken),
 				},
 			},
-			verifier:          &noopVerifier{},
+			verifier:          &oidc.NoopVerifier{},
 			wantAuthenticated: true,
 		},
 		{
@@ -637,8 +621,8 @@ func TestCallback(t *testing.T) {
 			oauther: &noopOauther{
 				tokenMap: map[string]interface{}{"id_token": ""},
 			},
-			verifier: &noopVerifier{
-				err: fmt.Errorf("failed"),
+			verifier: &oidc.NoopVerifier{
+				Err: fmt.Errorf("failed"),
 			},
 			wantError: "Internal Server Error\n",
 		},
@@ -671,7 +655,7 @@ func TestCallback(t *testing.T) {
 					"id_token": "",
 				},
 			},
-			verifier:  &noopVerifier{},
+			verifier:  &oidc.NoopVerifier{},
 			wantError: "Internal Server Error\n",
 		},
 		{
@@ -703,7 +687,7 @@ func TestCallback(t *testing.T) {
 					"id_token": "null",
 				},
 			},
-			verifier:      &noopVerifier{},
+			verifier:      &oidc.NoopVerifier{},
 			wantForbidden: true,
 		},
 		{
@@ -734,7 +718,7 @@ func TestCallback(t *testing.T) {
 					"id_token": string(idToken),
 				},
 			},
-			verifier:  &noopVerifier{},
+			verifier:  &oidc.NoopVerifier{},
 			wantError: "Internal Server Error\n",
 		},
 	} {

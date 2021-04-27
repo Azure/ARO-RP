@@ -33,10 +33,13 @@ const (
 	collSubscriptions     = "Subscriptions"
 )
 
-func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Core, m metrics.Interface, aead encryption.AEAD) (cosmosdb.DatabaseClient, error) {
-	databaseAccount, masterKey, err := find(ctx, env)
-	if err != nil {
-		return nil, err
+func NewDatabaseClient(log *logrus.Entry, env env.Core, authorizer cosmosdb.Authorizer, m metrics.Interface, aead encryption.AEAD) (cosmosdb.DatabaseClient, error) {
+	for _, key := range []string{
+		"DATABASE_ACCOUNT_NAME",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return nil, fmt.Errorf("environment variable %q unset", key)
+		}
 	}
 
 	h, err := NewJSONHandle(aead)
@@ -53,8 +56,31 @@ func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Core, m m
 		Timeout: 30 * time.Second,
 	}
 
-	databaseHostname := databaseAccount + "." + env.Environment().CosmosDBDNSSuffix
-	return cosmosdb.NewDatabaseClient(log, c, h, databaseHostname, masterKey)
+	return cosmosdb.NewDatabaseClient(log, c, h, os.Getenv("DATABASE_ACCOUNT_NAME")+"."+env.Environment().CosmosDBDNSSuffix, authorizer), nil
+}
+
+func NewMasterKeyAuthorizer(ctx context.Context, env env.Core) (cosmosdb.Authorizer, error) {
+	for _, key := range []string{
+		"DATABASE_ACCOUNT_NAME",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return nil, fmt.Errorf("environment variable %q unset", key)
+		}
+	}
+
+	rpAuthorizer, err := env.NewRPAuthorizer(env.Environment().ResourceManagerEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	databaseaccounts := documentdb.NewDatabaseAccountsClient(env.Environment(), env.SubscriptionID(), rpAuthorizer)
+
+	keys, err := databaseaccounts.ListKeys(ctx, env.ResourceGroup(), os.Getenv("DATABASE_ACCOUNT_NAME"))
+	if err != nil {
+		return nil, err
+	}
+
+	return cosmosdb.NewMasterKeyAuthorizer(*keys.PrimaryMasterKey)
 }
 
 func NewJSONHandle(aead encryption.AEAD) (*codec.JsonHandle, error) {
@@ -64,6 +90,10 @@ func NewJSONHandle(aead encryption.AEAD) (*codec.JsonHandle, error) {
 				ErrorIfNoField: true,
 			},
 		},
+	}
+
+	if aead == nil {
+		return h, nil
 	}
 
 	err := h.SetInterfaceExt(reflect.TypeOf(api.SecureBytes{}), 1, secureBytesExt{aead: aead})
@@ -79,7 +109,7 @@ func NewJSONHandle(aead encryption.AEAD) (*codec.JsonHandle, error) {
 	return h, nil
 }
 
-func databaseName(isLocalDevelopmentMode bool) (string, error) {
+func Name(isLocalDevelopmentMode bool) (string, error) {
 	if !isLocalDevelopmentMode {
 		return "ARO", nil
 	}
@@ -93,30 +123,4 @@ func databaseName(isLocalDevelopmentMode bool) (string, error) {
 	}
 
 	return os.Getenv("DATABASE_NAME"), nil
-}
-
-func find(ctx context.Context, env env.Core) (string, string, error) {
-	for _, key := range []string{
-		"DATABASE_ACCOUNT_NAME",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return "", "", fmt.Errorf("environment variable %q unset", key)
-		}
-	}
-
-	rpAuthorizer, err := env.NewRPAuthorizer(env.Environment().ResourceManagerEndpoint)
-	if err != nil {
-		return "", "", err
-	}
-
-	databaseaccounts := documentdb.NewDatabaseAccountsClient(env.Environment(), env.SubscriptionID(), rpAuthorizer)
-
-	acctName := os.Getenv("DATABASE_ACCOUNT_NAME")
-
-	keys, err := databaseaccounts.ListKeys(ctx, env.ResourceGroup(), acctName)
-	if err != nil {
-		return "", "", err
-	}
-
-	return acctName, *keys.PrimaryMasterKey, nil
 }
