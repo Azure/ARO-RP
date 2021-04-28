@@ -17,9 +17,9 @@ parameters:
   default: latest
 
 variables:
-  CDP_DEFINITION_BUILD_COUNT: $[counter('', 0)] # needed for onebranch.pipeline.version task https://aka.ms/obpipelines/versioning
+  Cdp_Definition_Build_Count: $[counter('', 0)] # needed for onebranch.pipeline.version task https://aka.ms/obpipelines/versioning
   LinuxContainerImage: centos:centos7   # Docker image which is used to build the project https://aka.ms/obpipelines/containers
-  DEBIAN_FRONTEND: noninteractive
+  Debian_Frontend: noninteractive
   vso-deployer-pipeline-id: 206753
   vso-project-id: 5d69ab04-7ded-49dc-84d5-bbbcac4add8d
 
@@ -49,33 +49,5 @@ extends:
 
     stages:
     - stage: Mirror_Images
-      variables:
-      - group: INT RP Service Secrets
       jobs:
-      - job: Mirror_Images
-        timeoutInMinutes: 360
-        pool:
-          type: linux
-
-        variables: # More settings at https://aka.ms/obpipelines/yaml/jobs
-          ob_outputDirectory: $(Build.SourcesDirectory)/out   # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
-
-        steps:
-        - checkout: rhado
-        - task: DownloadPipelineArtifact@2
-          displayName: Download Deployer
-          inputs:
-            buildType: specific
-            project: $(vso-project-id)
-            pipeline: $(vso-deployer-pipeline-id)
-            ${{ if eq(parameters.vsoDeployerBuildID, 'latest') }}:
-              buildVersionToDownload: FromBranch
-              branchName: refs/heads/master
-            downloadType: specific
-            downloadPath: $(Build.SourcesDirectory)/deployer
-            artifact: drop_Build_ARO_Build_ARO
-        - task: Bash@3
-          displayName: ⚙️ Run Ev2 Manifest packaging
-          inputs:
-            targetType: filePath
-            filePath: .pipelines/onebranch/scripts/mirrorpipeline.sh
+      - template: .pipelines/onebranch/templates/template-image-mirror.yml@self

@@ -1,0 +1,18 @@
+steps:
+- checkout: rhado
+- task: GoTool@0
+  displayName: Use Go 1.16.2
+  inputs:
+    version: 1.16.2
+- task: Go@0
+  inputs:
+    command: custom
+    customCommand: run
+    arguments: . --config-path ./config/
+    workingDirectory: $(Build.SourcesDirectory)/ARO.Pipelines/ev2/generator/
+  displayName: ⚙️ Generate Ev2 Deployment Manifests
+- task: Bash@3
+  displayName: ⚙️ Copy to ob_outputDirectory
+  inputs:
+    targetType: filePath
+    filePath: .pipelines/onebranch/scripts/deploymentpipeline.sh
