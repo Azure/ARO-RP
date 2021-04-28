@@ -62,8 +62,9 @@ type FeaturesSpec struct {
 
 // ClusterStatus defines the observed state of Cluster
 type ClusterStatus struct {
-	OperatorVersion string            `json:"operatorVersion,omitempty"`
-	Conditions      status.Conditions `json:"conditions,omitempty"`
+	OperatorVersion   string            `json:"operatorVersion,omitempty"`
+	Conditions        status.Conditions `json:"conditions,omitempty"`
+	RedHatKeysPresent []string          `json:"redHatKeysPresent,omitempty"`
 }
 
 // +kubebuilder:object:root=true

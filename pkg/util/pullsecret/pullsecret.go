@@ -9,11 +9,38 @@ import (
 	"os"
 	"reflect"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 type pullSecret struct {
 	Auths map[string]map[string]interface{} `json:"auths,omitempty"`
+}
+
+// Unmarshal pull-secret data which is stored in corev1.Secret.Data
+// the data has form:
+//   {"auths": {"secret key": {"auth": "secret value"}, "secret key": {"auth": "secret value"}}}
+//
+// returns map of extracted secrets in a form:
+//   {"secret key": "secret value"}
+// error is returned when parsing fails
+func UnmarshalSecretData(ps *corev1.Secret) (map[string]string, error) {
+	var pullSecretData pullSecret
+	if ps != nil {
+		if data := ps.Data[corev1.DockerConfigJsonKey]; len(data) > 0 {
+			if err := json.Unmarshal(data, &pullSecretData); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	secretData := map[string]string{}
+	for k, v := range pullSecretData.Auths {
+		secretData[k] = v["auth"].(string)
+	}
+
+	return secretData, nil
 }
 
 func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, bool, error) {
