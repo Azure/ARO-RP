@@ -122,6 +122,8 @@ func acceptableNames(path string) []string {
 		return []string{"utildiscovery"}
 	case "github.com/Azure/ARO-RP/pkg/util/namespace":
 		return []string{"", "utilnamespace"}
+	case "github.com/Azure/ARO-RP/pkg/util/recover":
+		return []string{"", "utilrecover"}
 	case "github.com/Azure/ARO-RP/test/database":
 		return []string{"testdatabase"}
 	case "github.com/Azure/ARO-RP/test/util/log":
