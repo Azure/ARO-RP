@@ -5,6 +5,8 @@ package dbtoken
 
 import (
 	"context"
+	"fmt"
+	"runtime/debug"
 	"sync/atomic"
 	"time"
 
@@ -13,7 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/recover"
+	utilrecover "github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
 type Refresher interface {
@@ -47,7 +49,7 @@ func NewRefresher(log *logrus.Entry, env env.Core, authorizer autorest.Authorize
 }
 
 func (r *refresher) Run(ctx context.Context) error {
-	defer recover.Panic(r.log)
+	defer utilrecover.Panic(r.log)
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
@@ -64,7 +66,15 @@ func (r *refresher) Run(ctx context.Context) error {
 	}
 }
 
-func (r *refresher) runOnce(ctx context.Context) error {
+func (r *refresher) runOnce(ctx context.Context) (err error) {
+	// extra hardening to prevent a panic under runOnce taking out the refresher
+	// goroutine
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("panic: %s (original err: %v)\n\n%s", e, err, string(debug.Stack()))
+		}
+	}()
+
 	timeoutCtx, done := context.WithTimeout(ctx, time.Minute)
 	defer done()
 
