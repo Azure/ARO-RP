@@ -29,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machine"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/machineset"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/node"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/pullsecret"
@@ -167,6 +168,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", controllers.MachineControllerName),
 			maocli, arocli, isLocalDevelopmentMode, role)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller Machine: %v", err)
+		}
+		if err = (machineset.NewMachineSetReconciler(
+			log.WithField("controller", controllers.MachineSetControllerName),
+			maocli, arocli)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller MachineSet: %v", err)
 		}
 	}
 
