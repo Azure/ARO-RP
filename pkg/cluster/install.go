@@ -47,7 +47,7 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
-		steps.Action(m.removePrivateDNSZone),
+		//steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communiate this out
 		steps.Action(m.updateProvisionedBy), // Run this last so we capture the resource provider only once the upgrade has been fully performed
 	}
 
