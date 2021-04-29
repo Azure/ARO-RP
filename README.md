@@ -113,6 +113,8 @@ questions or comments.
       vm type, vm image, disk size, three master nodes exist, and the number of worker nodes
       match the desired worker replicas
 
+    * machineset: Ensures that a minimum of two worker replicas are met.
+
     * monitoring: Ensures that the OpenShift monitoring configuration in the `openshift-monitoring` namespace is consistent and immutable.
 
     * node: Force deletes pods when a node fails to drain for 1 hour.  It should clear up any pods that refuse to be evicted on a drain due to violating a pod disruption budget.
