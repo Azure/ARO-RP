@@ -128,6 +128,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitDaemonsetStatuses,
 		mon.emitDeploymentStatuses,
 		mon.emitMachineConfigPoolConditions,
+		mon.emitMachineConfigPoolUnmanagedNodeCounts,
 		mon.emitNodeConditions,
 		mon.emitPodConditions,
 		mon.emitReplicasetStatuses,
