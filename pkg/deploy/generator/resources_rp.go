@@ -72,19 +72,47 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 			Name: to.StringPtr("ssh_in"),
 		})
 	} else {
-		rules = append(rules, mgmtnetwork.SecurityRule{
-			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-				SourcePortRange:          to.StringPtr("*"),
-				DestinationPortRange:     to.StringPtr("443"),
-				SourceAddressPrefixes:    to.StringSlicePtr([]string{}),
-				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-				DestinationAddressPrefix: to.StringPtr("*"),
-				Priority:                 to.Int32Ptr(130),
-				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+		rules = append(rules,
+			mgmtnetwork.SecurityRule{
+				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+					SourcePortRange:          to.StringPtr("*"),
+					DestinationPortRange:     to.StringPtr("8445"),
+					SourceAddressPrefix:      to.StringPtr("10.0.8.0/24"),
+					DestinationAddressPrefix: to.StringPtr("*"),
+					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+					Priority:                 to.Int32Ptr(140),
+					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+				},
+				Name: to.StringPtr("dbtoken_in_gateway"),
 			},
-			Name: to.StringPtr("rp_in_geneva"),
-		})
+			mgmtnetwork.SecurityRule{
+				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+					SourcePortRange:          to.StringPtr("*"),
+					DestinationPortRange:     to.StringPtr("*"),
+					SourceAddressPrefix:      to.StringPtr("10.0.8.0/24"),
+					DestinationAddressPrefix: to.StringPtr("*"),
+					Access:                   mgmtnetwork.SecurityRuleAccessDeny,
+					Priority:                 to.Int32Ptr(145),
+					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+				},
+				Name: to.StringPtr("deny_in_gateway"),
+			},
+			mgmtnetwork.SecurityRule{
+				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+					SourcePortRange:          to.StringPtr("*"),
+					DestinationPortRange:     to.StringPtr("443"),
+					SourceAddressPrefixes:    to.StringSlicePtr([]string{}),
+					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+					DestinationAddressPrefix: to.StringPtr("*"),
+					Priority:                 to.Int32Ptr(130),
+					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+				},
+				Name: to.StringPtr("rp_in_geneva"),
+			},
+		)
 	}
 
 	return g.securityGroup("rp-nsg", &rules, g.conditionStanza("deployNSGs"))
@@ -299,7 +327,7 @@ func (g *generator) rpLBInternal() *arm.Resource {
 							},
 							Protocol:         mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:     to.Int32Ptr(443),
+							FrontendPort:     to.Int32Ptr(8445),
 							BackendPort:      to.Int32Ptr(445),
 						},
 						Name: to.StringPtr("dbtoken-lbrule"),

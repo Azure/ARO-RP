@@ -333,7 +333,7 @@
                             },
                             "protocol": "Tcp",
                             "loadDistribution": "Default",
-                            "frontendPort": 443,
+                            "frontendPort": 8445,
                             "backendPort": 445
                         },
                         "name": "dbtoken-lbrule"
