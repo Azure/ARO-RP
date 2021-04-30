@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -223,21 +224,27 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 	// that here.
 	var linkIdentifier string
 	for _, conn := range *pls.PrivateEndpointConnections {
-		if !strings.EqualFold(*conn.PrivateEndpoint.ID, *pe.ID) ||
-			strings.EqualFold(*conn.PrivateLinkServiceConnectionState.Status, "Approved") {
+		if !strings.EqualFold(*conn.PrivateEndpoint.ID, *pe.ID) {
 			continue
 		}
 
-		conn.PrivateLinkServiceConnectionState.Status = to.StringPtr("Approved")
-		conn.PrivateLinkServiceConnectionState.Description = to.StringPtr("Approved")
+		linkIdentifier = *conn.LinkIdentifier
 
-		_, err = m.rpPrivateLinkServices.UpdatePrivateEndpointConnection(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", *conn.Name, conn)
-		if err != nil {
-			return err
+		if !strings.EqualFold(*conn.PrivateLinkServiceConnectionState.Status, "Approved") {
+			conn.PrivateLinkServiceConnectionState.Status = to.StringPtr("Approved")
+			conn.PrivateLinkServiceConnectionState.Description = to.StringPtr("Approved")
+
+			_, err = m.rpPrivateLinkServices.UpdatePrivateEndpointConnection(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", *conn.Name, conn)
+			if err != nil {
+				return err
+			}
 		}
 
-		linkIdentifier = *conn.LinkIdentifier
 		break
+	}
+
+	if linkIdentifier == "" {
+		return errors.New("private endpoint connection not found")
 	}
 
 	_, err = m.dbGateway.Create(ctx, &api.GatewayDocument{

@@ -22,6 +22,7 @@ type Checker struct {
 	billingDocuments          []*api.BillingDocument
 	asyncOperationDocuments   []*api.AsyncOperationDocument
 	portalDocuments           []*api.PortalDocument
+	gatewayDocuments          []*api.GatewayDocument
 }
 
 func NewChecker() *Checker {
@@ -80,6 +81,17 @@ func (f *Checker) AddPortalDocuments(docs ...*api.PortalDocument) {
 		}
 
 		f.portalDocuments = append(f.portalDocuments, docCopy.(*api.PortalDocument))
+	}
+}
+
+func (f *Checker) AddGatewayDocuments(docs ...*api.GatewayDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.gatewayDocuments = append(f.gatewayDocuments, docCopy.(*api.GatewayDocument))
 	}
 }
 
@@ -190,6 +202,26 @@ func (f *Checker) CheckPortals(portals *cosmosdb.FakePortalDocumentClient) (errs
 		}
 	} else if len(all.PortalDocuments) != 0 || len(f.portalDocuments) != 0 {
 		errs = append(errs, fmt.Errorf("portals length different, %d vs %d", len(all.PortalDocuments), len(f.portalDocuments)))
+	}
+
+	return errs
+}
+
+func (f *Checker) CheckGateways(gateways *cosmosdb.FakeGatewayDocumentClient) (errs []error) {
+	ctx := context.Background()
+
+	all, err := gateways.ListAll(ctx, nil)
+	if err != nil {
+		return []error{err}
+	}
+
+	if len(f.gatewayDocuments) != 0 && len(all.GatewayDocuments) == len(f.gatewayDocuments) {
+		diff := deep.Equal(all.GatewayDocuments, f.gatewayDocuments)
+		for _, i := range diff {
+			errs = append(errs, errors.New(i))
+		}
+	} else if len(all.GatewayDocuments) != 0 || len(f.gatewayDocuments) != 0 {
+		errs = append(errs, fmt.Errorf("gateways length different, %d vs %d", len(all.GatewayDocuments), len(f.gatewayDocuments)))
 	}
 
 	return errs
