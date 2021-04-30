@@ -24,14 +24,14 @@ func NewFakeOpenShiftClusters() (db database.OpenShiftClusters, client *cosmosdb
 	coll := &fakeCollectionClient{}
 	client = cosmosdb.NewFakeOpenShiftClusterDocumentClient(jsonHandle)
 	injectOpenShiftClusters(client)
-	db = database.NewOpenShiftClustersWithProvidedClient(client, coll)
+	db = database.NewOpenShiftClustersWithProvidedClient(client, coll, "")
 	return db, client
 }
 
 func NewFakeSubscriptions() (db database.Subscriptions, client *cosmosdb.FakeSubscriptionDocumentClient) {
 	client = cosmosdb.NewFakeSubscriptionDocumentClient(jsonHandle)
 	injectSubscriptions(client)
-	db = database.NewSubscriptionsWithProvidedClient(client)
+	db = database.NewSubscriptionsWithProvidedClient(client, "")
 	return db, client
 }
 
@@ -51,5 +51,11 @@ func NewFakeAsyncOperations() (db database.AsyncOperations, client *cosmosdb.Fak
 func NewFakePortal() (db database.Portal, client *cosmosdb.FakePortalDocumentClient) {
 	client = cosmosdb.NewFakePortalDocumentClient(jsonHandle)
 	db = database.NewPortalWithProvidedClient(client)
+	return db, client
+}
+
+func NewFakeGateway() (db database.Gateway, client *cosmosdb.FakeGatewayDocumentClient) {
+	client = cosmosdb.NewFakeGatewayDocumentClient(jsonHandle)
+	db = database.NewGatewayWithProvidedClient(client)
 	return db, client
 }
