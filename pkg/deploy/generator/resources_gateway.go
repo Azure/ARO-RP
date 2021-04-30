@@ -187,6 +187,8 @@ func (g *generator) gatewayPLS() *arm.Resource {
 }
 
 func (g *generator) gatewayVMSS() *arm.Resource {
+	// TODO: there is a lot of duplication with rpVMSS()
+
 	parts := []string{
 		fmt.Sprintf("base64ToString('%s')", base64.StdEncoding.EncodeToString([]byte("set -ex\n\n"))),
 	}

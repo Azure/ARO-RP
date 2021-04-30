@@ -14,6 +14,8 @@ import (
 )
 
 func (d *deployer) DeployGateway(ctx context.Context) error {
+	// TODO: there is a lot of duplication with DeployRP()
+
 	encryptionAtHostSupported, err := d.encryptionAtHostSupported(ctx)
 	if err != nil {
 		return err
