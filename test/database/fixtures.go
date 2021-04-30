@@ -18,12 +18,14 @@ type Fixture struct {
 	billingDocuments          []*api.BillingDocument
 	asyncOperationDocuments   []*api.AsyncOperationDocument
 	portalDocuments           []*api.PortalDocument
+	gatewayDocuments          []*api.GatewayDocument
 
 	openShiftClustersDatabase database.OpenShiftClusters
 	billingDatabase           database.Billing
 	subscriptionsDatabase     database.Subscriptions
 	asyncOperationsDatabase   database.AsyncOperations
 	portalDatabase            database.Portal
+	gatewayDatabase           database.Gateway
 }
 
 func NewFixture() *Fixture {
@@ -52,6 +54,11 @@ func (f *Fixture) WithAsyncOperations(db database.AsyncOperations) *Fixture {
 
 func (f *Fixture) WithPortal(db database.Portal) *Fixture {
 	f.portalDatabase = db
+	return f
+}
+
+func (f *Fixture) WithGateway(db database.Gateway) *Fixture {
+	f.gatewayDatabase = db
 	return f
 }
 
@@ -110,6 +117,17 @@ func (f *Fixture) AddPortalDocuments(docs ...*api.PortalDocument) {
 	}
 }
 
+func (f *Fixture) AddGatewayDocuments(docs ...*api.GatewayDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.gatewayDocuments = append(f.gatewayDocuments, docCopy.(*api.GatewayDocument))
+	}
+}
+
 func (f *Fixture) Create() error {
 	ctx := context.Background()
 
@@ -146,6 +164,13 @@ func (f *Fixture) Create() error {
 
 	for _, i := range f.portalDocuments {
 		_, err := f.portalDatabase.Create(ctx, i)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, i := range f.gatewayDocuments {
+		_, err := f.gatewayDatabase.Create(ctx, i)
 		if err != nil {
 			return err
 		}
