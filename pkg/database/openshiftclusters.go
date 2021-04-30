@@ -84,14 +84,14 @@ func NewOpenShiftClusters(ctx context.Context, isLocalDevelopmentMode bool, dbc 
 	}
 
 	documentClient := cosmosdb.NewOpenShiftClusterDocumentClient(collc, collOpenShiftClusters)
-	return NewOpenShiftClustersWithProvidedClient(documentClient, collc), nil
+	return NewOpenShiftClustersWithProvidedClient(documentClient, collc, uuid.Must(uuid.NewV4()).String()), nil
 }
 
-func NewOpenShiftClustersWithProvidedClient(client cosmosdb.OpenShiftClusterDocumentClient, collectionClient cosmosdb.CollectionClient) OpenShiftClusters {
+func NewOpenShiftClustersWithProvidedClient(client cosmosdb.OpenShiftClusterDocumentClient, collectionClient cosmosdb.CollectionClient, uuid string) OpenShiftClusters {
 	return &openShiftClusters{
 		c:     client,
 		collc: collectionClient,
-		uuid:  uuid.Must(uuid.NewV4()).String(),
+		uuid:  uuid,
 	}
 }
 
