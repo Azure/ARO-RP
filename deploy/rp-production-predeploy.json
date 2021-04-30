@@ -113,6 +113,32 @@
                         "properties": {
                             "protocol": "Tcp",
                             "sourcePortRange": "*",
+                            "destinationPortRange": "8445",
+                            "sourceAddressPrefix": "10.0.8.0/24",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 140,
+                            "direction": "Inbound"
+                        },
+                        "name": "dbtoken_in_gateway"
+                    },
+                    {
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "10.0.8.0/24",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 145,
+                            "direction": "Inbound"
+                        },
+                        "name": "deny_in_gateway"
+                    },
+                    {
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
                             "destinationPortRange": "443",
                             "sourceAddressPrefixes": "[parameters('rpNsgSourceAddressPrefixes')]",
                             "destinationAddressPrefix": "*",

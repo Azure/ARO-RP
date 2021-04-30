@@ -116,12 +116,26 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 
 	// deploy NSGs, keyvaults
 	// gateway first because RP predeploy will peer its vnet to the gateway vnet
-	err = d.deployPreDeploy(ctx, d.config.GatewayResourceGroupName, generator.FileGatewayProductionPredeploy, "gatewayServicePrincipalId", gwMSI.PrincipalID.String())
+
+	// key the decision to deploy NSGs on the existence of the gateway
+	// predeploy.  We do this in order to refresh the RP NSGs when the gateway
+	// is deployed for the first time.
+	var isCreate bool
+	_, err = d.deployments.Get(ctx, d.config.GatewayResourceGroupName, strings.TrimSuffix(generator.FileGatewayProductionPredeploy, ".json"))
+	if isDeploymentNotFoundError(err) {
+		isCreate = true
+		err = nil
+	}
 	if err != nil {
 		return err
 	}
 
-	err = d.deployPreDeploy(ctx, d.config.RPResourceGroupName, generator.FileRPProductionPredeploy, "rpServicePrincipalId", rpMSI.PrincipalID.String())
+	err = d.deployPreDeploy(ctx, d.config.GatewayResourceGroupName, generator.FileGatewayProductionPredeploy, "gatewayServicePrincipalId", gwMSI.PrincipalID.String(), isCreate)
+	if err != nil {
+		return err
+	}
+
+	err = d.deployPreDeploy(ctx, d.config.RPResourceGroupName, generator.FileRPProductionPredeploy, "rpServicePrincipalId", rpMSI.PrincipalID.String(), isCreate)
 	if err != nil {
 		return err
 	}
@@ -298,18 +312,8 @@ func (d *deployer) deployManagedIdentity(ctx context.Context, resourceGroupName,
 	})
 }
 
-func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deploymentFile, spIDName, spID string) error {
+func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deploymentFile, spIDName, spID string, isCreate bool) error {
 	deploymentName := strings.TrimSuffix(deploymentFile, ".json")
-
-	var isCreate bool
-	_, err := d.deployments.Get(ctx, resourceGroupName, deploymentName)
-	if isDeploymentNotFoundError(err) {
-		isCreate = true
-		err = nil
-	}
-	if err != nil {
-		return err
-	}
 
 	b, err := Asset(deploymentFile)
 	if err != nil {
