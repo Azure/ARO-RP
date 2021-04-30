@@ -49,7 +49,7 @@ func (d *deployer) DeployGateway(ctx context.Context) error {
 
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
 	parameters.Parameters["dbTokenUrl"] = &arm.ParametersParameter{
-		Value: "https://dbtoken." + d.config.Location + "." + *d.config.Configuration.RPParentDomainName,
+		Value: "https://dbtoken." + d.config.Location + "." + *d.config.Configuration.RPParentDomainName + ":8445",
 	}
 	parameters.Parameters["encryptionAtHost"] = &arm.ParametersParameter{
 		Value: encryptionAtHostSupported,
