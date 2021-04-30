@@ -19,6 +19,7 @@ import (
 )
 
 func (d *deployer) DeployRP(ctx context.Context) error {
+	// TODO: there is a lot of duplication with DeployGateway()
 	rpMSI, err := d.userassignedidentities.Get(ctx, d.config.RPResourceGroupName, "aro-rp-"+d.config.Location)
 	if err != nil {
 		return err
