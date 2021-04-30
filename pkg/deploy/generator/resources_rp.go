@@ -371,6 +371,8 @@ func (g *generator) rpLBAlert(threshold float64, severity int32, name string, ev
 }
 
 func (g *generator) rpVMSS() *arm.Resource {
+	// TODO: there is a lot of duplication with gatewayVMSS() (and other places)
+
 	parts := []string{
 		fmt.Sprintf("base64ToString('%s')", base64.StdEncoding.EncodeToString([]byte("set -ex\n\n"))),
 	}
