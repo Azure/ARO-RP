@@ -103,7 +103,7 @@ func TestKubeletConfig(t *testing.T) {
 				},
 			},
 			KubeletConfig: &runtime.RawExtension{
-				Raw: []byte(`{"evictionHard":{"memory.available":"500Mi"},"systemReserved":{"memory":"2000Mi"}}`),
+				Raw: []byte(`{"evictionHard":{"imagefs.available":"15%","memory.available":"500Mi","nodefs.available":"10%","nodefs.inodesFree":"5%"},"systemReserved":{"memory":"2000Mi"}}`),
 			},
 		},
 	}

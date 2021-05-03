@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
+	v1beta1 "k8s.io/kubernetes/pkg/kubelet/apis/config/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -60,13 +61,13 @@ func (sr *systemreserved) IsRequired(clusterVersion *version.Version) bool {
 }
 
 func (sr *systemreserved) kubeletConfig() (*mcv1.KubeletConfig, error) {
+	customEvictionHard := v1beta1.DefaultEvictionHard
+	customEvictionHard["memory.available"] = hardEviction
 	b, err := json.Marshal(map[string]interface{}{
 		"systemReserved": map[string]interface{}{
 			"memory": memReserved,
 		},
-		"evictionHard": map[string]interface{}{
-			"memory.available": hardEviction,
-		},
+		"evictionHard": customEvictionHard,
 	})
 	if err != nil {
 		return nil, err
