@@ -22,6 +22,8 @@ type OpenShiftCluster struct {
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
 }
 
+// CreatedByType by defines user type, which executed the request
+// This field should match common-types field names for swagger and sdk generation
 type CreatedByType string
 
 const (
@@ -31,8 +33,9 @@ const (
 	CreatedByTypeUser            CreatedByType = "User"
 )
 
-// SystemData represets metadata provided by arm. Add fields inside the struct are pointers
-// so we could better verify which fields are provided to use by ARM. More details on this:
+// SystemData represets metadata provided by arm. Time fields inside the struct are pointers
+// so we could better verify which fields are provided to use by ARM or not. Time package
+// does not comply with omitempty. More details about requirements:
 // https://github.com/Azure/azure-resource-manager-rpc/blob/master/v1.0/common-api-contracts.md#system-metadata-for-all-azure-resources
 type SystemData struct {
 	CreatedBy          string        `json:"createdBy,omitempty"`

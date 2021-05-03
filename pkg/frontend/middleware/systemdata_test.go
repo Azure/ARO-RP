@@ -19,18 +19,11 @@ func TestSystemData(t *testing.T) {
 	// extracted from INT:
 	// {"createdBy":"f707657a-xxxx-xxxx-xxxx-82704b3a99fd","createdByType":"Application","createdAt":"2021-04-20T11:36:09.3470409Z","lastModifiedBy":"f707657a-bec1-4294-9397-82704b3a99fd","lastModifiedByType":"Application","lastModifiedAt":"2021-04-20T11:36:09.3470409Z"}
 	// {"lastModifiedBy":"f707657a-xxxx-xxxx-xxxx-82704b3a99fd","lastModifiedByType":"Application","lastModifiedAt":"2021-04-20T12:14:15.7206198Z"}
-	var systemDataCreate = `
+	const systemDataCreate = `
 {
 	"createdBy": "foo@bar.com",
 	"createdByType": "Application",
 	"createdAt": "2021-01-23T12:34:54.0000000Z",
-	"lastModifiedBy": "00000000-0000-0000-0000-000000000000",
-	"lastModifiedByType": "Application",
-	"lastModifiedAt": "2021-01-23T12:34:54.0000000Z"
-}`
-
-	var systemDataUpdate = `
-{
 	"lastModifiedBy": "00000000-0000-0000-0000-000000000000",
 	"lastModifiedByType": "Application",
 	"lastModifiedAt": "2021-01-23T12:34:54.0000000Z"
@@ -47,7 +40,7 @@ func TestSystemData(t *testing.T) {
 		expect     *api.SystemData
 	}{
 		{
-			name:       "All systemData provided",
+			name:       "systemData provided",
 			systemData: systemDataCreate,
 			expect: &api.SystemData{
 				CreatedBy:          "foo@bar.com",
@@ -59,21 +52,12 @@ func TestSystemData(t *testing.T) {
 			},
 		},
 		{
-			name:       "Partial systemData provided",
-			systemData: systemDataUpdate,
-			expect: &api.SystemData{
-				LastModifiedByType: api.CreatedByTypeApplication,
-				LastModifiedBy:     "00000000-0000-0000-0000-000000000000",
-				LastModifiedAt:     &timestamp,
-			},
-		},
-		{
-			name:       "Empty",
+			name:       "empty",
 			systemData: "",
 			expect:     &api.SystemData{},
 		},
 		{
-			name:       "Invalid",
+			name:       "invalid",
 			systemData: "im_a_potato_not_a_json",
 			expect:     nil,
 		},

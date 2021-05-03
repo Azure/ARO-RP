@@ -186,18 +186,14 @@ const (
 	ArchitectureVersionV2
 )
 
-// CreatedByType stores metadata pertaining to creation and last modification of the resource.
+// CreatedByType defines user type, which executed the request
 type CreatedByType string
 
 const (
-	// Application ...
-	CreatedByTypeApplication CreatedByType = "Application"
-	// Key ...
-	CreatedByTypeKey CreatedByType = "Key"
-	// ManagedIdentity ...
+	CreatedByTypeApplication     CreatedByType = "Application"
+	CreatedByTypeKey             CreatedByType = "Key"
 	CreatedByTypeManagedIdentity CreatedByType = "ManagedIdentity"
-	// User ...
-	CreatedByTypeUser CreatedByType = "User"
+	CreatedByTypeUser            CreatedByType = "User"
 )
 
 // SystemData metadata pertaining to creation and last modification of the resource.
