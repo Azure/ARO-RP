@@ -56,9 +56,7 @@ type ClusterSpec struct {
 }
 
 // FeaturesSpec defines ARO operator feature gates
-type FeaturesSpec struct {
-	PersistentPrometheus bool `json:"persistentPrometheus,omitempty"`
-}
+type FeaturesSpec struct{}
 
 // ClusterStatus defines the observed state of Cluster
 type ClusterStatus struct {
