@@ -77,6 +77,9 @@ func (m *manager) ensureResourceGroup(ctx context.Context) error {
 		group.ManagedBy = nil
 	}
 
+	// According to https://stackoverflow.microsoft.com/a/245391/62320,
+	// re-PUTting our RG should re-create RP RBAC after a customer subscription
+	// migrates between tenants.
 	_, err := m.resourceGroups.CreateOrUpdate(ctx, resourceGroup, group)
 
 	var serviceError *azure.ServiceError
