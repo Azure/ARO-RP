@@ -52,7 +52,8 @@ type dynamic struct {
 	permissions     authorization.PermissionsClient
 	providers       features.ProvidersClient
 	virtualNetworks virtualNetworksGetClient
-	spUsage         compute.UsageClient
+	spComputeUsage  compute.UsageClient
+	spNetworkUsage  network.UsageClient
 }
 
 type AuthorizerType string
@@ -67,7 +68,8 @@ func NewValidator(log *logrus.Entry, azEnv *azure.Environment, subscriptionID st
 		azEnv:          azEnv,
 
 		providers:       features.NewProvidersClient(azEnv, subscriptionID, authorizer),
-		spUsage:         compute.NewUsageClient(azEnv, subscriptionID, authorizer),
+		spComputeUsage:  compute.NewUsageClient(azEnv, subscriptionID, authorizer),
+		spNetworkUsage:  network.NewUsageClient(azEnv, subscriptionID, authorizer),
 		permissions:     authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer),
 		virtualNetworks: newVirtualNetworksCache(network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer)),
 	}, nil
