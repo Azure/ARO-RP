@@ -1,5 +1,10 @@
 parameters:
-  generationType: ''
+- name: generationType
+  type: string
+  default: deployment
+  values:
+  - deployment
+  - mirroring
 steps:
 - checkout: rhado
 - task: GoTool@0

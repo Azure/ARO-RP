@@ -51,7 +51,7 @@ extends:
           ob_outputDirectory: $(Build.SourcesDirectory)/out   # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
 
         steps:
-        - template: .pipelines/onebranch/templates/template-buildrp-buildev2.yml@self
+        - template: .pipelines/onebranch/templates/template-generate-ev2-manifests.yml@self
           parameters:
             generationType: deployment
 
