@@ -1,3 +1,5 @@
+parameters:
+  generationType: ''
 steps:
 - checkout: rhado
 - task: GoTool@0
@@ -8,11 +10,18 @@ steps:
   inputs:
     command: custom
     customCommand: run
-    arguments: . --config-path ./config/
+    arguments: . {{ parameters.azureDevOpsJSONSPN }}
     workingDirectory: $(Build.SourcesDirectory)/ARO.Pipelines/ev2/generator/
   displayName: ⚙️ Generate Ev2 Deployment Manifests
+${{ if eq(parameters.generationType, 'deployment') }}:
 - task: Bash@3
   displayName: ⚙️ Copy to ob_outputDirectory
   inputs:
     targetType: filePath
     filePath: .pipelines/onebranch/scripts/deploymentpipeline.sh
+${{ if eq(parameters.generationType, 'mirroring') }}:
+- task: Bash@3
+  displayName: ⚙️ Copy to ob_outputDirectory
+  inputs:
+    targetType: filePath
+    filePath: .pipelines/onebranch/scripts/mirrorpipeline.sh

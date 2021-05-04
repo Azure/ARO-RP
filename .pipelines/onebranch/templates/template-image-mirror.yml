@@ -23,6 +23,9 @@ jobs:
       downloadType: specific
       downloadPath: $(Build.SourcesDirectory)/deployer
       artifact: drop_Build_ARO_Build_ARO
+  - template: .pipelines/onebranch/templates/template-buildrp-buildev2.yml@self
+    parameters:
+      generationType: mirroring
   - task: Bash@3
     displayName: ⚙️ Run Ev2 Manifest packaging
     inputs:

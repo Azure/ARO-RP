@@ -52,6 +52,8 @@ extends:
 
         steps:
         - template: .pipelines/onebranch/templates/template-buildrp-buildev2.yml@self
+          parameters:
+            generationType: deployment
 
     - stage: Build_Docker_Image
       jobs:
