@@ -5,7 +5,6 @@ package encryption
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
@@ -57,15 +56,15 @@ func NewMulti(ctx context.Context, serviceKeyvault keyvault.Manager, secretName,
 	return m, nil
 }
 
-func (c *multi) Open(input []byte) ([]byte, error) {
+func (c *multi) Open(input []byte) (b []byte, err error) {
 	for _, opener := range c.openers {
-		b, err := opener.Open(input)
+		b, err = opener.Open(input)
 		if err == nil {
-			return b, nil
+			return
 		}
 	}
 
-	return nil, fmt.Errorf("could not open")
+	return nil, err
 }
 
 func (c *multi) Seal(input []byte) ([]byte, error) {
