@@ -10,9 +10,9 @@ steps:
   inputs:
     command: custom
     customCommand: run
-    arguments: . {{ parameters.azureDevOpsJSONSPN }}
+    arguments: . {{ parameters.generationType }}
     workingDirectory: $(Build.SourcesDirectory)/ARO.Pipelines/ev2/generator/
-  displayName: ⚙️ Generate Ev2 Deployment Manifests
+  displayName: ⚙️ Generate Ev2 Deployment Manifests for {{ parameters.generationType }}
 ${{ if eq(parameters.generationType, 'deployment') }}:
 - task: Bash@3
   displayName: ⚙️ Copy to ob_outputDirectory

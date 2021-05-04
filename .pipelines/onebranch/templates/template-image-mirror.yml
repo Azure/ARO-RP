@@ -26,8 +26,3 @@ jobs:
   - template: .pipelines/onebranch/templates/template-buildrp-buildev2.yml@self
     parameters:
       generationType: mirroring
-  - task: Bash@3
-    displayName: ⚙️ Run Ev2 Manifest packaging
-    inputs:
-      targetType: filePath
-      filePath: .pipelines/onebranch/scripts/mirrorpipeline.sh
