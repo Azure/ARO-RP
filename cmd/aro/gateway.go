@@ -56,7 +56,7 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	dbRefresher, err := pkgdbtoken.NewRefresher(log, _env, msiRefresherAuthorizer, insecureSkipVerify, dbc, "gateway")
+	dbRefresher, err := pkgdbtoken.NewRefresher(log, _env, msiRefresherAuthorizer, insecureSkipVerify, dbc, "gateway", m, "gateway")
 	if err != nil {
 		return err
 	}
