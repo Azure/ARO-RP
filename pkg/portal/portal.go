@@ -26,11 +26,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	frontendmiddleware "github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/portal/kubeconfig"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/portal/prometheus"
 	"github.com/Azure/ARO-RP/pkg/portal/ssh"
 	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 )
 
@@ -70,6 +72,8 @@ type portal struct {
 	t *template.Template
 
 	aad middleware.AAD
+
+	m metrics.Interface
 }
 
 func NewPortal(env env.Core,
@@ -91,8 +95,9 @@ func NewPortal(env env.Core,
 	elevatedGroupIDs []string,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbPortal database.Portal,
-	dialer proxy.Dialer) Runnable {
-
+	dialer proxy.Dialer,
+	m metrics.Interface,
+) Runnable {
 	return &portal{
 		env:           env,
 		audit:         audit,
@@ -118,6 +123,8 @@ func NewPortal(env env.Core,
 		dbPortal:            dbPortal,
 
 		dialer: dialer,
+
+		m: m,
 	}
 }
 
@@ -230,6 +237,8 @@ func (p *portal) Run(ctx context.Context) error {
 		ErrorLog:    log.New(p.log.Writer(), "", 0),
 		BaseContext: func(net.Listener) context.Context { return ctx },
 	}
+
+	go heartbeat.EmitHeartbeat(p.log, p.m, "portal.heartbeat", nil, func() bool { return true })
 
 	return s.Serve(tls.NewListener(p.l, config))
 }
