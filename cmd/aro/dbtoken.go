@@ -121,7 +121,7 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 
 	log.Print("listening")
 
-	server, err := pkgdbtoken.NewServer(ctx, _env, log.WithField("component", "dbtoken"), log.WithField("component", "dbtoken-access"), l, servingKey, servingCerts, verifier, userc)
+	server, err := pkgdbtoken.NewServer(ctx, _env, log.WithField("component", "dbtoken"), log.WithField("component", "dbtoken-access"), l, servingKey, servingCerts, verifier, userc, m)
 	if err != nil {
 		return err
 	}
