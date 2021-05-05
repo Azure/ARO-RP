@@ -66,8 +66,13 @@ func (g *gateway) handleConnect(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *gateway) checkReady(w http.ResponseWriter, r *http.Request) {
-	if _, ok := g.lastChangefeed.Load().(time.Time); !ok || !g.ready.Load().(bool) {
+	if !g.isReady() {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (g *gateway) isReady() bool {
+	_, ok := g.lastChangefeed.Load().(time.Time)
+	return ok && g.ready.Load().(bool)
 }
