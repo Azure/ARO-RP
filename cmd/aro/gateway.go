@@ -17,7 +17,8 @@ import (
 	pkgdbtoken "github.com/Azure/ARO-RP/pkg/dbtoken"
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkggateway "github.com/Azure/ARO-RP/pkg/gateway"
-	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
 )
 
@@ -27,7 +28,16 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, &noop.Noop{}, nil)
+	m := statsd.New(ctx, log.WithField("component", "gateway"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
+
+	g, err := golang.NewMetrics(log.WithField("component", "gateway"), m)
+	if err != nil {
+		return err
+	}
+
+	go g.Run()
+
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil)
 	if err != nil {
 		return err
 	}
