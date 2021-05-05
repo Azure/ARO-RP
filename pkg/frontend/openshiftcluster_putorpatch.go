@@ -166,7 +166,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 
 	// This will update systemData from the values in the header. Old values, which
 	// is not provided in the header must be preserved
-	stompSystemData(doc, systemData)
+	f.systemDataEnricher(doc, systemData)
 
 	if isCreate {
 		// on create, make the cluster resourcegroup ID lower case to work
@@ -240,9 +240,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	return b, err
 }
 
-// stompSystemData will selectively overwrite systemData fields based on
+// enrichSystemData will selectively overwrite systemData fields based on
 // arm inputs
-func stompSystemData(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+func enrichSystemData(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
 	if systemData == nil {
 		return
 	}

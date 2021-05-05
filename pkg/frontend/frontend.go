@@ -69,7 +69,9 @@ type frontend struct {
 	startTime time.Time
 	ready     atomic.Value
 
-	now func() time.Time
+	// these helps us to test and mock easier
+	now                func() time.Time
+	systemDataEnricher func(*api.OpenShiftClusterDocument, *api.SystemData)
 }
 
 // Runnable represents a runnable object
@@ -109,7 +111,8 @@ func NewFrontend(ctx context.Context,
 
 		startTime: time.Now(),
 
-		now: time.Now,
+		now:                time.Now,
+		systemDataEnricher: enrichSystemData,
 	}
 
 	l, err := f.env.Listen()
