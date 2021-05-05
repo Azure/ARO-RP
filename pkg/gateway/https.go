@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"sync/atomic"
 
 	"github.com/pires/go-proxyproto"
 
@@ -68,11 +69,21 @@ func (g *gateway) handleHTTPS(ctx context.Context, _c net.Conn) {
 
 	if !isAllowed {
 		log.Print("access denied")
+		g.m.EmitGauge("gateway.connections", 1, map[string]string{
+			"protocol": "https",
+			"action":   "denied",
+		})
 		return
 	}
 
 	log.Print("access allowed")
-	// TODO: some sort of metrics framework to track connections
+	g.m.EmitGauge("gateway.connections", 1, map[string]string{
+		"protocol": "https",
+		"action":   "allowed",
+	})
+
+	atomic.AddInt64(&g.httpsConnections, 1)
+	defer atomic.AddInt64(&g.httpsConnections, -1)
 
 	// 3. Dial the second leg of the connection (c2).
 	c2, err := utilnet.Dial("tcp", serverName+":443", SocketSize)

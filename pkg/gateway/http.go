@@ -6,6 +6,7 @@ package gateway
 import (
 	"net"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/pires/go-proxyproto"
@@ -44,12 +45,22 @@ func (g *gateway) handleConnect(w http.ResponseWriter, r *http.Request) {
 
 	if !isAllowed || port != "443" {
 		log.Print("access denied")
+		g.m.EmitGauge("gateway.connections", 1, map[string]string{
+			"protocol": "http",
+			"action":   "denied",
+		})
 		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 		return
 	}
 
 	log.Print("access allowed")
-	// TODO: some sort of metrics framework to track connections
+	g.m.EmitGauge("gateway.connections", 1, map[string]string{
+		"protocol": "http",
+		"action":   "allowed",
+	})
+
+	atomic.AddInt64(&g.httpConnections, 1)
+	defer atomic.AddInt64(&g.httpConnections, -1)
 
 	proxy.Proxy(g.log, w, r, SocketSize)
 }

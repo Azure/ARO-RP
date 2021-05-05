@@ -97,7 +97,7 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	log.Print("listening")
 
-	p, err := pkggateway.NewGateway(ctx, _env, log.WithField("component", "gateway"), log.WithField("component", "gateway-access"), dbGateway, httpsl, httpl, os.Getenv("ACR_RESOURCE_ID"), os.Getenv("GATEWAY_DOMAINS"))
+	p, err := pkggateway.NewGateway(ctx, _env, log.WithField("component", "gateway"), log.WithField("component", "gateway-access"), dbGateway, httpsl, httpl, os.Getenv("ACR_RESOURCE_ID"), os.Getenv("GATEWAY_DOMAINS"), m)
 	if err != nil {
 		return err
 	}
