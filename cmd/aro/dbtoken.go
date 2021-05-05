@@ -16,6 +16,7 @@ import (
 	pkgdbtoken "github.com/Azure/ARO-RP/pkg/dbtoken"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 )
@@ -57,6 +58,13 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	m := statsd.New(ctx, log.WithField("component", "dbtoken"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
+
+	g, err := golang.NewMetrics(log.WithField("component", "dbtoken"), m)
+	if err != nil {
+		return err
+	}
+
+	go g.Run()
 
 	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer)
 	if err != nil {
