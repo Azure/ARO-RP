@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 )
 
 type Runnable interface {
@@ -174,6 +175,7 @@ func (g *gateway) Run(ctx context.Context, done chan<- struct{}) {
 	go g.changefeed(ctx)
 
 	go g.emitMetrics()
+	go heartbeat.EmitHeartbeat(g.log, g.m, "gateway.heartbeat", nil, g.isReady)
 
 	go func() {
 		// HTTP proxy connections are handled using the go HTTP stack
