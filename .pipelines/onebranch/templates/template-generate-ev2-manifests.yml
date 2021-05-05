@@ -5,6 +5,7 @@ parameters:
   values:
   - deployment
   - mirroring
+
 steps:
 - checkout: rhado
 - task: GoTool@0
