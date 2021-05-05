@@ -23,6 +23,3 @@ jobs:
       downloadType: specific
       downloadPath: $(Build.SourcesDirectory)/deployer
       artifact: drop_Build_ARO_Build_ARO
-  - template: template-generate-ev2-manifests.yml@self
-    parameters:
-      generationType: mirroring
