@@ -81,7 +81,7 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 	}()
 
 	log.Print("waiting for database token")
-	for !dbRefresher.Ready() {
+	for !dbRefresher.HasSyncedOnce() {
 		time.Sleep(time.Second)
 	}
 
