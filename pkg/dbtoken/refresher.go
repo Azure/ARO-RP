@@ -20,7 +20,7 @@ import (
 
 type Refresher interface {
 	Run(context.Context) error
-	Ready() bool
+	HasSyncedOnce() bool
 }
 
 type refresher struct {
@@ -88,7 +88,7 @@ func (r *refresher) runOnce(ctx context.Context) (err error) {
 	return nil
 }
 
-func (r *refresher) Ready() bool {
-	lastRefresh, _ := r.lastRefresh.Load().(time.Time)
-	return time.Since(lastRefresh) < time.Hour
+func (r *refresher) HasSyncedOnce() bool {
+	_, ok := r.lastRefresh.Load().(time.Time)
+	return ok
 }
