@@ -117,15 +117,15 @@ func TestSecurity(t *testing.T) {
 			},
 		},
 		{
-			name: "/index.js",
+			name: "/main.js",
 			request: func() (*http.Request, error) {
-				return http.NewRequest(http.MethodGet, "https://server/index.js", nil)
+				return http.NewRequest(http.MethodGet, "https://server/main.js", nil)
 			},
-			wantAuditOperation: "GET /index.js",
+			wantAuditOperation: "GET /main.js",
 			wantAuditTargetResources: []audit.TargetResource{
 				{
 					TargetResourceType: "",
-					TargetResourceName: "/index.js",
+					TargetResourceName: "/main.js",
 				},
 			},
 		},
@@ -337,7 +337,7 @@ func TestSecurity(t *testing.T) {
 				//
 				// [1] https://github.com/Azure/ARO-RP/blob/master/pkg/portal/portal.go#L222-L247
 				// [2] https://go.googlesource.com/go/+/go1.16.2/src/net/http/fs.go#337
-				if tt.name == "/" || tt.name == "/index.js" {
+				if tt.name == "/" || tt.name == "/main.js" {
 					return
 				}
 
