@@ -16,11 +16,11 @@ steps:
   inputs:
     command: custom
     customCommand: run
-    arguments: . {{ parameters.generationType }}
+    arguments: . ${{ parameters.generationType }}
     workingDirectory: $(Build.SourcesDirectory)/ARO.Pipelines/ev2/generator/
   displayName: ⚙️ Generate Ev2 Deployment Manifests for {{ parameters.generationType }}
 - task: Bash@3
   displayName: ⚙️ Copy to ob_outputDirectory
   inputs:
     targetType: filePath
-    filePath: .pipelines/onebranch/scripts/{{ parameters.generationType }}.sh
+    filePath: .pipelines/onebranch/scripts/${{ parameters.generationType }}.sh
