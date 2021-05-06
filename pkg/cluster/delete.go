@@ -286,6 +286,7 @@ func (m *manager) Delete(ctx context.Context) error {
 
 	// Retry logic due to race condition between PLS and nic
 	// TODO: Follow up on false future return
+	m.log.Printf("deleting resources")
 	for retry := 0; retry < 3; retry++ {
 		err = m.deleteResources(ctx)
 		if err == nil {
