@@ -446,6 +446,10 @@ each of the bash functions below.
         --name rp-mdm \
         --file secrets/rp-metrics-int.pem
    az keyvault certificate import \
+        --vault-name "$KEYVAULT_PREFIX-gwy" \
+        --name gwy-mdm \
+        --file secrets/rp-metrics-int.pem
+   az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-mdsd \
         --file secrets/rp-logging-int.pem
