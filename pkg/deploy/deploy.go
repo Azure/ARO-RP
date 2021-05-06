@@ -52,6 +52,8 @@ type deployer struct {
 	vmss                   compute.VirtualMachineScaleSetsClient
 	vmssvms                compute.VirtualMachineScaleSetVMsClient
 	zones                  dns.ZonesClient
+	clusterKeyvault        keyvault.Manager
+	dbtokenKeyvault        keyvault.Manager
 	portalKeyvault         keyvault.Manager
 	serviceKeyvault        keyvault.Manager
 
@@ -60,7 +62,7 @@ type deployer struct {
 }
 
 // New initiates new deploy utility object
-func New(ctx context.Context, log *logrus.Entry, env env.Core, config *RPConfig, version string) (Deployer, error) {
+func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig, version string) (Deployer, error) {
 	err := config.validate()
 	if err != nil {
 		return nil, err
@@ -71,33 +73,35 @@ func New(ctx context.Context, log *logrus.Entry, env env.Core, config *RPConfig,
 		return nil, err
 	}
 
-	kvAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(env.Environment().ResourceIdentifiers.KeyVault)
+	kvAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(_env.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}
 
 	return &deployer{
 		log: log,
-		env: env,
+		env: _env,
 
-		globaldeployments:      features.NewDeploymentsClient(env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
-		globalgroups:           features.NewResourceGroupsClient(env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
-		globalrecordsets:       dns.NewRecordSetsClient(env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
-		globalaccounts:         storage.NewAccountsClient(env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
-		deployments:            features.NewDeploymentsClient(env.Environment(), config.SubscriptionID, authorizer),
-		features:               features.NewClient(env.Environment(), config.SubscriptionID, authorizer),
-		groups:                 features.NewResourceGroupsClient(env.Environment(), config.SubscriptionID, authorizer),
-		loadbalancers:          network.NewLoadBalancersClient(env.Environment(), config.SubscriptionID, authorizer),
-		userassignedidentities: msi.NewUserAssignedIdentitiesClient(env.Environment(), config.SubscriptionID, authorizer),
-		providers:              features.NewProvidersClient(env.Environment(), config.SubscriptionID, authorizer),
-		roleassignments:        authorization.NewRoleAssignmentsClient(env.Environment(), config.SubscriptionID, authorizer),
-		resourceskus:           compute.NewResourceSkusClient(env.Environment(), config.SubscriptionID, authorizer),
-		publicipaddresses:      network.NewPublicIPAddressesClient(env.Environment(), config.SubscriptionID, authorizer),
-		vmss:                   compute.NewVirtualMachineScaleSetsClient(env.Environment(), config.SubscriptionID, authorizer),
-		vmssvms:                compute.NewVirtualMachineScaleSetVMsClient(env.Environment(), config.SubscriptionID, authorizer),
-		zones:                  dns.NewZonesClient(env.Environment(), config.SubscriptionID, authorizer),
-		portalKeyvault:         keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+"-por."+env.Environment().KeyVaultDNSSuffix+"/"),
-		serviceKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+"-svc."+env.Environment().KeyVaultDNSSuffix+"/"),
+		globaldeployments:      features.NewDeploymentsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
+		globalgroups:           features.NewResourceGroupsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
+		globalrecordsets:       dns.NewRecordSetsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
+		globalaccounts:         storage.NewAccountsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
+		deployments:            features.NewDeploymentsClient(_env.Environment(), config.SubscriptionID, authorizer),
+		features:               features.NewClient(_env.Environment(), config.SubscriptionID, authorizer),
+		groups:                 features.NewResourceGroupsClient(_env.Environment(), config.SubscriptionID, authorizer),
+		loadbalancers:          network.NewLoadBalancersClient(_env.Environment(), config.SubscriptionID, authorizer),
+		userassignedidentities: msi.NewUserAssignedIdentitiesClient(_env.Environment(), config.SubscriptionID, authorizer),
+		providers:              features.NewProvidersClient(_env.Environment(), config.SubscriptionID, authorizer),
+		roleassignments:        authorization.NewRoleAssignmentsClient(_env.Environment(), config.SubscriptionID, authorizer),
+		resourceskus:           compute.NewResourceSkusClient(_env.Environment(), config.SubscriptionID, authorizer),
+		publicipaddresses:      network.NewPublicIPAddressesClient(_env.Environment(), config.SubscriptionID, authorizer),
+		vmss:                   compute.NewVirtualMachineScaleSetsClient(_env.Environment(), config.SubscriptionID, authorizer),
+		vmssvms:                compute.NewVirtualMachineScaleSetVMsClient(_env.Environment(), config.SubscriptionID, authorizer),
+		zones:                  dns.NewZonesClient(_env.Environment(), config.SubscriptionID, authorizer),
+		clusterKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.ClusterKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
+		dbtokenKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.DBTokenKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
+		portalKeyvault:         keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.PortalKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
+		serviceKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.ServiceKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
 
 		config:  config,
 		version: version,

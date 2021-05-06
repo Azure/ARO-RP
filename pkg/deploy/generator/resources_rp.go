@@ -1039,25 +1039,9 @@ func (g *generator) rpDNSZone() *arm.Resource {
 
 func (g *generator) rpClusterKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
 	return []mgmtkeyvault.AccessPolicyEntry{
-		// TODO: remove fpServicePrincipalId after next RP rollout
 		{
 			TenantID: &tenantUUIDHack,
 			ObjectID: to.StringPtr("[parameters('fpServicePrincipalId')]"),
-			Permissions: &mgmtkeyvault.Permissions{
-				Secrets: &[]mgmtkeyvault.SecretPermissions{
-					mgmtkeyvault.SecretPermissionsGet,
-				},
-				Certificates: &[]mgmtkeyvault.CertificatePermissions{
-					mgmtkeyvault.Create,
-					mgmtkeyvault.Delete,
-					mgmtkeyvault.Get,
-					mgmtkeyvault.Update,
-				},
-			},
-		},
-		{
-			TenantID: &tenantUUIDHack,
-			ObjectID: to.StringPtr("[parameters('rpServicePrincipalId')]"),
 			Permissions: &mgmtkeyvault.Permissions{
 				Secrets: &[]mgmtkeyvault.SecretPermissions{
 					mgmtkeyvault.SecretPermissionsGet,
