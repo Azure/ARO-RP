@@ -450,6 +450,10 @@ each of the bash functions below.
         --name rp-mdsd \
         --file secrets/rp-logging-int.pem
    az keyvault certificate import \
+        --vault-name "$KEYVAULT_PREFIX-gwy" \
+        --name gwy-mdsd \
+        --file secrets/rp-logging-int.pem
+   az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name cluster-mdsd \
         --file secrets/cluster-logging-int.pem
