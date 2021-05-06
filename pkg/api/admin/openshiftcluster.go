@@ -24,6 +24,7 @@ type OpenShiftCluster struct {
 	Location   string                     `json:"location,omitempty"`
 	Tags       map[string]string          `json:"tags,omitempty"`
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
+	SystemData SystemData                 `json:"systemData,omitempty"`
 }
 
 // OpenShiftClusterProperties represents an OpenShift cluster's properties.
@@ -184,3 +185,23 @@ const (
 	ArchitectureVersionV1 ArchitectureVersion = iota
 	ArchitectureVersionV2
 )
+
+// CreatedByType defines user type, which executed the request
+type CreatedByType string
+
+const (
+	CreatedByTypeApplication     CreatedByType = "Application"
+	CreatedByTypeKey             CreatedByType = "Key"
+	CreatedByTypeManagedIdentity CreatedByType = "ManagedIdentity"
+	CreatedByTypeUser            CreatedByType = "User"
+)
+
+// SystemData metadata pertaining to creation and last modification of the resource.
+type SystemData struct {
+	CreatedBy          string        `json:"createdBy,omitempty"`
+	CreatedByType      CreatedByType `json:"createdByType,omitempty"`
+	CreatedAt          *time.Time    `json:"createdAt,omitempty"`
+	LastModifiedBy     string        `json:"lastModifiedBy,omitempty"`
+	LastModifiedByType CreatedByType `json:"lastModifiedByType,omitempty"`
+	LastModifiedAt     *time.Time    `json:"lastModifiedAt,omitempty"`
+}

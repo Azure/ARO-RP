@@ -20,6 +20,11 @@ in development mode to emulate ARM.
 The first party application, in the AME tenant, for use against ARM. Used in
 steady state: manage ACR tokens, DNS zone records, private endpoints.
 
+## localFPKVAuthorizer
+
+The first party application, in the AME tenant, for use against the cluster key
+vault. Used in steady state: manage cluster serving certificates.
+
 ## rpAuthorizer
 
 The managed identity attached to the RP VM, in the AME tenant, for use against
@@ -28,9 +33,8 @@ ARM. Used for bootstrapping: finding the CosmosDB key, populating the SKU list.
 ## rpKVAuthorizer
 
 The managed identity attached to the RP VM, in the AME tenant, for use against
-the service and cluster key vault. Used for bootstrapping: retrieving keys and
-secrets from the service key vault, including the first party certificate + key.
-Used in steady state: manage cluster serving certificates.
+the service key vault. Used for bootstrapping: retrieving keys and secrets from
+the service key vault, including the first party certificate + key.
 
 ## spAuthorizer
 

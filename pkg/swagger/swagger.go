@@ -81,6 +81,7 @@ func Run(api, outputDir string) error {
 	if err != nil {
 		return err
 	}
+
 	names = []string{"CloudError", "OperationList"}
 	err = define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api", g.xmsEnum, names...)
 	if err != nil {
@@ -124,21 +125,11 @@ func Run(api, outputDir string) error {
 				properties = append(properties, property)
 			}
 		}
-
 		s.Definitions[azureResource].Properties = properties
 
 		if g.systemData {
-			s.Definitions[azureResource].Properties = append(s.Definitions[azureResource].Properties,
-				NameSchema{
-					Name: "systemData",
-					Schema: &Schema{
-						ReadOnly:    true,
-						Description: "The system meta data relating to this resource.",
-						Ref:         "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/definitions/systemData",
-					},
-				})
+			s.defineSystemData([]string{azureResource, azureResource + "Update"}, g.commonTypesVersion)
 		}
-
 	}
 
 	b, err := json.MarshalIndent(s, "", "  ")
@@ -169,4 +160,40 @@ func deepCopy(v interface{}) (interface{}, error) {
 	}
 
 	return reflect.ValueOf(w).Elem().Interface(), nil
+}
+
+// defineSystemData will configure systemData fields for required definitions.
+// SystemData is not user consumable, so we remove definitions from auto-generated code
+// In addition to this we use common-types definition so we replace one we generate with common-types
+func (s *Swagger) defineSystemData(resources []string, commonVersion string) {
+	for _, resource := range resources {
+		s.Definitions[resource].Properties = removeNamedSchemas(s.Definitions[resource].Properties, "systemData")
+
+		// SystemData is not user side consumable type. It is being returned as Read-Only,
+		// but should not be generated into API or swagger as API/SDK type
+		delete(s.Definitions, "SystemData")
+		delete(s.Definitions, "CreatedByType")
+		s.Definitions[resource].Properties = append(s.Definitions[resource].Properties,
+			NameSchema{
+				Name: "systemData",
+				Schema: &Schema{
+					ReadOnly:    true,
+					Description: "The system meta data relating to this resource.",
+					Ref:         "../../../../../common-types/resource-management/" + commonVersion + "/types.json#/definitions/systemData",
+				},
+			},
+		)
+	}
+}
+
+func removeNamedSchemas(list NameSchemas, remove string) NameSchemas {
+	var result NameSchemas
+	for _, schema := range list {
+		if schema.Name == remove {
+			continue
+		}
+		result = append(result, schema)
+	}
+	return result
+
 }
