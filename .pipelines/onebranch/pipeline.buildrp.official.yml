@@ -25,6 +25,9 @@ resources:
   - repository: rhado
     type: git
     name: ARO.Pipelines
+  - repository: rpconfig
+    type: git
+    name: RP-Config
 
 extends:
   template: v2/OneBranch.Official.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
@@ -51,7 +54,9 @@ extends:
           ob_outputDirectory: $(Build.SourcesDirectory)/out   # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
 
         steps:
-        - template: .pipelines/onebranch/templates/template-buildrp-buildev2.yml@self
+        - template: .pipelines/onebranch/templates/template-generate-ev2-manifests.yml@self
+          parameters:
+            generationType: deployment
 
     - stage: Build_Docker_Image
       jobs:
