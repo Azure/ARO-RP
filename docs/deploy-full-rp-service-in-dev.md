@@ -51,6 +51,10 @@
         --name rp-mdm \
         --file secrets/rp-metrics-int.pem >/dev/null
     az keyvault certificate import \
+        --vault-name "$KEYVAULT_PREFIX-gwy" \
+        --name gwy-mdm \
+        --file secrets/rp-metrics-int.pem >/dev/null
+    az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-mdsd \
         --file secrets/rp-logging-int.pem >/dev/null
