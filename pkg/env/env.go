@@ -40,8 +40,6 @@ const (
 	EncryptionSecretName             = "encryption-key"
 	FrontendEncryptionSecretName     = "fe-encryption-key"
 	DBTokenServerSecretName          = "dbtoken-server"
-	RPLoggingSecretName              = "rp-mdsd"
-	RPMonitoringSecretName           = "rp-mdm"
 	PortalServerSecretName           = "portal-server"
 	PortalServerClientSecretName     = "portal-client"
 	PortalServerSessionKeySecretName = "portal-session-key"
