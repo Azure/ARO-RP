@@ -17,8 +17,33 @@ type OpenShiftCluster struct {
 	Name       string                     `json:"name,omitempty"`
 	Type       string                     `json:"type,omitempty"`
 	Location   string                     `json:"location,omitempty"`
+	SystemData SystemData                 `json:"systemData,omitempty"`
 	Tags       map[string]string          `json:"tags,omitempty"`
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
+}
+
+// CreatedByType by defines user type, which executed the request
+// This field should match common-types field names for swagger and sdk generation
+type CreatedByType string
+
+const (
+	CreatedByTypeApplication     CreatedByType = "Application"
+	CreatedByTypeKey             CreatedByType = "Key"
+	CreatedByTypeManagedIdentity CreatedByType = "ManagedIdentity"
+	CreatedByTypeUser            CreatedByType = "User"
+)
+
+// SystemData represets metadata provided by arm. Time fields inside the struct are pointers
+// so we could better verify which fields are provided to use by ARM or not. Time package
+// does not comply with omitempty. More details about requirements:
+// https://github.com/Azure/azure-resource-manager-rpc/blob/master/v1.0/common-api-contracts.md#system-metadata-for-all-azure-resources
+type SystemData struct {
+	CreatedBy          string        `json:"createdBy,omitempty"`
+	CreatedByType      CreatedByType `json:"createdByType,omitempty"`
+	CreatedAt          *time.Time    `json:"createdAt,omitempty"`
+	LastModifiedBy     string        `json:"lastModifiedBy,omitempty"`
+	LastModifiedByType CreatedByType `json:"lastModifiedByType,omitempty"`
+	LastModifiedAt     *time.Time    `json:"lastModifiedAt,omitempty"`
 }
 
 // SecureBytes represents an encrypted []byte

@@ -6,6 +6,12 @@ import "time"
 // Licensed under the Apache License 2.0.
 
 func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
+	timestampString := "2020-02-03T01:01:01.1075056Z"
+	timestamp, err := time.Parse(time.RFC3339, timestampString)
+	if err != nil {
+		panic(err)
+	}
+
 	return &OpenShiftClusterDocument{
 		ID:                        "00000000-0000-0000-0000-000000000000",
 		Key:                       "/subscriptions/subscriptionid/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
@@ -17,6 +23,14 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 			Name:     "resourceName",
 			Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
 			Location: "location",
+			SystemData: SystemData{
+				CreatedBy:          "string",
+				CreatedByType:      CreatedByTypeApplication,
+				CreatedAt:          &timestamp,
+				LastModifiedBy:     "string",
+				LastModifiedByType: CreatedByTypeApplication,
+				LastModifiedAt:     &timestamp,
+			},
 			Tags: map[string]string{
 				"key": "value",
 			},

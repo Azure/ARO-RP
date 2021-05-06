@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -21,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -216,6 +218,11 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			}
 			f.(*frontend).bucketAllocator = bucket.Fixed(1)
 
+			var systemDataEnricherCalled bool
+			f.(*frontend).systemDataEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+				systemDataEnricherCalled = true
+			}
+
 			go f.Run(ctx, nil, nil)
 
 			oc := &admin.OpenShiftCluster{}
@@ -268,6 +275,10 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			for _, err := range errs {
 				t.Error(err)
 			}
+
+			if !systemDataEnricherCalled {
+				t.Error(systemDataEnricherCalled)
+			}
 		})
 	}
 
@@ -290,16 +301,17 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 	mockCurrentTime := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	type test struct {
-		name           string
-		request        func(*v20200430.OpenShiftCluster)
-		isPatch        bool
-		fixture        func(*testdatabase.Fixture)
-		wantEnriched   []string
-		wantDocuments  func(*testdatabase.Checker)
-		wantStatusCode int
-		wantResponse   *v20200430.OpenShiftCluster
-		wantAsync      bool
-		wantError      string
+		name                   string
+		request                func(*v20200430.OpenShiftCluster)
+		isPatch                bool
+		fixture                func(*testdatabase.Fixture)
+		wantEnriched           []string
+		wantSystemDataEnriched bool
+		wantDocuments          func(*testdatabase.Checker)
+		wantStatusCode         int
+		wantResponse           *v20200430.OpenShiftCluster
+		wantAsync              bool
+		wantError              string
 	}
 
 	for _, tt := range []*test{
@@ -319,6 +331,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
+			wantSystemDataEnriched: true,
 			wantDocuments: func(c *testdatabase.Checker) {
 				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
@@ -399,6 +412,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				})
 
 			},
+			wantSystemDataEnriched: true,
 			wantDocuments: func(c *testdatabase.Checker) {
 				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
@@ -473,6 +487,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
+			wantSystemDataEnriched: true,
 			wantDocuments: func(c *testdatabase.Checker) {
 				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
@@ -608,6 +623,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
+			wantSystemDataEnriched: true,
 			wantDocuments: func(c *testdatabase.Checker) {
 				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
@@ -685,6 +701,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
+			wantSystemDataEnriched: true,
 			wantDocuments: func(c *testdatabase.Checker) {
 				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
@@ -828,9 +845,10 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			wantAsync:      true,
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      fmt.Sprintf("400: DuplicateResourceGroup: : The provided resource group '/subscriptions/%s/resourcegroups/aro-vjb21wca' already contains a cluster.", mockSubID),
+			wantSystemDataEnriched: true,
+			wantAsync:              true,
+			wantStatusCode:         http.StatusBadRequest,
+			wantError:              fmt.Sprintf("400: DuplicateResourceGroup: : The provided resource group '/subscriptions/%s/resourcegroups/aro-vjb21wca' already contains a cluster.", mockSubID),
 		},
 		{
 			name: "creating cluster failing when provided client ID is not unique",
@@ -863,12 +881,14 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			wantAsync:      true,
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      fmt.Sprintf("400: DuplicateClientID: : The provided client ID '%s' is already in use by a cluster.", mockSubID),
+			wantSystemDataEnriched: true,
+			wantAsync:              true,
+			wantStatusCode:         http.StatusBadRequest,
+			wantError:              fmt.Sprintf("400: DuplicateClientID: : The provided client ID '%s' is already in use by a cluster.", mockSubID),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+
 			ti := newTestInfra(t).
 				WithOpenShiftClusters().
 				WithSubscriptions().
@@ -888,6 +908,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			}
 			f.(*frontend).bucketAllocator = bucket.Fixed(1)
 			f.(*frontend).now = func() time.Time { return mockCurrentTime }
+
+			var systemDataEnricherCalled bool
+			f.(*frontend).systemDataEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+				systemDataEnricherCalled = true
+			}
 
 			go f.Run(ctx, nil, nil)
 
@@ -938,6 +963,109 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				for _, err := range errs {
 					t.Error(err)
 				}
+			}
+
+			if tt.wantSystemDataEnriched != systemDataEnricherCalled {
+				t.Error(systemDataEnricherCalled)
+			}
+		})
+	}
+}
+
+func TestEnrichSystemData(t *testing.T) {
+
+	accountID1 := "00000000-0000-0000-0000-000000000001"
+	accountID2 := "00000000-0000-0000-0000-000000000002"
+	timestampString := "2021-01-23T12:34:54.0000000Z"
+	timestamp, err := time.Parse(time.RFC3339, timestampString)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tt := range []struct {
+		name       string
+		systemData *api.SystemData
+		expected   *api.OpenShiftClusterDocument
+	}{
+		{
+			name:       "new systemData is nil",
+			systemData: nil,
+			expected: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{},
+			},
+		},
+		{
+			name: "new systemData has all fields",
+			systemData: &api.SystemData{
+				CreatedBy:          accountID1,
+				CreatedByType:      api.CreatedByTypeApplication,
+				CreatedAt:          &timestamp,
+				LastModifiedBy:     accountID1,
+				LastModifiedByType: api.CreatedByTypeApplication,
+				LastModifiedAt:     &timestamp,
+			},
+			expected: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					SystemData: api.SystemData{
+						CreatedBy:          accountID1,
+						CreatedByType:      api.CreatedByTypeApplication,
+						CreatedAt:          &timestamp,
+						LastModifiedBy:     accountID1,
+						LastModifiedByType: api.CreatedByTypeApplication,
+						LastModifiedAt:     &timestamp,
+					},
+				},
+			},
+		},
+		{
+			name: "update object",
+			systemData: &api.SystemData{
+				CreatedBy:          accountID1,
+				CreatedByType:      api.CreatedByTypeApplication,
+				CreatedAt:          &timestamp,
+				LastModifiedBy:     accountID2,
+				LastModifiedByType: api.CreatedByTypeApplication,
+				LastModifiedAt:     &timestamp,
+			},
+			expected: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					SystemData: api.SystemData{
+						CreatedBy:          accountID1,
+						CreatedByType:      api.CreatedByTypeApplication,
+						CreatedAt:          &timestamp,
+						LastModifiedBy:     accountID2,
+						LastModifiedByType: api.CreatedByTypeApplication,
+						LastModifiedAt:     &timestamp,
+					},
+				},
+			},
+		},
+		{
+			name: "old cluster update. Creation unknown",
+			systemData: &api.SystemData{
+				LastModifiedBy:     accountID2,
+				LastModifiedByType: api.CreatedByTypeApplication,
+				LastModifiedAt:     &timestamp,
+			},
+			expected: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					SystemData: api.SystemData{
+						LastModifiedBy:     accountID2,
+						LastModifiedByType: api.CreatedByTypeApplication,
+						LastModifiedAt:     &timestamp,
+					},
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			doc := &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{},
+			}
+			enrichSystemData(doc, tt.systemData)
+
+			if !reflect.DeepEqual(doc, tt.expected) {
+				t.Error(cmp.Diff(doc, tt.expected))
 			}
 		})
 	}

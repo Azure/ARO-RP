@@ -117,25 +117,27 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 		}
 
 	case *types.Struct:
+
 		for i := 0; i < t.NumFields(); i++ {
 			field := t.Field(i)
+			if field.Exported() {
+				nodes, _ := tw.getNodes(field.Pos())
+				node := nodes[1].(*ast.Field)
+				tag, _ := strconv.Unquote(node.Tag.Value)
 
-			nodes, _ := tw.getNodes(field.Pos())
-			node := nodes[1].(*ast.Field)
-			tag, _ := strconv.Unquote(node.Tag.Value)
+				name := strings.SplitN(reflect.StructTag(tag).Get("json"), ",", 2)[0]
+				if name == "-" {
+					continue
+				}
 
-			name := strings.SplitN(reflect.StructTag(tag).Get("json"), ",", 2)[0]
-			if name == "-" {
-				continue
+				properties := tw.schemaFromType(field.Type(), deps)
+				properties.Description = strings.Trim(node.Doc.Text(), "\n")
+
+				s.Properties = append(s.Properties, NameSchema{
+					Name:   name,
+					Schema: properties,
+				})
 			}
-
-			properties := tw.schemaFromType(field.Type(), deps)
-			properties.Description = strings.Trim(node.Doc.Text(), "\n")
-
-			s.Properties = append(s.Properties, NameSchema{
-				Name:   name,
-				Schema: properties,
-			})
 		}
 
 	default:
@@ -152,27 +154,29 @@ func (tw *typeWalker) _define(definitions Definitions, t *types.Named) {
 	s := tw.schemaFromType(t.Underlying(), deps)
 
 	path, _ := tw.getNodes(t.Obj().Pos())
-	s.Description = strings.Trim(path[len(path)-2].(*ast.GenDecl).Doc.Text(), "\n")
-	s.Enum = tw.enums[t]
+	if path != nil {
+		s.Description = strings.Trim(path[len(path)-2].(*ast.GenDecl).Doc.Text(), "\n")
+		s.Enum = tw.enums[t]
 
-	// Enum extensions allows non-breaking api changes
-	// https://github.com/Azure/autorest/tree/master/docs/extensions#x-ms-enum
-	c := strings.Split(t.String(), ".")
-	name := c[(len(c) - 1)]
-	for _, xname := range tw.xmsEnumList {
-		if xname == name {
-			s.XMSEnum = &XMSEnum{
-				ModelAsString: true,
-				Name:          name,
+		// Enum extensions allows non-breaking api changes
+		// https://github.com/Azure/autorest/tree/master/docs/extensions#x-ms-enum
+		c := strings.Split(t.String(), ".")
+		name := c[(len(c) - 1)]
+		for _, xname := range tw.xmsEnumList {
+			if xname == name {
+				s.XMSEnum = &XMSEnum{
+					ModelAsString: true,
+					Name:          xname,
+				}
 			}
 		}
-	}
 
-	definitions[t.Obj().Name()] = s
+		definitions[t.Obj().Name()] = s
 
-	for dep := range deps {
-		if _, found := definitions[dep.Obj().Name()]; !found {
-			tw._define(definitions, dep)
+		for dep := range deps {
+			if _, found := definitions[dep.Obj().Name()]; !found {
+				tw._define(definitions, dep)
+			}
 		}
 	}
 }

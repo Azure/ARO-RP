@@ -1,5 +1,7 @@
 package v20210131preview
 
+import "time"
+
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
@@ -25,6 +27,9 @@ type OpenShiftCluster struct {
 
 	// The resource location.
 	Location string `json:"location,omitempty"`
+
+	// SystemData - The system metadata relating to this resource
+	SystemData SystemData `json:"systemData,omitempty"`
 
 	// The resource tags.
 	Tags Tags `json:"tags,omitempty" mutable:"true"`
@@ -204,4 +209,30 @@ type IngressProfile struct {
 
 	// The IP of the ingress.
 	IP string `json:"ip,omitempty"`
+}
+
+// CreatedByType by defines user type, which executed the request
+type CreatedByType string
+
+const (
+	CreatedByTypeApplication     CreatedByType = "Application"
+	CreatedByTypeKey             CreatedByType = "Key"
+	CreatedByTypeManagedIdentity CreatedByType = "ManagedIdentity"
+	CreatedByTypeUser            CreatedByType = "User"
+)
+
+// SystemData metadata pertaining to creation and last modification of the resource.
+type SystemData struct {
+	// The identity that created the resource.
+	CreatedBy string `json:"createdBy,omitempty"`
+	// The type of identity that created the resource. Possible values include: 'User', 'Application', 'ManagedIdentity', 'Key'
+	CreatedByType CreatedByType `json:"createdByType,omitempty"`
+	// The timestamp of resource creation (UTC).
+	CreatedAt *time.Time `json:"createdAt,omitempty"`
+	// The identity that last modified the resource.
+	LastModifiedBy string `json:"lastModifiedBy,omitempty"`
+	// The type of identity that last modified the resource. Possible values include: 'User', 'Application', 'ManagedIdentity', 'Key'
+	LastModifiedByType CreatedByType `json:"lastModifiedByType,omitempty"`
+	// The type of identity that last modified the resource.
+	LastModifiedAt *time.Time `json:"lastModifiedAt,omitempty"`
 }

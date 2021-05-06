@@ -81,6 +81,15 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 		}
 	}
 
+	out.SystemData = SystemData{
+		CreatedBy:          oc.SystemData.CreatedBy,
+		CreatedAt:          oc.SystemData.CreatedAt,
+		CreatedByType:      CreatedByType(oc.SystemData.CreatedByType),
+		LastModifiedBy:     oc.SystemData.LastModifiedBy,
+		LastModifiedAt:     oc.SystemData.LastModifiedAt,
+		LastModifiedByType: CreatedByType(oc.SystemData.LastModifiedByType),
+	}
+
 	return out
 }
 
@@ -151,5 +160,14 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 			out.Properties.IngressProfiles[i].Visibility = api.Visibility(oc.Properties.IngressProfiles[i].Visibility)
 			out.Properties.IngressProfiles[i].IP = oc.Properties.IngressProfiles[i].IP
 		}
+	}
+
+	out.SystemData = api.SystemData{
+		CreatedBy:          oc.SystemData.CreatedBy,
+		CreatedAt:          oc.SystemData.CreatedAt,
+		CreatedByType:      api.CreatedByType(oc.SystemData.CreatedByType),
+		LastModifiedBy:     oc.SystemData.LastModifiedBy,
+		LastModifiedAt:     oc.SystemData.LastModifiedAt,
+		LastModifiedByType: api.CreatedByType(oc.SystemData.CreatedByType),
 	}
 }
