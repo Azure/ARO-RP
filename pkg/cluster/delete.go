@@ -286,6 +286,15 @@ func (m *manager) Delete(ctx context.Context) error {
 
 	m.log.Printf("deleting resources")
 	err = m.deleteResources(ctx)
+	// TODO: determine if futures are falsely returning successfully
+	// Retries here are not the optimal solution
+	for retry := 0; retry < 3; retry++ {
+		err = m.deleteResources(ctx)
+		if err == nil {
+			break
+		}
+		m.log.Errorf("failed to delete %s", err.Error())
+	}
 	if err != nil {
 		return err
 	}
