@@ -8,6 +8,7 @@ parameters:
 
 steps:
 - checkout: rhado
+- checkout: rpconfig
 - task: GoTool@0
   displayName: Use Go 1.16.2
   inputs:
