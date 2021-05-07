@@ -113,14 +113,27 @@
                         "properties": {
                             "protocol": "Tcp",
                             "sourcePortRange": "*",
-                            "destinationPortRange": "8445",
+                            "destinationPortRange": "445",
                             "sourceAddressPrefix": "10.0.8.0/24",
                             "destinationAddressPrefix": "*",
                             "access": "Allow",
                             "priority": 140,
                             "direction": "Inbound"
                         },
-                        "name": "dbtoken_in_gateway"
+                        "name": "dbtoken_in_gateway_445"
+                    },
+                    {
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "8445",
+                            "sourceAddressPrefix": "10.0.8.0/24",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 141,
+                            "direction": "Inbound"
+                        },
+                        "name": "dbtoken_in_gateway_8445"
                     },
                     {
                         "properties": {

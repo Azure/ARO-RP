@@ -77,14 +77,27 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
 					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
 					SourcePortRange:          to.StringPtr("*"),
-					DestinationPortRange:     to.StringPtr("8445"),
+					DestinationPortRange:     to.StringPtr("445"),
 					SourceAddressPrefix:      to.StringPtr("10.0.8.0/24"),
 					DestinationAddressPrefix: to.StringPtr("*"),
 					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
 					Priority:                 to.Int32Ptr(140),
 					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 				},
-				Name: to.StringPtr("dbtoken_in_gateway"),
+				Name: to.StringPtr("dbtoken_in_gateway_445"),
+			},
+			mgmtnetwork.SecurityRule{
+				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+					SourcePortRange:          to.StringPtr("*"),
+					DestinationPortRange:     to.StringPtr("8445"),
+					SourceAddressPrefix:      to.StringPtr("10.0.8.0/24"),
+					DestinationAddressPrefix: to.StringPtr("*"),
+					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+					Priority:                 to.Int32Ptr(141),
+					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+				},
+				Name: to.StringPtr("dbtoken_in_gateway_8445"),
 			},
 			mgmtnetwork.SecurityRule{
 				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
