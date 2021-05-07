@@ -33,7 +33,7 @@ const (
 	shellScriptLog = `while true;
 do
 	NOW=$(date "+%Y-%m-%d %H:%M:%S")
-	DROPPED_PACKETS=$(ovs-ofctl -O OpenFlow13 dump-flows br0 | sed -ne '/table=10,.* actions=drop/ { s/.* n_packets=//; s/,.*//; p }')
+	DROPPED_PACKETS=$(ovs-ofctl -O OpenFlow13 dump-flows unix:/host/var/run/openvswitch/br0.mgmt | sed -ne '/table=10,.* actions=drop/ { s/.* n_packets=//; s/,.*//; p }')
 	if [ "$DROPPED_PACKETS" != "" ] && [ "$DROPPED_PACKETS" -gt 1000 ];
 	then
 		echo "$NOW table=10 actions=drop packets=$DROPPED_PACKETS broken=true"
