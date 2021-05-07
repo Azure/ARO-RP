@@ -85,6 +85,21 @@
                     },
                     {
                         "tenantId": "[subscription().tenantId]",
+                        "objectId": "[parameters('rpServicePrincipalId')]",
+                        "permissions": {
+                            "secrets": [
+                                "get"
+                            ],
+                            "certificates": [
+                                "create",
+                                "delete",
+                                "get",
+                                "update"
+                            ]
+                        }
+                    },
+                    {
+                        "tenantId": "[subscription().tenantId]",
                         "objectId": "[parameters('adminObjectId')]",
                         "permissions": {
                             "certificates": [

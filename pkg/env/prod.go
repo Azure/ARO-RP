@@ -120,11 +120,17 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
+	clusterKeyvaultURI, err := keyvault.URI(p, ClusterKeyvaultSuffix)
+	if err != nil {
+		return nil, err
+	}
+
 	serviceKeyvaultURI, err := keyvault.URI(p, ServiceKeyvaultSuffix)
 	if err != nil {
 		return nil, err
 	}
 
+	p.clusterKeyvault = keyvault.NewManager(rpKVAuthorizer, clusterKeyvaultURI)
 	p.serviceKeyvault = keyvault.NewManager(rpKVAuthorizer, serviceKeyvaultURI)
 
 	err = p.populateZones(ctx, rpAuthorizer)
@@ -139,18 +145,6 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 
 	p.fpPrivateKey = fpPrivateKey
 	p.fpCertificate = fpCertificates[0]
-
-	localFPKVAuthorizer, err := p.FPAuthorizer(p.TenantID(), p.Environment().ResourceIdentifiers.KeyVault)
-	if err != nil {
-		return nil, err
-	}
-
-	clusterKeyvaultURI, err := keyvault.URI(p, ClusterKeyvaultSuffix)
-	if err != nil {
-		return nil, err
-	}
-
-	p.clusterKeyvault = keyvault.NewManager(localFPKVAuthorizer, clusterKeyvaultURI)
 
 	clusterGenevaLoggingPrivateKey, clusterGenevaLoggingCertificates, err := p.serviceKeyvault.GetCertificateSecret(ctx, ClusterLoggingSecretName)
 	if err != nil {

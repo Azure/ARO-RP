@@ -40,7 +40,7 @@ func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 }
 
 // CreateSignedCertificate mocks base method
-func (m *MockManager) CreateSignedCertificate(arg0 context.Context, arg1, arg2, arg3 string, arg4 keyvault.Eku) error {
+func (m *MockManager) CreateSignedCertificate(arg0 context.Context, arg1 keyvault.Issuer, arg2, arg3 string, arg4 keyvault.Eku) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateSignedCertificate", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(error)
@@ -126,21 +126,6 @@ func (m *MockManager) GetSecrets(arg0 context.Context) ([]keyvault0.SecretItem, 
 func (mr *MockManagerMockRecorder) GetSecrets(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecrets", reflect.TypeOf((*MockManager)(nil).GetSecrets), arg0)
-}
-
-// SetCertificateIssuer mocks base method
-func (m *MockManager) SetCertificateIssuer(arg0 context.Context, arg1 string, arg2 keyvault0.CertificateIssuerSetParameters) (keyvault0.IssuerBundle, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetCertificateIssuer", arg0, arg1, arg2)
-	ret0, _ := ret[0].(keyvault0.IssuerBundle)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SetCertificateIssuer indicates an expected call of SetCertificateIssuer
-func (mr *MockManagerMockRecorder) SetCertificateIssuer(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCertificateIssuer", reflect.TypeOf((*MockManager)(nil).SetCertificateIssuer), arg0, arg1, arg2)
 }
 
 // SetSecret mocks base method

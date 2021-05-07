@@ -17,6 +17,21 @@
                         "update"
                     ]
                 }
+            },
+            {
+                "tenantId": "[subscription().tenantId]",
+                "objectId": "[parameters('rpServicePrincipalId')]",
+                "permissions": {
+                    "secrets": [
+                        "get"
+                    ],
+                    "certificates": [
+                        "create",
+                        "delete",
+                        "get",
+                        "update"
+                    ]
+                }
             }
         ],
         "dbTokenKeyvaultAccessPolicies": [
