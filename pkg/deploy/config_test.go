@@ -42,7 +42,7 @@ func TestConfigurationFieldParity(t *testing.T) {
 		// check each parameter exists as a field in Configuration
 		for name := range params.Parameters {
 			switch name {
-			case "deployNSGs", "encryptionAtHost", "gatewayResourceGroupName",
+			case "deployNSGs", "gatewayResourceGroupName",
 				"gatewayServicePrincipalId", "rpImage", "rpServicePrincipalId",
 				"vmssName":
 			default:
