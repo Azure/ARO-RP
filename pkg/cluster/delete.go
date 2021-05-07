@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
@@ -284,8 +285,18 @@ func (m *manager) Delete(ctx context.Context) error {
 		return err
 	}
 
+	// PR 1483 is a temporary fix
+	// PLS failing to delete its own managed NIC causing E2E failures
+	// TODO: Remove PR 1483 changes on resolution of 239789689
 	m.log.Printf("deleting resources")
-	err = m.deleteResources(ctx)
+	for retry := 0; retry < 3; retry++ {
+		err = m.deleteResources(ctx)
+		if err == nil {
+			break
+		}
+		m.log.Info(err)
+		time.Sleep(30 * time.Second)
+	}
 	if err != nil {
 		return err
 	}
