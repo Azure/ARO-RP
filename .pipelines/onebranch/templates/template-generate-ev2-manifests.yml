@@ -3,6 +3,7 @@ parameters:
   type: string
   default: deployment
   values:
+  - bootstrapper
   - deployment
   - mirroring
 
