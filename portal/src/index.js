@@ -1,4 +1,12 @@
-$.extend({
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap-select/dist/css/bootstrap-select.min.css';
+
+import 'bootstrap/js/dist/util';
+import 'bootstrap/js/dist/dropdown';
+
+import 'bootstrap-select'
+
+jQuery.extend({
     redirect: function (location, args) {
         var form = $("<form method='POST' style='display: none;'></form>");
         form.attr("action", location);
@@ -17,7 +25,7 @@ $.extend({
     }
 });
 
-$(document).ready(function () {
+jQuery(function () {
     $.ajax({
         url: "/api/clusters",
         success: function (clusters) {
