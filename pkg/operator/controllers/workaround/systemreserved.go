@@ -26,8 +26,12 @@ type systemreserved struct {
 	versionFixed *version.Version
 }
 
+// Tweaked values from from https://github.com/openshift/kubernetes/blob/master/pkg/kubelet/apis/config/v1beta1/defaults_linux.go
 const (
 	hardEviction                = "500Mi"
+	nodeFsAvailable             = "10%"
+	nodeFsInodes                = "5%"
+	imageFs                     = "15%"
 	labelName                   = "aro.openshift.io/limits"
 	labelValue                  = ""
 	kubeletConfigName           = "aro-limits"
@@ -65,7 +69,10 @@ func (sr *systemreserved) kubeletConfig() (*mcv1.KubeletConfig, error) {
 			"memory": memReserved,
 		},
 		"evictionHard": map[string]interface{}{
-			"memory.available": hardEviction,
+			"memory.available":  hardEviction,
+			"nodefs.available":  nodeFsAvailable,
+			"nodefs.inodesFree": nodeFsInodes,
+			"imagefs.available": imageFs,
 		},
 	})
 	if err != nil {
