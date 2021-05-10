@@ -297,7 +297,8 @@ func (g *generator) devCIPool() *arm.Resource {
 	}
 
 	trailer := base64.StdEncoding.EncodeToString([]byte(`
-yum -y update -x WALinuxAgent
+# --disablerepo=* --enablerepo="*microsoft*" been added to workaround expired client package issue
+yum -y update -x WALinuxAgent --disablerepo=* --enablerepo="*microsoft*"
 
 lvextend -l +50%FREE /dev/rootvg/varlv
 xfs_growfs /var
