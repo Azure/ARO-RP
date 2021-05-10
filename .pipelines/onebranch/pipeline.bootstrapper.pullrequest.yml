@@ -41,6 +41,6 @@ extends:
         suppressionSet: default
 
     stages:
-    - stage: Mirror_Images
+    - stage: Bootstrapper
       jobs:
       - template: .pipelines/onebranch/templates/template-bootstrapper.yml@self
