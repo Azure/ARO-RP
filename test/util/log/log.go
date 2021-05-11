@@ -98,6 +98,10 @@ func AssertAuditPayloads(t *testing.T, h *test.Hook, expected []*audit.Payload) 
 		actualEntries = append(actualEntries, &actual)
 	}
 
+	if len(expected) == 0 && len(actualEntries) == 0 {
+		return
+	}
+
 	r := deep.Equal(expected, actualEntries)
 	if len(r) != 0 {
 		t.Error("log differences -- expected - actual:")
