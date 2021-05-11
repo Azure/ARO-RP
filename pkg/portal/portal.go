@@ -172,7 +172,7 @@ func (p *portal) Run(ctx context.Context) error {
 	aadAuthenticatedRouter := r.NewRoute().Subrouter()
 	aadAuthenticatedRouter.Use(p.aad.AAD)
 	aadAuthenticatedRouter.Use(middleware.Log(p.env, p.audit, p.baseAccessLog))
-	aadAuthenticatedRouter.Use(p.aad.Redirect)
+	aadAuthenticatedRouter.Use(p.aad.CheckAuthentication)
 	aadAuthenticatedRouter.Use(csrf.Protect(p.sessionKey, csrf.SameSite(csrf.SameSiteStrictMode), csrf.MaxAge(0)))
 
 	p.aadAuthenticatedRoutes(aadAuthenticatedRouter)
@@ -206,20 +206,21 @@ func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 	logger := middleware.Log(p.env, p.audit, p.baseAccessLog)
 
 	r.NewRoute().Methods(http.MethodGet).Path("/healthz/ready").Handler(logger(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
+	r.NewRoute().Methods(http.MethodGet).Path("/api/login").HandlerFunc(func(w http.ResponseWriter, r *http.Request) { p.aad.Login(w, r) })
 }
 
 func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 	for _, name := range AssetNames() {
 		if name == "index.html" {
+			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.serve(name))
 			continue
 		}
 
 		r.NewRoute().Methods(http.MethodGet).Path("/" + name).HandlerFunc(p.serve(name))
 	}
 
-	r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.index)
-
 	r.NewRoute().Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
+	r.NewRoute().Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
 	r.NewRoute().Methods(http.MethodPost).Path("/api/logout").Handler(p.aad.Logout("/"))
 }
 
@@ -235,19 +236,20 @@ func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (p *portal) index(w http.ResponseWriter, r *http.Request) {
-	buf := &bytes.Buffer{}
+func (p *portal) info(w http.ResponseWriter, r *http.Request) {
+	resp := map[string]string{
+		"location": p.env.Location(),
+		"csrf":     csrf.Token(r),
+	}
 
-	err := p.t.ExecuteTemplate(buf, "index.html", map[string]interface{}{
-		"location":       p.env.Location(),
-		csrf.TemplateTag: csrf.TemplateField(r),
-	})
+	b, err := json.MarshalIndent(resp, "", "    ")
 	if err != nil {
 		p.internalServerError(w, err)
 		return
 	}
 
-	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(buf.Bytes()))
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(b)
 }
 
 func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {

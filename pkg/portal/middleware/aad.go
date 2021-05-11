@@ -43,8 +43,9 @@ func init() {
 // AAD is responsible for ensuring that we have a valid login session with AAD.
 type AAD interface {
 	AAD(http.Handler) http.Handler
+	CheckAuthentication(http.Handler) http.Handler
+	Login(http.ResponseWriter, *http.Request)
 	Logout(string) http.Handler
-	Redirect(http.Handler) http.Handler
 }
 
 type oauther interface {
@@ -141,7 +142,7 @@ func (a *aad) AAD(h http.Handler) http.Handler {
 
 		expires, ok := session.Values[SessionKeyExpires].(time.Time)
 		if !ok || expires.Before(a.now()) {
-			h.ServeHTTP(w, r)
+			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 			return
 		}
 
@@ -154,19 +155,22 @@ func (a *aad) AAD(h http.Handler) http.Handler {
 	})
 }
 
-// Redirect is the late stage (post logging) handler which redirects to AAD if
-// there is no valid user.
-func (a *aad) Redirect(h http.Handler) http.Handler {
+// CheckAuthentication is the handler which prevents access to requests without
+// valid authentication.
+func (a *aad) CheckAuthentication(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-
-		if ctx.Value(ContextKeyUsername) != nil {
-			h.ServeHTTP(w, r)
+		if ctx.Value(ContextKeyUsername) == nil {
+			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 			return
 		}
-
-		a.redirect(w, r)
+		h.ServeHTTP(w, r)
 	})
+}
+
+// Login will redirect the user to a login page.
+func (a *aad) Login(w http.ResponseWriter, r *http.Request) {
+	a.redirect(w, r)
 }
 
 func (a *aad) Logout(url string) http.Handler {
@@ -196,16 +200,10 @@ func (a *aad) redirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := r.URL.Path
-	if path == "/callback" {
-		path = "/"
-	}
-
 	state := uuid.Must(uuid.NewV4()).String()
 
 	session.Values = map[interface{}]interface{}{
-		sessionKeyRedirectPath: path,
-		sessionKeyState:        state,
+		sessionKeyState: state,
 	}
 
 	err = session.Save(r, w)
@@ -289,13 +287,6 @@ func (a *aad) callback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 	}
 
-	redirectPath, ok := session.Values[sessionKeyRedirectPath].(string)
-	if !ok {
-		a.internalServerError(w, errors.New("redirect_path not found"))
-		return
-	}
-
-	delete(session.Values, sessionKeyRedirectPath)
 	session.Values[SessionKeyUsername] = claims.PreferredUsername
 	session.Values[SessionKeyGroups] = groupsIntersect
 	session.Values[SessionKeyExpires] = a.now().Add(a.sessionTimeout)
@@ -306,7 +297,7 @@ func (a *aad) callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, redirectPath, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
 // clientAssertion adds a JWT client assertion according to
