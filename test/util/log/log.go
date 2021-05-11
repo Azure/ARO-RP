@@ -6,10 +6,10 @@ package log
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
@@ -81,12 +81,9 @@ func AssertLoggingOutput(h *test.Hook, expected []map[string]types.GomegaMatcher
 // AssertAuditPayload compares the audit payloads in `h` with the given expected
 // payloads
 func AssertAuditPayloads(t *testing.T, h *test.Hook, expected []*audit.Payload) {
-	if len(expected) != len(h.AllEntries()) {
-		t.Errorf("mismatch entries count: expected: %d, actual: %d", len(expected), len(h.AllEntries()))
-		return
-	}
+	actualEntries := []*audit.Payload{}
 
-	for i, entry := range h.AllEntries() {
+	for _, entry := range h.AllEntries() {
 		raw, ok := entry.Data[audit.MetadataPayload].(string)
 		if !ok {
 			t.Error("audit payload type cast failed")
@@ -98,70 +95,14 @@ func AssertAuditPayloads(t *testing.T, h *test.Hook, expected []*audit.Payload) 
 			t.Errorf("fail to unmarshal payload: %s", err)
 			continue
 		}
+		actualEntries = append(actualEntries, &actual)
+	}
 
-		errors := []string{}
-		if expected[i].EnvVer != actual.EnvVer {
-			errors = append(errors, fmt.Sprintf("mismatch EnvVer. expected: %.f, actual: %.f", expected[i].EnvVer, actual.EnvVer))
-		}
-
-		if expected[i].EnvName != actual.EnvName {
-			errors = append(errors, fmt.Sprintf("mismatch EnvName. expected: %s, actual: %s", expected[i].EnvName, actual.EnvName))
-		}
-
-		if expected[i].EnvFlags != actual.EnvFlags {
-			errors = append(errors, fmt.Sprintf("mismatch EnvFlags. expected: %d, actual: %d", expected[i].EnvFlags, actual.EnvFlags))
-		}
-
-		if expected[i].EnvAppID != actual.EnvAppID {
-			errors = append(errors, fmt.Sprintf("mismatch EnvAppID. expected: %s, actual: %s", expected[i].EnvAppID, actual.EnvAppID))
-		}
-
-		if expected[i].EnvCloudName != actual.EnvCloudName {
-			errors = append(errors, fmt.Sprintf("mismatch EnvCloudName. expected: %s, actual: %s", expected[i].EnvCloudName, actual.EnvCloudName))
-		}
-
-		if expected[i].EnvCloudRole != actual.EnvCloudRole {
-			errors = append(errors, fmt.Sprintf("mismatch EnvCloudRole. expected: %s, actual: %s", expected[i].EnvCloudRole, actual.EnvCloudRole))
-		}
-
-		if expected[i].EnvCloudRoleInstance != actual.EnvCloudRoleInstance {
-			errors = append(errors, fmt.Sprintf("mismatch EnvCloudRoleInstance. expected: %s, actual: %s", expected[i].EnvCloudRoleInstance, actual.EnvCloudRoleInstance))
-		}
-
-		if expected[i].EnvCloudEnvironment != actual.EnvCloudEnvironment {
-			errors = append(errors, fmt.Sprintf("mismatch EnvCloudEnvironment. expected: %s, actual: %s", expected[i].EnvCloudEnvironment, actual.EnvCloudEnvironment))
-		}
-
-		if expected[i].EnvCloudLocation != actual.EnvCloudLocation {
-			errors = append(errors, fmt.Sprintf("mismatch EnvCloudLocation. expected: %s, actual: %s", expected[i].EnvCloudLocation, actual.EnvCloudLocation))
-		}
-
-		if expected[i].EnvCloudVer != actual.EnvCloudVer {
-			errors = append(errors, fmt.Sprintf("mismatch EnvCloudVer. expected: %.f, actual: %.f", expected[i].EnvCloudVer, actual.EnvCloudVer))
-		}
-
-		if !reflect.DeepEqual(expected[i].CallerIdentities, actual.CallerIdentities) {
-			errors = append(errors, fmt.Sprintf("mismatch CallerIdentities. expected: %+v, actual: %+v", expected[i].CallerIdentities, actual.CallerIdentities))
-		}
-
-		if expected[i].Category != actual.Category {
-			errors = append(errors, fmt.Sprintf("mismatch Category. expected: %s, actual: %s", expected[i].Category, actual.Category))
-		}
-
-		if expected[i].OperationName != actual.OperationName {
-			errors = append(errors, fmt.Sprintf("mismatch OperationName. expected: %s, actual: %s", expected[i].OperationName, actual.OperationName))
-		}
-
-		if !reflect.DeepEqual(expected[i].Result, actual.Result) {
-			errors = append(errors, fmt.Sprintf("mismatch Result. expected: %+v, actual: %+v", expected[i].Result, actual.Result))
-		}
-
-		if !reflect.DeepEqual(expected[i].TargetResources, actual.TargetResources) {
-			errors = append(errors, fmt.Sprintf("mismatch TargetResources. expected: %+v, actual: %+v", expected[i].TargetResources, actual.TargetResources))
-		}
-
-		if len(errors) > 0 {
-			t.Errorf("mismatch payload fields: %s", strings.Join(errors, "\n"))
+	r := deep.Equal(expected, actualEntries)
+	if len(r) != 0 {
+		t.Error("log differences -- expected - actual:")
+		for _, entry := range r {
+			t.Error(entry)
 		}
 	}
 }
