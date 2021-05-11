@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
 
@@ -101,10 +102,17 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	for _, ref := range []string{
-		version.MdsdImage("linuxgeneva-microsoft" + acrDomainSuffix),
-		version.MdmImage("linuxgeneva-microsoft" + acrDomainSuffix),
-	} {
+	var mirrorImages []string
+	switch env.Environment().Name {
+	case azure.PublicCloud.Name:
+		mirrorImages = append(mirrorImages, version.MdsdImage("linuxgeneva-microsoft"+acrDomainSuffix))
+		mirrorImages = append(mirrorImages, version.MdmImage("linuxgeneva-microsoft"+acrDomainSuffix))
+	case azure.USGovernmentCloud.Name:
+		mirrorImages = append(mirrorImages, version.MdsdImage("containerreplicationffusgovvirginia1"+acrDomainSuffix))
+		mirrorImages = append(mirrorImages, version.MdmImage("containerreplicationffusgovvirginia1"+acrDomainSuffix))
+	}
+
+	for _, ref := range mirrorImages {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
 		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, nil)
 		if err != nil {
