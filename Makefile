@@ -12,8 +12,8 @@ aro: generate
 az: pyenv
 	. pyenv/bin/activate && \
 	cd python/az/aro && \
-	python ./setup.py bdist_egg && \
-	python ./setup.py bdist_wheel || true && \
+	python3 ./setup.py bdist_egg && \
+	python3 ./setup.py bdist_wheel || true && \
 	rm -f ~/.azure/commandIndex.json # https://github.com/Azure/azure-cli/issues/1499
 
 clean:
@@ -79,7 +79,7 @@ proxy:
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./hack/proxy
 
 pyenv:
-	virtualenv pyenv
+	virtualenv --python=/usr/bin/python3 pyenv
 	. pyenv/bin/activate && \
 		pip install -U pip && \
 		pip install autopep8 azdev azure-mgmt-loganalytics==0.2.0 ruamel.yaml wheel && \
