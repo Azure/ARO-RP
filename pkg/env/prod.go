@@ -110,12 +110,12 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		}
 	}
 
-	rpAuthorizer, err := p.NewRPAuthorizer(p.Environment().ResourceManagerEndpoint)
+	msiAuthorizer, err := p.NewMSIAuthorizer(MSIContextRP, p.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	rpKVAuthorizer, err := p.NewRPAuthorizer(p.Environment().ResourceIdentifiers.KeyVault)
+	msiKVAuthorizer, err := p.NewMSIAuthorizer(MSIContextRP, p.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}
@@ -125,9 +125,9 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
-	p.serviceKeyvault = keyvault.NewManager(rpKVAuthorizer, serviceKeyvaultURI)
+	p.serviceKeyvault = keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
-	err = p.populateZones(ctx, rpAuthorizer)
+	err = p.populateZones(ctx, msiAuthorizer)
 	if err != nil {
 		return nil, err
 	}

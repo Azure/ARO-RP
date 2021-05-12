@@ -100,19 +100,19 @@ func (mr *MockCoreMockRecorder) Location() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Location", reflect.TypeOf((*MockCore)(nil).Location))
 }
 
-// NewRPAuthorizer mocks base method
-func (m *MockCore) NewRPAuthorizer(arg0 string) (autorest.Authorizer, error) {
+// NewMSIAuthorizer mocks base method
+func (m *MockCore) NewMSIAuthorizer(arg0 env.MSIContext, arg1 string) (autorest.Authorizer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewRPAuthorizer", arg0)
+	ret := m.ctrl.Call(m, "NewMSIAuthorizer", arg0, arg1)
 	ret0, _ := ret[0].(autorest.Authorizer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// NewRPAuthorizer indicates an expected call of NewRPAuthorizer
-func (mr *MockCoreMockRecorder) NewRPAuthorizer(arg0 interface{}) *gomock.Call {
+// NewMSIAuthorizer indicates an expected call of NewMSIAuthorizer
+func (mr *MockCoreMockRecorder) NewMSIAuthorizer(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRPAuthorizer", reflect.TypeOf((*MockCore)(nil).NewRPAuthorizer), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSIAuthorizer", reflect.TypeOf((*MockCore)(nil).NewMSIAuthorizer), arg0, arg1)
 }
 
 // ResourceGroup mocks base method
@@ -478,19 +478,19 @@ func (mr *MockInterfaceMockRecorder) Location() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Location", reflect.TypeOf((*MockInterface)(nil).Location))
 }
 
-// NewRPAuthorizer mocks base method
-func (m *MockInterface) NewRPAuthorizer(arg0 string) (autorest.Authorizer, error) {
+// NewMSIAuthorizer mocks base method
+func (m *MockInterface) NewMSIAuthorizer(arg0 env.MSIContext, arg1 string) (autorest.Authorizer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewRPAuthorizer", arg0)
+	ret := m.ctrl.Call(m, "NewMSIAuthorizer", arg0, arg1)
 	ret0, _ := ret[0].(autorest.Authorizer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// NewRPAuthorizer indicates an expected call of NewRPAuthorizer
-func (mr *MockInterfaceMockRecorder) NewRPAuthorizer(arg0 interface{}) *gomock.Call {
+// NewMSIAuthorizer indicates an expected call of NewMSIAuthorizer
+func (mr *MockInterfaceMockRecorder) NewMSIAuthorizer(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRPAuthorizer", reflect.TypeOf((*MockInterface)(nil).NewRPAuthorizer), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSIAuthorizer", reflect.TypeOf((*MockInterface)(nil).NewMSIAuthorizer), arg0, arg1)
 }
 
 // ResourceGroup mocks base method

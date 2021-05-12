@@ -37,14 +37,19 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	rpKVAuthorizer, err := _env.NewRPAuthorizer(_env.Environment().ResourceIdentifiers.KeyVault)
+	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerEndpoint)
+	if err != nil {
+		return err
+	}
+
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return err
 	}
 
 	m := statsd.New(ctx, log.WithField("component", "dbtoken"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
 
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env)
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer)
 	if err != nil {
 		return err
 	}
@@ -71,7 +76,7 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbtokenKeyvault := keyvault.NewManager(rpKVAuthorizer, dbtokenKeyvaultURI)
+	dbtokenKeyvault := keyvault.NewManager(msiKVAuthorizer, dbtokenKeyvaultURI)
 
 	servingKey, servingCerts, err := dbtokenKeyvault.GetCertificateSecret(ctx, env.DBTokenServerSecretName)
 	if err != nil {

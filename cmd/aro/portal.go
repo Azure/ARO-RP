@@ -62,7 +62,12 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	rpKVAuthorizer, err := _env.NewRPAuthorizer(_env.Environment().ResourceIdentifiers.KeyVault)
+	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerEndpoint)
+	if err != nil {
+		return err
+	}
+
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return err
 	}
@@ -75,7 +80,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	serviceKeyvault := keyvault.NewManager(rpKVAuthorizer, serviceKeyvaultURI)
+	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
 	key, err := serviceKeyvault.GetBase64Secret(ctx, env.EncryptionSecretName)
 	if err != nil {
@@ -87,7 +92,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env)
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer)
 	if err != nil {
 		return err
 	}
@@ -112,7 +117,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	portalKeyvault := keyvault.NewManager(rpKVAuthorizer, portalKeyvaultURI)
+	portalKeyvault := keyvault.NewManager(msiKVAuthorizer, portalKeyvaultURI)
 
 	servingKey, servingCerts, err := portalKeyvault.GetCertificateSecret(ctx, env.PortalServerSecretName)
 	if err != nil {

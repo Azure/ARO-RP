@@ -13,7 +13,7 @@ in steady state: manage cluster resources in the customer's subscription.
 ## fpGraphAuthorizer
 
 The first party application, in the customer's tenant, for use against AAD. Used
-in development mode to emulate ARM.
+in development mode as part of the ARM helper.
 
 ## localFPAuthorizer
 
@@ -25,16 +25,25 @@ steady state: manage ACR tokens, DNS zone records, private endpoints.
 The first party application, in the AME tenant, for use against the cluster key
 vault. Used in steady state: manage cluster serving certificates.
 
-## rpAuthorizer
+## msiAuthorizer
 
 The managed identity attached to the RP VM, in the AME tenant, for use against
 ARM. Used for bootstrapping: finding the CosmosDB key, populating the SKU list.
 
-## rpKVAuthorizer
+## msiRefresherAuthorizer
+
+The managed identity attached to the RP VM, in the AME tenant, for use against
+the database token service. Used for retrieving Cosmos DB tokens.
+
+## msiKVAuthorizer
 
 The managed identity attached to the RP VM, in the AME tenant, for use against
 the service key vault. Used for bootstrapping: retrieving keys and secrets from
 the service key vault, including the first party certificate + key.
+
+## armAuthorizer
+
+The ARM helper application.  Used in development mode only.
 
 ## spAuthorizer
 

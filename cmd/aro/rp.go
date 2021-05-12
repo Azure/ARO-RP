@@ -73,6 +73,11 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		RequestLatency: k8s.NewLatency(m),
 	})
 
+	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerEndpoint)
+	if err != nil {
+		return err
+	}
+
 	dbKey, err := _env.ServiceKeyvault().GetBase64Secret(ctx, env.EncryptionSecretName)
 	if err != nil {
 		return err
@@ -83,7 +88,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env)
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer)
 	if err != nil {
 		return err
 	}

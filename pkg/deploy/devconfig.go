@@ -35,6 +35,7 @@ func adminKeyvaultAccessPolicy(_env env.Core) map[string]interface{} {
 				"ListIssuers",
 			},
 			"secrets": []interface{}{
+				"Get",
 				"List",
 			},
 		},
@@ -108,6 +109,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			ARMClientID:                  to.StringPtr(os.Getenv("AZURE_ARM_CLIENT_ID")),
 			ClusterMDSDConfigVersion:     to.StringPtr(version.DevClusterGenevaLoggingConfigVersion),
 			ClusterParentDomainName:      to.StringPtr(os.Getenv("USER") + "-clusters." + os.Getenv("PARENT_DOMAIN_NAME")),
+			DisableCosmosDBFirewall:      to.BoolPtr(true),
 			ExtraClusterKeyvaultAccessPolicies: []interface{}{
 				adminKeyvaultAccessPolicy(_env),
 			},
@@ -141,6 +143,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"DisableSignedCertificates",
 				"EnableDevelopmentAuthorizer",
 				"RequireD2sV3Workers",
+				"DisableReadinessDelay",
 			},
 			RPImagePrefix:       to.StringPtr(os.Getenv("USER") + "aro.azurecr.io/aro"),
 			RPMDSDConfigVersion: to.StringPtr("3.3"),

@@ -45,6 +45,7 @@ type Configuration struct {
 	ClusterMDSDConfigVersion           *string       `json:"clusterMdsdConfigVersion,omitempty" value:"required"`
 	ClusterParentDomainName            *string       `json:"clusterParentDomainName,omitempty" value:"required"`
 	DatabaseAccountName                *string       `json:"databaseAccountName,omitempty" value:"required"`
+	DisableCosmosDBFirewall            *bool         `json:"disableCosmosDBFirewall,omitempty"`
 	ExtraClusterKeyvaultAccessPolicies []interface{} `json:"extraClusterKeyvaultAccessPolicies,omitempty" value:"required"`
 	ExtraDBTokenKeyvaultAccessPolicies []interface{} `json:"extraDBTokenKeyvaultAccessPolicies,omitempty" value:"required"`
 	ExtraCosmosDBIPs                   []string      `json:"extraCosmosDBIPs,omitempty"`

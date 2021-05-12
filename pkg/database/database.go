@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
@@ -59,7 +60,7 @@ func NewDatabaseClient(log *logrus.Entry, env env.Core, authorizer cosmosdb.Auth
 	return cosmosdb.NewDatabaseClient(log, c, h, os.Getenv("DATABASE_ACCOUNT_NAME")+"."+env.Environment().CosmosDBDNSSuffix, authorizer), nil
 }
 
-func NewMasterKeyAuthorizer(ctx context.Context, env env.Core) (cosmosdb.Authorizer, error) {
+func NewMasterKeyAuthorizer(ctx context.Context, _env env.Core, msiAuthorizer autorest.Authorizer) (cosmosdb.Authorizer, error) {
 	for _, key := range []string{
 		"DATABASE_ACCOUNT_NAME",
 	} {
@@ -68,14 +69,9 @@ func NewMasterKeyAuthorizer(ctx context.Context, env env.Core) (cosmosdb.Authori
 		}
 	}
 
-	rpAuthorizer, err := env.NewRPAuthorizer(env.Environment().ResourceManagerEndpoint)
-	if err != nil {
-		return nil, err
-	}
+	databaseaccounts := documentdb.NewDatabaseAccountsClient(_env.Environment(), _env.SubscriptionID(), msiAuthorizer)
 
-	databaseaccounts := documentdb.NewDatabaseAccountsClient(env.Environment(), env.SubscriptionID(), rpAuthorizer)
-
-	keys, err := databaseaccounts.ListKeys(ctx, env.ResourceGroup(), os.Getenv("DATABASE_ACCOUNT_NAME"))
+	keys, err := databaseaccounts.ListKeys(ctx, _env.ResourceGroup(), os.Getenv("DATABASE_ACCOUNT_NAME"))
 	if err != nil {
 		return nil, err
 	}

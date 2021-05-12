@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -30,7 +31,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	rpKVAuthorizer, err := _env.NewRPAuthorizer(_env.Environment().ResourceIdentifiers.KeyVault)
+	authorizer, err := auth.NewAuthorizerFromCLIWithResource(_env.Environment().ResourceManagerEndpoint)
+	if err != nil {
+		return err
+	}
+
+	kvAuthorizer, err := auth.NewAuthorizerFromCLIWithResource(_env.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return err
 	}
@@ -40,7 +46,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	serviceKeyvault := keyvault.NewManager(rpKVAuthorizer, serviceKeyvaultURI)
+	serviceKeyvault := keyvault.NewManager(kvAuthorizer, serviceKeyvaultURI)
 
 	key, err := serviceKeyvault.GetBase64Secret(ctx, env.EncryptionSecretName)
 	if err != nil {
@@ -52,7 +58,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env)
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, authorizer)
 	if err != nil {
 		return err
 	}
