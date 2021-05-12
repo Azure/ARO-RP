@@ -438,8 +438,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 	)
 
 	trailer := base64.StdEncoding.EncodeToString([]byte(`
-# --disablerepo=* --enablerepo="*microsoft*" been added to workaround expired client package issue
-yum -y update -x WALinuxAgent --disablerepo=* --enablerepo="*microsoft*"
+yum -y update -x WALinuxAgent
 
 lvextend -l +50%FREE /dev/rootvg/rootlv
 xfs_growfs /
