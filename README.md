@@ -94,10 +94,6 @@ questions or comments.
 
       * internetchecker: validate outbound internet connectivity to the nodes
 
-      * machinechecker: validate machine objects have the correct provider spec,
-        vm type, vm image, disk size, three master nodes exist, and the number of worker nodes
-        match the desired worker replicas
-
       * serviceprincipalchecker: validate cluster service principal has the
         correct role/permissions
 
@@ -110,6 +106,10 @@ questions or comments.
     * genevalogging: Ensures all the Geneva logging resources in the
       `openshift-azure-logging` namespace matches the pre-defined specification
       found in `pkg/operator/controllers/genevalogging/genevalogging.go`.
+
+    * machine: validate machine objects have the correct provider spec,
+      vm type, vm image, disk size, three master nodes exist, and the number of worker nodes
+      match the desired worker replicas
 
     * monitoring: Ensures that the OpenShift monitoring configuration in the `openshift-monitoring` namespace is consistent and immutable.
 

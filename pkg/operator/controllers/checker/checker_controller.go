@@ -32,12 +32,11 @@ type CheckerController struct {
 	checkers []Checker
 }
 
-func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.Interface, kubernetescli kubernetes.Interface, role string, isLocalDevelopmentMode bool) *CheckerController {
+func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.Interface, kubernetescli kubernetes.Interface, role string) *CheckerController {
 	checkers := []Checker{NewInternetChecker(log, arocli, role)}
 
 	if role == operator.RoleMaster {
 		checkers = append(checkers,
-			NewMachineChecker(log, maocli, arocli, role, isLocalDevelopmentMode),
 			NewServicePrincipalChecker(log, maocli, arocli, kubernetescli, role),
 		)
 	}
