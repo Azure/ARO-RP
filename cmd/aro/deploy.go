@@ -18,21 +18,40 @@ import (
 )
 
 func deploy(ctx context.Context, log *logrus.Entry) error {
-	for _, key := range []string{
-		"AZURE_CLIENT_ID",
-		"AZURE_CLIENT_SECRET",
-		"AZURE_SUBSCRIPTION_ID",
-		"AZURE_TENANT_ID",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
+	// TODO(mjudeikis): Remove this hack in public once we moved to EV2
+	// We are not able to use MSI in public cloud CI as we would need
+	// to have dedicated node pool with MSI where we can controll which jobs are running
+	// on them. Deploy code needs to have privileged access into production, and those should
+	// not be exposed to arbitrary CI nodes.
+	// This should go away once we move to EV2 in public cloud,
+	// env.NewCoreForCI is used in CI context to mock MSI, where env.NewCore uses
+	// MSI in production to populate env.Environment, Subscription, Location, etc
+	var _env env.Core
+	if os.Getenv("AZURE_EV2") != "" { // running in EV2 - use MSI
+		var err error
+		_env, err = env.NewCore(ctx, log)
+		if err != nil {
+			return err
+		}
+	} else { // running in CI node/Public - Use SP from Env
+		for _, key := range []string{
+			"AZURE_CLIENT_ID",
+			"AZURE_CLIENT_SECRET",
+			"AZURE_SUBSCRIPTION_ID",
+			"AZURE_TENANT_ID",
+		} {
+			if _, found := os.LookupEnv(key); !found {
+				return fmt.Errorf("environment variable %q unset", key)
+			}
+		}
+
+		var err error
+		_env, err = env.NewCoreForCI(ctx, log)
+		if err != nil {
+			return err
 		}
 	}
-
-	env, err := env.NewCoreForCI(ctx, log)
-	if err != nil {
-		return err
-	}
+	env := _env
 
 	deployVersion, location := version.GitCommit, flag.Arg(2)
 
