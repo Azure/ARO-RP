@@ -428,6 +428,92 @@ func (client OpenShiftClustersClient) ListComplete(ctx context.Context) (result 
 	return
 }
 
+// ListAdminKubeconfig the operation returns the admin kubeconfig.
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// resourceName - the name of the OpenShift cluster resource.
+func (client OpenShiftClustersClient) ListAdminKubeconfig(ctx context.Context, resourceGroupName string, resourceName string) (result OpenShiftClusterAdminKubeconfig, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.ListAdminKubeconfig")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "ListAdminKubeconfig", err.Error())
+	}
+
+	req, err := client.ListAdminKubeconfigPreparer(ctx, resourceGroupName, resourceName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "ListAdminKubeconfig", nil, "Failure preparing request")
+		return
+	}
+
+	resp, err := client.ListAdminKubeconfigSender(req)
+	if err != nil {
+		result.Response = autorest.Response{Response: resp}
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "ListAdminKubeconfig", resp, "Failure sending request")
+		return
+	}
+
+	result, err = client.ListAdminKubeconfigResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "ListAdminKubeconfig", resp, "Failure responding to request")
+		return
+	}
+
+	return
+}
+
+// ListAdminKubeconfigPreparer prepares the ListAdminKubeconfig request.
+func (client OpenShiftClustersClient) ListAdminKubeconfigPreparer(ctx context.Context, resourceGroupName string, resourceName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"resourceName":      autorest.Encode("path", resourceName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2021-01-31-preview"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/listAdminCredentials", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// ListAdminKubeconfigSender sends the ListAdminKubeconfig request. The method will close the
+// http.Response Body if it receives an error.
+func (client OpenShiftClustersClient) ListAdminKubeconfigSender(req *http.Request) (*http.Response, error) {
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
+}
+
+// ListAdminKubeconfigResponder handles the response to the ListAdminKubeconfig request. The method always
+// closes the http.Response Body.
+func (client OpenShiftClustersClient) ListAdminKubeconfigResponder(resp *http.Response) (result OpenShiftClusterAdminKubeconfig, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
 // ListByResourceGroup the operation returns properties of each OpenShift cluster.
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.

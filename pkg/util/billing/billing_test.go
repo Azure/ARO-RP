@@ -47,7 +47,7 @@ func TestIsSubscriptionRegisteredForE2E(t *testing.T) {
 				TenantID: tenantID,
 				RegisteredFeatures: []api.RegisteredFeatureProfile{
 					{
-						Name:  featureSaveAROTestConfig,
+						Name:  api.FeatureFlagSaveAROTestConfig,
 						State: "Registered",
 					},
 				},
@@ -83,7 +83,7 @@ func TestIsSubscriptionRegisteredForE2E(t *testing.T) {
 				TenantID: tenantIDAME,
 				RegisteredFeatures: []api.RegisteredFeatureProfile{
 					{
-						Name:  featureSaveAROTestConfig,
+						Name:  api.FeatureFlagSaveAROTestConfig,
 						State: "Registered",
 					},
 				},
@@ -96,7 +96,7 @@ func TestIsSubscriptionRegisteredForE2E(t *testing.T) {
 				TenantID: tenantIDMSFT,
 				RegisteredFeatures: []api.RegisteredFeatureProfile{
 					{
-						Name:  featureSaveAROTestConfig,
+						Name:  api.FeatureFlagSaveAROTestConfig,
 						State: "Registered",
 					},
 				},
@@ -283,7 +283,7 @@ func TestEnsure(t *testing.T) {
 						Properties: &api.SubscriptionProperties{
 							RegisteredFeatures: []api.RegisteredFeatureProfile{
 								{
-									Name:  featureSaveAROTestConfig,
+									Name:  api.FeatureFlagSaveAROTestConfig,
 									State: "NotRegistered",
 								},
 							},
@@ -325,7 +325,7 @@ func TestEnsure(t *testing.T) {
 						Properties: &api.SubscriptionProperties{
 							RegisteredFeatures: []api.RegisteredFeatureProfile{
 								{
-									Name:  featureSaveAROTestConfig,
+									Name:  api.FeatureFlagSaveAROTestConfig,
 									State: "NotRegistered",
 								},
 							},
@@ -357,7 +357,7 @@ func TestEnsure(t *testing.T) {
 						Properties: &api.SubscriptionProperties{
 							RegisteredFeatures: []api.RegisteredFeatureProfile{
 								{
-									Name:  featureSaveAROTestConfig,
+									Name:  api.FeatureFlagSaveAROTestConfig,
 									State: "NotRegistered",
 								},
 							},

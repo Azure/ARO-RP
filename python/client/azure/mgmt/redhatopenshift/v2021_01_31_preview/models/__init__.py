@@ -31,6 +31,7 @@ try:
     from ._models_py3 import MasterProfile
     from ._models_py3 import NetworkProfile
     from ._models_py3 import OpenShiftCluster
+    from ._models_py3 import OpenShiftClusterAdminKubeconfig
     from ._models_py3 import OpenShiftClusterCredentials
     from ._models_py3 import OpenShiftClusterUpdate
     from ._models_py3 import Operation
@@ -52,6 +53,7 @@ except (SyntaxError, ImportError):
     from ._models import MasterProfile
     from ._models import NetworkProfile
     from ._models import OpenShiftCluster
+    from ._models import OpenShiftClusterAdminKubeconfig
     from ._models import OpenShiftClusterCredentials
     from ._models import OpenShiftClusterUpdate
     from ._models import Operation
@@ -80,6 +82,7 @@ __all__ = [
     'MasterProfile',
     'NetworkProfile',
     'OpenShiftCluster',
+    'OpenShiftClusterAdminKubeconfig',
     'OpenShiftClusterCredentials',
     'OpenShiftClusterUpdate',
     'Operation',

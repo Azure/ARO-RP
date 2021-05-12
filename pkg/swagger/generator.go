@@ -24,6 +24,7 @@ type generator struct {
 	exampleOperationListResponse                   func() interface{}
 
 	systemData         bool
+	kubeConfig         bool
 	xmsEnum            []string
 	commonTypesVersion string
 }
@@ -41,16 +42,18 @@ var apis = map[string]*generator{
 		xmsEnum:            []string{},
 	},
 	apiv20210131previewPath: {
-		exampleOpenShiftClusterPutParameter:        v20210131preview.ExampleOpenShiftClusterPutParameter,
-		exampleOpenShiftClusterPatchParameter:      v20210131preview.ExampleOpenShiftClusterPatchParameter,
-		exampleOpenShiftClusterResponse:            v20210131preview.ExampleOpenShiftClusterResponse,
-		exampleOpenShiftClusterCredentialsResponse: v20210131preview.ExampleOpenShiftClusterCredentialsResponse,
-		exampleOpenShiftClusterListResponse:        v20210131preview.ExampleOpenShiftClusterListResponse,
-		exampleOperationListResponse:               api.ExampleOperationListResponse,
+		exampleOpenShiftClusterPutParameter:            v20210131preview.ExampleOpenShiftClusterPutParameter,
+		exampleOpenShiftClusterPatchParameter:          v20210131preview.ExampleOpenShiftClusterPatchParameter,
+		exampleOpenShiftClusterResponse:                v20210131preview.ExampleOpenShiftClusterResponse,
+		exampleOpenShiftClusterCredentialsResponse:     v20210131preview.ExampleOpenShiftClusterCredentialsResponse,
+		exampleOpenShiftClusterListResponse:            v20210131preview.ExampleOpenShiftClusterListResponse,
+		exampleOpenShiftClusterAdminKubeconfigResponse: v20210131preview.ExampleOpenShiftClusterAdminKubeconfigResponse,
+		exampleOperationListResponse:                   api.ExampleOperationListResponse,
 
 		xmsEnum:            []string{"VMSize", "SDNProvider"},
 		commonTypesVersion: "v2",
 		systemData:         true,
+		kubeConfig:         true,
 	},
 }
 

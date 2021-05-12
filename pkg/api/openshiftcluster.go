@@ -126,12 +126,20 @@ type OpenShiftClusterProperties struct {
 
 	StorageSuffix string `json:"storageSuffix,omitempty"`
 
-	InfraID              string       `json:"infraId,omitempty"`
-	SSHKey               SecureBytes  `json:"sshKey,omitempty"`
-	AdminKubeconfig      SecureBytes  `json:"adminKubeconfig,omitempty"`
-	AROServiceKubeconfig SecureBytes  `json:"aroServiceKubeconfig,omitempty"`
-	AROSREKubeconfig     SecureBytes  `json:"aroSREKubeconfig,omitempty"`
-	KubeadminPassword    SecureString `json:"kubeadminPassword,omitempty"`
+	InfraID string      `json:"infraId,omitempty"`
+	SSHKey  SecureBytes `json:"sshKey,omitempty"`
+	// AdminKubeconfig is installer generated kubeconfig. It is 10 year config,
+	// and should never be returned to the user.
+	AdminKubeconfig SecureBytes `json:"adminKubeconfig,omitempty"`
+	// AROServiceKubeconfig is used by ARO services. In example monitor
+	AROServiceKubeconfig SecureBytes `json:"aroServiceKubeconfig,omitempty"`
+	// AROSREKubeconfig is used by portal when proxying request from SRE
+	AROSREKubeconfig SecureBytes `json:"aroSREKubeconfig,omitempty"`
+	// KubeadminPassword installer generated kube-admin passworkd
+	KubeadminPassword SecureString `json:"kubeadminPassword,omitempty"`
+
+	// UserAdminKubeconfig is derived admin kubeConfig with shorter live span
+	UserAdminKubeconfig SecureBytes `json:"userAdminKubeconfig,omitempty"`
 
 	RegistryProfiles []*RegistryProfile `json:"registryProfiles,omitempty"`
 }

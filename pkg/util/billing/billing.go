@@ -26,11 +26,6 @@ import (
 const (
 	tenantIDMSFT = "72f988bf-86f1-41af-91ab-2d7cd011db47"
 	tenantIDAME  = "33e01921-4d64-4f8c-a055-5bdaffd5e33d"
-
-	// featureSaveAROTestConfig is the feature in the subscription that is used
-	// to indicate if we need to save ARO cluster config into the E2E
-	// StorageAccount
-	featureSaveAROTestConfig = "Microsoft.RedHatOpenShift/SaveAROTestConfig"
 )
 
 type Manager interface {
@@ -138,7 +133,7 @@ func (m *manager) Delete(ctx context.Context, doc *api.OpenShiftClusterDocument)
 // "Microsoft.RedHatOpenShift/SaveAROTestConfig" feature registered
 func isSubscriptionRegisteredForE2E(sub *api.SubscriptionProperties) bool {
 	if sub.TenantID == tenantIDMSFT || sub.TenantID == tenantIDAME {
-		return feature.IsRegisteredForFeature(sub, featureSaveAROTestConfig)
+		return feature.IsRegisteredForFeature(sub, api.FeatureFlagSaveAROTestConfig)
 	}
 	return false
 }

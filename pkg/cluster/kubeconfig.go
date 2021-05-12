@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"strings"
+	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/openshift/installer/pkg/asset"
@@ -21,16 +22,22 @@ import (
 // kubeconfig for the ARO service, based on the admin kubeconfig found in the
 // graph.
 func (m *manager) generateAROServiceKubeconfig(pg graph.PersistedGraph) (*kubeconfig.AdminInternalClient, error) {
-	return generateKubeconfig(pg, "system:aro-service", []string{"system:masters"})
+	return generateKubeconfig(pg, "system:aro-service", []string{"system:masters"}, tls.ValidityTenYears)
 }
 
 // generateAROSREKubeconfig generates additional admin credentials and a
 // kubeconfig for ARO SREs, based on the admin kubeconfig found in the graph.
 func (m *manager) generateAROSREKubeconfig(pg graph.PersistedGraph) (*kubeconfig.AdminInternalClient, error) {
-	return generateKubeconfig(pg, "system:aro-sre", nil)
+	return generateKubeconfig(pg, "system:aro-sre", nil, tls.ValidityTenYears)
 }
 
-func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization []string) (*kubeconfig.AdminInternalClient, error) {
+// generateUserAdminKubeconfig generates additional admin credentials and a
+// kubeconfig for ARO User, based on the admin kubeconfig found in the graph.
+func (m *manager) generateUserAdminKubeconfig(pg graph.PersistedGraph) (*kubeconfig.AdminInternalClient, error) {
+	return generateKubeconfig(pg, "system:admin", nil, tls.ValidityOneYear)
+}
+
+func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization []string, validity time.Duration) (*kubeconfig.AdminInternalClient, error) {
 	var ca *tls.AdminKubeConfigSignerCertKey
 	var adminInternalClient *kubeconfig.AdminInternalClient
 	err := pg.Get(&ca, &adminInternalClient)
@@ -42,7 +49,7 @@ func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization
 		Subject:      pkix.Name{CommonName: commonName, Organization: organization},
 		KeyUsages:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-		Validity:     tls.ValidityTenYears,
+		Validity:     validity,
 	}
 
 	var clientCertKey tls.AdminKubeConfigClientCertKey

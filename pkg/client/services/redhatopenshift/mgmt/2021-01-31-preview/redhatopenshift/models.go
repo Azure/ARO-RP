@@ -54,6 +54,12 @@ type AzureEntityResource struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for AzureEntityResource.
+func (aer AzureEntityResource) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	return json.Marshal(objectMap)
+}
+
 // CloudError cloudError represents a cloud error.
 type CloudError struct {
 	// Error - An error response from the service.
@@ -238,6 +244,14 @@ func (osc *OpenShiftCluster) UnmarshalJSON(body []byte) error {
 	}
 
 	return nil
+}
+
+// OpenShiftClusterAdminKubeconfig openShiftClusterAdminKubeconfig represents an OpenShift cluster's admin
+// kubeconfig.
+type OpenShiftClusterAdminKubeconfig struct {
+	autorest.Response `json:"-"`
+	// Kubeconfig - The base64-encoded kubeconfig file.
+	Kubeconfig *string `json:"kubeconfig,omitempty"`
 }
 
 // OpenShiftClusterCredentials openShiftClusterCredentials represents an OpenShift cluster's credentials.
@@ -797,6 +811,12 @@ type ProxyResource struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for ProxyResource.
+func (pr ProxyResource) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	return json.Marshal(objectMap)
+}
+
 // Resource common fields that are returned in the response for all Azure Resource Manager resources
 type Resource struct {
 	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -805,6 +825,12 @@ type Resource struct {
 	Name *string `json:"name,omitempty"`
 	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for Resource.
+func (r Resource) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	return json.Marshal(objectMap)
 }
 
 // ServicePrincipalProfile servicePrincipalProfile represents a service principal profile.
