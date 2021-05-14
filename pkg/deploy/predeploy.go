@@ -205,8 +205,7 @@ func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 				Template: template,
 				Mode:     mgmtfeatures.Incremental,
 			},
-			// Location: to.StringPtr("centralus"),
-			Location: to.StringPtr("usgovvirginia"),
+			Location: to.StringPtr("centralus"),
 		})
 		if serviceErr, ok := err.(*azure.ServiceError); ok &&
 			serviceErr.Code == "DeploymentFailed" &&
