@@ -20,7 +20,7 @@ done
 go mod edit -replace github.com/metal3-io/baremetal-operator=$(go list -mod=mod -m github.com/openshift/baremetal-operator@release-4.6 | sed -e 's/ /@/')
 go mod edit -replace github.com/metal3-io/cluster-api-provider-baremetal=$(go list -mod=mod -m github.com/openshift/cluster-api-provider-baremetal@release-4.6 | sed -e 's/ /@/')
 
-go mod edit -replace github.com/openshift/installer=$(go list -mod=mod -m github.com/jim-minter/installer@release-4.6-azure | sed -e 's/ /@/')
+go mod edit -replace github.com/openshift/installer=$(go list -mod=mod -m github.com/mjudeikis/installer@release-4.6-azure | sed -e 's/ /@/')
 
 go mod edit -replace k8s.io/kube-openapi=$(go list -mod=mod -m k8s.io/kube-openapi@release-1.19 | sed -e 's/ /@/')
 
