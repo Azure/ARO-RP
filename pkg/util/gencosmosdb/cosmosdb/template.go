@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	pkg "github.com/jim-minter/go-cosmosdb/pkg/gencosmosdb/cosmosdb/dummy"
+	pkg "github.com/mjudeikis/go-cosmosdb/pkg/gencosmosdb/cosmosdb/dummy"
 )
 
 type templateClient struct {

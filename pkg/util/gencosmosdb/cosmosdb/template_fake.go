@@ -8,7 +8,7 @@ import (
 
 	"github.com/ugorji/go/codec"
 
-	pkg "github.com/jim-minter/go-cosmosdb/pkg/gencosmosdb/cosmosdb/dummy"
+	pkg "github.com/mjudeikis/go-cosmosdb/pkg/gencosmosdb/cosmosdb/dummy"
 )
 
 type fakeTemplateTriggerHandler func(context.Context, *pkg.Template) error
