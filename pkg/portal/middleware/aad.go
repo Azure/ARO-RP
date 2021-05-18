@@ -28,12 +28,11 @@ import (
 )
 
 const (
-	SessionName            = "session"
-	SessionKeyExpires      = "expires"
-	sessionKeyRedirectPath = "redirect_path"
-	sessionKeyState        = "state"
-	SessionKeyUsername     = "user_name"
-	SessionKeyGroups       = "groups"
+	SessionName        = "session"
+	SessionKeyExpires  = "expires"
+	sessionKeyState    = "state"
+	SessionKeyUsername = "user_name"
+	SessionKeyGroups   = "groups"
 )
 
 func init() {
@@ -125,6 +124,8 @@ func NewAAD(log *logrus.Entry,
 	a.store.Options.SameSite = http.SameSiteLaxMode
 
 	unauthenticatedRouter.NewRoute().Methods(http.MethodGet).Path("/callback").Handler(Log(env, audit, baseAccessLog)(http.HandlerFunc(a.callback)))
+	unauthenticatedRouter.NewRoute().Methods(http.MethodGet).Path("/api/login").Handler(Log(env, audit, baseAccessLog)(http.HandlerFunc(a.Login)))
+	unauthenticatedRouter.NewRoute().Methods(http.MethodPost).Path("/api/logout").Handler(Log(env, audit, baseAccessLog)(a.Logout("/")))
 
 	return a, nil
 }
@@ -142,7 +143,7 @@ func (a *aad) AAD(h http.Handler) http.Handler {
 
 		expires, ok := session.Values[SessionKeyExpires].(time.Time)
 		if !ok || expires.Before(a.now()) {
-			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+			h.ServeHTTP(w, r)
 			return
 		}
 
