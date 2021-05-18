@@ -6,6 +6,7 @@ package routefix
 import (
 	"context"
 
+	securityv1 "github.com/openshift/api/security/v1"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -102,6 +103,7 @@ func (r *RouteFixReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		Owns(&corev1.Namespace{}).
 		Owns(&appsv1.DaemonSet{}).
+		Owns(&securityv1.SecurityContextConstraints{}).
 		Named(controllers.RouteFixControllerName).
 		Complete(r)
 }
