@@ -101,21 +101,38 @@ func (dv *dynamic) ValidateQuota(ctx context.Context, oc *api.OpenShiftCluster) 
 		}
 	}
 
-	usages, err := dv.spUsage.List(ctx, oc.Location)
-	if err != nil {
-		return err
-	}
+	//Public IP Addresses minimum requirement: 2 for ARM template deployment and 1 for kube-controller-manager
+	requiredResources["PublicIPAddresses"] = 3
+
 	//check requirements vs. usage
 
 	// we're only checking the limits returned by the Usage API and ignoring usage limits missing from the results
 	// rationale:
 	// 1. if the Usage API doesn't send a limit because a resource is no longer limited, RP will continue cluster creation without impact
 	// 2. if the Usage API doesn't send a limit that is still enforced, cluster creation will fail on the backend and we will get an error in the RP logs
-	for _, usage := range usages {
+	computeUsages, err := dv.spComputeUsage.List(ctx, oc.Location)
+	if err != nil {
+		return err
+	}
+
+	for _, usage := range computeUsages {
 		required, present := requiredResources[*usage.Name.Value]
 		if present && int64(required) > (*usage.Limit-int64(*usage.CurrentValue)) {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceQuotaExceeded, "", "Resource quota of %s exceeded. Maximum allowed: %d, Current in use: %d, Additional requested: %d.", *usage.Name.Value, *usage.Limit, *usage.CurrentValue, required)
 		}
 	}
+
+	netUsages, err := dv.spNetworkUsage.List(ctx, oc.Location)
+	if err != nil {
+		return err
+	}
+
+	for _, netUsage := range netUsages {
+		required, present := requiredResources[*netUsage.Name.Value]
+		if present && int64(required) > (*netUsage.Limit-int64(*netUsage.CurrentValue)) {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceQuotaExceeded, "", "Resource quota of %s exceeded. Maximum allowed: %d, Current in use: %d, Additional requested: %d.", *netUsage.Name.Value, *netUsage.Limit, *netUsage.CurrentValue, required)
+		}
+	}
+
 	return nil
 }
