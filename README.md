@@ -181,4 +181,4 @@ questions or comments.
 
 * https://docs.microsoft.com/en-gb/rest/api/cosmos-db
 
-* https://github.com/jim-minter/go-cosmosdb
+* https://github.com/mjudeikis/go-cosmosdb

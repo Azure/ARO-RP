@@ -52,7 +52,6 @@ require (
 	github.com/gorilla/sessions v1.2.1
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/h2non/filetype v1.1.1 // indirect
-	github.com/jim-minter/go-cosmosdb v0.0.0-20210320020825-d7f11ed7bd6d
 	github.com/jstemmer/go-junit-report v0.9.1
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/libvirt/libvirt-go v7.0.0+incompatible // indirect
@@ -61,6 +60,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.10 // indirect
 	github.com/metal3-io/cluster-api-provider-baremetal v0.2.2 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
+	github.com/mjudeikis/go-cosmosdb v0.0.0-20210518104404-b205b3cefd36
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/onsi/ginkgo v1.15.0
 	github.com/onsi/gomega v1.10.5
@@ -232,3 +232,5 @@ replace (
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.6.4
 	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.5.0
 )
+
+replace golang.org/x/tools => golang.org/x/tools v0.1.0
