@@ -1240,8 +1240,6 @@ github.com/jen20/awspolicyequivalence v1.1.0/go.mod h1:PV1fS2xyHhCLp83vbgSMFr2dr
 github.com/jessevdk/go-flags v0.0.0-20180331124232-1c38ed7ad0cc/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
 github.com/jhump/protoreflect v1.6.0/go.mod h1:eaTn3RZAmMBcV0fifFvlm6VHNz3wSkYyXYWUh7ymB74=
-github.com/jim-minter/go-cosmosdb v0.0.0-20210320020825-d7f11ed7bd6d h1:VH6BibAwhtDdFEOfEmRG77/RktPn/MdewL5QAokLlJA=
-github.com/jim-minter/go-cosmosdb v0.0.0-20210320020825-d7f11ed7bd6d/go.mod h1:n4wXKwl/rXS49qkPRFf3vovG0V6nkwAO4SbRwjGYibM=
 github.com/jimstudt/http-authentication v0.0.0-20140401203705-3eca13d6893a/go.mod h1:wK6yTYYcgjHE1Z1QtXACPDjcFJyBskHEdagmnq3vsP8=
 github.com/jingyugao/rowserrcheck v0.0.0-20191204022205-72ab7603b68a h1:GmsqmapfzSJkm28dhRoHz2tLRbJmqhU86IPgBtN3mmk=
 github.com/jingyugao/rowserrcheck v0.0.0-20191204022205-72ab7603b68a/go.mod h1:xRskid8CManxVta/ALEhJha/pweKBaVG6fWgc0yH25s=
@@ -1502,6 +1500,8 @@ github.com/mitchellh/pointerstructure v0.0.0-20190430161007-f252a8fd71c8/go.mod 
 github.com/mitchellh/prefixedio v0.0.0-20190213213902-5733675afd51/go.mod h1:kB1naBgV9ORnkiTVeyJOI1DavaJkG4oNIq0Af6ZVKUo=
 github.com/mitchellh/reflectwalk v1.0.0/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
 github.com/mitchellh/reflectwalk v1.0.1/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
+github.com/mjudeikis/go-cosmosdb v0.0.0-20210518104404-b205b3cefd36 h1:K0yb4fqa1rYPEbdlv3rYz0vh1aHK0Jkd+EscS1Yi5wI=
+github.com/mjudeikis/go-cosmosdb v0.0.0-20210518104404-b205b3cefd36/go.mod h1:l/LMyUQzbW3Pe62a6huel6S/5ED0KrkkqSQdwiGueUI=
 github.com/mjudeikis/installer v0.9.0-master.0.20210423142443-7756cb69c32a h1:Sgx14vkKBwXgIOv3wBrqANgHalgr9TwiXnrm5h19c9s=
 github.com/mjudeikis/installer v0.9.0-master.0.20210423142443-7756cb69c32a/go.mod h1:7VaPq04uNsqsSVgORCxZxNN7mq7FyhrvFBN2EPyk7iQ=
 github.com/moby/ipvs v1.0.1/go.mod h1:2pngiyseZbIKXNv7hsKj3O9UEz30c53MT9005gt2hxQ=
