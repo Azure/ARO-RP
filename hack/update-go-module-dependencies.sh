@@ -24,6 +24,9 @@ go mod edit -replace github.com/openshift/installer=$(go list -mod=mod -m github
 
 go mod edit -replace k8s.io/kube-openapi=$(go list -mod=mod -m k8s.io/kube-openapi@release-1.19 | sed -e 's/ /@/')
 
+# We are still using Go 1.14, but >=v0.1.1 depends on standard library from Go 1.16
+go mod edit -replace golang.org/x/tools=golang.org/x/tools@v0.1.0
+
 go get -u ./...
 
 go mod tidy

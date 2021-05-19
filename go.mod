@@ -232,3 +232,5 @@ replace (
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.6.4
 	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.5.0
 )
+
+replace golang.org/x/tools => golang.org/x/tools v0.1.0
