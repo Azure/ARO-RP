@@ -4,6 +4,7 @@ package workaround
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -85,7 +86,7 @@ func TestWorkaroundReconciler(t *testing.T) {
 				log:         utillog.GetLogger(),
 			}
 			tt.mocker(mwa)
-			got, err := r.Reconcile(reconcile.Request{})
+			got, err := r.Reconcile(context.Background(), reconcile.Request{})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("WorkaroundReconciler.Reconcile() error = %v, wantErr %v", err, tt.wantErr)
 				return
