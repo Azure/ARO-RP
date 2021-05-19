@@ -96,6 +96,10 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Op
 	if err := sv.validateMasterProfile(path+".masterProfile", &p.MasterProfile); err != nil {
 		return err
 	}
+	if err := sv.validateAPIServerProfile(path+".apiserverProfile", &p.APIServerProfile); err != nil {
+		return err
+	}
+
 	if isCreate {
 		if len(p.WorkerProfiles) != 1 {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".workerProfiles", "There should be exactly one worker profile.")
@@ -103,15 +107,13 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Op
 		if err := sv.validateWorkerProfile(path+".workerProfiles['"+p.WorkerProfiles[0].Name+"']", &p.WorkerProfiles[0], &p.MasterProfile); err != nil {
 			return err
 		}
-	}
-	if err := sv.validateAPIServerProfile(path+".apiserverProfile", &p.APIServerProfile); err != nil {
-		return err
-	}
-	if len(p.IngressProfiles) != 1 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ingressProfiles", "There should be exactly one ingress profile.")
-	}
-	if err := sv.validateIngressProfile(path+".ingressProfiles['"+p.IngressProfiles[0].Name+"']", &p.IngressProfiles[0]); err != nil {
-		return err
+
+		if len(p.IngressProfiles) != 1 {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ingressProfiles", "There should be exactly one ingress profile.")
+		}
+		if err := sv.validateIngressProfile(path+".ingressProfiles['"+p.IngressProfiles[0].Name+"']", &p.IngressProfiles[0]); err != nil {
+			return err
+		}
 	}
 
 	return nil
