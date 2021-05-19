@@ -142,7 +142,7 @@ admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
 
 vendor:
-	# https://groups.google.com/forum/#!topic/golang-nuts/51-D_YFC78k
+	# See comments in the script for background on why we need it
 	hack/update-go-module-dependencies.sh
 
 .PHONY: admin.kubeconfig aro az clean client deploy discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy lint-go proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor
