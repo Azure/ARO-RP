@@ -36,7 +36,7 @@ type Payload struct {
 	Category         string           `json:"Category"`
 	OperationName    string           `json:"OperationName"`
 	Result           Result           `json:"Result"`
-	RequestID        string           `json:"requestId"`
+	RequestID        string           `json:"requestId" deep:"-"`
 	TargetResources  []TargetResource `json:"TargetResources"`
 }
 
