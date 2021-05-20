@@ -5,7 +5,7 @@
 package v1alpha1
 
 import (
-	"github.com/operator-framework/operator-sdk/pkg/status"
+	v1 "github.com/openshift/api/operator/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -112,7 +112,7 @@ func (in *ClusterStatus) DeepCopyInto(out *ClusterStatus) {
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(status.Conditions, len(*in))
+		*out = make([]v1.OperatorCondition, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

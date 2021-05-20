@@ -7,7 +7,7 @@ package operator
 //go:generate go run ../../vendor/sigs.k8s.io/controller-tools/cmd/controller-gen object paths=./apis/aro.openshift.io/v1alpha1
 //go:generate sh -c "cd ../../../../.. && go run github.com/Azure/ARO-RP/vendor/k8s.io/code-generator/cmd/client-gen --clientset-name versioned --input-base github.com/Azure/ARO-RP/pkg/operator/apis --input aro.openshift.io/v1alpha1 --output-package github.com/Azure/ARO-RP/pkg/operator/clientset --go-header-file github.com/Azure/ARO-RP/hack/licenses/boilerplate.go.txt"
 //go:generate gofmt -s -w ./clientset
-//go:generate go run ../../vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP ./clientset
+//go:generate go run ../../vendor/golang.org/x/tools/cmd/goimports -local=github.com/Azure/ARO-RP -e -w ./clientset ./apis
 
 // build the operator's CRD (based on the apis)
 // for master deployment

@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/operator-framework/operator-sdk/pkg/status"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,17 +58,16 @@ func TestPullSecretReconciler(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		request        ctrl.Request
-		fakecli        *fake.Clientset
-		arocli         *arofake.Clientset
-		wantConditions []status.Condition
-		wantKeys       []string
-		wantErr        bool
-		want           string
-		wantCreated    bool
-		wantDeleted    bool
-		wantUpdated    bool
+		name        string
+		request     ctrl.Request
+		fakecli     *fake.Clientset
+		arocli      *arofake.Clientset
+		wantKeys    []string
+		wantErr     bool
+		want        string
+		wantCreated bool
+		wantDeleted bool
+		wantUpdated bool
 	}{
 		{
 			name: "deleted pull secret",

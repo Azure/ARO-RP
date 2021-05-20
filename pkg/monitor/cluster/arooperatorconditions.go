@@ -6,17 +6,16 @@ package cluster
 import (
 	"context"
 
-	"github.com/operator-framework/operator-sdk/pkg/status"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
-var aroOperatorConditionsExpected = map[status.ConditionType]corev1.ConditionStatus{
-	arov1alpha1.InternetReachableFromMaster: corev1.ConditionTrue,
-	arov1alpha1.InternetReachableFromWorker: corev1.ConditionTrue,
+var aroOperatorConditionsExpected = map[string]operatorv1.ConditionStatus{
+	arov1alpha1.InternetReachableFromMaster: operatorv1.ConditionTrue,
+	arov1alpha1.InternetReachableFromWorker: operatorv1.ConditionTrue,
 }
 
 func (mon *Monitor) emitAroOperatorConditions(ctx context.Context) error {
@@ -35,7 +34,7 @@ func (mon *Monitor) emitAroOperatorConditions(ctx context.Context) error {
 			"type":   string(c.Type),
 		})
 
-		if mon.hourlyRun && c.Status == corev1.ConditionFalse {
+		if mon.hourlyRun && c.Status == operatorv1.ConditionFalse {
 			mon.log.WithFields(logrus.Fields{
 				"metric":  "arooperator.conditions",
 				"status":  c.Status,
