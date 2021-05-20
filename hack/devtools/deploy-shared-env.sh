@@ -16,6 +16,7 @@ deploy_rp_dev_predeploy() {
             "adminObjectId=$ADMIN_OBJECT_ID" \
             "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
             "keyvaultPrefix=$KEYVAULT_PREFIX" \
+            "keyvaultDNSSuffix=$KEYVAULT_DNSSUFFIX" \
             "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].objectId' -o tsv)" >/dev/null
 }
 
@@ -222,6 +223,7 @@ echo "PARENT_DOMAIN_NAME=$PARENT_DOMAIN_NAME"
 echo "PARENT_DOMAIN_RESOURCEGROUP=$PARENT_DOMAIN_RESOURCEGROUP"
 echo
 echo "KEYVAULT_PREFIX=$KEYVAULT_PREFIX"
+echo "KEYVAULT_DNSSUFFIX=$KEYVAULT_DNSSUFFIX"
 echo
 echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
 echo "######################################"
@@ -234,6 +236,7 @@ echo "######################################"
 [ "$PARENT_DOMAIN_NAME" ] || ( echo ">> PARENT_DOMAIN_NAME is not set please validate your ./secrets/env"; exit 128 )
 [ "$AZURE_FP_CLIENT_ID" ] || ( echo ">> AZURE_FP_CLIENT_ID is not set please validate your ./secrets/env"; exit 128 )
 [ "$KEYVAULT_PREFIX" ] || ( echo ">> KEYVAULT_PREFIX is not set please validate your ./secrets/env"; exit 128 )
+[ "$KEYVAULT_DNSSUFFIX" ] || ( echo ">> KEYVAULT_DNSSUFFIX is not set please validate your ./secrets/env"; exit 128 )
 [ "$AZURE_RP_CLIENT_ID" ] || ( echo ">> AZURE_RP_CLIENT_ID is not set please validate your ./secrets/env"; exit 128 )
 [ "$PULL_SECRET" ] || ( echo ">> PULL_SECRET is not set please validate your ./secrets/env"; exit 128 )
 [ "$PARENT_DOMAIN_RESOURCEGROUP" ] || ( echo ">> PARENT_DOMAIN_RESOURCEGROUP is not set please validate your ./secrets/env"; exit 128 )
