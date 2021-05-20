@@ -78,6 +78,12 @@ publish-image-proxy: image-proxy
 proxy:
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./hack/proxy
 
+run-portal:
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro portal
+
+build-portal:
+	cd portal && npm install && npm run build
+
 pyenv:
 	virtualenv --python=/usr/bin/python3 pyenv
 	. pyenv/bin/activate && \

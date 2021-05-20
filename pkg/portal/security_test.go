@@ -28,6 +28,7 @@ import (
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/listener"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
+	"github.com/Azure/ARO-RP/test/util/testpoller"
 )
 
 var (
@@ -117,15 +118,15 @@ func TestSecurity(t *testing.T) {
 			},
 		},
 		{
-			name: "/index.js",
+			name: "/main.js",
 			request: func() (*http.Request, error) {
-				return http.NewRequest(http.MethodGet, "https://server/index.js", nil)
+				return http.NewRequest(http.MethodGet, "https://server/main.js", nil)
 			},
-			wantAuditOperation: "GET /index.js",
+			wantAuditOperation: "GET /main.js",
 			wantAuditTargetResources: []audit.TargetResource{
 				{
 					TargetResourceType: "",
-					TargetResourceName: "/index.js",
+					TargetResourceName: "/main.js",
 				},
 			},
 		},
@@ -326,7 +327,7 @@ func TestSecurity(t *testing.T) {
 					return
 				}
 
-				// skipping https://server because the http.ServeContent() calls in the
+				// perform some polling on static files because the http.ServeContent() calls in the
 				// portal's serve() and index() handlers[1] issued a call to io.Copy()[2]
 				// causes a race condition with the audit hook. The response was returned
 				// to the client and the testlog.AssertAuditPayloads() was called immediately,
@@ -337,8 +338,13 @@ func TestSecurity(t *testing.T) {
 				//
 				// [1] https://github.com/Azure/ARO-RP/blob/master/pkg/portal/portal.go#L222-L247
 				// [2] https://go.googlesource.com/go/+/go1.16.2/src/net/http/fs.go#337
-				if tt.name == "/" || tt.name == "/index.js" {
-					return
+				if tt.name == "/" || tt.name == "/main.js" {
+					err = testpoller.Poll(1*time.Second, 5*time.Millisecond, func() (bool, error) {
+						return len(auditHook.AllEntries()) == 1, nil
+					})
+					if err != nil {
+						t.Error(err)
+					}
 				}
 
 				payload := auditPayloadFixture()
