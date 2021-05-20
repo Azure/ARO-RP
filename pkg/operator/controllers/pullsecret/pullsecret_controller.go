@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -77,16 +76,13 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 
 	// reconcile global pull secret
 	// detects if the global pull secret is broken and fixes it by using backup managed by ARO operator
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		userSecret, err = r.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Get(ctx, pullSecretName.Name, metav1.GetOptions{})
-		if err != nil && !kerrors.IsNotFound(err) {
-			return err
-		}
+	userSecret, err = r.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Get(ctx, pullSecretName.Name, metav1.GetOptions{})
+	if err != nil && !kerrors.IsNotFound(err) {
+		return reconcile.Result{}, err
+	}
 
-		// fix pull secret if its broken to have at least the ARO pull secret
-		userSecret, err = r.ensureGlobalPullSecret(ctx, operatorSecret, userSecret)
-		return err
-	})
+	// fix pull secret if its broken to have at least the ARO pull secret
+	userSecret, err = r.ensureGlobalPullSecret(ctx, operatorSecret, userSecret)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -94,21 +90,17 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	// reconcile cluster status
 	// update the following information:
 	// - list of Red Hat pull-secret keys in status.
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		cluster, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
+	cluster, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
-		cluster.Status.RedHatKeysPresent, err = r.parseRedHatKeys(userSecret)
-		if err != nil {
-			return err
-		}
+	cluster.Status.RedHatKeysPresent, err = r.parseRedHatKeys(userSecret)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
-		_, err = r.arocli.AroV1alpha1().Clusters().UpdateStatus(ctx, cluster, metav1.UpdateOptions{})
-		return err
-	})
-
+	_, err = r.arocli.AroV1alpha1().Clusters().UpdateStatus(ctx, cluster, metav1.UpdateOptions{})
 	return reconcile.Result{}, err
 }
 

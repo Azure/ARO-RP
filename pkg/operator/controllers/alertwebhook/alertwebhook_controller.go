@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -49,56 +48,54 @@ func (r *AlertWebhookReconciler) Reconcile(request ctrl.Request) (ctrl.Result, e
 // setAlertManagerWebhook is a hack to disable the
 // AlertmanagerReceiversNotConfigured warning added in 4.3.8.
 func (r *AlertWebhookReconciler) setAlertManagerWebhook(ctx context.Context, addr string) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		s, err := r.kubernetescli.CoreV1().Secrets(alertManagerName.Namespace).Get(ctx, alertManagerName.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		var am map[string]interface{}
-		err = yaml.Unmarshal(s.Data["alertmanager.yaml"], &am)
-		if err != nil {
-			return err
-		}
-
-		receivers, ok := am["receivers"].([]interface{})
-		if !ok {
-			return nil
-		}
-
-		var changed bool
-		for _, r := range receivers {
-			r, ok := r.(map[string]interface{})
-			if !ok {
-				continue
-			}
-
-			if name, ok := r["name"].(string); !ok || (name != "null" && name != "Default") {
-				continue
-			}
-
-			webhookConfigs := []interface{}{
-				map[string]interface{}{"url": addr},
-			}
-
-			if !reflect.DeepEqual(r["webhook_configs"], webhookConfigs) {
-				r["webhook_configs"] = webhookConfigs
-				changed = true
-			}
-		}
-
-		if !changed {
-			return nil
-		}
-
-		s.Data["alertmanager.yaml"], err = yaml.Marshal(am)
-		if err != nil {
-			return err
-		}
-
-		_, err = r.kubernetescli.CoreV1().Secrets(alertManagerName.Namespace).Update(ctx, s, metav1.UpdateOptions{})
+	s, err := r.kubernetescli.CoreV1().Secrets(alertManagerName.Namespace).Get(ctx, alertManagerName.Name, metav1.GetOptions{})
+	if err != nil {
 		return err
-	})
+	}
+
+	var am map[string]interface{}
+	err = yaml.Unmarshal(s.Data["alertmanager.yaml"], &am)
+	if err != nil {
+		return err
+	}
+
+	receivers, ok := am["receivers"].([]interface{})
+	if !ok {
+		return nil
+	}
+
+	var changed bool
+	for _, r := range receivers {
+		r, ok := r.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		if name, ok := r["name"].(string); !ok || (name != "null" && name != "Default") {
+			continue
+		}
+
+		webhookConfigs := []interface{}{
+			map[string]interface{}{"url": addr},
+		}
+
+		if !reflect.DeepEqual(r["webhook_configs"], webhookConfigs) {
+			r["webhook_configs"] = webhookConfigs
+			changed = true
+		}
+	}
+
+	if !changed {
+		return nil
+	}
+
+	s.Data["alertmanager.yaml"], err = yaml.Marshal(am)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.kubernetescli.CoreV1().Secrets(alertManagerName.Namespace).Update(ctx, s, metav1.UpdateOptions{})
+	return err
 }
 
 // SetupWithManager setup our manager
