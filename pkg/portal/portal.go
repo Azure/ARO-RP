@@ -232,10 +232,22 @@ func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+type PortalInfo struct {
+	Location  string `json:"location"`
+	CSRFToken string `json:"csrf"`
+	Elevated  bool   `json:"elevated"`
+	Username  string `json:"username"`
+}
+
 func (p *portal) info(w http.ResponseWriter, r *http.Request) {
-	resp := map[string]string{
-		"location": p.env.Location(),
-		"csrf":     csrf.Token(r),
+	ctx := r.Context()
+	elevated := len(middleware.GroupsIntersect(p.elevatedGroupIDs, ctx.Value(middleware.ContextKeyGroups).([]string))) > 0
+
+	resp := PortalInfo{
+		Location:  p.env.Location(),
+		CSRFToken: csrf.Token(r),
+		Elevated:  elevated,
+		Username:  ctx.Value(middleware.ContextKeyUsername).(string),
 	}
 
 	b, err := json.MarshalIndent(resp, "", "    ")
