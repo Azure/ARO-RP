@@ -16,8 +16,10 @@ import {
   IRenderFunction,
   ITextStyles,
   IPanelStyles,
+  TooltipHost,
   IMessageBarStyles,
   MessageBarType,
+  Icon,
 } from "@fluentui/react"
 import {AxiosResponse} from "axios"
 import {useBoolean} from "@fluentui/react-hooks"
@@ -41,8 +43,8 @@ const stackStyles: IStackStyles = {
 
 const headerTextStyles: ITextStyles = {
   root: {
-  fontWeight: 600
-  }
+    fontWeight: 600,
+  },
 }
 
 const contentStackStyles: IStackStyles = {
@@ -83,17 +85,19 @@ const navPanelStyles: Partial<IPanelStyles> = {
 }
 
 function App() {
-  const [data, updateData] = useState({location: "", csrf: ""})
+  const [data, updateData] = useState({location: "", csrf: "", elevated: false, username: ""})
   const [error, setError] = useState<AxiosResponse | null>(null)
   const [isOpen, {setTrue: openPanel, setFalse: dismissPanel}] = useBoolean(false)
   const [fetching, setFetching] = useState("")
 
-  const sshRef = useRef<typeof SSHModal|null>(null)
+  const sshRef = useRef<typeof SSHModal | null>(null)
+  const csrfRef = useRef<string>("")
 
   useEffect(() => {
     const onData = (result: AxiosResponse | null) => {
       if (result?.status === 200) {
         updateData(result.data)
+        csrfRef.current = result.data.csrf
       } else {
         setError(result)
       }
@@ -149,7 +153,8 @@ function App() {
           <p>regions go here</p>
         </Panel>
         <ThemeProvider theme={darkTheme}>
-          <Stack grow
+          <Stack
+            grow
             tokens={appStackTokens}
             horizontalAlign={"start"}
             verticalAlign={"center"}
@@ -164,10 +169,21 @@ function App() {
               />
             </Stack.Item>
             <Stack.Item grow>
-              <Text styles={headerTextStyles}>ARO Portal {data.location ? "(" + data.location + ")" : ""}</Text>
+              <Text styles={headerTextStyles}>
+                ARO Portal {data.location ? "(" + data.location + ")" : ""}
+              </Text>
             </Stack.Item>
             <Stack.Item>
-            <IconButton
+              <Text>{data.username}</Text>
+            </Stack.Item>
+
+            <Stack.Item hidden={!data.elevated}>
+              <TooltipHost content={`Elevated User`}>
+                <Icon iconName={"Admin"}></Icon>
+              </TooltipHost>
+            </Stack.Item>
+            <Stack.Item>
+              <IconButton
                 iconProps={{iconName: "SignOut"}}
                 onClick={logOut}
                 styles={MenuButtonStyles}
@@ -178,10 +194,10 @@ function App() {
         <Stack styles={contentStackStyles}>
           <Stack.Item grow>{error && errorBar()}</Stack.Item>
           <Stack.Item grow>
-            <ClusterList sshBox={sshRef} loaded={fetching}/>
+            <ClusterList csrfToken={csrfRef} sshBox={sshRef} loaded={fetching} />
           </Stack.Item>
         </Stack>
-        <SSHModal csrfToken={data.csrf} ref={sshRef} />
+        <SSHModal csrfToken={csrfRef} ref={sshRef} />
       </Stack>
     </>
   )

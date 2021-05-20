@@ -11,12 +11,14 @@ import {
   MessageBar,
   MessageBarType,
   Stack,
+  FontSizes,
 } from "@fluentui/react"
 import {PrimaryButton, IconButton} from "@fluentui/react/lib/Button"
 import axios, {AxiosResponse} from "axios"
-import React, {useState, useImperativeHandle, useEffect, forwardRef} from "react"
+import React, {useState, useImperativeHandle, useEffect, forwardRef, MutableRefObject} from "react"
 
 const cancelIcon: IIconProps = {iconName: "Cancel"}
+const copyIcon: IIconProps = {iconName: "Copy"}
 
 const machineOptions = [
   {key: 1, text: "master-1"},
@@ -25,21 +27,64 @@ const machineOptions = [
 ]
 
 type SSHModalProps = {
-  csrfToken: string
+  csrfToken: MutableRefObject<string>
 }
+
+const theme = getTheme()
+const contentStyles = mergeStyleSets({
+  container: {
+    display: "flex",
+    flexFlow: "column nowrap",
+    alignItems: "stretch",
+  },
+  header: [
+    {
+      flex: "1 1 auto",
+      borderTop: `4px solid ${theme.palette.themePrimary}`,
+      color: theme.palette.neutralPrimary,
+      display: "flex",
+      alignItems: "center",
+      fontSize: FontSizes.xLargePlus,
+      fontWeight: FontWeights.semibold,
+      padding: "12px 12px 14px 24px",
+    },
+  ],
+  body: {
+    flex: "4 4 auto",
+    padding: "0 24px 24px 24px",
+    overflowY: "hidden",
+    selectors: {
+      "p": {margin: "14px 0"},
+      "p:first-child": {marginTop: 0},
+      "p:last-child": {marginBottom: 0},
+    },
+  },
+})
+
+const iconButtonStyles = {
+  root: {
+    color: theme.palette.neutralPrimary,
+    marginLeft: "auto",
+    marginTop: "4px",
+    marginRight: "2px",
+  },
+  rootHovered: {
+    color: theme.palette.neutralDark,
+  },
+}
+
+const sshDocs: string =
+  "https://msazure.visualstudio.com/AzureRedHatOpenShift/_wiki/wikis/ARO.wiki/136823/ARO-SRE-portal?anchor=ssh-(elevated)"
 
 export const SSHModal = forwardRef<any, SSHModalProps>(({csrfToken}, ref) => {
   const [isModalOpen, {setTrue: showModal, setFalse: hideModal}] = useBoolean(false)
 
-  // Use useId() to ensure that the IDs are unique on the page.
-  // (It's also okay to use plain strings and manually ensure uniqueness.)
   const titleId = useId("title")
-
   const [update, {setTrue: requestSSH, setFalse: sshRequested}] = useBoolean(false)
   const [resourceID, setResourceID] = useState("")
   const [machineName, setMachineName] = useState<IDropdownOption>()
   const [requestable, {setTrue: setRequestable, setFalse: setUnrequestable}] = useBoolean(false)
-  const [data, setData] = useState<{command: string, password: string} | null>(null)
+  const [data, setData] = useState<{command: string; password: string} | null>()
   const [error, setError] = useState<AxiosResponse | null>(null)
 
   useImperativeHandle(ref, () => ({
@@ -62,8 +107,7 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({csrfToken}, ref) => {
           data: {
             master: machineName?.key,
           },
-            headers: {"X-CSRF-Token": csrfToken},
-
+          headers: {"X-CSRF-Token": csrfToken.current},
         })
         setData(result.data)
         setRequestable()
@@ -112,8 +156,46 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({csrfToken}, ref) => {
   const dataResult = (): any => {
     return (
       <div>
-        <TextField label="Command" value={data?.command} />
-        <TextField label="Password" value={data?.password}/>
+        <Stack>
+          <Stack horizontal verticalAlign={"end"}>
+            <Stack.Item grow>
+              <TextField label="Command" value={data?.command} readOnly />
+            </Stack.Item>
+            <Stack.Item>
+              <IconButton
+                iconProps={copyIcon}
+                ariaLabel="Copy command"
+                onClick={(_) => {
+                  if (data) {
+                    navigator.clipboard.writeText(data.command)
+                  }
+                }}
+              />
+            </Stack.Item>
+          </Stack>
+          <Stack horizontal verticalAlign={"end"}>
+            <Stack.Item grow>
+              <TextField
+                label="Password"
+                value={data?.password}
+                type="password"
+                canRevealPassword
+                readOnly
+              />{" "}
+            </Stack.Item>
+            <Stack.Item>
+              <IconButton
+                iconProps={copyIcon}
+                ariaLabel="Copy password"
+                onClick={(_) => {
+                  if (data) {
+                    navigator.clipboard.writeText(data.password)
+                  }
+                }}
+              />
+            </Stack.Item>
+          </Stack>
+        </Stack>
       </div>
     )
   }
@@ -138,6 +220,10 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({csrfToken}, ref) => {
         </div>
 
         <div className={contentStyles.body}>
+          <p>
+            Before requesting SSH access, please ensure you have read the{" "}
+            <a href={sshDocs}>SSH docs</a>.
+          </p>
           {error && errorBar()}
           {data ? dataResult() : selectionField()}
         </div>
@@ -145,46 +231,3 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({csrfToken}, ref) => {
     </div>
   )
 })
-
-const theme = getTheme()
-const contentStyles = mergeStyleSets({
-  container: {
-    display: "flex",
-    flexFlow: "column nowrap",
-    alignItems: "stretch",
-  },
-  header: [
-    theme.fonts.xLargePlus,
-    {
-      flex: "1 1 auto",
-      borderTop: `4px solid ${theme.palette.themePrimary}`,
-      color: theme.palette.neutralPrimary,
-      display: "flex",
-      alignItems: "center",
-      fontWeight: FontWeights.semibold,
-      padding: "12px 12px 14px 24px",
-    },
-  ],
-  body: {
-    flex: "4 4 auto",
-    padding: "0 24px 24px 24px",
-    overflowY: "hidden",
-    selectors: {
-      "p": {margin: "14px 0"},
-      "p:first-child": {marginTop: 0},
-      "p:last-child": {marginBottom: 0},
-    },
-  },
-})
-
-const iconButtonStyles = {
-  root: {
-    color: theme.palette.neutralPrimary,
-    marginLeft: "auto",
-    marginTop: "4px",
-    marginRight: "2px",
-  },
-  rootHovered: {
-    color: theme.palette.neutralDark,
-  },
-}

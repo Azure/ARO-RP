@@ -39,3 +39,22 @@ export const ProcessLogOut = async (): Promise<any> => {
   }
   document.location.href = "/api/login"
 }
+
+export const RequestKubeconfig = async (
+  csrfToken: string,
+  clusterID: string
+): Promise<AxiosResponse | null> => {
+  try {
+    const result = await axios({
+      method: "POST",
+      url: clusterID + "/kubeconfig/new",
+      headers: {
+        "X-CSRF-Token": csrfToken,
+      },
+    })
+    return result
+  } catch (e) {
+    let err = e.response as AxiosResponse
+    return OnError(err)
+  }
+}

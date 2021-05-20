@@ -22,6 +22,7 @@ import {
 } from "@fluentui/react/lib/DetailsList"
 
 import {FetchClusters} from "./Request"
+import {KubeconfigButton} from "./Kubeconfig"
 import {AxiosResponse} from "axios"
 
 interface ICluster {
@@ -92,14 +93,15 @@ interface IClusterListState {
 }
 
 const clusterListDetailStyles: Partial<IDetailsListStyles> = {
-    headerWrapper: {
-      marginTop: "-16px",
-    },
-  }
+  headerWrapper: {
+    marginTop: "-16px",
+  },
+}
 
 interface ClusterListControlProps {
   items: ICluster[]
   sshModalRef: MutableRefObject<any>
+  csrfToken: MutableRefObject<string>
 }
 
 class ClusterListControl extends Component<ClusterListControlProps, IClusterListState> {
@@ -160,11 +162,12 @@ class ClusterListControl extends Component<ClusterListControlProps, IClusterList
             </TooltipHost>
             <TooltipHost content={`SSH`}>
               <IconButton
-                iconProps={{iconName: "Remote"}}
+                iconProps={{iconName: "CommandPrompt"}}
                 aria-label="SSH"
                 onClick={(_) => this._onSSHClick(item)}
               />
             </TooltipHost>
+            <KubeconfigButton clusterID={item.name} csrfToken={props.csrfToken} />
           </Stack>
         ),
       },
@@ -247,7 +250,11 @@ class ClusterListControl extends Component<ClusterListControlProps, IClusterList
   }
 }
 
-export function ClusterList(props: {sshBox: MutableRefObject<any>, loaded: string}) {
+export function ClusterList(props: {
+  csrfToken: MutableRefObject<string>
+  sshBox: MutableRefObject<any>
+  loaded: string
+}) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
   const state = useRef<ClusterListControl>(null)
@@ -317,7 +324,12 @@ export function ClusterList(props: {sshBox: MutableRefObject<any>, loaded: strin
       <Separator styles={separatorStyle} />
 
       {error && errorBar()}
-      <ClusterListControl items={data} ref={state} sshModalRef={props.sshBox} />
+      <ClusterListControl
+        items={data}
+        ref={state}
+        sshModalRef={props.sshBox}
+        csrfToken={props.csrfToken}
+      />
     </Stack>
   )
 }

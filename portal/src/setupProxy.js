@@ -1,28 +1,28 @@
-const { createProxyMiddleware } = require('http-proxy-middleware');
+const {createProxyMiddleware} = require("http-proxy-middleware")
 
-module.exports = function(app) {
+module.exports = function (app) {
   app.use(
-    '/api',
+    "/api",
     createProxyMiddleware({
-      target: 'https://localhost:8444',
+      target: "https://localhost:8444",
       changeOrigin: true,
       secure: false,
     })
-  );
+  )
   app.use(
-    '/subscriptions',
+    "/subscriptions",
     createProxyMiddleware({
-      target: 'https://localhost:8444',
+      target: "https://localhost:8444",
       changeOrigin: true,
       secure: false,
     })
-  );
+  )
   app.use(
-    '/callback',
+    "/callback",
     createProxyMiddleware({
-      target: 'https://localhost:8444',
+      target: "https://localhost:8444",
       changeOrigin: true,
       secure: false,
     })
-  );
-};
+  )
+}
