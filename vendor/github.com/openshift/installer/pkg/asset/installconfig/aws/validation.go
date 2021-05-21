@@ -5,8 +5,12 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/pkg/errors"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -15,6 +19,21 @@ import (
 	"github.com/openshift/installer/pkg/types"
 	awstypes "github.com/openshift/installer/pkg/types/aws"
 )
+
+type resourceRequirements struct {
+	minimumVCpus  int64
+	minimumMemory int64
+}
+
+var controlPlaneReq = resourceRequirements{
+	minimumVCpus:  4,
+	minimumMemory: 16384,
+}
+
+var computeReq = resourceRequirements{
+	minimumVCpus:  2,
+	minimumMemory: 8192,
+}
 
 // Validate executes platform-specific validation.
 func Validate(ctx context.Context, meta *Metadata, config *types.InstallConfig) error {
@@ -26,12 +45,12 @@ func Validate(ctx context.Context, meta *Metadata, config *types.InstallConfig) 
 	allErrs = append(allErrs, validatePlatform(ctx, meta, field.NewPath("platform", "aws"), config.Platform.AWS, config.Networking, config.Publish)...)
 
 	if config.ControlPlane != nil && config.ControlPlane.Platform.AWS != nil {
-		allErrs = append(allErrs, validateMachinePool(ctx, meta, field.NewPath("controlPlane", "platform", "aws"), config.Platform.AWS, config.ControlPlane.Platform.AWS)...)
+		allErrs = append(allErrs, validateMachinePool(ctx, meta, field.NewPath("controlPlane", "platform", "aws"), config.Platform.AWS, config.ControlPlane.Platform.AWS, controlPlaneReq)...)
 	}
 	for idx, compute := range config.Compute {
 		fldPath := field.NewPath("compute").Index(idx)
 		if compute.Platform.AWS != nil {
-			allErrs = append(allErrs, validateMachinePool(ctx, meta, fldPath.Child("platform", "aws"), config.Platform.AWS, compute.Platform.AWS)...)
+			allErrs = append(allErrs, validateMachinePool(ctx, meta, fldPath.Child("platform", "aws"), config.Platform.AWS, compute.Platform.AWS, computeReq)...)
 		}
 	}
 	return allErrs.ToAggregate()
@@ -51,7 +70,7 @@ func validatePlatform(ctx context.Context, meta *Metadata, fldPath *field.Path, 
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("serviceEndpoints"), platform.ServiceEndpoints, err.Error()))
 	}
 	if platform.DefaultMachinePlatform != nil {
-		allErrs = append(allErrs, validateMachinePool(ctx, meta, fldPath.Child("defaultMachinePlatform"), platform, platform.DefaultMachinePlatform)...)
+		allErrs = append(allErrs, validateMachinePool(ctx, meta, fldPath.Child("defaultMachinePlatform"), platform, platform.DefaultMachinePlatform, controlPlaneReq)...)
 	}
 	return allErrs
 }
@@ -104,7 +123,7 @@ func validateSubnets(ctx context.Context, meta *Metadata, fldPath *field.Path, s
 	return allErrs
 }
 
-func validateMachinePool(ctx context.Context, meta *Metadata, fldPath *field.Path, platform *awstypes.Platform, pool *awstypes.MachinePool) field.ErrorList {
+func validateMachinePool(ctx context.Context, meta *Metadata, fldPath *field.Path, platform *awstypes.Platform, pool *awstypes.MachinePool, req resourceRequirements) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if len(pool.Zones) > 0 {
 		availableZones := sets.String{}
@@ -127,6 +146,25 @@ func validateMachinePool(ctx context.Context, meta *Metadata, fldPath *field.Pat
 		if diff := sets.NewString(pool.Zones...).Difference(availableZones); diff.Len() > 0 {
 			errMsg := fmt.Sprintf("No subnets provided for zones %s", diff.List())
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("zones"), pool.Zones, errMsg))
+		}
+	}
+	if pool.InstanceType != "" {
+		instanceTypes, err := meta.InstanceTypes(ctx)
+		if err != nil {
+			return append(allErrs, field.InternalError(fldPath, err))
+		}
+		if typeMeta, ok := instanceTypes[pool.InstanceType]; ok {
+			if typeMeta.DefaultVCpus < req.minimumVCpus {
+				errMsg := fmt.Sprintf("instance type does not meet minimum resource requirements of %d vCPUs", req.minimumVCpus)
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("type"), pool.InstanceType, errMsg))
+			}
+			if typeMeta.MemInMiB < req.minimumMemory {
+				errMsg := fmt.Sprintf("instance type does not meet minimum resource requirements of %d MiB Memory", req.minimumMemory)
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("type"), pool.InstanceType, errMsg))
+			}
+		} else {
+			errMsg := fmt.Sprintf("instance type %s not found", pool.InstanceType)
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("type"), pool.InstanceType, errMsg))
 		}
 	}
 	return allErrs
@@ -211,4 +249,88 @@ var requiredServices = []string{
 	"s3",
 	"sts",
 	"tagging",
+}
+
+// ValidateForProvisioning validates if the install config is valid for provisioning the cluster.
+func ValidateForProvisioning(session *session.Session, ic *types.InstallConfig, metadata *Metadata) error {
+	allErrs := field.ErrorList{}
+	allErrs = append(allErrs, validateExistingHostedZone(session, ic, metadata)...)
+	return allErrs.ToAggregate()
+}
+
+func validateExistingHostedZone(session *session.Session, ic *types.InstallConfig, metadata *Metadata) field.ErrorList {
+	if ic.AWS.HostedZone == "" {
+		return nil
+	}
+
+	// validate that the hosted zone exists
+	hostedZonePath := field.NewPath("aws", "hostedZone")
+	client := route53.New(session)
+	zone, err := client.GetHostedZone(&route53.GetHostedZoneInput{Id: aws.String(ic.AWS.HostedZone)})
+	if err != nil {
+		return field.ErrorList{
+			field.Invalid(hostedZonePath, ic.AWS.HostedZone, "cannot find hosted zone"),
+		}
+	}
+
+	allErrs := field.ErrorList{}
+
+	// validate that the hosted zone is associated with the VPC containing the existing subnets for the cluster
+	vpcID, err := metadata.VPC(context.TODO())
+	if err == nil {
+		if !isHostedZoneAssociatedWithVPC(zone, vpcID) {
+			allErrs = append(allErrs, field.Invalid(hostedZonePath, ic.AWS.HostedZone, "hosted zone is not associated with the VPC"))
+		}
+	} else {
+		allErrs = append(allErrs, field.Invalid(hostedZonePath, ic.AWS.HostedZone, "no VPC found"))
+	}
+
+	// validate that the hosted zone does not already have any record sets for the cluster domain
+	dottedClusterDomain := ic.ClusterDomain() + "."
+	var problematicRecords []string
+	if err := client.ListResourceRecordSetsPages(
+		&route53.ListResourceRecordSetsInput{HostedZoneId: zone.HostedZone.Id},
+		func(out *route53.ListResourceRecordSetsOutput, lastPage bool) bool {
+			for _, recordSet := range out.ResourceRecordSets {
+				name := aws.StringValue(recordSet.Name)
+				// skip record sets that are not sub-domains of the cluster domain. Such record sets may exist for
+				// hosted zones that are used for other clusters or other purposes.
+				if !strings.HasSuffix(name, dottedClusterDomain) {
+					continue
+				}
+				// skip record sets that are the cluster domain. Record sets for the cluster domain are fine. If the
+				// hosted zone has the name of the cluster domain, then there will be NS and SOA record sets for the
+				// cluster domain.
+				if len(name) == len(dottedClusterDomain) {
+					continue
+				}
+				problematicRecords = append(problematicRecords, fmt.Sprintf("%s (%s)", name, aws.StringValue(recordSet.Type)))
+			}
+			return !lastPage
+		},
+	); err != nil {
+		allErrs = append(allErrs, field.InternalError(hostedZonePath,
+			errors.Wrapf(err, "could not list record sets for hosted zone %q", ic.AWS.HostedZone)))
+	}
+	if len(problematicRecords) > 0 {
+		detail := fmt.Sprintf(
+			"hosted zone already has record sets for the domain of the cluster: [%s]",
+			strings.Join(problematicRecords, ", "),
+		)
+		allErrs = append(allErrs, field.Invalid(hostedZonePath, ic.AWS.HostedZone, detail))
+	}
+
+	return allErrs
+}
+
+func isHostedZoneAssociatedWithVPC(hostedZone *route53.GetHostedZoneOutput, vpcID string) bool {
+	if vpcID == "" {
+		return false
+	}
+	for _, vpc := range hostedZone.VPCs {
+		if aws.StringValue(vpc.VPCId) == vpcID {
+			return true
+		}
+	}
+	return false
 }

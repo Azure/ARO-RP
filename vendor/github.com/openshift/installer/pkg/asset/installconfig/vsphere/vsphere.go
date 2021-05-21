@@ -107,7 +107,7 @@ func getClients() (*vCenterClient, error) {
 			Validate: survey.Required,
 		},
 	}, &vcenter); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed UserInput")
 	}
 
 	if err := survey.Ask([]*survey.Question{
@@ -119,7 +119,7 @@ func getClients() (*vCenterClient, error) {
 			Validate: survey.Required,
 		},
 	}, &username); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed UserInput")
 	}
 
 	if err := survey.Ask([]*survey.Question{
@@ -131,7 +131,7 @@ func getClients() (*vCenterClient, error) {
 			Validate: survey.Required,
 		},
 	}, &password); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed UserInput")
 	}
 
 	// There is a noticeable delay when creating the client, so let the user know what's going on.
@@ -198,7 +198,7 @@ func getDataCenter(ctx context.Context, finder *find.Finder, client *vim25.Clien
 			Validate: survey.Required,
 		},
 	}, &selectedDataCenter); err != nil {
-		return "", "", err
+		return "", "", errors.Wrap(err, "failed UserInput")
 	}
 
 	return selectedDataCenter, dataCenterPaths[selectedDataCenter], nil
@@ -241,7 +241,7 @@ func getCluster(ctx context.Context, path string, finder *find.Finder, client *v
 			Validate: survey.Required,
 		},
 	}, &selectedcluster); err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed UserInput")
 	}
 
 	return selectedcluster, nil
@@ -282,7 +282,7 @@ func getDataStore(ctx context.Context, path string, finder *find.Finder, client 
 			Validate: survey.Required,
 		},
 	}, &selectedDataStore); err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed UserInput")
 	}
 
 	return selectedDataStore, nil
@@ -336,7 +336,7 @@ func getNetwork(ctx context.Context, path string, finder *find.Finder, client *v
 			Validate: survey.Required,
 		},
 	}, &selectednetwork); err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed UserInput")
 	}
 
 	return selectednetwork, nil
@@ -356,7 +356,7 @@ func getVIPs() (string, string, error) {
 			}),
 		},
 	}, &apiVIP); err != nil {
-		return "", "", err
+		return "", "", errors.Wrap(err, "failed UserInput")
 	}
 
 	if err := survey.Ask([]*survey.Question{
@@ -373,7 +373,7 @@ func getVIPs() (string, string, error) {
 			}),
 		},
 	}, &ingressVIP); err != nil {
-		return "", "", err
+		return "", "", errors.Wrap(err, "failed UserInput")
 	}
 
 	return apiVIP, ingressVIP, nil

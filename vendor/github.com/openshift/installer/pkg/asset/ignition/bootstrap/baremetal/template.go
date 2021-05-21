@@ -1,6 +1,7 @@
 package baremetal
 
 import (
+	"fmt"
 	"net"
 	"strings"
 
@@ -33,10 +34,16 @@ type TemplateData struct {
 	// ProvisioningDHCPAllowList contains a space-separated list of all of the control plane's boot
 	// MAC addresses. Requests to bootstrap DHCP from other hosts will be ignored.
 	ProvisioningDHCPAllowList string
+
+	// IronicUsername contains the username for authentication to Ironic
+	IronicUsername string
+
+	// IronicUsername contains the password for authentication to Ironic
+	IronicPassword string
 }
 
 // GetTemplateData returns platform-specific data for bootstrap templates.
-func GetTemplateData(config *baremetal.Platform, networks []types.MachineNetworkEntry) *TemplateData {
+func GetTemplateData(config *baremetal.Platform, networks []types.MachineNetworkEntry, ironicUsername, ironicPassword string) *TemplateData {
 	var templateData TemplateData
 
 	templateData.ProvisioningIP = config.BootstrapProvisioningIP
@@ -51,8 +58,11 @@ func GetTemplateData(config *baremetal.Platform, networks []types.MachineNetwork
 
 	switch config.ProvisioningNetwork {
 	case baremetal.ManagedProvisioningNetwork:
-		// When provisioning network is managed, we set a DHCP range:
-		templateData.ProvisioningDHCPRange = config.ProvisioningDHCPRange
+		cidr, _ := config.ProvisioningNetworkCIDR.Mask.Size()
+
+		// When provisioning network is managed, we set a DHCP range including
+		// netmask for dnsmasq.
+		templateData.ProvisioningDHCPRange = fmt.Sprintf("%s,%d", config.ProvisioningDHCPRange, cidr)
 
 		var dhcpAllowList []string
 		for _, host := range config.Hosts {
@@ -65,16 +75,20 @@ func GetTemplateData(config *baremetal.Platform, networks []types.MachineNetwork
 		templateData.ProvisioningInterface = "ens3"
 		templateData.ProvisioningDNSMasq = false
 
-		for _, network := range networks {
-			if network.CIDR.Contains(net.ParseIP(templateData.ProvisioningIP)) {
-				templateData.ProvisioningIPv6 = network.CIDR.IP.To4() == nil
+		if templateData.ProvisioningIP != "" {
+			for _, network := range networks {
+				if network.CIDR.Contains(net.ParseIP(templateData.ProvisioningIP)) {
+					templateData.ProvisioningIPv6 = network.CIDR.IP.To4() == nil
 
-				cidr, _ := network.CIDR.Mask.Size()
-				templateData.ProvisioningCIDR = cidr
+					cidr, _ := network.CIDR.Mask.Size()
+					templateData.ProvisioningCIDR = cidr
+				}
 			}
-
 		}
 	}
+
+	templateData.IronicUsername = ironicUsername
+	templateData.IronicPassword = ironicPassword
 
 	return &templateData
 }

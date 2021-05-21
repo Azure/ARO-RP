@@ -528,8 +528,6 @@ func (c *Client) Do(ctx context.Context, req *http.Request, f func(*http.Respons
 		return err
 	}
 
-	defer res.Body.Close()
-
 	if d.enabled() {
 		d.debugResponse(res, ext)
 	}
@@ -537,6 +535,8 @@ func (c *Client) Do(ctx context.Context, req *http.Request, f func(*http.Respons
 	if c.insecureCookies {
 		c.setInsecureCookies(res)
 	}
+
+	defer res.Body.Close()
 
 	return f(res)
 }
@@ -560,7 +560,7 @@ type statusError struct {
 }
 
 // Temporary returns true for HTTP response codes that can be retried
-// See vim25.TemporaryNetworkError
+// See vim25.IsTemporaryNetworkError
 func (e *statusError) Temporary() bool {
 	switch e.res.StatusCode {
 	case http.StatusBadGateway:
@@ -828,7 +828,7 @@ func (c *Client) WriteFile(ctx context.Context, file string, src io.Reader, size
 
 	if s != nil {
 		pr := progress.NewReader(ctx, s, src, size)
-		src = pr
+		r = pr
 
 		// Mark progress reader as done when returning from this function.
 		defer func() {

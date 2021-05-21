@@ -8,8 +8,10 @@ import (
 	"os"
 	"strings"
 
-	igntypes "github.com/coreos/ignition/v2/config/v3_1/types"
+	igntypes "github.com/coreos/ignition/v2/config/v3_2/types"
 	gcpprovider "github.com/openshift/cluster-api-provider-gcp/pkg/apis/gcpprovider/v1beta1"
+	kubevirtprovider "github.com/openshift/cluster-api-provider-kubevirt/pkg/apis/kubevirtprovider/v1alpha1"
+	kubevirtutils "github.com/openshift/cluster-api-provider-kubevirt/pkg/utils"
 	libvirtprovider "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 	ovirtprovider "github.com/openshift/cluster-api-provider-ovirt/pkg/apis/ovirtprovider/v1beta1"
 	vsphereprovider "github.com/openshift/machine-api-operator/pkg/apis/vsphereprovider/v1beta1"
@@ -22,6 +24,7 @@ import (
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/ignition"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
+	baremetalbootstrap "github.com/openshift/installer/pkg/asset/ignition/bootstrap/baremetal"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	awsconfig "github.com/openshift/installer/pkg/asset/installconfig/aws"
@@ -37,6 +40,7 @@ import (
 	azuretfvars "github.com/openshift/installer/pkg/tfvars/azure"
 	baremetaltfvars "github.com/openshift/installer/pkg/tfvars/baremetal"
 	gcptfvars "github.com/openshift/installer/pkg/tfvars/gcp"
+	kubevirttfvars "github.com/openshift/installer/pkg/tfvars/kubevirt"
 	libvirttfvars "github.com/openshift/installer/pkg/tfvars/libvirt"
 	openstacktfvars "github.com/openshift/installer/pkg/tfvars/openstack"
 	ovirttfvars "github.com/openshift/installer/pkg/tfvars/ovirt"
@@ -46,6 +50,7 @@ import (
 	"github.com/openshift/installer/pkg/types/azure"
 	"github.com/openshift/installer/pkg/types/baremetal"
 	"github.com/openshift/installer/pkg/types/gcp"
+	"github.com/openshift/installer/pkg/types/kubevirt"
 	"github.com/openshift/installer/pkg/types/libvirt"
 	"github.com/openshift/installer/pkg/types/none"
 	"github.com/openshift/installer/pkg/types/openstack"
@@ -90,6 +95,7 @@ func (t *TerraformVariables) Dependencies() []asset.Asset {
 		&machine.Master{},
 		&machines.Master{},
 		&machines.Worker{},
+		&baremetalbootstrap.IronicCreds{},
 	}
 }
 
@@ -104,7 +110,8 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 	workersAsset := &machines.Worker{}
 	rhcosImage := new(rhcos.Image)
 	rhcosBootstrapImage := new(rhcos.BootstrapImage)
-	parents.Get(clusterID, installConfig, bootstrapIgnAsset, masterIgnAsset, mastersAsset, workersAsset, rhcosImage, rhcosBootstrapImage)
+	ironicCreds := &baremetalbootstrap.IronicCreds{}
+	parents.Get(clusterID, installConfig, bootstrapIgnAsset, masterIgnAsset, mastersAsset, workersAsset, rhcosImage, rhcosBootstrapImage, ironicCreds)
 
 	platform := installConfig.Config.Platform.Name()
 	switch platform {
@@ -226,10 +233,28 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 		if len(osImage) == 2 {
 			osImageRegion = osImage[1]
 		}
+
+		workerIAMRoleName := ""
+		if mp := installConfig.Config.WorkerMachinePool(); mp != nil {
+			awsMP := &aws.MachinePool{}
+			awsMP.Set(installConfig.Config.AWS.DefaultMachinePlatform)
+			awsMP.Set(mp.Platform.AWS)
+			workerIAMRoleName = awsMP.IAMRole
+		}
+
+		masterIAMRoleName := ""
+		if mp := installConfig.Config.ControlPlane; mp != nil {
+			awsMP := &aws.MachinePool{}
+			awsMP.Set(installConfig.Config.AWS.DefaultMachinePlatform)
+			awsMP.Set(mp.Platform.AWS)
+			masterIAMRoleName = awsMP.IAMRole
+		}
+
 		data, err := awstfvars.TFVars(awstfvars.TFVarsSources{
 			VPC:                   vpc,
 			PrivateSubnets:        privateSubnets,
 			PublicSubnets:         publicSubnets,
+			InternalZone:          installConfig.Config.AWS.HostedZone,
 			Services:              installConfig.Config.AWS.ServiceEndpoints,
 			Publish:               installConfig.Config.Publish,
 			MasterConfigs:         masterConfigs,
@@ -239,6 +264,8 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			IgnitionBucket:        bucket,
 			IgnitionPresignedURL:  url,
 			AdditionalTrustBundle: installConfig.Config.AdditionalTrustBundle,
+			MasterIAMRoleName:     masterIAMRoleName,
+			WorkerIAMRoleName:     workerIAMRoleName,
 		})
 		if err != nil {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
@@ -403,11 +430,12 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			installConfig.Config.Platform.OpenStack.Cloud,
 			installConfig.Config.Platform.OpenStack.ExternalNetwork,
 			installConfig.Config.Platform.OpenStack.ExternalDNS,
-			installConfig.Config.Platform.OpenStack.LbFloatingIP,
+			installConfig.Config.Platform.OpenStack.APIFloatingIP,
 			installConfig.Config.Platform.OpenStack.IngressFloatingIP,
 			installConfig.Config.Platform.OpenStack.APIVIP,
 			installConfig.Config.Platform.OpenStack.IngressVIP,
 			string(*rhcosImage),
+			installConfig.Config.Platform.OpenStack.ClusterOSImageProperties,
 			clusterID.InfraID,
 			caCert,
 			bootstrapIgn,
@@ -422,14 +450,24 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			Data:     data,
 		})
 	case baremetal.Name:
+		provisioningIP := installConfig.Config.Platform.BareMetal.BootstrapProvisioningIP
+		if installConfig.Config.Platform.BareMetal.ProvisioningNetwork == baremetal.DisabledProvisioningNetwork && provisioningIP == "" {
+			provisioningIP = installConfig.Config.Platform.BareMetal.APIVIP
+		}
+
 		data, err = baremetaltfvars.TFVars(
 			installConfig.Config.Platform.BareMetal.LibvirtURI,
-			installConfig.Config.Platform.BareMetal.BootstrapProvisioningIP,
+			provisioningIP,
 			string(*rhcosBootstrapImage),
 			installConfig.Config.Platform.BareMetal.ExternalBridge,
+			installConfig.Config.Platform.BareMetal.ExternalMACAddress,
 			installConfig.Config.Platform.BareMetal.ProvisioningBridge,
+			installConfig.Config.Platform.BareMetal.ProvisioningMACAddress,
 			installConfig.Config.Platform.BareMetal.Hosts,
 			string(*rhcosImage),
+			ironicCreds.Username,
+			ironicCreds.Password,
+			masterIgn,
 		)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
@@ -520,6 +558,33 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			Filename: fmt.Sprintf(TfPlatformVarsFileName, platform),
 			Data:     data,
 		})
+	case kubevirt.Name:
+		masters, err := mastersAsset.Machines()
+		if err != nil {
+			return err
+		}
+		masterSpecs := make([]*kubevirtprovider.KubevirtMachineProviderSpec, len(masters))
+		for i, m := range masters {
+			masterSpecs[i] = m.Spec.ProviderSpec.Value.Object.(*kubevirtprovider.KubevirtMachineProviderSpec)
+		}
+
+		labels := kubevirtutils.BuildLabels(clusterID.InfraID)
+		data, err := kubevirttfvars.TFVars(
+			kubevirttfvars.TFVarsSources{
+				MasterSpecs:     masterSpecs,
+				ImageURL:        string(*rhcosImage),
+				Namespace:       installConfig.Config.Kubevirt.Namespace,
+				ResourcesLabels: labels,
+			},
+		)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
+		}
+		t.FileList = append(t.FileList, &asset.File{
+			Filename: fmt.Sprintf(TfPlatformVarsFileName, platform),
+			Data:     data,
+		})
+
 	default:
 		logrus.Warnf("unrecognized platform %s", platform)
 	}

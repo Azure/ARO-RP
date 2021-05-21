@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	registerFactory("ibmc", newIbmcAccessDetails, []string{"http", "https"})
+	RegisterFactory("ibmc", newIbmcAccessDetails, []string{"http", "https"})
 }
 
 func newIbmcAccessDetails(parsedURL *url.URL, disableCertificateVerification bool) (AccessDetails, error) {
@@ -91,9 +91,13 @@ func (a *ibmcAccessDetails) PowerInterface() string {
 }
 
 func (a *ibmcAccessDetails) RAIDInterface() string {
-	return ""
+	return "no-raid"
 }
 
 func (a *ibmcAccessDetails) VendorInterface() string {
 	return ""
+}
+
+func (a *ibmcAccessDetails) SupportsSecureBoot() bool {
+	return false
 }

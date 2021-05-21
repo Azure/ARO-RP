@@ -87,6 +87,7 @@ func (m *Manifests) Dependencies() []asset.Asset {
 		&bootkube.MachineConfigServerTLSSecret{},
 		&bootkube.OpenshiftConfigSecretPullSecret{},
 		&bootkube.OpenshiftMachineConfigOperator{},
+		&bootkube.KubevirtInfraNamespace{},
 		&bootkube.AROWorkerRegistries{},
 		&bootkube.AROIngressService{},
 		&bootkube.ARODNSConfig{},
@@ -208,6 +209,7 @@ func (m *Manifests) generateBootKubeManifests(dependencies asset.Parents) []*ass
 		&bootkube.MachineConfigServerTLSSecret{},
 		&bootkube.OpenshiftConfigSecretPullSecret{},
 		&bootkube.OpenshiftMachineConfigOperator{},
+		&bootkube.KubevirtInfraNamespace{},
 		&bootkube.AROWorkerRegistries{},
 		&bootkube.AROIngressService{},
 	} {
