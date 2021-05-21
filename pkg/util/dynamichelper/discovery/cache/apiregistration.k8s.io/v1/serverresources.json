@@ -18,6 +18,9 @@
                 "update",
                 "watch"
             ],
+            "categories": [
+                "api-extensions"
+            ],
             "storageVersionHash": "C+s2HXXP47k="
         },
         {

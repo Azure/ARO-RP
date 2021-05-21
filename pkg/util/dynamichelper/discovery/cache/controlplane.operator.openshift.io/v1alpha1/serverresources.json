@@ -1,13 +1,13 @@
 {
     "kind": "APIResourceList",
     "apiVersion": "v1",
-    "groupVersion": "apiregistration.k8s.io/v1beta1",
+    "groupVersion": "controlplane.operator.openshift.io/v1alpha1",
     "resources": [
         {
-            "name": "apiservices",
-            "singularName": "",
-            "namespaced": false,
-            "kind": "APIService",
+            "name": "podnetworkconnectivitychecks",
+            "singularName": "podnetworkconnectivitycheck",
+            "namespaced": true,
+            "kind": "PodNetworkConnectivityCheck",
             "verbs": [
                 "create",
                 "delete",
@@ -18,16 +18,13 @@
                 "update",
                 "watch"
             ],
-            "categories": [
-                "api-extensions"
-            ],
-            "storageVersionHash": "C+s2HXXP47k="
+            "storageVersionHash": "OAM77/d6N/I="
         },
         {
-            "name": "apiservices/status",
+            "name": "podnetworkconnectivitychecks/status",
             "singularName": "",
-            "namespaced": false,
-            "kind": "APIService",
+            "namespaced": true,
+            "kind": "PodNetworkConnectivityCheck",
             "verbs": [
                 "get",
                 "patch",

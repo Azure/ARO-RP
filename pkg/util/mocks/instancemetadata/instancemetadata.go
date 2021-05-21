@@ -12,30 +12,30 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockServicePrincipalToken is a mock of ServicePrincipalToken interface
+// MockServicePrincipalToken is a mock of ServicePrincipalToken interface.
 type MockServicePrincipalToken struct {
 	ctrl     *gomock.Controller
 	recorder *MockServicePrincipalTokenMockRecorder
 }
 
-// MockServicePrincipalTokenMockRecorder is the mock recorder for MockServicePrincipalToken
+// MockServicePrincipalTokenMockRecorder is the mock recorder for MockServicePrincipalToken.
 type MockServicePrincipalTokenMockRecorder struct {
 	mock *MockServicePrincipalToken
 }
 
-// NewMockServicePrincipalToken creates a new mock instance
+// NewMockServicePrincipalToken creates a new mock instance.
 func NewMockServicePrincipalToken(ctrl *gomock.Controller) *MockServicePrincipalToken {
 	mock := &MockServicePrincipalToken{ctrl: ctrl}
 	mock.recorder = &MockServicePrincipalTokenMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockServicePrincipalToken) EXPECT() *MockServicePrincipalTokenMockRecorder {
 	return m.recorder
 }
 
-// OAuthToken mocks base method
+// OAuthToken mocks base method.
 func (m *MockServicePrincipalToken) OAuthToken() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "OAuthToken")
@@ -43,13 +43,13 @@ func (m *MockServicePrincipalToken) OAuthToken() string {
 	return ret0
 }
 
-// OAuthToken indicates an expected call of OAuthToken
+// OAuthToken indicates an expected call of OAuthToken.
 func (mr *MockServicePrincipalTokenMockRecorder) OAuthToken() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OAuthToken", reflect.TypeOf((*MockServicePrincipalToken)(nil).OAuthToken))
 }
 
-// RefreshWithContext mocks base method
+// RefreshWithContext mocks base method.
 func (m *MockServicePrincipalToken) RefreshWithContext(arg0 context.Context) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RefreshWithContext", arg0)
@@ -57,36 +57,36 @@ func (m *MockServicePrincipalToken) RefreshWithContext(arg0 context.Context) err
 	return ret0
 }
 
-// RefreshWithContext indicates an expected call of RefreshWithContext
+// RefreshWithContext indicates an expected call of RefreshWithContext.
 func (mr *MockServicePrincipalTokenMockRecorder) RefreshWithContext(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshWithContext", reflect.TypeOf((*MockServicePrincipalToken)(nil).RefreshWithContext), arg0)
 }
 
-// MockInstanceMetadata is a mock of InstanceMetadata interface
+// MockInstanceMetadata is a mock of InstanceMetadata interface.
 type MockInstanceMetadata struct {
 	ctrl     *gomock.Controller
 	recorder *MockInstanceMetadataMockRecorder
 }
 
-// MockInstanceMetadataMockRecorder is the mock recorder for MockInstanceMetadata
+// MockInstanceMetadataMockRecorder is the mock recorder for MockInstanceMetadata.
 type MockInstanceMetadataMockRecorder struct {
 	mock *MockInstanceMetadata
 }
 
-// NewMockInstanceMetadata creates a new mock instance
+// NewMockInstanceMetadata creates a new mock instance.
 func NewMockInstanceMetadata(ctrl *gomock.Controller) *MockInstanceMetadata {
 	mock := &MockInstanceMetadata{ctrl: ctrl}
 	mock.recorder = &MockInstanceMetadataMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockInstanceMetadata) EXPECT() *MockInstanceMetadataMockRecorder {
 	return m.recorder
 }
 
-// Environment mocks base method
+// Environment mocks base method.
 func (m *MockInstanceMetadata) Environment() *azure.Environment {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Environment")
@@ -94,13 +94,13 @@ func (m *MockInstanceMetadata) Environment() *azure.Environment {
 	return ret0
 }
 
-// Environment indicates an expected call of Environment
+// Environment indicates an expected call of Environment.
 func (mr *MockInstanceMetadataMockRecorder) Environment() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockInstanceMetadata)(nil).Environment))
 }
 
-// Hostname mocks base method
+// Hostname mocks base method.
 func (m *MockInstanceMetadata) Hostname() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Hostname")
@@ -108,13 +108,13 @@ func (m *MockInstanceMetadata) Hostname() string {
 	return ret0
 }
 
-// Hostname indicates an expected call of Hostname
+// Hostname indicates an expected call of Hostname.
 func (mr *MockInstanceMetadataMockRecorder) Hostname() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Hostname", reflect.TypeOf((*MockInstanceMetadata)(nil).Hostname))
 }
 
-// Location mocks base method
+// Location mocks base method.
 func (m *MockInstanceMetadata) Location() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Location")
@@ -122,13 +122,13 @@ func (m *MockInstanceMetadata) Location() string {
 	return ret0
 }
 
-// Location indicates an expected call of Location
+// Location indicates an expected call of Location.
 func (mr *MockInstanceMetadataMockRecorder) Location() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Location", reflect.TypeOf((*MockInstanceMetadata)(nil).Location))
 }
 
-// ResourceGroup mocks base method
+// ResourceGroup mocks base method.
 func (m *MockInstanceMetadata) ResourceGroup() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResourceGroup")
@@ -136,13 +136,13 @@ func (m *MockInstanceMetadata) ResourceGroup() string {
 	return ret0
 }
 
-// ResourceGroup indicates an expected call of ResourceGroup
+// ResourceGroup indicates an expected call of ResourceGroup.
 func (mr *MockInstanceMetadataMockRecorder) ResourceGroup() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceGroup", reflect.TypeOf((*MockInstanceMetadata)(nil).ResourceGroup))
 }
 
-// SubscriptionID mocks base method
+// SubscriptionID mocks base method.
 func (m *MockInstanceMetadata) SubscriptionID() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SubscriptionID")
@@ -150,13 +150,13 @@ func (m *MockInstanceMetadata) SubscriptionID() string {
 	return ret0
 }
 
-// SubscriptionID indicates an expected call of SubscriptionID
+// SubscriptionID indicates an expected call of SubscriptionID.
 func (mr *MockInstanceMetadataMockRecorder) SubscriptionID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscriptionID", reflect.TypeOf((*MockInstanceMetadata)(nil).SubscriptionID))
 }
 
-// TenantID mocks base method
+// TenantID mocks base method.
 func (m *MockInstanceMetadata) TenantID() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "TenantID")
@@ -164,7 +164,7 @@ func (m *MockInstanceMetadata) TenantID() string {
 	return ret0
 }
 
-// TenantID indicates an expected call of TenantID
+// TenantID indicates an expected call of TenantID.
 func (mr *MockInstanceMetadataMockRecorder) TenantID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TenantID", reflect.TypeOf((*MockInstanceMetadata)(nil).TenantID))

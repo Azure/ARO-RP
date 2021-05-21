@@ -32,19 +32,6 @@
             ]
         },
         {
-            "name": "extensions",
-            "preferredVersion": {
-                "groupVersion": "extensions/v1beta1",
-                "version": "v1beta1"
-            },
-            "versions": [
-                {
-                    "groupVersion": "extensions/v1beta1",
-                    "version": "v1beta1"
-                }
-            ]
-        },
-        {
             "name": "apps",
             "preferredVersion": {
                 "groupVersion": "apps/v1",
@@ -181,6 +168,19 @@
             ]
         },
         {
+            "name": "extensions",
+            "preferredVersion": {
+                "groupVersion": "extensions/v1beta1",
+                "version": "v1beta1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "extensions/v1beta1",
+                    "version": "v1beta1"
+                }
+            ]
+        },
+        {
             "name": "policy",
             "preferredVersion": {
                 "groupVersion": "policy/v1beta1",
@@ -298,10 +298,14 @@
         {
             "name": "node.k8s.io",
             "preferredVersion": {
-                "groupVersion": "node.k8s.io/v1beta1",
-                "version": "v1beta1"
+                "groupVersion": "node.k8s.io/v1",
+                "version": "v1"
             },
             "versions": [
+                {
+                    "groupVersion": "node.k8s.io/v1",
+                    "version": "v1"
+                },
                 {
                     "groupVersion": "node.k8s.io/v1beta1",
                     "version": "v1beta1"
@@ -324,10 +328,14 @@
         {
             "name": "flowcontrol.apiserver.k8s.io",
             "preferredVersion": {
-                "groupVersion": "flowcontrol.apiserver.k8s.io/v1alpha1",
-                "version": "v1alpha1"
+                "groupVersion": "flowcontrol.apiserver.k8s.io/v1beta1",
+                "version": "v1beta1"
             },
             "versions": [
+                {
+                    "groupVersion": "flowcontrol.apiserver.k8s.io/v1beta1",
+                    "version": "v1beta1"
+                },
                 {
                     "groupVersion": "flowcontrol.apiserver.k8s.io/v1alpha1",
                     "version": "v1alpha1"
@@ -560,6 +568,10 @@
                 {
                     "groupVersion": "console.openshift.io/v1",
                     "version": "v1"
+                },
+                {
+                    "groupVersion": "console.openshift.io/v1alpha1",
+                    "version": "v1alpha1"
                 }
             ]
         },
@@ -625,6 +637,10 @@
                 {
                     "groupVersion": "monitoring.coreos.com/v1",
                     "version": "v1"
+                },
+                {
+                    "groupVersion": "monitoring.coreos.com/v1alpha1",
+                    "version": "v1alpha1"
                 }
             ]
         },
@@ -702,6 +718,23 @@
             ]
         },
         {
+            "name": "snapshot.storage.k8s.io",
+            "preferredVersion": {
+                "groupVersion": "snapshot.storage.k8s.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "snapshot.storage.k8s.io/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "snapshot.storage.k8s.io/v1beta1",
+                    "version": "v1beta1"
+                }
+            ]
+        },
+        {
             "name": "tuned.openshift.io",
             "preferredVersion": {
                 "groupVersion": "tuned.openshift.io/v1",
@@ -723,6 +756,19 @@
             "versions": [
                 {
                     "groupVersion": "aro.openshift.io/v1alpha1",
+                    "version": "v1alpha1"
+                }
+            ]
+        },
+        {
+            "name": "controlplane.operator.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "controlplane.operator.openshift.io/v1alpha1",
+                "version": "v1alpha1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "controlplane.operator.openshift.io/v1alpha1",
                     "version": "v1alpha1"
                 }
             ]
@@ -788,19 +834,6 @@
             "versions": [
                 {
                     "groupVersion": "machine.openshift.io/v1beta1",
-                    "version": "v1beta1"
-                }
-            ]
-        },
-        {
-            "name": "snapshot.storage.k8s.io",
-            "preferredVersion": {
-                "groupVersion": "snapshot.storage.k8s.io/v1beta1",
-                "version": "v1beta1"
-            },
-            "versions": [
-                {
-                    "groupVersion": "snapshot.storage.k8s.io/v1beta1",
                     "version": "v1beta1"
                 }
             ]

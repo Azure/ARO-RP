@@ -1,13 +1,13 @@
 {
     "kind": "APIResourceList",
     "apiVersion": "v1",
-    "groupVersion": "oauth.openshift.io/v1",
+    "groupVersion": "snapshot.storage.k8s.io/v1",
     "resources": [
         {
-            "name": "oauthaccesstokens",
-            "singularName": "",
+            "name": "volumesnapshotclasses",
+            "singularName": "volumesnapshotclass",
             "namespaced": false,
-            "kind": "OAuthAccessToken",
+            "kind": "VolumeSnapshotClass",
             "verbs": [
                 "create",
                 "delete",
@@ -18,13 +18,13 @@
                 "update",
                 "watch"
             ],
-            "storageVersionHash": "Hss+eIbWaq4="
+            "storageVersionHash": "Auz1oPjhi6Y="
         },
         {
-            "name": "oauthauthorizetokens",
-            "singularName": "",
+            "name": "volumesnapshotcontents",
+            "singularName": "volumesnapshotcontent",
             "namespaced": false,
-            "kind": "OAuthAuthorizeToken",
+            "kind": "VolumeSnapshotContent",
             "verbs": [
                 "create",
                 "delete",
@@ -35,13 +35,24 @@
                 "update",
                 "watch"
             ],
-            "storageVersionHash": "boIUgj6jo8I="
+            "storageVersionHash": "nRPzLkINbss="
         },
         {
-            "name": "oauthclientauthorizations",
+            "name": "volumesnapshotcontents/status",
             "singularName": "",
             "namespaced": false,
-            "kind": "OAuthClientAuthorization",
+            "kind": "VolumeSnapshotContent",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "volumesnapshots",
+            "singularName": "volumesnapshot",
+            "namespaced": true,
+            "kind": "VolumeSnapshot",
             "verbs": [
                 "create",
                 "delete",
@@ -52,35 +63,17 @@
                 "update",
                 "watch"
             ],
-            "storageVersionHash": "Q0jsEj2AFkk="
+            "storageVersionHash": "TSKmYoNn2SQ="
         },
         {
-            "name": "oauthclients",
+            "name": "volumesnapshots/status",
             "singularName": "",
-            "namespaced": false,
-            "kind": "OAuthClient",
+            "namespaced": true,
+            "kind": "VolumeSnapshot",
             "verbs": [
-                "create",
-                "delete",
-                "deletecollection",
                 "get",
-                "list",
                 "patch",
-                "update",
-                "watch"
-            ],
-            "storageVersionHash": "8NZGiGeCmFo="
-        },
-        {
-            "name": "useroauthaccesstokens",
-            "singularName": "",
-            "namespaced": false,
-            "kind": "UserOAuthAccessToken",
-            "verbs": [
-                "delete",
-                "get",
-                "list",
-                "watch"
+                "update"
             ]
         }
     ]

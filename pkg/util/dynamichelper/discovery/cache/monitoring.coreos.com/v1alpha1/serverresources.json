@@ -1,0 +1,24 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "monitoring.coreos.com/v1alpha1",
+    "resources": [
+        {
+            "name": "alertmanagerconfigs",
+            "singularName": "alertmanagerconfig",
+            "namespaced": true,
+            "kind": "AlertmanagerConfig",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "95DNJ6wsUCg="
+        }
+    ]
+}

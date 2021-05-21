@@ -18,6 +18,9 @@
                 "update",
                 "watch"
             ],
+            "categories": [
+                "api-extensions"
+            ],
             "storageVersionHash": "yxW1cpLtfp8="
         },
         {
@@ -34,6 +37,9 @@
                 "patch",
                 "update",
                 "watch"
+            ],
+            "categories": [
+                "api-extensions"
             ],
             "storageVersionHash": "P9NhrezfnWE="
         }
