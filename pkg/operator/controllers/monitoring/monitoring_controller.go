@@ -5,6 +5,7 @@ package monitoring
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/ghodss/yaml"
 	"github.com/sirupsen/logrus"
@@ -40,28 +41,11 @@ type Config struct {
 		Retention           string `json:"retention,omitempty"`
 		VolumeClaimTemplate struct {
 			api.MissingFields
-			Spec struct {
-				api.MissingFields
-				Resources struct {
-					api.MissingFields
-					Requests struct {
-						api.MissingFields
-						Storage string `json:"storage,omitempty"`
-					} `json:"requests,omitempty"`
-				} `json:"resources,omitempty"`
-			} `json:"spec,omitempty"`
 		} `json:"volumeClaimTemplate,omitempty"`
 	} `json:"prometheusK8s,omitempty"`
 }
 
-var defaultConfig = `prometheusK8s:
-  retention: 15d
-  volumeClaimTemplate:
-    spec:
-      resources:
-        requests:
-          storage: 100Gi
-`
+var defaultConfig = `prometheusK8s: {}`
 
 type Reconciler struct {
 	arocli        aroclient.Interface
@@ -109,8 +93,8 @@ func (r *Reconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 		configData.PrometheusK8s.Retention = ""
 		changed = true
 	}
-	if configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage != "" {
-		configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage = ""
+	if !reflect.DeepEqual(configData.PrometheusK8s.VolumeClaimTemplate, struct{ api.MissingFields }{}) {
+		configData.PrometheusK8s.VolumeClaimTemplate = struct{ api.MissingFields }{}
 		changed = true
 	}
 
@@ -161,7 +145,7 @@ func (r *Reconciler) monitoringConfigMap(ctx context.Context) (*corev1.ConfigMap
 
 // SetupWithManager setup the manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.log.Info("starting starting cluster monitoring controller")
+	r.log.Info("starting cluster monitoring controller")
 
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
 		return meta.GetName() == arov1alpha1.SingletonClusterName
