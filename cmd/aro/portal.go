@@ -82,10 +82,12 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 
 	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
+	log.Infof("Loading encryption key from keyvault: %s", serviceKeyvaultURI)
 	key, err := serviceKeyvault.GetBase64Secret(ctx, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
+	log.Info("Done.")
 
 	aead, err := encryption.NewXChaCha20Poly1305(ctx, key)
 	if err != nil {
@@ -119,15 +121,19 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 
 	portalKeyvault := keyvault.NewManager(msiKVAuthorizer, portalKeyvaultURI)
 
+	log.Info("Loading serving key...")
 	servingKey, servingCerts, err := portalKeyvault.GetCertificateSecret(ctx, env.PortalServerSecretName)
 	if err != nil {
 		return err
 	}
+	log.Info("Done.")
 
+	log.Info("Loading client key...")
 	clientKey, clientCerts, err := portalKeyvault.GetCertificateSecret(ctx, env.PortalServerClientSecretName)
 	if err != nil {
 		return err
 	}
+	log.Info("Done.")
 
 	sessionKey, err := portalKeyvault.GetBase64Secret(ctx, env.PortalServerSessionKeySecretName)
 	if err != nil {
