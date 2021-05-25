@@ -239,7 +239,11 @@ func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authoriz
 	p.zones = map[string][]string{}
 
 	for _, sku := range skus {
-		if !strings.EqualFold((*sku.Locations)[0], p.Location()) ||
+		// TODO(mjudeikis): At some point some SKU's stopped returning zones and
+		// locations. IcM is open with MSFT but this might take a while.
+		// Revert once we find out right behaviour.
+		// https://github.com/Azure/ARO-RP/issues/1515
+		if len(*sku.Locations) == 0 || !strings.EqualFold((*sku.Locations)[0], p.Location()) ||
 			*sku.ResourceType != "virtualMachines" {
 			continue
 		}
