@@ -50,6 +50,9 @@
         "fpServicePrincipalId": {
             "value": ""
         },
+        "keyvaultDNSSuffix": {
+            "value": ""
+        },
         "keyvaultPrefix": {
             "value": ""
         },

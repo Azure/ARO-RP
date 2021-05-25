@@ -43,6 +43,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"extraCosmosDBIPs",
 			"fpClientId",
 			"keyvaultPrefix",
+			"keyvaultDNSSuffix",
 			"mdmFrontendUrl",
 			"mdsdEnvironment",
 			"portalAccessGroupIds",
