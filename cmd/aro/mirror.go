@@ -57,7 +57,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dstAcr, _ := os.LookupEnv("DST_ACR_NAME")
+	dstAcr := os.Getenv("DST_ACR_NAME")
+	srcAcrGenevaOverride := os.Getenv("SRC_ACR_NAME_GENEVA_OVERRIDE") // Optional
 
 	srcAuthQuay, err := getAuth("SRC_AUTH_QUAY")
 	if err != nil {
@@ -102,14 +103,21 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	var mirrorImages []string
+	var srcAcrGeneva string
 	switch env.Environment().Name {
 	case azure.PublicCloud.Name:
-		mirrorImages = append(mirrorImages, version.MdsdImage("linuxgeneva-microsoft"+acrDomainSuffix))
-		mirrorImages = append(mirrorImages, version.MdmImage("linuxgeneva-microsoft"+acrDomainSuffix))
+		srcAcrGeneva = "linuxgeneva-microsoft" + acrDomainSuffix
 	case azure.USGovernmentCloud.Name:
-		mirrorImages = append(mirrorImages, version.MdsdImage("containerreplicationffusgovvirginia1"+acrDomainSuffix))
-		mirrorImages = append(mirrorImages, version.MdmImage("containerreplicationffusgovvirginia1"+acrDomainSuffix))
+		srcAcrGeneva = "containerreplicationffusgovvirginia1" + acrDomainSuffix
+	}
+
+	if srcAcrGenevaOverride != "" {
+		srcAcrGeneva = srcAcrGenevaOverride
+	}
+
+	mirrorImages := []string{
+		version.MdsdImage(srcAcrGeneva),
+		version.MdmImage(srcAcrGeneva),
 	}
 
 	for _, ref := range mirrorImages {
