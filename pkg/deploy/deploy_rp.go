@@ -69,6 +69,9 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	parameters.Parameters["vmssName"] = &arm.ParametersParameter{
 		Value: d.version,
 	}
+	parameters.Parameters["keyvaultDNSSuffix"] = &arm.ParametersParameter{
+		Value: d.env.Environment().KeyVaultDNSSuffix,
+	}
 
 	for i := 0; i < 2; i++ {
 		d.log.Printf("deploying %s", deploymentName)
