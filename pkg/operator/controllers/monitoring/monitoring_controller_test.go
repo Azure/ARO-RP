@@ -79,6 +79,8 @@ func TestReconcileMonitoringConfig(t *testing.T) {
 prometheusK8s:
   retention: 1d
   volumeClaimTemplate:
+    metadata:
+      name: meh
     spec:
       resources:
         requests:
@@ -93,12 +95,7 @@ prometheusK8s:
 				}
 			},
 			wantConfig: `
-prometheusK8s:
-  volumeClaimTemplate:
-    spec:
-      storageClassName: fast
-      volumeMode: Filesystem
-`,
+{}`,
 		},
 		{
 			name: "other monitoring components are configured",

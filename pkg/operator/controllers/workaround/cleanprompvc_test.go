@@ -131,12 +131,8 @@ func TestCleanPromPVCIsRequired(t *testing.T) {
 			name: "Should be required, persistent set to false",
 			kcli: newKubernetesCli(`prometheusK8s:
   retention: ""
-  volumeClaimTemplate:
-    spec:
-      resources:
-        requests:
-          storage: ""
-            `),
+  volumeClaimTemplate: {}
+`),
 			wantRequired: true,
 		},
 	}
