@@ -32,7 +32,9 @@ import (
 )
 
 func rp(ctx context.Context, log, audit *logrus.Entry) error {
-	_env, err := env.NewEnv(ctx, log)
+	stop := make(chan struct{})
+
+	_env, err := env.NewEnv(ctx, stop, log)
 	if err != nil {
 		return err
 	}
@@ -146,7 +148,6 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	// When shutdown completes for frontend and backend "/healthz" endpoint
 	// will go dark and external observer will know that shutdown sequence is finished
 	sigterm := make(chan os.Signal, 1)
-	stop := make(chan struct{})
 	doneF := make(chan struct{})
 	doneB := make(chan struct{})
 	signal.Notify(sigterm, syscall.SIGTERM)
