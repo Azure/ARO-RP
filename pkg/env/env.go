@@ -84,12 +84,12 @@ type Interface interface {
 	AROOperatorImage() string
 }
 
-func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
+func NewEnv(ctx context.Context, stop <-chan struct{}, log *logrus.Entry) (Interface, error) {
 	if IsLocalDevelopmentMode() {
-		return newDev(ctx, log)
+		return newDev(ctx, stop, log)
 	}
 
-	return newProd(ctx, log)
+	return newProd(ctx, stop, log)
 }
 
 func IsLocalDevelopmentMode() bool {

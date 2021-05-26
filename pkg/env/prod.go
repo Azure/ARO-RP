@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
@@ -36,9 +37,8 @@ type prod struct {
 	acrDomain string
 	zones     map[string][]string
 
-	fpCertificate *x509.Certificate
-	fpPrivateKey  *rsa.PrivateKey
-	fpClientID    string
+	fpRefreshingManager CertificateRefresher
+	fpClientID          string
 
 	clusterKeyvault keyvault.Manager
 	serviceKeyvault keyvault.Manager
@@ -53,7 +53,7 @@ type prod struct {
 	features map[Feature]bool
 }
 
-func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
+func newProd(ctx context.Context, stop <-chan struct{}, log *logrus.Entry) (*prod, error) {
 	for _, key := range []string{
 		"AZURE_FP_CLIENT_ID",
 		"DOMAIN_NAME",
@@ -132,13 +132,11 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
-	fpPrivateKey, fpCertificates, err := p.serviceKeyvault.GetCertificateSecret(ctx, RPFirstPartySecretName)
+	p.fpRefreshingManager = newCertificateRefresher(ctx, log, 1*time.Hour, p.serviceKeyvault, RPFirstPartySecretName, stop)
+	err = p.fpRefreshingManager.Start(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	p.fpPrivateKey = fpPrivateKey
-	p.fpCertificate = fpCertificates[0]
 
 	localFPKVAuthorizer, err := p.FPAuthorizer(p.TenantID(), p.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
@@ -288,7 +286,9 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, 
 		return nil, err
 	}
 
-	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, p.fpClientID, p.fpCertificate, p.fpPrivateKey, resource)
+	fpPrivateKey, fpCertificates := p.fpRefreshingManager.GetCertificates()
+
+	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, p.fpClientID, fpCertificates[0], fpPrivateKey, resource)
 	if err != nil {
 		return nil, err
 	}
