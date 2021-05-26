@@ -120,7 +120,14 @@ func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
 		if env.IsLocalDevelopmentMode() {
 			c.ciParentVnet = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.env.SubscriptionID(), c.env.ResourceGroup())
 		} else {
-			c.ciParentVnet = "/subscriptions/46626fc5-476d-41ad-8c76-2ec49c6994eb/resourceGroups/e2einfra-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet"
+			// This is dirty, but it used to be hard coded only for pub cloud.
+			// TODO pick right config value to get sub and resource group
+			if env.Environment().Name == azure.USGovernmentCloud.Name {
+				c.ciParentVnet = "/subscriptions/28015960-ee66-4844-8037-fc28b0560bf1/resourceGroups/e2einfra-usgovvirginia/providers/Microsoft.Network/virtualNetworks/dev-vnet"
+			} else {
+				// default to prior behavior, public cloud int
+				c.ciParentVnet = "/subscriptions/46626fc5-476d-41ad-8c76-2ec49c6994eb/resourceGroups/e2einfra-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet"
+			}
 		}
 
 		r, err := azure.ParseResourceID(c.ciParentVnet)
