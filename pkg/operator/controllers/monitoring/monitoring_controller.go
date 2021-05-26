@@ -18,10 +18,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -151,19 +149,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return meta.GetName() == arov1alpha1.SingletonClusterName
 	})
 
-	monitoringConfigMapPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
-		return meta.GetName() == monitoringName.Name && meta.GetNamespace() == monitoringName.Namespace
-	})
-
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
-		// https://github.com/kubernetes-sigs/controller-runtime/issues/1173
-		// equivalent to For(&v1.ConfigMap{}, ...)., but can't call For multiple times on one builder
-		Watches(
-			&source.Kind{Type: &corev1.ConfigMap{}},
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(monitoringConfigMapPredicate),
-		).
+		Owns(&corev1.ConfigMap{}).
 		Named(controllers.MonitoringControllerName).
 		Complete(r)
 }
