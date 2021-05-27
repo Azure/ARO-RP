@@ -33,6 +33,8 @@ func NodeIsReady(node *corev1.Node) bool {
 func DaemonSetIsReady(ds *appsv1.DaemonSet) bool {
 	return ds.Status.DesiredNumberScheduled == ds.Status.NumberAvailable &&
 		ds.Status.DesiredNumberScheduled == ds.Status.UpdatedNumberScheduled &&
+		ds.Status.CurrentNumberScheduled == ds.Status.NumberReady &&
+		ds.Status.CurrentNumberScheduled > 0 &&
 		ds.Generation == ds.Status.ObservedGeneration
 }
 
