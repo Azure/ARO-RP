@@ -2,7 +2,6 @@ package manifests
 
 import (
 	"fmt"
-	"io/ioutil"
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
@@ -16,15 +15,16 @@ import (
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
-	icopenstack "github.com/openshift/installer/pkg/asset/installconfig/openstack"
 	"github.com/openshift/installer/pkg/asset/manifests/azure"
 	gcpmanifests "github.com/openshift/installer/pkg/asset/manifests/gcp"
+	kubevirtmanifests "github.com/openshift/installer/pkg/asset/manifests/kubevirt"
 	openstackmanifests "github.com/openshift/installer/pkg/asset/manifests/openstack"
 	vspheremanifests "github.com/openshift/installer/pkg/asset/manifests/vsphere"
 	awstypes "github.com/openshift/installer/pkg/types/aws"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
 	gcptypes "github.com/openshift/installer/pkg/types/gcp"
+	kubevirttypes "github.com/openshift/installer/pkg/types/kubevirt"
 	libvirttypes "github.com/openshift/installer/pkg/types/libvirt"
 	nonetypes "github.com/openshift/installer/pkg/types/none"
 	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
@@ -40,7 +40,8 @@ var (
 )
 
 const (
-	cloudProviderConfigDataKey = "config"
+	cloudProviderConfigDataKey         = "config"
+	cloudProviderConfigCABundleDataKey = "ca-bundle.pem"
 )
 
 // CloudProviderConfig generates the cloud-provider-config.yaml files.
@@ -89,24 +90,26 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 	}
 
 	switch installConfig.Config.Platform.Name() {
-	case awstypes.Name, libvirttypes.Name, nonetypes.Name, baremetaltypes.Name, ovirttypes.Name:
+	case libvirttypes.Name, nonetypes.Name, baremetaltypes.Name, ovirttypes.Name:
 		return nil
+	case awstypes.Name:
+		// Store the additional trust bundle in the ca-bundle.pem key if the cluster is being installed on a C2S region.
+		trustBundle := installConfig.Config.AdditionalTrustBundle
+		if trustBundle == "" || !awstypes.C2SRegions.Has(installConfig.Config.AWS.Region) {
+			return nil
+		}
+		cm.Data[cloudProviderConfigCABundleDataKey] = trustBundle
+
 	case openstacktypes.Name:
-		cloud, err := icopenstack.GetSession(installConfig.Config.Platform.OpenStack.Cloud)
+		cloudProviderConfigData, cloudProviderConfigCABundleData, err := openstackmanifests.GenerateCloudProviderConfig(*installConfig.Config)
 		if err != nil {
-			return errors.Wrap(err, "failed to get cloud config for openstack")
+			return errors.Wrap(err, "failed to generate OpenStack provider config")
+		}
+		cm.Data[cloudProviderConfigDataKey] = cloudProviderConfigData
+		if cloudProviderConfigCABundleData != "" {
+			cm.Data[cloudProviderConfigCABundleDataKey] = cloudProviderConfigCABundleData
 		}
 
-		cm.Data[cloudProviderConfigDataKey] = openstackmanifests.CloudProviderConfig(cloud.CloudConfig)
-
-		// Get the ca-cert-bundle key if there is a value for cacert in clouds.yaml
-		if caPath := cloud.CloudConfig.CACertFile; caPath != "" {
-			caFile, err := ioutil.ReadFile(caPath)
-			if err != nil {
-				return errors.Wrap(err, "failed to read clouds.yaml ca-cert from disk")
-			}
-			cm.Data["ca-bundle.pem"] = string(caFile)
-		}
 	case azuretypes.Name:
 		session, err := installConfig.Azure.Session()
 		if err != nil {
@@ -167,6 +170,15 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 			return errors.Wrap(err, "could not create cloud provider config")
 		}
 		cm.Data[cloudProviderConfigDataKey] = vsphereConfig
+	case kubevirttypes.Name:
+		kubevirtConfig, err := kubevirtmanifests.CloudProviderConfig{
+			Namespace: installConfig.Config.Platform.Kubevirt.Namespace,
+			InfraID:   clusterID.InfraID,
+		}.JSON()
+		if err != nil {
+			return errors.Wrap(err, "could not create cloud provider config")
+		}
+		cm.Data[cloudProviderConfigDataKey] = kubevirtConfig
 	default:
 		return errors.New("invalid Platform")
 	}

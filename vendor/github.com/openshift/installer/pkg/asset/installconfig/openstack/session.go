@@ -4,6 +4,7 @@ package openstack
 import (
 	"sync"
 
+	openstackdefaults "github.com/openshift/installer/pkg/types/openstack/defaults"
 	"github.com/pkg/errors"
 
 	"github.com/ghodss/yaml"
@@ -20,7 +21,9 @@ type Session struct {
 
 // GetSession returns an OpenStack session for a given cloud name in clouds.yaml.
 func GetSession(cloudName string) (*Session, error) {
-	opts := defaultClientOpts(cloudName)
+	opts := openstackdefaults.DefaultClientOpts(cloudName)
+	opts.YAMLOpts = new(yamlLoadOpts)
+
 	cloudConfig, err := clientconfig.GetCloudFromYAML(opts)
 	if err != nil {
 		return nil, err
@@ -28,13 +31,6 @@ func GetSession(cloudName string) (*Session, error) {
 	return &Session{
 		CloudConfig: cloudConfig,
 	}, nil
-}
-
-func defaultClientOpts(cloudName string) *clientconfig.ClientOpts {
-	opts := new(clientconfig.ClientOpts)
-	opts.Cloud = cloudName
-	opts.YAMLOpts = new(yamlLoadOpts)
-	return opts
 }
 
 type yamlLoadOpts struct{}

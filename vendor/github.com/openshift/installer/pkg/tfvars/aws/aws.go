@@ -32,16 +32,20 @@ type config struct {
 	VPC                     string            `json:"aws_vpc,omitempty"`
 	PrivateSubnets          []string          `json:"aws_private_subnets,omitempty"`
 	PublicSubnets           *[]string         `json:"aws_public_subnets,omitempty"`
+	InternalZone            string            `json:"aws_internal_zone,omitempty"`
 	PublishStrategy         string            `json:"aws_publish_strategy,omitempty"`
 	SkipRegionCheck         bool              `json:"aws_skip_region_validation"`
 	IgnitionBucket          string            `json:"aws_ignition_bucket"`
 	BootstrapIgnitionStub   string            `json:"aws_bootstrap_stub_ignition"`
+	MasterIAMRoleName       string            `json:"aws_master_iam_role_name,omitempty"`
+	WorkerIAMRoleName       string            `json:"aws_worker_iam_role_name,omitempty"`
 }
 
 // TFVarsSources contains the parameters to be converted into Terraform variables
 type TFVarsSources struct {
 	VPC                           string
 	PrivateSubnets, PublicSubnets []string
+	InternalZone                  string
 	Services                      []typesaws.ServiceEndpoint
 
 	Publish types.PublishingStrategy
@@ -53,6 +57,8 @@ type TFVarsSources struct {
 	IgnitionBucket, IgnitionPresignedURL string
 
 	AdditionalTrustBundle string
+
+	MasterIAMRoleName, WorkerIAMRoleName string
 }
 
 // TFVars generates AWS-specific Terraform variables launching the cluster.
@@ -120,9 +126,12 @@ func TFVars(sources TFVarsSources) ([]byte, error) {
 		Type:                    *rootVolume.EBS.VolumeType,
 		VPC:                     sources.VPC,
 		PrivateSubnets:          sources.PrivateSubnets,
+		InternalZone:            sources.InternalZone,
 		PublishStrategy:         string(sources.Publish),
 		SkipRegionCheck:         !configaws.IsKnownRegion(masterConfig.Placement.Region),
 		IgnitionBucket:          sources.IgnitionBucket,
+		MasterIAMRoleName:       sources.MasterIAMRoleName,
+		WorkerIAMRoleName:       sources.WorkerIAMRoleName,
 	}
 
 	stubIgn, err := generateIgnitionShim(sources.IgnitionPresignedURL, sources.AdditionalTrustBundle)

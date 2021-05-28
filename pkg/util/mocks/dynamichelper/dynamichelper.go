@@ -12,30 +12,30 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
-// MockInterface is a mock of Interface interface
+// MockInterface is a mock of Interface interface.
 type MockInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfaceMockRecorder
 }
 
-// MockInterfaceMockRecorder is the mock recorder for MockInterface
+// MockInterfaceMockRecorder is the mock recorder for MockInterface.
 type MockInterfaceMockRecorder struct {
 	mock *MockInterface
 }
 
-// NewMockInterface creates a new mock instance
+// NewMockInterface creates a new mock instance.
 func NewMockInterface(ctrl *gomock.Controller) *MockInterface {
 	mock := &MockInterface{ctrl: ctrl}
 	mock.recorder = &MockInterfaceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 	return m.recorder
 }
 
-// Ensure mocks base method
+// Ensure mocks base method.
 func (m *MockInterface) Ensure(arg0 context.Context, arg1 ...runtime.Object) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0}
@@ -47,14 +47,14 @@ func (m *MockInterface) Ensure(arg0 context.Context, arg1 ...runtime.Object) err
 	return ret0
 }
 
-// Ensure indicates an expected call of Ensure
+// Ensure indicates an expected call of Ensure.
 func (mr *MockInterfaceMockRecorder) Ensure(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ensure", reflect.TypeOf((*MockInterface)(nil).Ensure), varargs...)
 }
 
-// EnsureDeleted mocks base method
+// EnsureDeleted mocks base method.
 func (m *MockInterface) EnsureDeleted(arg0 context.Context, arg1, arg2, arg3 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureDeleted", arg0, arg1, arg2, arg3)
@@ -62,13 +62,13 @@ func (m *MockInterface) EnsureDeleted(arg0 context.Context, arg1, arg2, arg3 str
 	return ret0
 }
 
-// EnsureDeleted indicates an expected call of EnsureDeleted
+// EnsureDeleted indicates an expected call of EnsureDeleted.
 func (mr *MockInterfaceMockRecorder) EnsureDeleted(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureDeleted", reflect.TypeOf((*MockInterface)(nil).EnsureDeleted), arg0, arg1, arg2, arg3)
 }
 
-// Refresh mocks base method
+// Refresh mocks base method.
 func (m *MockInterface) Refresh() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Refresh")
@@ -76,7 +76,7 @@ func (m *MockInterface) Refresh() error {
 	return ret0
 }
 
-// Refresh indicates an expected call of Refresh
+// Refresh indicates an expected call of Refresh.
 func (mr *MockInterfaceMockRecorder) Refresh() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Refresh", reflect.TypeOf((*MockInterface)(nil).Refresh))

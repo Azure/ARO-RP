@@ -6,7 +6,7 @@ package baremetal
 import (
 	"fmt"
 
-	"github.com/metal3-io/baremetal-operator/pkg/apis/metal3/v1alpha1"
+	"github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
 )
 
 // RootDeviceHints holds the hints for specifying the storage location
@@ -90,9 +90,9 @@ func (source *RootDeviceHints) MakeHintMap() map[string]string {
 	}
 	switch {
 	case source.Rotational == nil:
-	case *source.Rotational == true:
+	case *source.Rotational:
 		hints["rotational"] = "true"
-	case *source.Rotational == false:
+	case !*source.Rotational:
 		hints["rotational"] = "false"
 	}
 

@@ -12,30 +12,30 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockTokensClient is a mock of TokensClient interface
+// MockTokensClient is a mock of TokensClient interface.
 type MockTokensClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockTokensClientMockRecorder
 }
 
-// MockTokensClientMockRecorder is the mock recorder for MockTokensClient
+// MockTokensClientMockRecorder is the mock recorder for MockTokensClient.
 type MockTokensClientMockRecorder struct {
 	mock *MockTokensClient
 }
 
-// NewMockTokensClient creates a new mock instance
+// NewMockTokensClient creates a new mock instance.
 func NewMockTokensClient(ctrl *gomock.Controller) *MockTokensClient {
 	mock := &MockTokensClient{ctrl: ctrl}
 	mock.recorder = &MockTokensClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTokensClient) EXPECT() *MockTokensClientMockRecorder {
 	return m.recorder
 }
 
-// CreateAndWait mocks base method
+// CreateAndWait mocks base method.
 func (m *MockTokensClient) CreateAndWait(arg0 context.Context, arg1, arg2, arg3 string, arg4 containerregistry.Token) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateAndWait", arg0, arg1, arg2, arg3, arg4)
@@ -43,13 +43,13 @@ func (m *MockTokensClient) CreateAndWait(arg0 context.Context, arg1, arg2, arg3 
 	return ret0
 }
 
-// CreateAndWait indicates an expected call of CreateAndWait
+// CreateAndWait indicates an expected call of CreateAndWait.
 func (mr *MockTokensClientMockRecorder) CreateAndWait(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndWait", reflect.TypeOf((*MockTokensClient)(nil).CreateAndWait), arg0, arg1, arg2, arg3, arg4)
 }
 
-// DeleteAndWait mocks base method
+// DeleteAndWait mocks base method.
 func (m *MockTokensClient) DeleteAndWait(arg0 context.Context, arg1, arg2, arg3 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3)
@@ -57,36 +57,36 @@ func (m *MockTokensClient) DeleteAndWait(arg0 context.Context, arg1, arg2, arg3 
 	return ret0
 }
 
-// DeleteAndWait indicates an expected call of DeleteAndWait
+// DeleteAndWait indicates an expected call of DeleteAndWait.
 func (mr *MockTokensClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockTokensClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3)
 }
 
-// MockRegistriesClient is a mock of RegistriesClient interface
+// MockRegistriesClient is a mock of RegistriesClient interface.
 type MockRegistriesClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockRegistriesClientMockRecorder
 }
 
-// MockRegistriesClientMockRecorder is the mock recorder for MockRegistriesClient
+// MockRegistriesClientMockRecorder is the mock recorder for MockRegistriesClient.
 type MockRegistriesClientMockRecorder struct {
 	mock *MockRegistriesClient
 }
 
-// NewMockRegistriesClient creates a new mock instance
+// NewMockRegistriesClient creates a new mock instance.
 func NewMockRegistriesClient(ctrl *gomock.Controller) *MockRegistriesClient {
 	mock := &MockRegistriesClient{ctrl: ctrl}
 	mock.recorder = &MockRegistriesClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockRegistriesClient) EXPECT() *MockRegistriesClientMockRecorder {
 	return m.recorder
 }
 
-// GenerateCredentials mocks base method
+// GenerateCredentials mocks base method.
 func (m *MockRegistriesClient) GenerateCredentials(arg0 context.Context, arg1, arg2 string, arg3 containerregistry.GenerateCredentialsParameters) (containerregistry.GenerateCredentialsResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GenerateCredentials", arg0, arg1, arg2, arg3)
@@ -95,7 +95,7 @@ func (m *MockRegistriesClient) GenerateCredentials(arg0 context.Context, arg1, a
 	return ret0, ret1
 }
 
-// GenerateCredentials indicates an expected call of GenerateCredentials
+// GenerateCredentials indicates an expected call of GenerateCredentials.
 func (mr *MockRegistriesClientMockRecorder) GenerateCredentials(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateCredentials", reflect.TypeOf((*MockRegistriesClient)(nil).GenerateCredentials), arg0, arg1, arg2, arg3)

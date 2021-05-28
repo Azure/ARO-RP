@@ -19,11 +19,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -63,10 +63,7 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli
 //   requested).
 // * If the pull Secret object (which is not owned by the Cluster object)
 //   changes, we'll see the pull Secret object requested.
-func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO(mj): Reconcile will eventually be receiving a ctx (https://github.com/kubernetes-sigs/controller-runtime/blob/7ef2da0bc161d823f084ad21ff5f9c9bd6b0cc39/pkg/reconcile/reconcile.go#L93)
-	ctx := context.TODO()
-
+func (r *PullSecretReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	operatorSecret, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
@@ -106,13 +103,13 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 
 // SetupWithManager setup our manager
 func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	pullSecretPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
-		return (meta.GetName() == pullSecretName.Name && meta.GetNamespace() == pullSecretName.Namespace) ||
-			(meta.GetName() == operator.SecretName && meta.GetNamespace() == operator.Namespace)
+	pullSecretPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return (o.GetName() == pullSecretName.Name && o.GetNamespace() == pullSecretName.Namespace) ||
+			(o.GetName() == operator.SecretName && o.GetNamespace() == operator.Namespace)
 	})
 
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
-		return meta.GetName() == arov1alpha1.SingletonClusterName
+	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == arov1alpha1.SingletonClusterName
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).

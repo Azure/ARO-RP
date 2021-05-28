@@ -185,7 +185,7 @@ func (in *CredentialsRequestCondition) DeepCopy() *CredentialsRequestCondition {
 func (in *CredentialsRequestList) DeepCopyInto(out *CredentialsRequestList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]CredentialsRequest, len(*in))

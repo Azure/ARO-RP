@@ -6,14 +6,15 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/ghodss/yaml"
 	"github.com/gophercloud/utils/openstack/clientconfig"
 	"github.com/pkg/errors"
 
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
+	installconfigaws "github.com/openshift/installer/pkg/asset/installconfig/aws"
 	"github.com/openshift/installer/pkg/asset/installconfig/gcp"
+	kubeconfig "github.com/openshift/installer/pkg/asset/installconfig/kubevirt"
 	"github.com/openshift/installer/pkg/asset/installconfig/ovirt"
 	"github.com/openshift/installer/pkg/asset/machines"
 	osmachine "github.com/openshift/installer/pkg/asset/machines/openstack"
@@ -27,6 +28,7 @@ import (
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
 	gcptypes "github.com/openshift/installer/pkg/types/gcp"
+	kubevirttypes "github.com/openshift/installer/pkg/types/kubevirt"
 	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
 	ovirttypes "github.com/openshift/installer/pkg/types/ovirt"
 	vspheretypes "github.com/openshift/installer/pkg/types/vsphere"
@@ -79,12 +81,21 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 	platform := installConfig.Config.Platform.Name()
 	switch platform {
 	case awstypes.Name:
-		ssn := session.Must(session.NewSessionWithOptions(session.Options{
-			SharedConfigState: session.SharedConfigEnable,
-		}))
+		ssn, err := installConfig.AWS.Session(context.TODO())
+		if err != nil {
+			return err
+		}
 		creds, err := ssn.Config.Credentials.Get()
 		if err != nil {
 			return err
+		}
+		if !installconfigaws.IsStaticCredentials(creds) {
+			switch {
+			case installConfig.Config.CredentialsMode == "":
+				return errors.Errorf("AWS credentials provided by %s are not valid for default credentials mode", creds.ProviderName)
+			case installConfig.Config.CredentialsMode != types.ManualCredentialsMode:
+				return errors.Errorf("AWS credentials provided by %s are not valid for %s credentials mode", creds.ProviderName, installConfig.Config.CredentialsMode)
+			}
 		}
 		cloudCreds = cloudCredsSecretData{
 			AWS: &AwsCredsSecretData{
@@ -182,6 +193,16 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 				Base64encodeCABundle: base64.StdEncoding.EncodeToString([]byte(conf.CABundle)),
 			},
 		}
+	case kubevirttypes.Name:
+		kubeconfigContent, err := kubeconfig.LoadKubeConfigContent()
+		if err != nil {
+			return err
+		}
+		cloudCreds = cloudCredsSecretData{
+			Kubevirt: &KubevirtCredsSecretData{
+				Base64encodedKubeconfig: base64.StdEncoding.EncodeToString(kubeconfigContent),
+			},
+		}
 	}
 
 	templateData := &openshiftTemplateData{
@@ -207,8 +228,10 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 	}
 
 	switch platform {
-	case awstypes.Name, openstacktypes.Name, vspheretypes.Name, azuretypes.Name, gcptypes.Name, ovirttypes.Name:
-		assetData["99_cloud-creds-secret.yaml"] = applyTemplateData(cloudCredsSecret.Files()[0].Data, templateData)
+	case awstypes.Name, openstacktypes.Name, vspheretypes.Name, azuretypes.Name, gcptypes.Name, ovirttypes.Name, kubevirttypes.Name:
+		if installConfig.Config.CredentialsMode != types.ManualCredentialsMode {
+			assetData["99_cloud-creds-secret.yaml"] = applyTemplateData(cloudCredsSecret.Files()[0].Data, templateData)
+		}
 		assetData["99_role-cloud-creds-secret-reader.yaml"] = applyTemplateData(roleCloudCredsSecretReader.Files()[0].Data, templateData)
 	case baremetaltypes.Name:
 		bmTemplateData := baremetalTemplateData{

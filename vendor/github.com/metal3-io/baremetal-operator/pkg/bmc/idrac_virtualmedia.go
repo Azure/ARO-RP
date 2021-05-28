@@ -6,7 +6,7 @@ import (
 
 func init() {
 	schemes := []string{"http", "https"}
-	registerFactory("idrac-virtualmedia", newRedfishiDracVirtualMediaAccessDetails, schemes)
+	RegisterFactory("idrac-virtualmedia", newRedfishiDracVirtualMediaAccessDetails, schemes)
 }
 
 func newRedfishiDracVirtualMediaAccessDetails(parsedURL *url.URL, disableCertificateVerification bool) (AccessDetails, error) {
@@ -85,4 +85,8 @@ func (a *redfishiDracVirtualMediaAccessDetails) RAIDInterface() string {
 
 func (a *redfishiDracVirtualMediaAccessDetails) VendorInterface() string {
 	return "no-vendor"
+}
+
+func (a *redfishiDracVirtualMediaAccessDetails) SupportsSecureBoot() bool {
+	return true
 }

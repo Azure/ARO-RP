@@ -11,11 +11,11 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -38,10 +38,7 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface) *Alert
 }
 
 // Reconcile makes sure that the Alertmanager default webhook is set.
-func (r *AlertWebhookReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO(mj): Reconcile will eventually be receiving a ctx (https://github.com/kubernetes-sigs/controller-runtime/blob/7ef2da0bc161d823f084ad21ff5f9c9bd6b0cc39/pkg/reconcile/reconcile.go#L93)
-	ctx := context.TODO()
-
+func (r *AlertWebhookReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	return reconcile.Result{}, r.setAlertManagerWebhook(ctx, "http://aro-operator-master.openshift-azure-operator.svc.cluster.local:8080")
 }
 
@@ -102,8 +99,8 @@ func (r *AlertWebhookReconciler) setAlertManagerWebhook(ctx context.Context, add
 func (r *AlertWebhookReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.log.Info("starting alertmanager sink")
 
-	isAlertManagerPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
-		return meta.GetName() == alertManagerName.Name && meta.GetNamespace() == alertManagerName.Namespace
+	isAlertManagerPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == alertManagerName.Name && o.GetNamespace() == alertManagerName.Namespace
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).

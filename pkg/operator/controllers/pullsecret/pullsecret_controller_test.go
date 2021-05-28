@@ -223,7 +223,7 @@ func TestPullSecretReconciler(t *testing.T) {
 				tt.request.NamespacedName = pullSecretName
 			}
 
-			_, err := r.Reconcile(tt.request)
+			_, err := r.Reconcile(context.Background(), tt.request)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("PullsecretReconciler.Reconcile() error = %v, wantErr %v", err, tt.wantErr)
 				return

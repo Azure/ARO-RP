@@ -22,6 +22,9 @@
                 "crd",
                 "crds"
             ],
+            "categories": [
+                "api-extensions"
+            ],
             "storageVersionHash": "jfWCUB31mvA="
         },
         {

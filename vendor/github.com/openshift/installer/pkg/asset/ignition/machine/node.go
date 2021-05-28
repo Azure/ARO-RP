@@ -6,17 +6,23 @@ import (
 	"net/url"
 
 	ignutil "github.com/coreos/ignition/v2/config/util"
-	igntypes "github.com/coreos/ignition/v2/config/v3_1/types"
+	igntypes "github.com/coreos/ignition/v2/config/v3_2/types"
 	"github.com/vincent-petithory/dataurl"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/openshift/installer/pkg/asset/ignition"
 	"github.com/openshift/installer/pkg/asset/templates/content/bootkube"
 	"github.com/openshift/installer/pkg/types"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
+	kubevirttypes "github.com/openshift/installer/pkg/types/kubevirt"
 	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
 	ovirttypes "github.com/openshift/installer/pkg/types/ovirt"
 	vspheretypes "github.com/openshift/installer/pkg/types/vsphere"
+	mcfgv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 )
+
+const directory = "openshift"
 
 // pointerIgnitionConfig generates a config which references the remote config
 // served by the machine config server.
@@ -42,6 +48,8 @@ func pointerIgnitionConfig(installConfig *types.InstallConfig, aroDNSConfig *boo
 		if installConfig.VSphere.APIVIP != "" {
 			ignitionHost = net.JoinHostPort(installConfig.VSphere.APIVIP, "22623")
 		}
+	case kubevirttypes.Name:
+		ignitionHost = net.JoinHostPort(installConfig.Kubevirt.APIVIP, "22623")
 	}
 	return &igntypes.Config{
 		Ignition: igntypes.Ignition{
@@ -66,4 +74,32 @@ func pointerIgnitionConfig(installConfig *types.InstallConfig, aroDNSConfig *boo
 			},
 		},
 	}
+}
+
+// generatePointerMachineConfig generates a machineconfig when a user customizes
+// the pointer ignition file manually in an IPI deployment
+func generatePointerMachineConfig(config igntypes.Config, role string) (*mcfgv1.MachineConfig, error) {
+	// Remove the merge section from the pointer config
+	config.Ignition.Config.Merge = nil
+
+	rawExt, err := ignition.ConvertToRawExtension(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &mcfgv1.MachineConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: mcfgv1.SchemeGroupVersion.String(),
+			Kind:       "MachineConfig",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("99-installer-ignition-%s", role),
+			Labels: map[string]string{
+				"machineconfiguration.openshift.io/role": role,
+			},
+		},
+		Spec: mcfgv1.MachineConfigSpec{
+			Config: rawExt,
+		},
+	}, nil
 }

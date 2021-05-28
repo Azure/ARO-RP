@@ -21,13 +21,21 @@ type Platform struct {
 	// +optional
 	ExternalNetwork string `json:"externalNetwork,omitempty"`
 
-	// FlavorName is the name of the compute flavor to use for instances in this cluster.
-	FlavorName string `json:"computeFlavor"`
+	// DeprecatedFlavorName is the name of the flavor to use for instances in this cluster.
+	// Deprecated: use FlavorName in DefaultMachinePlatform to define default flavor.
+	// +optional
+	DeprecatedFlavorName string `json:"computeFlavor,omitempty"`
 
 	// LbFloatingIP is the IP address of an available floating IP in your OpenStack cluster
 	// to associate with the OpenShift load balancer.
+	// Deprecated: this value has been renamed to apiFloatingIP.
 	// +optional
-	LbFloatingIP string `json:"lbFloatingIP,omitempty"`
+	DeprecatedLbFloatingIP string `json:"lbFloatingIP,omitempty"`
+
+	// APIFloatingIP is the IP address of an available floating IP in your OpenStack cluster
+	// to associate with the OpenShift API load balancer.
+	// +optional
+	APIFloatingIP string `json:"apiFloatingIP,omitempty"`
 
 	// IngressFloatingIP is the ID of an available floating IP in your OpenStack cluster
 	// that will be associated with the OpenShift ingress port
@@ -55,6 +63,11 @@ type Platform struct {
 	// the default OS image for cluster nodes, or an existing Glance image name.
 	// +optional
 	ClusterOSImage string `json:"clusterOSImage,omitempty"`
+
+	// ClusterOSImageProperties is a list of properties to be added to the metadata of the uploaded Glance ClusterOSImage.
+	// Default: the default is to not set any properties.
+	// +optional
+	ClusterOSImageProperties map[string]string `json:"clusterOSImageProperties,omitempty"`
 
 	// APIVIP is the static IP on the nodes subnet that the api port for openshift will be assigned
 	// Default: will be set to the 5 on the first entry in the machineNetwork CIDR

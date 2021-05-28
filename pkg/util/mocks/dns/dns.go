@@ -13,30 +13,30 @@ import (
 	api "github.com/Azure/ARO-RP/pkg/api"
 )
 
-// MockManager is a mock of Manager interface
+// MockManager is a mock of Manager interface.
 type MockManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockManagerMockRecorder
 }
 
-// MockManagerMockRecorder is the mock recorder for MockManager
+// MockManagerMockRecorder is the mock recorder for MockManager.
 type MockManagerMockRecorder struct {
 	mock *MockManager
 }
 
-// NewMockManager creates a new mock instance
+// NewMockManager creates a new mock instance.
 func NewMockManager(ctrl *gomock.Controller) *MockManager {
 	mock := &MockManager{ctrl: ctrl}
 	mock.recorder = &MockManagerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 	return m.recorder
 }
 
-// Create mocks base method
+// Create mocks base method.
 func (m *MockManager) Create(arg0 context.Context, arg1 *api.OpenShiftCluster) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", arg0, arg1)
@@ -44,13 +44,13 @@ func (m *MockManager) Create(arg0 context.Context, arg1 *api.OpenShiftCluster) e
 	return ret0
 }
 
-// Create indicates an expected call of Create
+// Create indicates an expected call of Create.
 func (mr *MockManagerMockRecorder) Create(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockManager)(nil).Create), arg0, arg1)
 }
 
-// CreateOrUpdateRouter mocks base method
+// CreateOrUpdateRouter mocks base method.
 func (m *MockManager) CreateOrUpdateRouter(arg0 context.Context, arg1 *api.OpenShiftCluster, arg2 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateOrUpdateRouter", arg0, arg1, arg2)
@@ -58,13 +58,13 @@ func (m *MockManager) CreateOrUpdateRouter(arg0 context.Context, arg1 *api.OpenS
 	return ret0
 }
 
-// CreateOrUpdateRouter indicates an expected call of CreateOrUpdateRouter
+// CreateOrUpdateRouter indicates an expected call of CreateOrUpdateRouter.
 func (mr *MockManagerMockRecorder) CreateOrUpdateRouter(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateRouter", reflect.TypeOf((*MockManager)(nil).CreateOrUpdateRouter), arg0, arg1, arg2)
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockManager) Delete(arg0 context.Context, arg1 *api.OpenShiftCluster) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
@@ -72,13 +72,13 @@ func (m *MockManager) Delete(arg0 context.Context, arg1 *api.OpenShiftCluster) e
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockManagerMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockManager)(nil).Delete), arg0, arg1)
 }
 
-// Update mocks base method
+// Update mocks base method.
 func (m *MockManager) Update(arg0 context.Context, arg1 *api.OpenShiftCluster, arg2 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", arg0, arg1, arg2)
@@ -86,7 +86,7 @@ func (m *MockManager) Update(arg0 context.Context, arg1 *api.OpenShiftCluster, a
 	return ret0
 }
 
-// Update indicates an expected call of Update
+// Update indicates an expected call of Update.
 func (mr *MockManagerMockRecorder) Update(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockManager)(nil).Update), arg0, arg1, arg2)

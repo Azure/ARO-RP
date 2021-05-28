@@ -13,30 +13,30 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockApplicationsClient is a mock of ApplicationsClient interface
+// MockApplicationsClient is a mock of ApplicationsClient interface.
 type MockApplicationsClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockApplicationsClientMockRecorder
 }
 
-// MockApplicationsClientMockRecorder is the mock recorder for MockApplicationsClient
+// MockApplicationsClientMockRecorder is the mock recorder for MockApplicationsClient.
 type MockApplicationsClientMockRecorder struct {
 	mock *MockApplicationsClient
 }
 
-// NewMockApplicationsClient creates a new mock instance
+// NewMockApplicationsClient creates a new mock instance.
 func NewMockApplicationsClient(ctrl *gomock.Controller) *MockApplicationsClient {
 	mock := &MockApplicationsClient{ctrl: ctrl}
 	mock.recorder = &MockApplicationsClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockApplicationsClient) EXPECT() *MockApplicationsClientMockRecorder {
 	return m.recorder
 }
 
-// Create mocks base method
+// Create mocks base method.
 func (m *MockApplicationsClient) Create(arg0 context.Context, arg1 graphrbac.ApplicationCreateParameters) (graphrbac.Application, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", arg0, arg1)
@@ -45,13 +45,13 @@ func (m *MockApplicationsClient) Create(arg0 context.Context, arg1 graphrbac.App
 	return ret0, ret1
 }
 
-// Create indicates an expected call of Create
+// Create indicates an expected call of Create.
 func (mr *MockApplicationsClientMockRecorder) Create(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockApplicationsClient)(nil).Create), arg0, arg1)
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockApplicationsClient) Delete(arg0 context.Context, arg1 string) (autorest.Response, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
@@ -60,13 +60,13 @@ func (m *MockApplicationsClient) Delete(arg0 context.Context, arg1 string) (auto
 	return ret0, ret1
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockApplicationsClientMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockApplicationsClient)(nil).Delete), arg0, arg1)
 }
 
-// GetServicePrincipalsIDByAppID mocks base method
+// GetServicePrincipalsIDByAppID mocks base method.
 func (m *MockApplicationsClient) GetServicePrincipalsIDByAppID(arg0 context.Context, arg1 string) (graphrbac.ServicePrincipalObjectResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetServicePrincipalsIDByAppID", arg0, arg1)
@@ -75,13 +75,13 @@ func (m *MockApplicationsClient) GetServicePrincipalsIDByAppID(arg0 context.Cont
 	return ret0, ret1
 }
 
-// GetServicePrincipalsIDByAppID indicates an expected call of GetServicePrincipalsIDByAppID
+// GetServicePrincipalsIDByAppID indicates an expected call of GetServicePrincipalsIDByAppID.
 func (mr *MockApplicationsClientMockRecorder) GetServicePrincipalsIDByAppID(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServicePrincipalsIDByAppID", reflect.TypeOf((*MockApplicationsClient)(nil).GetServicePrincipalsIDByAppID), arg0, arg1)
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockApplicationsClient) List(arg0 context.Context, arg1 string) ([]graphrbac.Application, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1)
@@ -90,36 +90,36 @@ func (m *MockApplicationsClient) List(arg0 context.Context, arg1 string) ([]grap
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockApplicationsClientMockRecorder) List(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockApplicationsClient)(nil).List), arg0, arg1)
 }
 
-// MockServicePrincipalClient is a mock of ServicePrincipalClient interface
+// MockServicePrincipalClient is a mock of ServicePrincipalClient interface.
 type MockServicePrincipalClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockServicePrincipalClientMockRecorder
 }
 
-// MockServicePrincipalClientMockRecorder is the mock recorder for MockServicePrincipalClient
+// MockServicePrincipalClientMockRecorder is the mock recorder for MockServicePrincipalClient.
 type MockServicePrincipalClientMockRecorder struct {
 	mock *MockServicePrincipalClient
 }
 
-// NewMockServicePrincipalClient creates a new mock instance
+// NewMockServicePrincipalClient creates a new mock instance.
 func NewMockServicePrincipalClient(ctrl *gomock.Controller) *MockServicePrincipalClient {
 	mock := &MockServicePrincipalClient{ctrl: ctrl}
 	mock.recorder = &MockServicePrincipalClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockServicePrincipalClient) EXPECT() *MockServicePrincipalClientMockRecorder {
 	return m.recorder
 }
 
-// Create mocks base method
+// Create mocks base method.
 func (m *MockServicePrincipalClient) Create(arg0 context.Context, arg1 graphrbac.ServicePrincipalCreateParameters) (graphrbac.ServicePrincipal, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", arg0, arg1)
@@ -128,13 +128,13 @@ func (m *MockServicePrincipalClient) Create(arg0 context.Context, arg1 graphrbac
 	return ret0, ret1
 }
 
-// Create indicates an expected call of Create
+// Create indicates an expected call of Create.
 func (mr *MockServicePrincipalClientMockRecorder) Create(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockServicePrincipalClient)(nil).Create), arg0, arg1)
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockServicePrincipalClient) List(arg0 context.Context, arg1 string) ([]graphrbac.ServicePrincipal, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1)
@@ -143,7 +143,7 @@ func (m *MockServicePrincipalClient) List(arg0 context.Context, arg1 string) ([]
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockServicePrincipalClientMockRecorder) List(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockServicePrincipalClient)(nil).List), arg0, arg1)
