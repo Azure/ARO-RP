@@ -9,9 +9,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-test/deep"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
-	"github.com/go-test/deep"
 )
 
 func TestClusters(t *testing.T) {
