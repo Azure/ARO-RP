@@ -132,28 +132,35 @@ func NetworkSecurityGroupID(oc *api.OpenShiftCluster, subnetID string) (string, 
 	if infraID == "" {
 		infraID = "aro"
 	}
-
-	switch oc.Properties.ArchitectureVersion {
-	case api.ArchitectureVersionV1:
-		return networkSecurityGroupIDV1(oc, subnetID, infraID), nil
-	case api.ArchitectureVersionV2:
-		return networkSecurityGroupIDV2(oc, subnetID, infraID), nil
-	default:
-		return "", fmt.Errorf("unknown architecture version %d", oc.Properties.ArchitectureVersion)
-	}
-
-}
-
-func networkSecurityGroupIDV1(oc *api.OpenShiftCluster, subnetID, infraID string) string {
+	isWorkerSubnet := false
 	for _, s := range oc.Properties.WorkerProfiles {
 		if strings.EqualFold(subnetID, s.SubnetID) {
-			return oc.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/" + infraID + NSGNodeSuffixV1
+			isWorkerSubnet = true
+			break
 		}
-
 	}
-	return oc.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/" + infraID + NSGControlPlaneSuffixV1
+	return NetworkSecurityGroupIDExpanded(oc.Properties.ArchitectureVersion, oc.Properties.ClusterProfile.ResourceGroupID, infraID, isWorkerSubnet)
 }
 
-func networkSecurityGroupIDV2(oc *api.OpenShiftCluster, subnetID, infraID string) string {
-	return oc.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/" + infraID + NSGSuffixV2
+// NetworkSecurityGroupIDExpanded returns the NetworkSecurityGroup ID for a given subnetID, without the OpenShift Cluster document
+func NetworkSecurityGroupIDExpanded(architectureVersion api.ArchitectureVersion, resourceGroupID, infraID string, isWorkerSubnet bool) (string, error) {
+	switch architectureVersion {
+	case api.ArchitectureVersionV1:
+		return networkSecurityGroupIDV1(resourceGroupID, infraID, isWorkerSubnet), nil
+	case api.ArchitectureVersionV2:
+		return networkSecurityGroupIDV2(resourceGroupID, infraID), nil
+	default:
+		return "", fmt.Errorf("unknown architecture version %d", architectureVersion)
+	}
+}
+
+func networkSecurityGroupIDV1(resourceGroupID, infraID string, isWorkerSubnet bool) string {
+	if isWorkerSubnet {
+		return resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/" + infraID + NSGNodeSuffixV1
+	}
+	return resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/" + infraID + NSGControlPlaneSuffixV1
+}
+
+func networkSecurityGroupIDV2(resourceGroupID, infraID string) string {
+	return resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/" + infraID + NSGSuffixV2
 }
