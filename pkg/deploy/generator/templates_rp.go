@@ -30,6 +30,7 @@ func (g *generator) rpTemplate() *arm.Template {
 	if g.production {
 		params = append(params,
 			"acrResourceId",
+			"azureCloudName",
 			"adminApiCaBundle",
 			"adminApiClientCertCommonName",
 			"armApiCaBundle",
