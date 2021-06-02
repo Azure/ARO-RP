@@ -70,6 +70,14 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	var srcAuthGeneva *types.DockerAuthConfig
+	if os.Getenv("SRC_AUTH_GENEVA") != "" {
+		srcAuthGeneva, err = getAuth("SRC_AUTH_GENEVA") // Optional.  Needed for situations where ACR doesn't allow anonymous pulls
+		if err != nil {
+			return err
+		}
+	}
+
 	var releases []pkgmirror.Node
 	if len(flag.Args()) == 1 {
 		log.Print("reading release graph")
@@ -122,7 +130,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 	for _, ref := range mirrorImages {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
-		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, nil)
+		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
 		if err != nil {
 			log.Errorf("%s: %s\n", ref, err)
 			errorOccurred = true
