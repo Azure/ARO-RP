@@ -72,6 +72,9 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	parameters.Parameters["keyvaultDNSSuffix"] = &arm.ParametersParameter{
 		Value: d.env.Environment().KeyVaultDNSSuffix,
 	}
+	parameters.Parameters["azureCloudName"] = &arm.ParametersParameter{
+		Value: d.env.Environment().Name,
+	}
 
 	for i := 0; i < 2; i++ {
 		d.log.Printf("deploying %s", deploymentName)

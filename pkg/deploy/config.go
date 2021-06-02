@@ -33,6 +33,7 @@ type RPConfig struct {
 type Configuration struct {
 	ACRLocationOverride                *string       `json:"acrLocationOverride,omitempty"`
 	ACRResourceID                      *string       `json:"acrResourceId,omitempty" value:"required"`
+	AzureCloudName                     *string       `json:"azureCloudName,omitempty" value:"required"`
 	RPVersionStorageAccountName        *string       `json:"rpVersionStorageAccountName,omitempty" value:"required"`
 	ACRReplicaDisabled                 *bool         `json:"acrReplicaDisabled,omitempty"`
 	AdminAPICABundle                   *string       `json:"adminApiCaBundle,omitempty" value:"required"`
