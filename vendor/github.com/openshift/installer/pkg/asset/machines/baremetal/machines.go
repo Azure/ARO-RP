@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	baremetalprovider "github.com/metal3-io/cluster-api-provider-baremetal/pkg/apis/baremetal/v1alpha1"
-	machineapi "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
+	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,11 +82,19 @@ func provider(platform *baremetal.Platform, osImage string, userDataSecret strin
 	}
 	imageURL.RawQuery = ""
 	imageURL.Fragment = ""
-	// We strip any .gz suffix because ironic-machine-os-downloader unzips the image
+	// We strip any .gz/.xz suffix because ironic-machine-os-downloader unzips the image
 	// ref https://github.com/openshift/ironic-rhcos-downloader/pull/12
 	imageFilename := path.Base(strings.TrimSuffix(imageURL.String(), ".gz"))
+	imageFilename = strings.TrimSuffix(imageFilename, ".xz")
 	compressedImageFilename := strings.Replace(imageFilename, "openstack", "compressed", 1)
-	cacheImageURL := fmt.Sprintf("http://%s/images/%s/%s", net.JoinHostPort(platform.ClusterProvisioningIP, "6180"), imageFilename, compressedImageFilename)
+
+	cacheImageIP := platform.ClusterProvisioningIP
+	cacheImagePort := "6180"
+	if platform.ProvisioningNetwork == baremetal.DisabledProvisioningNetwork && platform.ClusterProvisioningIP == "" {
+		cacheImageIP = platform.APIVIP
+		cacheImagePort = "6181"
+	}
+	cacheImageURL := fmt.Sprintf("http://%s/images/%s/%s", net.JoinHostPort(cacheImageIP, cacheImagePort), imageFilename, compressedImageFilename)
 	cacheChecksumURL := fmt.Sprintf("%s.md5sum", cacheImageURL)
 	config := &baremetalprovider.BareMetalMachineProviderSpec{
 		TypeMeta: metav1.TypeMeta{

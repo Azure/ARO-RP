@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
@@ -269,7 +270,7 @@ var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
 		}
 
 		Expect(configData.PrometheusK8s.Retention).To(Equal(""))
-		Expect(configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage).To(Equal(""))
+		Expect(configData.PrometheusK8s.VolumeClaimTemplate).To(Equal(struct{ api.MissingFields }{}))
 	})
 
 	Specify("cluster monitoring configmap should be restored if deleted", func() {

@@ -95,7 +95,7 @@ class AADManager:
         # https://github.com/Azure/azure-sdk-for-python/issues/18131
         for c in credentials:
             if c.custom_key_identifier is None:
-                raise BadRequestError("Cluster AAD application contains a client secret with an empty description.\n\
+                raise BadRequestError("Cluster AAD application contains a client secret with an empty identifier.\n\
 Please either manually remove the existing client secret and run `az aro update --refresh-credentials`, \n\
 or manually create a new client secret and run `az aro update --client-secret <ClientSecret>`.")
 

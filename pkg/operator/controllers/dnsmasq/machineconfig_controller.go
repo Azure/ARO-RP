@@ -41,10 +41,7 @@ func NewMachineConfigReconciler(log *logrus.Entry, arocli aroclient.Interface, m
 
 // Reconcile watches ARO DNS MachineConfig objects, and if any changes,
 // reconciles it
-func (r *MachineConfigReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO(mj): Reconcile will eventually be receiving a ctx (https://github.com/kubernetes-sigs/controller-runtime/blob/7ef2da0bc161d823f084ad21ff5f9c9bd6b0cc39/pkg/reconcile/reconcile.go#L93)
-	ctx := context.TODO()
-
+func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	m := rxARODNS.FindStringSubmatch(request.Name)
 	if m == nil {
 		return reconcile.Result{}, nil

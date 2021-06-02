@@ -70,6 +70,18 @@
                 "watch"
             ],
             "storageVersionHash": "8NZGiGeCmFo="
+        },
+        {
+            "name": "useroauthaccesstokens",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "UserOAuthAccessToken",
+            "verbs": [
+                "delete",
+                "get",
+                "list",
+                "watch"
+            ]
         }
     ]
 }

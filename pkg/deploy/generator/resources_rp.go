@@ -395,6 +395,8 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"rpParentDomainName",
 		"databaseAccountName",
 		"keyvaultPrefix",
+		"keyvaultDNSSuffix",
+		"azureCloudName",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
@@ -437,8 +439,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 	)
 
 	trailer := base64.StdEncoding.EncodeToString([]byte(`
-# --disablerepo=* --enablerepo="*microsoft*" been added to workaround expired client package issue
-yum -y update -x WALinuxAgent --disablerepo=* --enablerepo="*microsoft*"
+yum -y update -x WALinuxAgent
 
 lvextend -l +50%FREE /dev/rootvg/rootlv
 xfs_growfs /
@@ -518,6 +519,8 @@ cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 	Match *
 	Port 29230
 EOF
+
+export AZURE_CLOUD_NAME=$AZURECLOUDNAME
 
 az login -i
 az account set -s "$SUBSCRIPTIONID"
@@ -829,7 +832,7 @@ fi
 SECRET_NAME="rp-\${COMPONENT}"
 NEW_CERT_FILE="\$TEMP_DIR/\$COMPONENT.pem"
 for attempt in {1..5}; do
-  az keyvault secret download --file \$NEW_CERT_FILE --id "https://$KEYVAULTPREFIX-svc.vault.azure.net/secrets/\$SECRET_NAME" && break
+  az keyvault secret download --file \$NEW_CERT_FILE --id "https://$KEYVAULTPREFIX-svc.$KEYVAULTDNSSUFFIX/secrets/\$SECRET_NAME" && break
   if [[ \$attempt -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 

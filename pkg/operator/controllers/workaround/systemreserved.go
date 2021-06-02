@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -98,25 +97,21 @@ func (sr *systemreserved) kubeletConfig() (*mcv1.KubeletConfig, error) {
 func (sr *systemreserved) Ensure(ctx context.Context) error {
 	// Step 1. Add label to worker MachineConfigPool.
 	// Get the worker MachineConfigPool, modify it to add a label aro.openshift.io/limits: "", and apply the modified config.
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, workerMachineConfigPoolName, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		if _, ok := mcp.Labels[labelName]; ok {
-			// don't update if we don't need to.
-			return nil
-		}
+	mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, workerMachineConfigPoolName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	// don't update if we don't need to.
+	if _, ok := mcp.Labels[labelName]; !ok {
 		if mcp.Labels == nil {
 			mcp.Labels = map[string]string{}
 		}
 		mcp.Labels[labelName] = labelValue
 
 		_, err = sr.mcocli.MachineconfigurationV1().MachineConfigPools().Update(ctx, mcp, metav1.UpdateOptions{})
-		return err
-	})
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	//   Step 2. Create KubeletConfig CRD with appropriate limits.
@@ -129,20 +124,17 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 }
 
 func (sr *systemreserved) Remove(ctx context.Context) error {
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, workerMachineConfigPoolName, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		if _, ok := mcp.Labels[labelName]; !ok {
-			// don't update if we don't need to.
-			return nil
-		}
-		delete(mcp.Labels, labelName)
-
-		_, err = sr.mcocli.MachineconfigurationV1().MachineConfigPools().Update(ctx, mcp, metav1.UpdateOptions{})
+	mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, workerMachineConfigPoolName, metav1.GetOptions{})
+	if err != nil {
 		return err
-	})
+	}
+	if _, ok := mcp.Labels[labelName]; !ok {
+		// don't update if we don't need to.
+		return nil
+	}
+	delete(mcp.Labels, labelName)
+
+	_, err = sr.mcocli.MachineconfigurationV1().MachineConfigPools().Update(ctx, mcp, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}

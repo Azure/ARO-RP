@@ -116,6 +116,23 @@
             ]
         },
         {
+            "name": "consolequickstarts",
+            "singularName": "consolequickstart",
+            "namespaced": false,
+            "kind": "ConsoleQuickStart",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "jjkxMYsy4hY="
+        },
+        {
             "name": "consoleyamlsamples",
             "singularName": "consoleyamlsample",
             "namespaced": false,

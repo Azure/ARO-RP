@@ -13,6 +13,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -37,10 +38,7 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, dh dynamichelp
 	}
 }
 
-func (r *RBACReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO(mj): Reconcile will eventually be receiving a ctx (https://github.com/kubernetes-sigs/controller-runtime/blob/7ef2da0bc161d823f084ad21ff5f9c9bd6b0cc39/pkg/reconcile/reconcile.go#L93)
-	ctx := context.TODO()
-
+func (r *RBACReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		r.log.Error(err)
@@ -87,8 +85,8 @@ func (r *RBACReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 
 // SetupWithManager setup our mananger
 func (r *RBACReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
-		return meta.GetName() == arov1alpha1.SingletonClusterName
+	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == arov1alpha1.SingletonClusterName
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).

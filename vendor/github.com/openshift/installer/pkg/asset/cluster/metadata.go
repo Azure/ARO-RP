@@ -12,16 +12,19 @@ import (
 	"github.com/openshift/installer/pkg/asset/cluster/azure"
 	"github.com/openshift/installer/pkg/asset/cluster/baremetal"
 	"github.com/openshift/installer/pkg/asset/cluster/gcp"
+	"github.com/openshift/installer/pkg/asset/cluster/kubevirt"
 	"github.com/openshift/installer/pkg/asset/cluster/libvirt"
 	"github.com/openshift/installer/pkg/asset/cluster/openstack"
 	"github.com/openshift/installer/pkg/asset/cluster/ovirt"
 	"github.com/openshift/installer/pkg/asset/cluster/vsphere"
+	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/types"
 	awstypes "github.com/openshift/installer/pkg/types/aws"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
 	gcptypes "github.com/openshift/installer/pkg/types/gcp"
+	kubevirttypes "github.com/openshift/installer/pkg/types/kubevirt"
 	libvirttypes "github.com/openshift/installer/pkg/types/libvirt"
 	nonetypes "github.com/openshift/installer/pkg/types/none"
 	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
@@ -51,6 +54,7 @@ func (m *Metadata) Dependencies() []asset.Asset {
 	return []asset.Asset{
 		&installconfig.ClusterID{},
 		&installconfig.InstallConfig{},
+		&bootstrap.Bootstrap{},
 	}
 }
 
@@ -83,6 +87,8 @@ func (m *Metadata) Generate(parents asset.Parents) (err error) {
 		metadata.ClusterPlatformMetadata.Ovirt = ovirt.Metadata(installConfig.Config)
 	case vspheretypes.Name:
 		metadata.ClusterPlatformMetadata.VSphere = vsphere.Metadata(installConfig.Config)
+	case kubevirttypes.Name:
+		metadata.ClusterPlatformMetadata.Kubevirt = kubevirt.Metadata(clusterID.InfraID, installConfig.Config)
 	case nonetypes.Name:
 	default:
 		return errors.Errorf("no known platform")

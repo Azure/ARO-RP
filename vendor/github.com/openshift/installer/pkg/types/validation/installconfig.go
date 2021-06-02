@@ -24,6 +24,8 @@ import (
 	baremetalvalidation "github.com/openshift/installer/pkg/types/baremetal/validation"
 	"github.com/openshift/installer/pkg/types/gcp"
 	gcpvalidation "github.com/openshift/installer/pkg/types/gcp/validation"
+	"github.com/openshift/installer/pkg/types/kubevirt"
+	kubevirtvalidation "github.com/openshift/installer/pkg/types/kubevirt/validation"
 	"github.com/openshift/installer/pkg/types/libvirt"
 	libvirtvalidation "github.com/openshift/installer/pkg/types/libvirt/validation"
 	"github.com/openshift/installer/pkg/types/openstack"
@@ -67,6 +69,10 @@ func ValidateInstallConfig(c *types.InstallConfig) field.ErrorList {
 	nameErr := validate.ClusterName(c.ObjectMeta.Name)
 	if c.Platform.GCP != nil || c.Platform.Azure != nil {
 		nameErr = validate.ClusterName1035(c.ObjectMeta.Name)
+	}
+	if c.Platform.Ovirt != nil {
+		// FIX-ME: As soon bz#1915122 get resolved remove the limitation of 14 chars for the clustername
+		nameErr = validate.ClusterNameMaxLength(c.ObjectMeta.Name, 14)
 	}
 	if nameErr != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("metadata", "name"), c.ObjectMeta.Name, nameErr.Error()))
@@ -441,6 +447,11 @@ func validatePlatform(platform *types.Platform, fldPath *field.Path, network *ty
 			return ovirtvalidation.ValidatePlatform(platform.Ovirt, f)
 		})
 	}
+	if platform.Kubevirt != nil {
+		validate(kubevirt.Name, platform.Kubevirt, func(f *field.Path) field.ErrorList {
+			return kubevirtvalidation.ValidatePlatform(platform.Kubevirt, f, c)
+		})
+	}
 	return allErrs
 }
 
@@ -528,8 +539,8 @@ func validateCloudCredentialsMode(mode types.CredentialsMode, fldPath *field.Pat
 	// for the platform. If a platform name is not in the map, then the credentials mode cannot be set for that platform.
 	validPlatformCredentialsModes := map[string][]types.CredentialsMode{
 		aws.Name:   {types.MintCredentialsMode, types.PassthroughCredentialsMode, types.ManualCredentialsMode},
-		azure.Name: {types.MintCredentialsMode, types.PassthroughCredentialsMode},
-		gcp.Name:   {types.MintCredentialsMode, types.PassthroughCredentialsMode},
+		azure.Name: {types.MintCredentialsMode, types.PassthroughCredentialsMode, types.ManualCredentialsMode},
+		gcp.Name:   {types.MintCredentialsMode, types.PassthroughCredentialsMode, types.ManualCredentialsMode},
 	}
 	if validModes, ok := validPlatformCredentialsModes[platform]; ok {
 		validModesSet := sets.NewString()

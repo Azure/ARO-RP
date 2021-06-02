@@ -225,7 +225,17 @@ rules:
   - consoleexternalloglinks
   - consolelinks
   - consolenotifications
+  - consoleplugins
+  - consolequickstarts
   - consoleyamlsamples
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - controlplane.operator.openshift.io
+  resources:
+  - podnetworkconnectivitychecks
   verbs:
   - get
   - list
@@ -378,6 +388,7 @@ rules:
 - apiGroups:
   - monitoring.coreos.com
   resources:
+  - alertmanagerconfigs
   - alertmanagers
   - podmonitors
   - probes
@@ -458,6 +469,7 @@ rules:
   - catalogsources
   - clusterserviceversions
   - installplans
+  - operatorconditions
   - operatorgroups
   - operators
   - subscriptions

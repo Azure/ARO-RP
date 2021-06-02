@@ -3,6 +3,7 @@ package openstack
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gophercloud/gophercloud"
@@ -12,10 +13,12 @@ import (
 	"github.com/gophercloud/utils/openstack/clientconfig"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+
+	openstackdefaults "github.com/openshift/installer/pkg/types/openstack/defaults"
 )
 
 // uploadBaseImage creates a new image in Glance and uploads the RHCOS image there
-func uploadBaseImage(cloud string, localFilePath string, imageName string, clusterID string) error {
+func uploadBaseImage(cloud string, localFilePath string, imageName string, clusterID string, imageProperties map[string]string) error {
 	logrus.Debugln("Creating a Glance image for RHCOS...")
 
 	f, err := os.Open(localFilePath)
@@ -24,20 +27,24 @@ func uploadBaseImage(cloud string, localFilePath string, imageName string, clust
 	}
 	defer f.Close()
 
-	opts := clientconfig.ClientOpts{
-		Cloud: cloud,
-	}
-
-	conn, err := clientconfig.NewServiceClient("image", &opts)
+	conn, err := clientconfig.NewServiceClient("image", openstackdefaults.DefaultClientOpts(cloud))
 	if err != nil {
 		return err
+	}
+
+	// By default we use "qcow2" disk format, but if the file extension is "raw",
+	// then we set the disk format as "raw".
+	diskFormat := "qcow2"
+	if extension := filepath.Ext(localFilePath); extension == "raw" {
+		diskFormat = "raw"
 	}
 
 	imageCreateOpts := images.CreateOpts{
 		Name:            imageName,
 		ContainerFormat: "bare",
-		DiskFormat:      "qcow2",
+		DiskFormat:      diskFormat,
 		Tags:            []string{fmt.Sprintf("openshiftClusterID=%s", clusterID)},
+		Properties:      imageProperties,
 		// TODO(mfedosin): add Description when gophercloud supports it.
 	}
 
@@ -116,11 +123,7 @@ func isImageImportSupported(cloud string) (bool, error) {
 	// https://docs.openstack.org/api-ref/image/v2/?expanded=#image-service-info-discovery
 	logrus.Debugln("Checking if the image import mechanism is supported")
 
-	opts := clientconfig.ClientOpts{
-		Cloud: cloud,
-	}
-
-	conn, err := clientconfig.NewServiceClient("image", &opts)
+	conn, err := clientconfig.NewServiceClient("image", openstackdefaults.DefaultClientOpts(cloud))
 	if err != nil {
 		return false, err
 	}

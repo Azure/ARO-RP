@@ -12,11 +12,11 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -47,10 +47,7 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, securi
 }
 
 // Reconcile the genevalogging deployment.
-func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO(mj): Reconcile will eventually be receiving a ctx (https://github.com/kubernetes-sigs/controller-runtime/blob/7ef2da0bc161d823f084ad21ff5f9c9bd6b0cc39/pkg/reconcile/reconcile.go#L93)
-	ctx := context.TODO()
-
+func (r *GenevaloggingReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
@@ -99,8 +96,8 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 // SetupWithManager setup our manager
 func (r *GenevaloggingReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
-		return meta.GetName() == arov1alpha1.SingletonClusterName
+	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == arov1alpha1.SingletonClusterName
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).

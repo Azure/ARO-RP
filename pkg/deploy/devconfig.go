@@ -145,6 +145,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"RequireD2sV3Workers",
 				"DisableReadinessDelay",
 			},
+			// TODO update this to support FF
 			RPImagePrefix:       to.StringPtr(os.Getenv("USER") + "aro.azurecr.io/aro"),
 			RPMDSDConfigVersion: to.StringPtr("3.3"),
 			RPNSGSourceAddressPrefixes: []string{

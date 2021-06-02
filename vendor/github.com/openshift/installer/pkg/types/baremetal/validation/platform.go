@@ -142,7 +142,7 @@ func validateDHCPRange(p *baremetal.Platform, fldPath *field.Path) (allErrs fiel
 	if start != nil && end != nil {
 		// Validate ClusterProvisioningIP is not in DHCP range
 		if clusterProvisioningIP := net.ParseIP(p.ClusterProvisioningIP); clusterProvisioningIP != nil && bytes.Compare(clusterProvisioningIP, start) >= 0 && bytes.Compare(clusterProvisioningIP, end) <= 0 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("provisioningHostIP"), p.ClusterProvisioningIP, fmt.Sprintf("%q overlaps with the allocated DHCP range", p.ClusterProvisioningIP)))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("clusterProvisioningIP"), p.ClusterProvisioningIP, fmt.Sprintf("%q overlaps with the allocated DHCP range", p.ClusterProvisioningIP)))
 		}
 
 		// Validate BootstrapProvisioningIP is not in DHCP range
@@ -303,8 +303,16 @@ func ValidatePlatform(p *baremetal.Platform, n *types.Networking, fldPath *field
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("provisioningNetwork"), p.ProvisioningNetwork, provisioningNetwork.List()))
 	}
 
-	if err := validate.IP(p.ClusterProvisioningIP); err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("provisioningHostIP"), p.ClusterProvisioningIP, err.Error()))
+	if p.BootstrapProvisioningIP != "" {
+		if err := validate.IP(p.BootstrapProvisioningIP); err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("bootstrapProvisioningIP"), p.BootstrapProvisioningIP, err.Error()))
+		}
+	}
+
+	if p.ClusterProvisioningIP != "" {
+		if err := validate.IP(p.ClusterProvisioningIP); err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("clusterProvisioningIP"), p.ClusterProvisioningIP, err.Error()))
+		}
 	}
 
 	if p.Hosts == nil {
@@ -351,14 +359,18 @@ func ValidateProvisioning(p *baremetal.Platform, n *types.Networking, fldPath *f
 	// will be run on the external network. Users must provide IP's on the
 	// machine networks to host those services.
 	case baremetal.DisabledProvisioningNetwork:
-		// Ensure bootstrapProvisioningIP is in one of the machine networks
-		if err := validateIPinMachineCIDR(p.BootstrapProvisioningIP, n); err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("bootstrapProvisioningIP"), p.BootstrapProvisioningIP, fmt.Sprintf("provisioning network is disabled, %s", err.Error())))
+		// If set, ensure bootstrapProvisioningIP is in one of the machine networks
+		if p.BootstrapProvisioningIP != "" {
+			if err := validateIPinMachineCIDR(p.BootstrapProvisioningIP, n); err != nil {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("bootstrapProvisioningIP"), p.BootstrapProvisioningIP, fmt.Sprintf("provisioning network is disabled, %s", err.Error())))
+			}
 		}
 
-		// Ensure clusterProvisioningIP is in one of the machine networks
-		if err := validateIPinMachineCIDR(p.ClusterProvisioningIP, n); err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("clusterProvisioningIP"), p.ClusterProvisioningIP, fmt.Sprintf("provisioning network is disabled, %s", err.Error())))
+		// If set, ensure clusterProvisioningIP is in one of the machine networks
+		if p.ClusterProvisioningIP != "" {
+			if err := validateIPinMachineCIDR(p.ClusterProvisioningIP, n); err != nil {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("clusterProvisioningIP"), p.ClusterProvisioningIP, fmt.Sprintf("provisioning network is disabled, %s", err.Error())))
+			}
 		}
 	default:
 		// Ensure provisioningNetworkCIDR doesn't overlap with any machine network
@@ -386,6 +398,18 @@ func ValidateProvisioning(p *baremetal.Platform, n *types.Networking, fldPath *f
 		// Make sure the provisioning interface is set.  Very little we can do to validate this  as it's not on this machine.
 		if p.ProvisioningNetworkInterface == "" {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("provisioningNetworkInterface"), p.ProvisioningNetworkInterface, "no provisioning network interface is configured, please set this value to be the interface on the provisioning network on your cluster's baremetal hosts"))
+		}
+
+		if err := validate.MAC(p.ExternalMACAddress); p.ExternalMACAddress != "" && err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("externalMACAddress"), p.ExternalMACAddress, err.Error()))
+		}
+
+		if err := validate.MAC(p.ProvisioningMACAddress); p.ProvisioningMACAddress != "" && err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("provisioningMACAddress"), p.ProvisioningMACAddress, err.Error()))
+		}
+
+		if p.ProvisioningMACAddress != "" && strings.EqualFold(p.ProvisioningMACAddress, p.ExternalMACAddress) {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Child("provisioningMACAddress"), "provisioning and external MAC addresses may not be identical"))
 		}
 	}
 

@@ -5,6 +5,7 @@ package monitoring
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/ghodss/yaml"
 	"github.com/sirupsen/logrus"
@@ -12,12 +13,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -41,28 +41,11 @@ type Config struct {
 		Retention           string `json:"retention,omitempty"`
 		VolumeClaimTemplate struct {
 			api.MissingFields
-			Spec struct {
-				api.MissingFields
-				Resources struct {
-					api.MissingFields
-					Requests struct {
-						api.MissingFields
-						Storage string `json:"storage,omitempty"`
-					} `json:"requests,omitempty"`
-				} `json:"resources,omitempty"`
-			} `json:"spec,omitempty"`
 		} `json:"volumeClaimTemplate,omitempty"`
 	} `json:"prometheusK8s,omitempty"`
 }
 
-var defaultConfig = `prometheusK8s:
-  retention: 15d
-  volumeClaimTemplate:
-    spec:
-      resources:
-        requests:
-          storage: 100Gi
-`
+var defaultConfig = `prometheusK8s: {}`
 
 type Reconciler struct {
 	arocli        aroclient.Interface
@@ -80,67 +63,62 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli
 	}
 }
 
-func (r *Reconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO(mj): Reconcile will eventually be receiving a ctx (https://github.com/kubernetes-sigs/controller-runtime/blob/7ef2da0bc161d823f084ad21ff5f9c9bd6b0cc39/pkg/reconcile/reconcile.go#L93)
-	ctx := context.TODO()
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	cm, isCreate, err := r.monitoringConfigMap(ctx)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if cm.Data == nil {
+		cm.Data = map[string]string{}
+	}
 
-	return reconcile.Result{}, retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		cm, isCreate, err := r.monitoringConfigMap(ctx)
-		if err != nil {
-			return err
-		}
-		if cm.Data == nil {
-			cm.Data = map[string]string{}
-		}
+	configDataJSON, err := yaml.YAMLToJSON([]byte(cm.Data["config.yaml"]))
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
-		configDataJSON, err := yaml.YAMLToJSON([]byte(cm.Data["config.yaml"]))
-		if err != nil {
-			return err
-		}
+	var configData Config
+	err = codec.NewDecoderBytes(configDataJSON, r.jsonHandle).Decode(&configData)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
-		var configData Config
-		err = codec.NewDecoderBytes(configDataJSON, r.jsonHandle).Decode(&configData)
-		if err != nil {
-			return err
-		}
+	changed := false
+	// we are disabling persistence. We use omitempty on the struct to
+	// clean the fields
+	if configData.PrometheusK8s.Retention != "" {
+		configData.PrometheusK8s.Retention = ""
+		changed = true
+	}
+	if !reflect.DeepEqual(configData.PrometheusK8s.VolumeClaimTemplate, struct{ api.MissingFields }{}) {
+		configData.PrometheusK8s.VolumeClaimTemplate = struct{ api.MissingFields }{}
+		changed = true
+	}
 
-		changed := false
-		// we are disabling persistence. We use omitempty on the struct to
-		// clean the fields
-		if configData.PrometheusK8s.Retention != "" {
-			configData.PrometheusK8s.Retention = ""
-			changed = true
-		}
-		if configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage != "" {
-			configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage = ""
-			changed = true
-		}
+	if !isCreate && !changed {
+		return reconcile.Result{}, nil
+	}
 
-		if !isCreate && !changed {
-			return nil
-		}
+	var b []byte
+	err = codec.NewEncoderBytes(&b, r.jsonHandle).Encode(configData)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
-		var b []byte
-		err = codec.NewEncoderBytes(&b, r.jsonHandle).Encode(configData)
-		if err != nil {
-			return err
-		}
+	cmYaml, err := yaml.JSONToYAML(b)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	cm.Data["config.yaml"] = string(cmYaml)
 
-		cmYaml, err := yaml.JSONToYAML(b)
-		if err != nil {
-			return err
-		}
-		cm.Data["config.yaml"] = string(cmYaml)
-
-		if isCreate {
-			r.log.Infof("re-creating monitoring configmap. %s", monitoringName.Name)
-			_, err = r.kubernetescli.CoreV1().ConfigMaps(monitoringName.Namespace).Create(ctx, cm, metav1.CreateOptions{})
-		} else {
-			r.log.Infof("updating monitoring configmap. %s", monitoringName.Name)
-			_, err = r.kubernetescli.CoreV1().ConfigMaps(monitoringName.Namespace).Update(ctx, cm, metav1.UpdateOptions{})
-		}
-		return err
-	})
+	if isCreate {
+		r.log.Infof("re-creating monitoring configmap. %s", monitoringName.Name)
+		_, err = r.kubernetescli.CoreV1().ConfigMaps(monitoringName.Namespace).Create(ctx, cm, metav1.CreateOptions{})
+	} else {
+		r.log.Infof("updating monitoring configmap. %s", monitoringName.Name)
+		_, err = r.kubernetescli.CoreV1().ConfigMaps(monitoringName.Namespace).Update(ctx, cm, metav1.UpdateOptions{})
+	}
+	return reconcile.Result{}, err
 }
 
 func (r *Reconciler) monitoringConfigMap(ctx context.Context) (*corev1.ConfigMap, bool, error) {
@@ -164,14 +142,14 @@ func (r *Reconciler) monitoringConfigMap(ctx context.Context) (*corev1.ConfigMap
 
 // SetupWithManager setup the manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.log.Info("starting starting cluster monitoring controller")
+	r.log.Info("starting cluster monitoring controller")
 
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
-		return meta.GetName() == arov1alpha1.SingletonClusterName
+	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == arov1alpha1.SingletonClusterName
 	})
 
-	monitoringConfigMapPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
-		return meta.GetName() == monitoringName.Name && meta.GetNamespace() == monitoringName.Namespace
+	monitoringConfigMapPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == monitoringName.Name && o.GetNamespace() == monitoringName.Namespace
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).

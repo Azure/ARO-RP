@@ -64,6 +64,7 @@ type InfrastructureStatus struct {
 	// etcdDiscoveryDomain is the domain used to fetch the SRV records for discovering
 	// etcd servers and clients.
 	// For more info: https://github.com/etcd-io/etcd/blob/329be66e8b3f9e2e6af83c123ff89297e49ebd15/Documentation/op-guide/clustering.md#dns-discovery
+	// deprecated: as of 4.7, this field is no longer set or honored.  It will be removed in a future release.
 	EtcdDiscoveryDomain string `json:"etcdDiscoveryDomain"`
 
 	// apiServerURL is a valid URI with scheme 'https', address and
@@ -79,7 +80,7 @@ type InfrastructureStatus struct {
 }
 
 // PlatformType is a specific supported infrastructure provider.
-// +kubebuilder:validation:Enum="";AWS;Azure;BareMetal;GCP;Libvirt;OpenStack;None;VSphere;oVirt;IBMCloud
+// +kubebuilder:validation:Enum="";AWS;Azure;BareMetal;GCP;Libvirt;OpenStack;None;VSphere;oVirt;IBMCloud;KubeVirt
 type PlatformType string
 
 const (
@@ -112,6 +113,9 @@ const (
 
 	// IBMCloudPlatformType represents IBM Cloud infrastructure.
 	IBMCloudPlatformType PlatformType = "IBMCloud"
+
+	// KubevirtPlatformType represents KubeVirt/Openshift Virtualization infrastructure.
+	KubevirtPlatformType PlatformType = "KubeVirt"
 )
 
 // IBMCloudProviderType is a specific supported IBM Cloud provider cluster type
@@ -134,7 +138,7 @@ type PlatformSpec struct {
 	// balancers, dynamic volume provisioning, machine creation and deletion, and
 	// other integrations are enabled. If None, no infrastructure automation is
 	// enabled. Allowed values are "AWS", "Azure", "BareMetal", "GCP", "Libvirt",
-	// "OpenStack", "VSphere", "oVirt", and "None". Individual components may not support
+	// "OpenStack", "VSphere", "oVirt", "KubeVirt" and "None". Individual components may not support
 	// all platforms, and must handle unrecognized platforms as None if they do
 	// not support that platform.
 	//
@@ -172,6 +176,10 @@ type PlatformSpec struct {
 	// IBMCloud contains settings specific to the IBMCloud infrastructure provider.
 	// +optional
 	IBMCloud *IBMCloudPlatformSpec `json:"ibmcloud,omitempty"`
+
+	// Kubevirt contains settings specific to the kubevirt infrastructure provider.
+	// +optional
+	Kubevirt *KubevirtPlatformSpec `json:"kubevirt,omitempty"`
 }
 
 // PlatformStatus holds the current status specific to the underlying infrastructure provider
@@ -222,6 +230,10 @@ type PlatformStatus struct {
 	// IBMCloud contains settings specific to the IBMCloud infrastructure provider.
 	// +optional
 	IBMCloud *IBMCloudPlatformStatus `json:"ibmcloud,omitempty"`
+
+	// Kubevirt contains settings specific to the kubevirt infrastructure provider.
+	// +optional
+	Kubevirt *KubevirtPlatformStatus `json:"kubevirt,omitempty"`
 }
 
 // AWSServiceEndpoint store the configuration of a custom url to
@@ -262,6 +274,34 @@ type AWSPlatformStatus struct {
 	// There must be only one ServiceEndpoint for a service.
 	// +optional
 	ServiceEndpoints []AWSServiceEndpoint `json:"serviceEndpoints,omitempty"`
+
+	// resourceTags is a list of additional tags to apply to AWS resources created for the cluster.
+	// See https://docs.aws.amazon.com/general/latest/gr/aws_tagging.html for information on tagging AWS resources.
+	// AWS supports a maximum of 50 tags per resource. OpenShift reserves 25 tags for its use, leaving 25 tags
+	// available for the user.
+	// +kubebuilder:validation:MaxItems=25
+	// +optional
+	ResourceTags []AWSResourceTag `json:"resourceTags,omitempty"`
+}
+
+// AWSResourceTag is a tag to apply to AWS resources created for the cluster.
+type AWSResourceTag struct {
+	// key is the key of the tag
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	// +kubebuilder:validation:Pattern=`^[0-9A-Za-z_.:/=+-@]+$`
+	// +required
+	Key string `json:"key"`
+	// value is the value of the tag.
+	// Some AWS service do not support empty values. Since tags are added to resources in many services, the
+	// length of the tag value must meet the requirements of all services.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[0-9A-Za-z_.:/=+-@]+$`
+	// +required
+	Value string `json:"value"`
 }
 
 // AzurePlatformSpec holds the desired state of the Azure infrastructure provider.
@@ -431,6 +471,23 @@ type IBMCloudPlatformStatus struct {
 
 	// ProviderType indicates the type of cluster that was created
 	ProviderType IBMCloudProviderType `json:"providerType,omitempty"`
+}
+
+// KubevirtPlatformSpec holds the desired state of the kubevirt infrastructure provider.
+// This only includes fields that can be modified in the cluster.
+type KubevirtPlatformSpec struct{}
+
+// KubevirtPlatformStatus holds the current status of the kubevirt infrastructure provider.
+type KubevirtPlatformStatus struct {
+	// apiServerInternalIP is an IP address to contact the Kubernetes API server that can be used
+	// by components inside the cluster, like kubelets using the infrastructure rather
+	// than Kubernetes networking. It is the IP that the Infrastructure.status.apiServerInternalURI
+	// points to. It is the IP for a self-hosted load balancer in front of the API servers.
+	APIServerInternalIP string `json:"apiServerInternalIP,omitempty"`
+
+	// ingressIP is an external IP which routes to the default ingress controller.
+	// The IP is a suitable target of a wildcard DNS record used to resolve default route host names.
+	IngressIP string `json:"ingressIP,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -632,7 +632,7 @@ func TestOpenShiftClusterStaticValidateAPIServerProfile(t *testing.T) {
 }
 
 func TestOpenShiftClusterStaticValidateIngressProfile(t *testing.T) {
-	commonTests := []*validateTest{
+	tests := []*validateTest{
 		{
 			name: "valid",
 		},
@@ -664,9 +664,6 @@ func TestOpenShiftClusterStaticValidateIngressProfile(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.ingressProfiles['default'].ip: The provided IP '::' is invalid: must be IPv4.",
 		},
-	}
-
-	createTests := []*validateTest{
 		{
 			name: "empty ip valid",
 			modify: func(oc *OpenShiftCluster) {
@@ -675,9 +672,9 @@ func TestOpenShiftClusterStaticValidateIngressProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, testModeCreate, createTests)
-	runTests(t, testModeCreate, commonTests)
-	runTests(t, testModeUpdate, commonTests)
+	// we don't validate this on update as all fields are immutable and will
+	// be validated with "mutable" flag
+	runTests(t, testModeCreate, tests)
 }
 
 func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {

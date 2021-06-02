@@ -14,6 +14,7 @@ package workaround
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/ghodss/yaml"
 	"github.com/sirupsen/logrus"
@@ -22,6 +23,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -65,7 +67,7 @@ func (c *cleanPromPVC) IsRequired(clusterVersion *version.Version) bool {
 		return false
 	}
 
-	if configData.PrometheusK8s.Retention == "" && configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage == "" {
+	if configData.PrometheusK8s.Retention == "" && reflect.DeepEqual(configData.PrometheusK8s.VolumeClaimTemplate, struct{ api.MissingFields }{}) {
 		return true
 	}
 

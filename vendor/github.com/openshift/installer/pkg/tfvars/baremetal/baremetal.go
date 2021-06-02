@@ -17,11 +17,13 @@ import (
 )
 
 type config struct {
-	LibvirtURI              string `json:"libvirt_uri"`
-	BootstrapProvisioningIP string `json:"bootstrap_provisioning_ip"`
-	BootstrapOSImage        string `json:"bootstrap_os_image"`
-	ExternalBridge          string `json:"external_bridge"`
-	ProvisioningBridge      string `json:"provisioning_bridge"`
+	LibvirtURI              string              `json:"libvirt_uri,omitempty"`
+	BootstrapProvisioningIP string              `json:"bootstrap_provisioning_ip,omitempty"`
+	BootstrapOSImage        string              `json:"bootstrap_os_image,omitempty"`
+	Bridges                 []map[string]string `json:"bridges"`
+
+	IronicUsername string `json:"ironic_username"`
+	IronicPassword string `json:"ironic_password"`
 
 	// Data required for control plane deployment - several maps per host, because of terraform's limitations
 	Hosts         []map[string]interface{} `json:"hosts"`
@@ -32,7 +34,7 @@ type config struct {
 }
 
 // TFVars generates bare metal specific Terraform variables.
-func TFVars(libvirtURI, bootstrapProvisioningIP, bootstrapOSImage, externalBridge, provisioningBridge string, platformHosts []*baremetal.Host, image string) ([]byte, error) {
+func TFVars(libvirtURI, bootstrapProvisioningIP, bootstrapOSImage, externalBridge, externalMAC, provisioningBridge, provisioningMAC string, platformHosts []*baremetal.Host, image, ironicUsername, ironicPassword, ignition string) ([]byte, error) {
 	bootstrapOSImage, err := cache.DownloadImageFile(bootstrapOSImage)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to use cached bootstrap libvirt image")
@@ -118,14 +120,14 @@ func TFVars(libvirtURI, bootstrapProvisioningIP, bootstrapOSImage, externalBridg
 		}
 		imageURL.RawQuery = ""
 		imageURL.Fragment = ""
-		// We strip any .gz suffix because ironic-machine-os-downloader unzips the image
+		// We strip any .gz/.xz suffix because ironic-machine-os-downloader unzips the image
 		// ref https://github.com/openshift/ironic-rhcos-downloader/pull/12
 		imageFilename := path.Base(strings.TrimSuffix(imageURL.String(), ".gz"))
+		imageFilename = strings.TrimSuffix(imageFilename, ".xz")
 		compressedImageFilename := strings.Replace(imageFilename, "openstack", "compressed", 1)
 		cacheImageURL := fmt.Sprintf("http://%s/images/%s/%s", net.JoinHostPort(bootstrapProvisioningIP, "80"), imageFilename, compressedImageFilename)
 		cacheChecksumURL := fmt.Sprintf("%s.md5sum", cacheImageURL)
 		instanceInfo := map[string]interface{}{
-			"root_gb":        25, // FIXME(stbenjam): Needed until https://storyboard.openstack.org/#!/story/2005165
 			"image_source":   cacheImageURL,
 			"image_checksum": cacheChecksumURL,
 		}
@@ -137,13 +139,31 @@ func TFVars(libvirtURI, bootstrapProvisioningIP, bootstrapOSImage, externalBridg
 		instanceInfos = append(instanceInfos, instanceInfo)
 	}
 
+	var bridges []map[string]string
+
+	bridges = append(bridges,
+		map[string]string{
+			"name": externalBridge,
+			"mac":  externalMAC,
+		})
+
+	if provisioningBridge != "" {
+		bridges = append(
+			bridges,
+			map[string]string{
+				"name": provisioningBridge,
+				"mac":  provisioningMAC,
+			})
+	}
+
 	cfg := &config{
 		LibvirtURI:              libvirtURI,
 		BootstrapProvisioningIP: bootstrapProvisioningIP,
 		BootstrapOSImage:        bootstrapOSImage,
-		ExternalBridge:          externalBridge,
-		ProvisioningBridge:      provisioningBridge,
+		IronicUsername:          ironicUsername,
+		IronicPassword:          ironicPassword,
 		Hosts:                   hosts,
+		Bridges:                 bridges,
 		Properties:              properties,
 		DriverInfos:             driverInfos,
 		RootDevices:             rootDevices,

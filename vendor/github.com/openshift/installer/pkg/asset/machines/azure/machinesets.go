@@ -7,9 +7,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	clusterapi "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/azure"
+	clusterapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 )
 
 // MachineSets returns a list of machinesets for a machinepool.
@@ -44,9 +44,6 @@ func MachineSets(clusterID string, config *types.InstallConfig, pool *types.Mach
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create provider")
 		}
-		if config.Platform.Azure.ARO {
-			provider.PublicLoadBalancer = clusterID
-		}
 		name := fmt.Sprintf("%s-%s-%s%s", clusterID, pool.Name, platform.Region, az)
 		mset := &clusterapi.MachineSet{
 			TypeMeta: metav1.TypeMeta{
@@ -71,7 +68,7 @@ func MachineSets(clusterID string, config *types.InstallConfig, pool *types.Mach
 					},
 				},
 				Template: clusterapi.MachineTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
+					ObjectMeta: clusterapi.ObjectMeta{
 						Labels: map[string]string{
 							"machine.openshift.io/cluster-api-machineset":   name,
 							"machine.openshift.io/cluster-api-cluster":      clusterID,

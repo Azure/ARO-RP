@@ -79,6 +79,8 @@ func TestReconcileMonitoringConfig(t *testing.T) {
 prometheusK8s:
   retention: 1d
   volumeClaimTemplate:
+    metadata:
+      name: meh
     spec:
       resources:
         requests:
@@ -93,12 +95,7 @@ prometheusK8s:
 				}
 			},
 			wantConfig: `
-prometheusK8s:
-  volumeClaimTemplate:
-    spec:
-      storageClassName: fast
-      volumeMode: Filesystem
-`,
+{}`,
 		},
 		{
 			name: "other monitoring components are configured",
@@ -163,7 +160,7 @@ alertmanagerMain:
 			request.Name = "cluster-monitoring-config"
 			request.Namespace = "openshift-monitoring"
 
-			_, err := r.Reconcile(request)
+			_, err := r.Reconcile(ctx, request)
 			if err != nil {
 				t.Fatal(err)
 			}

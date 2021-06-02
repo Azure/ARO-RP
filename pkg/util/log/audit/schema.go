@@ -14,9 +14,9 @@ type Payload struct {
 	// Part-A
 	EnvVer                 float64 `json:"env_ver"`
 	EnvName                string  `json:"env_name"`
-	EnvTime                string  `json:"env_time"`
-	EnvEpoch               string  `json:"env_epoch,omitempty"`
-	EnvSeqNum              uint64  `json:"env_seqNum,omitempty"`
+	EnvTime                string  `json:"env_time" deep:"-"`
+	EnvEpoch               string  `json:"env_epoch,omitempty" deep:"-"`
+	EnvSeqNum              uint64  `json:"env_seqNum,omitempty" deep:"-"`
 	EnvIKey                string  `json:"env_iKey,omitempty"`
 	EnvFlags               int     `json:"env_flags,omitempty"`
 	EnvAppID               string  `json:"env_appId"`
@@ -36,7 +36,7 @@ type Payload struct {
 	Category         string           `json:"Category"`
 	OperationName    string           `json:"OperationName"`
 	Result           Result           `json:"Result"`
-	RequestID        string           `json:"requestId"`
+	RequestID        string           `json:"requestId" deep:"-"`
 	TargetResources  []TargetResource `json:"TargetResources"`
 }
 

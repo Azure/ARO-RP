@@ -13,30 +13,30 @@ import (
 	cosmosdb "github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
-// MockPermissionClient is a mock of PermissionClient interface
+// MockPermissionClient is a mock of PermissionClient interface.
 type MockPermissionClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockPermissionClientMockRecorder
 }
 
-// MockPermissionClientMockRecorder is the mock recorder for MockPermissionClient
+// MockPermissionClientMockRecorder is the mock recorder for MockPermissionClient.
 type MockPermissionClientMockRecorder struct {
 	mock *MockPermissionClient
 }
 
-// NewMockPermissionClient creates a new mock instance
+// NewMockPermissionClient creates a new mock instance.
 func NewMockPermissionClient(ctrl *gomock.Controller) *MockPermissionClient {
 	mock := &MockPermissionClient{ctrl: ctrl}
 	mock.recorder = &MockPermissionClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockPermissionClient) EXPECT() *MockPermissionClientMockRecorder {
 	return m.recorder
 }
 
-// Create mocks base method
+// Create mocks base method.
 func (m *MockPermissionClient) Create(arg0 context.Context, arg1 *cosmosdb.Permission) (*cosmosdb.Permission, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", arg0, arg1)
@@ -45,13 +45,13 @@ func (m *MockPermissionClient) Create(arg0 context.Context, arg1 *cosmosdb.Permi
 	return ret0, ret1
 }
 
-// Create indicates an expected call of Create
+// Create indicates an expected call of Create.
 func (mr *MockPermissionClientMockRecorder) Create(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockPermissionClient)(nil).Create), arg0, arg1)
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockPermissionClient) Delete(arg0 context.Context, arg1 *cosmosdb.Permission) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
@@ -59,13 +59,13 @@ func (m *MockPermissionClient) Delete(arg0 context.Context, arg1 *cosmosdb.Permi
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockPermissionClientMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockPermissionClient)(nil).Delete), arg0, arg1)
 }
 
-// Get mocks base method
+// Get mocks base method.
 func (m *MockPermissionClient) Get(arg0 context.Context, arg1 string) (*cosmosdb.Permission, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0, arg1)
@@ -74,13 +74,13 @@ func (m *MockPermissionClient) Get(arg0 context.Context, arg1 string) (*cosmosdb
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get
+// Get indicates an expected call of Get.
 func (mr *MockPermissionClientMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPermissionClient)(nil).Get), arg0, arg1)
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockPermissionClient) List() cosmosdb.PermissionIterator {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List")
@@ -88,13 +88,13 @@ func (m *MockPermissionClient) List() cosmosdb.PermissionIterator {
 	return ret0
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockPermissionClientMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockPermissionClient)(nil).List))
 }
 
-// ListAll mocks base method
+// ListAll mocks base method.
 func (m *MockPermissionClient) ListAll(arg0 context.Context) (*cosmosdb.Permissions, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListAll", arg0)
@@ -103,13 +103,13 @@ func (m *MockPermissionClient) ListAll(arg0 context.Context) (*cosmosdb.Permissi
 	return ret0, ret1
 }
 
-// ListAll indicates an expected call of ListAll
+// ListAll indicates an expected call of ListAll.
 func (mr *MockPermissionClientMockRecorder) ListAll(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAll", reflect.TypeOf((*MockPermissionClient)(nil).ListAll), arg0)
 }
 
-// Replace mocks base method
+// Replace mocks base method.
 func (m *MockPermissionClient) Replace(arg0 context.Context, arg1 *cosmosdb.Permission) (*cosmosdb.Permission, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Replace", arg0, arg1)
@@ -118,7 +118,7 @@ func (m *MockPermissionClient) Replace(arg0 context.Context, arg1 *cosmosdb.Perm
 	return ret0, ret1
 }
 
-// Replace indicates an expected call of Replace
+// Replace indicates an expected call of Replace.
 func (mr *MockPermissionClientMockRecorder) Replace(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Replace", reflect.TypeOf((*MockPermissionClient)(nil).Replace), arg0, arg1)

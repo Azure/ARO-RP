@@ -19,12 +19,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -64,10 +63,7 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli
 //   requested).
 // * If the pull Secret object (which is not owned by the Cluster object)
 //   changes, we'll see the pull Secret object requested.
-func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO(mj): Reconcile will eventually be receiving a ctx (https://github.com/kubernetes-sigs/controller-runtime/blob/7ef2da0bc161d823f084ad21ff5f9c9bd6b0cc39/pkg/reconcile/reconcile.go#L93)
-	ctx := context.TODO()
-
+func (r *PullSecretReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	operatorSecret, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
@@ -77,16 +73,13 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 
 	// reconcile global pull secret
 	// detects if the global pull secret is broken and fixes it by using backup managed by ARO operator
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		userSecret, err = r.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Get(ctx, pullSecretName.Name, metav1.GetOptions{})
-		if err != nil && !kerrors.IsNotFound(err) {
-			return err
-		}
+	userSecret, err = r.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Get(ctx, pullSecretName.Name, metav1.GetOptions{})
+	if err != nil && !kerrors.IsNotFound(err) {
+		return reconcile.Result{}, err
+	}
 
-		// fix pull secret if its broken to have at least the ARO pull secret
-		userSecret, err = r.ensureGlobalPullSecret(ctx, operatorSecret, userSecret)
-		return err
-	})
+	// fix pull secret if its broken to have at least the ARO pull secret
+	userSecret, err = r.ensureGlobalPullSecret(ctx, operatorSecret, userSecret)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -94,33 +87,29 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	// reconcile cluster status
 	// update the following information:
 	// - list of Red Hat pull-secret keys in status.
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		cluster, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
+	cluster, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
-		cluster.Status.RedHatKeysPresent, err = r.parseRedHatKeys(userSecret)
-		if err != nil {
-			return err
-		}
+	cluster.Status.RedHatKeysPresent, err = r.parseRedHatKeys(userSecret)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
-		_, err = r.arocli.AroV1alpha1().Clusters().UpdateStatus(ctx, cluster, metav1.UpdateOptions{})
-		return err
-	})
-
+	_, err = r.arocli.AroV1alpha1().Clusters().UpdateStatus(ctx, cluster, metav1.UpdateOptions{})
 	return reconcile.Result{}, err
 }
 
 // SetupWithManager setup our manager
 func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	pullSecretPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
-		return (meta.GetName() == pullSecretName.Name && meta.GetNamespace() == pullSecretName.Namespace) ||
-			(meta.GetName() == operator.SecretName && meta.GetNamespace() == operator.Namespace)
+	pullSecretPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return (o.GetName() == pullSecretName.Name && o.GetNamespace() == pullSecretName.Namespace) ||
+			(o.GetName() == operator.SecretName && o.GetNamespace() == operator.Namespace)
 	})
 
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(meta metav1.Object, object runtime.Object) bool {
-		return meta.GetName() == arov1alpha1.SingletonClusterName
+	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == arov1alpha1.SingletonClusterName
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).

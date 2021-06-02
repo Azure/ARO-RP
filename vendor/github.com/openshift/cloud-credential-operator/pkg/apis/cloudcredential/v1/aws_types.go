@@ -38,8 +38,6 @@ type StatementEntry struct {
 	Action []string `json:"action"`
 	// Resource specifies the object(s) this statement should apply to. (or "*" for all)
 	Resource string `json:"resource"`
-	// PolicyCondition specifies under which condition StatementEntry will apply
-	PolicyCondition IAMPolicyCondition `json:"policyCondition,omitempty"`
 }
 
 // AWSStatus containes the status of the credentials request in AWS.
@@ -51,9 +49,3 @@ type AWSProviderStatus struct {
 	// Policy is the name of the policy attached to the user in AWS.
 	Policy string `json:"policy"`
 }
-
-// IAMPolicyCondition - map of condition types, with associated key - value mapping
-type IAMPolicyCondition map[string]IAMPolicyConditionKeyValue
-
-// IAMPolicyConditionKeyValue - mapping of values for the chosen type
-type IAMPolicyConditionKeyValue map[string]interface{}

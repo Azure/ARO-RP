@@ -23,7 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	"github.com/openshift/cloud-credential-operator/pkg/version"
+	"github.com/openshift/cloud-credential-operator/version"
 )
 
 //go:generate mockgen -source=./client.go -destination=./mock/client_generated.go -package=mock
@@ -118,7 +118,7 @@ func NewClient(accessKeyID, secretAccessKey []byte, region, infraName string) (C
 	}
 	s.Handlers.Build.PushBackNamed(request.NamedHandler{
 		Name: "openshift.io/cloud-credential-operator",
-		Fn:   request.MakeAddToUserAgentHandler("openshift.io cloud-credential-operator", version.Get().String(), infraName),
+		Fn:   request.MakeAddToUserAgentHandler("openshift.io cloud-credential-operator", version.Version, infraName),
 	})
 
 	return NewClientFromIAMClient(iam.New(s))

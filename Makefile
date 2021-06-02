@@ -78,6 +78,12 @@ publish-image-proxy: image-proxy
 proxy:
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./hack/proxy
 
+run-portal:
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro portal
+
+build-portal:
+	cd portal && npm install && npm run build
+
 pyenv:
 	virtualenv --python=/usr/bin/python3 pyenv
 	. pyenv/bin/activate && \
@@ -136,7 +142,7 @@ admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
 
 vendor:
-	# https://groups.google.com/forum/#!topic/golang-nuts/51-D_YFC78k
+	# See comments in the script for background on why we need it
 	hack/update-go-module-dependencies.sh
 
 .PHONY: admin.kubeconfig aro az clean client deploy discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy lint-go proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor
