@@ -77,6 +77,7 @@ func TestReconcileMonitoringConfig(t *testing.T) {
 						Data: map[string]string{
 							"config.yaml": `
 prometheusK8s:
+  extraField: prometheus
   retention: 1d
   volumeClaimTemplate:
     metadata:
@@ -87,6 +88,17 @@ prometheusK8s:
           storage: 50Gi
       storageClassName: fast
       volumeMode: Filesystem
+alertmanagerMain:
+  extraField: yeet
+  volumeClaimTemplate:
+    metadata:
+      name: slowest-storage
+    spec:
+      resources:
+        requests:
+          storage: 50Gi
+        storageClassName: snail-mail
+        volumeMode: Filesystem
 `,
 						},
 					}),
@@ -95,7 +107,11 @@ prometheusK8s:
 				}
 			},
 			wantConfig: `
-{}`,
+alertmanagerMain:
+  extraField: yeet
+prometheusK8s:
+  extraField: prometheus
+`,
 		},
 		{
 			name: "other monitoring components are configured",
@@ -108,6 +124,8 @@ prometheusK8s:
 alertmanagerMain:
   nodeSelector:
     foo: bar
+somethingElse:
+  configured: true
 `,
 						},
 					}),
@@ -119,37 +137,8 @@ alertmanagerMain:
 alertmanagerMain:
   nodeSelector:
     foo: bar
-`,
-		},
-		{
-			name: "enabled and we want to disable",
-			setConfigMap: func() *Reconciler {
-				return &Reconciler{
-					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
-						ObjectMeta: cmMetadata,
-						Data: map[string]string{
-							"config.yaml": `
-alertmanagerMain:
-  nodeSelector:
-    foo: bar
-prometheusK8s:
-    retention: 15d
-    volumeClaimTemplate:
-      spec:
-        resources:
-          requests:
-            storage: 100Gi
-`,
-						},
-					}),
-					log:        log,
-					jsonHandle: new(codec.JsonHandle),
-				}
-			},
-			wantConfig: `
-alertmanagerMain:
-  nodeSelector:
-    foo: bar
+somethingElse:
+  configured: true
 `,
 		},
 	} {
