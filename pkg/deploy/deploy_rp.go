@@ -19,14 +19,6 @@ import (
 )
 
 func (d *deployer) DeployRP(ctx context.Context) error {
-	encryptionAtHostSupported, err := d.encryptionAtHostSupported(ctx)
-	if err != nil {
-		return err
-	}
-	if !encryptionAtHostSupported {
-		d.log.Warn("encryption at host not supported")
-	}
-
 	rpMSI, err := d.userassignedidentities.Get(ctx, d.config.RPResourceGroupName, "aro-rp-"+d.config.Location)
 	if err != nil {
 		return err
@@ -53,9 +45,6 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		parameters.Parameters["armApiCaBundle"] = &arm.ParametersParameter{
 			Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.ARMAPICABundle)),
 		}
-	}
-	parameters.Parameters["encryptionAtHost"] = &arm.ParametersParameter{
-		Value: encryptionAtHostSupported,
 	}
 	parameters.Parameters["extraCosmosDBIPs"] = &arm.ParametersParameter{
 		Value: strings.Join(d.config.Configuration.ExtraCosmosDBIPs, ","),

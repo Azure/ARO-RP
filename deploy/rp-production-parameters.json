@@ -41,9 +41,6 @@
         "disableCosmosDBFirewall": {
             "value": false
         },
-        "encryptionAtHost": {
-            "value": ""
-        },
         "extraCosmosDBIPs": {
             "value": ""
         },

@@ -40,7 +40,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"billingServicePrincipalId",
 			"clusterMdsdConfigVersion",
 			"disableCosmosDBFirewall",
-			"encryptionAtHost",
 			"extraCosmosDBIPs",
 			"fpClientId",
 			"keyvaultPrefix",
@@ -69,8 +68,6 @@ func (g *generator) rpTemplate() *arm.Template {
 		case "disableCosmosDBFirewall":
 			p.Type = "bool"
 			p.DefaultValue = false
-		case "encryptionAtHost":
-			p.Type = "bool"
 		case "armApiCaBundle",
 			"armApiClientCertCommonName",
 			"armClientId",

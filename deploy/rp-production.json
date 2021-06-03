@@ -47,9 +47,6 @@
             "type": "bool",
             "defaultValue": false
         },
-        "encryptionAtHost": {
-            "type": "bool"
-        },
         "extraCosmosDBIPs": {
             "type": "string",
             "defaultValue": ""
@@ -398,9 +395,6 @@
                                 }
                             }
                         ]
-                    },
-                    "securityProfile": {
-                        "encryptionAtHost": "[parameters('encryptionAtHost')]"
                     },
                     "diagnosticsProfile": {
                         "bootDiagnostics": {

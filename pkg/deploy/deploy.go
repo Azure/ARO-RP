@@ -146,26 +146,3 @@ func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
 
 	return parameters
 }
-
-func (d *deployer) encryptionAtHostSupported(ctx context.Context) (bool, error) {
-	skus, err := d.resourceskus.List(ctx, "")
-	if err != nil {
-		return false, err
-	}
-
-	for _, sku := range skus {
-		if !strings.EqualFold((*sku.Locations)[0], d.config.Location) ||
-			*sku.Name != "Standard_D2s_v3" {
-			continue
-		}
-
-		for _, cap := range *sku.Capabilities {
-			if *cap.Name == "EncryptionAtHostSupported" &&
-				*cap.Value == "True" {
-				return true, nil
-			}
-		}
-	}
-
-	return false, nil
-}
