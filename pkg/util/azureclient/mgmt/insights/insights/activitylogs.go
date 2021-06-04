@@ -97,7 +97,8 @@ func (client ActivityLogsClient) ListPreparer(ctx context.Context, filter string
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2015-04-01"
+	//const APIVersion = "2015-04-01"
+	const APIVersion = "2017-03-01-preview"
 	queryParameters := map[string]interface{}{
 		"$filter":     autorest.Encode("query", filter),
 		"api-version": APIVersion,
