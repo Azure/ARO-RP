@@ -385,29 +385,21 @@ func (d *deployer) configureKeyvaultIssuers(ctx context.Context) error {
 }
 
 func (d *deployer) configureServiceSecrets(ctx context.Context) error {
-	err := d.ensureSecret(ctx, d.serviceKeyvault, env.EncryptionSecretName, 32)
-	if err != nil {
-		return err
-	}
-
-	err = d.ensureSecret(ctx, d.serviceKeyvault, env.EncryptionSecretV2Name, 64)
-	if err != nil {
-		return err
-	}
-
-	err = d.ensureSecret(ctx, d.serviceKeyvault, env.FrontendEncryptionSecretName, 32)
-	if err != nil {
-		return err
-	}
-
-	err = d.ensureSecret(ctx, d.serviceKeyvault, env.FrontendEncryptionSecretV2Name, 64)
-	if err != nil {
-		return err
-	}
-
-	err = d.ensureSecret(ctx, d.portalKeyvault, env.PortalServerSessionKeySecretName, 32)
-	if err != nil {
-		return err
+	for _, s := range []struct {
+		kv         keyvault.Manager
+		secretName string
+		len        int
+	}{
+		{d.serviceKeyvault, env.EncryptionSecretName, 32},
+		{d.serviceKeyvault, env.EncryptionSecretV2Name, 64},
+		{d.serviceKeyvault, env.FrontendEncryptionSecretName, 32},
+		{d.serviceKeyvault, env.FrontendEncryptionSecretV2Name, 64},
+		{d.portalKeyvault, env.PortalServerSessionKeySecretName, 32},
+	} {
+		err := d.ensureSecret(ctx, s.kv, s.secretName, s.len)
+		if err != nil {
+			return err
+		}
 	}
 
 	return d.ensureSecretKey(ctx, d.portalKeyvault, env.PortalServerSSHKeySecretName)
