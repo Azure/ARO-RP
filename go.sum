@@ -1820,8 +1820,8 @@ github.com/mitchellh/reflectwalk v1.0.0/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx
 github.com/mitchellh/reflectwalk v1.0.1/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
 github.com/mjudeikis/go-cosmosdb v0.0.0-20210518104404-b205b3cefd36 h1:K0yb4fqa1rYPEbdlv3rYz0vh1aHK0Jkd+EscS1Yi5wI=
 github.com/mjudeikis/go-cosmosdb v0.0.0-20210518104404-b205b3cefd36/go.mod h1:l/LMyUQzbW3Pe62a6huel6S/5ED0KrkkqSQdwiGueUI=
-github.com/mjudeikis/installer v0.9.0-master.0.20210521150000-41d78ae90525 h1:5cm+cXaHTbZwhzvGuYf5XfcfpKT4gaBMYcB0eEc/FrU=
-github.com/mjudeikis/installer v0.9.0-master.0.20210521150000-41d78ae90525/go.mod h1:gK919VTSoMmqggOrjr5alO0KD7hkuE0I0xwoaitRpCQ=
+github.com/mjudeikis/installer v0.9.0-master.0.20210603071751-c3c375c5034a h1:CUatJN+U9y8AGqzfbvjQcnPKiJaK5gCZEIYpMqZr3/8=
+github.com/mjudeikis/installer v0.9.0-master.0.20210603071751-c3c375c5034a/go.mod h1:wRAY/doOkyi+sihbkl88EAMg11+3ZvPPBpGqI7iPVq0=
 github.com/moby/ipvs v1.0.1/go.mod h1:2pngiyseZbIKXNv7hsKj3O9UEz30c53MT9005gt2hxQ=
 github.com/moby/locker v1.0.1/go.mod h1:S7SDdo5zpBK84bzzVlKr2V0hz+7x9hWbYC/kq7oQppc=
 github.com/moby/sys/mountinfo v0.1.3/go.mod h1:w2t2Avltqx8vE7gX5l+QiBKxODu2TX0+Syr3h52Tw4o=
