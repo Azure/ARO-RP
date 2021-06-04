@@ -43,6 +43,12 @@ type Config struct {
 			api.MissingFields
 		} `json:"volumeClaimTemplate,omitempty"`
 	} `json:"prometheusK8s,omitempty"`
+	AlertManagerMain struct {
+		api.MissingFields
+		VolumeClaimTemplate struct {
+			api.MissingFields
+		} `json:"volumeClaimTemplate,omitempty"`
+	} `json:"alertmanagerMain,omitempty"`
 }
 
 var defaultConfig = `prometheusK8s: {}`
@@ -92,6 +98,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 	if !reflect.DeepEqual(configData.PrometheusK8s.VolumeClaimTemplate, struct{ api.MissingFields }{}) {
 		configData.PrometheusK8s.VolumeClaimTemplate = struct{ api.MissingFields }{}
+		changed = true
+	}
+
+	if !reflect.DeepEqual(configData.AlertManagerMain.VolumeClaimTemplate, struct{ api.MissingFields }{}) {
+		configData.AlertManagerMain.VolumeClaimTemplate = struct{ api.MissingFields }{}
 		changed = true
 	}
 
