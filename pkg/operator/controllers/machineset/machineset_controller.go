@@ -7,6 +7,7 @@ import (
 	"context"
 	"regexp"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
@@ -19,12 +20,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
-	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
-	"github.com/Azure/go-autorest/autorest/to"
-
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
 type MachineSetReconciler struct {
@@ -47,7 +45,11 @@ func (r *MachineSetReconciler) Reconcile(ctx context.Context, request ctrl.Reque
 		return reconcile.Result{}, err
 	}
 
-	machinesetObject, err := r.maocli.MachineV1beta1().MachineSets(request.Namespace).Get(ctx, request.Name, metav1.GetOptions{}) // need to re-add workers only
+	if !instance.Spec.Features.ReconcileMachineSet {
+		return reconcile.Result{}, nil
+	}
+
+	machinesetObject, err := r.maocli.MachineV1beta1().MachineSets(machineSetsNamespace).Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -73,9 +75,9 @@ func (r *MachineSetReconciler) Reconcile(ctx context.Context, request ctrl.Reque
 
 	// Scale up
 	if replicaCount < 3 && matches {
-		r.log.Infof("Found %d worker replicas. The MachineSet controller will attempt scaling.", replicaCount)
+		r.log.Error("Found less than 3 worker replicas. The MachineSet controller will attempt scaling.")
 		machinesetObject.Spec.Replicas = to.Int32Ptr(int32(1) + *machinesetObject.Spec.Replicas)
-		_, err := r.maocli.MachineV1beta1().MachineSets(request.Namespace).Update(ctx, machinesetObject, metav1.UpdateOptions{})
+		_, err := r.maocli.MachineV1beta1().MachineSets(machineSetsNamespace).Update(ctx, machinesetObject, metav1.UpdateOptions{})
 		if err != nil {
 			return reconcile.Result{}, err
 		}

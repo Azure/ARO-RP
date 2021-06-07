@@ -72,6 +72,7 @@ type FeaturesSpec struct {
 	ReconcilePullSecret            bool `json:"reconcilePullSecret,omitempty"`
 	ReconcileRouteFix              bool `json:"reconcileRouteFix,omitempty"`
 	ReconcileWorkaroundsController bool `json:"reconcileWorkaroundsController,omitempty"`
+	ReconcileMachineSet            bool `json:"reconcileMachineSet,omitempty"`
 }
 
 // ClusterStatus defines the observed state of Cluster

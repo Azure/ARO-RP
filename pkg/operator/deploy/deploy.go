@@ -190,6 +190,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 					ReconcilePullSecret:            true,
 					ReconcileRouteFix:              true,
 					ReconcileWorkaroundsController: true,
+					ReconcileMachineSet:            true,
 				},
 			},
 		},
