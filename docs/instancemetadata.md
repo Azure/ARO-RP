@@ -19,4 +19,4 @@ Environment variables you **must** set:
 * RESOURCEGROUP: the target resource group name
 
 Environment variables you may **optionally** set:
-* HOSTNAME_OVERRIDE: in case default behavior doesn't give a value we want for hostname, pass in an override here
+* HOSTNAME_OVERRIDE: in case default behavior doesn't give a value we want for hostname, pass in an override here.  This can happen when running `aro deploy` inside an Azure Conainer Instance (ACI) where the hostname is not meaningful and we wish to use the host's hostname.
