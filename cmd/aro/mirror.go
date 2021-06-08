@@ -78,39 +78,6 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	var releases []pkgmirror.Node
-	if len(flag.Args()) == 1 {
-		log.Print("reading release graph")
-		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 3))
-		if err != nil {
-			return err
-		}
-	} else {
-		for _, arg := range flag.Args()[1:] {
-			if strings.EqualFold(arg, "latest") {
-				releases = append(releases, pkgmirror.Node{
-					Version: version.InstallStream.Version.String(),
-					Payload: version.InstallStream.PullSpec,
-				})
-			} else {
-				releases = append(releases, pkgmirror.Node{
-					Version: arg,
-					Payload: arg,
-				})
-			}
-		}
-	}
-
-	var errorOccurred bool
-	for _, release := range releases {
-		log.Printf("mirroring release %s", release.Version)
-		err = pkgmirror.Mirror(ctx, log, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
-		if err != nil {
-			log.Errorf("%s: %s\n", release, err)
-			errorOccurred = true
-		}
-	}
-
 	var srcAcrGeneva string
 	switch env.Environment().Name {
 	case azure.PublicCloud.Name:
@@ -137,11 +104,44 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
+	var errorOccurred bool
 	for _, ref := range mirrorImages {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
 		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
 		if err != nil {
 			log.Errorf("%s: %s\n", ref, err)
+			errorOccurred = true
+		}
+	}
+
+	var releases []pkgmirror.Node
+	if len(flag.Args()) == 1 {
+		log.Print("reading release graph")
+		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 3))
+		if err != nil {
+			return err
+		}
+	} else {
+		for _, arg := range flag.Args()[1:] {
+			if strings.EqualFold(arg, "latest") {
+				releases = append(releases, pkgmirror.Node{
+					Version: version.InstallStream.Version.String(),
+					Payload: version.InstallStream.PullSpec,
+				})
+			} else {
+				releases = append(releases, pkgmirror.Node{
+					Version: arg,
+					Payload: arg,
+				})
+			}
+		}
+	}
+
+	for _, release := range releases {
+		log.Printf("mirroring release %s", release.Version)
+		err = pkgmirror.Mirror(ctx, log, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
+		if err != nil {
+			log.Errorf("%s: %s\n", release, err)
 			errorOccurred = true
 		}
 	}
