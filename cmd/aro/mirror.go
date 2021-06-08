@@ -123,9 +123,18 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		srcAcrGeneva = srcAcrGenevaOverride
 	}
 
-	mirrorImages := []string{
-		version.MdsdImage(srcAcrGeneva),
-		version.MdmImage(srcAcrGeneva),
+	var mirrorImages = []string{}
+	switch env.Environment().Name {
+	case azure.PublicCloud.Name:
+		mirrorImages = []string{
+			version.MdsdImage(srcAcrGeneva),
+			version.MdmImage(srcAcrGeneva),
+		}
+	case azure.USGovernmentCloud.Name:
+		mirrorImages = []string{
+			version.MdsdImageGov(srcAcrGeneva),
+			version.MdmImageGov(srcAcrGeneva),
+		}
 	}
 
 	for _, ref := range mirrorImages {
