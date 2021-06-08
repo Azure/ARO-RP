@@ -11,7 +11,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 )
 
-type prodfromenv struct {
+type prodFromEnv struct {
 	instanceMetadata
 
 	Getenv    func(key string) string
@@ -19,7 +19,7 @@ type prodfromenv struct {
 }
 
 func newProdFromEnv(ctx context.Context) (InstanceMetadata, error) {
-	p := &prodfromenv{
+	p := &prodFromEnv{
 		Getenv:    os.Getenv,
 		LookupEnv: os.LookupEnv,
 	}
@@ -32,7 +32,7 @@ func newProdFromEnv(ctx context.Context) (InstanceMetadata, error) {
 	return p, nil
 }
 
-func (p *prodfromenv) populateInstanceMetadata() error {
+func (p *prodFromEnv) populateInstanceMetadata() error {
 
 	for _, key := range []string{
 		"AZURE_ENVIRONMENT",

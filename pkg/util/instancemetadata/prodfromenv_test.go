@@ -5,44 +5,31 @@ package instancemetadata
 
 import (
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestProdEnvPopulateInstanceMetadata(t *testing.T) {
-	hostname, _ := os.Hostname()
+	hostname, err := os.Hostname()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
-		name        string
-		environment map[string]string
-		expectErr   bool
-		expected    prodfromenv
+		name                 string
+		environment          map[string]string
+		wantInstanceMetadata instanceMetadata
+		wantErr              string
 	}{
 		{
-			name:        "no environment",
-			environment: make(map[string]string),
-			expectErr:   true,
-			expected:    prodfromenv{},
+			name:    "missing environment variables",
+			wantErr: "environment variable \"AZURE_ENVIRONMENT\" unset",
 		},
 		{
-			name: "env missing all keys",
-			environment: map[string]string{
-				"someKey": "someValue",
-			},
-			expectErr: true,
-			expected:  prodfromenv{},
-		},
-		{
-			name: "env missing some keys",
-			environment: map[string]string{
-				"RESOURCEGROUP": "my-rg",
-			},
-			expectErr: true,
-			expected:  prodfromenv{},
-		},
-		{
-			name: "env valid environment",
+			name: "valid environment variables",
 			environment: map[string]string{
 				"AZURE_ENVIRONMENT":     azure.PublicCloud.Name,
 				"AZURE_SUBSCRIPTION_ID": "some-sub-guid",
@@ -50,20 +37,17 @@ func TestProdEnvPopulateInstanceMetadata(t *testing.T) {
 				"LOCATION":              "some-region",
 				"RESOURCEGROUP":         "my-resourceGroup",
 			},
-			expectErr: false,
-			expected: prodfromenv{
-				instanceMetadata: instanceMetadata{
-					environment:    &azure.PublicCloud,
-					subscriptionID: "some-sub-guid",
-					tenantID:       "some-tenant-guid",
-					location:       "some-region",
-					resourceGroup:  "my-resourceGroup",
-					hostname:       hostname,
-				},
+			wantInstanceMetadata: instanceMetadata{
+				environment:    &azure.PublicCloud,
+				subscriptionID: "some-sub-guid",
+				tenantID:       "some-tenant-guid",
+				location:       "some-region",
+				resourceGroup:  "my-resourceGroup",
+				hostname:       hostname,
 			},
 		},
 		{
-			name: "env invalid environment",
+			name: "valid environment variables, but invalid Azure environment name",
 			environment: map[string]string{
 				"AZURE_ENVIRONMENT":     "ThisEnvDoesNotExist",
 				"AZURE_SUBSCRIPTION_ID": "some-sub-guid",
@@ -71,20 +55,10 @@ func TestProdEnvPopulateInstanceMetadata(t *testing.T) {
 				"LOCATION":              "some-region",
 				"RESOURCEGROUP":         "my-resourceGroup",
 			},
-			expectErr: true,
-			expected: prodfromenv{
-				instanceMetadata: instanceMetadata{
-					environment:    nil,
-					subscriptionID: "some-sub-guid",
-					tenantID:       "some-tenant-guid",
-					location:       "some-region",
-					resourceGroup:  "my-resourceGroup",
-					hostname:       hostname,
-				},
-			},
+			wantErr: "autorest/azure: There is no cloud environment matching the name \"THISENVDOESNOTEXIST\"",
 		},
 		{
-			name: "env with hostname override",
+			name: "valid environment variables with hostname override",
 			environment: map[string]string{
 				"AZURE_ENVIRONMENT":     azure.PublicCloud.Name,
 				"AZURE_SUBSCRIPTION_ID": "some-sub-guid",
@@ -93,66 +67,38 @@ func TestProdEnvPopulateInstanceMetadata(t *testing.T) {
 				"RESOURCEGROUP":         "my-resourceGroup",
 				"HOSTNAME_OVERRIDE":     "my.over.ride",
 			},
-			expectErr: false,
-			expected: prodfromenv{
-				instanceMetadata: instanceMetadata{
-					environment:    &azure.PublicCloud,
-					subscriptionID: "some-sub-guid",
-					tenantID:       "some-tenant-guid",
-					location:       "some-region",
-					resourceGroup:  "my-resourceGroup",
-					hostname:       "my.over.ride",
-				},
+			wantInstanceMetadata: instanceMetadata{
+				environment:    &azure.PublicCloud,
+				subscriptionID: "some-sub-guid",
+				tenantID:       "some-tenant-guid",
+				location:       "some-region",
+				resourceGroup:  "my-resourceGroup",
+				hostname:       "my.over.ride",
 			},
 		},
 	}
 
 	for _, test := range tests {
-		p := &prodfromenv{
-			Getenv: func(key string) string {
-				return test.environment[key]
-			},
-			LookupEnv: func(key string) (string, bool) {
-				value, ok := test.environment[key]
-				return value, ok
-			},
-		}
-		err := p.populateInstanceMetadata()
-		if test.expectErr != (err != nil) {
-			t.Errorf("%s: expected error %#v got %#v", test.name, test.expectErr, err)
-		} else if !test.expectErr {
-			// verify there are values for all required fields
-			if p.environment != nil && test.expected.environment != nil {
-				pName := ""
-				eName := ""
-				if p.environment != nil {
-					pName = p.environment.Name
-				}
-				if test.expected.environment != nil {
-					eName = test.expected.environment.Name
-				}
-				if pName != eName {
-					t.Errorf("%s: unexpected environment Name value, expected %#v got %#v", test.name, eName, pName)
-				}
-			} else if p.environment != test.expected.environment {
-				// one of these is nil and the other is not
-				t.Errorf("%s: unexpected environment value, expected %#v got %#v", test.name, test.expected.environment, p.environment)
+		t.Run(test.name, func(t *testing.T) {
+			p := &prodFromEnv{
+				Getenv: func(key string) string {
+					return test.environment[key]
+				},
+				LookupEnv: func(key string) (string, bool) {
+					value, ok := test.environment[key]
+					return value, ok
+				},
 			}
-			if p.subscriptionID != test.expected.subscriptionID {
-				t.Errorf("%s: unexpected subscriptionID value, expected %#v got %#v", test.name, test.expected.subscriptionID, p.subscriptionID)
+
+			err := p.populateInstanceMetadata()
+			if err != nil && err.Error() != test.wantErr ||
+				err == nil && test.wantErr != "" {
+				t.Error(err)
 			}
-			if p.tenantID != test.expected.tenantID {
-				t.Errorf("%s: unexpected tenantID value, expected %#v got %#v", test.name, test.expected.tenantID, p.tenantID)
+			if !reflect.DeepEqual(p.instanceMetadata, test.wantInstanceMetadata) {
+				opts := cmp.AllowUnexported(instanceMetadata{})
+				t.Error(cmp.Diff(p.instanceMetadata, test.wantInstanceMetadata, opts))
 			}
-			if p.location != test.expected.location {
-				t.Errorf("%s: unexpected environment value, expected %#v got %#v", test.name, test.expected.location, p.location)
-			}
-			if p.resourceGroup != test.expected.resourceGroup {
-				t.Errorf("%s: unexpected environment value, expected %#v got %#v", test.name, test.expected.resourceGroup, p.resourceGroup)
-			}
-			if p.hostname != test.expected.hostname {
-				t.Errorf("%s: unexpected environment value, expected %#v got %#v", test.name, test.expected.hostname, p.hostname)
-			}
-		}
+		})
 	}
 }
