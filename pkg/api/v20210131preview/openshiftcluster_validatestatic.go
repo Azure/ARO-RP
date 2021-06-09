@@ -215,7 +215,7 @@ func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, n
 
 func (sv *openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile) error {
 
-	if !validate.VMSizeIsValid(mp.VMSize, sv.requireD2sV3Workers, true) {
+	if !validate.VMSizeIsValid(api.VMSize(mp.VMSize), sv.requireD2sV3Workers, true) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided master VM size '%s' is invalid.", mp.VMSize)
 	}
 	if !validate.RxSubnetID.MatchString(mp.SubnetID) {
@@ -236,7 +236,7 @@ func (sv *openShiftClusterStaticValidator) validateWorkerProfile(path string, wp
 	if wp.Name != "worker" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".name", "The provided worker name '%s' is invalid.", wp.Name)
 	}
-	if !validate.VMSizeIsValid(wp.VMSize, sv.requireD2sV3Workers, false) {
+	if !validate.VMSizeIsValid(api.VMSize(wp.VMSize), sv.requireD2sV3Workers, false) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided worker VM size '%s' is invalid.", wp.VMSize)
 	}
 	if !validate.DiskSizeIsValid(wp.DiskSizeGB) {

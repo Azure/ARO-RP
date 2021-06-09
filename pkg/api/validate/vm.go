@@ -3,54 +3,58 @@ package validate
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
+import (
+	"github.com/Azure/ARO-RP/pkg/api"
+)
+
 func DiskSizeIsValid(sizeGB int) bool {
 	return sizeGB >= 128
 }
 
-func VMSizeIsValid(vmSize VMSize, requiredD2sV3Workers, isMaster bool) bool {
+func VMSizeIsValid(vmSize api.VMSize, requiredD2sV3Workers, isMaster bool) bool {
 	if isMaster {
 		switch vmSize {
-		case VMSizeStandardD8sV3,
-			VMSizeStandardD16sV3,
-			VMSizeStandardD32sV3,
-			VMSizeStandardE64iV3,
-			VMSizeStandardE64isV3,
-			VMSizeStandardF72sV2,
-			VMSizeStandardGS5,
-			VMSizeStandardG5,
-			VMSizeStandardM128ms:
+		case api.VMSizeStandardD8sV3,
+			api.VMSizeStandardD16sV3,
+			api.VMSizeStandardD32sV3,
+			api.VMSizeStandardE64iV3,
+			api.VMSizeStandardE64isV3,
+			api.VMSizeStandardF72sV2,
+			api.VMSizeStandardGS5,
+			api.VMSizeStandardG5,
+			api.VMSizeStandardM128ms:
 			return true
 		}
 	} else {
 		if requiredD2sV3Workers {
 			switch vmSize {
-			case VMSizeStandardD2sV3:
+			case api.VMSizeStandardD2sV3:
 				return true
 			}
 		} else {
 			switch vmSize {
-			case VMSizeStandardD4asV4,
-				VMSizeStandardD8asV4,
-				VMSizeStandardD16asV4,
-				VMSizeStandardD32asV4,
-				VMSizeStandardD4sV3,
-				VMSizeStandardD8sV3,
-				VMSizeStandardD16sV3,
-				VMSizeStandardD32sV3,
-				VMSizeStandardE4sV3,
-				VMSizeStandardE8sV3,
-				VMSizeStandardE16sV3,
-				VMSizeStandardE32sV3,
-				VMSizeStandardE64iV3,
-				VMSizeStandardE64isV3,
-				VMSizeStandardF4sV2,
-				VMSizeStandardF8sV2,
-				VMSizeStandardF16sV2,
-				VMSizeStandardF32sV2,
-				VMSizeStandardF72sV2,
-				VMSizeStandardG5,
-				VMSizeStandardGS5,
-				VMSizeStandardM128ms:
+			case api.VMSizeStandardD4asV4,
+				api.VMSizeStandardD8asV4,
+				api.VMSizeStandardD16asV4,
+				api.VMSizeStandardD32asV4,
+				api.VMSizeStandardD4sV3,
+				api.VMSizeStandardD8sV3,
+				api.VMSizeStandardD16sV3,
+				api.VMSizeStandardD32sV3,
+				api.VMSizeStandardE4sV3,
+				api.VMSizeStandardE8sV3,
+				api.VMSizeStandardE16sV3,
+				api.VMSizeStandardE32sV3,
+				api.VMSizeStandardE64iV3,
+				api.VMSizeStandardE64isV3,
+				api.VMSizeStandardF4sV2,
+				api.VMSizeStandardF8sV2,
+				api.VMSizeStandardF16sV2,
+				api.VMSizeStandardF32sV2,
+				api.VMSizeStandardF72sV2,
+				api.VMSizeStandardG5,
+				api.VMSizeStandardGS5,
+				api.VMSizeStandardM128ms:
 				return true
 			}
 		}
