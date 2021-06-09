@@ -5,8 +5,10 @@ package instancemetadata
 
 import (
 	"context"
+	"os"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/sirupsen/logrus"
 )
 
 type InstanceMetadata interface {
@@ -51,10 +53,17 @@ func (im *instanceMetadata) Environment() *azure.Environment {
 	return im.environment
 }
 
-func New(ctx context.Context, isLocalDevelopmentMode bool) (InstanceMetadata, error) {
+func New(ctx context.Context, log *logrus.Entry, isLocalDevelopmentMode bool) (InstanceMetadata, error) {
 	if isLocalDevelopmentMode {
+		log.Info("creating development InstanceMetadata")
 		return NewDev(true)
 	}
 
-	return newProd(ctx)
+	if os.Getenv("AZURE_EV2") != "" {
+		log.Info("creating InstanceMetadata from Environment")
+		return newProdFromEnv(ctx)
+	} else {
+		log.Info("creating InstanceMetadata from Azure Instance Metadata Service (AIMS)")
+		return newProd(ctx)
+	}
 }

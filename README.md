@@ -89,6 +89,8 @@ questions or comments.
       aro-operator-master.openshift-azure-operator:8080, to avoid the
       `AlertmanagerReceiversNotConfigured` warning.
 
+    * azurensg: Ensures that the Network Security Groups (NSGs) are correct, and updates the Azure Machine Provider spec with subnet, vnet, and Network Resource Group.
+
     * checker: Watches the `Cluster` resource for changes and updates conditions
       of the resource based on checks mentioned below
 

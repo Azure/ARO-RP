@@ -39,7 +39,7 @@ func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 		log.Info("running in local development mode")
 	}
 
-	im, err := instancemetadata.New(ctx, isLocalDevelopmentMode)
+	im, err := instancemetadata.New(ctx, log, isLocalDevelopmentMode)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Infof("running on %s", im.Environment().Name)
+	log.Infof("InstanceMetadata: running on %s", im.Environment().Name)
 
 	return &core{
 		InstanceMetadata: im,
