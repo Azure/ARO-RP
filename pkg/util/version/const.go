@@ -4,6 +4,8 @@ package version
 // Licensed under the Apache License 2.0.
 
 import (
+	"os"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
@@ -49,23 +51,19 @@ func FluentbitImage(acrDomain string) string {
 // MdmImage contains the location of the MDM container image
 func MdmImage(acrDomain string) string {
 	// for the latest version see https://genevamondocs.azurewebsites.net/collect/references/linuxcontainers.html?q=container
+	if os.Getenv("GENEVA_MDM_IMAGE_OVERRIDE") != "" {
+		return os.Getenv("GENEVA_MDM_IMAGE_OVERRIDE")
+	}
+
 	return acrDomain + "/genevamdm:master_20210401.1"
 }
 
 // MdsdImage contains the location of the MDSD container image
 func MdsdImage(acrDomain string) string {
 	// for the latest version see https://genevamondocs.azurewebsites.net/collect/references/linuxcontainers.html?q=container
+	if os.Getenv("GENEVA_MDSD_IMAGE_OVERRIDE") != "" {
+		return os.Getenv("GENEVA_MDSD_IMAGE_OVERRIDE")
+	}
+
 	return acrDomain + "/genevamdsd:master_20210401.1"
-}
-
-// MdmImage contains the location of the MDM container image
-func MdmImageGov(acrDomain string) string {
-	// for the latest version see https://genevamondocs.azurewebsites.net/collect/references/linuxcontainers.html?q=container
-	return acrDomain + "/artifact/4e0b7fc3-3c5c-4f9a-95ea-e1e76af5061b/official/genevamdm"
-}
-
-// MdsdImage contains the location of the MDSD container image
-func MdsdImageGov(acrDomain string) string {
-	// for the latest version see https://genevamondocs.azurewebsites.net/collect/references/linuxcontainers.html?q=container
-	return acrDomain + "/f7ab95c7-7c6a-4b5b-942f-978593199e55/f7ab95c7-7c6a-4b5b-942f-978593199e55/official/genevamdsd"
 }

@@ -54,6 +54,10 @@ func Dest(repo, reference string) string {
 	return repo + reference[strings.IndexByte(reference, '/'):]
 }
 
+func DestLastIndex(repo, reference string) string {
+	return repo + reference[strings.LastIndex(reference, "/"):]
+}
+
 func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, dstauth, srcauth *types.DockerAuthConfig) error {
 	log.Printf("reading imagestream from %s", srcrelease)
 	is, err := getReleaseImageStream(ctx, srcrelease, srcauth)

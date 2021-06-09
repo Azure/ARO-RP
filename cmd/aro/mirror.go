@@ -12,7 +12,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
 
@@ -78,42 +77,6 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	var srcAcrGeneva string
-	switch env.Environment().Name {
-	case azure.PublicCloud.Name:
-		srcAcrGeneva = "linuxgeneva-microsoft" + acrDomainSuffix
-	case azure.USGovernmentCloud.Name:
-		srcAcrGeneva = "containerreplicationffusgovvirginia1" + acrDomainSuffix
-	}
-
-	if srcAcrGenevaOverride != "" {
-		srcAcrGeneva = srcAcrGenevaOverride
-	}
-
-	var mirrorImages = []string{}
-	switch env.Environment().Name {
-	case azure.PublicCloud.Name:
-		mirrorImages = []string{
-			version.MdsdImage(srcAcrGeneva),
-			version.MdmImage(srcAcrGeneva),
-		}
-	case azure.USGovernmentCloud.Name:
-		mirrorImages = []string{
-			version.MdsdImageGov(srcAcrGeneva),
-			version.MdmImageGov(srcAcrGeneva),
-		}
-	}
-
-	var errorOccurred bool
-	for _, ref := range mirrorImages {
-		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
-		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
-		if err != nil {
-			log.Errorf("%s: %s\n", ref, err)
-			errorOccurred = true
-		}
-	}
-
 	var releases []pkgmirror.Node
 	if len(flag.Args()) == 1 {
 		log.Print("reading release graph")
@@ -137,11 +100,32 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
+	var errorOccurred bool
 	for _, release := range releases {
 		log.Printf("mirroring release %s", release.Version)
 		err = pkgmirror.Mirror(ctx, log, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
 		if err != nil {
 			log.Errorf("%s: %s\n", release, err)
+			errorOccurred = true
+		}
+	}
+
+	srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
+
+	if srcAcrGenevaOverride != "" {
+		srcAcrGeneva = srcAcrGenevaOverride
+	}
+
+	mirrorImages := []string{
+		version.MdsdImage(srcAcrGeneva),
+		version.MdmImage(srcAcrGeneva),
+	}
+
+	for _, ref := range mirrorImages {
+		log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
+		err = pkgmirror.Copy(ctx, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
+		if err != nil {
+			log.Errorf("%s: %s\n", ref, err)
 			errorOccurred = true
 		}
 	}
