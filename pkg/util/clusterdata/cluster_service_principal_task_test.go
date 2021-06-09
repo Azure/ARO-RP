@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/test/util/cmp"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
 func TestClusterServidePrincipalEnricherTask(t *testing.T) {
