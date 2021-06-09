@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -87,6 +88,17 @@ func DevConfig(_env env.Core) (*Config, error) {
 		keyvaultPrefix = keyvaultPrefix[:20]
 	}
 
+	// Cloud name is used by az cli.
+	// Therfore must translate cloud names, only Public and USGov needed
+	// https://github.com/Azure/go-autorest/issues/624
+	cloudName := _env.Environment().Name // Default, we'll translate only those we need
+	switch cloudName {
+	case azure.PublicCloud.Name:
+		cloudName = "AzureCloud"
+	case azure.USGovernmentCloud.Name:
+		cloudName = "AzureUSGovernment"
+	}
+
 	return &Config{
 		RPs: []RPConfig{
 			{
@@ -95,6 +107,8 @@ func DevConfig(_env env.Core) (*Config, error) {
 				GatewayResourceGroupName: os.Getenv("USER") + "-gwy-" + _env.Location(),
 				RPResourceGroupName:      os.Getenv("USER") + "-aro-" + _env.Location(),
 				Configuration: &Configuration{
+					AzureCloudName:              &cloudName,
+					KeyvaultDNSSuffix:           &_env.Environment().KeyVaultDNSSuffix,
 					DatabaseAccountName:         to.StringPtr(os.Getenv("USER") + "-aro-" + _env.Location()),
 					KeyvaultPrefix:              &keyvaultPrefix,
 					StorageAccountDomain:        to.StringPtr(os.Getenv("USER") + "aro" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
