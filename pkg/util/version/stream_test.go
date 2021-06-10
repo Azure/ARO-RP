@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/Azure/ARO-RP/test/util/cmp"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
 func TestOpenShiftVersions(t *testing.T) {

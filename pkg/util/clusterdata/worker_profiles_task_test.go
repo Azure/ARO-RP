@@ -20,7 +20,7 @@ import (
 	ktesting "k8s.io/client-go/testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/test/util/cmp"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
 func TestWorkerProfilesEnricherTask(t *testing.T) {
