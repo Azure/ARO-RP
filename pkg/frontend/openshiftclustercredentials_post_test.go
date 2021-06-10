@@ -29,6 +29,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 	}
 
 	mockSubID := "00000000-0000-0000-0000-000000000000"
+	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
 
 	type test struct {
 		name           string
@@ -44,7 +45,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 	for _, tt := range []*test{
 		{
 			name:       "cluster exists in db",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			resourceID: resourceID,
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
@@ -84,14 +85,14 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 		},
 		{
 			name:           "credentials request is not allowed in the API version",
-			resourceID:     fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			resourceID:     resourceID,
 			apiVersion:     "no-credentials",
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: InvalidResourceType: : The resource type 'openshiftclusters' could not be found in the namespace 'microsoft.redhatopenshift' for api version 'no-credentials'.`,
 		},
 		{
 			name:       "cluster exists in db in creating state",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			resourceID: resourceID,
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
@@ -125,7 +126,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 		},
 		{
 			name:       "cluster exists in db in deleting state",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			resourceID: resourceID,
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
@@ -159,7 +160,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 		},
 		{
 			name:       "cluster failed to create",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			resourceID: resourceID,
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
@@ -194,7 +195,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 		},
 		{
 			name:       "cluster failed to delete",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			resourceID: resourceID,
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
@@ -229,7 +230,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 		},
 		{
 			name:       "cluster not found in db",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			resourceID: resourceID,
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
@@ -246,7 +247,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 		},
 		{
 			name:           "internal error",
-			resourceID:     fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			resourceID:     resourceID,
 			dbError:        &cosmosdb.Error{Code: "500", Message: "oh no!"},
 			wantStatusCode: http.StatusInternalServerError,
 			wantError:      `500: InternalServerError: : Internal server error.`,
