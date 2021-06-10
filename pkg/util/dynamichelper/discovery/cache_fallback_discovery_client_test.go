@@ -16,9 +16,9 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/version"
-	"github.com/Azure/ARO-RP/test/util/cmp"
 )
 
 // TestVersion makes sure that bindata contains cache generated with the

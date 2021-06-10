@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/test/util/cmp"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
 func TestClusterVersionEnricherTask(t *testing.T) {
