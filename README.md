@@ -107,7 +107,7 @@ questions or comments.
       immutable
 
     * dnsmasq: Ensures that a dnsmasq systemd service is defined as a machineconfig for all
-      nodes to allow for api-int and *.apps domains resolve even if custom DNS on the VNET is set.
+      nodes. The dnsmasq config contains records for azure load balancers such as api, api-int and *.apps domains so they will resolve even if custom DNS on the VNET is set.
 
     * genevalogging: Ensures all the Geneva logging resources in the
       `openshift-azure-logging` namespace matches the pre-defined specification
