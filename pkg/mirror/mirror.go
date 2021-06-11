@@ -50,8 +50,22 @@ func Copy(ctx context.Context, dstreference, srcreference string, dstauth, srcau
 	return err
 }
 
+// This will return repo and image name, preserving path
+// Ex:
+// repo      destrepo.io
+// reference azurecr.io/some/path/to/image:tag
+// returns:  destrepo.io/some/path/to/image:tag
 func Dest(repo, reference string) string {
 	return repo + reference[strings.IndexByte(reference, '/'):]
+}
+
+// This will return repo / image name.
+// Ex:
+// repo      destrepo.io
+// reference azurecr.io/some/path/to/image:tag
+// returns:  destrepo.io/image:tag
+func DestLastIndex(repo, reference string) string {
+	return repo + reference[strings.LastIndex(reference, "/"):]
 }
 
 func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, dstauth, srcauth *types.DockerAuthConfig) error {

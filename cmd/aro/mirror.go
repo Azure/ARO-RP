@@ -12,7 +12,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
 
@@ -111,13 +110,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	var srcAcrGeneva string
-	switch env.Environment().Name {
-	case azure.PublicCloud.Name:
-		srcAcrGeneva = "linuxgeneva-microsoft" + acrDomainSuffix
-	case azure.USGovernmentCloud.Name:
-		srcAcrGeneva = "containerreplicationffusgovvirginia1" + acrDomainSuffix
-	}
+	srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 
 	if srcAcrGenevaOverride != "" {
 		srcAcrGeneva = srcAcrGenevaOverride
@@ -129,8 +122,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	for _, ref := range mirrorImages {
-		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
-		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
+		log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
+		err = pkgmirror.Copy(ctx, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
 		if err != nil {
 			log.Errorf("%s: %s\n", ref, err)
 			errorOccurred = true
