@@ -45,7 +45,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 		By("verifying through Azure activity logs that the redeployment happened")
-		err = wait.PollImmediate(10*time.Second, 10*time.Minute, func() (bool, error) {
+		err = wait.PollImmediate(10*time.Second, 5*time.Minute, func() (bool, error) {
 			filter := fmt.Sprintf(
 				"eventTimestamp ge '%s' and resourceId eq '%s'",
 				startTime.Format(time.RFC3339),

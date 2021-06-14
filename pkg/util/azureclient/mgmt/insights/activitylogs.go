@@ -7,7 +7,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 
-	//"github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/insights/insights"
 )
 
@@ -16,7 +15,7 @@ once https://github.com/Azure/azure-sdk-for-go/issues/14704 is completed, or the
 successfully finds the missing objects:
 
 	activityLog.OperationName.Value == "Microsoft.Compute/virtualMachines/redeploy/action"
-	https://github.com/Azure/ARO-RP/blob/master/test/e2e/adminapi_redeployvm.go#L64-L70
+	https://github.com/Azure/ARO-RP/blob/924235001fd72793cc9770426dd74821c1e36bce/test/e2e/adminapi_redeployvm.go#L64-L70
 
 Last information on a fix to be provided by Azure stated sometime in 2nd half of calendar year 2021
 More details in the github issue, and the referenced ICM (see github issue for icm id)
