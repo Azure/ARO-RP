@@ -20,11 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-// TODO(jminter, 06/04/2021): re-enable this test.  Right now, ActivityLogs.List
-// has stopped returning the correct activity log record.  The record is visible
-// via the portal, which uses api-version 2017-03-01-preview, but that's not
-// available in the Go SDK.  Shrug.
-var _ = XDescribe("[Admin API] VM redeploy action", func() {
+var _ = Describe("[Admin API] VM redeploy action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("should trigger a selected VM to redeploy", func() {
