@@ -57,7 +57,7 @@ func NewManager(kvAuthorizer autorest.Authorizer, keyvaultURI string) Manager {
 	}
 }
 
-func (m *manager) CreateSignedCertificate(ctx context.Context, issuer string, certificateName, commonName string, eku Eku) error {
+func getShortCommonName(commonName string) string {
 	shortCommonName := commonName
 	if len(shortCommonName) > 64 {
 		// RFC 5280 requires that the common name be <= 64 characters.  Also see
@@ -67,8 +67,17 @@ func (m *manager) CreateSignedCertificate(ctx context.Context, issuer string, ce
 		// subject with an empty common name.  So, in the case where the domain
 		// name is too long, we use a reserved domain name which cannot be
 		// allocated by an end user as the common name.
-		shortCommonName = "reserved.aroapp.io"
+
+		// each cloud has different base domain and we have int and prod.
+		// the common string is 'aroapp' so we use that to build the base domain for a shorter CN
+		baseDomain := shortCommonName[strings.LastIndex(shortCommonName, "aroapp"):]
+		shortCommonName = "reserved." + baseDomain
 	}
+	return shortCommonName
+}
+
+func (m *manager) CreateSignedCertificate(ctx context.Context, issuer string, certificateName, commonName string, eku Eku) error {
+	shortCommonName := getShortCommonName(commonName)
 
 	op, err := m.kv.CreateCertificate(ctx, m.keyvaultURI, certificateName, azkeyvault.CertificateCreateParameters{
 		CertificatePolicy: &azkeyvault.CertificatePolicy{
