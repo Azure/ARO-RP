@@ -83,7 +83,12 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	verifier, err := oidc.NewVerifier(ctx, "https://sts.windows.net/"+_env.TenantID()+"/", pkgdbtoken.Resource)
+	dbTokenEndpoint, err := pkgdbtoken.Resource(_env.Environment().Name)
+	if err != nil {
+		return err
+	}
+
+	verifier, err := oidc.NewVerifier(ctx, _env.Environment().ActiveDirectoryEndpoint+_env.TenantID()+"/", dbTokenEndpoint)
 	if err != nil {
 		return err
 	}
