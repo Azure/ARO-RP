@@ -148,14 +148,10 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return nil
 	}
 
-	fpClientID := os.Getenv("AZURE_FP_CLIENT_ID")
+	fpSPID := os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")
 
-	fpSPID, err := c.getServicePrincipal(ctx, fpClientID)
-	if err != nil {
-		return err
-	}
 	if fpSPID == "" {
-		return fmt.Errorf("service principal not found for appId %s", fpClientID)
+		return fmt.Errorf("service principal id is not found")
 	}
 
 	c.log.Infof("creating AAD application")

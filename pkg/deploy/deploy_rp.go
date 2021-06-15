@@ -62,6 +62,10 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		Value: d.env.Environment().KeyVaultDNSSuffix,
 	}
 
+	parameters.Parameters["fpServicePrincipalId"] = &arm.ParametersParameter{
+		Value: *d.config.Configuration.FPServicePrincipalID,
+	}
+
 	// Cloud name is used by az cli.
 	// Therfore must translate cloud names, only Public and USGov needed
 	// https://github.com/Azure/go-autorest/issues/624
