@@ -962,6 +962,29 @@ systemctl enable download-mdm-credentials.timer
 /usr/local/bin/download-credentials.sh mdm
 MDSDCERTIFICATESAN=$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN=//')
 
+cat >/etc/systemd/system/watch-mdm-credentials.service <<EOF
+[Unit]
+Description=Watch for changes in mdm.pem and restarts the mdm service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart mdm.service
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+cat >/etc/systemd/system/watch-mdm-credentials.path <<EOF
+[Path]
+PathModified=/etc/mdm.pem
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable watch-mdm-credentials.path
+systemctl start watch-mdm-credentials.path
+
 mkdir /etc/systemd/system/mdsd.service.d
 cat >/etc/systemd/system/mdsd.service.d/override.conf <<'EOF'
 [Unit]
