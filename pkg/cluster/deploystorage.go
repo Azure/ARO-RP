@@ -263,6 +263,10 @@ func (m *manager) attachNSGsAndPatch(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	aroUserInternalClient, err := m.generateUserAdminKubeconfig(pg)
+	if err != nil {
+		return err
+	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		// used for the SAS token with which the bootstrap node retrieves its
@@ -278,6 +282,7 @@ func (m *manager) attachNSGsAndPatch(ctx context.Context) error {
 		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminInternalClient.File.Data
 		doc.OpenShiftCluster.Properties.AROServiceKubeconfig = aroServiceInternalClient.File.Data
 		doc.OpenShiftCluster.Properties.AROSREKubeconfig = aroSREInternalClient.File.Data
+		doc.OpenShiftCluster.Properties.UserAdminKubeconfig = aroUserInternalClient.File.Data
 		return nil
 	})
 	return err

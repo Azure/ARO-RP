@@ -31,5 +31,8 @@ func init() {
 		OpenShiftClusterCredentialsConverter: func() api.OpenShiftClusterCredentialsConverter {
 			return &openShiftClusterCredentialsConverter{}
 		},
+		OpenShiftClusterAdminKubeconfigConverter: func() api.OpenShiftClusterAdminKubeconfigConverter {
+			return &openShiftClusterAdminKubeconfigConverter{}
+		},
 	}
 }

@@ -468,6 +468,23 @@ class OpenShiftCluster(TrackedResource):
         self.system_data = None
 
 
+class OpenShiftClusterAdminKubeconfig(Model):
+    """OpenShiftClusterAdminKubeconfig represents an OpenShift cluster's admin
+    kubeconfig.
+
+    :param kubeconfig: The base64-encoded kubeconfig file.
+    :type kubeconfig: str
+    """
+
+    _attribute_map = {
+        'kubeconfig': {'key': 'kubeconfig', 'type': 'str'},
+    }
+
+    def __init__(self, *, kubeconfig: str=None, **kwargs) -> None:
+        super(OpenShiftClusterAdminKubeconfig, self).__init__(**kwargs)
+        self.kubeconfig = kubeconfig
+
+
 class OpenShiftClusterCredentials(Model):
     """OpenShiftClusterCredentials represents an OpenShift cluster's credentials.
 

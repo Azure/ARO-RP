@@ -60,6 +60,19 @@ func Run(api, outputDir string) error {
 		},
 	}
 
+	if g.kubeConfig {
+		s.Paths["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/listAdminCredentials"] = &PathItem{
+			Post: &Operation{
+				Tags:        []string{"OpenShiftClusters"},
+				Summary:     "Lists admin kubeconfig of an OpenShift cluster with the specified subscription, resource group and resource name.",
+				Description: "The operation returns the admin kubeconfig.",
+				OperationID: "OpenShiftClusters_ListAdminKubeconfig",
+				Parameters:  g.populateParameters(3, "OpenShiftCluster", "OpenShift cluster"),
+				Responses:   g.populateResponses("OpenShiftClusterAdminKubeconfig", false, http.StatusOK),
+			},
+		}
+	}
+
 	s.Paths["/providers/Microsoft.RedHatOpenShift/operations"] = &PathItem{
 		Get: &Operation{
 			Tags:        []string{"Operations"},
@@ -75,8 +88,11 @@ func Run(api, outputDir string) error {
 	}
 
 	populateExamples(s.Paths)
-
 	names := []string{"OpenShiftClusterList", "OpenShiftClusterCredentials"}
+	if g.kubeConfig {
+		names = append(names, "OpenShiftClusterAdminKubeconfig")
+	}
+
 	err = define(s.Definitions, api, g.xmsEnum, names...)
 	if err != nil {
 		return err

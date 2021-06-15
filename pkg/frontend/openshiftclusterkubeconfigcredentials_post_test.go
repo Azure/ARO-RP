@@ -11,20 +11,20 @@ import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
+	"github.com/Azure/ARO-RP/pkg/api/v20210131preview"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
-func TestPostOpenShiftClusterCredentials(t *testing.T) {
+func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 	ctx := context.Background()
 
 	apis := map[string]*api.Version{
-		"2020-04-30": api.APIs["2020-04-30"],
+		"2021-01-31-preview": api.APIs["2021-01-31-preview"],
 		"no-credentials": {
-			OpenShiftClusterConverter:       api.APIs["2020-04-30"].OpenShiftClusterConverter,
-			OpenShiftClusterStaticValidator: api.APIs["2020-04-30"].OpenShiftClusterStaticValidator,
+			OpenShiftClusterConverter:       api.APIs["2021-01-31-preview"].OpenShiftClusterConverter,
+			OpenShiftClusterStaticValidator: api.APIs["2021-01-31-preview"].OpenShiftClusterStaticValidator,
 		},
 	}
 
@@ -38,7 +38,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 		fixture        func(*testdatabase.Fixture)
 		dbError        error
 		wantStatusCode int
-		wantResponse   func(*test) *v20200430.OpenShiftClusterCredentials
+		wantResponse   func(*test) *v20210131preview.OpenShiftClusterAdminKubeconfig
 		wantError      string
 	}
 
@@ -54,14 +54,47 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateSucceeded,
-							ClusterProfile: api.ClusterProfile{
-								PullSecret: "{}",
+							ProvisioningState:   api.ProvisioningStateSucceeded,
+							UserAdminKubeconfig: api.SecureBytes("{kubeconfig}"),
+						},
+					},
+				})
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+							RegisteredFeatures: []api.RegisteredFeatureProfile{
+								{
+									Name:  api.FeatureFlagAdminKubeconfig,
+									State: "Registered",
+								},
 							},
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								ClientSecret: "clientSecret",
-							},
-							KubeadminPassword: "password",
+						},
+					},
+				})
+			},
+			wantStatusCode: http.StatusOK,
+			wantResponse: func(tt *test) *v20210131preview.OpenShiftClusterAdminKubeconfig {
+				return &v20210131preview.OpenShiftClusterAdminKubeconfig{
+					Kubeconfig: []byte("{kubeconfig}"),
+				}
+			},
+		},
+		{
+			name:       "cluster exists in db but no feature flag",
+			resourceID: resourceID,
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:   api.ProvisioningStateSucceeded,
+							UserAdminKubeconfig: api.SecureBytes("{kubeconfig}"),
 						},
 					},
 				})
@@ -75,13 +108,8 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 					},
 				})
 			},
-			wantStatusCode: http.StatusOK,
-			wantResponse: func(tt *test) *v20200430.OpenShiftClusterCredentials {
-				return &v20200430.OpenShiftClusterCredentials{
-					KubeadminUsername: "kubeadmin",
-					KubeadminPassword: "password",
-				}
-			},
+			wantStatusCode: http.StatusForbidden,
+			wantError:      `403: Forbidden: : Subscription feature flag 'Microsoft.RedHatOpenShift/AdminKubeconfig' is not enabled on this subscription to use this API.`,
 		},
 		{
 			name:           "credentials request is not allowed in the API version",
@@ -101,13 +129,8 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateCreating,
-							ClusterProfile: api.ClusterProfile{
-								PullSecret: "{}",
-							},
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								ClientSecret: "clientSecret",
-							},
+							ProvisioningState:   api.ProvisioningStateCreating,
+							UserAdminKubeconfig: api.SecureBytes("{kubeconfig}"),
 						},
 					},
 				})
@@ -117,6 +140,12 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
 							TenantID: "11111111-1111-1111-1111-111111111111",
+							RegisteredFeatures: []api.RegisteredFeatureProfile{
+								{
+									Name:  api.FeatureFlagAdminKubeconfig,
+									State: "Registered",
+								},
+							},
 						},
 					},
 				})
@@ -135,13 +164,8 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateDeleting,
-							ClusterProfile: api.ClusterProfile{
-								PullSecret: "{}",
-							},
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								ClientSecret: "clientSecret",
-							},
+							ProvisioningState:   api.ProvisioningStateDeleting,
+							UserAdminKubeconfig: api.SecureBytes("{kubeconfig}"),
 						},
 					},
 				})
@@ -151,6 +175,12 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
 							TenantID: "11111111-1111-1111-1111-111111111111",
+							RegisteredFeatures: []api.RegisteredFeatureProfile{
+								{
+									Name:  api.FeatureFlagAdminKubeconfig,
+									State: "Registered",
+								},
+							},
 						},
 					},
 				})
@@ -169,14 +199,9 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateFailed,
-							ClusterProfile: api.ClusterProfile{
-								PullSecret: "{}",
-							},
+							ProvisioningState:       api.ProvisioningStateFailed,
+							UserAdminKubeconfig:     api.SecureBytes("{}"),
 							FailedProvisioningState: api.ProvisioningStateCreating,
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								ClientSecret: "clientSecret",
-							},
 						},
 					},
 				})
@@ -186,6 +211,12 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
 							TenantID: "11111111-1111-1111-1111-111111111111",
+							RegisteredFeatures: []api.RegisteredFeatureProfile{
+								{
+									Name:  api.FeatureFlagAdminKubeconfig,
+									State: "Registered",
+								},
+							},
 						},
 					},
 				})
@@ -204,14 +235,9 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateFailed,
-							ClusterProfile: api.ClusterProfile{
-								PullSecret: "{}",
-							},
+							ProvisioningState:       api.ProvisioningStateFailed,
 							FailedProvisioningState: api.ProvisioningStateDeleting,
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								ClientSecret: "clientSecret",
-							},
+							UserAdminKubeconfig:     api.SecureBytes("{kubeconfig}"),
 						},
 					},
 				})
@@ -221,6 +247,12 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
 							TenantID: "11111111-1111-1111-1111-111111111111",
+							RegisteredFeatures: []api.RegisteredFeatureProfile{
+								{
+									Name:  api.FeatureFlagAdminKubeconfig,
+									State: "Registered",
+								},
+							},
 						},
 					},
 				})
@@ -238,6 +270,12 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
 							TenantID: "11111111-1111-1111-1111-111111111111",
+							RegisteredFeatures: []api.RegisteredFeatureProfile{
+								{
+									Name:  api.FeatureFlagAdminKubeconfig,
+									State: "Registered",
+								},
+							},
 						},
 					},
 				})
@@ -274,13 +312,13 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			reqAPIVersion := "2020-04-30"
+			reqAPIVersion := "2021-01-31-preview"
 			if tt.apiVersion != "" {
 				reqAPIVersion = tt.apiVersion
 			}
 
 			resp, b, err := ti.request(http.MethodPost,
-				fmt.Sprintf("https://server%s/listcredentials?api-version=%s", tt.resourceID, reqAPIVersion),
+				fmt.Sprintf("https://server%s/listAdminCredentials?api-version=%s", tt.resourceID, reqAPIVersion),
 				nil, nil)
 			if err != nil {
 				t.Error(err)

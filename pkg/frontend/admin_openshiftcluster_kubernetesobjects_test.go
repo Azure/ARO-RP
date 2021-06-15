@@ -319,6 +319,7 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 func TestAdminPostKubernetesObjects(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	mockTenantID := "00000000-0000-0000-0000-000000000000"
+	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
 	ctx := context.Background()
 
 	type test struct {
@@ -333,7 +334,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 	for _, tt := range []*test{
 		{
 			name:       "basic coverage",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			resourceID: resourceID,
 			objInBody: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind": "ConfigMap",
@@ -351,7 +352,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 		},
 		{
 			name:       "secret requested",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			resourceID: resourceID,
 			objInBody: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind": "Secret",

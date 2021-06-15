@@ -351,6 +351,53 @@
         }
       }
     },
+    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/listAdminCredentials": {
+      "post": {
+        "tags": [
+          "OpenShiftClusters"
+        ],
+        "summary": "Lists admin kubeconfig of an OpenShift cluster with the specified subscription, resource group and resource name.",
+        "description": "The operation returns the admin kubeconfig.",
+        "operationId": "OpenShiftClusters_ListAdminKubeconfig",
+        "parameters": [
+          {
+            "$ref": "../../../../../common-types/resource-management/v2/types.json#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "../../../../../common-types/resource-management/v2/types.json#/parameters/SubscriptionIdParameter"
+          },
+          {
+            "$ref": "../../../../../common-types/resource-management/v2/types.json#/parameters/ResourceGroupNameParameter"
+          },
+          {
+            "name": "resourceName",
+            "in": "path",
+            "description": "The name of the OpenShift cluster resource.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/OpenShiftClusterAdminKubeconfig"
+            }
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        },
+        "x-ms-examples": {
+          "Lists admin kubeconfig of an OpenShift cluster with the specified subscription, resource group and resource name.": {
+            "$ref": "./examples/OpenShiftClusters_ListAdminKubeconfig.json"
+          }
+        }
+      }
+    },
     "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/listCredentials": {
       "post": {
         "tags": [
@@ -561,6 +608,15 @@
           "$ref": "../../../../../common-types/resource-management/v2/types.json#/definitions/systemData",
           "description": "The system meta data relating to this resource.",
           "readOnly": true
+        }
+      }
+    },
+    "OpenShiftClusterAdminKubeconfig": {
+      "description": "OpenShiftClusterAdminKubeconfig represents an OpenShift cluster's admin kubeconfig.",
+      "properties": {
+        "kubeconfig": {
+          "description": "The base64-encoded kubeconfig file.",
+          "type": "string"
         }
       }
     },
