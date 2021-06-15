@@ -1,14 +1,14 @@
 package portal
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"encoding/json"
 	"net/http"
 	"sort"
 	"strings"
 )
-
-// Copyright (c) Microsoft Corporation.
-// Licensed under the Apache License 2.0.
 
 type AdminOpenShiftCluster struct {
 	Key         string `json:"key"`
