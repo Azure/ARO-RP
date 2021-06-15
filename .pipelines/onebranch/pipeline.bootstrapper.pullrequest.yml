@@ -44,3 +44,16 @@ extends:
     - stage: Bootstrapper
       jobs:
       - template: .pipelines/onebranch/templates/template-bootstrapper.yml@self
+
+    - stage: Build_Fluentbit
+      jobs:
+      - job: Build_Fluentbit
+        pool:
+          type: docker
+          os: linux
+
+        variables:
+          ob_git_checkout: true
+
+        steps:
+        - template: .pipelines/onebranch/templates/template-bootstrapper-fluentbit.yml@self
