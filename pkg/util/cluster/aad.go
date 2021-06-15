@@ -11,6 +11,7 @@ import (
 
 	azgraphrbac "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/gofrs/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -38,9 +39,19 @@ func (c *Cluster) getServicePrincipal(ctx context.Context, appID string) (string
 func (c *Cluster) createApplication(ctx context.Context, displayName string) (string, string, error) {
 	password := uuid.Must(uuid.NewV4()).String()
 
+	var domainSuffix string
+	switch c.env.Environment().Name {
+	case azure.PublicCloud.Name:
+		domainSuffix = "azure.com/"
+	case azure.USGovernmentCloud.Name:
+		domainSuffix = "azure.us/"
+	default:
+		return "", "", fmt.Errorf("unsupported cloud environment")
+	}
+
 	app, err := c.applications.Create(ctx, azgraphrbac.ApplicationCreateParameters{
 		DisplayName:    &displayName,
-		IdentifierUris: &[]string{"https://test.aro.azure.com/" + uuid.Must(uuid.NewV4()).String()},
+		IdentifierUris: &[]string{"https://test.aro." + domainSuffix + uuid.Must(uuid.NewV4()).String()},
 		PasswordCredentials: &[]azgraphrbac.PasswordCredential{
 			{
 				EndDate: &date.Time{Time: time.Now().AddDate(1, 0, 0)},
