@@ -42,6 +42,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"disableCosmosDBFirewall",
 			"extraCosmosDBIPs",
 			"fpClientId",
+			"fpServicePrincipalId",
 			"keyvaultPrefix",
 			"keyvaultDNSSuffix",
 			"mdmFrontendUrl",

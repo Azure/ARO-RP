@@ -30,10 +30,11 @@ steps:
     # TODO: get these into ADO variables, then remove rpMode
     if [[ "${{ parameters.rpMode }}" = "int" ]]; then
       export AZURE_FP_CLIENT_ID=71cfb175-ea3a-444e-8c03-b119b2752ce4
+      export AZURE_FP_SERVICE_PRINCIPAL_ID=fe9d206f-a6af-46db-8bda-303aae45e469
     else
       export AZURE_FP_CLIENT_ID=f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875
+      export AZURE_FP_SERVICE_PRINCIPAL_ID=de2829de-2392-40ee-b3a8-79b70a18c2a1
     fi
-
     # TODO: remove --env RESOURCEGROUP after next RP deployment.
 
     # TODO: e2e.test arguments need to move inside the container somehow.  Maybe
@@ -44,6 +45,7 @@ steps:
       --env AZURE_CLIENT_ID \
       --env AZURE_CLIENT_SECRET \
       --env AZURE_FP_CLIENT_ID \
+      --env AZURE_FP_SERVICE_PRINCIPAL_ID \
       --env AZURE_TENANT_ID \
       --env AZURE_SUBSCRIPTION_ID \
       --env LOCATION \

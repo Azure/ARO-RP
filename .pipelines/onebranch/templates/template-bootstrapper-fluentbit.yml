@@ -9,4 +9,5 @@ steps:
     saveImageToPath: fluentbit.tar
     buildkit: 1
     enable_network: true
-    build_tag: $(Build.BuildNumber)
+    build_tag: 1.7.8-1
+    arguments: ' --build-arg VERSION=1.7.8-1'
