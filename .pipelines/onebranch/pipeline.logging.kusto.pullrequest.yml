@@ -41,6 +41,6 @@ extends:
         suppressionSet: default
 
     stages:
-    - stage: Logging-Kusto
+    - stage: LoggingKusto
       jobs:
       - template: .pipelines/onebranch/templates/template-logging-kusto.yml@self
