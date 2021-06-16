@@ -17,6 +17,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
+	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
@@ -109,7 +110,9 @@ func TestSecurity(t *testing.T) {
 			request: func() (*http.Request, error) {
 				return http.NewRequest(http.MethodGet, "https://server/", nil)
 			},
-			wantAuditOperation: "GET /",
+			unauthenticatedWantStatusCode: 307,
+			authenticatedWantStatusCode:   200,
+			wantAuditOperation:            "GET /",
 			wantAuditTargetResources: []audit.TargetResource{
 				{
 					TargetResourceType: "",
@@ -148,8 +151,9 @@ func TestSecurity(t *testing.T) {
 			request: func() (*http.Request, error) {
 				return http.NewRequest(http.MethodPost, "https://server/api/logout", nil)
 			},
-			authenticatedWantStatusCode: http.StatusSeeOther,
-			wantAuditOperation:          "POST /api/logout",
+			unauthenticatedWantStatusCode: http.StatusSeeOther,
+			authenticatedWantStatusCode:   http.StatusSeeOther,
+			wantAuditOperation:            "POST /api/logout",
 			wantAuditTargetResources: []audit.TargetResource{
 				{
 					TargetResourceType: "",
@@ -162,8 +166,9 @@ func TestSecurity(t *testing.T) {
 			request: func() (*http.Request, error) {
 				return http.NewRequest(http.MethodGet, "https://server/callback", nil)
 			},
-			authenticatedWantStatusCode: http.StatusTemporaryRedirect,
-			wantAuditOperation:          "GET /callback",
+			unauthenticatedWantStatusCode: http.StatusTemporaryRedirect,
+			authenticatedWantStatusCode:   http.StatusTemporaryRedirect,
+			wantAuditOperation:            "GET /callback",
 			wantAuditTargetResources: []audit.TargetResource{
 				{
 					TargetResourceType: "",
@@ -310,12 +315,18 @@ func TestSecurity(t *testing.T) {
 					if tt2.authenticated {
 						tt2.wantStatusCode = http.StatusOK
 					} else {
-						tt2.wantStatusCode = http.StatusTemporaryRedirect
+						tt2.wantStatusCode = http.StatusForbidden
 					}
 				}
 
 				if resp.StatusCode != tt2.wantStatusCode {
-					t.Error(resp.StatusCode)
+					t.Error(resp.StatusCode, tt2.wantStatusCode)
+					body := make([]byte, 0)
+					_, err := resp.Body.Read(body)
+					if err != nil {
+						t.Fatal(err)
+					}
+					t.Error(body)
 				}
 
 				if tt.checkResponse != nil {
@@ -347,15 +358,24 @@ func TestSecurity(t *testing.T) {
 					}
 				}
 
-				payload := auditPayloadFixture()
-				payload.OperationName = tt.wantAuditOperation
-				payload.TargetResources = tt.wantAuditTargetResources
-				payload.Result.ResultDescription = fmt.Sprintf("Status code: %d", tt2.wantStatusCode)
-				if tt2.authenticated && tt.name != "/callback" && tt.name != "/healthz/ready" {
-					payload.CallerIdentities[0].CallerIdentityValue = "username"
-				}
+				if tt.wantAuditOperation != "" {
+					payload := auditPayloadFixture()
+					payload.OperationName = tt.wantAuditOperation
+					payload.TargetResources = tt.wantAuditTargetResources
+					payload.Result.ResultDescription = fmt.Sprintf("Status code: %d", tt2.wantStatusCode)
 
-				testlog.AssertAuditPayloads(t, auditHook, []*audit.Payload{payload})
+					if tt2.wantStatusCode == http.StatusForbidden {
+						payload.Result.ResultType = audit.ResultTypeFail
+					}
+
+					if tt2.authenticated && !sliceutil.Contains([]string{
+						"/callback", "/healthz/ready", "/api/login", "/api/logout"}, tt.name) {
+						payload.CallerIdentities[0].CallerIdentityValue = "username"
+					}
+					testlog.AssertAuditPayloads(t, auditHook, []*audit.Payload{payload})
+				} else {
+					testlog.AssertAuditPayloads(t, auditHook, []*audit.Payload{})
+				}
 			})
 		}
 	}
