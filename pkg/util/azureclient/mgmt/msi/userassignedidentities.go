@@ -8,7 +8,8 @@ import (
 
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // UserAssignedIdentitiesClient is a minimal interface for azure UserAssignedIdentitiesClient
@@ -23,7 +24,7 @@ type userAssignedIdentitiesClient struct {
 var _ UserAssignedIdentitiesClient = &userAssignedIdentitiesClient{}
 
 // NewUserAssignedIdentitiesClient creates a new UserAssignedIdentitiesClient
-func NewUserAssignedIdentitiesClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) UserAssignedIdentitiesClient {
+func NewUserAssignedIdentitiesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) UserAssignedIdentitiesClient {
 	client := mgmtmsi.NewUserAssignedIdentitiesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 

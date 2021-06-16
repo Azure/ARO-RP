@@ -15,6 +15,11 @@ type MachinePool struct {
 	// +optional
 	InstanceType string `json:"type"`
 
+	// EncryptionAtHost
+	//
+	// +optional
+	EncryptionAtHost bool `json:"encryptionAtHost,omitempty"`
+
 	// OSDisk defines the storage for instance.
 	//
 	// +optional
@@ -34,6 +39,10 @@ type OSDisk struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Standard_LRS;Premium_LRS;StandardSSD_LRS
 	DiskType string `json:"diskType"`
+
+	// DiskEncryptionSetID is a resource ID of disk encryption set
+	// +optional
+	DiskEncryptionSetID string `json:"diskEncryptionSetId,omitempty"`
 }
 
 // Set sets the values from `required` to `a`.
@@ -50,11 +59,19 @@ func (a *MachinePool) Set(required *MachinePool) {
 		a.InstanceType = required.InstanceType
 	}
 
+	if required.EncryptionAtHost {
+		a.EncryptionAtHost = required.EncryptionAtHost
+	}
+
 	if required.OSDisk.DiskSizeGB != 0 {
 		a.OSDisk.DiskSizeGB = required.OSDisk.DiskSizeGB
 	}
 
 	if required.OSDisk.DiskType != "" {
 		a.OSDisk.DiskType = required.OSDisk.DiskType
+	}
+
+	if required.OSDisk.DiskEncryptionSetID != "" {
+		a.OSDisk.DiskEncryptionSetID = required.OSDisk.DiskEncryptionSetID
 	}
 }

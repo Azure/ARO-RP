@@ -7,8 +7,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
+
+	"github.com/go-test/deep"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -21,6 +22,7 @@ func TestClusters(t *testing.T) {
 		WithOpenShiftClusters(dbOpenShiftClusters)
 
 	fixture.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+		ID:  "00000000-0000-0000-0000-000000000000",
 		Key: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroupname/providers/microsoft.redhatopenshift/openshiftclusters/succeeded",
 		OpenShiftCluster: &api.OpenShiftCluster{
 			ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/succeeded",
@@ -29,6 +31,7 @@ func TestClusters(t *testing.T) {
 			},
 		},
 	}, &api.OpenShiftClusterDocument{
+		ID:  "00000000-0000-0000-0000-000000000001",
 		Key: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroupname/providers/microsoft.redhatopenshift/openshiftclusters/creating",
 		OpenShiftCluster: &api.OpenShiftCluster{
 			ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/creating",
@@ -36,7 +39,18 @@ func TestClusters(t *testing.T) {
 				ProvisioningState: api.ProvisioningStateCreating,
 			},
 		},
-	})
+	},
+		&api.OpenShiftClusterDocument{
+			ID:  "00000000-0000-0000-0000-000000000002",
+			Key: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroupname/providers/microsoft.redhatopenshift/openshiftclusters/failedcreate",
+			OpenShiftCluster: &api.OpenShiftCluster{
+				ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/failedcreate",
+				Properties: api.OpenShiftClusterProperties{
+					ProvisioningState:       api.ProvisioningStateFailed,
+					FailedProvisioningState: api.ProvisioningStateCreating,
+				},
+			},
+		})
 
 	err := fixture.Create()
 	if err != nil {
@@ -61,7 +75,11 @@ func TestClusters(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(r, []string{"/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/succeeded"}) {
-		t.Error(r)
+	expected := []string{
+		"/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/succeeded",
+	}
+
+	for _, l := range deep.Equal(expected, r) {
+		t.Error(l)
 	}
 }

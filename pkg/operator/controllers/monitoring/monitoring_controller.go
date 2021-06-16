@@ -5,7 +5,7 @@ package monitoring
 
 import (
 	"context"
-	"reflect"
+	"encoding/json"
 
 	"github.com/ghodss/yaml"
 	"github.com/sirupsen/logrus"
@@ -29,7 +29,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
-var monitoringName = types.NamespacedName{Name: "cluster-monitoring-config", Namespace: "openshift-monitoring"}
+var (
+	monitoringName   = types.NamespacedName{Name: "cluster-monitoring-config", Namespace: "openshift-monitoring"}
+	prometheusLabels = "app=prometheus,prometheus=k8s"
+)
 
 // Config represents cluster monitoring stack configuration.
 // Reconciler reconciles retention and storage settings,
@@ -38,20 +41,14 @@ type Config struct {
 	api.MissingFields
 	PrometheusK8s struct {
 		api.MissingFields
-		Retention           string `json:"retention,omitempty"`
-		VolumeClaimTemplate struct {
-			api.MissingFields
-		} `json:"volumeClaimTemplate,omitempty"`
+		Retention           string           `json:"retention,omitempty"`
+		VolumeClaimTemplate *json.RawMessage `json:"volumeClaimTemplate,omitempty"`
 	} `json:"prometheusK8s,omitempty"`
 	AlertManagerMain struct {
 		api.MissingFields
-		VolumeClaimTemplate struct {
-			api.MissingFields
-		} `json:"volumeClaimTemplate,omitempty"`
+		VolumeClaimTemplate *json.RawMessage `json:"volumeClaimTemplate,omitempty"`
 	} `json:"alertmanagerMain,omitempty"`
 }
-
-var defaultConfig = `prometheusK8s: {}`
 
 type Reconciler struct {
 	arocli        aroclient.Interface
@@ -70,10 +67,39 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	for _, f := range []func(context.Context, ctrl.Request) (ctrl.Result, error){
+		r.reconcileConfiguration,
+		r.reconcilePVC, // TODO(mj): This should be removed once we don't have PVC anymore
+	} {
+		result, err := f(ctx, request)
+		if err != nil {
+			return result, err
+		}
+	}
+	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) reconcilePVC(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	pvcList, err := r.kubernetescli.CoreV1().PersistentVolumeClaims(monitoringName.Namespace).List(ctx, metav1.ListOptions{LabelSelector: prometheusLabels})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	for _, pvc := range pvcList.Items {
+		err = r.kubernetescli.CoreV1().PersistentVolumeClaims(monitoringName.Namespace).Delete(ctx, pvc.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) reconcileConfiguration(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	cm, isCreate, err := r.monitoringConfigMap(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+
 	if cm.Data == nil {
 		cm.Data = map[string]string{}
 	}
@@ -90,19 +116,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	changed := false
-	// we are disabling persistence. We use omitempty on the struct to
-	// clean the fields
+
+	// Nil out the fields we don't want set
+	if configData.AlertManagerMain.VolumeClaimTemplate != nil {
+		configData.AlertManagerMain.VolumeClaimTemplate = nil
+		changed = true
+	}
+
 	if configData.PrometheusK8s.Retention != "" {
 		configData.PrometheusK8s.Retention = ""
 		changed = true
 	}
-	if !reflect.DeepEqual(configData.PrometheusK8s.VolumeClaimTemplate, struct{ api.MissingFields }{}) {
-		configData.PrometheusK8s.VolumeClaimTemplate = struct{ api.MissingFields }{}
-		changed = true
-	}
 
-	if !reflect.DeepEqual(configData.AlertManagerMain.VolumeClaimTemplate, struct{ api.MissingFields }{}) {
-		configData.AlertManagerMain.VolumeClaimTemplate = struct{ api.MissingFields }{}
+	if configData.PrometheusK8s.VolumeClaimTemplate != nil {
+		configData.PrometheusK8s.VolumeClaimTemplate = nil
 		changed = true
 	}
 
@@ -140,9 +167,7 @@ func (r *Reconciler) monitoringConfigMap(ctx context.Context) (*corev1.ConfigMap
 				Name:      monitoringName.Name,
 				Namespace: monitoringName.Namespace,
 			},
-			Data: map[string]string{
-				"config.yaml": defaultConfig,
-			},
+			Data: nil,
 		}, true, nil
 	}
 	if err != nil {

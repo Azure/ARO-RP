@@ -318,13 +318,13 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install azure-cli docker jq gcc rh-git29 rh-python36 tmpwatch lttng-usr
+yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install azure-cli docker jq gcc rh-git29 rh-python36 tmpwatch
 
 GO_VERSION=1.14.9
 curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz | tar -C /usr/local -xz
 ln -s /usr/local/go/bin/* /usr/local/bin
 
-VSTS_AGENT_VERSION=2.181.1
+VSTS_AGENT_VERSION=2.188.3
 mkdir /home/cloud-user/agent
 pushd /home/cloud-user/agent
 curl https://vstsagentpackage.azureedge.net/agent/${VSTS_AGENT_VERSION}/vsts-agent-linux-x64-${VSTS_AGENT_VERSION}.tar.gz | tar -xz

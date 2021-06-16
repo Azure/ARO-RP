@@ -37,6 +37,7 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 		steps.Condition(m.apiServersReady, 30*time.Minute),
 		steps.Action(m.ensureBillingRecord), // belt and braces
 		steps.Action(m.fixSSH),
+		steps.Action(m.fixInfraID),        // Old clusters lacks infraID in the database. Which makes code prone to errors.
 		steps.Action(m.populateCreatedAt), // TODO(mikalai): Remove after a round of admin updates
 		steps.Action(m.fixSREKubeconfig),
 		steps.Action(m.fixUserAdminKubeconfig),
@@ -150,7 +151,7 @@ func (m *manager) Install(ctx context.Context) error {
 
 func (m *manager) runSteps(ctx context.Context, s []steps.Step) error {
 	err := steps.Run(ctx, m.log, 10*time.Second, s)
-	if err != nil && !m.env.IsLocalDevelopmentMode() {
+	if err != nil {
 		m.gatherFailureLogs(ctx)
 	}
 	return err

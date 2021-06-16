@@ -6,7 +6,8 @@ package network
 import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // UsageClient is a minimal interface for azure UsageClient
@@ -21,7 +22,7 @@ type usageClient struct {
 var _ UsageClient = &usageClient{}
 
 // NewUsageClient creates a new UsageClient
-func NewUsageClient(environment *azure.Environment, tenantID string, authorizer autorest.Authorizer) UsageClient {
+func NewUsageClient(environment *azureclient.AROEnvironment, tenantID string, authorizer autorest.Authorizer) UsageClient {
 	client := mgmtnetwork.NewUsagesClientWithBaseURI(environment.ResourceManagerEndpoint, tenantID)
 	client.Authorizer = authorizer
 

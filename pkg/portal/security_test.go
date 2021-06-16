@@ -15,13 +15,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
+	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
@@ -50,7 +51,7 @@ func TestSecurity(t *testing.T) {
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 	_env.EXPECT().Location().AnyTimes().Return("eastus")
 	_env.EXPECT().TenantID().AnyTimes().Return("00000000-0000-0000-0000-000000000001")
-	_env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+	_env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 	_env.EXPECT().Hostname().AnyTimes().Return("testhost")
 
 	l := listener.NewListener()
@@ -109,7 +110,9 @@ func TestSecurity(t *testing.T) {
 			request: func() (*http.Request, error) {
 				return http.NewRequest(http.MethodGet, "https://server/", nil)
 			},
-			wantAuditOperation: "GET /",
+			unauthenticatedWantStatusCode: 307,
+			authenticatedWantStatusCode:   200,
+			wantAuditOperation:            "GET /",
 			wantAuditTargetResources: []audit.TargetResource{
 				{
 					TargetResourceType: "",
@@ -148,8 +151,9 @@ func TestSecurity(t *testing.T) {
 			request: func() (*http.Request, error) {
 				return http.NewRequest(http.MethodPost, "https://server/api/logout", nil)
 			},
-			authenticatedWantStatusCode: http.StatusSeeOther,
-			wantAuditOperation:          "POST /api/logout",
+			unauthenticatedWantStatusCode: http.StatusSeeOther,
+			authenticatedWantStatusCode:   http.StatusSeeOther,
+			wantAuditOperation:            "POST /api/logout",
 			wantAuditTargetResources: []audit.TargetResource{
 				{
 					TargetResourceType: "",
@@ -162,8 +166,9 @@ func TestSecurity(t *testing.T) {
 			request: func() (*http.Request, error) {
 				return http.NewRequest(http.MethodGet, "https://server/callback", nil)
 			},
-			authenticatedWantStatusCode: http.StatusTemporaryRedirect,
-			wantAuditOperation:          "GET /callback",
+			unauthenticatedWantStatusCode: http.StatusTemporaryRedirect,
+			authenticatedWantStatusCode:   http.StatusTemporaryRedirect,
+			wantAuditOperation:            "GET /callback",
 			wantAuditTargetResources: []audit.TargetResource{
 				{
 					TargetResourceType: "",
@@ -310,12 +315,18 @@ func TestSecurity(t *testing.T) {
 					if tt2.authenticated {
 						tt2.wantStatusCode = http.StatusOK
 					} else {
-						tt2.wantStatusCode = http.StatusTemporaryRedirect
+						tt2.wantStatusCode = http.StatusForbidden
 					}
 				}
 
 				if resp.StatusCode != tt2.wantStatusCode {
-					t.Error(resp.StatusCode)
+					t.Error(resp.StatusCode, tt2.wantStatusCode)
+					body := make([]byte, 0)
+					_, err := resp.Body.Read(body)
+					if err != nil {
+						t.Fatal(err)
+					}
+					t.Error(body)
 				}
 
 				if tt.checkResponse != nil {
@@ -340,22 +351,36 @@ func TestSecurity(t *testing.T) {
 				// [2] https://go.googlesource.com/go/+/go1.16.2/src/net/http/fs.go#337
 				if tt.name == "/" || tt.name == "/main.js" {
 					err = testpoller.Poll(1*time.Second, 5*time.Millisecond, func() (bool, error) {
-						return len(auditHook.AllEntries()) == 1, nil
+						if len(auditHook.AllEntries()) == 1 {
+							if _, ok := auditHook.AllEntries()[0].Data[audit.MetadataPayload]; ok {
+								return true, nil
+							}
+						}
+						return false, nil
 					})
 					if err != nil {
 						t.Error(err)
 					}
 				}
 
-				payload := auditPayloadFixture()
-				payload.OperationName = tt.wantAuditOperation
-				payload.TargetResources = tt.wantAuditTargetResources
-				payload.Result.ResultDescription = fmt.Sprintf("Status code: %d", tt2.wantStatusCode)
-				if tt2.authenticated && tt.name != "/callback" && tt.name != "/healthz/ready" {
-					payload.CallerIdentities[0].CallerIdentityValue = "username"
-				}
+				if tt.wantAuditOperation != "" {
+					payload := auditPayloadFixture()
+					payload.OperationName = tt.wantAuditOperation
+					payload.TargetResources = tt.wantAuditTargetResources
+					payload.Result.ResultDescription = fmt.Sprintf("Status code: %d", tt2.wantStatusCode)
 
-				testlog.AssertAuditPayloads(t, auditHook, []*audit.Payload{payload})
+					if tt2.wantStatusCode == http.StatusForbidden {
+						payload.Result.ResultType = audit.ResultTypeFail
+					}
+
+					if tt2.authenticated && !sliceutil.Contains([]string{
+						"/callback", "/healthz/ready", "/api/login", "/api/logout"}, tt.name) {
+						payload.CallerIdentities[0].CallerIdentityValue = "username"
+					}
+					testlog.AssertAuditPayloads(t, auditHook, []*audit.Payload{payload})
+				} else {
+					testlog.AssertAuditPayloads(t, auditHook, []*audit.Payload{})
+				}
 			})
 		}
 	}
@@ -402,10 +427,10 @@ func auditPayloadFixture() *audit.Payload {
 		EnvName:              audit.IFXAuditName,
 		EnvFlags:             257,
 		EnvAppID:             audit.SourceAdminPortal,
-		EnvCloudName:         azure.PublicCloud.Name,
+		EnvCloudName:         azureclient.PublicCloud.Name,
 		EnvCloudRole:         audit.CloudRoleRP,
 		EnvCloudRoleInstance: "testhost",
-		EnvCloudEnvironment:  azure.PublicCloud.Name,
+		EnvCloudEnvironment:  azureclient.PublicCloud.Name,
 		EnvCloudLocation:     "eastus",
 		EnvCloudVer:          1,
 		CallerIdentities: []audit.CallerIdentity{

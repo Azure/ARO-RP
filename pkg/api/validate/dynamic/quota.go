@@ -57,7 +57,13 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 	case api.VMSizeStandardE32sV3:
 		requiredResources["standardESv3Family"] += (count * 32)
 		requiredResources["cores"] += (count * 32)
-
+		//Support for Compute isolation
+	case api.VMSizeStandardE64iV3:
+		requiredResources["standardEIv3Family"] += (count * 64)
+		requiredResources["cores"] += (count * 64)
+	case api.VMSizeStandardE64isV3:
+		requiredResources["standardEISv3Family"] += (count * 64)
+		requiredResources["cores"] += (count * 64)
 	case api.VMSizeStandardF4sV2:
 		requiredResources["standardFSv2Family"] += (count * 4)
 		requiredResources["cores"] += (count * 4)
@@ -70,7 +76,18 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 	case api.VMSizeStandardF32sV2:
 		requiredResources["standardFSv2Family"] += (count * 32)
 		requiredResources["cores"] += (count * 32)
-
+	case api.VMSizeStandardF72sV2:
+		requiredResources["standardFSv2Family"] += (count * 72)
+		requiredResources["cores"] += (count * 72)
+	case api.VMSizeStandardM128ms:
+		requiredResources["standardMSFamily"] += (count * 128)
+		requiredResources["cores"] += (count * 128)
+	case api.VMSizeStandardG5:
+		requiredResources["standardGFamily"] += (count * 32)
+		requiredResources["cores"] += (count * 32)
+	case api.VMSizeStandardGS5:
+		requiredResources["standardGSFamily"] += (count * 32)
+		requiredResources["cores"] += (count * 32)
 	default:
 		//will only happen if pkg/api verification allows new VMSizes
 		return fmt.Errorf("unexpected node VMSize %s", vmSize)

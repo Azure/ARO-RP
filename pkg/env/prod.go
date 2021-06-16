@@ -18,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
@@ -167,7 +168,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		}
 		p.acrDomain = acrResource.ResourceName + "." + p.Environment().ContainerRegistryDNSSuffix
 	} else {
-		p.acrDomain = "arointsvc" + "." + azure.PublicCloud.ContainerRegistryDNSSuffix // TODO: make cloud aware once this is set up for US Gov Cloud
+		p.acrDomain = "arointsvc" + "." + azureclient.PublicCloud.ContainerRegistryDNSSuffix // TODO: make cloud aware once this is set up for US Gov Cloud
 	}
 
 	p.ARMHelper, err = newARMHelper(ctx, log, p)
@@ -231,7 +232,13 @@ func (p *prod) AROOperatorImage() string {
 func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
 	c := compute.NewResourceSkusClient(p.Environment(), p.SubscriptionID(), rpAuthorizer)
 
-	skus, err := c.List(ctx, "")
+	// Filtering is poorly documented, but currently (API version 2019-04-01)
+	// it seems that the API returns all SKUs without a filter and with invalid
+	// value in the filter.
+	// Filtering gives significant optimisation: at the moment of writing,
+	// we get ~1.2M response in eastus vs ~37M unfiltered (467 items vs 16618).
+	filter := fmt.Sprintf("location eq '%s'", p.Location())
+	skus, err := c.List(ctx, filter)
 	if err != nil {
 		return err
 	}

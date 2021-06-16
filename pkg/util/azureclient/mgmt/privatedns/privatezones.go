@@ -6,7 +6,8 @@ package privatedns
 import (
 	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // PrivateZonesClient is a minimal interface for azure PrivateZonesClient
@@ -21,7 +22,7 @@ type privateZonesClient struct {
 var _ PrivateZonesClient = &privateZonesClient{}
 
 // NewPrivateZonesClient creates a new PrivateZonesClient
-func NewPrivateZonesClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) PrivateZonesClient {
+func NewPrivateZonesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) PrivateZonesClient {
 	client := mgmtprivatedns.NewPrivateZonesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 

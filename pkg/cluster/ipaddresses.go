@@ -130,10 +130,12 @@ func (m *manager) populateDatabaseIntIP(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.Properties.APIServerProfile.IntIP != "" {
 		return nil
 	}
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
+	if infraID == "" {
+		infraID = "aro"
+	}
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-
-	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
 	var lbName string
 	switch m.doc.OpenShiftCluster.Properties.ArchitectureVersion {
@@ -161,7 +163,6 @@ func (m *manager) populateDatabaseIntIP(ctx context.Context) error {
 // refers to -pip-v4, which doesn't exist on pre-DNS change clusters.
 func (m *manager) updateAPIIPEarly(ctx context.Context) error {
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
-
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	lb, err := m.loadBalancers.Get(ctx, resourceGroup, infraID+"-internal", "")
@@ -194,6 +195,9 @@ func (m *manager) updateAPIIPEarly(ctx context.Context) error {
 
 func (m *manager) createAPIServerPrivateEndpoint(ctx context.Context) error {
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
+	if infraID == "" {
+		infraID = "aro"
+	}
 
 	err := m.fpPrivateEndpoints.CreateOrUpdateAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, mgmtnetwork.PrivateEndpoint{
 		PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{

@@ -8,7 +8,8 @@ import (
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2015-12-01/features"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // Client is a minimal interface for azure Client
@@ -24,7 +25,7 @@ type client struct {
 var _ Client = &client{}
 
 // NewClient creates a new Client
-func NewClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) Client {
+func NewClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) Client {
 	_client := mgmtfeatures.NewClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	_client.Authorizer = authorizer
 

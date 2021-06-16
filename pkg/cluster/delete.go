@@ -14,6 +14,7 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/davecgh/go-spew/spew"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -259,9 +260,21 @@ func (m *manager) deleteRoleDefinition(ctx context.Context) error {
 
 func (m *manager) Delete(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	//In edge case of CRG not being managedBy ARO, we have a different delete path
+	//we will assume normal case and set rgManagedByARO to true CRG is managedby ARO
+	rgManagedByARO := true
+	rg, err := m.resourceGroups.Get(ctx, resourceGroup)
+	if err != nil {
+		m.log.Warnf("failed to get resourceGroup %s", err)
+	} else if !m.env.IsLocalDevelopmentMode() {
+		if rg.ManagedBy == nil || *rg.ManagedBy == "" || !strings.EqualFold(*rg.ManagedBy, m.doc.OpenShiftCluster.ID) {
+			rgManagedByARO = false
+			m.log.Infof("cluster resource group not managed by aro %s", *rg.Name)
+		}
+	}
 
 	m.log.Printf("deleting dns")
-	err := m.dns.Delete(ctx, m.doc.OpenShiftCluster)
+	err = m.dns.Delete(ctx, m.doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}
@@ -284,25 +297,35 @@ func (m *manager) Delete(ctx context.Context) error {
 		return err
 	}
 
-	m.log.Printf("deleting resources")
-	err = m.deleteResources(ctx)
-	if err != nil {
-		return err
-	}
+	// only delete if managedByARO
+	if rgManagedByARO {
+		m.log.Printf("deleting resources")
+		err = m.deleteResources(ctx)
+		if err != nil {
+			return err
+		}
 
-	m.log.Printf("deleting resource group %s", resourceGroup)
-	err = m.resourceGroups.DeleteAndWait(ctx, resourceGroup)
-	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		(detailedErr.StatusCode == http.StatusForbidden || detailedErr.StatusCode == http.StatusNotFound) {
-		err = nil
+		m.log.Printf("deleting resource group %s", resourceGroup)
+		err = m.resourceGroups.DeleteAndWait(ctx, resourceGroup)
+		// TODO(mjudeikis): Remove this once we know all the error flavors this is
+		// returning so we can unify checks bellow
+		if err != nil {
+			m.log.Printf("delete resource group failed: %s", spew.Sdump(err))
+		}
+		if detailedErr, ok := err.(autorest.DetailedError); ok &&
+			(detailedErr.StatusCode == http.StatusForbidden || detailedErr.StatusCode == http.StatusNotFound) {
+			err = nil
+		}
+		if azureerrors.HasAuthorizationFailedError(err) {
+			err = nil
+		}
+		if azureerrors.ResourceGroupNotFound(err) {
+			err = nil
+		}
+		if err != nil {
+			return err
+		}
 	}
-	if azureerrors.HasAuthorizationFailedError(err) {
-		err = nil
-	}
-	if err != nil {
-		return err
-	}
-
 	if !m.env.FeatureIsSet(env.FeatureDisableSignedCertificates) {
 		managedDomain, err := dns.ManagedDomain(m.env, m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 		if err != nil {

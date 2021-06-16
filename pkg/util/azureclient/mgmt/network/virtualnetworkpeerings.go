@@ -8,7 +8,8 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 type VirtualNetworkPeeringsClient interface {
@@ -25,7 +26,7 @@ type virtualNetworkPeeringsClient struct {
 var _ VirtualNetworkPeeringsClient = &virtualNetworkPeeringsClient{}
 
 // NewVirtualNetworkPeeringsClient creates a new VirtualNetworkPeeringsClient
-func NewVirtualNetworkPeeringsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) VirtualNetworkPeeringsClient {
+func NewVirtualNetworkPeeringsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) VirtualNetworkPeeringsClient {
 	client := mgmtnetwork.NewVirtualNetworkPeeringsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 

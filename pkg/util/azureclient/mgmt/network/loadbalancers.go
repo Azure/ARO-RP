@@ -8,7 +8,8 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // LoadBalancersClient is a minimal interface for Azure LoadBalancersClient
@@ -24,7 +25,7 @@ type loadBalancersClient struct {
 var _ LoadBalancersClient = &loadBalancersClient{}
 
 // NewLoadBalancersClient creates a new LoadBalancersClient
-func NewLoadBalancersClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) LoadBalancersClient {
+func NewLoadBalancersClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) LoadBalancersClient {
 	client := mgmtnetwork.NewLoadBalancersClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -129,16 +128,6 @@ func (o *operator) resources() ([]runtime.Object, error) {
 		return nil, err
 	}
 
-	var monitoringEndpoint string
-	switch o.env.Environment().Name {
-	case azure.PublicCloud.Name:
-		monitoringEndpoint = "https://gcs.prod.monitoring.core.windows.net/"
-	case azure.USGovernmentCloud.Name:
-		monitoringEndpoint = "https://gcs.monitoring.core.usgovcloudapi.net/"
-	default:
-		return nil, fmt.Errorf("unsupported cloud environment")
-	}
-
 	vnetID, _, err := subnet.Split(o.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return nil, err
@@ -185,7 +174,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 						fmt.Sprintf("https://%s/", o.env.ACRDomain()),
 						o.env.Environment().ActiveDirectoryEndpoint,
 						o.env.Environment().ResourceManagerEndpoint,
-						monitoringEndpoint,
+						o.env.Environment().GenevaMonitoringEndpoint,
 					},
 				},
 				APIIntIP:  o.oc.Properties.APIServerProfile.IntIP,

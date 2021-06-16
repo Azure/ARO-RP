@@ -94,7 +94,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 		return nil, nil, err
 	}
 	if len(workerZones) == 0 {
-		masterZones = []string{""}
+		workerZones = []string{""}
 	}
 
 	installConfig := &installconfig.InstallConfig{
@@ -129,8 +129,12 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 				Replicas: to.Int64Ptr(3),
 				Platform: types.MachinePoolPlatform{
 					Azure: &azuretypes.MachinePool{
-						Zones:        masterZones,
-						InstanceType: string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize),
+						Zones:            masterZones,
+						InstanceType:     string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize),
+						EncryptionAtHost: m.doc.OpenShiftCluster.Properties.MasterProfile.EncryptionAtHost,
+						OSDisk: azuretypes.OSDisk{
+							DiskEncryptionSetID: m.doc.OpenShiftCluster.Properties.MasterProfile.DiskEncryptionSetID,
+						},
 					},
 				},
 				Hyperthreading: "Enabled",
@@ -142,10 +146,12 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 					Replicas: to.Int64Ptr(int64(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].Count)),
 					Platform: types.MachinePoolPlatform{
 						Azure: &azuretypes.MachinePool{
-							Zones:        workerZones,
-							InstanceType: string(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize),
+							Zones:            workerZones,
+							InstanceType:     string(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize),
+							EncryptionAtHost: m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].EncryptionAtHost,
 							OSDisk: azuretypes.OSDisk{
-								DiskSizeGB: int32(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB),
+								DiskEncryptionSetID: m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskEncryptionSetID,
+								DiskSizeGB:          int32(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB),
 							},
 						},
 					},

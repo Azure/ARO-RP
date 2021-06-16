@@ -15,7 +15,6 @@ import (
 	"net/http/httputil"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -23,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/portal/util/responsewriter"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_proxy "github.com/Azure/ARO-RP/pkg/util/mocks/proxy"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
@@ -384,7 +384,7 @@ func TestProxy(t *testing.T) {
 			defer ctrl.Finish()
 
 			_env := mock_env.NewMockInterface(ctrl)
-			_env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+			_env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 			_env.EXPECT().Hostname().AnyTimes().Return("testhost")
 			_env.EXPECT().Location().AnyTimes().Return("eastus")
 

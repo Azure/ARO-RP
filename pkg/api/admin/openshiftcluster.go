@@ -48,6 +48,7 @@ type OpenShiftClusterProperties struct {
 	Install                 *Install                `json:"install,omitempty"`
 	StorageSuffix           string                  `json:"storageSuffix,omitempty"`
 	RegistryProfiles        []RegistryProfile       `json:"registryProfiles,omitempty"`
+	InfraID                 string                  `json:"infraId,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.
@@ -91,8 +92,10 @@ type NetworkProfile struct {
 
 // MasterProfile represents a master profile.
 type MasterProfile struct {
-	VMSize   VMSize `json:"vmSize,omitempty"`
-	SubnetID string `json:"subnetId,omitempty"`
+	VMSize              VMSize `json:"vmSize,omitempty"`
+	SubnetID            string `json:"subnetId,omitempty"`
+	EncryptionAtHost    bool   `json:"encryptionAtHost,omitempty"`
+	DiskEncryptionSetID string `json:"diskEncryptionSetId,omitempty"`
 }
 
 // VMSize represents a VM size.
@@ -112,24 +115,33 @@ const (
 	VMSizeStandardD16sV3 VMSize = "Standard_D16s_v3"
 	VMSizeStandardD32sV3 VMSize = "Standard_D32s_v3"
 
-	VMSizeStandardE4sV3  VMSize = "Standard_E4s_v3"
-	VMSizeStandardE8sV3  VMSize = "Standard_E8s_v3"
-	VMSizeStandardE16sV3 VMSize = "Standard_E16s_v3"
-	VMSizeStandardE32sV3 VMSize = "Standard_E32s_v3"
+	VMSizeStandardE4sV3   VMSize = "Standard_E4s_v3"
+	VMSizeStandardE8sV3   VMSize = "Standard_E8s_v3"
+	VMSizeStandardE16sV3  VMSize = "Standard_E16s_v3"
+	VMSizeStandardE32sV3  VMSize = "Standard_E32s_v3"
+	VMSizeStandardE64isV3 VMSize = "Standard_E64is_v3"
+	VMSizeStandardE64iV3  VMSize = "Standard_E64i_v3"
 
 	VMSizeStandardF4sV2  VMSize = "Standard_F4s_v2"
 	VMSizeStandardF8sV2  VMSize = "Standard_F8s_v2"
 	VMSizeStandardF16sV2 VMSize = "Standard_F16s_v2"
 	VMSizeStandardF32sV2 VMSize = "Standard_F32s_v2"
+	VMSizeStandardF72sV2 VMSize = "Standard_F72s_v2"
+
+	VMSizeStandardM128ms VMSize = "Standard_M128ms"
+	VMSizeStandardG5     VMSize = "Standard_G5"
+	VMSizeStandardGS5    VMSize = "Standard_GS5"
 )
 
 // WorkerProfile represents a worker profile.
 type WorkerProfile struct {
-	Name       string `json:"name,omitempty"`
-	VMSize     VMSize `json:"vmSize,omitempty"`
-	DiskSizeGB int    `json:"diskSizeGB,omitempty"`
-	SubnetID   string `json:"subnetId,omitempty"`
-	Count      int    `json:"count,omitempty"`
+	Name                string `json:"name,omitempty"`
+	VMSize              VMSize `json:"vmSize,omitempty"`
+	DiskSizeGB          int    `json:"diskSizeGB,omitempty"`
+	SubnetID            string `json:"subnetId,omitempty"`
+	Count               int    `json:"count,omitempty"`
+	EncryptionAtHost    bool   `json:"encryptionAtHost,omitempty"`
+	DiskEncryptionSetID string `json:"diskEncryptionSetId,omitempty"`
 }
 
 // APIServerProfile represents an API server profile.

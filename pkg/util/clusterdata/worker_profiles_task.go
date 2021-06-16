@@ -95,6 +95,14 @@ func (ef *workerProfilesEnricherTask) FetchData(ctx context.Context, callbacks c
 			"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s",
 			r.SubscriptionID, machineProviderSpec.NetworkResourceGroup, machineProviderSpec.Vnet, machineProviderSpec.Subnet,
 		)
+
+		workerProfiles[i].EncryptionAtHost = machineProviderSpec.SecurityProfile != nil &&
+			machineProviderSpec.SecurityProfile.EncryptionAtHost != nil &&
+			*machineProviderSpec.SecurityProfile.EncryptionAtHost
+
+		if machineProviderSpec.OSDisk.ManagedDisk.DiskEncryptionSet != nil {
+			workerProfiles[i].DiskEncryptionSetID = machineProviderSpec.OSDisk.ManagedDisk.DiskEncryptionSet.ID
+		}
 	}
 
 	sort.Slice(workerProfiles, func(i, j int) bool { return workerProfiles[i].Name < workerProfiles[j].Name })

@@ -11,16 +11,22 @@ func DiskSizeIsValid(sizeGB int) bool {
 	return sizeGB >= 128
 }
 
-func VMSizeIsValid(vmSize api.VMSize, requireD2sV3Workers, isMaster bool) bool {
+func VMSizeIsValid(vmSize api.VMSize, requiredD2sV3Workers, isMaster bool) bool {
 	if isMaster {
 		switch vmSize {
 		case api.VMSizeStandardD8sV3,
 			api.VMSizeStandardD16sV3,
-			api.VMSizeStandardD32sV3:
+			api.VMSizeStandardD32sV3,
+			api.VMSizeStandardE64iV3,
+			api.VMSizeStandardE64isV3,
+			api.VMSizeStandardF72sV2,
+			api.VMSizeStandardGS5,
+			api.VMSizeStandardG5,
+			api.VMSizeStandardM128ms:
 			return true
 		}
 	} else {
-		if requireD2sV3Workers {
+		if requiredD2sV3Workers {
 			switch vmSize {
 			case api.VMSizeStandardD2sV3:
 				return true
@@ -39,14 +45,19 @@ func VMSizeIsValid(vmSize api.VMSize, requireD2sV3Workers, isMaster bool) bool {
 				api.VMSizeStandardE8sV3,
 				api.VMSizeStandardE16sV3,
 				api.VMSizeStandardE32sV3,
+				api.VMSizeStandardE64iV3,
+				api.VMSizeStandardE64isV3,
 				api.VMSizeStandardF4sV2,
 				api.VMSizeStandardF8sV2,
 				api.VMSizeStandardF16sV2,
-				api.VMSizeStandardF32sV2:
+				api.VMSizeStandardF32sV2,
+				api.VMSizeStandardF72sV2,
+				api.VMSizeStandardG5,
+				api.VMSizeStandardGS5,
+				api.VMSizeStandardM128ms:
 				return true
 			}
 		}
 	}
-
 	return false
 }

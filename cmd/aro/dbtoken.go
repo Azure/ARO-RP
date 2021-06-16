@@ -83,7 +83,13 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	verifier, err := oidc.NewVerifier(ctx, "https://sts.windows.net/"+_env.TenantID()+"/", pkgdbtoken.Resource)
+	// example value: https://login.microsoftonline.com/11111111-1111-1111-1111-111111111111/
+	issuer := _env.Environment().ActiveDirectoryEndpoint + _env.TenantID() + "/"
+
+	// example value: https://dbtoken.aro.azure.com/
+	clientID := "https://dbtoken." + _env.Environment().AppSuffix + "/"
+
+	verifier, err := oidc.NewVerifier(ctx, issuer, clientID)
 	if err != nil {
 		return err
 	}

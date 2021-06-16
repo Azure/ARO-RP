@@ -17,14 +17,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/form3tech-oss/jwt-go"
+	"github.com/go-test/deep"
 	"github.com/gofrs/uuid"
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
 	"golang.org/x/oauth2"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
@@ -193,7 +194,7 @@ func TestAAD(t *testing.T) {
 	}
 }
 
-func TestRedirect(t *testing.T) {
+func TestCheckAuthentication(t *testing.T) {
 	for _, tt := range []struct {
 		name              string
 		request           func(*aad) (*http.Request, error)
@@ -205,16 +206,95 @@ func TestRedirect(t *testing.T) {
 			request: func(a *aad) (*http.Request, error) {
 				ctx := context.Background()
 				ctx = context.WithValue(ctx, ContextKeyUsername, "user")
-				return http.NewRequestWithContext(ctx, http.MethodGet, "/", nil)
+				return http.NewRequestWithContext(ctx, http.MethodGet, "/api/info", nil)
 			},
-			wantStatusCode:    http.StatusOK,
 			wantAuthenticated: true,
+			wantStatusCode:    http.StatusOK,
 		},
 		{
 			name: "not authenticated",
 			request: func(a *aad) (*http.Request, error) {
 				ctx := context.Background()
-				return http.NewRequestWithContext(ctx, http.MethodGet, "/", nil)
+				return http.NewRequestWithContext(ctx, http.MethodGet, "/api/info", nil)
+			},
+			wantStatusCode: http.StatusForbidden,
+		},
+		{
+			name: "not authenticated",
+			request: func(a *aad) (*http.Request, error) {
+				ctx := context.Background()
+				return http.NewRequestWithContext(ctx, http.MethodGet, "/callback", nil)
+			},
+			wantStatusCode: http.StatusForbidden,
+		},
+		{
+			name: "invalid cookie",
+			request: func(a *aad) (*http.Request, error) {
+				return &http.Request{
+					Header: http.Header{
+						"Cookie": []string{"session=xxx"},
+					},
+				}, nil
+			},
+			wantStatusCode: http.StatusForbidden,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
+			env.EXPECT().TenantID().AnyTimes().Return("")
+
+			_, audit := testlog.NewAudit()
+			_, baseLog := testlog.New()
+			_, baseAccessLog := testlog.New()
+			a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var authenticated bool
+			h := a.CheckAuthentication(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, authenticated = r.Context().Value(ContextKeyUsername).(string)
+			}))
+
+			r, err := tt.request(a.(*aad))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			w := httptest.NewRecorder()
+
+			h.ServeHTTP(w, r)
+
+			if w.Code != tt.wantStatusCode {
+				t.Error(w.Code, tt.wantStatusCode)
+			}
+
+			if authenticated != tt.wantAuthenticated {
+				t.Fatal(authenticated)
+			}
+
+			if tt.wantStatusCode == http.StatusInternalServerError {
+				return
+			}
+		})
+	}
+}
+
+func TestLogin(t *testing.T) {
+	for _, tt := range []struct {
+		name           string
+		request        func(*aad) (*http.Request, error)
+		wantStatusCode int
+	}{
+		{
+			name: "authenticated",
+			request: func(a *aad) (*http.Request, error) {
+				ctx := context.Background()
+				ctx = context.WithValue(ctx, ContextKeyUsername, "user")
+				return http.NewRequestWithContext(ctx, http.MethodGet, "/login", nil)
 			},
 			wantStatusCode: http.StatusTemporaryRedirect,
 		},
@@ -222,7 +302,7 @@ func TestRedirect(t *testing.T) {
 			name: "not authenticated",
 			request: func(a *aad) (*http.Request, error) {
 				ctx := context.Background()
-				return http.NewRequestWithContext(ctx, http.MethodGet, "/callback", nil)
+				return http.NewRequestWithContext(ctx, http.MethodGet, "/login", nil)
 			},
 			wantStatusCode: http.StatusTemporaryRedirect,
 		},
@@ -253,10 +333,7 @@ func TestRedirect(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			var authenticated bool
-			h := a.Redirect(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				_, authenticated = r.Context().Value(ContextKeyUsername).(string)
-			}))
+			h := http.HandlerFunc(a.Login)
 
 			r, err := tt.request(a.(*aad))
 			if err != nil {
@@ -268,43 +345,17 @@ func TestRedirect(t *testing.T) {
 			h.ServeHTTP(w, r)
 
 			if w.Code != tt.wantStatusCode {
-				t.Error(w.Code)
-			}
-
-			if authenticated != tt.wantAuthenticated {
-				t.Fatal(authenticated)
+				t.Error(w.Code, tt.wantStatusCode)
 			}
 
 			if tt.wantStatusCode == http.StatusInternalServerError {
 				return
 			}
 
-			if !tt.wantAuthenticated {
-				if !strings.HasPrefix(w.Header().Get("Location"), "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=&redirect_uri=https%3A%2F%2F%2Fcallback&response_type=code&scope=openid+profile&state=") {
-					t.Error(w.Header().Get("Location"))
-				}
-
-				var m map[interface{}]interface{}
-				cookies := w.Result().Cookies()
-				err = securecookie.DecodeMulti(SessionName, cookies[len(cookies)-1].Value, &m, a.(*aad).store.Codecs...)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				if len(m) != 2 {
-					t.Error(len(m))
-				}
-
-				if redirectPath, ok := m[sessionKeyRedirectPath].(string); !ok ||
-					redirectPath != "/" {
-					t.Error(m[sessionKeyRedirectPath])
-				}
-
-				if state, ok := m[sessionKeyState].(string); !ok ||
-					uuid.FromStringOrNil(state) == uuid.Nil {
-					t.Error(m[sessionKeyState])
-				}
+			if !strings.HasPrefix(w.Header().Get("Location"), "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=&redirect_uri=https%3A%2F%2F%2Fcallback&response_type=code&scope=openid+profile&state=") {
+				t.Error(w.Header().Get("Location"))
 			}
+
 		})
 	}
 }
@@ -439,8 +490,7 @@ func TestCallback(t *testing.T) {
 				uuid := uuid.Must(uuid.NewV4()).String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState:        uuid,
-					sessionKeyRedirectPath: "/",
+					sessionKeyState: uuid,
 				}, a.store.Codecs...)
 				if err != nil {
 					return nil, err
@@ -491,8 +541,7 @@ func TestCallback(t *testing.T) {
 				uuid := u.String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState:        uuid,
-					sessionKeyRedirectPath: "/",
+					sessionKeyState: uuid,
 				}, a.store.Codecs...)
 				if err != nil {
 					return nil, err
@@ -517,8 +566,7 @@ func TestCallback(t *testing.T) {
 				uuid := u.String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState:        uuid,
-					sessionKeyRedirectPath: "/",
+					sessionKeyState: uuid,
 				}, a.store.Codecs...)
 				if err != nil {
 					return nil, err
@@ -545,8 +593,7 @@ func TestCallback(t *testing.T) {
 				uuid := u.String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState:        uuid,
-					sessionKeyRedirectPath: "/",
+					sessionKeyState: uuid,
 				}, a.store.Codecs...)
 				if err != nil {
 					return nil, err
@@ -574,8 +621,7 @@ func TestCallback(t *testing.T) {
 				uuid := u.String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState:        uuid,
-					sessionKeyRedirectPath: "/",
+					sessionKeyState: uuid,
 				}, a.store.Codecs...)
 				if err != nil {
 					return nil, err
@@ -601,8 +647,7 @@ func TestCallback(t *testing.T) {
 				uuid := u.String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState:        uuid,
-					sessionKeyRedirectPath: "/",
+					sessionKeyState: uuid,
 				}, a.store.Codecs...)
 				if err != nil {
 					return nil, err
@@ -633,8 +678,7 @@ func TestCallback(t *testing.T) {
 				uuid := u.String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState:        uuid,
-					sessionKeyRedirectPath: "/",
+					sessionKeyState: uuid,
 				}, a.store.Codecs...)
 				if err != nil {
 					return nil, err
@@ -665,8 +709,7 @@ func TestCallback(t *testing.T) {
 				uuid := u.String()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState:        uuid,
-					sessionKeyRedirectPath: "/",
+					sessionKeyState: uuid,
 				}, a.store.Codecs...)
 				if err != nil {
 					return nil, err
@@ -689,37 +732,6 @@ func TestCallback(t *testing.T) {
 			},
 			verifier:      &oidc.NoopVerifier{},
 			wantForbidden: true,
-		},
-		{
-			name: "fail - missing redirect_path",
-			request: func(a *aad) (*http.Request, error) {
-				u, _ := uuid.NewV4()
-				uuid := u.String()
-
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState: uuid,
-				}, a.store.Codecs...)
-				if err != nil {
-					return nil, err
-				}
-
-				return &http.Request{
-					URL: &url.URL{},
-					Header: http.Header{
-						"Cookie": []string{SessionName + "=" + cookie},
-					},
-					Form: url.Values{
-						"state": []string{uuid},
-					},
-				}, nil
-			},
-			oauther: &noopOauther{
-				tokenMap: map[string]interface{}{
-					"id_token": string(idToken),
-				},
-			},
-			verifier:  &oidc.NoopVerifier{},
-			wantError: "Internal Server Error\n",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -760,7 +772,8 @@ func TestCallback(t *testing.T) {
 				return
 			}
 
-			var m map[interface{}]interface{}
+			type cookie map[interface{}]interface{}
+			var m cookie
 			cookies := w.Result().Cookies()
 			err = securecookie.DecodeMulti(SessionName, cookies[len(cookies)-1].Value, &m, a.(*aad).store.Codecs...)
 			if err != nil {
@@ -777,23 +790,12 @@ func TestCallback(t *testing.T) {
 					t.Error(w.Header().Get("Location"))
 				}
 
-				if len(m) != 3 {
-					t.Error(len(m))
-				}
-
-				if expires, ok := m[SessionKeyExpires].(time.Time); !ok ||
-					expires != time.Unix(3600, 0) {
-					t.Error(m[SessionKeyExpires])
-				}
-
-				if sessionGroups, ok := m[SessionKeyGroups].([]string); !ok ||
-					!reflect.DeepEqual(sessionGroups, groups) {
-					t.Error(m[SessionKeyGroups])
-				}
-
-				if sessionUsername, ok := m[SessionKeyUsername].(string); !ok ||
-					sessionUsername != username {
-					t.Error(m[SessionKeyUsername])
+				for _, l := range deep.Equal(m, cookie{
+					SessionKeyExpires:  time.Unix(3600, 0),
+					SessionKeyGroups:   groups,
+					SessionKeyUsername: username,
+				}) {
+					t.Error(l)
 				}
 
 			case tt.wantForbidden:
@@ -805,15 +807,9 @@ func TestCallback(t *testing.T) {
 					t.Error(w.Header().Get("Location"))
 				}
 
-				if len(m) != 1 {
-					t.Error(len(m))
+				for _, l := range deep.Equal(m, cookie{}) {
+					t.Error(l)
 				}
-
-				if redirectPath, ok := m[sessionKeyRedirectPath].(string); !ok ||
-					redirectPath != "/" {
-					t.Error(m[sessionKeyRedirectPath])
-				}
-
 			default:
 				if w.Code != http.StatusTemporaryRedirect {
 					t.Error(w.Code)
@@ -822,20 +818,7 @@ func TestCallback(t *testing.T) {
 				if w.Header().Get("Location") != "/authcodeurl" {
 					t.Error(w.Header().Get("Location"))
 				}
-
-				if len(m) != 2 {
-					t.Error(len(m))
-				}
-
-				if redirectPath, ok := m[sessionKeyRedirectPath].(string); !ok ||
-					redirectPath != "" {
-					t.Error(m[sessionKeyRedirectPath])
-				}
-
-				if state, ok := m[sessionKeyState].(string); !ok ||
-					uuid.FromStringOrNil(state) == uuid.Nil {
-					t.Error(m[sessionKeyState])
-				}
+				return
 			}
 		})
 	}
@@ -845,7 +828,7 @@ func TestClientAssertion(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 	env := mock_env.NewMockInterface(controller)
-	env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+	env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 	env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 	env.EXPECT().TenantID().AnyTimes().Return("")
 

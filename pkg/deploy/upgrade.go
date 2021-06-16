@@ -37,7 +37,7 @@ func (d *deployer) SaveVersion(ctx context.Context) error {
 	}
 
 	blobClient := azstorage.NewAccountSASClient(
-		*d.config.Configuration.RPVersionStorageAccountName, v, *d.env.Environment()).GetBlobService()
+		*d.config.Configuration.RPVersionStorageAccountName, v, (*d.env.Environment()).Environment).GetBlobService()
 
 	containerRef := blobClient.GetContainerReference("rpversion")
 

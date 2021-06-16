@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
@@ -177,74 +176,6 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 	})
 })
 
-var _ = Describe("ARO Operator - Routefix Daemonset", func() {
-	// remove this once the change where the operator manages the routefix
-	// daemonset is in production
-	Specify("routefix DaemonSet must be Ready", func() {
-		dsReady := func() (bool, error) {
-			done, err := ready.CheckDaemonSetIsReady(context.Background(), clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix"), "routefix")()
-			if err != nil {
-				log.Warn(err)
-			}
-			return done, nil // swallow error
-		}
-
-		err := wait.PollImmediate(30*time.Second, 15*time.Minute, dsReady)
-		Expect(err).NotTo(HaveOccurred())
-
-	})
-	Specify("routefix Pods must all be Running before testing DaemonSet deletion", func() {
-		dsReady := func() (bool, error) {
-			clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix")
-			done, err := ready.CheckPodsAreRunning(context.Background(), clients.Kubernetes.CoreV1().Pods("openshift-azure-routefix"), map[string]string{"app": "routefix"})()
-			if err != nil {
-				log.Warn(err)
-			}
-			return done, nil // swallow error
-		}
-
-		err := wait.PollImmediate(30*time.Second, 15*time.Minute, dsReady)
-		Expect(err).NotTo(HaveOccurred())
-
-	})
-	Specify("routefix must be repaired if DaemonSet is deleted", func() {
-		dsReady := func() (bool, error) {
-			done, err := ready.CheckDaemonSetIsReady(context.Background(), clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix"), "routefix")()
-			if err != nil {
-				log.Warn(err)
-			}
-			return done, nil // swallow error
-		}
-
-		err := wait.PollImmediate(30*time.Second, 15*time.Minute, dsReady)
-		Expect(err).NotTo(HaveOccurred())
-
-		// delete the routefix daemonset
-		err = clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix").Delete(context.Background(), "routefix", metav1.DeleteOptions{})
-		Expect(err).NotTo(HaveOccurred())
-
-		// wait for it to be fixed
-		err = wait.PollImmediate(30*time.Second, 15*time.Minute, dsReady)
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix").Get(context.Background(), "routefix", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-	})
-	Specify("routefix Pods must all be Running after testing DaemonSet deletion", func() {
-		dsReady := func() (bool, error) {
-			clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix")
-			done, err := ready.CheckPodsAreRunning(context.Background(), clients.Kubernetes.CoreV1().Pods("openshift-azure-routefix"), map[string]string{"app": "routefix"})()
-			if err != nil {
-				log.Warn(err)
-			}
-			return done, nil // swallow error
-		}
-
-		err := wait.PollImmediate(30*time.Second, 15*time.Minute, dsReady)
-		Expect(err).NotTo(HaveOccurred())
-	})
-})
-
 var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
 	Specify("cluster monitoring configmap should not have persistent volume config", func() {
 		var cm *corev1.ConfigMap
@@ -269,8 +200,10 @@ var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
 			log.Warn(err)
 		}
 
-		Expect(configData.PrometheusK8s.Retention).To(Equal(""))
-		Expect(configData.PrometheusK8s.VolumeClaimTemplate).To(Equal(struct{ api.MissingFields }{}))
+		Expect(configData.PrometheusK8s.Retention).To(BeEmpty())
+		Expect(configData.PrometheusK8s.VolumeClaimTemplate).To(BeNil())
+		Expect(configData.AlertManagerMain.VolumeClaimTemplate).To(BeNil())
+
 	})
 
 	Specify("cluster monitoring configmap should be restored if deleted", func() {

@@ -14,9 +14,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_instancemetadata "github.com/Azure/ARO-RP/pkg/util/mocks/instancemetadata"
 )
 
@@ -27,7 +27,7 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 		wantSubscriptionID string
 		wantLocation       string
 		wantResourceGroup  string
-		wantEnvironment    *azure.Environment
+		wantEnvironment    *azureclient.AROEnvironment
 		wantErr            string
 	}{
 		{
@@ -51,7 +51,7 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 			wantSubscriptionID: "rpSubscriptionId",
 			wantLocation:       "eastus",
 			wantResourceGroup:  "rpResourceGroup",
-			wantEnvironment:    &azure.PublicCloud,
+			wantEnvironment:    &azureclient.PublicCloud,
 		},
 		{
 			name: "valid (US Government Cloud)",
@@ -74,7 +74,7 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 			wantSubscriptionID: "rpSubscriptionId",
 			wantLocation:       "eastus",
 			wantResourceGroup:  "rpResourceGroup",
-			wantEnvironment:    &azure.USGovernmentCloud,
+			wantEnvironment:    &azureclient.USGovernmentCloud,
 		},
 		{
 			name: "invalid JSON",
@@ -222,13 +222,13 @@ func TestPopulateTenantIDFromMSI(t *testing.T) {
 					if msiEndpoint != "http://169.254.169.254/metadata/identity/oauth2/token" {
 						return nil, fmt.Errorf("unexpected endpoint %q", msiEndpoint)
 					}
-					if resource != azure.PublicCloud.ResourceManagerEndpoint {
+					if resource != azureclient.PublicCloud.ResourceManagerEndpoint {
 						return nil, fmt.Errorf("unexpected resource %q", resource)
 					}
 					return token, nil
 				},
 				instanceMetadata: instanceMetadata{
-					environment: &azure.PublicCloud,
+					environment: &azureclient.PublicCloud,
 				},
 			}
 

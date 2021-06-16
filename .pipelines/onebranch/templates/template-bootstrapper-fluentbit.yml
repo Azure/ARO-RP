@@ -2,7 +2,7 @@ steps:
 - task: onebranch.pipeline.imagebuildinfo@1
   displayName: Build Fluentbit Dockerfile
   inputs:
-    repositoryName: aro-rp
+    repositoryName: fluentbit
     dockerFileRelPath: ./Dockerfile.fluentbit
     dockerFileContextPath: ./
     registry: cdpxlinux.azurecr.io

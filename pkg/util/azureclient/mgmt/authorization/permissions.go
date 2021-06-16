@@ -6,7 +6,8 @@ package authorization
 import (
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // PermissionsClient is a minimal interface for azure PermissionsClient
@@ -21,7 +22,7 @@ type permissionsClient struct {
 var _ PermissionsClient = &permissionsClient{}
 
 // NewPermissionsClient creates a new PermissionsClient
-func NewPermissionsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) PermissionsClient {
+func NewPermissionsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) PermissionsClient {
 	client := mgmtauthorization.NewPermissionsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 
