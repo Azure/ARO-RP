@@ -5,8 +5,9 @@ parameters:
   values:
   - bootstrapper
   - deployment
+  - geneva
+  - geneva-bootstrapper
   - kusto
-  - kusto-bootstrapper
   - mirroring
 
 steps:

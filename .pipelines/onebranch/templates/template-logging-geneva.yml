@@ -1,5 +1,5 @@
 jobs:
-- job: LoggingKustoBootstrapper
+- job: LoggingGeneva
   timeoutInMinutes: 30
   pool:
     type: linux
@@ -11,4 +11,4 @@ jobs:
   - checkout: rhado
   - template: ./template-generate-ev2-manifests.yml
     parameters:
-      generationType: kusto-bootstrapper
+      generationType: geneva
