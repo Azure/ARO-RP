@@ -2,6 +2,9 @@ SHELL = /bin/bash
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
 
+# fluentbit version must also be updated in RP code, see pkg/util/version/const.go
+FLUENTBIT_VERSION = 1.7.8-1
+
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
 endif
@@ -48,8 +51,8 @@ image-aro-multistage:
 	docker build --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) .
 
 image-fluentbit:
-	docker build --no-cache --build-arg VERSION=1.6.10-1 \
-	  -f Dockerfile.fluentbit -t ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.6.10-1 .
+	docker build --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) \
+	  -f Dockerfile.fluentbit -t ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION) .
 
 image-proxy: proxy
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
@@ -70,7 +73,7 @@ ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
 endif
 
 publish-image-fluentbit: image-fluentbit
-	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.6.10-1
+	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)
 
 publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
