@@ -214,6 +214,7 @@ func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, n
 }
 
 func (sv *openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile) error {
+
 	if !validate.VMSizeIsValid(api.VMSize(mp.VMSize), sv.requireD2sV3Workers, true) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided master VM size '%s' is invalid.", mp.VMSize)
 	}
