@@ -9,19 +9,17 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
+	"fmt"
 	"html/template"
 	"log"
 	"net"
 	"net/http"
-	"sort"
 	"time"
 
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	frontendmiddleware "github.com/Azure/ARO-RP/pkg/frontend/middleware"
@@ -38,13 +36,16 @@ type Runnable interface {
 }
 
 type portal struct {
-	env           env.Core
-	audit         *logrus.Entry
-	log           *logrus.Entry
-	baseAccessLog *logrus.Entry
-	l             net.Listener
-	sshl          net.Listener
-	verifier      oidc.Verifier
+	env                 env.Core
+	audit               *logrus.Entry
+	log                 *logrus.Entry
+	baseAccessLog       *logrus.Entry
+	l                   net.Listener
+	sshl                net.Listener
+	verifier            oidc.Verifier
+	baseRouter          *mux.Router
+	authenticatedRouter *mux.Router
+	publicRouter        *mux.Router
 
 	hostname     string
 	servingKey   *rsa.PrivateKey
@@ -88,6 +89,7 @@ func NewPortal(env env.Core,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbPortal database.Portal,
 	dialer proxy.Dialer) Runnable {
+
 	return &portal{
 		env:           env,
 		audit:         audit,
@@ -116,7 +118,15 @@ func NewPortal(env env.Core,
 	}
 }
 
-func (p *portal) Run(ctx context.Context) error {
+func (p *portal) setupRouter() error {
+
+	if p.baseRouter != nil {
+		return fmt.Errorf("can't setup twice")
+	}
+
+	r := mux.NewRouter()
+	r.Use(middleware.Panic(p.log))
+
 	asset, err := Asset("index.html")
 	if err != nil {
 		return err
@@ -127,6 +137,52 @@ func (p *portal) Run(ctx context.Context) error {
 		return err
 	}
 
+	unauthenticatedRouter := r.NewRoute().Subrouter()
+	p.unauthenticatedRoutes(unauthenticatedRouter)
+
+	allGroups := append([]string{}, p.groupIDs...)
+	allGroups = append(allGroups, p.elevatedGroupIDs...)
+
+	p.aad, err = middleware.NewAAD(p.log, p.audit, p.env, p.baseAccessLog, p.hostname, p.sessionKey, p.clientID, p.clientKey, p.clientCerts, allGroups, unauthenticatedRouter, p.verifier)
+	if err != nil {
+		return err
+	}
+
+	aadAuthenticatedRouter := r.NewRoute().Subrouter()
+	aadAuthenticatedRouter.Use(p.aad.AAD)
+	aadAuthenticatedRouter.Use(middleware.Log(p.env, p.audit, p.baseAccessLog))
+	aadAuthenticatedRouter.Use(p.aad.CheckAuthentication)
+	aadAuthenticatedRouter.Use(csrf.Protect(p.sessionKey, csrf.SameSite(csrf.SameSiteStrictMode), csrf.MaxAge(0), csrf.Path("/")))
+
+	p.aadAuthenticatedRoutes(aadAuthenticatedRouter)
+
+	p.baseRouter = r
+	p.publicRouter = unauthenticatedRouter
+	p.authenticatedRouter = aadAuthenticatedRouter
+
+	return nil
+}
+
+func (p *portal) setupServices() error {
+
+	ssh, err := ssh.New(p.env, p.log, p.baseAccessLog, p.sshl, p.sshKey, p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer, p.authenticatedRouter)
+	if err != nil {
+		return err
+	}
+
+	err = ssh.Run()
+	if err != nil {
+		return err
+	}
+
+	kubeconfig.New(p.log, p.audit, p.env, p.baseAccessLog, p.servingCerts[0], p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer, p.authenticatedRouter, p.publicRouter)
+
+	prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer, p.authenticatedRouter)
+
+	return nil
+}
+
+func (p *portal) Run(ctx context.Context) error {
 	config := &tls.Config{
 		Certificates: []tls.Certificate{
 			{
@@ -155,44 +211,19 @@ func (p *portal) Run(ctx context.Context) error {
 		config.Certificates[0].Certificate = append(config.Certificates[0].Certificate, cert.Raw)
 	}
 
-	r := mux.NewRouter()
-	r.Use(middleware.Panic(p.log))
-
-	unauthenticatedRouter := r.NewRoute().Subrouter()
-	p.unauthenticatedRoutes(unauthenticatedRouter)
-
-	allGroups := append([]string{}, p.groupIDs...)
-	allGroups = append(allGroups, p.elevatedGroupIDs...)
-
-	p.aad, err = middleware.NewAAD(p.log, p.audit, p.env, p.baseAccessLog, p.hostname, p.sessionKey, p.clientID, p.clientKey, p.clientCerts, allGroups, unauthenticatedRouter, p.verifier)
-	if err != nil {
-		return err
+	if p.baseRouter == nil {
+		err := p.setupRouter()
+		if err != nil {
+			return err
+		}
+		err = p.setupServices()
+		if err != nil {
+			return err
+		}
 	}
-
-	aadAuthenticatedRouter := r.NewRoute().Subrouter()
-	aadAuthenticatedRouter.Use(p.aad.AAD)
-	aadAuthenticatedRouter.Use(middleware.Log(p.env, p.audit, p.baseAccessLog))
-	aadAuthenticatedRouter.Use(p.aad.Redirect)
-	aadAuthenticatedRouter.Use(csrf.Protect(p.sessionKey, csrf.SameSite(csrf.SameSiteStrictMode), csrf.MaxAge(0)))
-
-	p.aadAuthenticatedRoutes(aadAuthenticatedRouter)
-
-	ssh, err := ssh.New(p.env, p.log, p.baseAccessLog, p.sshl, p.sshKey, p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer, aadAuthenticatedRouter)
-	if err != nil {
-		return err
-	}
-
-	err = ssh.Run()
-	if err != nil {
-		return err
-	}
-
-	kubeconfig.New(p.log, p.audit, p.env, p.baseAccessLog, p.servingCerts[0], p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer, aadAuthenticatedRouter, unauthenticatedRouter)
-
-	prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer, aadAuthenticatedRouter)
 
 	s := &http.Server{
-		Handler:     frontendmiddleware.Lowercase(r),
+		Handler:     frontendmiddleware.Lowercase(p.baseRouter),
 		ReadTimeout: 10 * time.Second,
 		IdleTimeout: 2 * time.Minute,
 		ErrorLog:    log.New(p.log.Writer(), "", 0),
@@ -205,22 +236,21 @@ func (p *portal) Run(ctx context.Context) error {
 func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 	logger := middleware.Log(p.env, p.audit, p.baseAccessLog)
 
-	r.NewRoute().Methods(http.MethodGet).Path("/healthz/ready").Handler(logger(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
-}
-
-func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 	for _, name := range AssetNames() {
 		if name == "index.html" {
+			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.serve(name))
 			continue
 		}
 
 		r.NewRoute().Methods(http.MethodGet).Path("/" + name).HandlerFunc(p.serve(name))
 	}
 
-	r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.index)
+	r.NewRoute().Methods(http.MethodGet).Path("/healthz/ready").Handler(logger(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
+}
 
+func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 	r.NewRoute().Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
-	r.NewRoute().Methods(http.MethodPost).Path("/api/logout").Handler(p.aad.Logout("/"))
+	r.NewRoute().Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
 }
 
 func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request) {
@@ -233,61 +263,4 @@ func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request)
 
 		http.ServeContent(w, r, path, time.Time{}, bytes.NewReader(b))
 	}
-}
-
-func (p *portal) index(w http.ResponseWriter, r *http.Request) {
-	buf := &bytes.Buffer{}
-
-	err := p.t.ExecuteTemplate(buf, "index.html", map[string]interface{}{
-		"location":       p.env.Location(),
-		csrf.TemplateTag: csrf.TemplateField(r),
-	})
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
-
-	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(buf.Bytes()))
-}
-
-func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	docs, err := p.dbOpenShiftClusters.ListAll(ctx)
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
-
-	clusters := make([]string, 0, len(docs.OpenShiftClusterDocuments))
-	for _, doc := range docs.OpenShiftClusterDocuments {
-		ps := doc.OpenShiftCluster.Properties.ProvisioningState
-		fps := doc.OpenShiftCluster.Properties.FailedProvisioningState
-
-		switch {
-		case ps == api.ProvisioningStateCreating,
-			ps == api.ProvisioningStateDeleting,
-			ps == api.ProvisioningStateFailed &&
-				(fps == api.ProvisioningStateCreating ||
-					fps == api.ProvisioningStateDeleting):
-		default:
-			clusters = append(clusters, doc.OpenShiftCluster.ID)
-		}
-	}
-
-	sort.Strings(clusters)
-
-	b, err := json.MarshalIndent(clusters, "", "    ")
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(b)
-}
-
-func (p *portal) internalServerError(w http.ResponseWriter, err error) {
-	p.log.Warn(err)
-	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
