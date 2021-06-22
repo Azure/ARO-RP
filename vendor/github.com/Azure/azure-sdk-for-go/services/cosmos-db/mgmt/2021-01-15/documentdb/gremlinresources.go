@@ -34,7 +34,7 @@ func NewGremlinResourcesClientWithBaseURI(baseURI string, subscriptionID string)
 
 // CreateUpdateGremlinDatabase create or update an Azure Cosmos DB Gremlin database
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // createUpdateGremlinDatabaseParameters - the parameters to provide for the current Gremlin database.
@@ -64,7 +64,6 @@ func (client GremlinResourcesClient) CreateUpdateGremlinDatabase(ctx context.Con
 			Constraints: []validation.Constraint{{Target: "createUpdateGremlinDatabaseParameters.GremlinDatabaseCreateUpdateProperties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "createUpdateGremlinDatabaseParameters.GremlinDatabaseCreateUpdateProperties.Resource", Name: validation.Null, Rule: true,
 					Chain: []validation.Constraint{{Target: "createUpdateGremlinDatabaseParameters.GremlinDatabaseCreateUpdateProperties.Resource.ID", Name: validation.Null, Rule: true, Chain: nil}}},
-					{Target: "createUpdateGremlinDatabaseParameters.GremlinDatabaseCreateUpdateProperties.Options", Name: validation.Null, Rule: true, Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.GremlinResourcesClient", "CreateUpdateGremlinDatabase", err.Error())
 	}
@@ -93,7 +92,7 @@ func (client GremlinResourcesClient) CreateUpdateGremlinDatabasePreparer(ctx con
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -137,7 +136,7 @@ func (client GremlinResourcesClient) CreateUpdateGremlinDatabaseResponder(resp *
 
 // CreateUpdateGremlinGraph create or update an Azure Cosmos DB Gremlin graph
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // graphName - cosmos DB graph name.
@@ -175,7 +174,6 @@ func (client GremlinResourcesClient) CreateUpdateGremlinGraph(ctx context.Contex
 								}},
 							}},
 					}},
-					{Target: "createUpdateGremlinGraphParameters.GremlinGraphCreateUpdateProperties.Options", Name: validation.Null, Rule: true, Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.GremlinResourcesClient", "CreateUpdateGremlinGraph", err.Error())
 	}
@@ -205,7 +203,7 @@ func (client GremlinResourcesClient) CreateUpdateGremlinGraphPreparer(ctx contex
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -249,7 +247,7 @@ func (client GremlinResourcesClient) CreateUpdateGremlinGraphResponder(resp *htt
 
 // DeleteGremlinDatabase deletes an existing Azure Cosmos DB Gremlin database.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 func (client GremlinResourcesClient) DeleteGremlinDatabase(ctx context.Context, resourceGroupName string, accountName string, databaseName string) (result GremlinResourcesDeleteGremlinDatabaseFuture, err error) {
@@ -301,7 +299,7 @@ func (client GremlinResourcesClient) DeleteGremlinDatabasePreparer(ctx context.C
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -342,7 +340,7 @@ func (client GremlinResourcesClient) DeleteGremlinDatabaseResponder(resp *http.R
 
 // DeleteGremlinGraph deletes an existing Azure Cosmos DB Gremlin graph.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // graphName - cosmos DB graph name.
@@ -396,7 +394,7 @@ func (client GremlinResourcesClient) DeleteGremlinGraphPreparer(ctx context.Cont
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -438,7 +436,7 @@ func (client GremlinResourcesClient) DeleteGremlinGraphResponder(resp *http.Resp
 // GetGremlinDatabase gets the Gremlin databases under an existing Azure Cosmos DB database account with the provided
 // name.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 func (client GremlinResourcesClient) GetGremlinDatabase(ctx context.Context, resourceGroupName string, accountName string, databaseName string) (result GremlinDatabaseGetResults, err error) {
@@ -497,7 +495,7 @@ func (client GremlinResourcesClient) GetGremlinDatabasePreparer(ctx context.Cont
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -531,7 +529,7 @@ func (client GremlinResourcesClient) GetGremlinDatabaseResponder(resp *http.Resp
 // GetGremlinDatabaseThroughput gets the RUs per second of the Gremlin database under an existing Azure Cosmos DB
 // database account with the provided name.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 func (client GremlinResourcesClient) GetGremlinDatabaseThroughput(ctx context.Context, resourceGroupName string, accountName string, databaseName string) (result ThroughputSettingsGetResults, err error) {
@@ -590,7 +588,7 @@ func (client GremlinResourcesClient) GetGremlinDatabaseThroughputPreparer(ctx co
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -623,7 +621,7 @@ func (client GremlinResourcesClient) GetGremlinDatabaseThroughputResponder(resp 
 
 // GetGremlinGraph gets the Gremlin graph under an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // graphName - cosmos DB graph name.
@@ -684,7 +682,7 @@ func (client GremlinResourcesClient) GetGremlinGraphPreparer(ctx context.Context
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -718,7 +716,7 @@ func (client GremlinResourcesClient) GetGremlinGraphResponder(resp *http.Respons
 // GetGremlinGraphThroughput gets the Gremlin graph throughput under an existing Azure Cosmos DB database account with
 // the provided name.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // graphName - cosmos DB graph name.
@@ -779,7 +777,7 @@ func (client GremlinResourcesClient) GetGremlinGraphThroughputPreparer(ctx conte
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -812,7 +810,7 @@ func (client GremlinResourcesClient) GetGremlinGraphThroughputResponder(resp *ht
 
 // ListGremlinDatabases lists the Gremlin databases under an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 func (client GremlinResourcesClient) ListGremlinDatabases(ctx context.Context, resourceGroupName string, accountName string) (result GremlinDatabaseListResult, err error) {
 	if tracing.IsEnabled() {
@@ -869,7 +867,7 @@ func (client GremlinResourcesClient) ListGremlinDatabasesPreparer(ctx context.Co
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -902,7 +900,7 @@ func (client GremlinResourcesClient) ListGremlinDatabasesResponder(resp *http.Re
 
 // ListGremlinGraphs lists the Gremlin graph under an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 func (client GremlinResourcesClient) ListGremlinGraphs(ctx context.Context, resourceGroupName string, accountName string, databaseName string) (result GremlinGraphListResult, err error) {
@@ -961,7 +959,7 @@ func (client GremlinResourcesClient) ListGremlinGraphsPreparer(ctx context.Conte
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -992,9 +990,390 @@ func (client GremlinResourcesClient) ListGremlinGraphsResponder(resp *http.Respo
 	return
 }
 
+// MigrateGremlinDatabaseToAutoscale migrate an Azure Cosmos DB Gremlin database from manual throughput to autoscale
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// accountName - cosmos DB database account name.
+// databaseName - cosmos DB database name.
+func (client GremlinResourcesClient) MigrateGremlinDatabaseToAutoscale(ctx context.Context, resourceGroupName string, accountName string, databaseName string) (result GremlinResourcesMigrateGremlinDatabaseToAutoscaleFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/GremlinResourcesClient.MigrateGremlinDatabaseToAutoscale")
+		defer func() {
+			sc := -1
+			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+				sc = result.FutureAPI.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
+		{TargetValue: accountName,
+			Constraints: []validation.Constraint{{Target: "accountName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "accountName", Name: validation.MinLength, Rule: 3, Chain: nil},
+				{Target: "accountName", Name: validation.Pattern, Rule: `^[a-z0-9]+(-[a-z0-9]+)*`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("documentdb.GremlinResourcesClient", "MigrateGremlinDatabaseToAutoscale", err.Error())
+	}
+
+	req, err := client.MigrateGremlinDatabaseToAutoscalePreparer(ctx, resourceGroupName, accountName, databaseName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.GremlinResourcesClient", "MigrateGremlinDatabaseToAutoscale", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.MigrateGremlinDatabaseToAutoscaleSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.GremlinResourcesClient", "MigrateGremlinDatabaseToAutoscale", nil, "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// MigrateGremlinDatabaseToAutoscalePreparer prepares the MigrateGremlinDatabaseToAutoscale request.
+func (client GremlinResourcesClient) MigrateGremlinDatabaseToAutoscalePreparer(ctx context.Context, resourceGroupName string, accountName string, databaseName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"accountName":       autorest.Encode("path", accountName),
+		"databaseName":      autorest.Encode("path", databaseName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2021-01-15"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/gremlinDatabases/{databaseName}/throughputSettings/default/migrateToAutoscale", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// MigrateGremlinDatabaseToAutoscaleSender sends the MigrateGremlinDatabaseToAutoscale request. The method will close the
+// http.Response Body if it receives an error.
+func (client GremlinResourcesClient) MigrateGremlinDatabaseToAutoscaleSender(req *http.Request) (future GremlinResourcesMigrateGremlinDatabaseToAutoscaleFuture, err error) {
+	var resp *http.Response
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = future.result
+	return
+}
+
+// MigrateGremlinDatabaseToAutoscaleResponder handles the response to the MigrateGremlinDatabaseToAutoscale request. The method always
+// closes the http.Response Body.
+func (client GremlinResourcesClient) MigrateGremlinDatabaseToAutoscaleResponder(resp *http.Response) (result ThroughputSettingsGetResults, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// MigrateGremlinDatabaseToManualThroughput migrate an Azure Cosmos DB Gremlin database from autoscale to manual
+// throughput
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// accountName - cosmos DB database account name.
+// databaseName - cosmos DB database name.
+func (client GremlinResourcesClient) MigrateGremlinDatabaseToManualThroughput(ctx context.Context, resourceGroupName string, accountName string, databaseName string) (result GremlinResourcesMigrateGremlinDatabaseToManualThroughputFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/GremlinResourcesClient.MigrateGremlinDatabaseToManualThroughput")
+		defer func() {
+			sc := -1
+			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+				sc = result.FutureAPI.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
+		{TargetValue: accountName,
+			Constraints: []validation.Constraint{{Target: "accountName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "accountName", Name: validation.MinLength, Rule: 3, Chain: nil},
+				{Target: "accountName", Name: validation.Pattern, Rule: `^[a-z0-9]+(-[a-z0-9]+)*`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("documentdb.GremlinResourcesClient", "MigrateGremlinDatabaseToManualThroughput", err.Error())
+	}
+
+	req, err := client.MigrateGremlinDatabaseToManualThroughputPreparer(ctx, resourceGroupName, accountName, databaseName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.GremlinResourcesClient", "MigrateGremlinDatabaseToManualThroughput", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.MigrateGremlinDatabaseToManualThroughputSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.GremlinResourcesClient", "MigrateGremlinDatabaseToManualThroughput", nil, "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// MigrateGremlinDatabaseToManualThroughputPreparer prepares the MigrateGremlinDatabaseToManualThroughput request.
+func (client GremlinResourcesClient) MigrateGremlinDatabaseToManualThroughputPreparer(ctx context.Context, resourceGroupName string, accountName string, databaseName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"accountName":       autorest.Encode("path", accountName),
+		"databaseName":      autorest.Encode("path", databaseName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2021-01-15"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/gremlinDatabases/{databaseName}/throughputSettings/default/migrateToManualThroughput", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// MigrateGremlinDatabaseToManualThroughputSender sends the MigrateGremlinDatabaseToManualThroughput request. The method will close the
+// http.Response Body if it receives an error.
+func (client GremlinResourcesClient) MigrateGremlinDatabaseToManualThroughputSender(req *http.Request) (future GremlinResourcesMigrateGremlinDatabaseToManualThroughputFuture, err error) {
+	var resp *http.Response
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = future.result
+	return
+}
+
+// MigrateGremlinDatabaseToManualThroughputResponder handles the response to the MigrateGremlinDatabaseToManualThroughput request. The method always
+// closes the http.Response Body.
+func (client GremlinResourcesClient) MigrateGremlinDatabaseToManualThroughputResponder(resp *http.Response) (result ThroughputSettingsGetResults, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// MigrateGremlinGraphToAutoscale migrate an Azure Cosmos DB Gremlin graph from manual throughput to autoscale
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// accountName - cosmos DB database account name.
+// databaseName - cosmos DB database name.
+// graphName - cosmos DB graph name.
+func (client GremlinResourcesClient) MigrateGremlinGraphToAutoscale(ctx context.Context, resourceGroupName string, accountName string, databaseName string, graphName string) (result GremlinResourcesMigrateGremlinGraphToAutoscaleFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/GremlinResourcesClient.MigrateGremlinGraphToAutoscale")
+		defer func() {
+			sc := -1
+			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+				sc = result.FutureAPI.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
+		{TargetValue: accountName,
+			Constraints: []validation.Constraint{{Target: "accountName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "accountName", Name: validation.MinLength, Rule: 3, Chain: nil},
+				{Target: "accountName", Name: validation.Pattern, Rule: `^[a-z0-9]+(-[a-z0-9]+)*`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("documentdb.GremlinResourcesClient", "MigrateGremlinGraphToAutoscale", err.Error())
+	}
+
+	req, err := client.MigrateGremlinGraphToAutoscalePreparer(ctx, resourceGroupName, accountName, databaseName, graphName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.GremlinResourcesClient", "MigrateGremlinGraphToAutoscale", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.MigrateGremlinGraphToAutoscaleSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.GremlinResourcesClient", "MigrateGremlinGraphToAutoscale", nil, "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// MigrateGremlinGraphToAutoscalePreparer prepares the MigrateGremlinGraphToAutoscale request.
+func (client GremlinResourcesClient) MigrateGremlinGraphToAutoscalePreparer(ctx context.Context, resourceGroupName string, accountName string, databaseName string, graphName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"accountName":       autorest.Encode("path", accountName),
+		"databaseName":      autorest.Encode("path", databaseName),
+		"graphName":         autorest.Encode("path", graphName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2021-01-15"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/gremlinDatabases/{databaseName}/graphs/{graphName}/throughputSettings/default/migrateToAutoscale", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// MigrateGremlinGraphToAutoscaleSender sends the MigrateGremlinGraphToAutoscale request. The method will close the
+// http.Response Body if it receives an error.
+func (client GremlinResourcesClient) MigrateGremlinGraphToAutoscaleSender(req *http.Request) (future GremlinResourcesMigrateGremlinGraphToAutoscaleFuture, err error) {
+	var resp *http.Response
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = future.result
+	return
+}
+
+// MigrateGremlinGraphToAutoscaleResponder handles the response to the MigrateGremlinGraphToAutoscale request. The method always
+// closes the http.Response Body.
+func (client GremlinResourcesClient) MigrateGremlinGraphToAutoscaleResponder(resp *http.Response) (result ThroughputSettingsGetResults, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// MigrateGremlinGraphToManualThroughput migrate an Azure Cosmos DB Gremlin graph from autoscale to manual throughput
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// accountName - cosmos DB database account name.
+// databaseName - cosmos DB database name.
+// graphName - cosmos DB graph name.
+func (client GremlinResourcesClient) MigrateGremlinGraphToManualThroughput(ctx context.Context, resourceGroupName string, accountName string, databaseName string, graphName string) (result GremlinResourcesMigrateGremlinGraphToManualThroughputFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/GremlinResourcesClient.MigrateGremlinGraphToManualThroughput")
+		defer func() {
+			sc := -1
+			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+				sc = result.FutureAPI.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
+		{TargetValue: accountName,
+			Constraints: []validation.Constraint{{Target: "accountName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "accountName", Name: validation.MinLength, Rule: 3, Chain: nil},
+				{Target: "accountName", Name: validation.Pattern, Rule: `^[a-z0-9]+(-[a-z0-9]+)*`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("documentdb.GremlinResourcesClient", "MigrateGremlinGraphToManualThroughput", err.Error())
+	}
+
+	req, err := client.MigrateGremlinGraphToManualThroughputPreparer(ctx, resourceGroupName, accountName, databaseName, graphName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.GremlinResourcesClient", "MigrateGremlinGraphToManualThroughput", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.MigrateGremlinGraphToManualThroughputSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.GremlinResourcesClient", "MigrateGremlinGraphToManualThroughput", nil, "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// MigrateGremlinGraphToManualThroughputPreparer prepares the MigrateGremlinGraphToManualThroughput request.
+func (client GremlinResourcesClient) MigrateGremlinGraphToManualThroughputPreparer(ctx context.Context, resourceGroupName string, accountName string, databaseName string, graphName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"accountName":       autorest.Encode("path", accountName),
+		"databaseName":      autorest.Encode("path", databaseName),
+		"graphName":         autorest.Encode("path", graphName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2021-01-15"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/gremlinDatabases/{databaseName}/graphs/{graphName}/throughputSettings/default/migrateToManualThroughput", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// MigrateGremlinGraphToManualThroughputSender sends the MigrateGremlinGraphToManualThroughput request. The method will close the
+// http.Response Body if it receives an error.
+func (client GremlinResourcesClient) MigrateGremlinGraphToManualThroughputSender(req *http.Request) (future GremlinResourcesMigrateGremlinGraphToManualThroughputFuture, err error) {
+	var resp *http.Response
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = future.result
+	return
+}
+
+// MigrateGremlinGraphToManualThroughputResponder handles the response to the MigrateGremlinGraphToManualThroughput request. The method always
+// closes the http.Response Body.
+func (client GremlinResourcesClient) MigrateGremlinGraphToManualThroughputResponder(resp *http.Response) (result ThroughputSettingsGetResults, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
 // UpdateGremlinDatabaseThroughput update RUs per second of an Azure Cosmos DB Gremlin database
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // updateThroughputParameters - the RUs per second of the parameters to provide for the current Gremlin
@@ -1024,7 +1403,9 @@ func (client GremlinResourcesClient) UpdateGremlinDatabaseThroughput(ctx context
 		{TargetValue: updateThroughputParameters,
 			Constraints: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource", Name: validation.Null, Rule: true,
-					Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.Throughput", Name: validation.Null, Rule: true, Chain: nil}}},
+					Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.AutoscaleSettings", Name: validation.Null, Rule: false,
+						Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.AutoscaleSettings.MaxThroughput", Name: validation.Null, Rule: true, Chain: nil}}},
+					}},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.GremlinResourcesClient", "UpdateGremlinDatabaseThroughput", err.Error())
 	}
@@ -1053,7 +1434,7 @@ func (client GremlinResourcesClient) UpdateGremlinDatabaseThroughputPreparer(ctx
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1097,7 +1478,7 @@ func (client GremlinResourcesClient) UpdateGremlinDatabaseThroughputResponder(re
 
 // UpdateGremlinGraphThroughput update RUs per second of an Azure Cosmos DB Gremlin graph
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // graphName - cosmos DB graph name.
@@ -1127,7 +1508,9 @@ func (client GremlinResourcesClient) UpdateGremlinGraphThroughput(ctx context.Co
 		{TargetValue: updateThroughputParameters,
 			Constraints: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource", Name: validation.Null, Rule: true,
-					Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.Throughput", Name: validation.Null, Rule: true, Chain: nil}}},
+					Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.AutoscaleSettings", Name: validation.Null, Rule: false,
+						Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.AutoscaleSettings.MaxThroughput", Name: validation.Null, Rule: true, Chain: nil}}},
+					}},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.GremlinResourcesClient", "UpdateGremlinGraphThroughput", err.Error())
 	}
@@ -1157,7 +1540,7 @@ func (client GremlinResourcesClient) UpdateGremlinGraphThroughputPreparer(ctx co
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

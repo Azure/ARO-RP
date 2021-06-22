@@ -83,7 +83,7 @@ func (client DatabaseAccountsClient) CheckNameExistsPreparer(ctx context.Context
 		"accountName": autorest.Encode("path", accountName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -116,7 +116,7 @@ func (client DatabaseAccountsClient) CheckNameExistsResponder(resp *http.Respons
 // CreateOrUpdate creates or updates an Azure Cosmos DB database account. The "Update" method is preferred when
 // performing updates on an account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // createUpdateParameters - the parameters to provide for the current database account.
 func (client DatabaseAccountsClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, accountName string, createUpdateParameters DatabaseAccountCreateUpdateParameters) (result DatabaseAccountsCreateOrUpdateFuture, err error) {
@@ -182,7 +182,7 @@ func (client DatabaseAccountsClient) CreateOrUpdatePreparer(ctx context.Context,
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -226,7 +226,7 @@ func (client DatabaseAccountsClient) CreateOrUpdateResponder(resp *http.Response
 
 // Delete deletes an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 func (client DatabaseAccountsClient) Delete(ctx context.Context, resourceGroupName string, accountName string) (result DatabaseAccountsDeleteFuture, err error) {
 	if tracing.IsEnabled() {
@@ -276,7 +276,7 @@ func (client DatabaseAccountsClient) DeletePreparer(ctx context.Context, resourc
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -319,7 +319,7 @@ func (client DatabaseAccountsClient) DeleteResponder(resp *http.Response) (resul
 // of 0 indicates a write region. The maximum value for a failover priority = (total number of regions - 1). Failover
 // priority values must be unique for each of the regions in which the database account exists.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // failoverParameters - the new failover policies for the database account.
 func (client DatabaseAccountsClient) FailoverPriorityChange(ctx context.Context, resourceGroupName string, accountName string, failoverParameters FailoverPolicies) (result DatabaseAccountsFailoverPriorityChangeFuture, err error) {
@@ -372,7 +372,7 @@ func (client DatabaseAccountsClient) FailoverPriorityChangePreparer(ctx context.
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -415,7 +415,7 @@ func (client DatabaseAccountsClient) FailoverPriorityChangeResponder(resp *http.
 
 // Get retrieves the properties of an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 func (client DatabaseAccountsClient) Get(ctx context.Context, resourceGroupName string, accountName string) (result DatabaseAccountGetResults, err error) {
 	if tracing.IsEnabled() {
@@ -472,7 +472,7 @@ func (client DatabaseAccountsClient) GetPreparer(ctx context.Context, resourceGr
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -505,7 +505,7 @@ func (client DatabaseAccountsClient) GetResponder(resp *http.Response) (result D
 
 // GetReadOnlyKeys lists the read-only access keys for the specified Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 func (client DatabaseAccountsClient) GetReadOnlyKeys(ctx context.Context, resourceGroupName string, accountName string) (result DatabaseAccountListReadOnlyKeysResult, err error) {
 	if tracing.IsEnabled() {
@@ -562,7 +562,7 @@ func (client DatabaseAccountsClient) GetReadOnlyKeysPreparer(ctx context.Context
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -639,7 +639,7 @@ func (client DatabaseAccountsClient) ListPreparer(ctx context.Context) (*http.Re
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -672,7 +672,7 @@ func (client DatabaseAccountsClient) ListResponder(resp *http.Response) (result 
 
 // ListByResourceGroup lists all the Azure Cosmos DB database accounts available under the given resource group.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 func (client DatabaseAccountsClient) ListByResourceGroup(ctx context.Context, resourceGroupName string) (result DatabaseAccountsListResult, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/DatabaseAccountsClient.ListByResourceGroup")
@@ -723,7 +723,7 @@ func (client DatabaseAccountsClient) ListByResourceGroupPreparer(ctx context.Con
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -756,7 +756,7 @@ func (client DatabaseAccountsClient) ListByResourceGroupResponder(resp *http.Res
 
 // ListConnectionStrings lists the connection strings for the specified Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 func (client DatabaseAccountsClient) ListConnectionStrings(ctx context.Context, resourceGroupName string, accountName string) (result DatabaseAccountListConnectionStringsResult, err error) {
 	if tracing.IsEnabled() {
@@ -813,7 +813,7 @@ func (client DatabaseAccountsClient) ListConnectionStringsPreparer(ctx context.C
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -846,7 +846,7 @@ func (client DatabaseAccountsClient) ListConnectionStringsResponder(resp *http.R
 
 // ListKeys lists the access keys for the specified Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 func (client DatabaseAccountsClient) ListKeys(ctx context.Context, resourceGroupName string, accountName string) (result DatabaseAccountListKeysResult, err error) {
 	if tracing.IsEnabled() {
@@ -903,7 +903,7 @@ func (client DatabaseAccountsClient) ListKeysPreparer(ctx context.Context, resou
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -936,7 +936,7 @@ func (client DatabaseAccountsClient) ListKeysResponder(resp *http.Response) (res
 
 // ListMetricDefinitions retrieves metric definitions for the given database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 func (client DatabaseAccountsClient) ListMetricDefinitions(ctx context.Context, resourceGroupName string, accountName string) (result MetricDefinitionsListResult, err error) {
 	if tracing.IsEnabled() {
@@ -993,7 +993,7 @@ func (client DatabaseAccountsClient) ListMetricDefinitionsPreparer(ctx context.C
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1026,7 +1026,7 @@ func (client DatabaseAccountsClient) ListMetricDefinitionsResponder(resp *http.R
 
 // ListMetrics retrieves the metrics determined by the given filter for the given database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // filter - an OData filter expression that describes a subset of metrics to return. The parameters that can be
 // filtered are name.value (name of the metric, can have an or of multiple names), startTime, endTime, and
@@ -1086,7 +1086,7 @@ func (client DatabaseAccountsClient) ListMetricsPreparer(ctx context.Context, re
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"$filter":     autorest.Encode("query", filter),
 		"api-version": APIVersion,
@@ -1120,7 +1120,7 @@ func (client DatabaseAccountsClient) ListMetricsResponder(resp *http.Response) (
 
 // ListReadOnlyKeys lists the read-only access keys for the specified Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 func (client DatabaseAccountsClient) ListReadOnlyKeys(ctx context.Context, resourceGroupName string, accountName string) (result DatabaseAccountListReadOnlyKeysResult, err error) {
 	if tracing.IsEnabled() {
@@ -1177,7 +1177,7 @@ func (client DatabaseAccountsClient) ListReadOnlyKeysPreparer(ctx context.Contex
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1210,7 +1210,7 @@ func (client DatabaseAccountsClient) ListReadOnlyKeysResponder(resp *http.Respon
 
 // ListUsages retrieves the usages (most recent data) for the given database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // filter - an OData filter expression that describes a subset of usages to return. The supported parameter is
 // name.value (name of the metric, can have an or of multiple names).
@@ -1269,7 +1269,7 @@ func (client DatabaseAccountsClient) ListUsagesPreparer(ctx context.Context, res
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1305,7 +1305,7 @@ func (client DatabaseAccountsClient) ListUsagesResponder(resp *http.Response) (r
 
 // OfflineRegion offline the specified region for the specified Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // regionParameterForOffline - cosmos DB region to offline for the database account.
 func (client DatabaseAccountsClient) OfflineRegion(ctx context.Context, resourceGroupName string, accountName string, regionParameterForOffline RegionForOnlineOffline) (result DatabaseAccountsOfflineRegionFuture, err error) {
@@ -1358,7 +1358,7 @@ func (client DatabaseAccountsClient) OfflineRegionPreparer(ctx context.Context, 
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1401,7 +1401,7 @@ func (client DatabaseAccountsClient) OfflineRegionResponder(resp *http.Response)
 
 // OnlineRegion online the specified region for the specified Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // regionParameterForOnline - cosmos DB region to online for the database account.
 func (client DatabaseAccountsClient) OnlineRegion(ctx context.Context, resourceGroupName string, accountName string, regionParameterForOnline RegionForOnlineOffline) (result DatabaseAccountsOnlineRegionFuture, err error) {
@@ -1454,7 +1454,7 @@ func (client DatabaseAccountsClient) OnlineRegionPreparer(ctx context.Context, r
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1497,7 +1497,7 @@ func (client DatabaseAccountsClient) OnlineRegionResponder(resp *http.Response) 
 
 // RegenerateKey regenerates an access key for the specified Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // keyToRegenerate - the name of the key to regenerate.
 func (client DatabaseAccountsClient) RegenerateKey(ctx context.Context, resourceGroupName string, accountName string, keyToRegenerate DatabaseAccountRegenerateKeyParameters) (result DatabaseAccountsRegenerateKeyFuture, err error) {
@@ -1548,7 +1548,7 @@ func (client DatabaseAccountsClient) RegenerateKeyPreparer(ctx context.Context, 
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1591,7 +1591,7 @@ func (client DatabaseAccountsClient) RegenerateKeyResponder(resp *http.Response)
 
 // Update updates the properties of an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // updateParameters - the parameters to provide for the current database account.
 func (client DatabaseAccountsClient) Update(ctx context.Context, resourceGroupName string, accountName string, updateParameters DatabaseAccountUpdateParameters) (result DatabaseAccountsUpdateFuture, err error) {
@@ -1642,7 +1642,7 @@ func (client DatabaseAccountsClient) UpdatePreparer(ctx context.Context, resourc
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
