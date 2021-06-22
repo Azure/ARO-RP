@@ -18,7 +18,13 @@ import (
 )
 
 // The package's fully qualified name.
-const fqdn = "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb"
+const fqdn = "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
+
+// APIProperties ...
+type APIProperties struct {
+	// ServerVersion - Describes the ServerVersion of an a MongoDB account. Possible values include: 'ThreeFullStopTwo', 'ThreeFullStopSix', 'FourFullStopZero'
+	ServerVersion ServerVersion `json:"serverVersion,omitempty"`
+}
 
 // ARMProxyResource the resource model definition for a ARM proxy resource. It will have everything other
 // than required location and tags
@@ -54,6 +60,136 @@ func (arp ARMResourceProperties) MarshalJSON() ([]byte, error) {
 		objectMap["tags"] = arp.Tags
 	}
 	return json.Marshal(objectMap)
+}
+
+// AutoscaleSettings ...
+type AutoscaleSettings struct {
+	// MaxThroughput - Represents maximum throughput, the resource can scale up to.
+	MaxThroughput *int32 `json:"maxThroughput,omitempty"`
+}
+
+// AutoscaleSettingsResource cosmos DB provisioned throughput settings object
+type AutoscaleSettingsResource struct {
+	// MaxThroughput - Represents maximum throughput container can scale up to.
+	MaxThroughput *int32 `json:"maxThroughput,omitempty"`
+	// AutoUpgradePolicy - Cosmos DB resource auto-upgrade policy
+	AutoUpgradePolicy *AutoUpgradePolicyResource `json:"autoUpgradePolicy,omitempty"`
+	// TargetMaxThroughput - READ-ONLY; Represents target maximum throughput container can scale up to once offer is no longer in pending state.
+	TargetMaxThroughput *int32 `json:"targetMaxThroughput,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for AutoscaleSettingsResource.
+func (asr AutoscaleSettingsResource) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if asr.MaxThroughput != nil {
+		objectMap["maxThroughput"] = asr.MaxThroughput
+	}
+	if asr.AutoUpgradePolicy != nil {
+		objectMap["autoUpgradePolicy"] = asr.AutoUpgradePolicy
+	}
+	return json.Marshal(objectMap)
+}
+
+// AutoUpgradePolicyResource cosmos DB resource auto-upgrade policy
+type AutoUpgradePolicyResource struct {
+	// ThroughputPolicy - Represents throughput policy which service must adhere to for auto-upgrade
+	ThroughputPolicy *ThroughputPolicyResource `json:"throughputPolicy,omitempty"`
+}
+
+// AzureEntityResource the resource model definition for an Azure Resource Manager resource with an etag.
+type AzureEntityResource struct {
+	// Etag - READ-ONLY; Resource Etag.
+	Etag *string `json:"etag,omitempty"`
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
+	Type *string `json:"type,omitempty"`
+}
+
+// BasicBackupPolicy the object representing the policy for taking backups on an account.
+type BasicBackupPolicy interface {
+	AsPeriodicModeBackupPolicy() (*PeriodicModeBackupPolicy, bool)
+	AsContinuousModeBackupPolicy() (*ContinuousModeBackupPolicy, bool)
+	AsBackupPolicy() (*BackupPolicy, bool)
+}
+
+// BackupPolicy the object representing the policy for taking backups on an account.
+type BackupPolicy struct {
+	// Type - Possible values include: 'TypeBackupPolicy', 'TypePeriodic', 'TypeContinuous'
+	Type Type `json:"type,omitempty"`
+}
+
+func unmarshalBasicBackupPolicy(body []byte) (BasicBackupPolicy, error) {
+	var m map[string]interface{}
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return nil, err
+	}
+
+	switch m["type"] {
+	case string(TypePeriodic):
+		var pmbp PeriodicModeBackupPolicy
+		err := json.Unmarshal(body, &pmbp)
+		return pmbp, err
+	case string(TypeContinuous):
+		var cmbp ContinuousModeBackupPolicy
+		err := json.Unmarshal(body, &cmbp)
+		return cmbp, err
+	default:
+		var bp BackupPolicy
+		err := json.Unmarshal(body, &bp)
+		return bp, err
+	}
+}
+func unmarshalBasicBackupPolicyArray(body []byte) ([]BasicBackupPolicy, error) {
+	var rawMessages []*json.RawMessage
+	err := json.Unmarshal(body, &rawMessages)
+	if err != nil {
+		return nil, err
+	}
+
+	bpArray := make([]BasicBackupPolicy, len(rawMessages))
+
+	for index, rawMessage := range rawMessages {
+		bp, err := unmarshalBasicBackupPolicy(*rawMessage)
+		if err != nil {
+			return nil, err
+		}
+		bpArray[index] = bp
+	}
+	return bpArray, nil
+}
+
+// MarshalJSON is the custom marshaler for BackupPolicy.
+func (bp BackupPolicy) MarshalJSON() ([]byte, error) {
+	bp.Type = TypeBackupPolicy
+	objectMap := make(map[string]interface{})
+	if bp.Type != "" {
+		objectMap["type"] = bp.Type
+	}
+	return json.Marshal(objectMap)
+}
+
+// AsPeriodicModeBackupPolicy is the BasicBackupPolicy implementation for BackupPolicy.
+func (bp BackupPolicy) AsPeriodicModeBackupPolicy() (*PeriodicModeBackupPolicy, bool) {
+	return nil, false
+}
+
+// AsContinuousModeBackupPolicy is the BasicBackupPolicy implementation for BackupPolicy.
+func (bp BackupPolicy) AsContinuousModeBackupPolicy() (*ContinuousModeBackupPolicy, bool) {
+	return nil, false
+}
+
+// AsBackupPolicy is the BasicBackupPolicy implementation for BackupPolicy.
+func (bp BackupPolicy) AsBackupPolicy() (*BackupPolicy, bool) {
+	return &bp, true
+}
+
+// AsBasicBackupPolicy is the BasicBackupPolicy implementation for BackupPolicy.
+func (bp BackupPolicy) AsBasicBackupPolicy() (BasicBackupPolicy, bool) {
+	return &bp, true
 }
 
 // Capability cosmos DB capability object
@@ -167,24 +303,21 @@ type CassandraKeyspaceCreateUpdateProperties struct {
 	// Resource - The standard JSON format of a Cassandra keyspace
 	Resource *CassandraKeyspaceResource `json:"resource,omitempty"`
 	// Options - A key-value pair of options to be applied for the request. This corresponds to the headers sent with the request.
-	Options map[string]*string `json:"options"`
-}
-
-// MarshalJSON is the custom marshaler for CassandraKeyspaceCreateUpdateProperties.
-func (ckcup CassandraKeyspaceCreateUpdateProperties) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
-	if ckcup.Resource != nil {
-		objectMap["resource"] = ckcup.Resource
-	}
-	if ckcup.Options != nil {
-		objectMap["options"] = ckcup.Options
-	}
-	return json.Marshal(objectMap)
+	Options *CreateUpdateOptions `json:"options,omitempty"`
 }
 
 // CassandraKeyspaceGetProperties the properties of an Azure Cosmos DB Cassandra keyspace
 type CassandraKeyspaceGetProperties struct {
 	Resource *CassandraKeyspaceGetPropertiesResource `json:"resource,omitempty"`
+	Options  *CassandraKeyspaceGetPropertiesOptions  `json:"options,omitempty"`
+}
+
+// CassandraKeyspaceGetPropertiesOptions ...
+type CassandraKeyspaceGetPropertiesOptions struct {
+	// Throughput - Value of the Cosmos DB resource throughput or autoscaleSettings. Use the ThroughputSetting resource when retrieving offer details.
+	Throughput *int32 `json:"throughput,omitempty"`
+	// AutoscaleSettings - Specifies the Autoscale settings.
+	AutoscaleSettings *AutoscaleSettings `json:"autoscaleSettings,omitempty"`
 }
 
 // CassandraKeyspaceGetPropertiesResource ...
@@ -194,7 +327,7 @@ type CassandraKeyspaceGetPropertiesResource struct {
 	// Rid - READ-ONLY; A system generated property. A unique identifier.
 	Rid *string `json:"_rid,omitempty"`
 	// Ts - READ-ONLY; A system generated property that denotes the last updated timestamp of the resource.
-	Ts interface{} `json:"_ts,omitempty"`
+	Ts *float64 `json:"_ts,omitempty"`
 	// Etag - READ-ONLY; A system generated property representing the resource etag required for optimistic concurrency control.
 	Etag *string `json:"_etag,omitempty"`
 }
@@ -488,6 +621,178 @@ func (future *CassandraResourcesDeleteCassandraTableFuture) result(client Cassan
 	return
 }
 
+// CassandraResourcesMigrateCassandraKeyspaceToAutoscaleFuture an abstraction for monitoring and retrieving
+// the results of a long-running operation.
+type CassandraResourcesMigrateCassandraKeyspaceToAutoscaleFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(CassandraResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *CassandraResourcesMigrateCassandraKeyspaceToAutoscaleFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for CassandraResourcesMigrateCassandraKeyspaceToAutoscaleFuture.Result.
+func (future *CassandraResourcesMigrateCassandraKeyspaceToAutoscaleFuture) result(client CassandraResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.CassandraResourcesMigrateCassandraKeyspaceToAutoscaleFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.CassandraResourcesMigrateCassandraKeyspaceToAutoscaleFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateCassandraKeyspaceToAutoscaleResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.CassandraResourcesMigrateCassandraKeyspaceToAutoscaleFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// CassandraResourcesMigrateCassandraKeyspaceToManualThroughputFuture an abstraction for monitoring and
+// retrieving the results of a long-running operation.
+type CassandraResourcesMigrateCassandraKeyspaceToManualThroughputFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(CassandraResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *CassandraResourcesMigrateCassandraKeyspaceToManualThroughputFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for CassandraResourcesMigrateCassandraKeyspaceToManualThroughputFuture.Result.
+func (future *CassandraResourcesMigrateCassandraKeyspaceToManualThroughputFuture) result(client CassandraResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.CassandraResourcesMigrateCassandraKeyspaceToManualThroughputFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.CassandraResourcesMigrateCassandraKeyspaceToManualThroughputFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateCassandraKeyspaceToManualThroughputResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.CassandraResourcesMigrateCassandraKeyspaceToManualThroughputFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// CassandraResourcesMigrateCassandraTableToAutoscaleFuture an abstraction for monitoring and retrieving
+// the results of a long-running operation.
+type CassandraResourcesMigrateCassandraTableToAutoscaleFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(CassandraResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *CassandraResourcesMigrateCassandraTableToAutoscaleFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for CassandraResourcesMigrateCassandraTableToAutoscaleFuture.Result.
+func (future *CassandraResourcesMigrateCassandraTableToAutoscaleFuture) result(client CassandraResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.CassandraResourcesMigrateCassandraTableToAutoscaleFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.CassandraResourcesMigrateCassandraTableToAutoscaleFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateCassandraTableToAutoscaleResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.CassandraResourcesMigrateCassandraTableToAutoscaleFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// CassandraResourcesMigrateCassandraTableToManualThroughputFuture an abstraction for monitoring and
+// retrieving the results of a long-running operation.
+type CassandraResourcesMigrateCassandraTableToManualThroughputFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(CassandraResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *CassandraResourcesMigrateCassandraTableToManualThroughputFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for CassandraResourcesMigrateCassandraTableToManualThroughputFuture.Result.
+func (future *CassandraResourcesMigrateCassandraTableToManualThroughputFuture) result(client CassandraResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.CassandraResourcesMigrateCassandraTableToManualThroughputFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.CassandraResourcesMigrateCassandraTableToManualThroughputFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateCassandraTableToManualThroughputResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.CassandraResourcesMigrateCassandraTableToManualThroughputFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
 // CassandraResourcesUpdateCassandraKeyspaceThroughputFuture an abstraction for monitoring and retrieving
 // the results of a long-running operation.
 type CassandraResourcesUpdateCassandraKeyspaceThroughputFuture struct {
@@ -688,24 +993,21 @@ type CassandraTableCreateUpdateProperties struct {
 	// Resource - The standard JSON format of a Cassandra table
 	Resource *CassandraTableResource `json:"resource,omitempty"`
 	// Options - A key-value pair of options to be applied for the request. This corresponds to the headers sent with the request.
-	Options map[string]*string `json:"options"`
-}
-
-// MarshalJSON is the custom marshaler for CassandraTableCreateUpdateProperties.
-func (ctcup CassandraTableCreateUpdateProperties) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
-	if ctcup.Resource != nil {
-		objectMap["resource"] = ctcup.Resource
-	}
-	if ctcup.Options != nil {
-		objectMap["options"] = ctcup.Options
-	}
-	return json.Marshal(objectMap)
+	Options *CreateUpdateOptions `json:"options,omitempty"`
 }
 
 // CassandraTableGetProperties the properties of an Azure Cosmos DB Cassandra table
 type CassandraTableGetProperties struct {
 	Resource *CassandraTableGetPropertiesResource `json:"resource,omitempty"`
+	Options  *CassandraTableGetPropertiesOptions  `json:"options,omitempty"`
+}
+
+// CassandraTableGetPropertiesOptions ...
+type CassandraTableGetPropertiesOptions struct {
+	// Throughput - Value of the Cosmos DB resource throughput or autoscaleSettings. Use the ThroughputSetting resource when retrieving offer details.
+	Throughput *int32 `json:"throughput,omitempty"`
+	// AutoscaleSettings - Specifies the Autoscale settings.
+	AutoscaleSettings *AutoscaleSettings `json:"autoscaleSettings,omitempty"`
 }
 
 // CassandraTableGetPropertiesResource ...
@@ -716,10 +1018,12 @@ type CassandraTableGetPropertiesResource struct {
 	DefaultTTL *int32 `json:"defaultTtl,omitempty"`
 	// Schema - Schema of the Cosmos DB Cassandra table
 	Schema *CassandraSchema `json:"schema,omitempty"`
+	// AnalyticalStorageTTL - Analytical TTL.
+	AnalyticalStorageTTL *int32 `json:"analyticalStorageTtl,omitempty"`
 	// Rid - READ-ONLY; A system generated property. A unique identifier.
 	Rid *string `json:"_rid,omitempty"`
 	// Ts - READ-ONLY; A system generated property that denotes the last updated timestamp of the resource.
-	Ts interface{} `json:"_ts,omitempty"`
+	Ts *float64 `json:"_ts,omitempty"`
 	// Etag - READ-ONLY; A system generated property representing the resource etag required for optimistic concurrency control.
 	Etag *string `json:"_etag,omitempty"`
 }
@@ -735,6 +1039,9 @@ func (ctgp CassandraTableGetPropertiesResource) MarshalJSON() ([]byte, error) {
 	}
 	if ctgp.Schema != nil {
 		objectMap["schema"] = ctgp.Schema
+	}
+	if ctgp.AnalyticalStorageTTL != nil {
+		objectMap["analyticalStorageTtl"] = ctgp.AnalyticalStorageTTL
 	}
 	return json.Marshal(objectMap)
 }
@@ -855,6 +1162,8 @@ type CassandraTableResource struct {
 	DefaultTTL *int32 `json:"defaultTtl,omitempty"`
 	// Schema - Schema of the Cosmos DB Cassandra table
 	Schema *CassandraSchema `json:"schema,omitempty"`
+	// AnalyticalStorageTTL - Analytical TTL.
+	AnalyticalStorageTTL *int32 `json:"analyticalStorageTtl,omitempty"`
 }
 
 // ClusterKey cosmos DB Cassandra table cluster key
@@ -906,10 +1215,86 @@ type ConsistencyPolicy struct {
 type ContainerPartitionKey struct {
 	// Paths - List of paths using which data within the container can be partitioned
 	Paths *[]string `json:"paths,omitempty"`
-	// Kind - Indicates the kind of algorithm used for partitioning. Possible values include: 'PartitionKindHash', 'PartitionKindRange'
+	// Kind - Indicates the kind of algorithm used for partitioning. For MultiHash, multiple partition keys (upto three maximum) are supported for container create. Possible values include: 'PartitionKindHash', 'PartitionKindRange', 'PartitionKindMultiHash'
 	Kind PartitionKind `json:"kind,omitempty"`
 	// Version - Indicates the version of the partition key definition
 	Version *int32 `json:"version,omitempty"`
+	// SystemKey - READ-ONLY; Indicates if the container is using a system generated partition key
+	SystemKey *bool `json:"systemKey,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ContainerPartitionKey.
+func (cpk ContainerPartitionKey) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if cpk.Paths != nil {
+		objectMap["paths"] = cpk.Paths
+	}
+	if cpk.Kind != "" {
+		objectMap["kind"] = cpk.Kind
+	}
+	if cpk.Version != nil {
+		objectMap["version"] = cpk.Version
+	}
+	return json.Marshal(objectMap)
+}
+
+// ContinuousModeBackupPolicy the object representing continuous mode backup policy.
+type ContinuousModeBackupPolicy struct {
+	// Type - Possible values include: 'TypeBackupPolicy', 'TypePeriodic', 'TypeContinuous'
+	Type Type `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ContinuousModeBackupPolicy.
+func (cmbp ContinuousModeBackupPolicy) MarshalJSON() ([]byte, error) {
+	cmbp.Type = TypeContinuous
+	objectMap := make(map[string]interface{})
+	if cmbp.Type != "" {
+		objectMap["type"] = cmbp.Type
+	}
+	return json.Marshal(objectMap)
+}
+
+// AsPeriodicModeBackupPolicy is the BasicBackupPolicy implementation for ContinuousModeBackupPolicy.
+func (cmbp ContinuousModeBackupPolicy) AsPeriodicModeBackupPolicy() (*PeriodicModeBackupPolicy, bool) {
+	return nil, false
+}
+
+// AsContinuousModeBackupPolicy is the BasicBackupPolicy implementation for ContinuousModeBackupPolicy.
+func (cmbp ContinuousModeBackupPolicy) AsContinuousModeBackupPolicy() (*ContinuousModeBackupPolicy, bool) {
+	return &cmbp, true
+}
+
+// AsBackupPolicy is the BasicBackupPolicy implementation for ContinuousModeBackupPolicy.
+func (cmbp ContinuousModeBackupPolicy) AsBackupPolicy() (*BackupPolicy, bool) {
+	return nil, false
+}
+
+// AsBasicBackupPolicy is the BasicBackupPolicy implementation for ContinuousModeBackupPolicy.
+func (cmbp ContinuousModeBackupPolicy) AsBasicBackupPolicy() (BasicBackupPolicy, bool) {
+	return &cmbp, true
+}
+
+// CorsPolicy the CORS policy for the Cosmos DB database account.
+type CorsPolicy struct {
+	// AllowedOrigins - The origin domains that are permitted to make a request against the service via CORS.
+	AllowedOrigins *string `json:"allowedOrigins,omitempty"`
+	// AllowedMethods - The methods (HTTP request verbs) that the origin domain may use for a CORS request.
+	AllowedMethods *string `json:"allowedMethods,omitempty"`
+	// AllowedHeaders - The request headers that the origin domain may specify on the CORS request.
+	AllowedHeaders *string `json:"allowedHeaders,omitempty"`
+	// ExposedHeaders - The response headers that may be sent in the response to the CORS request and exposed by the browser to the request issuer.
+	ExposedHeaders *string `json:"exposedHeaders,omitempty"`
+	// MaxAgeInSeconds - The maximum amount time that a browser should cache the preflight OPTIONS request.
+	MaxAgeInSeconds *int64 `json:"maxAgeInSeconds,omitempty"`
+}
+
+// CreateUpdateOptions createUpdateOptions are a list of key-value pairs that describe the resource.
+// Supported keys are "If-Match", "If-None-Match", "Session-Token" and "Throughput"
+type CreateUpdateOptions struct {
+	// Throughput - Request Units per second. For example, "throughput": 10000.
+	Throughput *int32 `json:"throughput,omitempty"`
+	// AutoscaleSettings - Specifies the Autoscale settings.
+	AutoscaleSettings *AutoscaleSettings `json:"autoscaleSettings,omitempty"`
 }
 
 // DatabaseAccountConnectionString connection string for the Cosmos DB account
@@ -923,7 +1308,8 @@ type DatabaseAccountConnectionString struct {
 // DatabaseAccountCreateUpdateParameters parameters to create and update Cosmos DB database accounts.
 type DatabaseAccountCreateUpdateParameters struct {
 	// Kind - Indicates the type of database account. This can only be set at database account creation. Possible values include: 'GlobalDocumentDB', 'MongoDB', 'Parse'
-	Kind                                   DatabaseAccountKind `json:"kind,omitempty"`
+	Kind                                   DatabaseAccountKind     `json:"kind,omitempty"`
+	Identity                               *ManagedServiceIdentity `json:"identity,omitempty"`
 	*DatabaseAccountCreateUpdateProperties `json:"properties,omitempty"`
 	// ID - READ-ONLY; The unique resource identifier of the ARM resource.
 	ID *string `json:"id,omitempty"`
@@ -941,6 +1327,9 @@ func (dacup DatabaseAccountCreateUpdateParameters) MarshalJSON() ([]byte, error)
 	objectMap := make(map[string]interface{})
 	if dacup.Kind != "" {
 		objectMap["kind"] = dacup.Kind
+	}
+	if dacup.Identity != nil {
+		objectMap["identity"] = dacup.Identity
 	}
 	if dacup.DatabaseAccountCreateUpdateProperties != nil {
 		objectMap["properties"] = dacup.DatabaseAccountCreateUpdateProperties
@@ -971,6 +1360,15 @@ func (dacup *DatabaseAccountCreateUpdateParameters) UnmarshalJSON(body []byte) e
 					return err
 				}
 				dacup.Kind = kind
+			}
+		case "identity":
+			if v != nil {
+				var identity ManagedServiceIdentity
+				err = json.Unmarshal(*v, &identity)
+				if err != nil {
+					return err
+				}
+				dacup.Identity = &identity
 			}
 		case "properties":
 			if v != nil {
@@ -1040,8 +1438,8 @@ type DatabaseAccountCreateUpdateProperties struct {
 	Locations *[]Location `json:"locations,omitempty"`
 	// DatabaseAccountOfferType - The offer type for the database
 	DatabaseAccountOfferType *string `json:"databaseAccountOfferType,omitempty"`
-	// IPRangeFilter - Cosmos DB Firewall Support: This value specifies the set of IP addresses or IP address ranges in CIDR form to be included as the allowed list of client IPs for a given database account. IP addresses/ranges must be comma separated and must not contain any spaces.
-	IPRangeFilter *string `json:"ipRangeFilter,omitempty"`
+	// IPRules - List of IpRules.
+	IPRules *[]IPAddressOrRange `json:"ipRules,omitempty"`
 	// IsVirtualNetworkFilterEnabled - Flag to indicate whether to enable/disable Virtual Network ACL rules.
 	IsVirtualNetworkFilterEnabled *bool `json:"isVirtualNetworkFilterEnabled,omitempty"`
 	// EnableAutomaticFailover - Enables automatic failover of the write region in the rare event that the region is unavailable due to an outage. Automatic failover will result in a new write region for the account and is chosen based on the failover priorities configured for the account.
@@ -1058,6 +1456,227 @@ type DatabaseAccountCreateUpdateProperties struct {
 	ConnectorOffer ConnectorOffer `json:"connectorOffer,omitempty"`
 	// DisableKeyBasedMetadataWriteAccess - Disable write operations on metadata resources (databases, containers, throughput) via account keys
 	DisableKeyBasedMetadataWriteAccess *bool `json:"disableKeyBasedMetadataWriteAccess,omitempty"`
+	// KeyVaultKeyURI - The URI of the key vault
+	KeyVaultKeyURI *string `json:"keyVaultKeyUri,omitempty"`
+	// PublicNetworkAccess - Whether requests from Public Network are allowed. Possible values include: 'Enabled', 'Disabled'
+	PublicNetworkAccess PublicNetworkAccess `json:"publicNetworkAccess,omitempty"`
+	// EnableFreeTier - Flag to indicate whether Free Tier is enabled.
+	EnableFreeTier *bool `json:"enableFreeTier,omitempty"`
+	// APIProperties - API specific properties. Currently, supported only for MongoDB API.
+	APIProperties *APIProperties `json:"apiProperties,omitempty"`
+	// EnableAnalyticalStorage - Flag to indicate whether to enable storage analytics.
+	EnableAnalyticalStorage *bool `json:"enableAnalyticalStorage,omitempty"`
+	// BackupPolicy - The object representing the policy for taking backups on an account.
+	BackupPolicy BasicBackupPolicy `json:"backupPolicy,omitempty"`
+	// Cors - The CORS policy for the Cosmos DB database account.
+	Cors *[]CorsPolicy `json:"cors,omitempty"`
+	// NetworkACLBypass - Indicates what services are allowed to bypass firewall checks. Possible values include: 'NetworkACLBypassNone', 'NetworkACLBypassAzureServices'
+	NetworkACLBypass NetworkACLBypass `json:"networkAclBypass,omitempty"`
+	// NetworkACLBypassResourceIds - An array that contains the Resource Ids for Network Acl Bypass for the Cosmos DB account.
+	NetworkACLBypassResourceIds *[]string `json:"networkAclBypassResourceIds,omitempty"`
+}
+
+// UnmarshalJSON is the custom unmarshaler for DatabaseAccountCreateUpdateProperties struct.
+func (dacup *DatabaseAccountCreateUpdateProperties) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "consistencyPolicy":
+			if v != nil {
+				var consistencyPolicy ConsistencyPolicy
+				err = json.Unmarshal(*v, &consistencyPolicy)
+				if err != nil {
+					return err
+				}
+				dacup.ConsistencyPolicy = &consistencyPolicy
+			}
+		case "locations":
+			if v != nil {
+				var locations []Location
+				err = json.Unmarshal(*v, &locations)
+				if err != nil {
+					return err
+				}
+				dacup.Locations = &locations
+			}
+		case "databaseAccountOfferType":
+			if v != nil {
+				var databaseAccountOfferType string
+				err = json.Unmarshal(*v, &databaseAccountOfferType)
+				if err != nil {
+					return err
+				}
+				dacup.DatabaseAccountOfferType = &databaseAccountOfferType
+			}
+		case "ipRules":
+			if v != nil {
+				var IPRules []IPAddressOrRange
+				err = json.Unmarshal(*v, &IPRules)
+				if err != nil {
+					return err
+				}
+				dacup.IPRules = &IPRules
+			}
+		case "isVirtualNetworkFilterEnabled":
+			if v != nil {
+				var isVirtualNetworkFilterEnabled bool
+				err = json.Unmarshal(*v, &isVirtualNetworkFilterEnabled)
+				if err != nil {
+					return err
+				}
+				dacup.IsVirtualNetworkFilterEnabled = &isVirtualNetworkFilterEnabled
+			}
+		case "enableAutomaticFailover":
+			if v != nil {
+				var enableAutomaticFailover bool
+				err = json.Unmarshal(*v, &enableAutomaticFailover)
+				if err != nil {
+					return err
+				}
+				dacup.EnableAutomaticFailover = &enableAutomaticFailover
+			}
+		case "capabilities":
+			if v != nil {
+				var capabilities []Capability
+				err = json.Unmarshal(*v, &capabilities)
+				if err != nil {
+					return err
+				}
+				dacup.Capabilities = &capabilities
+			}
+		case "virtualNetworkRules":
+			if v != nil {
+				var virtualNetworkRules []VirtualNetworkRule
+				err = json.Unmarshal(*v, &virtualNetworkRules)
+				if err != nil {
+					return err
+				}
+				dacup.VirtualNetworkRules = &virtualNetworkRules
+			}
+		case "enableMultipleWriteLocations":
+			if v != nil {
+				var enableMultipleWriteLocations bool
+				err = json.Unmarshal(*v, &enableMultipleWriteLocations)
+				if err != nil {
+					return err
+				}
+				dacup.EnableMultipleWriteLocations = &enableMultipleWriteLocations
+			}
+		case "enableCassandraConnector":
+			if v != nil {
+				var enableCassandraConnector bool
+				err = json.Unmarshal(*v, &enableCassandraConnector)
+				if err != nil {
+					return err
+				}
+				dacup.EnableCassandraConnector = &enableCassandraConnector
+			}
+		case "connectorOffer":
+			if v != nil {
+				var connectorOffer ConnectorOffer
+				err = json.Unmarshal(*v, &connectorOffer)
+				if err != nil {
+					return err
+				}
+				dacup.ConnectorOffer = connectorOffer
+			}
+		case "disableKeyBasedMetadataWriteAccess":
+			if v != nil {
+				var disableKeyBasedMetadataWriteAccess bool
+				err = json.Unmarshal(*v, &disableKeyBasedMetadataWriteAccess)
+				if err != nil {
+					return err
+				}
+				dacup.DisableKeyBasedMetadataWriteAccess = &disableKeyBasedMetadataWriteAccess
+			}
+		case "keyVaultKeyUri":
+			if v != nil {
+				var keyVaultKeyURI string
+				err = json.Unmarshal(*v, &keyVaultKeyURI)
+				if err != nil {
+					return err
+				}
+				dacup.KeyVaultKeyURI = &keyVaultKeyURI
+			}
+		case "publicNetworkAccess":
+			if v != nil {
+				var publicNetworkAccess PublicNetworkAccess
+				err = json.Unmarshal(*v, &publicNetworkAccess)
+				if err != nil {
+					return err
+				}
+				dacup.PublicNetworkAccess = publicNetworkAccess
+			}
+		case "enableFreeTier":
+			if v != nil {
+				var enableFreeTier bool
+				err = json.Unmarshal(*v, &enableFreeTier)
+				if err != nil {
+					return err
+				}
+				dacup.EnableFreeTier = &enableFreeTier
+			}
+		case "apiProperties":
+			if v != nil {
+				var APIProperties APIProperties
+				err = json.Unmarshal(*v, &APIProperties)
+				if err != nil {
+					return err
+				}
+				dacup.APIProperties = &APIProperties
+			}
+		case "enableAnalyticalStorage":
+			if v != nil {
+				var enableAnalyticalStorage bool
+				err = json.Unmarshal(*v, &enableAnalyticalStorage)
+				if err != nil {
+					return err
+				}
+				dacup.EnableAnalyticalStorage = &enableAnalyticalStorage
+			}
+		case "backupPolicy":
+			if v != nil {
+				backupPolicy, err := unmarshalBasicBackupPolicy(*v)
+				if err != nil {
+					return err
+				}
+				dacup.BackupPolicy = backupPolicy
+			}
+		case "cors":
+			if v != nil {
+				var cors []CorsPolicy
+				err = json.Unmarshal(*v, &cors)
+				if err != nil {
+					return err
+				}
+				dacup.Cors = &cors
+			}
+		case "networkAclBypass":
+			if v != nil {
+				var networkACLBypass NetworkACLBypass
+				err = json.Unmarshal(*v, &networkACLBypass)
+				if err != nil {
+					return err
+				}
+				dacup.NetworkACLBypass = networkACLBypass
+			}
+		case "networkAclBypassResourceIds":
+			if v != nil {
+				var networkACLBypassResourceIds []string
+				err = json.Unmarshal(*v, &networkACLBypassResourceIds)
+				if err != nil {
+					return err
+				}
+				dacup.NetworkACLBypassResourceIds = &networkACLBypassResourceIds
+			}
+		}
+	}
+
+	return nil
 }
 
 // DatabaseAccountGetProperties properties for the database account.
@@ -1067,8 +1686,8 @@ type DatabaseAccountGetProperties struct {
 	DocumentEndpoint *string `json:"documentEndpoint,omitempty"`
 	// DatabaseAccountOfferType - READ-ONLY; The offer type for the Cosmos DB database account. Default value: Standard. Possible values include: 'Standard'
 	DatabaseAccountOfferType DatabaseAccountOfferType `json:"databaseAccountOfferType,omitempty"`
-	// IPRangeFilter - Cosmos DB Firewall Support: This value specifies the set of IP addresses or IP address ranges in CIDR form to be included as the allowed list of client IPs for a given database account. IP addresses/ranges must be comma separated and must not contain any spaces.
-	IPRangeFilter *string `json:"ipRangeFilter,omitempty"`
+	// IPRules - List of IpRules.
+	IPRules *[]IPAddressOrRange `json:"ipRules,omitempty"`
 	// IsVirtualNetworkFilterEnabled - Flag to indicate whether to enable/disable Virtual Network ACL rules.
 	IsVirtualNetworkFilterEnabled *bool `json:"isVirtualNetworkFilterEnabled,omitempty"`
 	// EnableAutomaticFailover - Enables automatic failover of the write region in the rare event that the region is unavailable due to an outage. Automatic failover will result in a new write region for the account and is chosen based on the failover priorities configured for the account.
@@ -1087,6 +1706,8 @@ type DatabaseAccountGetProperties struct {
 	FailoverPolicies *[]FailoverPolicy `json:"failoverPolicies,omitempty"`
 	// VirtualNetworkRules - List of Virtual Network ACL rules configured for the Cosmos DB account.
 	VirtualNetworkRules *[]VirtualNetworkRule `json:"virtualNetworkRules,omitempty"`
+	// PrivateEndpointConnections - READ-ONLY; List of Private Endpoint Connections configured for the Cosmos DB account.
+	PrivateEndpointConnections *[]PrivateEndpointConnection `json:"privateEndpointConnections,omitempty"`
 	// EnableMultipleWriteLocations - Enables the account to write in multiple locations
 	EnableMultipleWriteLocations *bool `json:"enableMultipleWriteLocations,omitempty"`
 	// EnableCassandraConnector - Enables the cassandra connector on the Cosmos DB C* account
@@ -1095,6 +1716,24 @@ type DatabaseAccountGetProperties struct {
 	ConnectorOffer ConnectorOffer `json:"connectorOffer,omitempty"`
 	// DisableKeyBasedMetadataWriteAccess - Disable write operations on metadata resources (databases, containers, throughput) via account keys
 	DisableKeyBasedMetadataWriteAccess *bool `json:"disableKeyBasedMetadataWriteAccess,omitempty"`
+	// KeyVaultKeyURI - The URI of the key vault
+	KeyVaultKeyURI *string `json:"keyVaultKeyUri,omitempty"`
+	// PublicNetworkAccess - Whether requests from Public Network are allowed. Possible values include: 'Enabled', 'Disabled'
+	PublicNetworkAccess PublicNetworkAccess `json:"publicNetworkAccess,omitempty"`
+	// EnableFreeTier - Flag to indicate whether Free Tier is enabled.
+	EnableFreeTier *bool `json:"enableFreeTier,omitempty"`
+	// APIProperties - API specific properties.
+	APIProperties *APIProperties `json:"apiProperties,omitempty"`
+	// EnableAnalyticalStorage - Flag to indicate whether to enable storage analytics.
+	EnableAnalyticalStorage *bool `json:"enableAnalyticalStorage,omitempty"`
+	// BackupPolicy - The object representing the policy for taking backups on an account.
+	BackupPolicy BasicBackupPolicy `json:"backupPolicy,omitempty"`
+	// Cors - The CORS policy for the Cosmos DB database account.
+	Cors *[]CorsPolicy `json:"cors,omitempty"`
+	// NetworkACLBypass - Indicates what services are allowed to bypass firewall checks. Possible values include: 'NetworkACLBypassNone', 'NetworkACLBypassAzureServices'
+	NetworkACLBypass NetworkACLBypass `json:"networkAclBypass,omitempty"`
+	// NetworkACLBypassResourceIds - An array that contains the Resource Ids for Network Acl Bypass for the Cosmos DB account.
+	NetworkACLBypassResourceIds *[]string `json:"networkAclBypassResourceIds,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for DatabaseAccountGetProperties.
@@ -1103,8 +1742,8 @@ func (dagp DatabaseAccountGetProperties) MarshalJSON() ([]byte, error) {
 	if dagp.ProvisioningState != nil {
 		objectMap["provisioningState"] = dagp.ProvisioningState
 	}
-	if dagp.IPRangeFilter != nil {
-		objectMap["ipRangeFilter"] = dagp.IPRangeFilter
+	if dagp.IPRules != nil {
+		objectMap["ipRules"] = dagp.IPRules
 	}
 	if dagp.IsVirtualNetworkFilterEnabled != nil {
 		objectMap["isVirtualNetworkFilterEnabled"] = dagp.IsVirtualNetworkFilterEnabled
@@ -1133,14 +1772,297 @@ func (dagp DatabaseAccountGetProperties) MarshalJSON() ([]byte, error) {
 	if dagp.DisableKeyBasedMetadataWriteAccess != nil {
 		objectMap["disableKeyBasedMetadataWriteAccess"] = dagp.DisableKeyBasedMetadataWriteAccess
 	}
+	if dagp.KeyVaultKeyURI != nil {
+		objectMap["keyVaultKeyUri"] = dagp.KeyVaultKeyURI
+	}
+	if dagp.PublicNetworkAccess != "" {
+		objectMap["publicNetworkAccess"] = dagp.PublicNetworkAccess
+	}
+	if dagp.EnableFreeTier != nil {
+		objectMap["enableFreeTier"] = dagp.EnableFreeTier
+	}
+	if dagp.APIProperties != nil {
+		objectMap["apiProperties"] = dagp.APIProperties
+	}
+	if dagp.EnableAnalyticalStorage != nil {
+		objectMap["enableAnalyticalStorage"] = dagp.EnableAnalyticalStorage
+	}
+	objectMap["backupPolicy"] = dagp.BackupPolicy
+	if dagp.Cors != nil {
+		objectMap["cors"] = dagp.Cors
+	}
+	if dagp.NetworkACLBypass != "" {
+		objectMap["networkAclBypass"] = dagp.NetworkACLBypass
+	}
+	if dagp.NetworkACLBypassResourceIds != nil {
+		objectMap["networkAclBypassResourceIds"] = dagp.NetworkACLBypassResourceIds
+	}
 	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for DatabaseAccountGetProperties struct.
+func (dagp *DatabaseAccountGetProperties) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "provisioningState":
+			if v != nil {
+				var provisioningState string
+				err = json.Unmarshal(*v, &provisioningState)
+				if err != nil {
+					return err
+				}
+				dagp.ProvisioningState = &provisioningState
+			}
+		case "documentEndpoint":
+			if v != nil {
+				var documentEndpoint string
+				err = json.Unmarshal(*v, &documentEndpoint)
+				if err != nil {
+					return err
+				}
+				dagp.DocumentEndpoint = &documentEndpoint
+			}
+		case "databaseAccountOfferType":
+			if v != nil {
+				var databaseAccountOfferType DatabaseAccountOfferType
+				err = json.Unmarshal(*v, &databaseAccountOfferType)
+				if err != nil {
+					return err
+				}
+				dagp.DatabaseAccountOfferType = databaseAccountOfferType
+			}
+		case "ipRules":
+			if v != nil {
+				var IPRules []IPAddressOrRange
+				err = json.Unmarshal(*v, &IPRules)
+				if err != nil {
+					return err
+				}
+				dagp.IPRules = &IPRules
+			}
+		case "isVirtualNetworkFilterEnabled":
+			if v != nil {
+				var isVirtualNetworkFilterEnabled bool
+				err = json.Unmarshal(*v, &isVirtualNetworkFilterEnabled)
+				if err != nil {
+					return err
+				}
+				dagp.IsVirtualNetworkFilterEnabled = &isVirtualNetworkFilterEnabled
+			}
+		case "enableAutomaticFailover":
+			if v != nil {
+				var enableAutomaticFailover bool
+				err = json.Unmarshal(*v, &enableAutomaticFailover)
+				if err != nil {
+					return err
+				}
+				dagp.EnableAutomaticFailover = &enableAutomaticFailover
+			}
+		case "consistencyPolicy":
+			if v != nil {
+				var consistencyPolicy ConsistencyPolicy
+				err = json.Unmarshal(*v, &consistencyPolicy)
+				if err != nil {
+					return err
+				}
+				dagp.ConsistencyPolicy = &consistencyPolicy
+			}
+		case "capabilities":
+			if v != nil {
+				var capabilities []Capability
+				err = json.Unmarshal(*v, &capabilities)
+				if err != nil {
+					return err
+				}
+				dagp.Capabilities = &capabilities
+			}
+		case "writeLocations":
+			if v != nil {
+				var writeLocations []Location
+				err = json.Unmarshal(*v, &writeLocations)
+				if err != nil {
+					return err
+				}
+				dagp.WriteLocations = &writeLocations
+			}
+		case "readLocations":
+			if v != nil {
+				var readLocations []Location
+				err = json.Unmarshal(*v, &readLocations)
+				if err != nil {
+					return err
+				}
+				dagp.ReadLocations = &readLocations
+			}
+		case "locations":
+			if v != nil {
+				var locations []Location
+				err = json.Unmarshal(*v, &locations)
+				if err != nil {
+					return err
+				}
+				dagp.Locations = &locations
+			}
+		case "failoverPolicies":
+			if v != nil {
+				var failoverPolicies []FailoverPolicy
+				err = json.Unmarshal(*v, &failoverPolicies)
+				if err != nil {
+					return err
+				}
+				dagp.FailoverPolicies = &failoverPolicies
+			}
+		case "virtualNetworkRules":
+			if v != nil {
+				var virtualNetworkRules []VirtualNetworkRule
+				err = json.Unmarshal(*v, &virtualNetworkRules)
+				if err != nil {
+					return err
+				}
+				dagp.VirtualNetworkRules = &virtualNetworkRules
+			}
+		case "privateEndpointConnections":
+			if v != nil {
+				var privateEndpointConnections []PrivateEndpointConnection
+				err = json.Unmarshal(*v, &privateEndpointConnections)
+				if err != nil {
+					return err
+				}
+				dagp.PrivateEndpointConnections = &privateEndpointConnections
+			}
+		case "enableMultipleWriteLocations":
+			if v != nil {
+				var enableMultipleWriteLocations bool
+				err = json.Unmarshal(*v, &enableMultipleWriteLocations)
+				if err != nil {
+					return err
+				}
+				dagp.EnableMultipleWriteLocations = &enableMultipleWriteLocations
+			}
+		case "enableCassandraConnector":
+			if v != nil {
+				var enableCassandraConnector bool
+				err = json.Unmarshal(*v, &enableCassandraConnector)
+				if err != nil {
+					return err
+				}
+				dagp.EnableCassandraConnector = &enableCassandraConnector
+			}
+		case "connectorOffer":
+			if v != nil {
+				var connectorOffer ConnectorOffer
+				err = json.Unmarshal(*v, &connectorOffer)
+				if err != nil {
+					return err
+				}
+				dagp.ConnectorOffer = connectorOffer
+			}
+		case "disableKeyBasedMetadataWriteAccess":
+			if v != nil {
+				var disableKeyBasedMetadataWriteAccess bool
+				err = json.Unmarshal(*v, &disableKeyBasedMetadataWriteAccess)
+				if err != nil {
+					return err
+				}
+				dagp.DisableKeyBasedMetadataWriteAccess = &disableKeyBasedMetadataWriteAccess
+			}
+		case "keyVaultKeyUri":
+			if v != nil {
+				var keyVaultKeyURI string
+				err = json.Unmarshal(*v, &keyVaultKeyURI)
+				if err != nil {
+					return err
+				}
+				dagp.KeyVaultKeyURI = &keyVaultKeyURI
+			}
+		case "publicNetworkAccess":
+			if v != nil {
+				var publicNetworkAccess PublicNetworkAccess
+				err = json.Unmarshal(*v, &publicNetworkAccess)
+				if err != nil {
+					return err
+				}
+				dagp.PublicNetworkAccess = publicNetworkAccess
+			}
+		case "enableFreeTier":
+			if v != nil {
+				var enableFreeTier bool
+				err = json.Unmarshal(*v, &enableFreeTier)
+				if err != nil {
+					return err
+				}
+				dagp.EnableFreeTier = &enableFreeTier
+			}
+		case "apiProperties":
+			if v != nil {
+				var APIProperties APIProperties
+				err = json.Unmarshal(*v, &APIProperties)
+				if err != nil {
+					return err
+				}
+				dagp.APIProperties = &APIProperties
+			}
+		case "enableAnalyticalStorage":
+			if v != nil {
+				var enableAnalyticalStorage bool
+				err = json.Unmarshal(*v, &enableAnalyticalStorage)
+				if err != nil {
+					return err
+				}
+				dagp.EnableAnalyticalStorage = &enableAnalyticalStorage
+			}
+		case "backupPolicy":
+			if v != nil {
+				backupPolicy, err := unmarshalBasicBackupPolicy(*v)
+				if err != nil {
+					return err
+				}
+				dagp.BackupPolicy = backupPolicy
+			}
+		case "cors":
+			if v != nil {
+				var cors []CorsPolicy
+				err = json.Unmarshal(*v, &cors)
+				if err != nil {
+					return err
+				}
+				dagp.Cors = &cors
+			}
+		case "networkAclBypass":
+			if v != nil {
+				var networkACLBypass NetworkACLBypass
+				err = json.Unmarshal(*v, &networkACLBypass)
+				if err != nil {
+					return err
+				}
+				dagp.NetworkACLBypass = networkACLBypass
+			}
+		case "networkAclBypassResourceIds":
+			if v != nil {
+				var networkACLBypassResourceIds []string
+				err = json.Unmarshal(*v, &networkACLBypassResourceIds)
+				if err != nil {
+					return err
+				}
+				dagp.NetworkACLBypassResourceIds = &networkACLBypassResourceIds
+			}
+		}
+	}
+
+	return nil
 }
 
 // DatabaseAccountGetResults an Azure Cosmos DB database account.
 type DatabaseAccountGetResults struct {
 	autorest.Response `json:"-"`
 	// Kind - Indicates the type of database account. This can only be set at database account creation. Possible values include: 'GlobalDocumentDB', 'MongoDB', 'Parse'
-	Kind                          DatabaseAccountKind `json:"kind,omitempty"`
+	Kind                          DatabaseAccountKind     `json:"kind,omitempty"`
+	Identity                      *ManagedServiceIdentity `json:"identity,omitempty"`
 	*DatabaseAccountGetProperties `json:"properties,omitempty"`
 	// ID - READ-ONLY; The unique resource identifier of the ARM resource.
 	ID *string `json:"id,omitempty"`
@@ -1158,6 +2080,9 @@ func (dagr DatabaseAccountGetResults) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
 	if dagr.Kind != "" {
 		objectMap["kind"] = dagr.Kind
+	}
+	if dagr.Identity != nil {
+		objectMap["identity"] = dagr.Identity
 	}
 	if dagr.DatabaseAccountGetProperties != nil {
 		objectMap["properties"] = dagr.DatabaseAccountGetProperties
@@ -1188,6 +2113,15 @@ func (dagr *DatabaseAccountGetResults) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				dagr.Kind = kind
+			}
+		case "identity":
+			if v != nil {
+				var identity ManagedServiceIdentity
+				err = json.Unmarshal(*v, &identity)
+				if err != nil {
+					return err
+				}
+				dagr.Identity = &identity
 			}
 		case "properties":
 			if v != nil {
@@ -1567,7 +2501,8 @@ func (future *DatabaseAccountsUpdateFuture) result(client DatabaseAccountsClient
 type DatabaseAccountUpdateParameters struct {
 	Tags map[string]*string `json:"tags"`
 	// Location - The location of the resource group to which the resource belongs.
-	Location                         *string `json:"location,omitempty"`
+	Location                         *string                 `json:"location,omitempty"`
+	Identity                         *ManagedServiceIdentity `json:"identity,omitempty"`
 	*DatabaseAccountUpdateProperties `json:"properties,omitempty"`
 }
 
@@ -1579,6 +2514,9 @@ func (daup DatabaseAccountUpdateParameters) MarshalJSON() ([]byte, error) {
 	}
 	if daup.Location != nil {
 		objectMap["location"] = daup.Location
+	}
+	if daup.Identity != nil {
+		objectMap["identity"] = daup.Identity
 	}
 	if daup.DatabaseAccountUpdateProperties != nil {
 		objectMap["properties"] = daup.DatabaseAccountUpdateProperties
@@ -1613,6 +2551,15 @@ func (daup *DatabaseAccountUpdateParameters) UnmarshalJSON(body []byte) error {
 				}
 				daup.Location = &location
 			}
+		case "identity":
+			if v != nil {
+				var identity ManagedServiceIdentity
+				err = json.Unmarshal(*v, &identity)
+				if err != nil {
+					return err
+				}
+				daup.Identity = &identity
+			}
 		case "properties":
 			if v != nil {
 				var databaseAccountUpdateProperties DatabaseAccountUpdateProperties
@@ -1634,8 +2581,8 @@ type DatabaseAccountUpdateProperties struct {
 	ConsistencyPolicy *ConsistencyPolicy `json:"consistencyPolicy,omitempty"`
 	// Locations - An array that contains the georeplication locations enabled for the Cosmos DB account.
 	Locations *[]Location `json:"locations,omitempty"`
-	// IPRangeFilter - Cosmos DB Firewall Support: This value specifies the set of IP addresses or IP address ranges in CIDR form to be included as the allowed list of client IPs for a given database account. IP addresses/ranges must be comma separated and must not contain any spaces.
-	IPRangeFilter *string `json:"ipRangeFilter,omitempty"`
+	// IPRules - List of IpRules.
+	IPRules *[]IPAddressOrRange `json:"ipRules,omitempty"`
 	// IsVirtualNetworkFilterEnabled - Flag to indicate whether to enable/disable Virtual Network ACL rules.
 	IsVirtualNetworkFilterEnabled *bool `json:"isVirtualNetworkFilterEnabled,omitempty"`
 	// EnableAutomaticFailover - Enables automatic failover of the write region in the rare event that the region is unavailable due to an outage. Automatic failover will result in a new write region for the account and is chosen based on the failover priorities configured for the account.
@@ -1652,6 +2599,218 @@ type DatabaseAccountUpdateProperties struct {
 	ConnectorOffer ConnectorOffer `json:"connectorOffer,omitempty"`
 	// DisableKeyBasedMetadataWriteAccess - Disable write operations on metadata resources (databases, containers, throughput) via account keys
 	DisableKeyBasedMetadataWriteAccess *bool `json:"disableKeyBasedMetadataWriteAccess,omitempty"`
+	// KeyVaultKeyURI - The URI of the key vault
+	KeyVaultKeyURI *string `json:"keyVaultKeyUri,omitempty"`
+	// PublicNetworkAccess - Whether requests from Public Network are allowed. Possible values include: 'Enabled', 'Disabled'
+	PublicNetworkAccess PublicNetworkAccess `json:"publicNetworkAccess,omitempty"`
+	// EnableFreeTier - Flag to indicate whether Free Tier is enabled.
+	EnableFreeTier *bool `json:"enableFreeTier,omitempty"`
+	// APIProperties - API specific properties. Currently, supported only for MongoDB API.
+	APIProperties *APIProperties `json:"apiProperties,omitempty"`
+	// EnableAnalyticalStorage - Flag to indicate whether to enable storage analytics.
+	EnableAnalyticalStorage *bool `json:"enableAnalyticalStorage,omitempty"`
+	// BackupPolicy - The object representing the policy for taking backups on an account.
+	BackupPolicy BasicBackupPolicy `json:"backupPolicy,omitempty"`
+	// Cors - The CORS policy for the Cosmos DB database account.
+	Cors *[]CorsPolicy `json:"cors,omitempty"`
+	// NetworkACLBypass - Indicates what services are allowed to bypass firewall checks. Possible values include: 'NetworkACLBypassNone', 'NetworkACLBypassAzureServices'
+	NetworkACLBypass NetworkACLBypass `json:"networkAclBypass,omitempty"`
+	// NetworkACLBypassResourceIds - An array that contains the Resource Ids for Network Acl Bypass for the Cosmos DB account.
+	NetworkACLBypassResourceIds *[]string `json:"networkAclBypassResourceIds,omitempty"`
+}
+
+// UnmarshalJSON is the custom unmarshaler for DatabaseAccountUpdateProperties struct.
+func (daup *DatabaseAccountUpdateProperties) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "consistencyPolicy":
+			if v != nil {
+				var consistencyPolicy ConsistencyPolicy
+				err = json.Unmarshal(*v, &consistencyPolicy)
+				if err != nil {
+					return err
+				}
+				daup.ConsistencyPolicy = &consistencyPolicy
+			}
+		case "locations":
+			if v != nil {
+				var locations []Location
+				err = json.Unmarshal(*v, &locations)
+				if err != nil {
+					return err
+				}
+				daup.Locations = &locations
+			}
+		case "ipRules":
+			if v != nil {
+				var IPRules []IPAddressOrRange
+				err = json.Unmarshal(*v, &IPRules)
+				if err != nil {
+					return err
+				}
+				daup.IPRules = &IPRules
+			}
+		case "isVirtualNetworkFilterEnabled":
+			if v != nil {
+				var isVirtualNetworkFilterEnabled bool
+				err = json.Unmarshal(*v, &isVirtualNetworkFilterEnabled)
+				if err != nil {
+					return err
+				}
+				daup.IsVirtualNetworkFilterEnabled = &isVirtualNetworkFilterEnabled
+			}
+		case "enableAutomaticFailover":
+			if v != nil {
+				var enableAutomaticFailover bool
+				err = json.Unmarshal(*v, &enableAutomaticFailover)
+				if err != nil {
+					return err
+				}
+				daup.EnableAutomaticFailover = &enableAutomaticFailover
+			}
+		case "capabilities":
+			if v != nil {
+				var capabilities []Capability
+				err = json.Unmarshal(*v, &capabilities)
+				if err != nil {
+					return err
+				}
+				daup.Capabilities = &capabilities
+			}
+		case "virtualNetworkRules":
+			if v != nil {
+				var virtualNetworkRules []VirtualNetworkRule
+				err = json.Unmarshal(*v, &virtualNetworkRules)
+				if err != nil {
+					return err
+				}
+				daup.VirtualNetworkRules = &virtualNetworkRules
+			}
+		case "enableMultipleWriteLocations":
+			if v != nil {
+				var enableMultipleWriteLocations bool
+				err = json.Unmarshal(*v, &enableMultipleWriteLocations)
+				if err != nil {
+					return err
+				}
+				daup.EnableMultipleWriteLocations = &enableMultipleWriteLocations
+			}
+		case "enableCassandraConnector":
+			if v != nil {
+				var enableCassandraConnector bool
+				err = json.Unmarshal(*v, &enableCassandraConnector)
+				if err != nil {
+					return err
+				}
+				daup.EnableCassandraConnector = &enableCassandraConnector
+			}
+		case "connectorOffer":
+			if v != nil {
+				var connectorOffer ConnectorOffer
+				err = json.Unmarshal(*v, &connectorOffer)
+				if err != nil {
+					return err
+				}
+				daup.ConnectorOffer = connectorOffer
+			}
+		case "disableKeyBasedMetadataWriteAccess":
+			if v != nil {
+				var disableKeyBasedMetadataWriteAccess bool
+				err = json.Unmarshal(*v, &disableKeyBasedMetadataWriteAccess)
+				if err != nil {
+					return err
+				}
+				daup.DisableKeyBasedMetadataWriteAccess = &disableKeyBasedMetadataWriteAccess
+			}
+		case "keyVaultKeyUri":
+			if v != nil {
+				var keyVaultKeyURI string
+				err = json.Unmarshal(*v, &keyVaultKeyURI)
+				if err != nil {
+					return err
+				}
+				daup.KeyVaultKeyURI = &keyVaultKeyURI
+			}
+		case "publicNetworkAccess":
+			if v != nil {
+				var publicNetworkAccess PublicNetworkAccess
+				err = json.Unmarshal(*v, &publicNetworkAccess)
+				if err != nil {
+					return err
+				}
+				daup.PublicNetworkAccess = publicNetworkAccess
+			}
+		case "enableFreeTier":
+			if v != nil {
+				var enableFreeTier bool
+				err = json.Unmarshal(*v, &enableFreeTier)
+				if err != nil {
+					return err
+				}
+				daup.EnableFreeTier = &enableFreeTier
+			}
+		case "apiProperties":
+			if v != nil {
+				var APIProperties APIProperties
+				err = json.Unmarshal(*v, &APIProperties)
+				if err != nil {
+					return err
+				}
+				daup.APIProperties = &APIProperties
+			}
+		case "enableAnalyticalStorage":
+			if v != nil {
+				var enableAnalyticalStorage bool
+				err = json.Unmarshal(*v, &enableAnalyticalStorage)
+				if err != nil {
+					return err
+				}
+				daup.EnableAnalyticalStorage = &enableAnalyticalStorage
+			}
+		case "backupPolicy":
+			if v != nil {
+				backupPolicy, err := unmarshalBasicBackupPolicy(*v)
+				if err != nil {
+					return err
+				}
+				daup.BackupPolicy = backupPolicy
+			}
+		case "cors":
+			if v != nil {
+				var cors []CorsPolicy
+				err = json.Unmarshal(*v, &cors)
+				if err != nil {
+					return err
+				}
+				daup.Cors = &cors
+			}
+		case "networkAclBypass":
+			if v != nil {
+				var networkACLBypass NetworkACLBypass
+				err = json.Unmarshal(*v, &networkACLBypass)
+				if err != nil {
+					return err
+				}
+				daup.NetworkACLBypass = networkACLBypass
+			}
+		case "networkAclBypassResourceIds":
+			if v != nil {
+				var networkACLBypassResourceIds []string
+				err = json.Unmarshal(*v, &networkACLBypassResourceIds)
+				if err != nil {
+					return err
+				}
+				daup.NetworkACLBypassResourceIds = &networkACLBypassResourceIds
+			}
+		}
+	}
+
+	return nil
 }
 
 // ErrorResponse error Response.
@@ -1660,6 +2819,11 @@ type ErrorResponse struct {
 	Code *string `json:"code,omitempty"`
 	// Message - Error message indicating why the operation failed.
 	Message *string `json:"message,omitempty"`
+}
+
+// ErrorResponseUpdatedFormat an error response from the service.
+type ErrorResponseUpdatedFormat struct {
+	Error *ErrorResponse `json:"error,omitempty"`
 }
 
 // ExcludedPath ...
@@ -1674,7 +2838,7 @@ type ExtendedResourceProperties struct {
 	// Rid - READ-ONLY; A system generated property. A unique identifier.
 	Rid *string `json:"_rid,omitempty"`
 	// Ts - READ-ONLY; A system generated property that denotes the last updated timestamp of the resource.
-	Ts interface{} `json:"_ts,omitempty"`
+	Ts *float64 `json:"_ts,omitempty"`
 	// Etag - READ-ONLY; A system generated property representing the resource etag required for optimistic concurrency control.
 	Etag *string `json:"_etag,omitempty"`
 }
@@ -1811,24 +2975,21 @@ type GremlinDatabaseCreateUpdateProperties struct {
 	// Resource - The standard JSON format of a Gremlin database
 	Resource *GremlinDatabaseResource `json:"resource,omitempty"`
 	// Options - A key-value pair of options to be applied for the request. This corresponds to the headers sent with the request.
-	Options map[string]*string `json:"options"`
-}
-
-// MarshalJSON is the custom marshaler for GremlinDatabaseCreateUpdateProperties.
-func (gdcup GremlinDatabaseCreateUpdateProperties) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
-	if gdcup.Resource != nil {
-		objectMap["resource"] = gdcup.Resource
-	}
-	if gdcup.Options != nil {
-		objectMap["options"] = gdcup.Options
-	}
-	return json.Marshal(objectMap)
+	Options *CreateUpdateOptions `json:"options,omitempty"`
 }
 
 // GremlinDatabaseGetProperties the properties of an Azure Cosmos DB SQL database
 type GremlinDatabaseGetProperties struct {
 	Resource *GremlinDatabaseGetPropertiesResource `json:"resource,omitempty"`
+	Options  *GremlinDatabaseGetPropertiesOptions  `json:"options,omitempty"`
+}
+
+// GremlinDatabaseGetPropertiesOptions ...
+type GremlinDatabaseGetPropertiesOptions struct {
+	// Throughput - Value of the Cosmos DB resource throughput or autoscaleSettings. Use the ThroughputSetting resource when retrieving offer details.
+	Throughput *int32 `json:"throughput,omitempty"`
+	// AutoscaleSettings - Specifies the Autoscale settings.
+	AutoscaleSettings *AutoscaleSettings `json:"autoscaleSettings,omitempty"`
 }
 
 // GremlinDatabaseGetPropertiesResource ...
@@ -1838,7 +2999,7 @@ type GremlinDatabaseGetPropertiesResource struct {
 	// Rid - READ-ONLY; A system generated property. A unique identifier.
 	Rid *string `json:"_rid,omitempty"`
 	// Ts - READ-ONLY; A system generated property that denotes the last updated timestamp of the resource.
-	Ts interface{} `json:"_ts,omitempty"`
+	Ts *float64 `json:"_ts,omitempty"`
 	// Etag - READ-ONLY; A system generated property representing the resource etag required for optimistic concurrency control.
 	Etag *string `json:"_etag,omitempty"`
 }
@@ -2070,24 +3231,21 @@ type GremlinGraphCreateUpdateProperties struct {
 	// Resource - The standard JSON format of a Gremlin graph
 	Resource *GremlinGraphResource `json:"resource,omitempty"`
 	// Options - A key-value pair of options to be applied for the request. This corresponds to the headers sent with the request.
-	Options map[string]*string `json:"options"`
-}
-
-// MarshalJSON is the custom marshaler for GremlinGraphCreateUpdateProperties.
-func (ggcup GremlinGraphCreateUpdateProperties) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
-	if ggcup.Resource != nil {
-		objectMap["resource"] = ggcup.Resource
-	}
-	if ggcup.Options != nil {
-		objectMap["options"] = ggcup.Options
-	}
-	return json.Marshal(objectMap)
+	Options *CreateUpdateOptions `json:"options,omitempty"`
 }
 
 // GremlinGraphGetProperties the properties of an Azure Cosmos DB Gremlin graph
 type GremlinGraphGetProperties struct {
 	Resource *GremlinGraphGetPropertiesResource `json:"resource,omitempty"`
+	Options  *GremlinGraphGetPropertiesOptions  `json:"options,omitempty"`
+}
+
+// GremlinGraphGetPropertiesOptions ...
+type GremlinGraphGetPropertiesOptions struct {
+	// Throughput - Value of the Cosmos DB resource throughput or autoscaleSettings. Use the ThroughputSetting resource when retrieving offer details.
+	Throughput *int32 `json:"throughput,omitempty"`
+	// AutoscaleSettings - Specifies the Autoscale settings.
+	AutoscaleSettings *AutoscaleSettings `json:"autoscaleSettings,omitempty"`
 }
 
 // GremlinGraphGetPropertiesResource ...
@@ -2107,7 +3265,7 @@ type GremlinGraphGetPropertiesResource struct {
 	// Rid - READ-ONLY; A system generated property. A unique identifier.
 	Rid *string `json:"_rid,omitempty"`
 	// Ts - READ-ONLY; A system generated property that denotes the last updated timestamp of the resource.
-	Ts interface{} `json:"_ts,omitempty"`
+	Ts *float64 `json:"_ts,omitempty"`
 	// Etag - READ-ONLY; A system generated property representing the resource etag required for optimistic concurrency control.
 	Etag *string `json:"_etag,omitempty"`
 }
@@ -2419,6 +3577,178 @@ func (future *GremlinResourcesDeleteGremlinGraphFuture) result(client GremlinRes
 	return
 }
 
+// GremlinResourcesMigrateGremlinDatabaseToAutoscaleFuture an abstraction for monitoring and retrieving the
+// results of a long-running operation.
+type GremlinResourcesMigrateGremlinDatabaseToAutoscaleFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GremlinResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *GremlinResourcesMigrateGremlinDatabaseToAutoscaleFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for GremlinResourcesMigrateGremlinDatabaseToAutoscaleFuture.Result.
+func (future *GremlinResourcesMigrateGremlinDatabaseToAutoscaleFuture) result(client GremlinResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.GremlinResourcesMigrateGremlinDatabaseToAutoscaleFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.GremlinResourcesMigrateGremlinDatabaseToAutoscaleFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateGremlinDatabaseToAutoscaleResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.GremlinResourcesMigrateGremlinDatabaseToAutoscaleFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// GremlinResourcesMigrateGremlinDatabaseToManualThroughputFuture an abstraction for monitoring and
+// retrieving the results of a long-running operation.
+type GremlinResourcesMigrateGremlinDatabaseToManualThroughputFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GremlinResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *GremlinResourcesMigrateGremlinDatabaseToManualThroughputFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for GremlinResourcesMigrateGremlinDatabaseToManualThroughputFuture.Result.
+func (future *GremlinResourcesMigrateGremlinDatabaseToManualThroughputFuture) result(client GremlinResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.GremlinResourcesMigrateGremlinDatabaseToManualThroughputFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.GremlinResourcesMigrateGremlinDatabaseToManualThroughputFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateGremlinDatabaseToManualThroughputResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.GremlinResourcesMigrateGremlinDatabaseToManualThroughputFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// GremlinResourcesMigrateGremlinGraphToAutoscaleFuture an abstraction for monitoring and retrieving the
+// results of a long-running operation.
+type GremlinResourcesMigrateGremlinGraphToAutoscaleFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GremlinResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *GremlinResourcesMigrateGremlinGraphToAutoscaleFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for GremlinResourcesMigrateGremlinGraphToAutoscaleFuture.Result.
+func (future *GremlinResourcesMigrateGremlinGraphToAutoscaleFuture) result(client GremlinResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.GremlinResourcesMigrateGremlinGraphToAutoscaleFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.GremlinResourcesMigrateGremlinGraphToAutoscaleFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateGremlinGraphToAutoscaleResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.GremlinResourcesMigrateGremlinGraphToAutoscaleFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// GremlinResourcesMigrateGremlinGraphToManualThroughputFuture an abstraction for monitoring and retrieving
+// the results of a long-running operation.
+type GremlinResourcesMigrateGremlinGraphToManualThroughputFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(GremlinResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *GremlinResourcesMigrateGremlinGraphToManualThroughputFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for GremlinResourcesMigrateGremlinGraphToManualThroughputFuture.Result.
+func (future *GremlinResourcesMigrateGremlinGraphToManualThroughputFuture) result(client GremlinResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.GremlinResourcesMigrateGremlinGraphToManualThroughputFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.GremlinResourcesMigrateGremlinGraphToManualThroughputFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateGremlinGraphToManualThroughputResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.GremlinResourcesMigrateGremlinGraphToManualThroughputFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
 // GremlinResourcesUpdateGremlinDatabaseThroughputFuture an abstraction for monitoring and retrieving the
 // results of a long-running operation.
 type GremlinResourcesUpdateGremlinDatabaseThroughputFuture struct {
@@ -2539,6 +3869,12 @@ type IndexingPolicy struct {
 	SpatialIndexes *[]SpatialSpec `json:"spatialIndexes,omitempty"`
 }
 
+// IPAddressOrRange ipAddressOrRange object
+type IPAddressOrRange struct {
+	// IPAddressOrRange - A single IPv4 address or a single IPv4 address range in CIDR format. Provided IPs must be well-formatted and cannot be contained in one of the following ranges: 10.0.0.0/8, 100.64.0.0/10, 172.16.0.0/12, 192.168.0.0/16, since these are not enforceable by the IP address filter. Example of valid inputs: “23.40.210.245” or “23.40.210.0/8”.
+	IPAddressOrRange *string `json:"ipAddressOrRange,omitempty"`
+}
+
 // Location a region in which the Azure Cosmos DB database account is deployed.
 type Location struct {
 	// ID - READ-ONLY; The unique identifier of the region within the database account. Example: &lt;accountName&gt;-&lt;locationName&gt;.
@@ -2570,6 +3906,38 @@ func (l Location) MarshalJSON() ([]byte, error) {
 		objectMap["isZoneRedundant"] = l.IsZoneRedundant
 	}
 	return json.Marshal(objectMap)
+}
+
+// ManagedServiceIdentity identity for the resource.
+type ManagedServiceIdentity struct {
+	// PrincipalID - READ-ONLY; The principal id of the system assigned identity. This property will only be provided for a system assigned identity.
+	PrincipalID *string `json:"principalId,omitempty"`
+	// TenantID - READ-ONLY; The tenant id of the system assigned identity. This property will only be provided for a system assigned identity.
+	TenantID *string `json:"tenantId,omitempty"`
+	// Type - The type of identity used for the resource. The type 'SystemAssigned,UserAssigned' includes both an implicitly created identity and a set of user assigned identities. The type 'None' will remove any identities from the service. Possible values include: 'ResourceIdentityTypeSystemAssigned', 'ResourceIdentityTypeUserAssigned', 'ResourceIdentityTypeSystemAssignedUserAssigned', 'ResourceIdentityTypeNone'
+	Type ResourceIdentityType `json:"type,omitempty"`
+	// UserAssignedIdentities - The list of user identities associated with resource. The user identity dictionary key references will be ARM resource ids in the form: '/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{identityName}'.
+	UserAssignedIdentities map[string]*ManagedServiceIdentityUserAssignedIdentitiesValue `json:"userAssignedIdentities"`
+}
+
+// MarshalJSON is the custom marshaler for ManagedServiceIdentity.
+func (msi ManagedServiceIdentity) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if msi.Type != "" {
+		objectMap["type"] = msi.Type
+	}
+	if msi.UserAssignedIdentities != nil {
+		objectMap["userAssignedIdentities"] = msi.UserAssignedIdentities
+	}
+	return json.Marshal(objectMap)
+}
+
+// ManagedServiceIdentityUserAssignedIdentitiesValue ...
+type ManagedServiceIdentityUserAssignedIdentitiesValue struct {
+	// PrincipalID - READ-ONLY; The principal id of user assigned identity.
+	PrincipalID *string `json:"principalId,omitempty"`
+	// ClientID - READ-ONLY; The client id of user assigned identity.
+	ClientID *string `json:"clientId,omitempty"`
 }
 
 // Metric metric data
@@ -2771,24 +4139,21 @@ type MongoDBCollectionCreateUpdateProperties struct {
 	// Resource - The standard JSON format of a MongoDB collection
 	Resource *MongoDBCollectionResource `json:"resource,omitempty"`
 	// Options - A key-value pair of options to be applied for the request. This corresponds to the headers sent with the request.
-	Options map[string]*string `json:"options"`
-}
-
-// MarshalJSON is the custom marshaler for MongoDBCollectionCreateUpdateProperties.
-func (mdccup MongoDBCollectionCreateUpdateProperties) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
-	if mdccup.Resource != nil {
-		objectMap["resource"] = mdccup.Resource
-	}
-	if mdccup.Options != nil {
-		objectMap["options"] = mdccup.Options
-	}
-	return json.Marshal(objectMap)
+	Options *CreateUpdateOptions `json:"options,omitempty"`
 }
 
 // MongoDBCollectionGetProperties the properties of an Azure Cosmos DB MongoDB collection
 type MongoDBCollectionGetProperties struct {
 	Resource *MongoDBCollectionGetPropertiesResource `json:"resource,omitempty"`
+	Options  *MongoDBCollectionGetPropertiesOptions  `json:"options,omitempty"`
+}
+
+// MongoDBCollectionGetPropertiesOptions ...
+type MongoDBCollectionGetPropertiesOptions struct {
+	// Throughput - Value of the Cosmos DB resource throughput or autoscaleSettings. Use the ThroughputSetting resource when retrieving offer details.
+	Throughput *int32 `json:"throughput,omitempty"`
+	// AutoscaleSettings - Specifies the Autoscale settings.
+	AutoscaleSettings *AutoscaleSettings `json:"autoscaleSettings,omitempty"`
 }
 
 // MongoDBCollectionGetPropertiesResource ...
@@ -2799,10 +4164,12 @@ type MongoDBCollectionGetPropertiesResource struct {
 	ShardKey map[string]*string `json:"shardKey"`
 	// Indexes - List of index keys
 	Indexes *[]MongoIndex `json:"indexes,omitempty"`
+	// AnalyticalStorageTTL - Analytical TTL.
+	AnalyticalStorageTTL *int32 `json:"analyticalStorageTtl,omitempty"`
 	// Rid - READ-ONLY; A system generated property. A unique identifier.
 	Rid *string `json:"_rid,omitempty"`
 	// Ts - READ-ONLY; A system generated property that denotes the last updated timestamp of the resource.
-	Ts interface{} `json:"_ts,omitempty"`
+	Ts *float64 `json:"_ts,omitempty"`
 	// Etag - READ-ONLY; A system generated property representing the resource etag required for optimistic concurrency control.
 	Etag *string `json:"_etag,omitempty"`
 }
@@ -2818,6 +4185,9 @@ func (mdcgp MongoDBCollectionGetPropertiesResource) MarshalJSON() ([]byte, error
 	}
 	if mdcgp.Indexes != nil {
 		objectMap["indexes"] = mdcgp.Indexes
+	}
+	if mdcgp.AnalyticalStorageTTL != nil {
+		objectMap["analyticalStorageTtl"] = mdcgp.AnalyticalStorageTTL
 	}
 	return json.Marshal(objectMap)
 }
@@ -2938,6 +4308,8 @@ type MongoDBCollectionResource struct {
 	ShardKey map[string]*string `json:"shardKey"`
 	// Indexes - List of index keys
 	Indexes *[]MongoIndex `json:"indexes,omitempty"`
+	// AnalyticalStorageTTL - Analytical TTL.
+	AnalyticalStorageTTL *int32 `json:"analyticalStorageTtl,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for MongoDBCollectionResource.
@@ -2951,6 +4323,9 @@ func (mdcr MongoDBCollectionResource) MarshalJSON() ([]byte, error) {
 	}
 	if mdcr.Indexes != nil {
 		objectMap["indexes"] = mdcr.Indexes
+	}
+	if mdcr.AnalyticalStorageTTL != nil {
+		objectMap["analyticalStorageTtl"] = mdcr.AnalyticalStorageTTL
 	}
 	return json.Marshal(objectMap)
 }
@@ -3059,24 +4434,21 @@ type MongoDBDatabaseCreateUpdateProperties struct {
 	// Resource - The standard JSON format of a MongoDB database
 	Resource *MongoDBDatabaseResource `json:"resource,omitempty"`
 	// Options - A key-value pair of options to be applied for the request. This corresponds to the headers sent with the request.
-	Options map[string]*string `json:"options"`
-}
-
-// MarshalJSON is the custom marshaler for MongoDBDatabaseCreateUpdateProperties.
-func (mddcup MongoDBDatabaseCreateUpdateProperties) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
-	if mddcup.Resource != nil {
-		objectMap["resource"] = mddcup.Resource
-	}
-	if mddcup.Options != nil {
-		objectMap["options"] = mddcup.Options
-	}
-	return json.Marshal(objectMap)
+	Options *CreateUpdateOptions `json:"options,omitempty"`
 }
 
 // MongoDBDatabaseGetProperties the properties of an Azure Cosmos DB MongoDB database
 type MongoDBDatabaseGetProperties struct {
 	Resource *MongoDBDatabaseGetPropertiesResource `json:"resource,omitempty"`
+	Options  *MongoDBDatabaseGetPropertiesOptions  `json:"options,omitempty"`
+}
+
+// MongoDBDatabaseGetPropertiesOptions ...
+type MongoDBDatabaseGetPropertiesOptions struct {
+	// Throughput - Value of the Cosmos DB resource throughput or autoscaleSettings. Use the ThroughputSetting resource when retrieving offer details.
+	Throughput *int32 `json:"throughput,omitempty"`
+	// AutoscaleSettings - Specifies the Autoscale settings.
+	AutoscaleSettings *AutoscaleSettings `json:"autoscaleSettings,omitempty"`
 }
 
 // MongoDBDatabaseGetPropertiesResource ...
@@ -3086,7 +4458,7 @@ type MongoDBDatabaseGetPropertiesResource struct {
 	// Rid - READ-ONLY; A system generated property. A unique identifier.
 	Rid *string `json:"_rid,omitempty"`
 	// Ts - READ-ONLY; A system generated property that denotes the last updated timestamp of the resource.
-	Ts interface{} `json:"_ts,omitempty"`
+	Ts *float64 `json:"_ts,omitempty"`
 	// Etag - READ-ONLY; A system generated property representing the resource etag required for optimistic concurrency control.
 	Etag *string `json:"_etag,omitempty"`
 }
@@ -3371,6 +4743,178 @@ func (future *MongoDBResourcesDeleteMongoDBDatabaseFuture) result(client MongoDB
 		return
 	}
 	ar.Response = future.Response()
+	return
+}
+
+// MongoDBResourcesMigrateMongoDBCollectionToAutoscaleFuture an abstraction for monitoring and retrieving
+// the results of a long-running operation.
+type MongoDBResourcesMigrateMongoDBCollectionToAutoscaleFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(MongoDBResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *MongoDBResourcesMigrateMongoDBCollectionToAutoscaleFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for MongoDBResourcesMigrateMongoDBCollectionToAutoscaleFuture.Result.
+func (future *MongoDBResourcesMigrateMongoDBCollectionToAutoscaleFuture) result(client MongoDBResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.MongoDBResourcesMigrateMongoDBCollectionToAutoscaleFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.MongoDBResourcesMigrateMongoDBCollectionToAutoscaleFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateMongoDBCollectionToAutoscaleResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.MongoDBResourcesMigrateMongoDBCollectionToAutoscaleFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// MongoDBResourcesMigrateMongoDBCollectionToManualThroughputFuture an abstraction for monitoring and
+// retrieving the results of a long-running operation.
+type MongoDBResourcesMigrateMongoDBCollectionToManualThroughputFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(MongoDBResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *MongoDBResourcesMigrateMongoDBCollectionToManualThroughputFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for MongoDBResourcesMigrateMongoDBCollectionToManualThroughputFuture.Result.
+func (future *MongoDBResourcesMigrateMongoDBCollectionToManualThroughputFuture) result(client MongoDBResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.MongoDBResourcesMigrateMongoDBCollectionToManualThroughputFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.MongoDBResourcesMigrateMongoDBCollectionToManualThroughputFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateMongoDBCollectionToManualThroughputResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.MongoDBResourcesMigrateMongoDBCollectionToManualThroughputFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// MongoDBResourcesMigrateMongoDBDatabaseToAutoscaleFuture an abstraction for monitoring and retrieving the
+// results of a long-running operation.
+type MongoDBResourcesMigrateMongoDBDatabaseToAutoscaleFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(MongoDBResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *MongoDBResourcesMigrateMongoDBDatabaseToAutoscaleFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for MongoDBResourcesMigrateMongoDBDatabaseToAutoscaleFuture.Result.
+func (future *MongoDBResourcesMigrateMongoDBDatabaseToAutoscaleFuture) result(client MongoDBResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.MongoDBResourcesMigrateMongoDBDatabaseToAutoscaleFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.MongoDBResourcesMigrateMongoDBDatabaseToAutoscaleFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateMongoDBDatabaseToAutoscaleResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.MongoDBResourcesMigrateMongoDBDatabaseToAutoscaleFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// MongoDBResourcesMigrateMongoDBDatabaseToManualThroughputFuture an abstraction for monitoring and
+// retrieving the results of a long-running operation.
+type MongoDBResourcesMigrateMongoDBDatabaseToManualThroughputFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(MongoDBResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *MongoDBResourcesMigrateMongoDBDatabaseToManualThroughputFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for MongoDBResourcesMigrateMongoDBDatabaseToManualThroughputFuture.Result.
+func (future *MongoDBResourcesMigrateMongoDBDatabaseToManualThroughputFuture) result(client MongoDBResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.MongoDBResourcesMigrateMongoDBDatabaseToManualThroughputFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.MongoDBResourcesMigrateMongoDBDatabaseToManualThroughputFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateMongoDBDatabaseToManualThroughputResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.MongoDBResourcesMigrateMongoDBDatabaseToManualThroughputFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
 	return
 }
 
@@ -3923,6 +5467,14 @@ func NewOperationListResultPage(cur OperationListResult, getNextPage func(contex
 	}
 }
 
+// OptionsResource cosmos DB options resource object
+type OptionsResource struct {
+	// Throughput - Value of the Cosmos DB resource throughput or autoscaleSettings. Use the ThroughputSetting resource when retrieving offer details.
+	Throughput *int32 `json:"throughput,omitempty"`
+	// AutoscaleSettings - Specifies the Autoscale settings.
+	AutoscaleSettings *AutoscaleSettings `json:"autoscaleSettings,omitempty"`
+}
+
 // PartitionMetric the metric values for a single partition.
 type PartitionMetric struct {
 	// PartitionID - READ-ONLY; The partition id (GUID identifier) of the metric values.
@@ -4055,10 +5607,370 @@ type PercentileMetricValue struct {
 	Total *float64 `json:"total,omitempty"`
 }
 
+// PeriodicModeBackupPolicy the object representing periodic mode backup policy.
+type PeriodicModeBackupPolicy struct {
+	// PeriodicModeProperties - Configuration values for periodic mode backup
+	PeriodicModeProperties *PeriodicModeProperties `json:"periodicModeProperties,omitempty"`
+	// Type - Possible values include: 'TypeBackupPolicy', 'TypePeriodic', 'TypeContinuous'
+	Type Type `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PeriodicModeBackupPolicy.
+func (pmbp PeriodicModeBackupPolicy) MarshalJSON() ([]byte, error) {
+	pmbp.Type = TypePeriodic
+	objectMap := make(map[string]interface{})
+	if pmbp.PeriodicModeProperties != nil {
+		objectMap["periodicModeProperties"] = pmbp.PeriodicModeProperties
+	}
+	if pmbp.Type != "" {
+		objectMap["type"] = pmbp.Type
+	}
+	return json.Marshal(objectMap)
+}
+
+// AsPeriodicModeBackupPolicy is the BasicBackupPolicy implementation for PeriodicModeBackupPolicy.
+func (pmbp PeriodicModeBackupPolicy) AsPeriodicModeBackupPolicy() (*PeriodicModeBackupPolicy, bool) {
+	return &pmbp, true
+}
+
+// AsContinuousModeBackupPolicy is the BasicBackupPolicy implementation for PeriodicModeBackupPolicy.
+func (pmbp PeriodicModeBackupPolicy) AsContinuousModeBackupPolicy() (*ContinuousModeBackupPolicy, bool) {
+	return nil, false
+}
+
+// AsBackupPolicy is the BasicBackupPolicy implementation for PeriodicModeBackupPolicy.
+func (pmbp PeriodicModeBackupPolicy) AsBackupPolicy() (*BackupPolicy, bool) {
+	return nil, false
+}
+
+// AsBasicBackupPolicy is the BasicBackupPolicy implementation for PeriodicModeBackupPolicy.
+func (pmbp PeriodicModeBackupPolicy) AsBasicBackupPolicy() (BasicBackupPolicy, bool) {
+	return &pmbp, true
+}
+
+// PeriodicModeProperties configuration values for periodic mode backup
+type PeriodicModeProperties struct {
+	// BackupIntervalInMinutes - An integer representing the interval in minutes between two backups
+	BackupIntervalInMinutes *int32 `json:"backupIntervalInMinutes,omitempty"`
+	// BackupRetentionIntervalInHours - An integer representing the time (in hours) that each backup is retained
+	BackupRetentionIntervalInHours *int32 `json:"backupRetentionIntervalInHours,omitempty"`
+}
+
+// PrivateEndpointConnection a private endpoint connection
+type PrivateEndpointConnection struct {
+	autorest.Response `json:"-"`
+	// PrivateEndpointConnectionProperties - Resource properties.
+	*PrivateEndpointConnectionProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
+	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PrivateEndpointConnection.
+func (pec PrivateEndpointConnection) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if pec.PrivateEndpointConnectionProperties != nil {
+		objectMap["properties"] = pec.PrivateEndpointConnectionProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for PrivateEndpointConnection struct.
+func (pec *PrivateEndpointConnection) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var privateEndpointConnectionProperties PrivateEndpointConnectionProperties
+				err = json.Unmarshal(*v, &privateEndpointConnectionProperties)
+				if err != nil {
+					return err
+				}
+				pec.PrivateEndpointConnectionProperties = &privateEndpointConnectionProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				pec.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				pec.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				pec.Type = &typeVar
+			}
+		}
+	}
+
+	return nil
+}
+
+// PrivateEndpointConnectionListResult a list of private endpoint connections
+type PrivateEndpointConnectionListResult struct {
+	autorest.Response `json:"-"`
+	// Value - Array of private endpoint connections
+	Value *[]PrivateEndpointConnection `json:"value,omitempty"`
+}
+
+// PrivateEndpointConnectionProperties properties of a private endpoint connection.
+type PrivateEndpointConnectionProperties struct {
+	// PrivateEndpoint - Private endpoint which the connection belongs to.
+	PrivateEndpoint *PrivateEndpointProperty `json:"privateEndpoint,omitempty"`
+	// PrivateLinkServiceConnectionState - Connection State of the Private Endpoint Connection.
+	PrivateLinkServiceConnectionState *PrivateLinkServiceConnectionStateProperty `json:"privateLinkServiceConnectionState,omitempty"`
+	// GroupID - Group id of the private endpoint.
+	GroupID *string `json:"groupId,omitempty"`
+	// ProvisioningState - Provisioning state of the private endpoint.
+	ProvisioningState *string `json:"provisioningState,omitempty"`
+}
+
+// PrivateEndpointConnectionsCreateOrUpdateFuture an abstraction for monitoring and retrieving the results
+// of a long-running operation.
+type PrivateEndpointConnectionsCreateOrUpdateFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(PrivateEndpointConnectionsClient) (PrivateEndpointConnection, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *PrivateEndpointConnectionsCreateOrUpdateFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for PrivateEndpointConnectionsCreateOrUpdateFuture.Result.
+func (future *PrivateEndpointConnectionsCreateOrUpdateFuture) result(client PrivateEndpointConnectionsClient) (pec PrivateEndpointConnection, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.PrivateEndpointConnectionsCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		pec.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.PrivateEndpointConnectionsCreateOrUpdateFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if pec.Response.Response, err = future.GetResult(sender); err == nil && pec.Response.Response.StatusCode != http.StatusNoContent {
+		pec, err = client.CreateOrUpdateResponder(pec.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.PrivateEndpointConnectionsCreateOrUpdateFuture", "Result", pec.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// PrivateEndpointConnectionsDeleteFuture an abstraction for monitoring and retrieving the results of a
+// long-running operation.
+type PrivateEndpointConnectionsDeleteFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(PrivateEndpointConnectionsClient) (autorest.Response, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *PrivateEndpointConnectionsDeleteFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for PrivateEndpointConnectionsDeleteFuture.Result.
+func (future *PrivateEndpointConnectionsDeleteFuture) result(client PrivateEndpointConnectionsClient) (ar autorest.Response, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.PrivateEndpointConnectionsDeleteFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		ar.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.PrivateEndpointConnectionsDeleteFuture")
+		return
+	}
+	ar.Response = future.Response()
+	return
+}
+
+// PrivateEndpointProperty private endpoint which the connection belongs to.
+type PrivateEndpointProperty struct {
+	// ID - Resource id of the private endpoint.
+	ID *string `json:"id,omitempty"`
+}
+
+// PrivateLinkResource a private link resource
+type PrivateLinkResource struct {
+	autorest.Response `json:"-"`
+	// PrivateLinkResourceProperties - Resource properties.
+	*PrivateLinkResourceProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; The unique resource identifier of the database account.
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the database account.
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of Azure resource.
+	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PrivateLinkResource.
+func (plr PrivateLinkResource) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if plr.PrivateLinkResourceProperties != nil {
+		objectMap["properties"] = plr.PrivateLinkResourceProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for PrivateLinkResource struct.
+func (plr *PrivateLinkResource) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var privateLinkResourceProperties PrivateLinkResourceProperties
+				err = json.Unmarshal(*v, &privateLinkResourceProperties)
+				if err != nil {
+					return err
+				}
+				plr.PrivateLinkResourceProperties = &privateLinkResourceProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				plr.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				plr.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				plr.Type = &typeVar
+			}
+		}
+	}
+
+	return nil
+}
+
+// PrivateLinkResourceListResult a list of private link resources
+type PrivateLinkResourceListResult struct {
+	autorest.Response `json:"-"`
+	// Value - Array of private link resources
+	Value *[]PrivateLinkResource `json:"value,omitempty"`
+}
+
+// PrivateLinkResourceProperties properties of a private link resource.
+type PrivateLinkResourceProperties struct {
+	// GroupID - READ-ONLY; The private link resource group id.
+	GroupID *string `json:"groupId,omitempty"`
+	// RequiredMembers - READ-ONLY; The private link resource required member names.
+	RequiredMembers *[]string `json:"requiredMembers,omitempty"`
+	// RequiredZoneNames - READ-ONLY; The private link resource required zone names.
+	RequiredZoneNames *[]string `json:"requiredZoneNames,omitempty"`
+}
+
+// PrivateLinkServiceConnectionStateProperty connection State of the Private Endpoint Connection.
+type PrivateLinkServiceConnectionStateProperty struct {
+	// Status - The private link service connection status.
+	Status *string `json:"status,omitempty"`
+	// Description - The private link service connection description.
+	Description *string `json:"description,omitempty"`
+	// ActionsRequired - READ-ONLY; Any action that is required beyond basic workflow (approve/ reject/ disconnect)
+	ActionsRequired *string `json:"actionsRequired,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PrivateLinkServiceConnectionStateProperty.
+func (plscsp PrivateLinkServiceConnectionStateProperty) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if plscsp.Status != nil {
+		objectMap["status"] = plscsp.Status
+	}
+	if plscsp.Description != nil {
+		objectMap["description"] = plscsp.Description
+	}
+	return json.Marshal(objectMap)
+}
+
+// ProxyResource the resource model definition for a Azure Resource Manager proxy resource. It will not
+// have tags and a location
+type ProxyResource struct {
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
+	Type *string `json:"type,omitempty"`
+}
+
 // RegionForOnlineOffline cosmos DB region to online or offline.
 type RegionForOnlineOffline struct {
 	// Region - Cosmos DB region, with spaces between words and each word capitalized.
 	Region *string `json:"region,omitempty"`
+}
+
+// Resource common fields that are returned in the response for all Azure Resource Manager resources
+type Resource struct {
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
+	Type *string `json:"type,omitempty"`
 }
 
 // SpatialSpec ...
@@ -4173,24 +6085,21 @@ type SQLContainerCreateUpdateProperties struct {
 	// Resource - The standard JSON format of a container
 	Resource *SQLContainerResource `json:"resource,omitempty"`
 	// Options - A key-value pair of options to be applied for the request. This corresponds to the headers sent with the request.
-	Options map[string]*string `json:"options"`
-}
-
-// MarshalJSON is the custom marshaler for SQLContainerCreateUpdateProperties.
-func (sccup SQLContainerCreateUpdateProperties) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
-	if sccup.Resource != nil {
-		objectMap["resource"] = sccup.Resource
-	}
-	if sccup.Options != nil {
-		objectMap["options"] = sccup.Options
-	}
-	return json.Marshal(objectMap)
+	Options *CreateUpdateOptions `json:"options,omitempty"`
 }
 
 // SQLContainerGetProperties the properties of an Azure Cosmos DB container
 type SQLContainerGetProperties struct {
 	Resource *SQLContainerGetPropertiesResource `json:"resource,omitempty"`
+	Options  *SQLContainerGetPropertiesOptions  `json:"options,omitempty"`
+}
+
+// SQLContainerGetPropertiesOptions ...
+type SQLContainerGetPropertiesOptions struct {
+	// Throughput - Value of the Cosmos DB resource throughput or autoscaleSettings. Use the ThroughputSetting resource when retrieving offer details.
+	Throughput *int32 `json:"throughput,omitempty"`
+	// AutoscaleSettings - Specifies the Autoscale settings.
+	AutoscaleSettings *AutoscaleSettings `json:"autoscaleSettings,omitempty"`
 }
 
 // SQLContainerGetPropertiesResource ...
@@ -4207,10 +6116,12 @@ type SQLContainerGetPropertiesResource struct {
 	UniqueKeyPolicy *UniqueKeyPolicy `json:"uniqueKeyPolicy,omitempty"`
 	// ConflictResolutionPolicy - The conflict resolution policy for the container.
 	ConflictResolutionPolicy *ConflictResolutionPolicy `json:"conflictResolutionPolicy,omitempty"`
+	// AnalyticalStorageTTL - Analytical TTL.
+	AnalyticalStorageTTL *int64 `json:"analyticalStorageTtl,omitempty"`
 	// Rid - READ-ONLY; A system generated property. A unique identifier.
 	Rid *string `json:"_rid,omitempty"`
 	// Ts - READ-ONLY; A system generated property that denotes the last updated timestamp of the resource.
-	Ts interface{} `json:"_ts,omitempty"`
+	Ts *float64 `json:"_ts,omitempty"`
 	// Etag - READ-ONLY; A system generated property representing the resource etag required for optimistic concurrency control.
 	Etag *string `json:"_etag,omitempty"`
 }
@@ -4235,6 +6146,9 @@ func (scgp SQLContainerGetPropertiesResource) MarshalJSON() ([]byte, error) {
 	}
 	if scgp.ConflictResolutionPolicy != nil {
 		objectMap["conflictResolutionPolicy"] = scgp.ConflictResolutionPolicy
+	}
+	if scgp.AnalyticalStorageTTL != nil {
+		objectMap["analyticalStorageTtl"] = scgp.AnalyticalStorageTTL
 	}
 	return json.Marshal(objectMap)
 }
@@ -4360,6 +6274,8 @@ type SQLContainerResource struct {
 	UniqueKeyPolicy *UniqueKeyPolicy `json:"uniqueKeyPolicy,omitempty"`
 	// ConflictResolutionPolicy - The conflict resolution policy for the container.
 	ConflictResolutionPolicy *ConflictResolutionPolicy `json:"conflictResolutionPolicy,omitempty"`
+	// AnalyticalStorageTTL - Analytical TTL.
+	AnalyticalStorageTTL *int64 `json:"analyticalStorageTtl,omitempty"`
 }
 
 // SQLDatabaseCreateUpdateParameters parameters to create and update Cosmos DB SQL database.
@@ -4466,24 +6382,21 @@ type SQLDatabaseCreateUpdateProperties struct {
 	// Resource - The standard JSON format of a SQL database
 	Resource *SQLDatabaseResource `json:"resource,omitempty"`
 	// Options - A key-value pair of options to be applied for the request. This corresponds to the headers sent with the request.
-	Options map[string]*string `json:"options"`
-}
-
-// MarshalJSON is the custom marshaler for SQLDatabaseCreateUpdateProperties.
-func (sdcup SQLDatabaseCreateUpdateProperties) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
-	if sdcup.Resource != nil {
-		objectMap["resource"] = sdcup.Resource
-	}
-	if sdcup.Options != nil {
-		objectMap["options"] = sdcup.Options
-	}
-	return json.Marshal(objectMap)
+	Options *CreateUpdateOptions `json:"options,omitempty"`
 }
 
 // SQLDatabaseGetProperties the properties of an Azure Cosmos DB SQL database
 type SQLDatabaseGetProperties struct {
 	Resource *SQLDatabaseGetPropertiesResource `json:"resource,omitempty"`
+	Options  *SQLDatabaseGetPropertiesOptions  `json:"options,omitempty"`
+}
+
+// SQLDatabaseGetPropertiesOptions ...
+type SQLDatabaseGetPropertiesOptions struct {
+	// Throughput - Value of the Cosmos DB resource throughput or autoscaleSettings. Use the ThroughputSetting resource when retrieving offer details.
+	Throughput *int32 `json:"throughput,omitempty"`
+	// AutoscaleSettings - Specifies the Autoscale settings.
+	AutoscaleSettings *AutoscaleSettings `json:"autoscaleSettings,omitempty"`
 }
 
 // SQLDatabaseGetPropertiesResource ...
@@ -4493,7 +6406,7 @@ type SQLDatabaseGetPropertiesResource struct {
 	// Rid - READ-ONLY; A system generated property. A unique identifier.
 	Rid *string `json:"_rid,omitempty"`
 	// Ts - READ-ONLY; A system generated property that denotes the last updated timestamp of the resource.
-	Ts interface{} `json:"_ts,omitempty"`
+	Ts *float64 `json:"_ts,omitempty"`
 	// Etag - READ-ONLY; A system generated property representing the resource etag required for optimistic concurrency control.
 	Etag *string `json:"_etag,omitempty"`
 	// Colls - A system generated property that specified the addressable path of the collections resource.
@@ -5030,6 +6943,178 @@ func (future *SQLResourcesDeleteSQLUserDefinedFunctionFuture) result(client SQLR
 	return
 }
 
+// SQLResourcesMigrateSQLContainerToAutoscaleFuture an abstraction for monitoring and retrieving the
+// results of a long-running operation.
+type SQLResourcesMigrateSQLContainerToAutoscaleFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(SQLResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *SQLResourcesMigrateSQLContainerToAutoscaleFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for SQLResourcesMigrateSQLContainerToAutoscaleFuture.Result.
+func (future *SQLResourcesMigrateSQLContainerToAutoscaleFuture) result(client SQLResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.SQLResourcesMigrateSQLContainerToAutoscaleFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.SQLResourcesMigrateSQLContainerToAutoscaleFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateSQLContainerToAutoscaleResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.SQLResourcesMigrateSQLContainerToAutoscaleFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// SQLResourcesMigrateSQLContainerToManualThroughputFuture an abstraction for monitoring and retrieving the
+// results of a long-running operation.
+type SQLResourcesMigrateSQLContainerToManualThroughputFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(SQLResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *SQLResourcesMigrateSQLContainerToManualThroughputFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for SQLResourcesMigrateSQLContainerToManualThroughputFuture.Result.
+func (future *SQLResourcesMigrateSQLContainerToManualThroughputFuture) result(client SQLResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.SQLResourcesMigrateSQLContainerToManualThroughputFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.SQLResourcesMigrateSQLContainerToManualThroughputFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateSQLContainerToManualThroughputResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.SQLResourcesMigrateSQLContainerToManualThroughputFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// SQLResourcesMigrateSQLDatabaseToAutoscaleFuture an abstraction for monitoring and retrieving the results
+// of a long-running operation.
+type SQLResourcesMigrateSQLDatabaseToAutoscaleFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(SQLResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *SQLResourcesMigrateSQLDatabaseToAutoscaleFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for SQLResourcesMigrateSQLDatabaseToAutoscaleFuture.Result.
+func (future *SQLResourcesMigrateSQLDatabaseToAutoscaleFuture) result(client SQLResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.SQLResourcesMigrateSQLDatabaseToAutoscaleFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.SQLResourcesMigrateSQLDatabaseToAutoscaleFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateSQLDatabaseToAutoscaleResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.SQLResourcesMigrateSQLDatabaseToAutoscaleFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// SQLResourcesMigrateSQLDatabaseToManualThroughputFuture an abstraction for monitoring and retrieving the
+// results of a long-running operation.
+type SQLResourcesMigrateSQLDatabaseToManualThroughputFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(SQLResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *SQLResourcesMigrateSQLDatabaseToManualThroughputFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for SQLResourcesMigrateSQLDatabaseToManualThroughputFuture.Result.
+func (future *SQLResourcesMigrateSQLDatabaseToManualThroughputFuture) result(client SQLResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.SQLResourcesMigrateSQLDatabaseToManualThroughputFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.SQLResourcesMigrateSQLDatabaseToManualThroughputFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateSQLDatabaseToManualThroughputResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.SQLResourcesMigrateSQLDatabaseToManualThroughputFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
 // SQLResourcesUpdateSQLContainerThroughputFuture an abstraction for monitoring and retrieving the results
 // of a long-running operation.
 type SQLResourcesUpdateSQLContainerThroughputFuture struct {
@@ -5221,19 +7306,7 @@ type SQLStoredProcedureCreateUpdateProperties struct {
 	// Resource - The standard JSON format of a storedProcedure
 	Resource *SQLStoredProcedureResource `json:"resource,omitempty"`
 	// Options - A key-value pair of options to be applied for the request. This corresponds to the headers sent with the request.
-	Options map[string]*string `json:"options"`
-}
-
-// MarshalJSON is the custom marshaler for SQLStoredProcedureCreateUpdateProperties.
-func (sspcup SQLStoredProcedureCreateUpdateProperties) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
-	if sspcup.Resource != nil {
-		objectMap["resource"] = sspcup.Resource
-	}
-	if sspcup.Options != nil {
-		objectMap["options"] = sspcup.Options
-	}
-	return json.Marshal(objectMap)
+	Options *CreateUpdateOptions `json:"options,omitempty"`
 }
 
 // SQLStoredProcedureGetProperties the properties of an Azure Cosmos DB StoredProcedure
@@ -5250,7 +7323,7 @@ type SQLStoredProcedureGetPropertiesResource struct {
 	// Rid - READ-ONLY; A system generated property. A unique identifier.
 	Rid *string `json:"_rid,omitempty"`
 	// Ts - READ-ONLY; A system generated property that denotes the last updated timestamp of the resource.
-	Ts interface{} `json:"_ts,omitempty"`
+	Ts *float64 `json:"_ts,omitempty"`
 	// Etag - READ-ONLY; A system generated property representing the resource etag required for optimistic concurrency control.
 	Etag *string `json:"_etag,omitempty"`
 }
@@ -5487,19 +7560,7 @@ type SQLTriggerCreateUpdateProperties struct {
 	// Resource - The standard JSON format of a trigger
 	Resource *SQLTriggerResource `json:"resource,omitempty"`
 	// Options - A key-value pair of options to be applied for the request. This corresponds to the headers sent with the request.
-	Options map[string]*string `json:"options"`
-}
-
-// MarshalJSON is the custom marshaler for SQLTriggerCreateUpdateProperties.
-func (stcup SQLTriggerCreateUpdateProperties) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
-	if stcup.Resource != nil {
-		objectMap["resource"] = stcup.Resource
-	}
-	if stcup.Options != nil {
-		objectMap["options"] = stcup.Options
-	}
-	return json.Marshal(objectMap)
+	Options *CreateUpdateOptions `json:"options,omitempty"`
 }
 
 // SQLTriggerGetProperties the properties of an Azure Cosmos DB trigger
@@ -5520,7 +7581,7 @@ type SQLTriggerGetPropertiesResource struct {
 	// Rid - READ-ONLY; A system generated property. A unique identifier.
 	Rid *string `json:"_rid,omitempty"`
 	// Ts - READ-ONLY; A system generated property that denotes the last updated timestamp of the resource.
-	Ts interface{} `json:"_ts,omitempty"`
+	Ts *float64 `json:"_ts,omitempty"`
 	// Etag - READ-ONLY; A system generated property representing the resource etag required for optimistic concurrency control.
 	Etag *string `json:"_etag,omitempty"`
 }
@@ -5768,19 +7829,7 @@ type SQLUserDefinedFunctionCreateUpdateProperties struct {
 	// Resource - The standard JSON format of a userDefinedFunction
 	Resource *SQLUserDefinedFunctionResource `json:"resource,omitempty"`
 	// Options - A key-value pair of options to be applied for the request. This corresponds to the headers sent with the request.
-	Options map[string]*string `json:"options"`
-}
-
-// MarshalJSON is the custom marshaler for SQLUserDefinedFunctionCreateUpdateProperties.
-func (sudfcup SQLUserDefinedFunctionCreateUpdateProperties) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
-	if sudfcup.Resource != nil {
-		objectMap["resource"] = sudfcup.Resource
-	}
-	if sudfcup.Options != nil {
-		objectMap["options"] = sudfcup.Options
-	}
-	return json.Marshal(objectMap)
+	Options *CreateUpdateOptions `json:"options,omitempty"`
 }
 
 // SQLUserDefinedFunctionGetProperties the properties of an Azure Cosmos DB userDefinedFunction
@@ -5797,7 +7846,7 @@ type SQLUserDefinedFunctionGetPropertiesResource struct {
 	// Rid - READ-ONLY; A system generated property. A unique identifier.
 	Rid *string `json:"_rid,omitempty"`
 	// Ts - READ-ONLY; A system generated property that denotes the last updated timestamp of the resource.
-	Ts interface{} `json:"_ts,omitempty"`
+	Ts *float64 `json:"_ts,omitempty"`
 	// Etag - READ-ONLY; A system generated property representing the resource etag required for optimistic concurrency control.
 	Etag *string `json:"_etag,omitempty"`
 }
@@ -6034,24 +8083,21 @@ type TableCreateUpdateProperties struct {
 	// Resource - The standard JSON format of a Table
 	Resource *TableResource `json:"resource,omitempty"`
 	// Options - A key-value pair of options to be applied for the request. This corresponds to the headers sent with the request.
-	Options map[string]*string `json:"options"`
-}
-
-// MarshalJSON is the custom marshaler for TableCreateUpdateProperties.
-func (tcup TableCreateUpdateProperties) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
-	if tcup.Resource != nil {
-		objectMap["resource"] = tcup.Resource
-	}
-	if tcup.Options != nil {
-		objectMap["options"] = tcup.Options
-	}
-	return json.Marshal(objectMap)
+	Options *CreateUpdateOptions `json:"options,omitempty"`
 }
 
 // TableGetProperties the properties of an Azure Cosmos Table
 type TableGetProperties struct {
 	Resource *TableGetPropertiesResource `json:"resource,omitempty"`
+	Options  *TableGetPropertiesOptions  `json:"options,omitempty"`
+}
+
+// TableGetPropertiesOptions ...
+type TableGetPropertiesOptions struct {
+	// Throughput - Value of the Cosmos DB resource throughput or autoscaleSettings. Use the ThroughputSetting resource when retrieving offer details.
+	Throughput *int32 `json:"throughput,omitempty"`
+	// AutoscaleSettings - Specifies the Autoscale settings.
+	AutoscaleSettings *AutoscaleSettings `json:"autoscaleSettings,omitempty"`
 }
 
 // TableGetPropertiesResource ...
@@ -6061,7 +8107,7 @@ type TableGetPropertiesResource struct {
 	// Rid - READ-ONLY; A system generated property. A unique identifier.
 	Rid *string `json:"_rid,omitempty"`
 	// Ts - READ-ONLY; A system generated property that denotes the last updated timestamp of the resource.
-	Ts interface{} `json:"_ts,omitempty"`
+	Ts *float64 `json:"_ts,omitempty"`
 	// Etag - READ-ONLY; A system generated property representing the resource etag required for optimistic concurrency control.
 	Etag *string `json:"_etag,omitempty"`
 }
@@ -6268,6 +8314,92 @@ func (future *TableResourcesDeleteTableFuture) result(client TableResourcesClien
 	return
 }
 
+// TableResourcesMigrateTableToAutoscaleFuture an abstraction for monitoring and retrieving the results of
+// a long-running operation.
+type TableResourcesMigrateTableToAutoscaleFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(TableResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *TableResourcesMigrateTableToAutoscaleFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for TableResourcesMigrateTableToAutoscaleFuture.Result.
+func (future *TableResourcesMigrateTableToAutoscaleFuture) result(client TableResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.TableResourcesMigrateTableToAutoscaleFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.TableResourcesMigrateTableToAutoscaleFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateTableToAutoscaleResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.TableResourcesMigrateTableToAutoscaleFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// TableResourcesMigrateTableToManualThroughputFuture an abstraction for monitoring and retrieving the
+// results of a long-running operation.
+type TableResourcesMigrateTableToManualThroughputFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(TableResourcesClient) (ThroughputSettingsGetResults, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *TableResourcesMigrateTableToManualThroughputFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for TableResourcesMigrateTableToManualThroughputFuture.Result.
+func (future *TableResourcesMigrateTableToManualThroughputFuture) result(client TableResourcesClient) (tsgr ThroughputSettingsGetResults, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.TableResourcesMigrateTableToManualThroughputFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		tsgr.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("documentdb.TableResourcesMigrateTableToManualThroughputFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if tsgr.Response.Response, err = future.GetResult(sender); err == nil && tsgr.Response.Response.StatusCode != http.StatusNoContent {
+		tsgr, err = client.MigrateTableToManualThroughputResponder(tsgr.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "documentdb.TableResourcesMigrateTableToManualThroughputFuture", "Result", tsgr.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
 // TableResourcesUpdateTableThroughputFuture an abstraction for monitoring and retrieving the results of a
 // long-running operation.
 type TableResourcesUpdateTableThroughputFuture struct {
@@ -6311,6 +8443,14 @@ func (future *TableResourcesUpdateTableThroughputFuture) result(client TableReso
 	return
 }
 
+// ThroughputPolicyResource cosmos DB resource throughput policy
+type ThroughputPolicyResource struct {
+	// IsEnabled - Determines whether the ThroughputPolicy is active or not
+	IsEnabled *bool `json:"isEnabled,omitempty"`
+	// IncrementPercent - Represents the percentage by which throughput can increase every time throughput policy kicks in.
+	IncrementPercent *int32 `json:"incrementPercent,omitempty"`
+}
+
 // ThroughputSettingsGetProperties the properties of an Azure Cosmos DB resource throughput
 type ThroughputSettingsGetProperties struct {
 	Resource *ThroughputSettingsGetPropertiesResource `json:"resource,omitempty"`
@@ -6318,8 +8458,10 @@ type ThroughputSettingsGetProperties struct {
 
 // ThroughputSettingsGetPropertiesResource ...
 type ThroughputSettingsGetPropertiesResource struct {
-	// Throughput - Value of the Cosmos DB resource throughput
+	// Throughput - Value of the Cosmos DB resource throughput. Either throughput is required or autoscaleSettings is required, but not both.
 	Throughput *int32 `json:"throughput,omitempty"`
+	// AutoscaleSettings - Cosmos DB resource for autoscale settings. Either throughput is required or autoscaleSettings is required, but not both.
+	AutoscaleSettings *AutoscaleSettingsResource `json:"autoscaleSettings,omitempty"`
 	// MinimumThroughput - READ-ONLY; The minimum throughput of the resource
 	MinimumThroughput *string `json:"minimumThroughput,omitempty"`
 	// OfferReplacePending - READ-ONLY; The throughput replace is pending
@@ -6327,7 +8469,7 @@ type ThroughputSettingsGetPropertiesResource struct {
 	// Rid - READ-ONLY; A system generated property. A unique identifier.
 	Rid *string `json:"_rid,omitempty"`
 	// Ts - READ-ONLY; A system generated property that denotes the last updated timestamp of the resource.
-	Ts interface{} `json:"_ts,omitempty"`
+	Ts *float64 `json:"_ts,omitempty"`
 	// Etag - READ-ONLY; A system generated property representing the resource etag required for optimistic concurrency control.
 	Etag *string `json:"_etag,omitempty"`
 }
@@ -6337,6 +8479,9 @@ func (tsgp ThroughputSettingsGetPropertiesResource) MarshalJSON() ([]byte, error
 	objectMap := make(map[string]interface{})
 	if tsgp.Throughput != nil {
 		objectMap["throughput"] = tsgp.Throughput
+	}
+	if tsgp.AutoscaleSettings != nil {
+		objectMap["autoscaleSettings"] = tsgp.AutoscaleSettings
 	}
 	return json.Marshal(objectMap)
 }
@@ -6441,10 +8586,13 @@ func (tsgr *ThroughputSettingsGetResults) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-// ThroughputSettingsResource cosmos DB resource throughput object
+// ThroughputSettingsResource cosmos DB resource throughput object. Either throughput is required or
+// autoscaleSettings is required, but not both.
 type ThroughputSettingsResource struct {
-	// Throughput - Value of the Cosmos DB resource throughput
+	// Throughput - Value of the Cosmos DB resource throughput. Either throughput is required or autoscaleSettings is required, but not both.
 	Throughput *int32 `json:"throughput,omitempty"`
+	// AutoscaleSettings - Cosmos DB resource for autoscale settings. Either throughput is required or autoscaleSettings is required, but not both.
+	AutoscaleSettings *AutoscaleSettingsResource `json:"autoscaleSettings,omitempty"`
 	// MinimumThroughput - READ-ONLY; The minimum throughput of the resource
 	MinimumThroughput *string `json:"minimumThroughput,omitempty"`
 	// OfferReplacePending - READ-ONLY; The throughput replace is pending
@@ -6456,6 +8604,9 @@ func (tsr ThroughputSettingsResource) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
 	if tsr.Throughput != nil {
 		objectMap["throughput"] = tsr.Throughput
+	}
+	if tsr.AutoscaleSettings != nil {
+		objectMap["autoscaleSettings"] = tsr.AutoscaleSettings
 	}
 	return json.Marshal(objectMap)
 }
@@ -6563,6 +8714,33 @@ func (tsup *ThroughputSettingsUpdateParameters) UnmarshalJSON(body []byte) error
 type ThroughputSettingsUpdateProperties struct {
 	// Resource - The standard JSON format of a resource throughput
 	Resource *ThroughputSettingsResource `json:"resource,omitempty"`
+}
+
+// TrackedResource the resource model definition for an Azure Resource Manager tracked top level resource
+// which has 'tags' and a 'location'
+type TrackedResource struct {
+	// Tags - Resource tags.
+	Tags map[string]*string `json:"tags"`
+	// Location - The geo-location where the resource lives
+	Location *string `json:"location,omitempty"`
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
+	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for TrackedResource.
+func (tr TrackedResource) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if tr.Tags != nil {
+		objectMap["tags"] = tr.Tags
+	}
+	if tr.Location != nil {
+		objectMap["location"] = tr.Location
+	}
+	return json.Marshal(objectMap)
 }
 
 // UniqueKey the unique key on that enforces uniqueness constraint on documents in the collection in the

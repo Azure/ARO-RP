@@ -34,7 +34,7 @@ func NewCassandraResourcesClientWithBaseURI(baseURI string, subscriptionID strin
 
 // CreateUpdateCassandraKeyspace create or update an Azure Cosmos DB Cassandra keyspace
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // keyspaceName - cosmos DB keyspace name.
 // createUpdateCassandraKeyspaceParameters - the parameters to provide for the current Cassandra keyspace.
@@ -64,7 +64,6 @@ func (client CassandraResourcesClient) CreateUpdateCassandraKeyspace(ctx context
 			Constraints: []validation.Constraint{{Target: "createUpdateCassandraKeyspaceParameters.CassandraKeyspaceCreateUpdateProperties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "createUpdateCassandraKeyspaceParameters.CassandraKeyspaceCreateUpdateProperties.Resource", Name: validation.Null, Rule: true,
 					Chain: []validation.Constraint{{Target: "createUpdateCassandraKeyspaceParameters.CassandraKeyspaceCreateUpdateProperties.Resource.ID", Name: validation.Null, Rule: true, Chain: nil}}},
-					{Target: "createUpdateCassandraKeyspaceParameters.CassandraKeyspaceCreateUpdateProperties.Options", Name: validation.Null, Rule: true, Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.CassandraResourcesClient", "CreateUpdateCassandraKeyspace", err.Error())
 	}
@@ -93,7 +92,7 @@ func (client CassandraResourcesClient) CreateUpdateCassandraKeyspacePreparer(ctx
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -137,7 +136,7 @@ func (client CassandraResourcesClient) CreateUpdateCassandraKeyspaceResponder(re
 
 // CreateUpdateCassandraTable create or update an Azure Cosmos DB Cassandra Table
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // keyspaceName - cosmos DB keyspace name.
 // tableName - cosmos DB table name.
@@ -168,7 +167,6 @@ func (client CassandraResourcesClient) CreateUpdateCassandraTable(ctx context.Co
 			Constraints: []validation.Constraint{{Target: "createUpdateCassandraTableParameters.CassandraTableCreateUpdateProperties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "createUpdateCassandraTableParameters.CassandraTableCreateUpdateProperties.Resource", Name: validation.Null, Rule: true,
 					Chain: []validation.Constraint{{Target: "createUpdateCassandraTableParameters.CassandraTableCreateUpdateProperties.Resource.ID", Name: validation.Null, Rule: true, Chain: nil}}},
-					{Target: "createUpdateCassandraTableParameters.CassandraTableCreateUpdateProperties.Options", Name: validation.Null, Rule: true, Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.CassandraResourcesClient", "CreateUpdateCassandraTable", err.Error())
 	}
@@ -198,7 +196,7 @@ func (client CassandraResourcesClient) CreateUpdateCassandraTablePreparer(ctx co
 		"tableName":         autorest.Encode("path", tableName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -242,7 +240,7 @@ func (client CassandraResourcesClient) CreateUpdateCassandraTableResponder(resp 
 
 // DeleteCassandraKeyspace deletes an existing Azure Cosmos DB Cassandra keyspace.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // keyspaceName - cosmos DB keyspace name.
 func (client CassandraResourcesClient) DeleteCassandraKeyspace(ctx context.Context, resourceGroupName string, accountName string, keyspaceName string) (result CassandraResourcesDeleteCassandraKeyspaceFuture, err error) {
@@ -294,7 +292,7 @@ func (client CassandraResourcesClient) DeleteCassandraKeyspacePreparer(ctx conte
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -335,7 +333,7 @@ func (client CassandraResourcesClient) DeleteCassandraKeyspaceResponder(resp *ht
 
 // DeleteCassandraTable deletes an existing Azure Cosmos DB Cassandra table.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // keyspaceName - cosmos DB keyspace name.
 // tableName - cosmos DB table name.
@@ -389,7 +387,7 @@ func (client CassandraResourcesClient) DeleteCassandraTablePreparer(ctx context.
 		"tableName":         autorest.Encode("path", tableName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -431,7 +429,7 @@ func (client CassandraResourcesClient) DeleteCassandraTableResponder(resp *http.
 // GetCassandraKeyspace gets the Cassandra keyspaces under an existing Azure Cosmos DB database account with the
 // provided name.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // keyspaceName - cosmos DB keyspace name.
 func (client CassandraResourcesClient) GetCassandraKeyspace(ctx context.Context, resourceGroupName string, accountName string, keyspaceName string) (result CassandraKeyspaceGetResults, err error) {
@@ -490,7 +488,7 @@ func (client CassandraResourcesClient) GetCassandraKeyspacePreparer(ctx context.
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -524,7 +522,7 @@ func (client CassandraResourcesClient) GetCassandraKeyspaceResponder(resp *http.
 // GetCassandraKeyspaceThroughput gets the RUs per second of the Cassandra Keyspace under an existing Azure Cosmos DB
 // database account with the provided name.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // keyspaceName - cosmos DB keyspace name.
 func (client CassandraResourcesClient) GetCassandraKeyspaceThroughput(ctx context.Context, resourceGroupName string, accountName string, keyspaceName string) (result ThroughputSettingsGetResults, err error) {
@@ -583,7 +581,7 @@ func (client CassandraResourcesClient) GetCassandraKeyspaceThroughputPreparer(ct
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -616,7 +614,7 @@ func (client CassandraResourcesClient) GetCassandraKeyspaceThroughputResponder(r
 
 // GetCassandraTable gets the Cassandra table under an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // keyspaceName - cosmos DB keyspace name.
 // tableName - cosmos DB table name.
@@ -677,7 +675,7 @@ func (client CassandraResourcesClient) GetCassandraTablePreparer(ctx context.Con
 		"tableName":         autorest.Encode("path", tableName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -711,7 +709,7 @@ func (client CassandraResourcesClient) GetCassandraTableResponder(resp *http.Res
 // GetCassandraTableThroughput gets the RUs per second of the Cassandra table under an existing Azure Cosmos DB
 // database account with the provided name.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // keyspaceName - cosmos DB keyspace name.
 // tableName - cosmos DB table name.
@@ -772,7 +770,7 @@ func (client CassandraResourcesClient) GetCassandraTableThroughputPreparer(ctx c
 		"tableName":         autorest.Encode("path", tableName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -805,7 +803,7 @@ func (client CassandraResourcesClient) GetCassandraTableThroughputResponder(resp
 
 // ListCassandraKeyspaces lists the Cassandra keyspaces under an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 func (client CassandraResourcesClient) ListCassandraKeyspaces(ctx context.Context, resourceGroupName string, accountName string) (result CassandraKeyspaceListResult, err error) {
 	if tracing.IsEnabled() {
@@ -862,7 +860,7 @@ func (client CassandraResourcesClient) ListCassandraKeyspacesPreparer(ctx contex
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -895,7 +893,7 @@ func (client CassandraResourcesClient) ListCassandraKeyspacesResponder(resp *htt
 
 // ListCassandraTables lists the Cassandra table under an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // keyspaceName - cosmos DB keyspace name.
 func (client CassandraResourcesClient) ListCassandraTables(ctx context.Context, resourceGroupName string, accountName string, keyspaceName string) (result CassandraTableListResult, err error) {
@@ -954,7 +952,7 @@ func (client CassandraResourcesClient) ListCassandraTablesPreparer(ctx context.C
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -985,9 +983,392 @@ func (client CassandraResourcesClient) ListCassandraTablesResponder(resp *http.R
 	return
 }
 
+// MigrateCassandraKeyspaceToAutoscale migrate an Azure Cosmos DB Cassandra Keyspace from manual throughput to
+// autoscale
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// accountName - cosmos DB database account name.
+// keyspaceName - cosmos DB keyspace name.
+func (client CassandraResourcesClient) MigrateCassandraKeyspaceToAutoscale(ctx context.Context, resourceGroupName string, accountName string, keyspaceName string) (result CassandraResourcesMigrateCassandraKeyspaceToAutoscaleFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/CassandraResourcesClient.MigrateCassandraKeyspaceToAutoscale")
+		defer func() {
+			sc := -1
+			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+				sc = result.FutureAPI.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
+		{TargetValue: accountName,
+			Constraints: []validation.Constraint{{Target: "accountName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "accountName", Name: validation.MinLength, Rule: 3, Chain: nil},
+				{Target: "accountName", Name: validation.Pattern, Rule: `^[a-z0-9]+(-[a-z0-9]+)*`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("documentdb.CassandraResourcesClient", "MigrateCassandraKeyspaceToAutoscale", err.Error())
+	}
+
+	req, err := client.MigrateCassandraKeyspaceToAutoscalePreparer(ctx, resourceGroupName, accountName, keyspaceName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.CassandraResourcesClient", "MigrateCassandraKeyspaceToAutoscale", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.MigrateCassandraKeyspaceToAutoscaleSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.CassandraResourcesClient", "MigrateCassandraKeyspaceToAutoscale", nil, "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// MigrateCassandraKeyspaceToAutoscalePreparer prepares the MigrateCassandraKeyspaceToAutoscale request.
+func (client CassandraResourcesClient) MigrateCassandraKeyspaceToAutoscalePreparer(ctx context.Context, resourceGroupName string, accountName string, keyspaceName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"accountName":       autorest.Encode("path", accountName),
+		"keyspaceName":      autorest.Encode("path", keyspaceName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2021-01-15"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/cassandraKeyspaces/{keyspaceName}/throughputSettings/default/migrateToAutoscale", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// MigrateCassandraKeyspaceToAutoscaleSender sends the MigrateCassandraKeyspaceToAutoscale request. The method will close the
+// http.Response Body if it receives an error.
+func (client CassandraResourcesClient) MigrateCassandraKeyspaceToAutoscaleSender(req *http.Request) (future CassandraResourcesMigrateCassandraKeyspaceToAutoscaleFuture, err error) {
+	var resp *http.Response
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = future.result
+	return
+}
+
+// MigrateCassandraKeyspaceToAutoscaleResponder handles the response to the MigrateCassandraKeyspaceToAutoscale request. The method always
+// closes the http.Response Body.
+func (client CassandraResourcesClient) MigrateCassandraKeyspaceToAutoscaleResponder(resp *http.Response) (result ThroughputSettingsGetResults, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// MigrateCassandraKeyspaceToManualThroughput migrate an Azure Cosmos DB Cassandra Keyspace from autoscale to manual
+// throughput
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// accountName - cosmos DB database account name.
+// keyspaceName - cosmos DB keyspace name.
+func (client CassandraResourcesClient) MigrateCassandraKeyspaceToManualThroughput(ctx context.Context, resourceGroupName string, accountName string, keyspaceName string) (result CassandraResourcesMigrateCassandraKeyspaceToManualThroughputFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/CassandraResourcesClient.MigrateCassandraKeyspaceToManualThroughput")
+		defer func() {
+			sc := -1
+			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+				sc = result.FutureAPI.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
+		{TargetValue: accountName,
+			Constraints: []validation.Constraint{{Target: "accountName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "accountName", Name: validation.MinLength, Rule: 3, Chain: nil},
+				{Target: "accountName", Name: validation.Pattern, Rule: `^[a-z0-9]+(-[a-z0-9]+)*`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("documentdb.CassandraResourcesClient", "MigrateCassandraKeyspaceToManualThroughput", err.Error())
+	}
+
+	req, err := client.MigrateCassandraKeyspaceToManualThroughputPreparer(ctx, resourceGroupName, accountName, keyspaceName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.CassandraResourcesClient", "MigrateCassandraKeyspaceToManualThroughput", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.MigrateCassandraKeyspaceToManualThroughputSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.CassandraResourcesClient", "MigrateCassandraKeyspaceToManualThroughput", nil, "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// MigrateCassandraKeyspaceToManualThroughputPreparer prepares the MigrateCassandraKeyspaceToManualThroughput request.
+func (client CassandraResourcesClient) MigrateCassandraKeyspaceToManualThroughputPreparer(ctx context.Context, resourceGroupName string, accountName string, keyspaceName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"accountName":       autorest.Encode("path", accountName),
+		"keyspaceName":      autorest.Encode("path", keyspaceName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2021-01-15"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/cassandraKeyspaces/{keyspaceName}/throughputSettings/default/migrateToManualThroughput", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// MigrateCassandraKeyspaceToManualThroughputSender sends the MigrateCassandraKeyspaceToManualThroughput request. The method will close the
+// http.Response Body if it receives an error.
+func (client CassandraResourcesClient) MigrateCassandraKeyspaceToManualThroughputSender(req *http.Request) (future CassandraResourcesMigrateCassandraKeyspaceToManualThroughputFuture, err error) {
+	var resp *http.Response
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = future.result
+	return
+}
+
+// MigrateCassandraKeyspaceToManualThroughputResponder handles the response to the MigrateCassandraKeyspaceToManualThroughput request. The method always
+// closes the http.Response Body.
+func (client CassandraResourcesClient) MigrateCassandraKeyspaceToManualThroughputResponder(resp *http.Response) (result ThroughputSettingsGetResults, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// MigrateCassandraTableToAutoscale migrate an Azure Cosmos DB Cassandra table from manual throughput to autoscale
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// accountName - cosmos DB database account name.
+// keyspaceName - cosmos DB keyspace name.
+// tableName - cosmos DB table name.
+func (client CassandraResourcesClient) MigrateCassandraTableToAutoscale(ctx context.Context, resourceGroupName string, accountName string, keyspaceName string, tableName string) (result CassandraResourcesMigrateCassandraTableToAutoscaleFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/CassandraResourcesClient.MigrateCassandraTableToAutoscale")
+		defer func() {
+			sc := -1
+			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+				sc = result.FutureAPI.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
+		{TargetValue: accountName,
+			Constraints: []validation.Constraint{{Target: "accountName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "accountName", Name: validation.MinLength, Rule: 3, Chain: nil},
+				{Target: "accountName", Name: validation.Pattern, Rule: `^[a-z0-9]+(-[a-z0-9]+)*`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("documentdb.CassandraResourcesClient", "MigrateCassandraTableToAutoscale", err.Error())
+	}
+
+	req, err := client.MigrateCassandraTableToAutoscalePreparer(ctx, resourceGroupName, accountName, keyspaceName, tableName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.CassandraResourcesClient", "MigrateCassandraTableToAutoscale", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.MigrateCassandraTableToAutoscaleSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.CassandraResourcesClient", "MigrateCassandraTableToAutoscale", nil, "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// MigrateCassandraTableToAutoscalePreparer prepares the MigrateCassandraTableToAutoscale request.
+func (client CassandraResourcesClient) MigrateCassandraTableToAutoscalePreparer(ctx context.Context, resourceGroupName string, accountName string, keyspaceName string, tableName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"accountName":       autorest.Encode("path", accountName),
+		"keyspaceName":      autorest.Encode("path", keyspaceName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+		"tableName":         autorest.Encode("path", tableName),
+	}
+
+	const APIVersion = "2021-01-15"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/cassandraKeyspaces/{keyspaceName}/tables/{tableName}/throughputSettings/default/migrateToAutoscale", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// MigrateCassandraTableToAutoscaleSender sends the MigrateCassandraTableToAutoscale request. The method will close the
+// http.Response Body if it receives an error.
+func (client CassandraResourcesClient) MigrateCassandraTableToAutoscaleSender(req *http.Request) (future CassandraResourcesMigrateCassandraTableToAutoscaleFuture, err error) {
+	var resp *http.Response
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = future.result
+	return
+}
+
+// MigrateCassandraTableToAutoscaleResponder handles the response to the MigrateCassandraTableToAutoscale request. The method always
+// closes the http.Response Body.
+func (client CassandraResourcesClient) MigrateCassandraTableToAutoscaleResponder(resp *http.Response) (result ThroughputSettingsGetResults, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// MigrateCassandraTableToManualThroughput migrate an Azure Cosmos DB Cassandra table from autoscale to manual
+// throughput
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// accountName - cosmos DB database account name.
+// keyspaceName - cosmos DB keyspace name.
+// tableName - cosmos DB table name.
+func (client CassandraResourcesClient) MigrateCassandraTableToManualThroughput(ctx context.Context, resourceGroupName string, accountName string, keyspaceName string, tableName string) (result CassandraResourcesMigrateCassandraTableToManualThroughputFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/CassandraResourcesClient.MigrateCassandraTableToManualThroughput")
+		defer func() {
+			sc := -1
+			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+				sc = result.FutureAPI.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
+		{TargetValue: accountName,
+			Constraints: []validation.Constraint{{Target: "accountName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "accountName", Name: validation.MinLength, Rule: 3, Chain: nil},
+				{Target: "accountName", Name: validation.Pattern, Rule: `^[a-z0-9]+(-[a-z0-9]+)*`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("documentdb.CassandraResourcesClient", "MigrateCassandraTableToManualThroughput", err.Error())
+	}
+
+	req, err := client.MigrateCassandraTableToManualThroughputPreparer(ctx, resourceGroupName, accountName, keyspaceName, tableName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.CassandraResourcesClient", "MigrateCassandraTableToManualThroughput", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.MigrateCassandraTableToManualThroughputSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.CassandraResourcesClient", "MigrateCassandraTableToManualThroughput", nil, "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// MigrateCassandraTableToManualThroughputPreparer prepares the MigrateCassandraTableToManualThroughput request.
+func (client CassandraResourcesClient) MigrateCassandraTableToManualThroughputPreparer(ctx context.Context, resourceGroupName string, accountName string, keyspaceName string, tableName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"accountName":       autorest.Encode("path", accountName),
+		"keyspaceName":      autorest.Encode("path", keyspaceName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+		"tableName":         autorest.Encode("path", tableName),
+	}
+
+	const APIVersion = "2021-01-15"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/cassandraKeyspaces/{keyspaceName}/tables/{tableName}/throughputSettings/default/migrateToManualThroughput", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// MigrateCassandraTableToManualThroughputSender sends the MigrateCassandraTableToManualThroughput request. The method will close the
+// http.Response Body if it receives an error.
+func (client CassandraResourcesClient) MigrateCassandraTableToManualThroughputSender(req *http.Request) (future CassandraResourcesMigrateCassandraTableToManualThroughputFuture, err error) {
+	var resp *http.Response
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = future.result
+	return
+}
+
+// MigrateCassandraTableToManualThroughputResponder handles the response to the MigrateCassandraTableToManualThroughput request. The method always
+// closes the http.Response Body.
+func (client CassandraResourcesClient) MigrateCassandraTableToManualThroughputResponder(resp *http.Response) (result ThroughputSettingsGetResults, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
 // UpdateCassandraKeyspaceThroughput update RUs per second of an Azure Cosmos DB Cassandra Keyspace
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // keyspaceName - cosmos DB keyspace name.
 // updateThroughputParameters - the RUs per second of the parameters to provide for the current Cassandra
@@ -1017,7 +1398,9 @@ func (client CassandraResourcesClient) UpdateCassandraKeyspaceThroughput(ctx con
 		{TargetValue: updateThroughputParameters,
 			Constraints: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource", Name: validation.Null, Rule: true,
-					Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.Throughput", Name: validation.Null, Rule: true, Chain: nil}}},
+					Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.AutoscaleSettings", Name: validation.Null, Rule: false,
+						Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.AutoscaleSettings.MaxThroughput", Name: validation.Null, Rule: true, Chain: nil}}},
+					}},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.CassandraResourcesClient", "UpdateCassandraKeyspaceThroughput", err.Error())
 	}
@@ -1046,7 +1429,7 @@ func (client CassandraResourcesClient) UpdateCassandraKeyspaceThroughputPreparer
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1090,7 +1473,7 @@ func (client CassandraResourcesClient) UpdateCassandraKeyspaceThroughputResponde
 
 // UpdateCassandraTableThroughput update RUs per second of an Azure Cosmos DB Cassandra table
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // keyspaceName - cosmos DB keyspace name.
 // tableName - cosmos DB table name.
@@ -1121,7 +1504,9 @@ func (client CassandraResourcesClient) UpdateCassandraTableThroughput(ctx contex
 		{TargetValue: updateThroughputParameters,
 			Constraints: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource", Name: validation.Null, Rule: true,
-					Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.Throughput", Name: validation.Null, Rule: true, Chain: nil}}},
+					Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.AutoscaleSettings", Name: validation.Null, Rule: false,
+						Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.AutoscaleSettings.MaxThroughput", Name: validation.Null, Rule: true, Chain: nil}}},
+					}},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.CassandraResourcesClient", "UpdateCassandraTableThroughput", err.Error())
 	}
@@ -1151,7 +1536,7 @@ func (client CassandraResourcesClient) UpdateCassandraTableThroughputPreparer(ct
 		"tableName":         autorest.Encode("path", tableName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

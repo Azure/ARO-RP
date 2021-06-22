@@ -33,7 +33,7 @@ func NewDatabaseClientWithBaseURI(baseURI string, subscriptionID string) Databas
 
 // ListMetricDefinitions retrieves metric definitions for the given database.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseRid - cosmos DB database rid.
 func (client DatabaseClient) ListMetricDefinitions(ctx context.Context, resourceGroupName string, accountName string, databaseRid string) (result MetricDefinitionsListResult, err error) {
@@ -92,7 +92,7 @@ func (client DatabaseClient) ListMetricDefinitionsPreparer(ctx context.Context, 
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -125,7 +125,7 @@ func (client DatabaseClient) ListMetricDefinitionsResponder(resp *http.Response)
 
 // ListMetrics retrieves the metrics determined by the given filter for the given database account and database.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseRid - cosmos DB database rid.
 // filter - an OData filter expression that describes a subset of metrics to return. The parameters that can be
@@ -187,7 +187,7 @@ func (client DatabaseClient) ListMetricsPreparer(ctx context.Context, resourceGr
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"$filter":     autorest.Encode("query", filter),
 		"api-version": APIVersion,
@@ -221,7 +221,7 @@ func (client DatabaseClient) ListMetricsResponder(resp *http.Response) (result M
 
 // ListUsages retrieves the usages (most recent data) for the given database.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseRid - cosmos DB database rid.
 // filter - an OData filter expression that describes a subset of usages to return. The supported parameter is
@@ -282,7 +282,7 @@ func (client DatabaseClient) ListUsagesPreparer(ctx context.Context, resourceGro
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

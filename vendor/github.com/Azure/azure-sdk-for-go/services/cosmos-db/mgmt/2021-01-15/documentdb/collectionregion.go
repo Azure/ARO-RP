@@ -35,7 +35,7 @@ func NewCollectionRegionClientWithBaseURI(baseURI string, subscriptionID string)
 // ListMetrics retrieves the metrics determined by the given filter for the given database account, collection and
 // region.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // region - cosmos DB region, with spaces between words and each word capitalized.
 // databaseRid - cosmos DB database rid.
@@ -101,7 +101,7 @@ func (client CollectionRegionClient) ListMetricsPreparer(ctx context.Context, re
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"$filter":     autorest.Encode("query", filter),
 		"api-version": APIVersion,
