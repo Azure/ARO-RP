@@ -69,14 +69,30 @@ func TestClusters(t *testing.T) {
 		t.Error(w.Header().Get("Content-Type"))
 	}
 
-	var r []string
+	var r []AdminOpenShiftCluster
 	err = json.NewDecoder(w.Body).Decode(&r)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	expected := []string{
-		"/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/succeeded",
+	expected := []AdminOpenShiftCluster{
+		{
+			Key:   "00000000-0000-0000-0000-000000000000",
+			Name:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/succeeded",
+			State: api.ProvisioningStateSucceeded.String(),
+		},
+		{
+			Key:   "00000000-0000-0000-0000-000000000001",
+			Name:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/creating",
+			State: api.ProvisioningStateCreating.String(),
+		},
+
+		{
+			Key:         "00000000-0000-0000-0000-000000000002",
+			Name:        "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/failedcreate",
+			State:       api.ProvisioningStateFailed.String(),
+			FailedState: api.ProvisioningStateCreating.String(),
+		},
 	}
 
 	for _, l := range deep.Equal(expected, r) {

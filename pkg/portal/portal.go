@@ -9,20 +9,17 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
 	"net"
 	"net/http"
-	"sort"
 	"time"
 
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	frontendmiddleware "github.com/Azure/ARO-RP/pkg/frontend/middleware"
@@ -261,6 +258,7 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 	r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.index)
 
 	r.NewRoute().Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
+	r.NewRoute().Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
 }
 
 func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request) {
@@ -288,43 +286,6 @@ func (p *portal) index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(buf.Bytes()))
-}
-
-func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	docs, err := p.dbOpenShiftClusters.ListAll(ctx)
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
-
-	clusters := make([]string, 0, len(docs.OpenShiftClusterDocuments))
-	for _, doc := range docs.OpenShiftClusterDocuments {
-		ps := doc.OpenShiftCluster.Properties.ProvisioningState
-		fps := doc.OpenShiftCluster.Properties.FailedProvisioningState
-
-		switch {
-		case ps == api.ProvisioningStateCreating,
-			ps == api.ProvisioningStateDeleting,
-			ps == api.ProvisioningStateFailed &&
-				(fps == api.ProvisioningStateCreating ||
-					fps == api.ProvisioningStateDeleting):
-		default:
-			clusters = append(clusters, doc.OpenShiftCluster.ID)
-		}
-	}
-
-	sort.Strings(clusters)
-
-	b, err := json.MarshalIndent(clusters, "", "    ")
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(b)
 }
 
 func (p *portal) internalServerError(w http.ResponseWriter, err error) {
