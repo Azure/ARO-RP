@@ -1325,6 +1325,13 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 				},
 			},
 			DatabaseAccountOfferType: to.StringPtr(string(mgmtdocumentdb.Standard)),
+			BackupPolicy: mgmtdocumentdb.PeriodicModeBackupPolicy{
+				Type: mgmtdocumentdb.TypePeriodic,
+				PeriodicModeProperties: &mgmtdocumentdb.PeriodicModeProperties{
+					BackupIntervalInMinutes:        to.Int32Ptr(240),
+					BackupRetentionIntervalInHours: to.Int32Ptr(720),
+				},
+			},
 		},
 		Name:     to.StringPtr("[parameters('databaseAccountName')]"),
 		Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts"),
@@ -1338,7 +1345,8 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 		Resource:   cosmosdb,
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 	}
-
+	//TODO: IPRangeFilter doesn't work with this verison of documentdb. (removed)
+	//Find subsitute function that will achieve the same goal.
 	if g.production {
 		cosmosdb.IPRangeFilter = to.StringPtr("[if(parameters('disableCosmosDBFirewall'), '', concat('104.42.195.92,40.76.54.131,52.176.6.30,52.169.50.45,52.187.184.26', if(equals(parameters('extraCosmosDBIPs'), ''), '', ','), parameters('extraCosmosDBIPs')))]")
 		cosmosdb.IsVirtualNetworkFilterEnabled = to.BoolPtr(true)
