@@ -325,6 +325,9 @@ class MasterProfile(Model):
 class NetworkProfile(Model):
     """NetworkProfile represents a network profile.
 
+    :param network_type: The Network Provider to use when installing the
+     cluster.
+    :type network_type: str
     :param pod_cidr: The CIDR used for OpenShift/Kubernetes Pods.
     :type pod_cidr: str
     :param service_cidr: The CIDR used for OpenShift/Kubernetes Services.
@@ -332,12 +335,14 @@ class NetworkProfile(Model):
     """
 
     _attribute_map = {
+        'network_type': {'key': 'networkType', 'type': 'str'},
         'pod_cidr': {'key': 'podCidr', 'type': 'str'},
         'service_cidr': {'key': 'serviceCidr', 'type': 'str'},
     }
 
-    def __init__(self, *, pod_cidr: str=None, service_cidr: str=None, **kwargs) -> None:
+    def __init__(self, *, network_type: str=None, pod_cidr: str=None, service_cidr: str=None, **kwargs) -> None:
         super(NetworkProfile, self).__init__(**kwargs)
+        self.network_type = network_type
         self.pod_cidr = pod_cidr
         self.service_cidr = service_cidr
 
