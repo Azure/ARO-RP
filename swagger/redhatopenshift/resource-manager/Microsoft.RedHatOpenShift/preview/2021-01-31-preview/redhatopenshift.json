@@ -589,6 +589,10 @@
     "NetworkProfile": {
       "description": "NetworkProfile represents a network profile.",
       "properties": {
+        "networkType": {
+          "description": "The Network Provider to use when installing the cluster.",
+          "type": "string"
+        },
         "podCidr": {
           "description": "The CIDR used for OpenShift/Kubernetes Pods.",
           "type": "string"
