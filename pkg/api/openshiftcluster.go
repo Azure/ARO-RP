@@ -198,6 +198,7 @@ type NetworkProfile struct {
 
 	PodCIDR     string `json:"podCidr,omitempty"`
 	ServiceCIDR string `json:"serviceCidr,omitempty"`
+	NetworkType string `json:"networkType,omitempty"`
 
 	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
 }
