@@ -78,6 +78,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 			NetworkProfile: NetworkProfile{
 				PodCIDR:     "10.128.0.0/14",
 				ServiceCIDR: "172.30.0.0/16",
+				NetworkType: "OVNKubernetes",
 			},
 			MasterProfile: MasterProfile{
 				VMSize:   VMSizeStandardD8sV3,
@@ -460,6 +461,56 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 
 	runTests(t, testModeCreate, tests)
 	runTests(t, testModeUpdate, tests)
+}
+
+func TestOpenShiftClusterStaticValidateNetworkProfileType(t *testing.T) {
+	createtests := []*validateTest{
+		{
+			name: "valid",
+		},
+		{
+			name: "networkProvider",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.NetworkType = "InvalidOption"
+			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.networkType: The provided networkType must be either 'OVNKubernetes' or 'OpenShiftSDN'.",
+		},
+		{
+			name: "networkProvider",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.NetworkType = "OpenShiftSDN"
+			},
+		},
+		{
+			name: "networkProvider",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.NetworkType = "OVNKubernetes"
+			},
+		},
+	}
+
+	updatetests := []*validateTest{
+		{
+			name: "valid",
+		},
+		{
+			name: "networkProvider",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.NetworkType = "InvalidOption"
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.networkType: Changing property 'properties.networkProfile.networkType' is not allowed.",
+		},
+		{
+			name: "networkProvider",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.NetworkType = "OpenShiftSDN"
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.networkType: Changing property 'properties.networkProfile.networkType' is not allowed.",
+		},
+	}
+
+	runTests(t, testModeCreate, createtests)
+	runTests(t, testModeUpdate, updatetests)
 }
 
 func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {

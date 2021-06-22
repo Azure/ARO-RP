@@ -4,6 +4,7 @@ package v20210131preview
 // Licensed under the Apache License 2.0.
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -90,7 +91,7 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Op
 	if err := sv.validateServicePrincipalProfile(path+".servicePrincipalProfile", &p.ServicePrincipalProfile); err != nil {
 		return err
 	}
-	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile); err != nil {
+	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile, isCreate); err != nil {
 		return err
 	}
 	if err := sv.validateMasterProfile(path+".masterProfile", &p.MasterProfile); err != nil {
@@ -182,7 +183,7 @@ func (sv *openShiftClusterStaticValidator) validateServicePrincipalProfile(path 
 	return nil
 }
 
-func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile) error {
+func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile, isCreate bool) error {
 	_, pod, err := net.ParseCIDR(np.PodCIDR)
 	if err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".podCidr", "The provided pod CIDR '%s' is invalid: '%s'.", np.PodCIDR, err)
@@ -207,6 +208,13 @@ func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, n
 		ones, _ := service.Mask.Size()
 		if ones > 22 {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".serviceCidr", "The provided vnet CIDR '%s' is invalid: must be /22 or larger.", np.ServiceCIDR)
+		}
+	}
+
+	if isCreate {
+		if np.NetworkType != NetworkTypeOVNKubernetes && np.NetworkType != NetworkTypeOpenShiftSDN {
+			errorMsg := fmt.Sprintf("The provided networkType must be either '%s' or '%s'.", NetworkTypeOVNKubernetes, NetworkTypeOpenShiftSDN)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".networkType", errorMsg)
 		}
 	}
 
