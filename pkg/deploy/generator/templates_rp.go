@@ -26,6 +26,7 @@ func (g *generator) rpTemplate() *arm.Template {
 		"databaseAccountName",
 		"fpServicePrincipalId",
 		"rpServicePrincipalId",
+		"ipRules",
 	}
 	if g.production {
 		params = append(params,
@@ -45,7 +46,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clusterMdsdNamespace",
 			"dbtokenClientId",
 			"disableCosmosDBFirewall",
-			"extraCosmosDBIPs",
 			"fpClientId",
 			"fpServicePrincipalId",
 			"keyvaultPrefix",
@@ -77,12 +77,13 @@ func (g *generator) rpTemplate() *arm.Template {
 		case "disableCosmosDBFirewall":
 			p.Type = "bool"
 			p.DefaultValue = false
+		case "ipRules":
+			p.Type = "array"
 		case "armApiCaBundle",
 			"armApiClientCertCommonName",
 			"armClientId",
 			"billingServicePrincipalId",
 			"billingE2EStorageAccountId",
-			"extraCosmosDBIPs",
 			"rpFeatures":
 			p.DefaultValue = ""
 		case "vmSize":

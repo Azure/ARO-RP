@@ -16,13 +16,13 @@
                     "id": "[parameters('databaseName')]"
                 },
                 "options": {
-                    "throughput": "500"
+                    "throughput": 500
                 }
             },
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'))]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-08-01"
+            "apiVersion": "2021-01-15"
         },
         {
             "properties": {
@@ -41,7 +41,7 @@
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/AsyncOperations')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-08-01",
+            "apiVersion": "2021-01-15",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
             ]
@@ -62,7 +62,7 @@
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Billing')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-08-01",
+            "apiVersion": "2021-01-15",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
             ]
@@ -84,7 +84,7 @@
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Monitors')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-08-01",
+            "apiVersion": "2021-01-15",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
             ]
@@ -124,7 +124,7 @@
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/OpenShiftClusters')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-08-01",
+            "apiVersion": "2021-01-15",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
             ]
@@ -146,7 +146,7 @@
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Portal')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-08-01",
+            "apiVersion": "2021-01-15",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
             ]
@@ -167,7 +167,7 @@
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Subscriptions')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2019-08-01",
+            "apiVersion": "2021-01-15",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
             ]
