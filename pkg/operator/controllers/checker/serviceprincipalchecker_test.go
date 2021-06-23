@@ -53,7 +53,7 @@ func TestServicePrincipalValid(t *testing.T) {
 					ResourceID:    "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myresourcegroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/mycluster",
 				},
 			},
-			wantErr: `autorest/azure: There is no cloud environment matching the name "NEVERLAND"`,
+			wantErr: `cloud environment "NEVERLAND" is unsupported by ARO`,
 		},
 		{
 			name: "fail: azure-credential secret doesn't exist",

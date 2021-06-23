@@ -64,7 +64,7 @@ func (a *azureActions) VMSerialConsole(ctx context.Context, w http.ResponseWrite
 	}
 
 	blobService := azstorage.NewAccountSASClient(
-		"cluster"+a.oc.Properties.StorageSuffix, v, *a.env.Environment()).GetBlobService()
+		"cluster"+a.oc.Properties.StorageSuffix, v, (*a.env.Environment()).Environment).GetBlobService()
 
 	c := blobService.GetContainerReference(parts[1])
 

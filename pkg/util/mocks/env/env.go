@@ -12,10 +12,10 @@ import (
 	reflect "reflect"
 
 	autorest "github.com/Azure/go-autorest/autorest"
-	azure "github.com/Azure/go-autorest/autorest/azure"
 	gomock "github.com/golang/mock/gomock"
 
 	env "github.com/Azure/ARO-RP/pkg/env"
+	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
 	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	keyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
 	refreshable "github.com/Azure/ARO-RP/pkg/util/refreshable"
@@ -45,10 +45,10 @@ func (m *MockCore) EXPECT() *MockCoreMockRecorder {
 }
 
 // Environment mocks base method.
-func (m *MockCore) Environment() *azure.Environment {
+func (m *MockCore) Environment() *azureclient.AROEnvironment {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Environment")
-	ret0, _ := ret[0].(*azure.Environment)
+	ret0, _ := ret[0].(*azureclient.AROEnvironment)
 	return ret0
 }
 
@@ -351,10 +351,10 @@ func (mr *MockInterfaceMockRecorder) EnsureARMResourceGroupRoleAssignment(arg0, 
 }
 
 // Environment mocks base method.
-func (m *MockInterface) Environment() *azure.Environment {
+func (m *MockInterface) Environment() *azureclient.AROEnvironment {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Environment")
-	ret0, _ := ret[0].(*azure.Environment)
+	ret0, _ := ret[0].(*azureclient.AROEnvironment)
 	return ret0
 }
 

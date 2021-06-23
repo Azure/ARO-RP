@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -47,7 +48,7 @@ type Dynamic interface {
 type dynamic struct {
 	log            *logrus.Entry
 	authorizerType AuthorizerType
-	azEnv          *azure.Environment
+	azEnv          *azureclient.AROEnvironment
 
 	permissions     authorization.PermissionsClient
 	providers       features.ProvidersClient
@@ -61,7 +62,7 @@ type AuthorizerType string
 const AuthorizerFirstParty AuthorizerType = "resource provider"
 const AuthorizerClusterServicePrincipal AuthorizerType = "cluster"
 
-func NewValidator(log *logrus.Entry, azEnv *azure.Environment, subscriptionID string, authorizer refreshable.Authorizer, authorizerType AuthorizerType) (*dynamic, error) {
+func NewValidator(log *logrus.Entry, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizer refreshable.Authorizer, authorizerType AuthorizerType) (*dynamic, error) {
 	return &dynamic{
 		log:            log,
 		authorizerType: authorizerType,

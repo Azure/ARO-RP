@@ -8,8 +8,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/google/go-cmp/cmp"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 func TestProdEnvPopulateInstanceMetadata(t *testing.T) {
@@ -31,14 +32,14 @@ func TestProdEnvPopulateInstanceMetadata(t *testing.T) {
 		{
 			name: "valid environment variables",
 			environment: map[string]string{
-				"AZURE_ENVIRONMENT":     azure.PublicCloud.Name,
+				"AZURE_ENVIRONMENT":     azureclient.PublicCloud.Name,
 				"AZURE_SUBSCRIPTION_ID": "some-sub-guid",
 				"AZURE_TENANT_ID":       "some-tenant-guid",
 				"LOCATION":              "some-region",
 				"RESOURCEGROUP":         "my-resourceGroup",
 			},
 			wantInstanceMetadata: instanceMetadata{
-				environment:    &azure.PublicCloud,
+				environment:    &azureclient.PublicCloud,
 				subscriptionID: "some-sub-guid",
 				tenantID:       "some-tenant-guid",
 				location:       "some-region",
@@ -55,12 +56,12 @@ func TestProdEnvPopulateInstanceMetadata(t *testing.T) {
 				"LOCATION":              "some-region",
 				"RESOURCEGROUP":         "my-resourceGroup",
 			},
-			wantErr: "autorest/azure: There is no cloud environment matching the name \"THISENVDOESNOTEXIST\"",
+			wantErr: "cloud environment \"ThisEnvDoesNotExist\" is unsupported by ARO",
 		},
 		{
 			name: "valid environment variables with hostname override",
 			environment: map[string]string{
-				"AZURE_ENVIRONMENT":     azure.PublicCloud.Name,
+				"AZURE_ENVIRONMENT":     azureclient.PublicCloud.Name,
 				"AZURE_SUBSCRIPTION_ID": "some-sub-guid",
 				"AZURE_TENANT_ID":       "some-tenant-guid",
 				"LOCATION":              "some-region",
@@ -68,7 +69,7 @@ func TestProdEnvPopulateInstanceMetadata(t *testing.T) {
 				"HOSTNAME_OVERRIDE":     "my.over.ride",
 			},
 			wantInstanceMetadata: instanceMetadata{
-				environment:    &azure.PublicCloud,
+				environment:    &azureclient.PublicCloud,
 				subscriptionID: "some-sub-guid",
 				tenantID:       "some-tenant-guid",
 				location:       "some-region",

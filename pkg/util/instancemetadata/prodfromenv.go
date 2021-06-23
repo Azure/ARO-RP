@@ -9,7 +9,8 @@ import (
 	"os"
 
 	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 type prodFromEnv struct {
@@ -54,13 +55,11 @@ func (p *prodFromEnv) populateInstanceMetadata() error {
 	// optional env variables
 	// * HOSTNAME_OVERRIDE: defaults to os.Hostname()
 
-	envStr := p.Getenv("AZURE_ENVIRONMENT")
-	environment, err := azure.EnvironmentFromName(envStr)
+	environment, err := azureclient.EnvironmentFromName(p.Getenv("AZURE_ENVIRONMENT"))
 	if err != nil {
 		return err
 	}
 	p.environment = &environment
-
 	p.subscriptionID = p.Getenv("AZURE_SUBSCRIPTION_ID")
 	p.tenantID = p.Getenv("AZURE_TENANT_ID")
 	p.location = p.Getenv("LOCATION")

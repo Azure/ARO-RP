@@ -20,6 +20,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 )
 
@@ -63,7 +64,7 @@ func (r *ServicePrincipalChecker) Check(ctx context.Context) error {
 		return err
 	}
 
-	azEnv, err := azure.EnvironmentFromName(cluster.Spec.AZEnvironment)
+	azEnv, err := azureclient.EnvironmentFromName(cluster.Spec.AZEnvironment)
 	if err != nil {
 		return err
 	}
