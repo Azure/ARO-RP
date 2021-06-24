@@ -13,12 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
@@ -66,22 +61,12 @@ func (r *MachineReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		cond.Message = sb.String()
 	}
 
-	err := controllers.SetCondition(ctx, r.arocli, cond, r.role)
-	if err != nil {
-		r.log.Error(err)
-	}
-
-	return reconcile.Result{}, err
+	return reconcile.Result{}, controllers.SetCondition(ctx, r.arocli, cond, r.role)
 }
 
 func (r *MachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return o.GetName() == arov1alpha1.SingletonClusterName
-	})
-
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
-		Watches(&source.Kind{Type: &machinev1beta1.Machine{}}, &handler.EnqueueRequestForObject{}).
+		For(&machinev1beta1.Machine{}).
 		Named(controllers.MachineControllerName).
 		Complete(r)
 }

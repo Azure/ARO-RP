@@ -52,12 +52,12 @@ func (r *MachineReconciler) machineValid(ctx context.Context, machine *machinev1
 
 	// Validate VM size in machine provider spec
 	if !validate.VMSizeIsValid(api.VMSize(machineProviderSpec.VMSize), r.isLocalDevelopmentMode, isMaster) {
-		errs = append(errs, fmt.Errorf("machine %s: invalid VM size '%s'", machine.Name, machineProviderSpec.VMSize))
+		errs = append(errs, fmt.Errorf("machine %s: invalid VM size '%v'", machine.Name, machineProviderSpec.VMSize))
 	}
 
 	// Validate disk size in machine provider spec
 	if !isMaster && !validate.DiskSizeIsValid(int(machineProviderSpec.OSDisk.DiskSizeGB)) {
-		errs = append(errs, fmt.Errorf("machine %s: invalid disk size '%d'", machine.Name, machineProviderSpec.OSDisk.DiskSizeGB))
+		errs = append(errs, fmt.Errorf("machine %s: invalid disk size '%v'", machine.Name, machineProviderSpec.OSDisk.DiskSizeGB))
 	}
 
 	// Validate image publisher and offer
@@ -66,7 +66,7 @@ func (r *MachineReconciler) machineValid(ctx context.Context, machine *machinev1
 	}
 
 	if machineProviderSpec.ManagedIdentity != "" {
-		errs = append(errs, fmt.Errorf("machine %s: invalid managedIdentity '%s'", machine.Name, machineProviderSpec.ManagedIdentity))
+		errs = append(errs, fmt.Errorf("machine %s: invalid managedIdentity '%v'", machine.Name, machineProviderSpec.ManagedIdentity))
 	}
 
 	return errs
