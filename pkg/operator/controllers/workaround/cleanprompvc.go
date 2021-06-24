@@ -67,7 +67,7 @@ func (c *cleanPromPVC) IsRequired(clusterVersion *version.Version) bool {
 		return false
 	}
 
-	if configData.PrometheusK8s.Retention == "" && reflect.DeepEqual(configData.PrometheusK8s.VolumeClaimTemplate, struct{ api.MissingFields }{}) {
+	if configData.PrometheusK8s.Retention == nil && reflect.DeepEqual(configData.PrometheusK8s.VolumeClaimTemplate, struct{ api.MissingFields }{}) {
 		return true
 	}
 

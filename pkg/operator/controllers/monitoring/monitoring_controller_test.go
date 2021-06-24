@@ -31,26 +31,12 @@ func TestReconcileMonitoringConfig(t *testing.T) {
 			name: "ConfigMap does not exist - enable",
 			setConfigMap: func() *Reconciler {
 				return &Reconciler{
-					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{}),
+					kubernetescli: fake.NewSimpleClientset(),
 					log:           log,
 					jsonHandle:    new(codec.JsonHandle),
 				}
 			},
-			wantConfig: `
-{}`,
-		},
-		{
-			name: "ConfigMap does not have data",
-			setConfigMap: func() *Reconciler {
-				return &Reconciler{
-					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
-						ObjectMeta: cmMetadata,
-					}),
-					log:        log,
-					jsonHandle: new(codec.JsonHandle),
-				}
-			},
-			wantConfig: ``,
+			wantConfig: `{}`,
 		},
 		{
 			name: "empty config.yaml",
@@ -111,6 +97,34 @@ alertmanagerMain:
   extraField: yeet
 prometheusK8s:
   extraField: prometheus
+`,
+		},
+		{
+			name: "empty volumeClaimTemplate struct is cleared out",
+			setConfigMap: func() *Reconciler {
+				return &Reconciler{
+					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
+						ObjectMeta: cmMetadata,
+						Data: map[string]string{
+							"config.yaml": `
+alertmanagerMain:
+  volumeClaimTemplate: {}
+  extraField: alertmanager
+prometheusK8s:
+  volumeClaimTemplate: {}
+  bugs: not-here
+`,
+						},
+					}),
+					log:        log,
+					jsonHandle: new(codec.JsonHandle),
+				}
+			},
+			wantConfig: `
+alertmanagerMain:
+  extraField: alertmanager
+prometheusK8s:
+  bugs: not-here
 `,
 		},
 		{
