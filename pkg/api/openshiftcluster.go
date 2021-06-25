@@ -206,8 +206,10 @@ type NetworkProfile struct {
 type MasterProfile struct {
 	MissingFields
 
-	VMSize   VMSize `json:"vmSize,omitempty"`
-	SubnetID string `json:"subnetId,omitempty"`
+	VMSize              VMSize `json:"vmSize,omitempty"`
+	SubnetID            string `json:"subnetId,omitempty"`
+	EncryptionAtHost    bool   `json:"encryptionAtHost,omitempty"`
+	DiskEncryptionSetID string `json:"diskEncryptionSetId,omitempty"`
 }
 
 // VMSize represents a VM size
@@ -250,11 +252,13 @@ const (
 type WorkerProfile struct {
 	MissingFields
 
-	Name       string `json:"name,omitempty"`
-	VMSize     VMSize `json:"vmSize,omitempty"`
-	DiskSizeGB int    `json:"diskSizeGB,omitempty"`
-	SubnetID   string `json:"subnetId,omitempty"`
-	Count      int    `json:"count,omitempty"`
+	Name                string `json:"name,omitempty"`
+	VMSize              VMSize `json:"vmSize,omitempty"`
+	DiskSizeGB          int    `json:"diskSizeGB,omitempty"`
+	SubnetID            string `json:"subnetId,omitempty"`
+	Count               int    `json:"count,omitempty"`
+	EncryptionAtHost    bool   `json:"encryptionAtHost,omitempty"`
+	DiskEncryptionSetID string `json:"diskEncryptionSetId,omitempty"`
 }
 
 // APIServerProfile represents an API server profile
