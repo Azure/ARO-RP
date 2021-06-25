@@ -68,14 +68,16 @@ type Interface interface {
 	InitializeAuthorizers() error
 	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
 	AdminClientAuthorizer() clientauthorizer.ClientAuthorizer
+	ClusterGenevaLoggingAccount() string
+	ClusterGenevaLoggingNamespace() string
 	ClusterGenevaLoggingConfigVersion() string
-	ClusterGenevaLoggingEnvironment() string
 	ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
 	ClusterKeyvault() keyvault.Manager
 	Domain() string
 	FeatureIsSet(Feature) bool
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
 	FPClientID() string
+	GenevaLoggingEnvironment() string
 	Listen() (net.Listener, error)
 	ServiceKeyvault() keyvault.Manager
 	Zones(vmSize string) ([]string, error)

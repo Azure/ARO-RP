@@ -9,7 +9,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -37,8 +36,9 @@ func GetConfig(env env.Interface, doc *api.OpenShiftClusterDocument) (*bootstrap
 	return &bootstraplogging.Config{
 		Certificate:       string(gcsCertBytes),
 		Key:               string(gcsKeyBytes),
-		Namespace:         genevalogging.ClusterLogsNamespace,
-		Environment:       env.ClusterGenevaLoggingEnvironment(),
+		Account:           env.ClusterGenevaLoggingAccount(),
+		Environment:       env.GenevaLoggingEnvironment(),
+		Namespace:         env.ClusterGenevaLoggingNamespace(),
 		ConfigVersion:     env.ClusterGenevaLoggingConfigVersion(),
 		Region:            env.Location(),
 		ResourceID:        doc.OpenShiftCluster.ID,

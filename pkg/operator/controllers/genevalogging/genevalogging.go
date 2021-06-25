@@ -176,7 +176,7 @@ func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*apps
 								},
 								{
 									Name:  "MONITORING_GCS_ACCOUNT",
-									Value: "AROClusterLogs",
+									Value: cluster.Spec.GenevaLogging.MonitoringGCSAccount,
 								},
 								{
 									Name:  "MONITORING_GCS_REGION",
@@ -192,7 +192,7 @@ func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*apps
 								},
 								{
 									Name:  "MONITORING_GCS_NAMESPACE",
-									Value: ClusterLogsNamespace,
+									Value: cluster.Spec.GenevaLogging.MonitoringGCSNamespace,
 								},
 								{
 									Name:  "MONITORING_CONFIG_VERSION",

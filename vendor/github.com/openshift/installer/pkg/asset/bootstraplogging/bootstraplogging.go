@@ -12,6 +12,7 @@ const (
 type Config struct {
 	Certificate       string
 	Key               string
+	Account           string
 	Namespace         string
 	Environment       string
 	ConfigVersion     string
