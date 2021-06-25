@@ -45,8 +45,10 @@ type prod struct {
 
 	clusterGenevaLoggingCertificate   *x509.Certificate
 	clusterGenevaLoggingPrivateKey    *rsa.PrivateKey
+	clusterGenevaLoggingAccount       string
 	clusterGenevaLoggingConfigVersion string
-	clusterGenevaLoggingEnvironment   string
+	clusterGenevaLoggingNamespace     string
+	genevaLoggingEnvironment          string
 
 	log *logrus.Entry
 
@@ -66,7 +68,9 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	if !IsLocalDevelopmentMode() {
 		for _, key := range []string{
 			"CLUSTER_MDSD_CONFIG_VERSION",
+			"CLUSTER_MDSD_ACCOUNT",
 			"MDSD_ENVIRONMENT",
+			"CLUSTER_MDSD_NAMESPACE",
 		} {
 			if _, found := os.LookupEnv(key); !found {
 				return nil, fmt.Errorf("environment variable %q unset", key)
@@ -90,8 +94,10 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 
 		fpClientID: os.Getenv("AZURE_FP_CLIENT_ID"),
 
-		clusterGenevaLoggingEnvironment:   os.Getenv("MDSD_ENVIRONMENT"),
+		clusterGenevaLoggingAccount:       os.Getenv("CLUSTER_MDSD_ACCOUNT"),
+		clusterGenevaLoggingNamespace:     os.Getenv("CLUSTER_MDSD_NAMESPACE"),
 		clusterGenevaLoggingConfigVersion: os.Getenv("CLUSTER_MDSD_CONFIG_VERSION"),
+		genevaLoggingEnvironment:          os.Getenv("MDSD_ENVIRONMENT"),
 
 		log: log,
 
@@ -262,8 +268,12 @@ func (p *prod) ClusterGenevaLoggingConfigVersion() string {
 	return p.clusterGenevaLoggingConfigVersion
 }
 
-func (p *prod) ClusterGenevaLoggingEnvironment() string {
-	return p.clusterGenevaLoggingEnvironment
+func (p *prod) ClusterGenevaLoggingAccount() string {
+	return p.clusterGenevaLoggingAccount
+}
+
+func (p *prod) ClusterGenevaLoggingNamespace() string {
+	return p.clusterGenevaLoggingNamespace
 }
 
 func (p *prod) ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate) {
@@ -298,6 +308,10 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, 
 
 func (p *prod) FPClientID() string {
 	return p.fpClientID
+}
+
+func (p *prod) GenevaLoggingEnvironment() string {
+	return p.genevaLoggingEnvironment
 }
 
 func (p *prod) Listen() (net.Listener, error) {

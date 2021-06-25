@@ -47,8 +47,10 @@ func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		d.features[feature] = true
 	}
 
-	d.prod.clusterGenevaLoggingEnvironment = version.DevClusterGenevaLoggingEnvironment
+	d.prod.clusterGenevaLoggingAccount = version.DevClusterGenevaLoggingAccount
+	d.prod.clusterGenevaLoggingNamespace = version.DevClusterGenevaLoggingNamespace
 	d.prod.clusterGenevaLoggingConfigVersion = version.DevClusterGenevaLoggingConfigVersion
+	d.prod.genevaLoggingEnvironment = version.DevGenevaLoggingEnvironment
 
 	// ugh: run this again after RP_MODE=development has caused the feature flag
 	// to be set.
