@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -17,10 +18,12 @@ import (
 )
 
 type AdminOpenShiftCluster struct {
-	Key         string `json:"key"`
-	Name        string `json:"name"`
-	State       string `json:"state"`
-	FailedState string `json:"failedState"`
+	Key          string `json:"key"`
+	Name         string `json:"name"`
+	Id           string `json:"id"`
+	State        string `json:"state2"`
+	FailedState  string `json:"failedState"`
+	Subscription string `json:"subscription"`
 }
 
 func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
@@ -33,17 +36,25 @@ func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	clusters := make([]*AdminOpenShiftCluster, 0, len(docs.OpenShiftClusterDocuments))
+
+	re := regexp.MustCompile(`(?m)^/subscriptions/([^/]*)/resourceGroups/([^/]*)/providers/Microsoft.RedHatOpenShift/openShiftClusters/(.*)`)
 	for _, doc := range docs.OpenShiftClusterDocuments {
 		ps := doc.OpenShiftCluster.Properties.ProvisioningState
 		fps := doc.OpenShiftCluster.Properties.FailedProvisioningState
-
+		subscription := "Unknown"
+		name := "Unknown"
+		if m := re.FindAllStringSubmatch(doc.OpenShiftCluster.ID, -1); len(m) == 1 && len(m[0]) == 4 {
+			subscription = m[0][1]
+			name = m[0][3]
+		}
 		clusters = append(clusters, &AdminOpenShiftCluster{
-			Key:         doc.ID,
-			Name:        doc.OpenShiftCluster.ID,
-			State:       ps.String(),
-			FailedState: fps.String(),
+			Key:          doc.ID,
+			Id:           doc.OpenShiftCluster.ID,
+			Name:         name,
+			Subscription: subscription,
+			State:        ps.String(),
+			FailedState:  fps.String(),
 		})
-
 	}
 
 	sort.SliceStable(clusters, func(i, j int) bool { return strings.Compare(clusters[i].Key, clusters[j].Key) < 0 })
