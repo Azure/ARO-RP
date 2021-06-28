@@ -27,5 +27,6 @@ var _ = Describe("[Admin API] Get cluster action", func() {
 		// Note: some fields will have empty values
 		// on successfully provisioned cluster (oc.Properties.Install, for example)
 		Expect(oc.Properties.StorageSuffix).ToNot(BeEmpty())
+		Expect(oc.Properties.InfraID).ToNot(BeEmpty())
 	})
 })

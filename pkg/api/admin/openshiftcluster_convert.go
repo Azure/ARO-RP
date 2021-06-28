@@ -56,6 +56,7 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				IntIP:      oc.Properties.APIServerProfile.IntIP,
 			},
 			StorageSuffix: oc.Properties.StorageSuffix,
+			InfraID:       oc.Properties.InfraID,
 		},
 	}
 
@@ -151,6 +152,7 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 		}
 	}
 	out.Properties.ArchitectureVersion = api.ArchitectureVersion(oc.Properties.ArchitectureVersion)
+	out.Properties.InfraID = oc.Properties.InfraID
 	out.Properties.ProvisioningState = api.ProvisioningState(oc.Properties.ProvisioningState)
 	out.Properties.LastProvisioningState = api.ProvisioningState(oc.Properties.LastProvisioningState)
 	out.Properties.FailedProvisioningState = api.ProvisioningState(oc.Properties.FailedProvisioningState)
