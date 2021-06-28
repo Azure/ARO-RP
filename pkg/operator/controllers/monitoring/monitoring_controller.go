@@ -29,7 +29,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
-var monitoringName = types.NamespacedName{Name: "cluster-monitoring-config", Namespace: "openshift-monitoring"}
+var (
+	monitoringName   = types.NamespacedName{Name: "cluster-monitoring-config", Namespace: "openshift-monitoring"}
+	prometheusLabels = "app=prometheus,prometheus=k8s"
+)
 
 // Config represents cluster monitoring stack configuration.
 // Reconciler reconciles retention and storage settings,
@@ -64,6 +67,34 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	for _, f := range []func(context.Context, ctrl.Request) (ctrl.Result, error){
+		r.reconcileConfiguration,
+		r.reconcilePVC, // TODO(mj): This should be removed once we don't have PVC anymore
+	} {
+		result, err := f(ctx, request)
+		if err != nil {
+			return result, err
+		}
+	}
+	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) reconcilePVC(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	pvcList, err := r.kubernetescli.CoreV1().PersistentVolumeClaims(monitoringName.Namespace).List(ctx, metav1.ListOptions{LabelSelector: prometheusLabels})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	for _, pvc := range pvcList.Items {
+		err = r.kubernetescli.CoreV1().PersistentVolumeClaims(monitoringName.Namespace).Delete(ctx, pvc.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) reconcileConfiguration(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	cm, isCreate, err := r.monitoringConfigMap(ctx)
 	if err != nil {
 		return reconcile.Result{}, err

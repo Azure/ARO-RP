@@ -5,6 +5,7 @@ package monitoring
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -12,8 +13,11 @@ import (
 	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
 var cmMetadata = metav1.ObjectMeta{Name: "cluster-monitoring-config", Namespace: "openshift-monitoring"}
@@ -21,47 +25,33 @@ var cmMetadata = metav1.ObjectMeta{Name: "cluster-monitoring-config", Namespace:
 func TestReconcileMonitoringConfig(t *testing.T) {
 	log := logrus.NewEntry(logrus.StandardLogger())
 	type test struct {
-		name         string
-		setConfigMap func() *Reconciler
-		wantConfig   string
+		name          string
+		kubernetescli kubernetes.Interface
+		wantConfig    string
 	}
 
 	for _, tt := range []*test{
 		{
-			name: "ConfigMap does not exist - enable",
-			setConfigMap: func() *Reconciler {
-				return &Reconciler{
-					kubernetescli: fake.NewSimpleClientset(),
-					log:           log,
-					jsonHandle:    new(codec.JsonHandle),
-				}
-			},
-			wantConfig: `{}`,
+			name:          "ConfigMap does not exist - enable",
+			kubernetescli: fake.NewSimpleClientset(),
+			wantConfig:    `{}`,
 		},
 		{
 			name: "empty config.yaml",
-			setConfigMap: func() *Reconciler {
-				return &Reconciler{
-					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
-						ObjectMeta: cmMetadata,
-						Data: map[string]string{
-							"config.yaml": ``,
-						},
-					}),
-					log:        log,
-					jsonHandle: new(codec.JsonHandle),
-				}
-			},
+			kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
+				ObjectMeta: cmMetadata,
+				Data: map[string]string{
+					"config.yaml": ``,
+				},
+			}),
 			wantConfig: ``,
 		},
 		{
 			name: "settings restored to default and extra fields are preserved",
-			setConfigMap: func() *Reconciler {
-				return &Reconciler{
-					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
-						ObjectMeta: cmMetadata,
-						Data: map[string]string{
-							"config.yaml": `
+			kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
+				ObjectMeta: cmMetadata,
+				Data: map[string]string{
+					"config.yaml": `
 prometheusK8s:
   extraField: prometheus
   retention: 1d
@@ -86,12 +76,8 @@ alertmanagerMain:
         storageClassName: snail-mail
         volumeMode: Filesystem
 `,
-						},
-					}),
-					log:        log,
-					jsonHandle: new(codec.JsonHandle),
-				}
-			},
+				},
+			}),
 			wantConfig: `
 alertmanagerMain:
   extraField: yeet
@@ -101,12 +87,10 @@ prometheusK8s:
 		},
 		{
 			name: "empty volumeClaimTemplate struct is cleared out",
-			setConfigMap: func() *Reconciler {
-				return &Reconciler{
-					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
-						ObjectMeta: cmMetadata,
-						Data: map[string]string{
-							"config.yaml": `
+			kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
+				ObjectMeta: cmMetadata,
+				Data: map[string]string{
+					"config.yaml": `
 alertmanagerMain:
   volumeClaimTemplate: {}
   extraField: alertmanager
@@ -114,12 +98,8 @@ prometheusK8s:
   volumeClaimTemplate: {}
   bugs: not-here
 `,
-						},
-					}),
-					log:        log,
-					jsonHandle: new(codec.JsonHandle),
-				}
-			},
+				},
+			}),
 			wantConfig: `
 alertmanagerMain:
   extraField: alertmanager
@@ -129,24 +109,18 @@ prometheusK8s:
 		},
 		{
 			name: "other monitoring components are configured",
-			setConfigMap: func() *Reconciler {
-				return &Reconciler{
-					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
-						ObjectMeta: cmMetadata,
-						Data: map[string]string{
-							"config.yaml": `
+			kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
+				ObjectMeta: cmMetadata,
+				Data: map[string]string{
+					"config.yaml": `
 alertmanagerMain:
   nodeSelector:
     foo: bar
 somethingElse:
   configured: true
 `,
-						},
-					}),
-					log:        log,
-					jsonHandle: new(codec.JsonHandle),
-				}
-			},
+				},
+			}),
 			wantConfig: `
 alertmanagerMain:
   nodeSelector:
@@ -157,8 +131,12 @@ somethingElse:
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			r := &Reconciler{
+				kubernetescli: tt.kubernetescli,
+				log:           log,
+				jsonHandle:    new(codec.JsonHandle),
+			}
 			ctx := context.Background()
-			r := tt.setConfigMap()
 			request := ctrl.Request{}
 			request.Name = "cluster-monitoring-config"
 			request.Namespace = "openshift-monitoring"
@@ -175,6 +153,101 @@ somethingElse:
 
 			if strings.TrimSpace(cm.Data["config.yaml"]) != strings.TrimSpace(tt.wantConfig) {
 				t.Error(cm.Data["config.yaml"])
+			}
+		})
+	}
+}
+
+func TestReconcilePVC(t *testing.T) {
+	log := logrus.NewEntry(logrus.StandardLogger())
+	tests := []struct {
+		name          string
+		kubernetescli kubernetes.Interface
+		want          []corev1.PersistentVolumeClaim
+	}{
+		{
+			name: "Should delete the prometheus PVCs",
+			kubernetescli: fake.NewSimpleClientset(&corev1.PersistentVolumeClaim{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "prometheus-k8s-db-prometheus-k8s-0",
+					Namespace: "openshift-monitoring",
+					Labels: map[string]string{
+						"app":        "prometheus",
+						"prometheus": "k8s",
+					},
+				},
+			},
+				&corev1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "prometheus-k8s-db-prometheus-k8s-1",
+						Namespace: "openshift-monitoring",
+						Labels: map[string]string{
+							"app":        "prometheus",
+							"prometheus": "k8s",
+						},
+					},
+				}),
+			want: nil,
+		},
+		{
+			name: "Should preserve 1 pvc",
+			kubernetescli: fake.NewSimpleClientset(&corev1.PersistentVolumeClaim{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "prometheus-k8s-db-prometheus-k8s-0",
+					Namespace: "openshift-monitoring",
+					Labels: map[string]string{
+						"app":        "prometheus",
+						"prometheus": "k8s",
+					},
+				},
+			},
+				&corev1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "random-pvc",
+						Namespace: "openshift-monitoring",
+						Labels: map[string]string{
+							"app": "random",
+						},
+					},
+				}),
+			want: []corev1.PersistentVolumeClaim{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "random-pvc",
+						Namespace: "openshift-monitoring",
+						Labels: map[string]string{
+							"app": "random",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			r := &Reconciler{
+				log:           log,
+				kubernetescli: tt.kubernetescli,
+				jsonHandle:    new(codec.JsonHandle),
+			}
+			request := ctrl.Request{}
+			request.Name = "cluster-monitoring-config"
+			request.Namespace = "openshift-monitoring"
+
+			_, err := r.Reconcile(ctx, request)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			pvcList, err := r.kubernetescli.CoreV1().PersistentVolumeClaims(monitoringName.Namespace).List(context.Background(), metav1.ListOptions{})
+			if err != nil {
+				t.Fatalf("Unexpected error during list of PVCs: %v", err)
+			}
+
+			if !reflect.DeepEqual(pvcList.Items, tt.want) {
+				t.Error(cmp.Diff(pvcList.Items, tt.want))
 			}
 		})
 	}
