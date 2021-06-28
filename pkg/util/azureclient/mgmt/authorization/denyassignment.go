@@ -6,7 +6,8 @@ package authorization
 import (
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // DenyAssignmentClient is a minimal interface for azure DenyAssignmentClient
@@ -21,7 +22,7 @@ type denyAssignmentClient struct {
 var _ DenyAssignmentClient = &denyAssignmentClient{}
 
 // NewDenyAssignmentsClient creates a new DenyAssignmentsClient
-func NewDenyAssignmentsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) DenyAssignmentClient {
+func NewDenyAssignmentsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) DenyAssignmentClient {
 	client := mgmtauthorization.NewDenyAssignmentsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 

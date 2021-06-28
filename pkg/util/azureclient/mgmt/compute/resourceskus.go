@@ -6,7 +6,8 @@ package compute
 import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // ResourceSkusClient is a minimal interface for azure ResourceSkusClient
@@ -21,7 +22,7 @@ type resourceSkusClient struct {
 var _ ResourceSkusClient = &resourceSkusClient{}
 
 // NewResourceSkusClient creates a new ResourceSkusClient
-func NewResourceSkusClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) ResourceSkusClient {
+func NewResourceSkusClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) ResourceSkusClient {
 	client := mgmtcompute.NewResourceSkusClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 

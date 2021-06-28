@@ -6,7 +6,8 @@ package compute
 import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 type VirtualMachineScaleSetsClient interface {
@@ -20,7 +21,7 @@ type virtualMachineScaleSetsClient struct {
 var _ VirtualMachineScaleSetsClient = &virtualMachineScaleSetsClient{}
 
 // NewVirtualMachineScaleSetsClient creates a new VirtualMachineScaleSetsClient
-func NewVirtualMachineScaleSetsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) VirtualMachineScaleSetsClient {
+func NewVirtualMachineScaleSetsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) VirtualMachineScaleSetsClient {
 	client := mgmtcompute.NewVirtualMachineScaleSetsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 

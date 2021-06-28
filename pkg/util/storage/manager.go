@@ -52,7 +52,7 @@ func (m *manager) BlobService(ctx context.Context, resourceGroup, account string
 		return nil, err
 	}
 
-	blobcli := azstorage.NewAccountSASClient(account, v, *m.env.Environment()).GetBlobService()
+	blobcli := azstorage.NewAccountSASClient(account, v, (*m.env.Environment()).Environment).GetBlobService()
 
 	return &blobcli, nil
 }

@@ -26,7 +26,7 @@ func applyGoLicense() error {
 		}
 
 		switch path {
-		case "pkg/client", "vendor":
+		case "pkg/client", "vendor", ".git":
 			return filepath.SkipDir
 		}
 

@@ -8,7 +8,8 @@ import (
 
 	azgraphrbac "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // ServicePrincipalClient is a minimal interface for azure ApplicationsClient
@@ -24,7 +25,7 @@ type servicePrincipalClient struct {
 var _ ServicePrincipalClient = &servicePrincipalClient{}
 
 // NewServicePrincipalClient creates a new ServicePrincipalClient
-func NewServicePrincipalClient(environment *azure.Environment, tenantID string, authorizer autorest.Authorizer) ServicePrincipalClient {
+func NewServicePrincipalClient(environment *azureclient.AROEnvironment, tenantID string, authorizer autorest.Authorizer) ServicePrincipalClient {
 	client := azgraphrbac.NewServicePrincipalsClientWithBaseURI(environment.GraphEndpoint, tenantID)
 	client.Authorizer = authorizer
 

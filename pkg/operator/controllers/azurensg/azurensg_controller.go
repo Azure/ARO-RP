@@ -25,6 +25,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 )
@@ -60,7 +61,7 @@ func (r *AzureNSGReconciler) Reconcile(ctx context.Context, request ctrl.Request
 	}
 
 	// Get endpoints from operator
-	azEnv, err := azure.EnvironmentFromName(instance.Spec.AZEnvironment)
+	azEnv, err := azureclient.EnvironmentFromName(instance.Spec.AZEnvironment)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

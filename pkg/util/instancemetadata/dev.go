@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 func NewDev(checkEnv bool) (InstanceMetadata, error) {
@@ -24,10 +24,10 @@ func NewDev(checkEnv bool) (InstanceMetadata, error) {
 		}
 	}
 
-	environment := azure.PublicCloud
+	environment := azureclient.PublicCloud
 	if value, found := os.LookupEnv("AZURE_ENVIRONMENT"); found {
 		var err error
-		environment, err = azure.EnvironmentFromName(value)
+		environment, err = azureclient.EnvironmentFromName(value)
 		if err != nil {
 			return nil, err
 		}

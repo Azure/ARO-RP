@@ -8,7 +8,8 @@ import (
 
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // RecordSetsClient is a minimal interface for azure RecordSetsClient
@@ -25,7 +26,7 @@ type recordSetsClient struct {
 var _ RecordSetsClient = &recordSetsClient{}
 
 // NewRecordSetsClient creates a new RecordSetsClient
-func NewRecordSetsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) RecordSetsClient {
+func NewRecordSetsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) RecordSetsClient {
 	client := mgmtdns.NewRecordSetsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 

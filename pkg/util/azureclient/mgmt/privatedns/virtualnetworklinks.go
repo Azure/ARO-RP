@@ -6,7 +6,8 @@ package privatedns
 import (
 	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // VirtualNetworkLinksClient is a minimal interface for azure VirtualNetworkLinksClient
@@ -21,7 +22,7 @@ type virtualNetworkLinksClient struct {
 var _ VirtualNetworkLinksClient = &virtualNetworkLinksClient{}
 
 // NewVirtualNetworkLinksClient creates a new VirtualNetworkLinksClient
-func NewVirtualNetworkLinksClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) VirtualNetworkLinksClient {
+func NewVirtualNetworkLinksClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) VirtualNetworkLinksClient {
 	client := mgmtprivatedns.NewVirtualNetworkLinksClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 

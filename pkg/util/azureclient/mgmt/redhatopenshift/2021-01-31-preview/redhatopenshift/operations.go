@@ -8,10 +8,10 @@ import (
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 
 	mgmtredhatopenshift20210131preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2021-01-31-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // OperationsClient is a minimal interface for azure OperationsClient
@@ -26,7 +26,7 @@ type operationsClient struct {
 var _ OperationsClient = &operationsClient{}
 
 // NewOperationsClient creates a new OperationsClient
-func NewOperationsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) OperationsClient {
+func NewOperationsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) OperationsClient {
 	var client mgmtredhatopenshift20210131preview.OperationsClient
 	if env.IsLocalDevelopmentMode() {
 		client = mgmtredhatopenshift20210131preview.NewOperationsClientWithBaseURI("https://localhost:8443", subscriptionID)

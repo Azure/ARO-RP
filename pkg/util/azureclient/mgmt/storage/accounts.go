@@ -8,7 +8,8 @@ import (
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // AccountsClient is a minimal interface for azure AccountsClient
@@ -25,7 +26,7 @@ type accountsClient struct {
 var _ AccountsClient = &accountsClient{}
 
 // NewAccountsClient returns a new AccountsClient
-func NewAccountsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) AccountsClient {
+func NewAccountsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) AccountsClient {
 	client := mgmtstorage.NewAccountsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 
