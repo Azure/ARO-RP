@@ -8,18 +8,23 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 type prodFromEnv struct {
 	instanceMetadata
 
-	Getenv    func(key string) string
-	LookupEnv func(key string) (string, bool)
+	newServicePrincipalTokenFromMSI func(string, string) (ServicePrincipalToken, error)
+	Getenv                          func(key string) string
+	LookupEnv                       func(key string) (string, bool)
 }
 
 func newProdFromEnv(ctx context.Context) (InstanceMetadata, error) {
 	p := &prodFromEnv{
+		newServicePrincipalTokenFromMSI: func(msiEndpoint, resource string) (ServicePrincipalToken, error) {
+			return adal.NewServicePrincipalTokenFromMSI(msiEndpoint, resource)
+		},
 		Getenv:    os.Getenv,
 		LookupEnv: os.LookupEnv,
 	}

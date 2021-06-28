@@ -291,8 +291,10 @@ class MasterProfile(Model):
      'Standard_D32as_v4', 'Standard_D32s_v3', 'Standard_D4as_v4',
      'Standard_D4s_v3', 'Standard_D8as_v4', 'Standard_D8s_v3',
      'Standard_E16s_v3', 'Standard_E32s_v3', 'Standard_E4s_v3',
-     'Standard_E8s_v3', 'Standard_F16s_v2', 'Standard_F32s_v2',
-     'Standard_F4s_v2', 'Standard_F8s_v2'
+     'Standard_E64i_v3', 'Standard_E64is_v3', 'Standard_E8s_v3',
+     'Standard_F16s_v2', 'Standard_F32s_v2', 'Standard_F4s_v2',
+     'Standard_F72s_v2', 'Standard_F8s_v2', 'Standard_G5', 'Standard_GS5',
+     'Standard_M128ms'
     :type vm_size: str or
      ~azure.mgmt.redhatopenshift.v2021_01_31_preview.models.VMSize
     :param subnet_id: The Azure resource ID of the master subnet.
@@ -711,8 +713,10 @@ class WorkerProfile(Model):
      'Standard_D32as_v4', 'Standard_D32s_v3', 'Standard_D4as_v4',
      'Standard_D4s_v3', 'Standard_D8as_v4', 'Standard_D8s_v3',
      'Standard_E16s_v3', 'Standard_E32s_v3', 'Standard_E4s_v3',
-     'Standard_E8s_v3', 'Standard_F16s_v2', 'Standard_F32s_v2',
-     'Standard_F4s_v2', 'Standard_F8s_v2'
+     'Standard_E64i_v3', 'Standard_E64is_v3', 'Standard_E8s_v3',
+     'Standard_F16s_v2', 'Standard_F32s_v2', 'Standard_F4s_v2',
+     'Standard_F72s_v2', 'Standard_F8s_v2', 'Standard_G5', 'Standard_GS5',
+     'Standard_M128ms'
     :type vm_size: str or
      ~azure.mgmt.redhatopenshift.v2021_01_31_preview.models.VMSize
     :param disk_size_gb: The disk size of the worker VMs.

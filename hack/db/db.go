@@ -36,7 +36,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	kvAuthorizer, err := auth.NewAuthorizerFromCLIWithResource(_env.Environment().ResourceIdentifiers.KeyVault)
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	serviceKeyvault := keyvault.NewManager(kvAuthorizer, serviceKeyvaultURI)
+	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
 	key, err := serviceKeyvault.GetBase64Secret(ctx, env.EncryptionSecretName)
 	if err != nil {

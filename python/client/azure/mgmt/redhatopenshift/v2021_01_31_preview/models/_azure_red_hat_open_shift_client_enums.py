@@ -36,11 +36,17 @@ class VMSize(str, Enum):
     standard_e16s_v3 = "Standard_E16s_v3"
     standard_e32s_v3 = "Standard_E32s_v3"
     standard_e4s_v3 = "Standard_E4s_v3"
+    standard_e64i_v3 = "Standard_E64i_v3"
+    standard_e64is_v3 = "Standard_E64is_v3"
     standard_e8s_v3 = "Standard_E8s_v3"
     standard_f16s_v2 = "Standard_F16s_v2"
     standard_f32s_v2 = "Standard_F32s_v2"
     standard_f4s_v2 = "Standard_F4s_v2"
+    standard_f72s_v2 = "Standard_F72s_v2"
     standard_f8s_v2 = "Standard_F8s_v2"
+    standard_g5 = "Standard_G5"
+    standard_gs5 = "Standard_GS5"
+    standard_m128ms = "Standard_M128ms"
 
 
 class CreatedByType(str, Enum):

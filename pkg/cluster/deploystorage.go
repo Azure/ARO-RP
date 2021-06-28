@@ -131,14 +131,14 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		m.clusterNSG(infraID, installConfig.Config.Azure.Region),
 		m.clusterServicePrincipalRBAC(),
 		m.networkPrivateLinkService(installConfig),
-		m.networkPublicIPAddress(installConfig, m.doc.OpenShiftCluster.Properties.InfraID+"-pip-v4"),
+		m.networkPublicIPAddress(installConfig, infraID+"-pip-v4"),
 		m.networkInternalLoadBalancer(installConfig),
 		m.networkPublicLoadBalancer(installConfig),
 	}
 
 	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPublic {
 		resources = append(resources,
-			m.networkPublicIPAddress(installConfig, m.doc.OpenShiftCluster.Properties.InfraID+"-default-v4"),
+			m.networkPublicIPAddress(installConfig, infraID+"-default-v4"),
 		)
 	}
 
@@ -158,13 +158,12 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.InstallConfig, image *releaseimage.Image) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
 	exists, err := m.graph.Exists(ctx, resourceGroup, account)
 	if err != nil || exists {
 		return err
 	}
-
-	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
 	clusterID := &installconfig.ClusterID{
 		UUID:    m.doc.ID,
