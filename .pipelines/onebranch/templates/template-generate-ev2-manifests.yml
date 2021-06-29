@@ -25,7 +25,6 @@ steps:
   displayName: ⚙️ Generate Ev2 Deployment Manifests
 - task: Bash@3
   displayName: ⚙️ Copy to ob_outputDirectory
-  condition: ${{ in(parameters.generationType, 'bootstrapper', 'deployment', 'mirroring') }}
   inputs:
     targetType: filePath
     filePath: .pipelines/onebranch/scripts/${{ parameters.generationType }}.sh
