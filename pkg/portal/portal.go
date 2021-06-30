@@ -158,7 +158,7 @@ func (p *portal) setupRouter() error {
 	aadAuthenticatedRouter.Use(p.aad.AAD)
 	aadAuthenticatedRouter.Use(middleware.Log(p.env, p.audit, p.baseAccessLog))
 	aadAuthenticatedRouter.Use(p.aad.CheckAuthentication)
-	aadAuthenticatedRouter.Use(csrf.Protect(p.sessionKey, csrf.SameSite(csrf.SameSiteStrictMode), csrf.MaxAge(0)))
+	aadAuthenticatedRouter.Use(csrf.Protect(p.sessionKey, csrf.SameSite(csrf.SameSiteStrictMode), csrf.MaxAge(0), csrf.Path("/")))
 
 	p.aadAuthenticatedRoutes(aadAuthenticatedRouter)
 
@@ -249,13 +249,12 @@ func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 	for _, name := range AssetNames() {
 		if name == "index.html" {
+			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.serve(name))
 			continue
 		}
 
 		r.NewRoute().Methods(http.MethodGet).Path("/" + name).HandlerFunc(p.serve(name))
 	}
-
-	r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.index)
 
 	r.NewRoute().Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
 	r.NewRoute().Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
@@ -271,21 +270,6 @@ func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request)
 
 		http.ServeContent(w, r, path, time.Time{}, bytes.NewReader(b))
 	}
-}
-
-func (p *portal) index(w http.ResponseWriter, r *http.Request) {
-	buf := &bytes.Buffer{}
-
-	err := p.t.ExecuteTemplate(buf, "index.html", map[string]interface{}{
-		"location":       p.env.Location(),
-		csrf.TemplateTag: csrf.TemplateField(r),
-	})
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
-
-	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(buf.Bytes()))
 }
 
 func (p *portal) internalServerError(w http.ResponseWriter, err error) {
