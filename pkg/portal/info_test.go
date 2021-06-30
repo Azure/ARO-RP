@@ -8,11 +8,12 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -27,7 +28,7 @@ func TestInfo(t *testing.T) {
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 	_env.EXPECT().Location().AnyTimes().Return("eastus")
 	_env.EXPECT().TenantID().AnyTimes().Return("00000000-0000-0000-0000-000000000001")
-	_env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+	_env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 	_env.EXPECT().Hostname().AnyTimes().Return("testhost")
 
 	dbOpenShiftClusters, _ := testdatabase.NewFakeOpenShiftClusters()
@@ -54,9 +55,10 @@ func TestInfo(t *testing.T) {
 			elevated:           false,
 			expectedStatusCode: 200,
 			expectedResponse: PortalInfo{
-				Location: "eastus",
-				Username: "username",
-				Elevated: false,
+				Location:  "eastus",
+				Username:  "username",
+				Elevated:  false,
+				RPVersion: version.GitCommit,
 			},
 		},
 		{
@@ -65,9 +67,10 @@ func TestInfo(t *testing.T) {
 			elevated:           true,
 			expectedStatusCode: 200,
 			expectedResponse: PortalInfo{
-				Location: "eastus",
-				Username: "username",
-				Elevated: true,
+				Location:  "eastus",
+				Username:  "username",
+				Elevated:  true,
+				RPVersion: version.GitCommit,
 			},
 		},
 	} {
