@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_instancemetadata "github.com/Azure/ARO-RP/pkg/util/mocks/instancemetadata"
 )
 
@@ -118,7 +118,7 @@ func TestARMRefreshOnce(t *testing.T) {
 			defer controller.Finish()
 
 			im := mock_instancemetadata.NewMockInstanceMetadata(controller)
-			im.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+			im.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 
 			a := &arm{
 				now: func() time.Time { return time.Date(2020, 1, 20, 0, 0, 0, 0, time.UTC) },
@@ -278,7 +278,7 @@ func TestARMIsAuthorized(t *testing.T) {
 			defer controller.Finish()
 
 			im := mock_instancemetadata.NewMockInstanceMetadata(controller)
-			im.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+			im.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 
 			a := &arm{
 				im: im,

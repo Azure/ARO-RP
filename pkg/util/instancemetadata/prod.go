@@ -12,10 +12,10 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/form3tech-oss/jwt-go"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 type ServicePrincipalToken interface {
@@ -112,7 +112,7 @@ func (p *prod) populateInstanceMetadata() error {
 		return err
 	}
 
-	environment, err := azure.EnvironmentFromName(m.AzEnvironment)
+	environment, err := azureclient.EnvironmentFromName(m.AzEnvironment)
 	if err != nil {
 		return err
 	}

@@ -5,8 +5,8 @@ package insights
 
 import (
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/insights/insights"
 )
 
@@ -33,7 +33,7 @@ type activityLogsClient struct {
 var _ ActivityLogsClient = &activityLogsClient{}
 
 // NewActivityLogsClient creates a new ActivityLogsClient
-func NewActivityLogsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) ActivityLogsClient {
+func NewActivityLogsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) ActivityLogsClient {
 	client := insights.NewActivityLogsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 

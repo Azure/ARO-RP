@@ -17,7 +17,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/form3tech-oss/jwt-go"
 	"github.com/go-test/deep"
 	"github.com/gofrs/uuid"
@@ -26,6 +25,7 @@ import (
 	"github.com/gorilla/securecookie"
 	"golang.org/x/oauth2"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
@@ -828,7 +828,7 @@ func TestClientAssertion(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 	env := mock_env.NewMockInterface(controller)
-	env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+	env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 	env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 	env.EXPECT().TenantID().AnyTimes().Return("")
 

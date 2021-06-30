@@ -8,8 +8,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	azure "github.com/Azure/go-autorest/autorest/azure"
 	gomock "github.com/golang/mock/gomock"
+
+	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // MockServicePrincipalToken is a mock of ServicePrincipalToken interface.
@@ -87,10 +88,10 @@ func (m *MockInstanceMetadata) EXPECT() *MockInstanceMetadataMockRecorder {
 }
 
 // Environment mocks base method.
-func (m *MockInstanceMetadata) Environment() *azure.Environment {
+func (m *MockInstanceMetadata) Environment() *azureclient.AROEnvironment {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Environment")
-	ret0, _ := ret[0].(*azure.Environment)
+	ret0, _ := ret[0].(*azureclient.AROEnvironment)
 	return ret0
 }
 

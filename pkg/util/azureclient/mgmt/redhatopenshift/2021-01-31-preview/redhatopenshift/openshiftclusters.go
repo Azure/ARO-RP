@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 
 	mgmtredhatopenshift20210131preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2021-01-31-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // OpenShiftClustersClient is a minimal interface for azure OpenshiftClustersClient
@@ -30,7 +30,7 @@ type openShiftClustersClient struct {
 var _ OpenShiftClustersClient = &openShiftClustersClient{}
 
 // NewOpenShiftClustersClient creates a new OpenShiftClustersClient
-func NewOpenShiftClustersClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) OpenShiftClustersClient {
+func NewOpenShiftClustersClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) OpenShiftClustersClient {
 	var client mgmtredhatopenshift20210131preview.OpenShiftClustersClient
 	if env.IsLocalDevelopmentMode() {
 		client = mgmtredhatopenshift20210131preview.NewOpenShiftClustersClientWithBaseURI("https://localhost:8443", subscriptionID)

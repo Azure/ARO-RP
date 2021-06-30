@@ -9,7 +9,8 @@ import (
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // VirtualMachineScaleSetVMsClient is a minimal interface for azure VirtualMachineScaleSetVMsClient
@@ -25,7 +26,7 @@ type virtualMachineScaleSetVMsClient struct {
 var _ VirtualMachineScaleSetVMsClient = &virtualMachineScaleSetVMsClient{}
 
 // NewVirtualMachineScaleSetVMsClient creates a new VirtualMachineScaleSetVMsClient
-func NewVirtualMachineScaleSetVMsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) VirtualMachineScaleSetVMsClient {
+func NewVirtualMachineScaleSetVMsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) VirtualMachineScaleSetVMsClient {
 	client := mgmtcompute.NewVirtualMachineScaleSetVMsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 	client.PollingDuration = time.Hour

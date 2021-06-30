@@ -8,7 +8,8 @@ import (
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // RoleDefinitionsClient is a minimal interface for azure RoleDefinitionsClient
@@ -24,7 +25,7 @@ type roleDefinitionsClient struct {
 var _ RoleDefinitionsClient = &roleDefinitionsClient{}
 
 // NewRoleDefinitionsClient creates a new RoleDefinitionsClient
-func NewRoleDefinitionsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) RoleDefinitionsClient {
+func NewRoleDefinitionsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) RoleDefinitionsClient {
 	client := mgmtauthorization.NewRoleDefinitionsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 

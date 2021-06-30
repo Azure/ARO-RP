@@ -9,7 +9,8 @@ import (
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // DeploymentsClient is a minimal interface for azure DeploymentsClient
@@ -25,7 +26,7 @@ type deploymentsClient struct {
 var _ DeploymentsClient = &deploymentsClient{}
 
 // NewDeploymentsClient creates a new DeploymentsClient
-func NewDeploymentsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) DeploymentsClient {
+func NewDeploymentsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) DeploymentsClient {
 	client := mgmtfeatures.NewDeploymentsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 	client.PollingDelay = 10 * time.Second

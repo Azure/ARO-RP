@@ -48,6 +48,7 @@ type OpenShiftClusterProperties struct {
 	Install                 *Install                `json:"install,omitempty"`
 	StorageSuffix           string                  `json:"storageSuffix,omitempty"`
 	RegistryProfiles        []RegistryProfile       `json:"registryProfiles,omitempty"`
+	InfraID                 string                  `json:"infraId,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.

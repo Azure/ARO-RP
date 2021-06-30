@@ -15,7 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
 	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	"github.com/gorilla/securecookie"
@@ -23,6 +22,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
@@ -51,7 +51,7 @@ func TestSecurity(t *testing.T) {
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 	_env.EXPECT().Location().AnyTimes().Return("eastus")
 	_env.EXPECT().TenantID().AnyTimes().Return("00000000-0000-0000-0000-000000000001")
-	_env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+	_env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 	_env.EXPECT().Hostname().AnyTimes().Return("testhost")
 
 	l := listener.NewListener()
@@ -422,10 +422,10 @@ func auditPayloadFixture() *audit.Payload {
 		EnvName:              audit.IFXAuditName,
 		EnvFlags:             257,
 		EnvAppID:             audit.SourceAdminPortal,
-		EnvCloudName:         azure.PublicCloud.Name,
+		EnvCloudName:         azureclient.PublicCloud.Name,
 		EnvCloudRole:         audit.CloudRoleRP,
 		EnvCloudRoleInstance: "testhost",
-		EnvCloudEnvironment:  azure.PublicCloud.Name,
+		EnvCloudEnvironment:  azureclient.PublicCloud.Name,
 		EnvCloudLocation:     "eastus",
 		EnvCloudVer:          1,
 		CallerIdentities: []audit.CallerIdentity{

@@ -7,8 +7,9 @@ import (
 	"context"
 	"os"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 type InstanceMetadata interface {
@@ -17,7 +18,7 @@ type InstanceMetadata interface {
 	SubscriptionID() string
 	Location() string
 	ResourceGroup() string
-	Environment() *azure.Environment
+	Environment() *azureclient.AROEnvironment
 }
 
 type instanceMetadata struct {
@@ -26,7 +27,7 @@ type instanceMetadata struct {
 	subscriptionID string
 	location       string
 	resourceGroup  string
-	environment    *azure.Environment
+	environment    *azureclient.AROEnvironment
 }
 
 func (im *instanceMetadata) Hostname() string {
@@ -49,10 +50,11 @@ func (im *instanceMetadata) ResourceGroup() string {
 	return im.resourceGroup
 }
 
-func (im *instanceMetadata) Environment() *azure.Environment {
+func (im *instanceMetadata) Environment() *azureclient.AROEnvironment {
 	return im.environment
 }
 
+// New returns a new InstanceMetadata for the given mode, environment, and deployment system
 func New(ctx context.Context, log *logrus.Entry, isLocalDevelopmentMode bool) (InstanceMetadata, error) {
 	if isLocalDevelopmentMode {
 		log.Info("creating development InstanceMetadata")
@@ -62,8 +64,8 @@ func New(ctx context.Context, log *logrus.Entry, isLocalDevelopmentMode bool) (I
 	if os.Getenv("AZURE_EV2") != "" {
 		log.Info("creating InstanceMetadata from Environment")
 		return newProdFromEnv(ctx)
-	} else {
-		log.Info("creating InstanceMetadata from Azure Instance Metadata Service (AIMS)")
-		return newProd(ctx)
 	}
+
+	log.Info("creating InstanceMetadata from Azure Instance Metadata Service (AIMS)")
+	return newProd(ctx)
 }

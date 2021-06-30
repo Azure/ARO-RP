@@ -8,7 +8,8 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // SubnetsClient is a minimal interface for azure SubnetsClient
@@ -24,7 +25,7 @@ type subnetsClient struct {
 var _ SubnetsClient = &subnetsClient{}
 
 // NewSubnetsClient creates a new SubnetsClient
-func NewSubnetsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) SubnetsClient {
+func NewSubnetsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) SubnetsClient {
 	client := mgmtnetwork.NewSubnetsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 

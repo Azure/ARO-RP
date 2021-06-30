@@ -5,10 +5,8 @@ package env
 
 import (
 	"context"
-	"errors"
 
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
@@ -44,10 +42,6 @@ func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 		return nil, err
 	}
 
-	err = validateCloudEnvironment(im.Environment().Name)
-	if err != nil {
-		return nil, err
-	}
 	log.Infof("InstanceMetadata: running on %s", im.Environment().Name)
 
 	return &core{
@@ -73,22 +67,8 @@ func NewCoreForCI(ctx context.Context, log *logrus.Entry) (Core, error) {
 		return nil, err
 	}
 
-	err = validateCloudEnvironment(im.Environment().Name)
-	if err != nil {
-		return nil, err
-	}
-
 	return &core{
 		InstanceMetadata:       im,
 		isLocalDevelopmentMode: isLocalDevelopmentMode,
 	}, nil
-}
-
-func validateCloudEnvironment(name string) error {
-	switch name {
-	case azure.PublicCloud.Name, azure.USGovernmentCloud.Name:
-		return nil
-	default:
-		return errors.New("unsupported Azure cloud environment")
-	}
 }
