@@ -377,6 +377,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 
 	for _, variable := range []string{
 		"armClientId",
+		"azureSecPackVSATenantId",
 		"mdmFrontendUrl",
 		"mdsdEnvironment",
 		"acrResourceId",
@@ -889,6 +890,20 @@ EOF
 mkdir -p /usr/lib/ssl/certs
 csplit -f /usr/lib/ssl/certs/cert- -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 {*} >/dev/null
 c_rehash /usr/lib/ssl/certs
+
+
+# we leave clientId blank as long as only 1 managed identity assigned to vmss
+# if we have more than 1, we will need to populate with clientId used for off-node scanning
+cat >/etc/default/vsa-nodescan-agent.config <<EOF
+{
+    "Nice": 19,
+    "Timeout": 10800,
+    "ClientId": "",
+    "TenantId": "$AZURESECPACKVSATENANTID",
+    "ProcessTimeout": 300,
+    "CommandDelay": 0
+  }
+EOF
 
 for service in aro-dbtoken aro-monitor aro-portal aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-agent-bit; do
   systemctl enable $service.service
