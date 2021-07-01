@@ -33,7 +33,7 @@ steps:
       export AZURE_FP_SERVICE_PRINCIPAL_ID=fe9d206f-a6af-46db-8bda-303aae45e469
     else
       export AZURE_FP_CLIENT_ID=f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875
-      export AZURE_FP_SERVICE_PRINCIPAL_ID=de2829de-2392-40ee-b3a8-79b70a18c2a1
+      export AZURE_FP_SERVICE_PRINCIPAL_ID=50c17c64-bc11-4fdd-a339-0ecd396bf911
     fi
     # TODO: remove --env RESOURCEGROUP after next RP deployment.
 
