@@ -265,7 +265,7 @@ func (m *manager) Delete(ctx context.Context) error {
 	rg, err := m.resourceGroups.Get(ctx, resourceGroup)
 	if err != nil {
 		m.log.Warnf("failed to get resourceGroup %s", err)
-	} else {
+	} else if !m.env.IsLocalDevelopmentMode() {
 		if rg.ManagedBy == nil || *rg.ManagedBy == "" || !strings.EqualFold(*rg.ManagedBy, m.doc.OpenShiftCluster.ID) {
 			rgManagedByARO = false
 			m.log.Infof("cluster resource group not managed by aro %s", *rg.Name)
