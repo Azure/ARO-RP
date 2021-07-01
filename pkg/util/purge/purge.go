@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
+	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -27,6 +28,7 @@ type ResourceCleaner struct {
 	vnetscli               network.VirtualNetworksClient
 	privatelinkservicescli network.PrivateLinkServicesClient
 	securitygroupscli      network.SecurityGroupsClient
+	aroclient              redhatopenshift20200430.OpenShiftClustersClient
 
 	subnet subnet.Manager
 
@@ -48,6 +50,7 @@ func NewResourceCleaner(log *logrus.Entry, env env.Core, shouldDelete checkFn, d
 		vnetscli:               network.NewVirtualNetworksClient(env.Environment(), env.SubscriptionID(), authorizer),
 		privatelinkservicescli: network.NewPrivateLinkServicesClient(env.Environment(), env.SubscriptionID(), authorizer),
 		securitygroupscli:      network.NewSecurityGroupsClient(env.Environment(), env.SubscriptionID(), authorizer),
+		aroclient:              redhatopenshift20200430.NewOpenShiftClustersClient(env.Environment(), env.SubscriptionID(), authorizer),
 
 		subnet: subnet.NewManager(env, env.SubscriptionID(), authorizer),
 

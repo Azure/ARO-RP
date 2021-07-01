@@ -32,14 +32,20 @@ func (rc *ResourceCleaner) CleanResourceGroups(ctx context.Context) error {
 }
 
 // cleanResourceGroup checkes whether the resource group can be deleted if yes proceed to clean the group in an order:
+//     - delete any ARO clusters
 //     - unassign subnets
 //     - clean private links
 //     - checks ARO presence -> store app object ID for futher use
 //     - deletes resource group
 func (rc *ResourceCleaner) cleanResourceGroup(ctx context.Context, resourceGroup mgmtfeatures.ResourceGroup) error {
-	if rc.shouldDelete(resourceGroup, rc.log) {
+	if rc.shouldDelete(resourceGroup, rc.log) && !rc.dryRun {
 		rc.log.Printf("Deleting ResourceGroup: %s", *resourceGroup.Name)
-		err := rc.cleanNetworking(ctx, resourceGroup)
+		err := rc.cleanAROClusters(ctx, resourceGroup)
+		if err != nil {
+			return err
+		}
+
+		err = rc.cleanNetworking(ctx, resourceGroup)
 		if err != nil {
 			return err
 		}
@@ -49,11 +55,26 @@ func (rc *ResourceCleaner) cleanResourceGroup(ctx context.Context, resourceGroup
 			return err
 		}
 
-		if !rc.dryRun {
-			_, err := rc.resourcegroupscli.Delete(ctx, *resourceGroup.Name)
-			if err != nil {
-				return err
-			}
+		_, err = rc.resourcegroupscli.Delete(ctx, *resourceGroup.Name)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// cleanAROClusters deletes any prod ARO clusters that exist within the resource group
+func (rc *ResourceCleaner) cleanAROClusters(ctx context.Context, resourceGroup mgmtfeatures.ResourceGroup) error {
+	aroClusters, err := rc.aroclient.ListByResourceGroup(ctx, *resourceGroup.Name)
+	if err != nil {
+		return err
+	}
+
+	for _, cluster := range aroClusters {
+		err := rc.aroclient.DeleteAndWait(ctx, *resourceGroup.Name, *cluster.Name)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -99,7 +120,7 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 	return nil
 }
 
-// cleanPrivateLink lists and unassigns all private links. If they are assigned the deletoin will fail
+// cleanPrivateLink lists and unassigns all private links. If they are assigned the deletion will fail
 func (rc *ResourceCleaner) cleanPrivateLink(ctx context.Context, resourceGroup mgmtfeatures.ResourceGroup) error {
 	plss, err := rc.privatelinkservicescli.List(ctx, *resourceGroup.Name)
 	if err != nil {
