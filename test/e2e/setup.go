@@ -189,10 +189,11 @@ func done(ctx context.Context) error {
 			return err
 		}
 
-		err = cluster.Delete(ctx, vnetResourceGroup, clusterName)
-		if err != nil {
-			return err
-		}
+		fmt.Printf("cluster: %v\n", cluster)
+		// err = cluster.Delete(ctx, vnetResourceGroup, clusterName)
+		// if err != nil {
+		// 	return err
+		// }
 	}
 
 	return nil
@@ -201,7 +202,7 @@ func done(ctx context.Context) error {
 var _ = BeforeSuite(func() {
 	log.Info("BeforeSuite")
 
-	SetDefaultEventuallyTimeout(5 * time.Minute)
+	SetDefaultEventuallyTimeout(20 * time.Minute)
 	SetDefaultEventuallyPollingInterval(10 * time.Second)
 
 	if err := setup(context.Background()); err != nil {
