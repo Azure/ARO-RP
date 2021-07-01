@@ -638,6 +638,13 @@ ExecStart=/usr/bin/docker run \
   -e MDM_NAMESPACE \
   -e MDSD_ENVIRONMENT \
   -e RP_FEATURES \
+  -e AZURE_EV2 \
+  -e AZURE_ENVIRONMENT \
+  -e AZURE_SUBSCRIPTION_ID \
+  -e AZURE_TENANT_ID \
+  -e LOCATION \
+  -e RESOURCEGROUP \
+  -e HOSTNAME_OVERRIDE \
   -m 2g \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \

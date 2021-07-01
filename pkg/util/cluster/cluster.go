@@ -35,7 +35,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -123,7 +122,7 @@ func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
 		} else {
 			// This is dirty, but it used to be hard coded only for pub cloud.
 			// TODO pick right config value to get sub and resource group
-			if env.Environment().Name == azureclient.USGovernmentCloud.Name {
+			if env.Environment().Name == azure.USGovernmentCloud.Name {
 				c.ciParentVnet = "/subscriptions/28015960-ee66-4844-8037-fc28b0560bf1/resourceGroups/e2einfra-usgovvirginia/providers/Microsoft.Network/virtualNetworks/dev-vnet"
 			} else {
 				// default to prior behavior, public cloud int
@@ -176,8 +175,6 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		if err != nil {
 			return err
 		}
-
-		visibility = api.VisibilityPrivate
 	}
 
 	b, err := deploy.Asset(generator.FileClusterPredeploy)
@@ -273,12 +270,6 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	if c.ci {
 		c.log.Info("fixing up NSGs")
 		err = c.fixupNSGs(ctx, vnetResourceGroup, clusterName)
-		if err != nil {
-			return err
-		}
-
-		c.log.Info("peering subnets to CI infra")
-		err = c.peerSubnetsToCI(ctx, vnetResourceGroup, clusterName)
 		if err != nil {
 			return err
 		}
