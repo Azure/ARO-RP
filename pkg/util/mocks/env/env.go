@@ -250,20 +250,6 @@ func (mr *MockInterfaceMockRecorder) ArmClientAuthorizer() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArmClientAuthorizer", reflect.TypeOf((*MockInterface)(nil).ArmClientAuthorizer))
 }
 
-// ClusterGenevaLoggingConfigVersion mocks base method.
-func (m *MockInterface) ClusterGenevaLoggingConfigVersion() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClusterGenevaLoggingConfigVersion")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// ClusterGenevaLoggingConfigVersion indicates an expected call of ClusterGenevaLoggingConfigVersion.
-func (mr *MockInterfaceMockRecorder) ClusterGenevaLoggingConfigVersion() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterGenevaLoggingConfigVersion", reflect.TypeOf((*MockInterface)(nil).ClusterGenevaLoggingConfigVersion))
-}
-
 // ClusterGenevaLoggingAccount mocks base method.
 func (m *MockInterface) ClusterGenevaLoggingAccount() string {
 	m.ctrl.T.Helper()
@@ -278,18 +264,18 @@ func (mr *MockInterfaceMockRecorder) ClusterGenevaLoggingAccount() *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterGenevaLoggingAccount", reflect.TypeOf((*MockInterface)(nil).ClusterGenevaLoggingAccount))
 }
 
-// ClusterGenevaLoggingEnvironment mocks base method.
-func (m *MockInterface) ClusterGenevaLoggingEnvironment() string {
+// ClusterGenevaLoggingConfigVersion mocks base method.
+func (m *MockInterface) ClusterGenevaLoggingConfigVersion() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClusterGenevaLoggingEnvironment")
+	ret := m.ctrl.Call(m, "ClusterGenevaLoggingConfigVersion")
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
-// ClusterGenevaLoggingEnvironment indicates an expected call of ClusterGenevaLoggingEnvironment.
-func (mr *MockInterfaceMockRecorder) ClusterGenevaLoggingEnvironment() *gomock.Call {
+// ClusterGenevaLoggingConfigVersion indicates an expected call of ClusterGenevaLoggingConfigVersion.
+func (mr *MockInterfaceMockRecorder) ClusterGenevaLoggingConfigVersion() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterGenevaLoggingEnvironment", reflect.TypeOf((*MockInterface)(nil).ClusterGenevaLoggingEnvironment))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterGenevaLoggingConfigVersion", reflect.TypeOf((*MockInterface)(nil).ClusterGenevaLoggingConfigVersion))
 }
 
 // ClusterGenevaLoggingNamespace mocks base method.
@@ -433,6 +419,20 @@ func (m *MockInterface) FeatureIsSet(arg0 env.Feature) bool {
 func (mr *MockInterfaceMockRecorder) FeatureIsSet(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FeatureIsSet", reflect.TypeOf((*MockInterface)(nil).FeatureIsSet), arg0)
+}
+
+// GenevaLoggingEnvironment mocks base method.
+func (m *MockInterface) GenevaLoggingEnvironment() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GenevaLoggingEnvironment")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GenevaLoggingEnvironment indicates an expected call of GenevaLoggingEnvironment.
+func (mr *MockInterfaceMockRecorder) GenevaLoggingEnvironment() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenevaLoggingEnvironment", reflect.TypeOf((*MockInterface)(nil).GenevaLoggingEnvironment))
 }
 
 // Hostname mocks base method.
