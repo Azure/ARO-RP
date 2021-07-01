@@ -385,7 +385,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"billingE2EStorageAccountId",
 		"clusterMdsdAccount",
 		"clusterMdsdConfigVersion",
-		"clusterMdsdConfigNamespace",
+		"clusterMdsdNamespace",
 		"clusterParentDomainName",
 		"fpClientId",
 		"fpServicePrincipalId",
