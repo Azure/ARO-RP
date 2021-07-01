@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/v20210131preview"
+	"github.com/Azure/ARO-RP/pkg/api/v20210901preview"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -21,10 +21,10 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 	ctx := context.Background()
 
 	apis := map[string]*api.Version{
-		"2021-01-31-preview": api.APIs["2021-01-31-preview"],
+		"2021-09-01-preview": api.APIs["2021-09-01-preview"],
 		"no-credentials": {
-			OpenShiftClusterConverter:       api.APIs["2021-01-31-preview"].OpenShiftClusterConverter,
-			OpenShiftClusterStaticValidator: api.APIs["2021-01-31-preview"].OpenShiftClusterStaticValidator,
+			OpenShiftClusterConverter:       api.APIs["2021-09-01-preview"].OpenShiftClusterConverter,
+			OpenShiftClusterStaticValidator: api.APIs["2021-09-01-preview"].OpenShiftClusterStaticValidator,
 		},
 	}
 
@@ -38,7 +38,7 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 		fixture        func(*testdatabase.Fixture)
 		dbError        error
 		wantStatusCode int
-		wantResponse   func(*test) *v20210131preview.OpenShiftClusterAdminKubeconfig
+		wantResponse   func(*test) *v20210901preview.OpenShiftClusterAdminKubeconfig
 		wantError      string
 	}
 
@@ -76,8 +76,8 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 				})
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: func(tt *test) *v20210131preview.OpenShiftClusterAdminKubeconfig {
-				return &v20210131preview.OpenShiftClusterAdminKubeconfig{
+			wantResponse: func(tt *test) *v20210901preview.OpenShiftClusterAdminKubeconfig {
+				return &v20210901preview.OpenShiftClusterAdminKubeconfig{
 					Kubeconfig: []byte("{kubeconfig}"),
 				}
 			},
@@ -312,7 +312,7 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			reqAPIVersion := "2021-01-31-preview"
+			reqAPIVersion := "2021-09-01-preview"
 			if tt.apiVersion != "" {
 				reqAPIVersion = tt.apiVersion
 			}

@@ -21,7 +21,7 @@ type dev struct {
 	*prod
 }
 
-func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
+func newDev(ctx context.Context, stop <-chan struct{}, log *logrus.Entry) (Interface, error) {
 	for _, key := range []string{
 		"PROXY_HOSTNAME",
 	} {
@@ -33,7 +33,7 @@ func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	d := &dev{}
 
 	var err error
-	d.prod, err = newProd(ctx, log)
+	d.prod, err = newProd(ctx, stop, log)
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +47,10 @@ func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		d.features[feature] = true
 	}
 
-	d.prod.clusterGenevaLoggingEnvironment = version.DevClusterGenevaLoggingEnvironment
+	d.prod.clusterGenevaLoggingAccount = version.DevClusterGenevaLoggingAccount
 	d.prod.clusterGenevaLoggingConfigVersion = version.DevClusterGenevaLoggingConfigVersion
+	d.prod.clusterGenevaLoggingEnvironment = version.DevGenevaLoggingEnvironment
+	d.prod.clusterGenevaLoggingNamespace = version.DevClusterGenevaLoggingNamespace
 
 	// ugh: run this again after RP_MODE=development has caused the feature flag
 	// to be set.
@@ -87,7 +89,9 @@ func (d *dev) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, e
 		return nil, err
 	}
 
-	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, d.fpClientID, d.fpCertificate, d.fpPrivateKey, resource)
+	fpPrivateKey, fpCertificates := d.fpCertificateRefresher.GetCertificates()
+
+	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, d.fpClientID, fpCertificates[0], fpPrivateKey, resource)
 	if err != nil {
 		return nil, err
 	}

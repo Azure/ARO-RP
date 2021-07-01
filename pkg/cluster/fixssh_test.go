@@ -174,21 +174,18 @@ func TestFixSSH(t *testing.T) {
 		lbID                string
 		loadbalancer        func(string) *mgmtnetwork.LoadBalancer
 		iface               func(string, int) *mgmtnetwork.Interface
-		mocks               func(string, string, *mock_network.MockLoadBalancersClient, *mock_network.MockInterfacesClient)
+		iNameF              string
+		writeExpected       bool // do we expect write to happen as part of this test
+		fallbackExpected    bool // do we expect fallback nic.Get as part of this test
 	}{
 		{
-			name:         "updates v1 resources correctly",
-			lb:           infraID + "-internal-lb",
-			lbID:         "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
-			loadbalancer: lbBefore,
-			iface:        ifBefore,
-			mocks: func(lb, lbID string, loadBalancers *mock_network.MockLoadBalancersClient, interfaces *mock_network.MockInterfacesClient) {
-				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, lb, *lbAfter(lbID))
-
-				for i := 0; i < 3; i++ {
-					interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(infraID+"-master%d-nic", i), *ifAfter(lbID, i))
-				}
-			},
+			name:          "updates v1 resources correctly",
+			lb:            infraID + "-internal-lb",
+			lbID:          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
+			loadbalancer:  lbBefore,
+			iface:         ifBefore,
+			iNameF:        "%s-master%d-nic",
+			writeExpected: true,
 		},
 		{
 			name:         "v1 noop",
@@ -196,6 +193,7 @@ func TestFixSSH(t *testing.T) {
 			lbID:         "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
 			loadbalancer: lbAfter,
 			iface:        ifAfter,
+			iNameF:       "%s-master%d-nic",
 		},
 		{
 			name:                "updates v2 resources correctly",
@@ -204,13 +202,8 @@ func TestFixSSH(t *testing.T) {
 			lbID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
 			loadbalancer:        lbBefore,
 			iface:               ifBefore,
-			mocks: func(lb, lbID string, loadBalancers *mock_network.MockLoadBalancersClient, interfaces *mock_network.MockInterfacesClient) {
-				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, lb, *lbAfter(lbID))
-
-				for i := 0; i < 3; i++ {
-					interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(infraID+"-master%d-nic", i), *ifAfter(lbID, i))
-				}
-			},
+			iNameF:              "%s-master%d-nic",
+			writeExpected:       true,
 		},
 		{
 			name:                "v2 noop",
@@ -219,6 +212,18 @@ func TestFixSSH(t *testing.T) {
 			lbID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
 			loadbalancer:        lbAfter,
 			iface:               ifAfter,
+			iNameF:              "%s-master%d-nic",
+		},
+		{
+			name:                "updates v2 resources correctly with masters recreated",
+			architectureVersion: api.ArchitectureVersionV2,
+			lb:                  infraID + "-internal",
+			lbID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
+			loadbalancer:        lbBefore,
+			iface:               ifBefore,
+			iNameF:              "%s-master-%d-nic",
+			writeExpected:       true,
+			fallbackExpected:    true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -228,13 +233,20 @@ func TestFixSSH(t *testing.T) {
 			interfaces := mock_network.NewMockInterfacesClient(ctrl)
 			loadBalancers := mock_network.NewMockLoadBalancersClient(ctrl)
 
+			// check
 			loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.lb, "").Return(*tt.loadbalancer(tt.lbID), nil)
 			for i := 0; i < 3; i++ {
-				interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(infraID+"-master%d-nic", i), "").Return(*tt.iface(tt.lbID, i), nil)
+				if tt.fallbackExpected { // bit of hack to check fallback.
+					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), "").Return(mgmtnetwork.Interface{}, fmt.Errorf("nic not found"))
+				}
+				interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*tt.iface(tt.lbID, i), nil)
 			}
 
-			if tt.mocks != nil {
-				tt.mocks(tt.lb, tt.lbID, loadBalancers, interfaces)
+			if tt.writeExpected {
+				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, tt.lb, *lbAfter(tt.lbID))
+				for i := 0; i < 3; i++ {
+					interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *ifAfter(tt.lbID, i))
+				}
 			}
 
 			m := &manager{

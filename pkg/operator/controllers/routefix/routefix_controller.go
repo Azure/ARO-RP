@@ -29,38 +29,49 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-//RouteFixReconciler is the controller struct
-type RouteFixReconciler struct {
+// Reconciler is the controller struct
+type Reconciler struct {
+	log *logrus.Entry
+
+	arocli        aroclient.Interface
+	configcli     configclient.Interface
 	kubernetescli kubernetes.Interface
 	securitycli   securityclient.Interface
-	configcli     configclient.Interface
-	arocli        aroclient.Interface
-	restConfig    *rest.Config
-	log           *logrus.Entry
-	verFixed      *version.Version
+
+	restConfig *rest.Config
+	verFixed46 *version.Version
+	verFixed47 *version.Version
 }
 
-//NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, configcli configclient.Interface, arocli aroclient.Interface, restConfig *rest.Config) *RouteFixReconciler {
-	verFixed, _ := version.ParseVersion("4.7.15")
+var (
+	verFixed47, _ = version.ParseVersion("4.7.18")
+	verFixed46, _ = version.ParseVersion("4.6.37")
+)
 
-	return &RouteFixReconciler{
-		securitycli:   securitycli,
-		kubernetescli: kubernetescli,
-		configcli:     configcli,
-		arocli:        arocli,
-		restConfig:    restConfig,
+// NewReconciler creates a new Reconciler
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli configclient.Interface, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, restConfig *rest.Config) *Reconciler {
+	return &Reconciler{
 		log:           log,
-		verFixed:      verFixed,
+		arocli:        arocli,
+		configcli:     configcli,
+		kubernetescli: kubernetescli,
+		securitycli:   securitycli,
+		restConfig:    restConfig,
+		verFixed46:    verFixed46,
+		verFixed47:    verFixed47,
 	}
 }
 
-//Reconcile fixes the daemonset Routefix
-func (r *RouteFixReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+// Reconcile fixes the daemonset Routefix
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
+	}
+
+	if !instance.Spec.Features.ReconcileRouteFix {
+		return reconcile.Result{}, nil
 	}
 
 	// cluster version is not set to final until upgrade is completed. We need to
@@ -78,7 +89,7 @@ func (r *RouteFixReconciler) Reconcile(ctx context.Context, request ctrl.Request
 	return r.remove(ctx, instance)
 }
 
-func (r *RouteFixReconciler) deploy(ctx context.Context, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+func (r *Reconciler) deploy(ctx context.Context, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
 	// TODO: dh should be a field in r, but the fact that it is initialised here
 	// each time currently saves us in the case that the controller runs before
 	// the SCC API is registered.
@@ -115,7 +126,7 @@ func (r *RouteFixReconciler) deploy(ctx context.Context, instance *arov1alpha1.C
 	return reconcile.Result{}, nil
 }
 
-func (r *RouteFixReconciler) remove(ctx context.Context, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+func (r *Reconciler) remove(ctx context.Context, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
 	err := r.kubernetescli.CoreV1().Namespaces().Delete(ctx, kubeNamespace, metav1.DeleteOptions{})
 	if !kerrors.IsNotFound(err) {
 		return reconcile.Result{}, err
@@ -128,8 +139,8 @@ func (r *RouteFixReconciler) remove(ctx context.Context, instance *arov1alpha1.C
 	return reconcile.Result{}, err
 }
 
-//SetupWithManager creates the controller
-func (r *RouteFixReconciler) SetupWithManager(mgr ctrl.Manager) error {
+// SetupWithManager creates the controller
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
 	})
@@ -143,6 +154,14 @@ func (r *RouteFixReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *RouteFixReconciler) isRequired(clusterVersion *version.Version) bool {
-	return clusterVersion.Lt(r.verFixed)
+func (r *Reconciler) isRequired(clusterVersion *version.Version) bool {
+	y := clusterVersion.V[1]
+	switch y {
+	case 6: // 4.6.X
+		return clusterVersion.Lt(r.verFixed46)
+	case 7: // 4.7.X
+		return clusterVersion.Lt(r.verFixed47)
+	default:
+		return clusterVersion.Lt(r.verFixed47)
+	}
 }

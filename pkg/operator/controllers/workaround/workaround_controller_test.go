@@ -17,6 +17,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_workaround "github.com/Azure/ARO-RP/pkg/util/mocks/operator/controllers/workaround"
 )
@@ -41,6 +43,19 @@ func clusterVersion(ver string) *configv1.ClusterVersion {
 }
 
 func TestWorkaroundReconciler(t *testing.T) {
+	var (
+		arocli = arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: arov1alpha1.SingletonClusterName,
+			},
+			Spec: arov1alpha1.ClusterSpec{
+				Features: arov1alpha1.FeaturesSpec{
+					ReconcileWorkaroundsController: true,
+				},
+			},
+		})
+	)
+
 	tests := []struct {
 		name    string
 		want    ctrl.Result
@@ -80,7 +95,8 @@ func TestWorkaroundReconciler(t *testing.T) {
 			defer controller.Finish()
 
 			mwa := mock_workaround.NewMockWorkaround(controller)
-			r := &WorkaroundReconciler{
+			r := &Reconciler{
+				arocli:      arocli,
 				configcli:   configfake.NewSimpleClientset(clusterVersion("4.4.10")),
 				workarounds: []Workaround{mwa},
 				log:         utillog.GetLogger(),

@@ -12,8 +12,15 @@ import (
 const InstallArchitectureVersion = api.ArchitectureVersionV2
 
 const (
-	DevClusterGenevaLoggingEnvironment   = "Test"
-	DevClusterGenevaLoggingConfigVersion = "2.3"
+	DevClusterGenevaLoggingAccount       = "AROClusterLogs"
+	DevClusterGenevaLoggingConfigVersion = "2.4"
+	DevClusterGenevaLoggingNamespace     = "AROClusterLogs"
+	DevClusterGenevaMetricsAccount       = "AzureRedHatOpenShiftCluster"
+	DevGenevaLoggingEnvironment          = "Test"
+	DevRPGenevaLoggingAccount            = "ARORPLogs"
+	DevRPGenevaLoggingConfigVersion      = "3.7"
+	DevRPGenevaLoggingNamespace          = "ARORPLogs"
+	DevRPGenevaMetricsAccount            = "AzureRedHatOpenShiftRP"
 )
 
 var GitCommit = "unknown"

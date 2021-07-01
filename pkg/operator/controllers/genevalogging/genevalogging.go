@@ -21,13 +21,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-const (
-	GenevaCertName = "gcscert.pem"
-	GenevaKeyName  = "gcskey.pem"
-)
-
-func (g *GenevaloggingReconciler) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
-	scc, err := g.securitycli.SecurityV1().SecurityContextConstraints().Get(ctx, "privileged", metav1.GetOptions{})
+func (r *Reconciler) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
+	scc, err := r.securitycli.SecurityV1().SecurityContextConstraints().Get(ctx, "privileged", metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -40,8 +35,8 @@ func (g *GenevaloggingReconciler) securityContextConstraints(ctx context.Context
 	return scc, nil
 }
 
-func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet, error) {
-	r, err := azure.ParseResourceID(cluster.Spec.ResourceID)
+func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet, error) {
+	resourceID, err := azure.ParseResourceID(cluster.Spec.ResourceID)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +171,7 @@ func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*apps
 								},
 								{
 									Name:  "MONITORING_GCS_ACCOUNT",
-									Value: "AROClusterLogs",
+									Value: cluster.Spec.GenevaLogging.MonitoringGCSAccount,
 								},
 								{
 									Name:  "MONITORING_GCS_REGION",
@@ -192,7 +187,7 @@ func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*apps
 								},
 								{
 									Name:  "MONITORING_GCS_NAMESPACE",
-									Value: ClusterLogsNamespace,
+									Value: cluster.Spec.GenevaLogging.MonitoringGCSNamespace,
 								},
 								{
 									Name:  "MONITORING_CONFIG_VERSION",
@@ -229,15 +224,15 @@ func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*apps
 								},
 								{
 									Name:  "SUBSCRIPTION_ID",
-									Value: strings.ToLower(r.SubscriptionID),
+									Value: strings.ToLower(resourceID.SubscriptionID),
 								},
 								{
 									Name:  "RESOURCE_GROUP",
-									Value: strings.ToLower(r.ResourceGroup),
+									Value: strings.ToLower(resourceID.ResourceGroup),
 								},
 								{
 									Name:  "RESOURCE_NAME",
-									Value: strings.ToLower(r.ResourceName),
+									Value: strings.ToLower(resourceID.ResourceName),
 								},
 							},
 							Resources: corev1.ResourceRequirements{
@@ -268,13 +263,13 @@ func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*apps
 	}, nil
 }
 
-func (g *GenevaloggingReconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster, gcscert, gcskey []byte) ([]runtime.Object, error) {
-	scc, err := g.securityContextConstraints(ctx, "privileged-genevalogging", kubeServiceAccount)
+func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster, gcscert, gcskey []byte) ([]runtime.Object, error) {
+	scc, err := r.securityContextConstraints(ctx, "privileged-genevalogging", kubeServiceAccount)
 	if err != nil {
 		return nil, err
 	}
 
-	daemonset, err := g.daemonset(cluster)
+	daemonset, err := r.daemonset(cluster)
 	if err != nil {
 		return nil, err
 	}

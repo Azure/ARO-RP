@@ -7,17 +7,14 @@ import (
 	"context"
 	"time"
 
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -25,24 +22,24 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
-// CheckerController runs a number of checkers
-type CheckerController struct {
-	log      *logrus.Entry
+// Reconciler runs a number of checkers
+type Reconciler struct {
+	log *logrus.Entry
+
 	role     string
 	checkers []Checker
 }
 
-func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.Interface, kubernetescli kubernetes.Interface, role string, isLocalDevelopmentMode bool) *CheckerController {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli maoclient.Interface, role string) *Reconciler {
 	checkers := []Checker{NewInternetChecker(log, arocli, role)}
 
 	if role == operator.RoleMaster {
 		checkers = append(checkers,
-			NewMachineChecker(log, maocli, arocli, role, isLocalDevelopmentMode),
-			NewServicePrincipalChecker(log, maocli, arocli, kubernetescli, role),
+			NewServicePrincipalChecker(log, arocli, kubernetescli, maocli, role),
 		)
 	}
 
-	return &CheckerController{
+	return &Reconciler{
 		log:      log,
 		role:     role,
 		checkers: checkers,
@@ -56,7 +53,7 @@ func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclie
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters/status,verbs=get;update;patch
 
 // Reconcile will keep checking that the cluster can connect to essential services.
-func (r *CheckerController) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	var err error
 	for _, c := range r.checkers {
 		thisErr := c.Check(ctx)
@@ -73,7 +70,7 @@ func (r *CheckerController) Reconcile(ctx context.Context, request ctrl.Request)
 }
 
 // SetupWithManager setup our manager
-func (r *CheckerController) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
 	})
@@ -81,10 +78,5 @@ func (r *CheckerController) SetupWithManager(mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate))
 
-	if r.role == operator.RoleMaster {
-		// https://github.com/kubernetes-sigs/controller-runtime/issues/1173
-		// equivalent to builder = builder.For(&machinev1beta1.Machine{}), but can't call For multiple times on one builder
-		builder = builder.Watches(&source.Kind{Type: &machinev1beta1.Machine{}}, &handler.EnqueueRequestForObject{})
-	}
 	return builder.Named(controllers.CheckerControllerName).Complete(r)
 }

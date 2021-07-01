@@ -17,10 +17,25 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
-var cmMetadata = metav1.ObjectMeta{Name: "cluster-monitoring-config", Namespace: "openshift-monitoring"}
+var (
+	cmMetadata = metav1.ObjectMeta{Name: "cluster-monitoring-config", Namespace: "openshift-monitoring"}
+
+	arocli = arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: arov1alpha1.SingletonClusterName,
+		},
+		Spec: arov1alpha1.ClusterSpec{
+			Features: arov1alpha1.FeaturesSpec{
+				ReconcileMonitoringConfig: true,
+			},
+		},
+	})
+)
 
 func TestReconcileMonitoringConfig(t *testing.T) {
 	log := logrus.NewEntry(logrus.StandardLogger())
@@ -133,6 +148,7 @@ somethingElse:
 		t.Run(tt.name, func(t *testing.T) {
 			r := &Reconciler{
 				kubernetescli: tt.kubernetescli,
+				arocli:        arocli,
 				log:           log,
 				jsonHandle:    new(codec.JsonHandle),
 			}
@@ -229,6 +245,7 @@ func TestReconcilePVC(t *testing.T) {
 			ctx := context.Background()
 			r := &Reconciler{
 				log:           log,
+				arocli:        arocli,
 				kubernetescli: tt.kubernetescli,
 				jsonHandle:    new(codec.JsonHandle),
 			}

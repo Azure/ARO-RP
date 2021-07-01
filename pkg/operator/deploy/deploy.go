@@ -49,13 +49,13 @@ type operator struct {
 	env env.Interface
 	oc  *api.OpenShiftCluster
 
-	dh            dynamichelper.Interface
-	cli           kubernetes.Interface
-	extensionscli extensionsclient.Interface
 	arocli        aroclient.Interface
+	extensionscli extensionsclient.Interface
+	kubernetescli kubernetes.Interface
+	dh            dynamichelper.Interface
 }
 
-func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, cli kubernetes.Interface, extensionscli extensionsclient.Interface, arocli aroclient.Interface) (Operator, error) {
+func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli aroclient.Interface, extensionscli extensionsclient.Interface, kubernetescli kubernetes.Interface) (Operator, error) {
 	restConfig, err := restconfig.RestConfig(env, oc)
 	if err != nil {
 		return nil, err
@@ -70,10 +70,10 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, cli kub
 		env: env,
 		oc:  oc,
 
-		dh:            dh,
-		cli:           cli,
-		extensionscli: extensionscli,
 		arocli:        arocli,
+		extensionscli: extensionscli,
+		kubernetescli: kubernetescli,
+		dh:            dh,
 	}, nil
 }
 
@@ -167,7 +167,9 @@ func (o *operator) resources() ([]runtime.Object, error) {
 				VnetID:              vnetID,
 				GenevaLogging: arov1alpha1.GenevaLoggingSpec{
 					ConfigVersion:            o.env.ClusterGenevaLoggingConfigVersion(),
+					MonitoringGCSAccount:     o.env.ClusterGenevaLoggingAccount(),
 					MonitoringGCSEnvironment: o.env.ClusterGenevaLoggingEnvironment(),
+					MonitoringGCSNamespace:   o.env.ClusterGenevaLoggingNamespace(),
 				},
 				InternetChecker: arov1alpha1.InternetCheckerSpec{
 					URLs: []string{
@@ -179,6 +181,16 @@ func (o *operator) resources() ([]runtime.Object, error) {
 				},
 				APIIntIP:  o.oc.Properties.APIServerProfile.IntIP,
 				IngressIP: o.oc.Properties.IngressProfiles[0].IP,
+				Features: arov1alpha1.FeaturesSpec{
+					ReconcileAlertWebhook:          true,
+					ReconcileDNSMasq:               true,
+					ReconcileGenevaLogging:         true,
+					ReconcileMonitoringConfig:      true,
+					ReconcileNodeDrainer:           true,
+					ReconcilePullSecret:            true,
+					ReconcileRouteFix:              true,
+					ReconcileWorkaroundsController: true,
+				},
 			},
 		},
 	), nil
@@ -252,7 +264,7 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 					return err
 				}
 
-				s, err := o.cli.CoreV1().Secrets(pkgoperator.Namespace).Get(ctx, pkgoperator.SecretName, metav1.GetOptions{})
+				s, err := o.kubernetescli.CoreV1().Secrets(pkgoperator.Namespace).Get(ctx, pkgoperator.SecretName, metav1.GetOptions{})
 				if err != nil {
 					return err
 				}
@@ -262,7 +274,7 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 					return err
 				}
 
-				_, err = o.cli.CoreV1().Secrets(pkgoperator.Namespace).Update(ctx, s, metav1.UpdateOptions{})
+				_, err = o.kubernetescli.CoreV1().Secrets(pkgoperator.Namespace).Update(ctx, s, metav1.UpdateOptions{})
 				return err
 			})
 			if err != nil {
@@ -274,11 +286,11 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 }
 
 func (o *operator) IsReady(ctx context.Context) (bool, error) {
-	ok, err := ready.CheckDeploymentIsReady(ctx, o.cli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-master")()
+	ok, err := ready.CheckDeploymentIsReady(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-master")()
 	if !ok || err != nil {
 		return ok, err
 	}
-	ok, err = ready.CheckDeploymentIsReady(ctx, o.cli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-worker")()
+	ok, err = ready.CheckDeploymentIsReady(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-worker")()
 	if !ok || err != nil {
 		return ok, err
 	}

@@ -8,11 +8,11 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
-	"github.com/Azure/ARO-RP/pkg/api/v20210131preview"
+	"github.com/Azure/ARO-RP/pkg/api/v20210901preview"
 )
 
 const apiv20200430Path = "github.com/Azure/ARO-RP/pkg/api/v20200430"
-const apiv20210131previewPath = "github.com/Azure/ARO-RP/pkg/api/v20210131preview"
+const apiv20210901previewPath = "github.com/Azure/ARO-RP/pkg/api/v20210901preview"
 
 type generator struct {
 	exampleOpenShiftClusterPutParameter            func() interface{}
@@ -41,13 +41,13 @@ var apis = map[string]*generator{
 		commonTypesVersion: "v1",
 		xmsEnum:            []string{},
 	},
-	apiv20210131previewPath: {
-		exampleOpenShiftClusterPutParameter:            v20210131preview.ExampleOpenShiftClusterPutParameter,
-		exampleOpenShiftClusterPatchParameter:          v20210131preview.ExampleOpenShiftClusterPatchParameter,
-		exampleOpenShiftClusterResponse:                v20210131preview.ExampleOpenShiftClusterResponse,
-		exampleOpenShiftClusterCredentialsResponse:     v20210131preview.ExampleOpenShiftClusterCredentialsResponse,
-		exampleOpenShiftClusterListResponse:            v20210131preview.ExampleOpenShiftClusterListResponse,
-		exampleOpenShiftClusterAdminKubeconfigResponse: v20210131preview.ExampleOpenShiftClusterAdminKubeconfigResponse,
+	apiv20210901previewPath: {
+		exampleOpenShiftClusterPutParameter:            v20210901preview.ExampleOpenShiftClusterPutParameter,
+		exampleOpenShiftClusterPatchParameter:          v20210901preview.ExampleOpenShiftClusterPatchParameter,
+		exampleOpenShiftClusterResponse:                v20210901preview.ExampleOpenShiftClusterResponse,
+		exampleOpenShiftClusterCredentialsResponse:     v20210901preview.ExampleOpenShiftClusterCredentialsResponse,
+		exampleOpenShiftClusterListResponse:            v20210901preview.ExampleOpenShiftClusterListResponse,
+		exampleOpenShiftClusterAdminKubeconfigResponse: v20210901preview.ExampleOpenShiftClusterAdminKubeconfigResponse,
 		exampleOperationListResponse:                   api.ExampleOperationListResponse,
 
 		xmsEnum:            []string{"VMSize", "SDNProvider"},

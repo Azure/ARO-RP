@@ -377,13 +377,17 @@ func (g *generator) rpVMSS() *arm.Resource {
 
 	for _, variable := range []string{
 		"armClientId",
+		"azureSecPackVSATenantId",
 		"mdmFrontendUrl",
 		"mdsdEnvironment",
 		"acrResourceId",
 		"adminApiClientCertCommonName",
 		"armApiClientCertCommonName",
 		"billingE2EStorageAccountId",
+		"clusterMdmAccount",
+		"clusterMdsdAccount",
 		"clusterMdsdConfigVersion",
+		"clusterMdsdNamespace",
 		"clusterParentDomainName",
 		"fpClientId",
 		"fpServicePrincipalId",
@@ -392,7 +396,10 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"portalElevatedGroupIds",
 		"rpFeatures",
 		"rpImage",
+		"rpMdmAccount",
+		"rpMdsdAccount",
 		"rpMdsdConfigVersion",
+		"rpMdsdNamespace",
 		"rpParentDomainName",
 		"databaseAccountName",
 		"keyvaultPrefix",
@@ -593,11 +600,13 @@ AZURE_ARM_CLIENT_ID='$ARMCLIENTID'
 AZURE_FP_CLIENT_ID='$FPCLIENTID'
 AZURE_FP_SERVICE_PRINCIPAL_ID='$FPSERVICEPRINCIPALID'
 BILLING_E2E_STORAGE_ACCOUNT_ID='$BILLINGE2ESTORAGEACCOUNTID'
+CLUSTER_MDSD_ACCOUNT='$CLUSTERMDSDACCOUNT'
 CLUSTER_MDSD_CONFIG_VERSION='$CLUSTERMDSDCONFIGVERSION'
+CLUSTER_MDSD_NAMESPACE='$CLUSTERMDSDNAMESPACE'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 DOMAIN_NAME='$LOCATION.$CLUSTERPARENTDOMAINNAME'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
-MDM_ACCOUNT=AzureRedHatOpenShiftRP
+MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=RP
 MDSD_ENVIRONMENT='$MDSDENVIRONMENT'
 RP_FEATURES='$RPFEATURES'
@@ -622,7 +631,9 @@ ExecStart=/usr/bin/docker run \
   -e AZURE_ARM_CLIENT_ID \
   -e AZURE_FP_CLIENT_ID \
   -e BILLING_E2E_STORAGE_ACCOUNT_ID \
+  -e CLUSTER_MDSD_ACCOUNT \
   -e CLUSTER_MDSD_CONFIG_VERSION \
+  -e CLUSTER_MDSD_NAMESPACE \
   -e DATABASE_ACCOUNT_NAME \
   -e DOMAIN_NAME \
   -e KEYVAULT_PREFIX \
@@ -650,7 +661,7 @@ EOF
 cat >/etc/sysconfig/aro-dbtoken <<EOF
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
-MDM_ACCOUNT=AzureRedHatOpenShiftRP
+MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=DBToken
 RPIMAGE='$RPIMAGE'
 EOF
@@ -688,11 +699,11 @@ WantedBy=multi-user.target
 EOF
 
 cat >/etc/sysconfig/aro-monitor <<EOF
-CLUSTER_MDM_ACCOUNT=AzureRedHatOpenShiftCluster
+CLUSTER_MDM_ACCOUNT='$CLUSTERMDMACCOUNT'
 CLUSTER_MDM_NAMESPACE=BBM
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
-MDM_ACCOUNT=AzureRedHatOpenShiftRP
+MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=BBM
 RPIMAGE='$RPIMAGE'
 EOF
@@ -734,7 +745,7 @@ AZURE_PORTAL_CLIENT_ID='$PORTALCLIENTID'
 AZURE_PORTAL_ELEVATED_GROUP_IDS='$PORTALELEVATEDGROUPIDS'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
-MDM_ACCOUNT=AzureRedHatOpenShiftRP
+MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=Portal
 PORTAL_HOSTNAME='$LOCATION.admin.$RPPARENTDOMAINNAME'
 RPIMAGE='$RPIMAGE'
@@ -871,11 +882,11 @@ MDSD_ROLE_PREFIX=/var/run/mdsd/default
 MDSD_OPTIONS="-A -d -r \$MDSD_ROLE_PREFIX"
 
 export MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
-export MONITORING_GCS_ACCOUNT=ARORPLogs
+export MONITORING_GCS_ACCOUNT='$RPMDSDACCOUNT'
 export MONITORING_GCS_REGION='$LOCATION'
 export MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault
 export MONITORING_GCS_AUTH_ID='$MDSDCERTIFICATESAN'
-export MONITORING_GCS_NAMESPACE=ARORPLogs
+export MONITORING_GCS_NAMESPACE='$RPMDSDNAMESPACE'
 export MONITORING_CONFIG_VERSION='$RPMDSDCONFIGVERSION'
 export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
 
@@ -889,6 +900,20 @@ EOF
 mkdir -p /usr/lib/ssl/certs
 csplit -f /usr/lib/ssl/certs/cert- -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 {*} >/dev/null
 c_rehash /usr/lib/ssl/certs
+
+
+# we leave clientId blank as long as only 1 managed identity assigned to vmss
+# if we have more than 1, we will need to populate with clientId used for off-node scanning
+cat >/etc/default/vsa-nodescan-agent.config <<EOF
+{
+    "Nice": 19,
+    "Timeout": 10800,
+    "ClientId": "",
+    "TenantId": "$AZURESECPACKVSATENANTID",
+    "ProcessTimeout": 300,
+    "CommandDelay": 0
+  }
+EOF
 
 for service in aro-dbtoken aro-monitor aro-portal aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-agent-bit; do
   systemctl enable $service.service

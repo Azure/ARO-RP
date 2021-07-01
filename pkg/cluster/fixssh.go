@@ -49,11 +49,27 @@ func (m *manager) fixSSH(ctx context.Context) error {
 	}
 
 	for i := 0; i < 3; i++ {
-		nicName := fmt.Sprintf("%s-master%d-nic", infraID, i)
+		// NIC names might be different if customer re-created master nodes
+		// see https://bugzilla.redhat.com/show_bug.cgi?id=1882490 for more details
+		// installer naming  - <foo>-master{0,1,2}-nic
+		// machineAPI naming - <foo>-master-{0,1,2}-nic
+		nicNameInstaller := fmt.Sprintf("%s-master%d-nic", infraID, i)
+		nicNameMachineAPI := fmt.Sprintf("%s-master-%d-nic", infraID, i)
 
-		nic, err := m.interfaces.Get(ctx, resourceGroup, nicName, "")
+		var iErr, err error
+		var nic mgmtnetwork.Interface
+		nicName := nicNameInstaller
+
+		nic, err = m.interfaces.Get(ctx, resourceGroup, nicName, "")
 		if err != nil {
-			return err
+			iErr = err // preserve original error
+			nicName = nicNameMachineAPI
+			m.log.Warnf("fallback to check MachineAPI Nic name format for %s", nicName)
+			nic, err = m.interfaces.Get(ctx, resourceGroup, nicName, "")
+			if err != nil {
+				m.log.Warnf("fallback failed with err %s", err)
+				return iErr
+			}
 		}
 
 		changed = updateNIC(&nic, &lb, i)

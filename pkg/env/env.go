@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/proxy"
@@ -68,8 +69,10 @@ type Interface interface {
 	InitializeAuthorizers() error
 	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
 	AdminClientAuthorizer() clientauthorizer.ClientAuthorizer
+	ClusterGenevaLoggingAccount() string
 	ClusterGenevaLoggingConfigVersion() string
 	ClusterGenevaLoggingEnvironment() string
+	ClusterGenevaLoggingNamespace() string
 	ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
 	ClusterKeyvault() keyvault.Manager
 	Domain() string
@@ -78,18 +81,21 @@ type Interface interface {
 	FPClientID() string
 	Listen() (net.Listener, error)
 	ServiceKeyvault() keyvault.Manager
-	Zones(vmSize string) ([]string, error)
 	ACRResourceID() string
 	ACRDomain() string
 	AROOperatorImage() string
+
+	// VMSku returns SKU for a given vm size. Note that this
+	// returns a pointer to partly populated object.
+	VMSku(vmSize string) (*mgmtcompute.ResourceSku, error)
 }
 
-func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
+func NewEnv(ctx context.Context, stop <-chan struct{}, log *logrus.Entry) (Interface, error) {
 	if IsLocalDevelopmentMode() {
-		return newDev(ctx, log)
+		return newDev(ctx, stop, log)
 	}
 
-	return newProd(ctx, log)
+	return newProd(ctx, stop, log)
 }
 
 func IsLocalDevelopmentMode() bool {

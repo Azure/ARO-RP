@@ -94,7 +94,9 @@ func DevConfig(_env env.Core) (*Config, error) {
 				SubscriptionID:      _env.SubscriptionID(),
 				RPResourceGroupName: os.Getenv("USER") + "-aro-" + _env.Location(),
 				Configuration: &Configuration{
+					AzureCloudName:       &_env.Environment().ActualCloudName,
 					DatabaseAccountName:  to.StringPtr(os.Getenv("USER") + "-aro-" + _env.Location()),
+					KeyvaultDNSSuffix:    &_env.Environment().KeyVaultDNSSuffix,
 					KeyvaultPrefix:       &keyvaultPrefix,
 					StorageAccountDomain: to.StringPtr(os.Getenv("USER") + "aro" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
 				},
@@ -107,7 +109,10 @@ func DevConfig(_env env.Core) (*Config, error) {
 			ARMAPICABundle:               to.StringPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
 			ARMAPIClientCertCommonName:   to.StringPtr(clientCert.Subject.CommonName),
 			ARMClientID:                  to.StringPtr(os.Getenv("AZURE_ARM_CLIENT_ID")),
+			ClusterMDMAccount:            to.StringPtr(version.DevClusterGenevaMetricsAccount),
+			ClusterMDSDAccount:           to.StringPtr(version.DevClusterGenevaLoggingAccount),
 			ClusterMDSDConfigVersion:     to.StringPtr(version.DevClusterGenevaLoggingConfigVersion),
+			ClusterMDSDNamespace:         to.StringPtr(version.DevClusterGenevaLoggingNamespace),
 			ClusterParentDomainName:      to.StringPtr(os.Getenv("USER") + "-clusters." + os.Getenv("PARENT_DOMAIN_NAME")),
 			DisableCosmosDBFirewall:      to.BoolPtr(true),
 			ExtraClusterKeyvaultAccessPolicies: []interface{}{
@@ -130,7 +135,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			GlobalResourceGroupName:     to.StringPtr(os.Getenv("USER") + "-global"),
 			GlobalSubscriptionID:        to.StringPtr(_env.SubscriptionID()),
 			MDMFrontendURL:              to.StringPtr("https://int2.int.microsoftmetrics.com/"),
-			MDSDEnvironment:             to.StringPtr(version.DevClusterGenevaLoggingEnvironment),
+			MDSDEnvironment:             to.StringPtr(version.DevGenevaLoggingEnvironment),
 			PortalAccessGroupIDs: []string{
 				os.Getenv("AZURE_PORTAL_ACCESS_GROUP_IDS"),
 			},
@@ -147,7 +152,10 @@ func DevConfig(_env env.Core) (*Config, error) {
 			},
 			// TODO update this to support FF
 			RPImagePrefix:       to.StringPtr(os.Getenv("USER") + "aro.azurecr.io/aro"),
-			RPMDSDConfigVersion: to.StringPtr("3.3"),
+			RPMDMAccount:        to.StringPtr(version.DevRPGenevaMetricsAccount),
+			RPMDSDAccount:       to.StringPtr(version.DevRPGenevaLoggingAccount),
+			RPMDSDConfigVersion: to.StringPtr(version.DevRPGenevaLoggingConfigVersion),
+			RPMDSDNamespace:     to.StringPtr(version.DevRPGenevaLoggingNamespace),
 			RPNSGSourceAddressPrefixes: []string{
 				"0.0.0.0/0",
 			},

@@ -10,6 +10,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -22,35 +23,46 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-// WorkaroundReconciler the point of the workaround controller is to apply
+// Reconciler the point of the workaround controller is to apply
 // workarounds that we have unitl upstream fixes are available.
-type WorkaroundReconciler struct {
-	kubernetescli kubernetes.Interface
-	configcli     configclient.Interface
+type Reconciler struct {
+	log *logrus.Entry
+
 	arocli        aroclient.Interface
-	restConfig    *rest.Config
-	workarounds   []Workaround
-	log           *logrus.Entry
+	configcli     configclient.Interface
+	kubernetescli kubernetes.Interface
+
+	restConfig  *rest.Config
+	workarounds []Workaround
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, configcli configclient.Interface, mcocli mcoclient.Interface, arocli aroclient.Interface, restConfig *rest.Config) *WorkaroundReconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli configclient.Interface, kubernetescli kubernetes.Interface, mcocli mcoclient.Interface, restConfig *rest.Config) *Reconciler {
 	dh, err := dynamichelper.New(log, restConfig)
 	if err != nil {
 		panic(err)
 	}
 
-	return &WorkaroundReconciler{
-		kubernetescli: kubernetescli,
-		configcli:     configcli,
+	return &Reconciler{
+		log:           log,
 		arocli:        arocli,
+		configcli:     configcli,
+		kubernetescli: kubernetescli,
 		restConfig:    restConfig,
 		workarounds:   []Workaround{NewSystemReserved(log, mcocli, dh), NewIfReload(log, kubernetescli)},
-		log:           log,
 	}
 }
 
 // Reconcile makes sure that the workarounds are applied or removed as per the OpenShift version.
-func (r *WorkaroundReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if !instance.Spec.Features.ReconcileWorkaroundsController {
+		return reconcile.Result{}, nil
+	}
+
 	clusterVersion, err := version.GetClusterVersion(ctx, r.configcli)
 	if err != nil {
 		r.log.Errorf("error getting the OpenShift version: %v", err)
@@ -73,7 +85,7 @@ func (r *WorkaroundReconciler) Reconcile(ctx context.Context, request ctrl.Reque
 }
 
 // SetupWithManager setup our manager
-func (r *WorkaroundReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}).
 		Named(controllers.WorkaroundControllerName).

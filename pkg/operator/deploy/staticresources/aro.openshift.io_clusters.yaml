@@ -49,7 +49,23 @@ spec:
               features:
                 description: FeaturesSpec defines ARO operator feature gates
                 properties:
+                  reconcileAlertWebhook:
+                    type: boolean
+                  reconcileDNSMasq:
+                    type: boolean
+                  reconcileGenevaLogging:
+                    type: boolean
+                  reconcileMonitoringConfig:
+                    type: boolean
                   reconcileNSGs:
+                    type: boolean
+                  reconcileNodeDrainer:
+                    type: boolean
+                  reconcilePullSecret:
+                    type: boolean
+                  reconcileRouteFix:
+                    type: boolean
+                  reconcileWorkaroundsController:
                     type: boolean
                 type: object
               genevaLogging:
@@ -57,10 +73,23 @@ spec:
                   configVersion:
                     pattern: '[0-9]+.[0-9]+'
                     type: string
+                  monitoringGCSAccount:
+                    enum:
+                    - AROClusterLogsINT
+                    - AROClusterLogsPROD
+                    - AROClusterLogs
+                    type: string
                   monitoringGCSEnvironment:
                     enum:
                     - DiagnosticsProd
                     - Test
+                    - CaFairfax
+                    type: string
+                  monitoringGCSNamespace:
+                    enum:
+                    - AROClusterLogsINT
+                    - AROClusterLogsPROD
+                    - AROClusterLogs
                     type: string
                 type: object
               infraId:

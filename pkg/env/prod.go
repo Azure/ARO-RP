@@ -11,8 +11,9 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
-	"github.com/Azure/go-autorest/autorest"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
@@ -35,26 +36,27 @@ type prod struct {
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
 
 	acrDomain string
-	zones     map[string][]string
+	vmskus    map[string]*mgmtcompute.ResourceSku
 
-	fpCertificate *x509.Certificate
-	fpPrivateKey  *rsa.PrivateKey
-	fpClientID    string
+	fpCertificateRefresher CertificateRefresher
+	fpClientID             string
 
 	clusterKeyvault keyvault.Manager
 	serviceKeyvault keyvault.Manager
 
 	clusterGenevaLoggingCertificate   *x509.Certificate
 	clusterGenevaLoggingPrivateKey    *rsa.PrivateKey
+	clusterGenevaLoggingAccount       string
 	clusterGenevaLoggingConfigVersion string
 	clusterGenevaLoggingEnvironment   string
+	clusterGenevaLoggingNamespace     string
 
 	log *logrus.Entry
 
 	features map[Feature]bool
 }
 
-func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
+func newProd(ctx context.Context, stop <-chan struct{}, log *logrus.Entry) (*prod, error) {
 	for _, key := range []string{
 		"AZURE_FP_CLIENT_ID",
 		"DOMAIN_NAME",
@@ -67,7 +69,9 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	if !IsLocalDevelopmentMode() {
 		for _, key := range []string{
 			"CLUSTER_MDSD_CONFIG_VERSION",
+			"CLUSTER_MDSD_ACCOUNT",
 			"MDSD_ENVIRONMENT",
+			"CLUSTER_MDSD_NAMESPACE",
 		} {
 			if _, found := os.LookupEnv(key); !found {
 				return nil, fmt.Errorf("environment variable %q unset", key)
@@ -91,8 +95,10 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 
 		fpClientID: os.Getenv("AZURE_FP_CLIENT_ID"),
 
-		clusterGenevaLoggingEnvironment:   os.Getenv("MDSD_ENVIRONMENT"),
+		clusterGenevaLoggingAccount:       os.Getenv("CLUSTER_MDSD_ACCOUNT"),
 		clusterGenevaLoggingConfigVersion: os.Getenv("CLUSTER_MDSD_CONFIG_VERSION"),
+		clusterGenevaLoggingEnvironment:   os.Getenv("MDSD_ENVIRONMENT"),
+		clusterGenevaLoggingNamespace:     os.Getenv("CLUSTER_MDSD_NAMESPACE"),
 
 		log: log,
 
@@ -128,18 +134,17 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 
 	p.serviceKeyvault = keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
-	err = p.populateZones(ctx, msiAuthorizer)
+	resourceSkusClient := compute.NewResourceSkusClient(p.Environment(), p.SubscriptionID(), msiAuthorizer)
+	err = p.populateVMSkus(ctx, resourceSkusClient)
 	if err != nil {
 		return nil, err
 	}
 
-	fpPrivateKey, fpCertificates, err := p.serviceKeyvault.GetCertificateSecret(ctx, RPFirstPartySecretName)
+	p.fpCertificateRefresher = newCertificateRefresher(log, 1*time.Hour, p.serviceKeyvault, RPFirstPartySecretName, stop)
+	err = p.fpCertificateRefresher.Start(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	p.fpPrivateKey = fpPrivateKey
-	p.fpCertificate = fpCertificates[0]
 
 	localFPKVAuthorizer, err := p.FPAuthorizer(p.TenantID(), p.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
@@ -229,22 +234,19 @@ func (p *prod) AROOperatorImage() string {
 	return fmt.Sprintf("%s/aro:%s", p.acrDomain, version.GitCommit)
 }
 
-func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
-	c := compute.NewResourceSkusClient(p.Environment(), p.SubscriptionID(), rpAuthorizer)
-
+func (p *prod) populateVMSkus(ctx context.Context, resourceSkusClient compute.ResourceSkusClient) error {
 	// Filtering is poorly documented, but currently (API version 2019-04-01)
 	// it seems that the API returns all SKUs without a filter and with invalid
 	// value in the filter.
 	// Filtering gives significant optimisation: at the moment of writing,
 	// we get ~1.2M response in eastus vs ~37M unfiltered (467 items vs 16618).
 	filter := fmt.Sprintf("location eq '%s'", p.Location())
-	skus, err := c.List(ctx, filter)
+	skus, err := resourceSkusClient.List(ctx, filter)
 	if err != nil {
 		return err
 	}
 
-	p.zones = map[string][]string{}
-
+	p.vmskus = map[string]*mgmtcompute.ResourceSku{}
 	for _, sku := range skus {
 		// TODO(mjudeikis): At some point some SKU's stopped returning zones and
 		// locations. IcM is open with MSFT but this might take a while.
@@ -259,10 +261,20 @@ func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authoriz
 			continue
 		}
 
-		p.zones[*sku.Name] = *(*sku.LocationInfo)[0].Zones
+		// We copy only part of the object so we don't have to keep
+		// a lot of data in memory.
+		p.vmskus[*sku.Name] = &mgmtcompute.ResourceSku{
+			Name:         sku.Name,
+			LocationInfo: sku.LocationInfo,
+			Capabilities: sku.Capabilities,
+		}
 	}
 
 	return nil
+}
+
+func (p *prod) ClusterGenevaLoggingAccount() string {
+	return p.clusterGenevaLoggingAccount
 }
 
 func (p *prod) ClusterGenevaLoggingConfigVersion() string {
@@ -271,6 +283,10 @@ func (p *prod) ClusterGenevaLoggingConfigVersion() string {
 
 func (p *prod) ClusterGenevaLoggingEnvironment() string {
 	return p.clusterGenevaLoggingEnvironment
+}
+
+func (p *prod) ClusterGenevaLoggingNamespace() string {
+	return p.clusterGenevaLoggingNamespace
 }
 
 func (p *prod) ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate) {
@@ -295,7 +311,9 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, 
 		return nil, err
 	}
 
-	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, p.fpClientID, p.fpCertificate, p.fpPrivateKey, resource)
+	fpPrivateKey, fpCertificates := p.fpCertificateRefresher.GetCertificates()
+
+	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, p.fpClientID, fpCertificates[0], fpPrivateKey, resource)
 	if err != nil {
 		return nil, err
 	}
@@ -315,10 +333,10 @@ func (p *prod) ServiceKeyvault() keyvault.Manager {
 	return p.serviceKeyvault
 }
 
-func (p *prod) Zones(vmSize string) ([]string, error) {
-	zones, found := p.zones[vmSize]
+func (p *prod) VMSku(vmSize string) (*mgmtcompute.ResourceSku, error) {
+	vmsku, found := p.vmskus[vmSize]
 	if !found {
-		return nil, fmt.Errorf("zone information not found for vm size %q", vmSize)
+		return nil, fmt.Errorf("sku information not found for vm size %q", vmSize)
 	}
-	return zones, nil
+	return vmsku, nil
 }

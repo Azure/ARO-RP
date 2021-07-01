@@ -30,8 +30,12 @@ func ClusterChecksTypes() []status.ConditionType {
 type GenevaLoggingSpec struct {
 	// +kubebuilder:validation:Pattern:=`[0-9]+.[0-9]+`
 	ConfigVersion string `json:"configVersion,omitempty"`
-	// +kubebuilder:validation:Enum=DiagnosticsProd;Test
+	// +kubebuilder:validation:Enum=AROClusterLogsINT;AROClusterLogsPROD;AROClusterLogs
+	MonitoringGCSAccount string `json:"monitoringGCSAccount,omitempty"`
+	// +kubebuilder:validation:Enum=DiagnosticsProd;Test;CaFairfax
 	MonitoringGCSEnvironment string `json:"monitoringGCSEnvironment,omitempty"`
+	// +kubebuilder:validation:Enum=AROClusterLogsINT;AROClusterLogsPROD;AROClusterLogs
+	MonitoringGCSNamespace string `json:"monitoringGCSNamespace,omitempty"`
 }
 
 type InternetCheckerSpec struct {
@@ -59,7 +63,15 @@ type ClusterSpec struct {
 
 // FeaturesSpec defines ARO operator feature gates
 type FeaturesSpec struct {
-	ReconcileNSGs bool `json:"reconcileNSGs,omitempty"`
+	ReconcileNSGs                  bool `json:"reconcileNSGs,omitempty"`
+	ReconcileAlertWebhook          bool `json:"reconcileAlertWebhook,omitempty"`
+	ReconcileDNSMasq               bool `json:"reconcileDNSMasq,omitempty"`
+	ReconcileGenevaLogging         bool `json:"reconcileGenevaLogging,omitempty"`
+	ReconcileMonitoringConfig      bool `json:"reconcileMonitoringConfig,omitempty"`
+	ReconcileNodeDrainer           bool `json:"reconcileNodeDrainer,omitempty"`
+	ReconcilePullSecret            bool `json:"reconcilePullSecret,omitempty"`
+	ReconcileRouteFix              bool `json:"reconcileRouteFix,omitempty"`
+	ReconcileWorkaroundsController bool `json:"reconcileWorkaroundsController,omitempty"`
 }
 
 // ClusterStatus defines the observed state of Cluster

@@ -47,7 +47,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		By("verifying through Azure activity logs that the redeployment happened")
 		// Can be material delays in shipping activity logs, hence healthy 15 min wait.
 		// https://docs.microsoft.com/en-us/azure/azure-monitor/logs/data-ingestion-time#azure-activity-logs-resource-logs-and-metrics
-		err = wait.PollImmediate(10*time.Second, 15*time.Minute, func() (bool, error) {
+		err = wait.PollImmediate(10*time.Second, 20*time.Minute, func() (bool, error) {
 			filter := fmt.Sprintf(
 				"eventTimestamp ge '%s' and resourceId eq '%s'",
 				startTime.Format(time.RFC3339),
