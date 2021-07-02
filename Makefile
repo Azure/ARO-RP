@@ -88,7 +88,7 @@ build-portal:
 	cd portal && npm install && npm run build
 
 pyenv:
-	virtualenv --python=/usr/bin/python3 pyenv
+	python3 -m venv pyenv
 	. pyenv/bin/activate && \
 		pip install -U pip && \
 		pip install autopep8 azdev azure-mgmt-loganalytics==0.2.0 ruamel.yaml wheel && \
