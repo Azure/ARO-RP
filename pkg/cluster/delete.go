@@ -313,6 +313,9 @@ func (m *manager) Delete(ctx context.Context) error {
 		if azureerrors.HasAuthorizationFailedError(err) {
 			err = nil
 		}
+		if azureerrors.ResourceGroupNotFound(err) {
+			err = nil
+		}
 		if err != nil {
 			return err
 		}
