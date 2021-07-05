@@ -7,10 +7,12 @@ import (
 	"context"
 
 	securityv1 "github.com/openshift/api/security/v1"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -24,25 +26,32 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 //RouteFixReconciler is the controller struct
 type RouteFixReconciler struct {
 	kubernetescli kubernetes.Interface
 	securitycli   securityclient.Interface
+	configcli     configclient.Interface
 	arocli        aroclient.Interface
 	restConfig    *rest.Config
 	log           *logrus.Entry
+	verFixed      *version.Version
 }
 
 //NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, arocli aroclient.Interface, restConfig *rest.Config) *RouteFixReconciler {
+func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, configcli configclient.Interface, arocli aroclient.Interface, restConfig *rest.Config) *RouteFixReconciler {
+	verFixed, _ := version.ParseVersion("4.7.15")
+
 	return &RouteFixReconciler{
 		securitycli:   securitycli,
 		kubernetescli: kubernetescli,
+		configcli:     configcli,
 		arocli:        arocli,
 		restConfig:    restConfig,
 		log:           log,
+		verFixed:      verFixed,
 	}
 }
 
@@ -54,6 +63,22 @@ func (r *RouteFixReconciler) Reconcile(ctx context.Context, request ctrl.Request
 		return reconcile.Result{}, err
 	}
 
+	// cluster version is not set to final until upgrade is completed. We need to
+	// detect if desired version is with the fix, so we can prevent stuck upgrade
+	// by deleting fix resources
+	clusterVersion, err := version.GetClusterDesiredVersion(ctx, r.configcli)
+	if err != nil {
+		r.log.Errorf("error getting the OpenShift desired version: %v", err)
+		return reconcile.Result{}, err
+	}
+
+	if r.isRequired(clusterVersion) {
+		return r.deploy(ctx, instance)
+	}
+	return r.remove(ctx, instance)
+}
+
+func (r *RouteFixReconciler) deploy(ctx context.Context, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
 	// TODO: dh should be a field in r, but the fact that it is initialised here
 	// each time currently saves us in the case that the controller runs before
 	// the SCC API is registered.
@@ -90,6 +115,19 @@ func (r *RouteFixReconciler) Reconcile(ctx context.Context, request ctrl.Request
 	return reconcile.Result{}, nil
 }
 
+func (r *RouteFixReconciler) remove(ctx context.Context, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+	err := r.kubernetescli.CoreV1().Namespaces().Delete(ctx, kubeNamespace, metav1.DeleteOptions{})
+	if kerrors.IsNotFound(err) {
+		return reconcile.Result{}, nil
+	}
+	err = r.kubernetescli.RbacV1().ClusterRoleBindings().Delete(ctx, kubeName, metav1.DeleteOptions{})
+	if kerrors.IsNotFound(err) {
+		return reconcile.Result{}, nil
+	}
+
+	return reconcile.Result{}, err
+}
+
 //SetupWithManager creates the controller
 func (r *RouteFixReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
@@ -103,4 +141,8 @@ func (r *RouteFixReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&securityv1.SecurityContextConstraints{}).
 		Named(controllers.RouteFixControllerName).
 		Complete(r)
+}
+
+func (r *RouteFixReconciler) isRequired(clusterVersion *version.Version) bool {
+	return clusterVersion.Lt(r.verFixed)
 }
