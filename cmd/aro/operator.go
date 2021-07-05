@@ -124,7 +124,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (routefix.NewReconciler(
 			log.WithField("controller", controllers.RouteFixControllerName),
-			kubernetescli, securitycli, arocli, restConfig)).SetupWithManager(mgr); err != nil {
+			kubernetescli, securitycli, configcli, arocli, restConfig)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller RouteFix: %v", err)
 		}
 		if err = (monitoring.NewReconciler(
