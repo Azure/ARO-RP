@@ -14,6 +14,7 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/davecgh/go-spew/spew"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -306,11 +307,19 @@ func (m *manager) Delete(ctx context.Context) error {
 
 		m.log.Printf("deleting resource group %s", resourceGroup)
 		err = m.resourceGroups.DeleteAndWait(ctx, resourceGroup)
+		// TODO(mjudeikis): Remove this once we know all the error flavors this is
+		// returning so we can unify checks bellow
+		if err != nil {
+			m.log.Printf("delete resource group failed: %s", spew.Sdump(err))
+		}
 		if detailedErr, ok := err.(autorest.DetailedError); ok &&
 			(detailedErr.StatusCode == http.StatusForbidden || detailedErr.StatusCode == http.StatusNotFound) {
 			err = nil
 		}
 		if azureerrors.HasAuthorizationFailedError(err) {
+			err = nil
+		}
+		if azureerrors.ResourceGroupNotFound(err) {
 			err = nil
 		}
 		if err != nil {

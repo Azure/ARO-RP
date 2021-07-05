@@ -89,3 +89,20 @@ func IsInvalidSecretError(err error) bool {
 func IsUnauthorizedClientError(err error) bool {
 	return strings.Contains(err.Error(), "AADSTS700016")
 }
+
+// ResourceGroupNotFound returns true if the error is an ResourceGroupNotFound error
+func ResourceGroupNotFound(err error) bool {
+	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok {
+			if serviceErr.Code == "ResourceGroupNotFound" {
+				return true
+			}
+		}
+		if requestErr, ok := detailedErr.Original.(*azure.RequestError); ok &&
+			requestErr.ServiceError != nil &&
+			requestErr.ServiceError.Code == "ResourceGroupNotFound" {
+			return true
+		}
+	}
+	return false
+}
