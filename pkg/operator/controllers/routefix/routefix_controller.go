@@ -117,8 +117,8 @@ func (r *RouteFixReconciler) deploy(ctx context.Context, instance *arov1alpha1.C
 
 func (r *RouteFixReconciler) remove(ctx context.Context, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
 	err := r.kubernetescli.CoreV1().Namespaces().Delete(ctx, kubeNamespace, metav1.DeleteOptions{})
-	if kerrors.IsNotFound(err) {
-		return reconcile.Result{}, nil
+	if !kerrors.IsNotFound(err) {
+		return reconcile.Result{}, err
 	}
 	err = r.kubernetescli.RbacV1().ClusterRoleBindings().Delete(ctx, kubeName, metav1.DeleteOptions{})
 	if kerrors.IsNotFound(err) {
