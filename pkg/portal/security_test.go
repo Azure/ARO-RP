@@ -351,7 +351,12 @@ func TestSecurity(t *testing.T) {
 				// [2] https://go.googlesource.com/go/+/go1.16.2/src/net/http/fs.go#337
 				if tt.name == "/" || tt.name == "/main.js" {
 					err = testpoller.Poll(1*time.Second, 5*time.Millisecond, func() (bool, error) {
-						return len(auditHook.AllEntries()) == 1, nil
+						if len(auditHook.AllEntries()) == 1 {
+							if _, ok := auditHook.AllEntries()[0].Data[audit.MetadataPayload]; ok {
+								return true, nil
+							}
+						}
+						return false, nil
 					})
 					if err != nil {
 						t.Error(err)
