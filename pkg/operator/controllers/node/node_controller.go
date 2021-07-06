@@ -16,6 +16,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
@@ -35,17 +36,28 @@ const (
 // happens, it tries to drain them disabling eviction (so PDBs don't count).
 type NodeReconciler struct {
 	log           *logrus.Entry
+	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
 }
 
-func NewNodeReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface) *NodeReconciler {
+func NewNodeReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.Interface) *NodeReconciler {
 	return &NodeReconciler{
 		log:           log,
+		arocli:        arocli,
 		kubernetescli: kubernetescli,
 	}
 }
 
 func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, request.Name, metav1.GetOptions{})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if !instance.Spec.Features.ReconcileNodeDrainer {
+		return reconcile.Result{}, nil
+	}
+
 	node, err := r.kubernetescli.CoreV1().Nodes().Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		r.log.Error(err)

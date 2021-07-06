@@ -59,6 +59,8 @@ spec:
                     type: boolean
                   reconcileNSGs:
                     type: boolean
+                  reconcileNodeDrainer:
+                    type: boolean
                 type: object
               genevaLogging:
                 properties:

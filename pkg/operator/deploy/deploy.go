@@ -184,6 +184,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 					ReconcileDNSMasq:          true,
 					ReconcileGenevaLogging:    true,
 					ReconcileMonitoringConfig: true,
+					ReconcileNodeDrainer:      true,
 				},
 			},
 		},
