@@ -61,6 +61,7 @@ type ClusterSpec struct {
 type FeaturesSpec struct {
 	ReconcileNSGs         bool `json:"reconcileNSGs,omitempty"`
 	ReconcileAlertWebhook bool `json:"reconcileAlertWebhook,omitempty"`
+	ReconcileDNSMasq      bool `json:"reconcileDNSMasq,omitempty"`
 }
 
 // ClusterStatus defines the observed state of Cluster

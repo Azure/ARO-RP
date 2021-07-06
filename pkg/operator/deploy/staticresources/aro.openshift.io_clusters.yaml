@@ -51,6 +51,8 @@ spec:
                 properties:
                   reconcileAlertWebhook:
                     type: boolean
+                  reconcileDNSMasq:
+                    type: boolean
                   reconcileNSGs:
                     type: boolean
                 type: object

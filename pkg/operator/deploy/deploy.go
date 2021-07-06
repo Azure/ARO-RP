@@ -181,6 +181,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 				IngressIP: o.oc.Properties.IngressProfiles[0].IP,
 				Features: arov1alpha1.FeaturesSpec{
 					ReconcileAlertWebhook: true,
+					ReconcileDNSMasq:      true,
 				},
 			},
 		},
