@@ -107,6 +107,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			ARMAPICABundle:               to.StringPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
 			ARMAPIClientCertCommonName:   to.StringPtr(clientCert.Subject.CommonName),
 			ARMClientID:                  to.StringPtr(os.Getenv("AZURE_ARM_CLIENT_ID")),
+			ClusterMDMAccount:            to.StringPtr(version.DevClusterGenevaMetricsAccount),
 			ClusterMDSDAccount:           to.StringPtr(version.DevClusterGenevaLoggingAccount),
 			ClusterMDSDConfigVersion:     to.StringPtr(version.DevClusterGenevaLoggingConfigVersion),
 			ClusterMDSDNamespace:         to.StringPtr(version.DevClusterGenevaLoggingNamespace),
@@ -149,6 +150,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			},
 			// TODO update this to support FF
 			RPImagePrefix:       to.StringPtr(os.Getenv("USER") + "aro.azurecr.io/aro"),
+			RPMDMAccount:        to.StringPtr(version.DevRPGenevaMetricsAccount),
 			RPMDSDAccount:       to.StringPtr(version.DevRPGenevaLoggingAccount),
 			RPMDSDConfigVersion: to.StringPtr(version.DevRPGenevaLoggingConfigVersion),
 			RPMDSDNamespace:     to.StringPtr(version.DevRPGenevaLoggingNamespace),
