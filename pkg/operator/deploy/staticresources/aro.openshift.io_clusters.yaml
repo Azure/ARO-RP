@@ -53,6 +53,8 @@ spec:
                     type: boolean
                   reconcileDNSMasq:
                     type: boolean
+                  reconcileGenevaLogging:
+                    type: boolean
                   reconcileNSGs:
                     type: boolean
                 type: object
