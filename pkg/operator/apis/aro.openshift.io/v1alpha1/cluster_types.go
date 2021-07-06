@@ -65,6 +65,7 @@ type FeaturesSpec struct {
 	ReconcileGenevaLogging    bool `json:"reconcileGenevaLogging,omitempty"`
 	ReconcileMonitoringConfig bool `json:"reconcileMonitoringConfig,omitempty"`
 	ReconcileNodeDrainer      bool `json:"reconcileNodeDrainer,omitempty"`
+	ReconcilePullSecret       bool `json:"reconcilePullSecret,omitempty"`
 }
 
 // ClusterStatus defines the observed state of Cluster

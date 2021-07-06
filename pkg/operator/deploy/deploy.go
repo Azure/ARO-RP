@@ -185,6 +185,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 					ReconcileGenevaLogging:    true,
 					ReconcileMonitoringConfig: true,
 					ReconcileNodeDrainer:      true,
+					ReconcilePullSecret:       true,
 				},
 			},
 		},

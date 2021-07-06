@@ -61,6 +61,8 @@ spec:
                     type: boolean
                   reconcileNodeDrainer:
                     type: boolean
+                  reconcilePullSecret:
+                    type: boolean
                 type: object
               genevaLogging:
                 properties:

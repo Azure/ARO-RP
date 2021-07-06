@@ -64,6 +64,15 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli
 // * If the pull Secret object (which is not owned by the Cluster object)
 //   changes, we'll see the pull Secret object requested.
 func (r *PullSecretReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if !instance.Spec.Features.ReconcilePullSecret {
+		return reconcile.Result{}, nil
+	}
+
 	operatorSecret, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
@@ -87,17 +96,13 @@ func (r *PullSecretReconciler) Reconcile(ctx context.Context, request ctrl.Reque
 	// reconcile cluster status
 	// update the following information:
 	// - list of Red Hat pull-secret keys in status.
-	cluster, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+
+	instance.Status.RedHatKeysPresent, err = r.parseRedHatKeys(userSecret)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	cluster.Status.RedHatKeysPresent, err = r.parseRedHatKeys(userSecret)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	_, err = r.arocli.AroV1alpha1().Clusters().UpdateStatus(ctx, cluster, metav1.UpdateOptions{})
+	_, err = r.arocli.AroV1alpha1().Clusters().UpdateStatus(ctx, instance, metav1.UpdateOptions{})
 	return reconcile.Result{}, err
 }
 
