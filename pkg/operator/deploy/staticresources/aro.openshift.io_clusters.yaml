@@ -55,6 +55,8 @@ spec:
                     type: boolean
                   reconcileGenevaLogging:
                     type: boolean
+                  reconcileMonitoringConfig:
+                    type: boolean
                   reconcileNSGs:
                     type: boolean
                 type: object
