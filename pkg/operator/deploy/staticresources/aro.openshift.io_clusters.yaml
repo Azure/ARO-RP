@@ -63,6 +63,8 @@ spec:
                     type: boolean
                   reconcilePullSecret:
                     type: boolean
+                  reconcileRouteFix:
+                    type: boolean
                 type: object
               genevaLogging:
                 properties:

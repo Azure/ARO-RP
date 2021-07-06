@@ -186,6 +186,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 					ReconcileMonitoringConfig: true,
 					ReconcileNodeDrainer:      true,
 					ReconcilePullSecret:       true,
+					ReconcileRouteFix:         true,
 				},
 			},
 		},
