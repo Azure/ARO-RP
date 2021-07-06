@@ -59,7 +59,8 @@ type ClusterSpec struct {
 
 // FeaturesSpec defines ARO operator feature gates
 type FeaturesSpec struct {
-	ReconcileNSGs bool `json:"reconcileNSGs,omitempty"`
+	ReconcileNSGs         bool `json:"reconcileNSGs,omitempty"`
+	ReconcileAlertWebhook bool `json:"reconcileAlertWebhook,omitempty"`
 }
 
 // ClusterStatus defines the observed state of Cluster

@@ -49,6 +49,8 @@ spec:
               features:
                 description: FeaturesSpec defines ARO operator feature gates
                 properties:
+                  reconcileAlertWebhook:
+                    type: boolean
                   reconcileNSGs:
                     type: boolean
                 type: object
