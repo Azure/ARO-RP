@@ -27,6 +27,13 @@ spec:
         - worker
         image: GENERATED
         name: aro-operator
+        resources:
+          limits:
+            cpu: 10m
+            memory: 100Mi
+          requests:
+            cpu: 10m
+            memory: 100Mi
         livenessProbe:
           httpGet:
             path: /healthz/ready
