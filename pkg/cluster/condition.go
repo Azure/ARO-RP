@@ -19,6 +19,9 @@ const minimumWorkerNodes = 2
 
 func (m *manager) bootstrapConfigMapReady(ctx context.Context) (bool, error) {
 	cm, err := m.kubernetescli.CoreV1().ConfigMaps("kube-system").Get(ctx, "bootstrap", metav1.GetOptions{})
+	if err != nil && m.env.IsLocalDevelopmentMode() {
+		m.log.Printf("bootstrapConfigMapReady condition error %s", err)
+	}
 	return err == nil && cm.Data["status"] == "complete", nil
 }
 
