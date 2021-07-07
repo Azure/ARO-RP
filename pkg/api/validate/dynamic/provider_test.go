@@ -19,9 +19,6 @@ import (
 func TestValidateProviders(t *testing.T) {
 	ctx := context.Background()
 
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
 	for _, tt := range []struct {
 		name    string
 		mocks   func(*mock_features.MockProvidersClient)
@@ -135,6 +132,9 @@ func TestValidateProviders(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
 			providerClient := mock_features.NewMockProvidersClient(controller)
 
 			tt.mocks(providerClient)
