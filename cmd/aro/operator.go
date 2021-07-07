@@ -11,6 +11,7 @@ import (
 	"net/http"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	consoleclient "github.com/openshift/client-go/console/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
@@ -24,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/alertwebhook"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/azurensg"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/banner"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
@@ -72,6 +74,10 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 	configcli, err := configclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+	consolecli, err := consoleclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
@@ -168,6 +174,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", controllers.MachineControllerName),
 			arocli, maocli, isLocalDevelopmentMode, role)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller Machine: %v", err)
+		}
+		if err = (banner.NewReconciler(
+			log.WithField("controller", controllers.BannerControllerName),
+			arocli, consolecli)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller Banner: %v", err)
 		}
 	}
 
