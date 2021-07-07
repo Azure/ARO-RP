@@ -536,12 +536,6 @@ func TestDelete(t *testing.T) {
 }
 
 func TestManagedDomain(t *testing.T) {
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	env := mock_env.NewMockInterface(controller)
-	env.EXPECT().Domain().AnyTimes().Return("eastus.aroapp.io")
-
 	for _, tt := range []struct {
 		domain  string
 		want    string
@@ -581,6 +575,12 @@ func TestManagedDomain(t *testing.T) {
 		},
 	} {
 		t.Run(tt.domain, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().Domain().AnyTimes().Return("eastus.aroapp.io")
+
 			got, err := ManagedDomain(env, tt.domain)
 			if got != tt.want {
 				t.Error(got)

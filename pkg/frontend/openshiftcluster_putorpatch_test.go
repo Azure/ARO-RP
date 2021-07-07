@@ -888,7 +888,6 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-
 			ti := newTestInfra(t).
 				WithOpenShiftClusters().
 				WithSubscriptions().
