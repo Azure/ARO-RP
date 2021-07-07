@@ -29,6 +29,9 @@
         "billingServicePrincipalId": {
             "value": ""
         },
+        "clusterMdmAccount": {
+            "value": ""
+        },
         "clusterMdsdAccount": {
             "value": ""
         },
@@ -81,6 +84,9 @@
             "value": ""
         },
         "rpImage": {
+            "value": ""
+        },
+        "rpMdmAccount": {
             "value": ""
         },
         "rpMdsdAccount": {
