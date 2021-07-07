@@ -740,6 +740,8 @@ github.com/opencontainers/runtime-spec/specs-go
 # github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible => github.com/openshift/api v0.0.0-20210428205234-a8389931bee7
 ## explicit
 github.com/openshift/api/config/v1
+github.com/openshift/api/console/v1
+github.com/openshift/api/console/v1alpha1
 github.com/openshift/api/image/docker10
 github.com/openshift/api/image/dockerpre012
 github.com/openshift/api/image/v1
@@ -755,6 +757,10 @@ github.com/openshift/client-go/config/clientset/versioned/fake
 github.com/openshift/client-go/config/clientset/versioned/scheme
 github.com/openshift/client-go/config/clientset/versioned/typed/config/v1
 github.com/openshift/client-go/config/clientset/versioned/typed/config/v1/fake
+github.com/openshift/client-go/console/clientset/versioned
+github.com/openshift/client-go/console/clientset/versioned/scheme
+github.com/openshift/client-go/console/clientset/versioned/typed/console/v1
+github.com/openshift/client-go/console/clientset/versioned/typed/console/v1alpha1
 github.com/openshift/client-go/operator/clientset/versioned
 github.com/openshift/client-go/operator/clientset/versioned/fake
 github.com/openshift/client-go/operator/clientset/versioned/scheme
