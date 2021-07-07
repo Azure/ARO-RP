@@ -349,6 +349,14 @@ func TestSecurity(t *testing.T) {
 				//
 				// [1] https://github.com/Azure/ARO-RP/blob/master/pkg/portal/portal.go#L222-L247
 				// [2] https://go.googlesource.com/go/+/go1.16.2/src/net/http/fs.go#337
+				//
+				// TODO: there is a data race that exists only within this test independent of the polling
+				// race mentioned above. AllEntries returns a copy of the current entries within logrus,
+				// but the underlying data within the entry is not copied over.  When we attempt to
+				// get the entry in the Data map for the MetadataPayload, there is a slight chance that
+				// the Payload will change during this access, resulting in the e2e panicking.
+				// `go test -race -timeout 30s -run ^TestSecurity$ ./pkg/portal` should show the race and
+				// where the concurrent read/write is occurring.
 				if tt.name == "/" || tt.name == "/main.js" {
 					err = testpoller.Poll(1*time.Second, 5*time.Millisecond, func() (bool, error) {
 						if len(auditHook.AllEntries()) == 1 {
