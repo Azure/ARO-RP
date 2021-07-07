@@ -114,10 +114,18 @@ type ServicePrincipalProfile struct {
 	ClientSecret string `json:"clientSecret,omitempty" mutable:"true"`
 }
 
+// SDNProvider constants.
+type SDNProvider string
+
+const (
+	SDNProviderOVNKubernetes SDNProvider = "OVNKubernetes"
+	SDNProviderOpenShiftSDN  SDNProvider = "OpenShiftSDN"
+)
+
 // NetworkProfile represents a network profile.
 type NetworkProfile struct {
-	// The Network Provider to use when installing the cluster.
-	NetworkType string `json:"networkType,omitempty"`
+	// The SDNProvider to use when installing the cluster.
+	SDNProvider SDNProvider `json:"sdnProvider,omitempty"`
 
 	// The CIDR used for OpenShift/Kubernetes Pods.
 	PodCIDR string `json:"podCidr,omitempty"`
@@ -125,12 +133,6 @@ type NetworkProfile struct {
 	// The CIDR used for OpenShift/Kubernetes Services.
 	ServiceCIDR string `json:"serviceCidr,omitempty"`
 }
-
-// NetworkType constants.
-const (
-	NetworkTypeOVNKubernetes string = "OVNKubernetes"
-	NetworkTypeOpenShiftSDN  string = "OpenShiftSDN"
-)
 
 // MasterProfile represents a master profile.
 type MasterProfile struct {

@@ -192,13 +192,16 @@ type ServicePrincipalProfile struct {
 	SPObjectID   string       `json:"spObjectId,omitempty"`
 }
 
+// SDNProvider
+type SDNProvider string
+
 // NetworkProfile represents a network profile
 type NetworkProfile struct {
 	MissingFields
 
-	PodCIDR     string `json:"podCidr,omitempty"`
-	ServiceCIDR string `json:"serviceCidr,omitempty"`
-	NetworkType string `json:"networkType,omitempty"`
+	PodCIDR     string      `json:"podCidr,omitempty"`
+	ServiceCIDR string      `json:"serviceCidr,omitempty"`
+	SDNProvider SDNProvider `json:"sdnProvider,omitempty"`
 
 	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
 }

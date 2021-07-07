@@ -212,9 +212,9 @@ func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, n
 	}
 
 	if isCreate {
-		if np.NetworkType != NetworkTypeOVNKubernetes && np.NetworkType != NetworkTypeOpenShiftSDN {
-			errorMsg := fmt.Sprintf("The provided networkType must be either '%s' or '%s'.", NetworkTypeOVNKubernetes, NetworkTypeOpenShiftSDN)
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".networkType", errorMsg)
+		if np.SDNProvider != SDNProviderOVNKubernetes && np.SDNProvider != SDNProviderOpenShiftSDN {
+			errorMsg := fmt.Sprintf("The provided SDNProvider must be either '%s' or '%s'.", SDNProviderOVNKubernetes, SDNProviderOpenShiftSDN)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".sdnProvider", errorMsg)
 		}
 	}
 

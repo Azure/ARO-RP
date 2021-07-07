@@ -78,7 +78,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 			NetworkProfile: NetworkProfile{
 				PodCIDR:     "10.128.0.0/14",
 				ServiceCIDR: "172.30.0.0/16",
-				NetworkType: "OVNKubernetes",
+				SDNProvider: "OVNKubernetes",
 			},
 			MasterProfile: MasterProfile{
 				VMSize:   VMSizeStandardD8sV3,
@@ -471,20 +471,20 @@ func TestOpenShiftClusterStaticValidateNetworkProfileType(t *testing.T) {
 		{
 			name: "networkProvider",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.NetworkType = "InvalidOption"
+				oc.Properties.NetworkProfile.SDNProvider = "InvalidOption"
 			},
-			wantErr: "400: InvalidParameter: properties.networkProfile.networkType: The provided networkType must be either 'OVNKubernetes' or 'OpenShiftSDN'.",
+			wantErr: "400: InvalidParameter: properties.networkProfile.sdnProvider: The provided SDNProvider must be either 'OVNKubernetes' or 'OpenShiftSDN'.",
 		},
 		{
 			name: "networkProvider",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.NetworkType = "OpenShiftSDN"
+				oc.Properties.NetworkProfile.SDNProvider = "OpenShiftSDN"
 			},
 		},
 		{
 			name: "networkProvider",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.NetworkType = "OVNKubernetes"
+				oc.Properties.NetworkProfile.SDNProvider = "OVNKubernetes"
 			},
 		},
 	}
@@ -496,16 +496,16 @@ func TestOpenShiftClusterStaticValidateNetworkProfileType(t *testing.T) {
 		{
 			name: "networkProvider",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.NetworkType = "InvalidOption"
+				oc.Properties.NetworkProfile.SDNProvider = "InvalidOption"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.networkType: Changing property 'properties.networkProfile.networkType' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.sdnProvider: Changing property 'properties.networkProfile.sdnProvider' is not allowed.",
 		},
 		{
 			name: "networkProvider",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.NetworkType = "OpenShiftSDN"
+				oc.Properties.NetworkProfile.SDNProvider = "OpenShiftSDN"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.networkType: Changing property 'properties.networkProfile.networkType' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.sdnProvider: Changing property 'properties.networkProfile.sdnProvider' is not allowed.",
 		},
 	}
 
