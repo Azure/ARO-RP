@@ -299,17 +299,27 @@ class MasterProfile(Model):
      ~azure.mgmt.redhatopenshift.v2021_01_31_preview.models.VMSize
     :param subnet_id: The Azure resource ID of the master subnet.
     :type subnet_id: str
+    :param encryption_at_host: Whether master virtual machines are encrypted
+     at host.
+    :type encryption_at_host: bool
+    :param disk_encryption_set_id: The resource ID of an associated
+     DiskEncryptionSet, if applicable.
+    :type disk_encryption_set_id: str
     """
 
     _attribute_map = {
         'vm_size': {'key': 'vmSize', 'type': 'str'},
         'subnet_id': {'key': 'subnetId', 'type': 'str'},
+        'encryption_at_host': {'key': 'encryptionAtHost', 'type': 'bool'},
+        'disk_encryption_set_id': {'key': 'diskEncryptionSetId', 'type': 'str'},
     }
 
     def __init__(self, **kwargs):
         super(MasterProfile, self).__init__(**kwargs)
         self.vm_size = kwargs.get('vm_size', None)
         self.subnet_id = kwargs.get('subnet_id', None)
+        self.encryption_at_host = kwargs.get('encryption_at_host', None)
+        self.disk_encryption_set_id = kwargs.get('disk_encryption_set_id', None)
 
 
 class NetworkProfile(Model):
@@ -725,6 +735,12 @@ class WorkerProfile(Model):
     :type subnet_id: str
     :param count: The number of worker VMs.
     :type count: int
+    :param encryption_at_host: Whether master virtual machines are encrypted
+     at host.
+    :type encryption_at_host: bool
+    :param disk_encryption_set_id: The resource ID of an associated
+     DiskEncryptionSet, if applicable.
+    :type disk_encryption_set_id: str
     """
 
     _attribute_map = {
@@ -733,6 +749,8 @@ class WorkerProfile(Model):
         'disk_size_gb': {'key': 'diskSizeGB', 'type': 'int'},
         'subnet_id': {'key': 'subnetId', 'type': 'str'},
         'count': {'key': 'count', 'type': 'int'},
+        'encryption_at_host': {'key': 'encryptionAtHost', 'type': 'bool'},
+        'disk_encryption_set_id': {'key': 'diskEncryptionSetId', 'type': 'str'},
     }
 
     def __init__(self, **kwargs):
@@ -742,3 +760,5 @@ class WorkerProfile(Model):
         self.disk_size_gb = kwargs.get('disk_size_gb', None)
         self.subnet_id = kwargs.get('subnet_id', None)
         self.count = kwargs.get('count', None)
+        self.encryption_at_host = kwargs.get('encryption_at_host', None)
+        self.disk_encryption_set_id = kwargs.get('disk_encryption_set_id', None)
