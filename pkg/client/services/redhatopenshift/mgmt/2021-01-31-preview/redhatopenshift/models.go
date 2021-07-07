@@ -132,8 +132,8 @@ type MasterProfile struct {
 
 // NetworkProfile networkProfile represents a network profile.
 type NetworkProfile struct {
-	// NetworkType - The Network Provider to use when installing the cluster.
-	NetworkType *string `json:"networkType,omitempty"`
+	// SdnProvider - The SDNProvider to use when installing the cluster. Possible values include: 'OVNKubernetes', 'OpenShiftSDN'
+	SdnProvider SDNProvider `json:"sdnProvider,omitempty"`
 	// PodCidr - The CIDR used for OpenShift/Kubernetes Pods.
 	PodCidr *string `json:"podCidr,omitempty"`
 	// ServiceCidr - The CIDR used for OpenShift/Kubernetes Services.

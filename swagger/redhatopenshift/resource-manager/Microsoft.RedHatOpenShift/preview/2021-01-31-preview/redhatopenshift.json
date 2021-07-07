@@ -589,9 +589,9 @@
     "NetworkProfile": {
       "description": "NetworkProfile represents a network profile.",
       "properties": {
-        "networkType": {
-          "description": "The Network Provider to use when installing the cluster.",
-          "type": "string"
+        "sdnProvider": {
+          "$ref": "#/definitions/SDNProvider",
+          "description": "The SDNProvider to use when installing the cluster."
         },
         "podCidr": {
           "description": "The CIDR used for OpenShift/Kubernetes Pods.",
@@ -771,6 +771,18 @@
         "Updating"
       ],
       "type": "string"
+    },
+    "SDNProvider": {
+      "description": "SDNProvider constants.",
+      "enum": [
+        "OVNKubernetes",
+        "OpenShiftSDN"
+      ],
+      "type": "string",
+      "x-ms-enum": {
+        "name": "SDNProvider",
+        "modelAsString": true
+      }
     },
     "ServicePrincipalProfile": {
       "description": "ServicePrincipalProfile represents a service principal profile.",
