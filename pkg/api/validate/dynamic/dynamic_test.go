@@ -527,7 +527,7 @@ func TestValidateVnetLocation(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = dv.validateLocation(ctx, vnetr, "eastus")
+			err = dv.validateVnetLocation(ctx, vnetr, "eastus")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

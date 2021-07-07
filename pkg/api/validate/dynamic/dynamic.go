@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -31,7 +32,10 @@ import (
 )
 
 type Subnet struct {
-	ID   string
+	// ID is a resource id of the subnet
+	ID string
+
+	// Path is a path in the cluster document. For example, properties.workerProfiles[0].subnetId
 	Path string
 }
 
@@ -41,20 +45,23 @@ type Dynamic interface {
 	ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
 	ValidateProviders(ctx context.Context) error
 	ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string) error
-
 	ValidateQuota(ctx context.Context, oc *api.OpenShiftCluster) error
+	ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenShiftCluster) error
+	ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error
 }
 
 type dynamic struct {
 	log            *logrus.Entry
 	authorizerType AuthorizerType
+	env            env.Interface
 	azEnv          *azureclient.AROEnvironment
 
-	permissions     authorization.PermissionsClient
-	providers       features.ProvidersClient
-	virtualNetworks virtualNetworksGetClient
-	spComputeUsage  compute.UsageClient
-	spNetworkUsage  network.UsageClient
+	permissions        authorization.PermissionsClient
+	providers          features.ProvidersClient
+	virtualNetworks    virtualNetworksGetClient
+	diskEncryptionSets compute.DiskEncryptionSetsClient
+	spComputeUsage     compute.UsageClient
+	spNetworkUsage     network.UsageClient
 }
 
 type AuthorizerType string
@@ -62,17 +69,19 @@ type AuthorizerType string
 const AuthorizerFirstParty AuthorizerType = "resource provider"
 const AuthorizerClusterServicePrincipal AuthorizerType = "cluster"
 
-func NewValidator(log *logrus.Entry, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizer refreshable.Authorizer, authorizerType AuthorizerType) (*dynamic, error) {
+func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizer refreshable.Authorizer, authorizerType AuthorizerType) (Dynamic, error) {
 	return &dynamic{
 		log:            log,
 		authorizerType: authorizerType,
+		env:            env,
 		azEnv:          azEnv,
 
-		providers:       features.NewProvidersClient(azEnv, subscriptionID, authorizer),
-		spComputeUsage:  compute.NewUsageClient(azEnv, subscriptionID, authorizer),
-		spNetworkUsage:  network.NewUsageClient(azEnv, subscriptionID, authorizer),
-		permissions:     authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer),
-		virtualNetworks: newVirtualNetworksCache(network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer)),
+		providers:          features.NewProvidersClient(azEnv, subscriptionID, authorizer),
+		spComputeUsage:     compute.NewUsageClient(azEnv, subscriptionID, authorizer),
+		spNetworkUsage:     network.NewUsageClient(azEnv, subscriptionID, authorizer),
+		permissions:        authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer),
+		virtualNetworks:    newVirtualNetworksCache(network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer)),
+		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(azEnv, subscriptionID, authorizer),
 	}, nil
 }
 
@@ -109,7 +118,7 @@ func (dv *dynamic) ValidateVnet(ctx context.Context, location string, subnets []
 			return err
 		}
 
-		err = dv.validateLocation(ctx, vnet, location)
+		err = dv.validateVnetLocation(ctx, vnet, location)
 		if err != nil {
 			return err
 		}
@@ -288,8 +297,8 @@ func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, add
 	return nil
 }
 
-func (dv *dynamic) validateLocation(ctx context.Context, vnetr azure.Resource, location string) error {
-	dv.log.Print("validateLocation")
+func (dv *dynamic) validateVnetLocation(ctx context.Context, vnetr azure.Resource, location string) error {
+	dv.log.Print("validateVnetLocation")
 
 	vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, "")
 	if err != nil {

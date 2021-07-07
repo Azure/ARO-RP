@@ -22,7 +22,7 @@ type OpenShiftClusterDynamicValidator interface {
 }
 
 // NewOpenShiftClusterDynamicValidator creates a new OpenShiftClusterDynamicValidator
-func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Core, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, fpAuthorizer refreshable.Authorizer) OpenShiftClusterDynamicValidator {
+func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, fpAuthorizer refreshable.Authorizer) OpenShiftClusterDynamicValidator {
 	return &openShiftClusterDynamicValidator{
 		log: log,
 		env: env,
@@ -35,7 +35,7 @@ func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Core, oc *ap
 
 type openShiftClusterDynamicValidator struct {
 	log *logrus.Entry
-	env env.Core
+	env env.Interface
 
 	oc              *api.OpenShiftCluster
 	subscriptionDoc *api.SubscriptionDocument
@@ -45,26 +45,29 @@ type openShiftClusterDynamicValidator struct {
 // Dynamic validates an OpenShift cluster
 func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	// Get all subnets
-	var subnets []dynamic.Subnet
-	subnets = append(subnets, dynamic.Subnet{
+	subnets := []dynamic.Subnet{{
 		ID:   dv.oc.Properties.MasterProfile.SubnetID,
 		Path: "properties.masterProfile.subnetId",
-	})
-
-	for i, s := range dv.oc.Properties.WorkerProfiles {
+	}}
+	for i, wp := range dv.oc.Properties.WorkerProfiles {
 		subnets = append(subnets, dynamic.Subnet{
-			ID:   s.SubnetID,
+			ID:   wp.SubnetID,
 			Path: fmt.Sprintf("properties.workerProfiles[%d].subnetId", i),
 		})
 	}
 
 	// FP validation
-	fpDynamic, err := dynamic.NewValidator(dv.log, dv.env.Environment(), dv.subscriptionDoc.ID, dv.fpAuthorizer, dynamic.AuthorizerFirstParty)
+	fpDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, dv.fpAuthorizer, dynamic.AuthorizerFirstParty)
 	if err != nil {
 		return err
 	}
 
 	err = fpDynamic.ValidateVnet(ctx, dv.oc.Location, subnets, dv.oc.Properties.NetworkProfile.PodCIDR, dv.oc.Properties.NetworkProfile.ServiceCIDR)
+	if err != nil {
+		return err
+	}
+
+	err = fpDynamic.ValidateDiskEncryptionSets(ctx, dv.oc)
 	if err != nil {
 		return err
 	}
@@ -77,7 +80,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 
 	spAuthorizer := refreshable.NewAuthorizer(token)
 
-	spDynamic, err := dynamic.NewValidator(dv.log, dv.env.Environment(), dv.subscriptionDoc.ID, spAuthorizer, dynamic.AuthorizerClusterServicePrincipal)
+	spDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, spAuthorizer, dynamic.AuthorizerClusterServicePrincipal)
 	if err != nil {
 		return err
 	}
@@ -104,6 +107,16 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	err = spDynamic.ValidateQuota(ctx, dv.oc)
+	if err != nil {
+		return err
+	}
+
+	err = spDynamic.ValidateDiskEncryptionSets(ctx, dv.oc)
+	if err != nil {
+		return err
+	}
+
+	err = spDynamic.ValidateEncryptionAtHost(ctx, dv.oc)
 	if err != nil {
 		return err
 	}

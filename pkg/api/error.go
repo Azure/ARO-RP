@@ -80,6 +80,7 @@ var (
 	CloudErrorCodeUnsupportedMediaType               = "UnsupportedMediaType"
 	CloudErrorCodeInvalidLinkedVNet                  = "InvalidLinkedVNet"
 	CloudErrorCodeInvalidLinkedRouteTable            = "InvalidLinkedRouteTable"
+	CloudErrorCodeInvalidLinkedDiskEncryptionSet     = "InvalidLinkedDiskEncryptionSet"
 	CloudErrorCodeNotFound                           = "NotFound"
 	CloudErrorCodeForbidden                          = "Forbidden"
 	CloudErrorCodeInvalidSubscriptionState           = "InvalidSubscriptionState"

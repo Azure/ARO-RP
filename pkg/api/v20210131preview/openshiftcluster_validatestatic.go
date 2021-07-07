@@ -214,7 +214,6 @@ func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, n
 }
 
 func (sv *openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile) error {
-
 	if !validate.VMSizeIsValid(api.VMSize(mp.VMSize), sv.requireD2sV3Workers, true) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided master VM size '%s' is invalid.", mp.VMSize)
 	}
@@ -227,6 +226,18 @@ func (sv *openShiftClusterStaticValidator) validateMasterProfile(path string, mp
 	}
 	if sr.SubscriptionID != sv.r.SubscriptionID {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", "The provided master VM subnet '%s' is invalid: must be in same subscription as cluster.", mp.SubnetID)
+	}
+	if mp.DiskEncryptionSetID != "" {
+		if !validate.RxDiskEncryptionSetID.MatchString(mp.DiskEncryptionSetID) {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".diskEncryptionSetId", "The provided master disk encryption set '%s' is invalid.", mp.DiskEncryptionSetID)
+		}
+		desr, err := azure.ParseResourceID(mp.DiskEncryptionSetID)
+		if err != nil {
+			return err
+		}
+		if desr.SubscriptionID != sv.r.SubscriptionID {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".diskEncryptionSetId", "The provided master disk encryption set '%s' is invalid: must be in same subscription as cluster.", mp.DiskEncryptionSetID)
+		}
 	}
 
 	return nil
@@ -261,6 +272,9 @@ func (sv *openShiftClusterStaticValidator) validateWorkerProfile(path string, wp
 	}
 	if wp.Count < 2 || wp.Count > 50 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".count", "The provided worker count '%d' is invalid.", wp.Count)
+	}
+	if !strings.EqualFold(mp.DiskEncryptionSetID, wp.DiskEncryptionSetID) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", "The provided worker disk encryption set '%s' is invalid: must be the same as master disk encryption set '%s'.", wp.DiskEncryptionSetID, mp.DiskEncryptionSetID)
 	}
 
 	return nil
