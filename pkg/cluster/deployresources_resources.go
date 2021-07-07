@@ -87,56 +87,69 @@ func (m *manager) networkMasterNICs(installConfig *installconfig.InstallConfig) 
 }
 
 func (m *manager) computeBootstrapVM(installConfig *installconfig.InstallConfig) *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtcompute.VirtualMachine{
-			VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
-				HardwareProfile: &mgmtcompute.HardwareProfile{
-					VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD4sV3,
+	vm := &mgmtcompute.VirtualMachine{
+		VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+			HardwareProfile: &mgmtcompute.HardwareProfile{
+				VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD4sV3,
+			},
+			StorageProfile: &mgmtcompute.StorageProfile{
+				ImageReference: &mgmtcompute.ImageReference{
+					Publisher: &installConfig.Config.Azure.Image.Publisher,
+					Offer:     &installConfig.Config.Azure.Image.Offer,
+					Sku:       &installConfig.Config.Azure.Image.SKU,
+					Version:   &installConfig.Config.Azure.Image.Version,
 				},
-				StorageProfile: &mgmtcompute.StorageProfile{
-					ImageReference: &mgmtcompute.ImageReference{
-						Publisher: &installConfig.Config.Azure.Image.Publisher,
-						Offer:     &installConfig.Config.Azure.Image.Offer,
-						Sku:       &installConfig.Config.Azure.Image.SKU,
-						Version:   &installConfig.Config.Azure.Image.Version,
-					},
-					OsDisk: &mgmtcompute.OSDisk{
-						Name:         to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap_OSDisk"),
-						Caching:      mgmtcompute.CachingTypesReadWrite,
-						CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
-						DiskSizeGB:   to.Int32Ptr(100),
-						ManagedDisk: &mgmtcompute.ManagedDiskParameters{
-							StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
-						},
-					},
-				},
-				OsProfile: &mgmtcompute.OSProfile{
-					ComputerName:  to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-vm"),
-					AdminUsername: to.StringPtr("core"),
-					AdminPassword: to.StringPtr("NotActuallyApplied!"),
-					CustomData:    to.StringPtr(`[base64(concat('{"ignition":{"version":"3.2.0","config":{"replace":{"source":"https://cluster` + m.doc.OpenShiftCluster.Properties.StorageSuffix + `.blob.` + m.env.Environment().StorageEndpointSuffix + `/ignition/bootstrap.ign?', listAccountSas(resourceId('Microsoft.Storage/storageAccounts', 'cluster` + m.doc.OpenShiftCluster.Properties.StorageSuffix + `'), '2019-04-01', parameters('sas')).accountSasToken, '"}}}}'))]`),
-					LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
-						DisablePasswordAuthentication: to.BoolPtr(false),
-					},
-				},
-				NetworkProfile: &mgmtcompute.NetworkProfile{
-					NetworkInterfaces: &[]mgmtcompute.NetworkInterfaceReference{
-						{
-							ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', '" + m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-nic')]"),
-						},
-					},
-				},
-				DiagnosticsProfile: &mgmtcompute.DiagnosticsProfile{
-					BootDiagnostics: &mgmtcompute.BootDiagnostics{
-						Enabled:    to.BoolPtr(true),
-						StorageURI: to.StringPtr("https://cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + ".blob." + m.env.Environment().StorageEndpointSuffix + "/"),
+				OsDisk: &mgmtcompute.OSDisk{
+					Name:         to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap_OSDisk"),
+					Caching:      mgmtcompute.CachingTypesReadWrite,
+					CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
+					DiskSizeGB:   to.Int32Ptr(100),
+					ManagedDisk: &mgmtcompute.ManagedDiskParameters{
+						StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
 					},
 				},
 			},
-			Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap"),
-			Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
-			Location: &installConfig.Config.Azure.Region,
+			OsProfile: &mgmtcompute.OSProfile{
+				ComputerName:  to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-vm"),
+				AdminUsername: to.StringPtr("core"),
+				AdminPassword: to.StringPtr("NotActuallyApplied!"),
+				CustomData:    to.StringPtr(`[base64(concat('{"ignition":{"version":"3.2.0","config":{"replace":{"source":"https://cluster` + m.doc.OpenShiftCluster.Properties.StorageSuffix + `.blob.` + m.env.Environment().StorageEndpointSuffix + `/ignition/bootstrap.ign?', listAccountSas(resourceId('Microsoft.Storage/storageAccounts', 'cluster` + m.doc.OpenShiftCluster.Properties.StorageSuffix + `'), '2019-04-01', parameters('sas')).accountSasToken, '"}}}}'))]`),
+				LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
+					DisablePasswordAuthentication: to.BoolPtr(false),
+				},
+			},
+			NetworkProfile: &mgmtcompute.NetworkProfile{
+				NetworkInterfaces: &[]mgmtcompute.NetworkInterfaceReference{
+					{
+						ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', '" + m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-nic')]"),
+					},
+				},
+			},
+			DiagnosticsProfile: &mgmtcompute.DiagnosticsProfile{
+				BootDiagnostics: &mgmtcompute.BootDiagnostics{
+					Enabled:    to.BoolPtr(true),
+					StorageURI: to.StringPtr("https://cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + ".blob." + m.env.Environment().StorageEndpointSuffix + "/"),
+				},
+			},
 		},
+		Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap"),
+		Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
+		Location: &installConfig.Config.Azure.Region,
+	}
+
+	if installConfig.Config.ControlPlane.Platform.Azure.DiskEncryptionSetID != "" {
+		vm.StorageProfile.OsDisk.ManagedDisk.DiskEncryptionSet = &mgmtcompute.DiskEncryptionSetParameters{
+			ID: &installConfig.Config.ControlPlane.Platform.Azure.DiskEncryptionSetID,
+		}
+	}
+
+	if installConfig.Config.ControlPlane.Platform.Azure.EncryptionAtHost {
+		vm.SecurityProfile = &mgmtcompute.SecurityProfile{
+			EncryptionAtHost: &installConfig.Config.ControlPlane.Platform.Azure.EncryptionAtHost,
+		}
+	}
+	return &arm.Resource{
+		Resource:   vm,
 		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 		DependsOn: []string{
 			"Microsoft.Network/networkInterfaces/" + m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-nic",
@@ -145,57 +158,71 @@ func (m *manager) computeBootstrapVM(installConfig *installconfig.InstallConfig)
 }
 
 func (m *manager) computeMasterVMs(installConfig *installconfig.InstallConfig, zones *[]string, machineMaster *machine.Master) *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtcompute.VirtualMachine{
-			VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
-				HardwareProfile: &mgmtcompute.HardwareProfile{
-					VMSize: mgmtcompute.VirtualMachineSizeTypes(installConfig.Config.ControlPlane.Platform.Azure.InstanceType),
+	vm := &mgmtcompute.VirtualMachine{
+		VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+			HardwareProfile: &mgmtcompute.HardwareProfile{
+				VMSize: mgmtcompute.VirtualMachineSizeTypes(installConfig.Config.ControlPlane.Platform.Azure.InstanceType),
+			},
+			StorageProfile: &mgmtcompute.StorageProfile{
+				ImageReference: &mgmtcompute.ImageReference{
+					Publisher: &installConfig.Config.Azure.Image.Publisher,
+					Offer:     &installConfig.Config.Azure.Image.Offer,
+					Sku:       &installConfig.Config.Azure.Image.SKU,
+					Version:   &installConfig.Config.Azure.Image.Version,
 				},
-				StorageProfile: &mgmtcompute.StorageProfile{
-					ImageReference: &mgmtcompute.ImageReference{
-						Publisher: &installConfig.Config.Azure.Image.Publisher,
-						Offer:     &installConfig.Config.Azure.Image.Offer,
-						Sku:       &installConfig.Config.Azure.Image.SKU,
-						Version:   &installConfig.Config.Azure.Image.Version,
-					},
-					OsDisk: &mgmtcompute.OSDisk{
-						Name:         to.StringPtr("[concat('" + m.doc.OpenShiftCluster.Properties.InfraID + "-master-', copyIndex(), '_OSDisk')]"),
-						Caching:      mgmtcompute.CachingTypesReadOnly,
-						CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
-						DiskSizeGB:   &installConfig.Config.ControlPlane.Platform.Azure.OSDisk.DiskSizeGB,
-						ManagedDisk: &mgmtcompute.ManagedDiskParameters{
-							StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
-						},
-					},
-				},
-				OsProfile: &mgmtcompute.OSProfile{
-					ComputerName:  to.StringPtr("[concat('" + m.doc.OpenShiftCluster.Properties.InfraID + "-master-', copyIndex())]"),
-					AdminUsername: to.StringPtr("core"),
-					AdminPassword: to.StringPtr("NotActuallyApplied!"),
-					CustomData:    to.StringPtr(base64.StdEncoding.EncodeToString(machineMaster.File.Data)),
-					LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
-						DisablePasswordAuthentication: to.BoolPtr(false),
-					},
-				},
-				NetworkProfile: &mgmtcompute.NetworkProfile{
-					NetworkInterfaces: &[]mgmtcompute.NetworkInterfaceReference{
-						{
-							ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', concat('" + m.doc.OpenShiftCluster.Properties.InfraID + "-master', copyIndex(), '-nic'))]"),
-						},
-					},
-				},
-				DiagnosticsProfile: &mgmtcompute.DiagnosticsProfile{
-					BootDiagnostics: &mgmtcompute.BootDiagnostics{
-						Enabled:    to.BoolPtr(true),
-						StorageURI: to.StringPtr("https://cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + ".blob." + m.env.Environment().StorageEndpointSuffix + "/"),
+				OsDisk: &mgmtcompute.OSDisk{
+					Name:         to.StringPtr("[concat('" + m.doc.OpenShiftCluster.Properties.InfraID + "-master-', copyIndex(), '_OSDisk')]"),
+					Caching:      mgmtcompute.CachingTypesReadOnly,
+					CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
+					DiskSizeGB:   &installConfig.Config.ControlPlane.Platform.Azure.OSDisk.DiskSizeGB,
+					ManagedDisk: &mgmtcompute.ManagedDiskParameters{
+						StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
 					},
 				},
 			},
-			Zones:    zones,
-			Name:     to.StringPtr("[concat('" + m.doc.OpenShiftCluster.Properties.InfraID + "-master-', copyIndex())]"),
-			Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
-			Location: &installConfig.Config.Azure.Region,
+			OsProfile: &mgmtcompute.OSProfile{
+				ComputerName:  to.StringPtr("[concat('" + m.doc.OpenShiftCluster.Properties.InfraID + "-master-', copyIndex())]"),
+				AdminUsername: to.StringPtr("core"),
+				AdminPassword: to.StringPtr("NotActuallyApplied!"),
+				CustomData:    to.StringPtr(base64.StdEncoding.EncodeToString(machineMaster.File.Data)),
+				LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
+					DisablePasswordAuthentication: to.BoolPtr(false),
+				},
+			},
+			NetworkProfile: &mgmtcompute.NetworkProfile{
+				NetworkInterfaces: &[]mgmtcompute.NetworkInterfaceReference{
+					{
+						ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', concat('" + m.doc.OpenShiftCluster.Properties.InfraID + "-master', copyIndex(), '-nic'))]"),
+					},
+				},
+			},
+			DiagnosticsProfile: &mgmtcompute.DiagnosticsProfile{
+				BootDiagnostics: &mgmtcompute.BootDiagnostics{
+					Enabled:    to.BoolPtr(true),
+					StorageURI: to.StringPtr("https://cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + ".blob." + m.env.Environment().StorageEndpointSuffix + "/"),
+				},
+			},
 		},
+		Zones:    zones,
+		Name:     to.StringPtr("[concat('" + m.doc.OpenShiftCluster.Properties.InfraID + "-master-', copyIndex())]"),
+		Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
+		Location: &installConfig.Config.Azure.Region,
+	}
+
+	if installConfig.Config.ControlPlane.Platform.Azure.DiskEncryptionSetID != "" {
+		vm.StorageProfile.OsDisk.ManagedDisk.DiskEncryptionSet = &mgmtcompute.DiskEncryptionSetParameters{
+			ID: &installConfig.Config.ControlPlane.Platform.Azure.DiskEncryptionSetID,
+		}
+	}
+
+	if installConfig.Config.ControlPlane.Platform.Azure.EncryptionAtHost {
+		vm.SecurityProfile = &mgmtcompute.SecurityProfile{
+			EncryptionAtHost: &installConfig.Config.ControlPlane.Platform.Azure.EncryptionAtHost,
+		}
+	}
+
+	return &arm.Resource{
+		Resource:   vm,
 		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 		Copy: &arm.Copy{
 			Name:  "computecopy",

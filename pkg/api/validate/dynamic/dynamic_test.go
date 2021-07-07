@@ -44,9 +44,6 @@ func TestValidateVnetPermissions(t *testing.T) {
 	resourceType := "virtualNetworks"
 	resourceProvider := "Microsoft.Network"
 
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
 	for _, tt := range []struct {
 		name    string
 		mocks   func(*mock_authorization.MockPermissionsClient, func())
@@ -111,6 +108,9 @@ func TestValidateVnetPermissions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
@@ -161,6 +161,9 @@ func TestGetRouteTableID(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
 			vnet := &mgmtnetwork.VirtualNetwork{
 				ID: &vnetID,
 				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
@@ -193,9 +196,6 @@ func TestGetRouteTableID(t *testing.T) {
 
 func TestValidateRouteTablesPermissions(t *testing.T) {
 	ctx := context.Background()
-
-	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	for _, tt := range []struct {
 		name            string
@@ -299,6 +299,9 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
@@ -356,9 +359,6 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 func TestValidateCIDRRanges(t *testing.T) {
 	ctx := context.Background()
 
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
 	for _, tt := range []struct {
 		name      string
 		modifyOC  func(*api.OpenShiftCluster)
@@ -392,99 +392,101 @@ func TestValidateCIDRRanges(t *testing.T) {
 			wantErr: "400: InvalidLinkedVNet: : The provided CIDRs must not overlap: '10.0.0.0/24 overlaps with 10.0.0.0/24'.",
 		},
 	} {
-		oc := &api.OpenShiftCluster{
-			Properties: api.OpenShiftClusterProperties{
-				ClusterProfile: api.ClusterProfile{
-					ResourceGroupID: resourceGroupID,
-				},
-				NetworkProfile: api.NetworkProfile{
-					PodCIDR:     "10.0.2.0/24",
-					ServiceCIDR: "10.0.3.0/24",
-				},
-				MasterProfile: api.MasterProfile{
-					SubnetID: masterSubnet,
-				},
-				WorkerProfiles: []api.WorkerProfile{
-					{
-						SubnetID: workerSubnet,
-					},
-					{
-						SubnetID: workerSubnet,
-					},
-				},
-			},
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
 
-		vnet := mgmtnetwork.VirtualNetwork{
-			ID:       &vnetID,
-			Location: to.StringPtr("eastus"),
-			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-				Subnets: &[]mgmtnetwork.Subnet{
-					{
-						ID: &masterSubnet,
-						SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-							AddressPrefix: to.StringPtr("10.0.0.0/24"),
-							NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-								ID: &masterNSGv1,
-							},
-							ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
-								{
-									Service:           to.StringPtr("Microsoft.ContainerRegistry"),
-									ProvisioningState: mgmtnetwork.Succeeded,
-								},
-							},
-							PrivateLinkServiceNetworkPolicies: to.StringPtr("Disabled"),
-						},
+			oc := &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
 					},
-					{
-						ID: &workerSubnet,
-						SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-							AddressPrefix: to.StringPtr("10.0.1.0/24"),
-							NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-								ID: &workerNSGv1,
-							},
-							ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
-								{
-									Service:           to.StringPtr("Microsoft.ContainerRegistry"),
-									ProvisioningState: mgmtnetwork.Succeeded,
-								},
-							},
+					NetworkProfile: api.NetworkProfile{
+						PodCIDR:     "10.0.2.0/24",
+						ServiceCIDR: "10.0.3.0/24",
+					},
+					MasterProfile: api.MasterProfile{
+						SubnetID: masterSubnet,
+					},
+					WorkerProfiles: []api.WorkerProfile{
+						{
+							SubnetID: workerSubnet,
+						},
+						{
+							SubnetID: workerSubnet,
 						},
 					},
 				},
-			},
-		}
+			}
 
-		if tt.modifyOC != nil {
-			tt.modifyOC(oc)
-		}
+			vnet := mgmtnetwork.VirtualNetwork{
+				ID:       &vnetID,
+				Location: to.StringPtr("eastus"),
+				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
+					Subnets: &[]mgmtnetwork.Subnet{
+						{
+							ID: &masterSubnet,
+							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+								AddressPrefix: to.StringPtr("10.0.0.0/24"),
+								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+									ID: &masterNSGv1,
+								},
+								ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+									{
+										Service:           to.StringPtr("Microsoft.ContainerRegistry"),
+										ProvisioningState: mgmtnetwork.Succeeded,
+									},
+								},
+								PrivateLinkServiceNetworkPolicies: to.StringPtr("Disabled"),
+							},
+						},
+						{
+							ID: &workerSubnet,
+							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+								AddressPrefix: to.StringPtr("10.0.1.0/24"),
+								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+									ID: &workerNSGv1,
+								},
+								ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+									{
+										Service:           to.StringPtr("Microsoft.ContainerRegistry"),
+										ProvisioningState: mgmtnetwork.Succeeded,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
 
-		vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
-		if tt.vnetMocks != nil {
-			tt.vnetMocks(vnetClient, vnet)
-		}
+			if tt.modifyOC != nil {
+				tt.modifyOC(oc)
+			}
 
-		dv := &dynamic{
-			log:             logrus.NewEntry(logrus.StandardLogger()),
-			virtualNetworks: vnetClient,
-		}
+			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+			if tt.vnetMocks != nil {
+				tt.vnetMocks(vnetClient, vnet)
+			}
 
-		err := dv.validateCIDRRanges(ctx, []Subnet{
-			{ID: masterSubnet},
-			{ID: workerSubnet}},
-			oc.Properties.NetworkProfile.PodCIDR, oc.Properties.NetworkProfile.ServiceCIDR)
-		if err != nil && err.Error() != tt.wantErr ||
-			err == nil && tt.wantErr != "" {
-			t.Error(err)
-		}
+			dv := &dynamic{
+				log:             logrus.NewEntry(logrus.StandardLogger()),
+				virtualNetworks: vnetClient,
+			}
+
+			err := dv.validateCIDRRanges(ctx, []Subnet{
+				{ID: masterSubnet},
+				{ID: workerSubnet}},
+				oc.Properties.NetworkProfile.PodCIDR, oc.Properties.NetworkProfile.ServiceCIDR)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+		})
 	}
 }
 
 func TestValidateVnetLocation(t *testing.T) {
 	ctx := context.Background()
-
-	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	for _, tt := range []struct {
 		name     string
@@ -502,6 +504,8 @@ func TestValidateVnetLocation(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
 
 			vnet := mgmtnetwork.VirtualNetwork{
 				ID:       to.StringPtr(vnetID),
@@ -534,9 +538,6 @@ func TestValidateVnetLocation(t *testing.T) {
 
 func TestValidateSubnets(t *testing.T) {
 	ctx := context.Background()
-
-	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	for _, tt := range []struct {
 		name      string
@@ -678,6 +679,9 @@ func TestValidateSubnets(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
 			oc := &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					ClusterProfile: api.ClusterProfile{

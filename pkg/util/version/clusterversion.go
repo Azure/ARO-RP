@@ -26,3 +26,12 @@ func GetClusterVersion(ctx context.Context, configcli configclient.Interface) (*
 
 	return nil, errors.New("unknown cluster version")
 }
+
+func GetClusterDesiredVersion(ctx context.Context, configcli configclient.Interface) (*Version, error) {
+	cv, err := configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return ParseVersion(cv.Status.Desired.Version)
+}

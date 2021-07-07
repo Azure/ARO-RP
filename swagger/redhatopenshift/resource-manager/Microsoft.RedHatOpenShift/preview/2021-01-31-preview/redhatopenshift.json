@@ -575,6 +575,14 @@
         "subnetId": {
           "description": "The Azure resource ID of the master subnet.",
           "type": "string"
+        },
+        "encryptionAtHost": {
+          "description": "Whether master virtual machines are encrypted at host.",
+          "type": "boolean"
+        },
+        "diskEncryptionSetId": {
+          "description": "The resource ID of an associated DiskEncryptionSet, if applicable.",
+          "type": "string"
         }
       }
     },
@@ -843,6 +851,14 @@
         "count": {
           "description": "The number of worker VMs.",
           "type": "integer"
+        },
+        "encryptionAtHost": {
+          "description": "Whether master virtual machines are encrypted at host.",
+          "type": "boolean"
+        },
+        "diskEncryptionSetId": {
+          "description": "The resource ID of an associated DiskEncryptionSet, if applicable.",
+          "type": "string"
         }
       }
     }

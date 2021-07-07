@@ -77,7 +77,7 @@ func TestEmitClusterVersion(t *testing.T) {
 			wantActualVersion:                        "4.5.1",
 			wantDesiredVersion:                       "4.5.3",
 			wantProvisionedByResourceProviderVersion: "",
-			wantAvailableVersion:                     "4.5.38",
+			wantAvailableVersion:                     "4.5.39",
 			wantAvailableRP:                          "unknown",
 		},
 		{
