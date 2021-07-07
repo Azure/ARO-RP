@@ -116,7 +116,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 						CIDR: *ipnet.MustParseCIDR("127.0.0.0/8"), // dummy
 					},
 				},
-				NetworkType: m.doc.OpenShiftCluster.Properties.NetworkProfile.NetworkType,
+				NetworkType: string(m.doc.OpenShiftCluster.Properties.NetworkProfile.SDNProvider),
 				ClusterNetwork: []types.ClusterNetworkEntry{
 					{
 						CIDR:       *ipnet.MustParseCIDR(m.doc.OpenShiftCluster.Properties.NetworkProfile.PodCIDR),
