@@ -8,7 +8,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type BannerContent int
+
 const (
+	// not using iota to force a stable value mapping
+	BannerEmpty          BannerContent = 0
+	BannerContactSupport BannerContent = 1
+
 	SingletonClusterName                             = "cluster"
 	InternetReachableFromMaster status.ConditionType = "InternetReachableFromMaster"
 	InternetReachableFromWorker status.ConditionType = "InternetReachableFromWorker"
@@ -57,6 +63,7 @@ type ClusterSpec struct {
 	VnetID              string              `json:"vnetId,omitempty"`
 	APIIntIP            string              `json:"apiIntIP,omitempty"`
 	IngressIP           string              `json:"ingressIP,omitempty"`
+	Banner              Banner              `json:"banner,omitempty"`
 
 	Features FeaturesSpec `json:"features,omitempty"`
 }
@@ -72,6 +79,12 @@ type FeaturesSpec struct {
 	ReconcilePullSecret            bool `json:"reconcilePullSecret,omitempty"`
 	ReconcileRouteFix              bool `json:"reconcileRouteFix,omitempty"`
 	ReconcileWorkaroundsController bool `json:"reconcileWorkaroundsController,omitempty"`
+	ReconcileBanner                bool `json:"reconcileBanner,omitempty"`
+}
+
+// Banner defines if a Banner should be shown to the customer
+type Banner struct {
+	Content BannerContent `json:"content,omitempty"`
 }
 
 // ClusterStatus defines the observed state of Cluster
