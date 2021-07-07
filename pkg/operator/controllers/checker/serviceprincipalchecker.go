@@ -79,7 +79,7 @@ func (r *ServicePrincipalChecker) Check(ctx context.Context) error {
 		updateFailedCondition(cond, err)
 	}
 
-	spDynamic, err := dynamic.NewValidator(r.log, &azEnv, resource.SubscriptionID, nil, dynamic.AuthorizerClusterServicePrincipal)
+	spDynamic, err := dynamic.NewValidator(r.log, nil, &azEnv, resource.SubscriptionID, nil, dynamic.AuthorizerClusterServicePrincipal)
 	if err != nil {
 		return err
 	}

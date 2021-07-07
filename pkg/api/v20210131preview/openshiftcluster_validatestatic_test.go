@@ -463,7 +463,7 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 }
 
 func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
-	tests := []*validateTest{
+	commonTests := []*validateTest{
 		{
 			name: "valid",
 		},
@@ -488,10 +488,37 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.masterProfile.subnetId: The provided master VM subnet '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourcegroups/test-vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master' is invalid: must be in same subscription as cluster.",
 		},
+		{
+			name: "disk encryption set is invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MasterProfile.DiskEncryptionSetID = "invalid"
+				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.masterProfile.diskEncryptionSetId: The provided master disk encryption set 'invalid' is invalid.",
+		},
+		{
+			name: "disk encryption set not matching cluster subscriptionId",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MasterProfile.DiskEncryptionSetID = "/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1"
+			},
+			wantErr: "400: InvalidParameter: properties.masterProfile.diskEncryptionSetId: The provided master disk encryption set '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1' is invalid: must be in same subscription as cluster.",
+		},
 	}
 
-	runTests(t, testModeCreate, tests)
-	runTests(t, testModeUpdate, tests)
+	createTests := []*validateTest{
+		{
+			name: "disk encryption set is valid",
+			modify: func(oc *OpenShiftCluster) {
+				desID := fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Compute/diskEncryptionSets/test-disk-encryption-set", subscriptionID)
+				oc.Properties.MasterProfile.DiskEncryptionSetID = desID
+				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = desID
+			},
+		},
+	}
+
+	runTests(t, testModeCreate, createTests)
+	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, commonTests)
 }
 
 func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
@@ -569,6 +596,14 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 				oc.Properties.WorkerProfiles[0].Count = 51
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].count: The provided worker count '51' is invalid.",
+		},
+		{
+			name: "disk encryption set not matching master disk encryption set",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MasterProfile.DiskEncryptionSetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Compute/diskEncryptionSets/test-disk-encryption-set", subscriptionID)
+				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = "/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1"
+			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker disk encryption set '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1' is invalid: must be the same as master disk encryption set '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Compute/diskEncryptionSets/test-disk-encryption-set'.",
 		},
 	}
 
