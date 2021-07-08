@@ -151,7 +151,7 @@ func (m *manager) Install(ctx context.Context) error {
 
 func (m *manager) runSteps(ctx context.Context, s []steps.Step) error {
 	err := steps.Run(ctx, m.log, 10*time.Second, s)
-	if err != nil && !m.env.IsLocalDevelopmentMode() {
+	if err != nil {
 		m.gatherFailureLogs(ctx)
 	}
 	return err
