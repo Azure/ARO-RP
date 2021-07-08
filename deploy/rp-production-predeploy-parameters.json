@@ -20,6 +20,9 @@
         "fpServicePrincipalId": {
             "value": ""
         },
+        "gatewayResourceGroupName": {
+            "value": ""
+        },
         "keyvaultPrefix": {
             "value": ""
         },

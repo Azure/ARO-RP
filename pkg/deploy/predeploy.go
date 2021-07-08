@@ -57,6 +57,14 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
+	d.log.Infof("deploying rg %s in %s", d.config.GatewayResourceGroupName, d.config.Location)
+	_, err = d.groups.CreateOrUpdate(ctx, d.config.GatewayResourceGroupName, mgmtfeatures.ResourceGroup{
+		Location: &d.config.Location,
+	})
+	if err != nil {
+		return err
+	}
+
 	// deploy action groups
 	err = d.deployRPSubscription(ctx)
 	if err != nil {
@@ -64,7 +72,7 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 	}
 
 	// deploy managed identity
-	err = d.deployRPManagedIdentity(ctx)
+	err = d.deployManagedIdentity(ctx, d.config.RPResourceGroupName, generator.FileRPProductionManagedIdentity)
 	if err != nil {
 		return err
 	}
@@ -74,8 +82,19 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
+	// deploy managed identity
+	err = d.deployManagedIdentity(ctx, d.config.GatewayResourceGroupName, generator.FileGatewayProductionManagedIdentity)
+	if err != nil {
+		return err
+	}
+
+	gwMSI, err := d.userassignedidentities.Get(ctx, d.config.GatewayResourceGroupName, "aro-gateway-"+d.config.Location)
+	if err != nil {
+		return err
+	}
+
 	// deploy ACR RBAC, RP version storage account
-	err = d.deployRPGlobal(ctx, rpMSI.PrincipalID.String())
+	err = d.deployRPGlobal(ctx, rpMSI.PrincipalID.String(), gwMSI.PrincipalID.String())
 	if err != nil {
 		return err
 	}
@@ -96,7 +115,27 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 	}
 
 	// deploy NSGs, keyvaults
-	err = d.deployRPPreDeploy(ctx, rpMSI.PrincipalID.String())
+	// gateway first because RP predeploy will peer its vnet to the gateway vnet
+
+	// key the decision to deploy NSGs on the existence of the gateway
+	// predeploy.  We do this in order to refresh the RP NSGs when the gateway
+	// is deployed for the first time.
+	var isCreate bool
+	_, err = d.deployments.Get(ctx, d.config.GatewayResourceGroupName, strings.TrimSuffix(generator.FileGatewayProductionPredeploy, ".json"))
+	if isDeploymentNotFoundError(err) {
+		isCreate = true
+		err = nil
+	}
+	if err != nil {
+		return err
+	}
+
+	err = d.deployPreDeploy(ctx, d.config.GatewayResourceGroupName, generator.FileGatewayProductionPredeploy, "gatewayServicePrincipalId", gwMSI.PrincipalID.String(), isCreate)
+	if err != nil {
+		return err
+	}
+
+	err = d.deployPreDeploy(ctx, d.config.RPResourceGroupName, generator.FileRPProductionPredeploy, "rpServicePrincipalId", rpMSI.PrincipalID.String(), isCreate)
 	if err != nil {
 		return err
 	}
@@ -109,7 +148,7 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 	return d.configureServiceSecrets(ctx)
 }
 
-func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID string) error {
+func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gatewayServicePrincipalID string) error {
 	deploymentName := "rp-global-" + d.config.Location
 
 	b, err := Asset(generator.FileRPProductionGlobal)
@@ -126,6 +165,9 @@ func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID stri
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
 		Value: rpServicePrincipalID,
+	}
+	parameters.Parameters["gatewayServicePrincipalId"] = &arm.ParametersParameter{
+		Value: gatewayServicePrincipalID,
 	}
 
 	for i := 0; i < 2; i++ {
@@ -247,10 +289,10 @@ func (d *deployer) deployRPSubscription(ctx context.Context) error {
 	})
 }
 
-func (d *deployer) deployRPManagedIdentity(ctx context.Context) error {
-	deploymentName := "rp-production-managed-identity"
+func (d *deployer) deployManagedIdentity(ctx context.Context, resourceGroupName, deploymentFile string) error {
+	deploymentName := strings.TrimSuffix(deploymentFile, ".json")
 
-	b, err := Asset(generator.FileRPProductionManagedIdentity)
+	b, err := Asset(deploymentFile)
 	if err != nil {
 		return err
 	}
@@ -262,7 +304,7 @@ func (d *deployer) deployRPManagedIdentity(ctx context.Context) error {
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.RPResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+	return d.deployments.CreateOrUpdateAndWait(ctx, resourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
 			Template: template,
 			Mode:     mgmtfeatures.Incremental,
@@ -270,20 +312,10 @@ func (d *deployer) deployRPManagedIdentity(ctx context.Context) error {
 	})
 }
 
-func (d *deployer) deployRPPreDeploy(ctx context.Context, rpServicePrincipalID string) error {
-	deploymentName := "rp-production-predeploy"
+func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deploymentFile, spIDName, spID string, isCreate bool) error {
+	deploymentName := strings.TrimSuffix(deploymentFile, ".json")
 
-	var isCreate bool
-	_, err := d.deployments.Get(ctx, d.config.RPResourceGroupName, deploymentName)
-	if isDeploymentNotFoundError(err) {
-		isCreate = true
-		err = nil
-	}
-	if err != nil {
-		return err
-	}
-
-	b, err := Asset(generator.FileRPProductionPredeploy)
+	b, err := Asset(deploymentFile)
 	if err != nil {
 		return err
 	}
@@ -298,12 +330,18 @@ func (d *deployer) deployRPPreDeploy(ctx context.Context, rpServicePrincipalID s
 	parameters.Parameters["deployNSGs"] = &arm.ParametersParameter{
 		Value: isCreate,
 	}
-	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
-		Value: rpServicePrincipalID,
+	// TODO: ugh
+	if _, ok := template["parameters"].(map[string]interface{})["gatewayResourceGroupName"]; ok {
+		parameters.Parameters["gatewayResourceGroupName"] = &arm.ParametersParameter{
+			Value: d.config.GatewayResourceGroupName,
+		}
+	}
+	parameters.Parameters[spIDName] = &arm.ParametersParameter{
+		Value: spID,
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.RPResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+	return d.deployments.CreateOrUpdateAndWait(ctx, resourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   template,
 			Mode:       mgmtfeatures.Incremental,

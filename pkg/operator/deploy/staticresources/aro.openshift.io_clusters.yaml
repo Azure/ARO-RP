@@ -52,6 +52,12 @@ spec:
                   reconcileNSGs:
                     type: boolean
                 type: object
+              gatewayDomains:
+                items:
+                  type: string
+                type: array
+              gatewayPrivateEndpointIP:
+                type: string
               genevaLogging:
                 properties:
                   configVersion:

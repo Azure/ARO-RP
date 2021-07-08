@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -87,16 +88,31 @@ func DevConfig(_env env.Core) (*Config, error) {
 		keyvaultPrefix = keyvaultPrefix[:20]
 	}
 
+	// Cloud name is used by az cli.
+	// Therfore must translate cloud names, only Public and USGov needed
+	// https://github.com/Azure/go-autorest/issues/624
+	cloudName := _env.Environment().Name // Default, we'll translate only those we need
+	switch cloudName {
+	case azure.PublicCloud.Name:
+		cloudName = "AzureCloud"
+	case azure.USGovernmentCloud.Name:
+		cloudName = "AzureUSGovernment"
+	}
+
 	return &Config{
 		RPs: []RPConfig{
 			{
-				Location:            _env.Location(),
-				SubscriptionID:      _env.SubscriptionID(),
-				RPResourceGroupName: os.Getenv("USER") + "-aro-" + _env.Location(),
+				Location:                 _env.Location(),
+				SubscriptionID:           _env.SubscriptionID(),
+				GatewayResourceGroupName: os.Getenv("USER") + "-gwy-" + _env.Location(),
+				RPResourceGroupName:      os.Getenv("USER") + "-aro-" + _env.Location(),
 				Configuration: &Configuration{
-					DatabaseAccountName:  to.StringPtr(os.Getenv("USER") + "-aro-" + _env.Location()),
-					KeyvaultPrefix:       &keyvaultPrefix,
-					StorageAccountDomain: to.StringPtr(os.Getenv("USER") + "aro" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
+					AzureCloudName:              &cloudName,
+					KeyvaultDNSSuffix:           &_env.Environment().KeyVaultDNSSuffix,
+					DatabaseAccountName:         to.StringPtr(os.Getenv("USER") + "-aro-" + _env.Location()),
+					KeyvaultPrefix:              &keyvaultPrefix,
+					StorageAccountDomain:        to.StringPtr(os.Getenv("USER") + "aro" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
+					GatewayStorageAccountDomain: to.StringPtr(os.Getenv("USER") + "gwy" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
 				},
 			},
 		},
@@ -116,6 +132,9 @@ func DevConfig(_env env.Core) (*Config, error) {
 			ExtraDBTokenKeyvaultAccessPolicies: []interface{}{
 				adminKeyvaultAccessPolicy(_env),
 			},
+			ExtraGatewayKeyvaultAccessPolicies: []interface{}{
+				adminKeyvaultAccessPolicy(_env),
+			},
 			ExtraPortalKeyvaultAccessPolicies: []interface{}{
 				adminKeyvaultAccessPolicy(_env),
 				deployKeyvaultAccessPolicy(_env),
@@ -124,8 +143,26 @@ func DevConfig(_env env.Core) (*Config, error) {
 				adminKeyvaultAccessPolicy(_env),
 				deployKeyvaultAccessPolicy(_env),
 			},
-			FPClientID:                  to.StringPtr(os.Getenv("AZURE_FP_CLIENT_ID")),
-			FPServicePrincipalID:        to.StringPtr(os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
+			FPClientID:           to.StringPtr(os.Getenv("AZURE_FP_CLIENT_ID")),
+			FPServicePrincipalID: to.StringPtr(os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
+			GatewayDomains: []string{
+				"eastus-shared.ppe.warm.ingest.monitor.core.windows.net",
+				"gcs.ppe.monitoring.core.windows.net",
+				"gsm1890023205eh.servicebus.windows.net",
+				"gsm1890023205xt.blob.core.windows.net",
+				"gsm584263398eh.servicebus.windows.net",
+				"gsm584263398xt.blob.core.windows.net",
+				"gsm779889026eh.servicebus.windows.net",
+				"gsm779889026xt.blob.core.windows.net",
+				"monitoringagentbvt2.blob.core.windows.net",
+				"qos.ppe.warm.ingest.monitor.core.windows.net",
+				"test1.diagnostics.monitoring.core.windows.net",
+			},
+			GatewayFeatures: []string{
+				"InsecureSkipVerifyDBTokenCertificate",
+			},
+			GatewayMDSDConfigVersion:    to.StringPtr("3.3"),
+			GatewayVMSSCapacity:         to.IntPtr(1),
 			GlobalResourceGroupLocation: to.StringPtr(_env.Location()),
 			GlobalResourceGroupName:     to.StringPtr(os.Getenv("USER") + "-global"),
 			GlobalSubscriptionID:        to.StringPtr(_env.SubscriptionID()),

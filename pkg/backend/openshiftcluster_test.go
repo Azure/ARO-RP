@@ -290,11 +290,11 @@ func TestBackendTry(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			createManager := func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument) (cluster.Interface, error) {
+			createManager := func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument) (cluster.Interface, error) {
 				return manager, nil
 			}
 
-			b, err := newBackend(ctx, log, nil, nil, nil, dbOpenShiftClusters, dbSubscriptions, nil, &noop.Noop{})
+			b, err := newBackend(ctx, log, nil, nil, nil, nil, dbOpenShiftClusters, dbSubscriptions, nil, &noop.Noop{})
 			if err != nil {
 				t.Fatal(err)
 			}

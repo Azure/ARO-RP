@@ -29,5 +29,9 @@ func (sv *openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftC
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, err.Message)
 	}
 
+	if current.Properties.FeatureProfile.GatewayEnabled && !oc.Properties.FeatureProfile.GatewayEnabled {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "properties.featureProfile.gatewayEnabled", "Changing property 'properties.featureProfile.gatewayEnabled' is not allowed.")
+	}
+
 	return nil
 }

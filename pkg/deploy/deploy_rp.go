@@ -19,7 +19,13 @@ import (
 )
 
 func (d *deployer) DeployRP(ctx context.Context) error {
+	// TODO: there is a lot of duplication with DeployGateway()
 	rpMSI, err := d.userassignedidentities.Get(ctx, d.config.RPResourceGroupName, "aro-rp-"+d.config.Location)
+	if err != nil {
+		return err
+	}
+
+	gwMSI, err := d.userassignedidentities.Get(ctx, d.config.GatewayResourceGroupName, "aro-gateway-"+d.config.Location)
 	if err != nil {
 		return err
 	}
@@ -48,6 +54,12 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	}
 	parameters.Parameters["extraCosmosDBIPs"] = &arm.ParametersParameter{
 		Value: strings.Join(d.config.Configuration.ExtraCosmosDBIPs, ","),
+	}
+	parameters.Parameters["gatewayResourceGroupName"] = &arm.ParametersParameter{
+		Value: d.config.GatewayResourceGroupName,
+	}
+	parameters.Parameters["gatewayServicePrincipalId"] = &arm.ParametersParameter{
+		Value: gwMSI.PrincipalID.String(),
 	}
 	parameters.Parameters["rpImage"] = &arm.ParametersParameter{
 		Value: *d.config.Configuration.RPImagePrefix + ":" + d.version,

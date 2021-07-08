@@ -45,6 +45,9 @@ func (g *generator) rpTemplate() *arm.Template {
 			"fpServicePrincipalId",
 			"keyvaultPrefix",
 			"keyvaultDNSSuffix",
+			"gatewayDomains",
+			"gatewayResourceGroupName",
+			"gatewayServicePrincipalId",
 			"mdmFrontendUrl",
 			"mdsdEnvironment",
 			"portalAccessGroupIds",
@@ -75,6 +78,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"billingServicePrincipalId",
 			"billingE2EStorageAccountId",
 			"extraCosmosDBIPs",
+			"gatewayDomains",
 			"rpFeatures":
 			p.DefaultValue = ""
 		case "vmSize":
@@ -99,12 +103,15 @@ func (g *generator) rpTemplate() *arm.Template {
 			g.rpLBAlert(33.0, 2, "rp-vnet-alert", "PT5M", "PT5M", "VipAvailability"))          // this will trigger only if the Azure network infrastructure between the loadBalancers and VMs is down for 3.5min
 		// more on alerts https://msazure.visualstudio.com/AzureRedHatOpenShift/_wiki/wikis/ARO.wiki/53765/WIP-Alerting
 		t.Resources = append(t.Resources, g.rpBillingContributorRbac()...)
+
+		t.Resources = append(t.Resources,
+			g.virtualNetworkPeering("rp-vnet/peering-gateway-vnet", "[resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks', 'gateway-vnet')]"),
+		)
 	}
 
 	t.Resources = append(t.Resources, g.rpDNSZone(),
-		g.rpVnet(), g.rpPEVnet(),
-		g.virtualNetworkPeering("rp-vnet", "rp-pe-vnet-001"),
-		g.virtualNetworkPeering("rp-pe-vnet-001", "rp-vnet"))
+		g.virtualNetworkPeering("rp-vnet/peering-rp-pe-vnet-001", "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]"),
+		g.virtualNetworkPeering("rp-pe-vnet-001/peering-rp-vnet", "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"))
 	t.Resources = append(t.Resources, g.rpCosmosDB()...)
 	t.Resources = append(t.Resources, g.rpRBAC()...)
 
@@ -119,6 +126,7 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 		"acrResourceId",
 		"fpServicePrincipalId",
 		"clusterParentDomainName",
+		"gatewayServicePrincipalId",
 		"rpParentDomainName",
 		"rpServicePrincipalId",
 		"rpVersionStorageAccountName",
@@ -223,6 +231,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 			"extraDBTokenKeyvaultAccessPolicies",
 			"extraPortalKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies",
+			"gatewayResourceGroupName",
 			"rpNsgSourceAddressPrefixes",
 		)
 	} else {
@@ -255,6 +264,8 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 	t.Resources = append(t.Resources,
 		g.rpSecurityGroup(),
 		g.rpPESecurityGroup(),
+		g.rpVnet(),
+		g.rpPEVnet(),
 		g.rpClusterKeyvault(),
 		g.rpDBTokenKeyvault(),
 		g.rpPortalKeyvault(),

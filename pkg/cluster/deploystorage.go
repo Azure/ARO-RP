@@ -5,12 +5,14 @@ package cluster
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -128,6 +130,8 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		m.storageAccount(clusterStorageAccountName, installConfig.Config.Azure.Region),
 		m.storageAccountBlobContainer(clusterStorageAccountName, "ignition"),
 		m.storageAccountBlobContainer(clusterStorageAccountName, "aro"),
+		m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, installConfig.Config.Azure.Region),
+		m.storageAccountBlobContainer(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, "image-registry"),
 		m.clusterNSG(infraID, installConfig.Config.Azure.Region),
 		m.clusterServicePrincipalRBAC(),
 		m.networkPrivateLinkService(installConfig),
@@ -139,6 +143,12 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPublic {
 		resources = append(resources,
 			m.networkPublicIPAddress(installConfig, infraID+"-default-v4"),
+		)
+	}
+
+	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
+		resources = append(resources,
+			m.networkPrivateEndpoint(),
 		)
 	}
 
@@ -157,10 +167,10 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 
 func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.InstallConfig, image *releaseimage.Image) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
-	exists, err := m.graph.Exists(ctx, resourceGroup, account)
+	exists, err := m.graph.Exists(ctx, resourceGroup, clusterStorageAccountName)
 	if err != nil || exists {
 		return err
 	}
@@ -175,13 +185,30 @@ func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.
 		return err
 	}
 
+	httpSecret := make([]byte, 64)
+	_, err = rand.Read(httpSecret)
+	if err != nil {
+		return err
+	}
+
+	imageRegistryConfig := &bootkube.AROImageRegistryConfig{
+		AccountName:   m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName,
+		ContainerName: "image-registry",
+		HTTPSecret:    hex.EncodeToString(httpSecret),
+	}
+
 	dnsConfig := &bootkube.ARODNSConfig{
 		APIIntIP:  m.doc.OpenShiftCluster.Properties.APIServerProfile.IntIP,
 		IngressIP: m.doc.OpenShiftCluster.Properties.IngressProfiles[0].IP,
 	}
 
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
+		dnsConfig.GatewayPrivateEndpointIP = m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP
+		dnsConfig.GatewayDomains = append(m.env.GatewayDomains(), m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName+".blob."+m.env.Environment().StorageEndpointSuffix)
+	}
+
 	g := graph.Graph{}
-	g.Set(installConfig, image, clusterID, bootstrapLoggingConfig, dnsConfig)
+	g.Set(installConfig, image, clusterID, bootstrapLoggingConfig, dnsConfig, imageRegistryConfig)
 
 	m.log.Print("resolving graph")
 	for _, a := range targets.Cluster {
@@ -192,7 +219,7 @@ func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.
 	}
 
 	// the graph is quite big so we store it in a storage account instead of in cosmosdb
-	return m.graph.Save(ctx, resourceGroup, account, g)
+	return m.graph.Save(ctx, resourceGroup, clusterStorageAccountName, g)
 }
 
 func (m *manager) attachNSGsAndPatch(ctx context.Context) error {
@@ -285,4 +312,23 @@ func (m *manager) attachNSGsAndPatch(ctx context.Context) error {
 		return nil
 	})
 	return err
+}
+
+func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
+	// TODO: there is probably an undesirable race condition here - check if etags can help.
+	s, err := m.subnet.Get(ctx, m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+	if err != nil {
+		return err
+	}
+
+	if s.SubnetPropertiesFormat == nil {
+		s.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
+	}
+
+	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
+		s.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies = to.StringPtr("Disabled")
+	}
+	s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies = to.StringPtr("Disabled")
+
+	return m.subnet.CreateOrUpdate(ctx, m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID, s)
 }
