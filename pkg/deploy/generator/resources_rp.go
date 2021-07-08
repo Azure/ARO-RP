@@ -487,6 +487,13 @@ yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install azsec-clamav a
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
+# Remove pin for td-agent-bit once https://github.com/fluent/fluent-bit/issues/3742 is fixed
+# Old RPMs does not exist so we have to fixup manually for now
+if [ ! -f /usr/lib/systemd/system/td-agent-bit.service ]; then
+	cp /opt/td-agent-bit/lib/systemd/system/td-agent-bit.service /usr/lib/systemd/system/td-agent-bit.service
+	systemctl daemon-reload
+fi
+
 rpm -e $(rpm -qa | grep ^abrt-)
 cat >/etc/sysctl.d/01-disable-core.conf <<'EOF'
 kernel.core_pattern = |/bin/true
