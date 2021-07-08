@@ -94,7 +94,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 		return nil, nil, err
 	}
 	if len(workerZones) == 0 {
-		masterZones = []string{""}
+		workerZones = []string{""}
 	}
 
 	installConfig := &installconfig.InstallConfig{
