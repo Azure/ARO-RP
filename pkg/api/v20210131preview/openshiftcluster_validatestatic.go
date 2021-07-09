@@ -91,7 +91,7 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Op
 	if err := sv.validateServicePrincipalProfile(path+".servicePrincipalProfile", &p.ServicePrincipalProfile); err != nil {
 		return err
 	}
-	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile, isCreate); err != nil {
+	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile); err != nil {
 		return err
 	}
 	if err := sv.validateMasterProfile(path+".masterProfile", &p.MasterProfile); err != nil {
@@ -183,7 +183,7 @@ func (sv *openShiftClusterStaticValidator) validateServicePrincipalProfile(path 
 	return nil
 }
 
-func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile, isCreate bool) error {
+func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile) error {
 	_, pod, err := net.ParseCIDR(np.PodCIDR)
 	if err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".podCidr", "The provided pod CIDR '%s' is invalid: '%s'.", np.PodCIDR, err)
@@ -211,13 +211,12 @@ func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, n
 		}
 	}
 
-	if isCreate {
-		switch np.SDNProvider {
-		case SDNProviderOVNKubernetes, SDNProviderOpenShiftSDN:
-		default:
-			errorMsg := fmt.Sprintf("The provided SDNProvider must be either '%s' or '%s'.", SDNProviderOVNKubernetes, SDNProviderOpenShiftSDN)
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".sdnProvider", errorMsg)
-		}
+	switch np.SDNProvider {
+	case SDNProviderOVNKubernetes, SDNProviderOpenShiftSDN:
+	default:
+		fmt.Println(np.SDNProvider)
+		errorMsg := fmt.Sprintf("The provided SDNProvider must be either '%s' or '%s'.", SDNProviderOVNKubernetes, SDNProviderOpenShiftSDN)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".sdnProvider", errorMsg)
 	}
 
 	return nil
