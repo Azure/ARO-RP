@@ -498,7 +498,7 @@ func TestOpenShiftClusterStaticValidateNetworkProfileType(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.NetworkProfile.SDNProvider = "InvalidOption"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.sdnProvider: Changing property 'properties.networkProfile.sdnProvider' is not allowed.",
+			wantErr: "400: InvalidParameter: properties.networkProfile.sdnProvider: The provided SDNProvider must be either 'OVNKubernetes' or 'OpenShiftSDN'.",
 		},
 		{
 			name: "networkProvider",
@@ -506,6 +506,13 @@ func TestOpenShiftClusterStaticValidateNetworkProfileType(t *testing.T) {
 				oc.Properties.NetworkProfile.SDNProvider = "OpenShiftSDN"
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.sdnProvider: Changing property 'properties.networkProfile.sdnProvider' is not allowed.",
+		},
+		{
+			name: "networkProvider",
+			modify: func(oc *OpenShiftCluster) {
+				// no change, object starts in this state
+				oc.Properties.NetworkProfile.SDNProvider = "OVNKubernetes"
+			},
 		},
 	}
 
