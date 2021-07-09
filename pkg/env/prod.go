@@ -12,7 +12,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
@@ -35,7 +35,7 @@ type prod struct {
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
 
 	acrDomain string
-	zones     map[string][]string
+	vmskus    map[string]*mgmtcompute.ResourceSku
 
 	fpCertificate *x509.Certificate
 	fpPrivateKey  *rsa.PrivateKey
@@ -128,7 +128,8 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 
 	p.serviceKeyvault = keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
-	err = p.populateZones(ctx, msiAuthorizer)
+	resourceSkusClient := compute.NewResourceSkusClient(p.Environment(), p.SubscriptionID(), msiAuthorizer)
+	err = p.populateVMSkus(ctx, resourceSkusClient)
 	if err != nil {
 		return nil, err
 	}
@@ -229,22 +230,19 @@ func (p *prod) AROOperatorImage() string {
 	return fmt.Sprintf("%s/aro:%s", p.acrDomain, version.GitCommit)
 }
 
-func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
-	c := compute.NewResourceSkusClient(p.Environment(), p.SubscriptionID(), rpAuthorizer)
-
+func (p *prod) populateVMSkus(ctx context.Context, resourceSkusClient compute.ResourceSkusClient) error {
 	// Filtering is poorly documented, but currently (API version 2019-04-01)
 	// it seems that the API returns all SKUs without a filter and with invalid
 	// value in the filter.
 	// Filtering gives significant optimisation: at the moment of writing,
 	// we get ~1.2M response in eastus vs ~37M unfiltered (467 items vs 16618).
 	filter := fmt.Sprintf("location eq '%s'", p.Location())
-	skus, err := c.List(ctx, filter)
+	skus, err := resourceSkusClient.List(ctx, filter)
 	if err != nil {
 		return err
 	}
 
-	p.zones = map[string][]string{}
-
+	p.vmskus = map[string]*mgmtcompute.ResourceSku{}
 	for _, sku := range skus {
 		// TODO(mjudeikis): At some point some SKU's stopped returning zones and
 		// locations. IcM is open with MSFT but this might take a while.
@@ -259,7 +257,13 @@ func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authoriz
 			continue
 		}
 
-		p.zones[*sku.Name] = *(*sku.LocationInfo)[0].Zones
+		// We copy only part of the object so we don't have to keep
+		// a lot of data in memory.
+		p.vmskus[*sku.Name] = &mgmtcompute.ResourceSku{
+			Name:         sku.Name,
+			LocationInfo: sku.LocationInfo,
+			Capabilities: sku.Capabilities,
+		}
 	}
 
 	return nil
@@ -315,10 +319,10 @@ func (p *prod) ServiceKeyvault() keyvault.Manager {
 	return p.serviceKeyvault
 }
 
-func (p *prod) Zones(vmSize string) ([]string, error) {
-	zones, found := p.zones[vmSize]
+func (p *prod) VMSku(vmSize string) (*mgmtcompute.ResourceSku, error) {
+	vmsku, found := p.vmskus[vmSize]
 	if !found {
-		return nil, fmt.Errorf("zone information not found for vm size %q", vmSize)
+		return nil, fmt.Errorf("sku information not found for vm size %q", vmSize)
 	}
-	return zones, nil
+	return vmsku, nil
 }
