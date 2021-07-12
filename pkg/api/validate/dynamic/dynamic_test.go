@@ -46,12 +46,12 @@ func TestValidateVnetPermissions(t *testing.T) {
 
 	for _, tt := range []struct {
 		name    string
-		mocks   func(*mock_authorization.MockPermissionsClient, func())
+		mocks   func(*mock_authorization.MockPermissionsClient, context.CancelFunc)
 		wantErr string
 	}{
 		{
 			name: "pass",
-			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel func()) {
+			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
 				permissionsClient.EXPECT().
 					ListForResource(gomock.Any(), resourceGroupName, resourceProvider, "", resourceType, vnetName).
 					Return([]mgmtauthorization.Permission{
@@ -71,7 +71,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 		},
 		{
 			name: "fail: missing permissions",
-			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel func()) {
+			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
 				permissionsClient.EXPECT().
 					ListForResource(gomock.Any(), resourceGroupName, resourceProvider, "", resourceType, vnetName).
 					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
@@ -91,7 +91,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 		},
 		{
 			name: "fail: not found",
-			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel func()) {
+			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
 				permissionsClient.EXPECT().
 					ListForResource(gomock.Any(), resourceGroupName, resourceProvider, "", resourceType, vnetName).
 					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
@@ -200,7 +200,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 	for _, tt := range []struct {
 		name            string
 		subnet          Subnet
-		permissionMocks func(*mock_authorization.MockPermissionsClient, func())
+		permissionMocks func(*mock_authorization.MockPermissionsClient, context.CancelFunc)
 		vnetMocks       func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
 		wantErr         string
 	}{
@@ -244,7 +244,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			permissionMocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel func()) {
+			permissionMocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
 				permissionsClient.EXPECT().
 					ListForResource(gomock.Any(), resourceGroupName, "Microsoft.Network", "", "routeTables", gomock.Any()).
 					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
@@ -270,7 +270,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
-			permissionMocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel func()) {
+			permissionMocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
 				permissionsClient.EXPECT().
 					ListForResource(gomock.Any(), resourceGroupName, "Microsoft.Network", "", "routeTables", gomock.Any()).
 					AnyTimes().
