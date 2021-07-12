@@ -189,11 +189,10 @@ func done(ctx context.Context) error {
 			return err
 		}
 
-		fmt.Printf("cluster: %v\n", cluster)
-		// err = cluster.Delete(ctx, vnetResourceGroup, clusterName)
-		// if err != nil {
-		// 	return err
-		// }
+		err = cluster.Delete(ctx, vnetResourceGroup, clusterName)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
