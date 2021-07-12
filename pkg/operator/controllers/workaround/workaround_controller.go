@@ -54,7 +54,6 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, config
 func (r *WorkaroundReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
-		r.log.Error(err)
 		return reconcile.Result{}, err
 	}
 
