@@ -1,0 +1,13 @@
+steps:
+- task: onebranch.pipeline.imagebuildinfo@1
+  displayName: Build Fluentbit Dockerfile
+  inputs:
+    repositoryName: fluentbit
+    dockerFileRelPath: ./Dockerfile.fluentbit
+    dockerFileContextPath: ./
+    registry: cdpxlinux.azurecr.io
+    saveImageToPath: fluentbit.tar
+    buildkit: 1
+    enable_network: true
+    build_tag: 1.7.8-1
+    arguments: ' --build-arg VERSION=1.7.8-1'

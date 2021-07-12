@@ -43,6 +43,15 @@ func NewClusterReconciler(log *logrus.Entry, arocli aroclient.Interface, mcocli 
 // Reconcile watches the ARO object, and if it changes, reconciles all the
 // 99-%s-aro-dns machineconfigs
 func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if !instance.Spec.Features.ReconcileDNSMasq {
+		return reconcile.Result{}, nil
+	}
+
 	mcps, err := r.mcocli.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		r.log.Error(err)

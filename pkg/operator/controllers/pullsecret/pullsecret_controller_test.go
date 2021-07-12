@@ -51,6 +51,11 @@ func TestPullSecretReconciler(t *testing.T) {
 	baseCluster := arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 		Status:     arov1alpha1.ClusterStatus{},
+		Spec: arov1alpha1.ClusterSpec{
+			Features: arov1alpha1.FeaturesSpec{
+				ReconcilePullSecret: true,
+			},
+		},
 	}
 
 	tests := []struct {
@@ -169,6 +174,11 @@ func TestPullSecretReconciler(t *testing.T) {
 				&arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 					Status:     arov1alpha1.ClusterStatus{},
+					Spec: arov1alpha1.ClusterSpec{
+						Features: arov1alpha1.FeaturesSpec{
+							ReconcilePullSecret: true,
+						},
+					},
 				}),
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys: []string{"registry.redhat.io"},
@@ -186,6 +196,11 @@ func TestPullSecretReconciler(t *testing.T) {
 				&arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 					Status:     arov1alpha1.ClusterStatus{},
+					Spec: arov1alpha1.ClusterSpec{
+						Features: arov1alpha1.FeaturesSpec{
+							ReconcilePullSecret: true,
+						},
+					},
 				}),
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys: nil,

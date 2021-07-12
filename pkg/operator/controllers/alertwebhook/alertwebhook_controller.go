@@ -19,6 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
@@ -26,12 +28,14 @@ var alertManagerName = types.NamespacedName{Name: "alertmanager-main", Namespace
 
 // AlertWebhookReconciler reconciles the alertmanager webhook
 type AlertWebhookReconciler struct {
+	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
 	log           *logrus.Entry
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface) *AlertWebhookReconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface) *AlertWebhookReconciler {
 	return &AlertWebhookReconciler{
+		arocli:        arocli,
 		kubernetescli: kubernetescli,
 		log:           log,
 	}
@@ -39,6 +43,15 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface) *Alert
 
 // Reconcile makes sure that the Alertmanager default webhook is set.
 func (r *AlertWebhookReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if !instance.Spec.Features.ReconcileAlertWebhook {
+		return reconcile.Result{}, nil
+	}
+
 	return reconcile.Result{}, r.setAlertManagerWebhook(ctx, "http://aro-operator-master.openshift-azure-operator.svc.cluster.local:8080")
 }
 

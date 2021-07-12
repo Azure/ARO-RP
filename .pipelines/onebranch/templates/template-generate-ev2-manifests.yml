@@ -5,6 +5,8 @@ parameters:
   values:
   - bootstrapper
   - deployment
+  - kusto
+  - kusto-bootstrapper
   - mirroring
 
 steps:

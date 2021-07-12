@@ -114,7 +114,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (alertwebhook.NewReconciler(
 			log.WithField("controller", controllers.AlertwebhookControllerName),
-			kubernetescli)).SetupWithManager(mgr); err != nil {
+			arocli, kubernetescli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller AlertWebhook: %v", err)
 		}
 		if err = (workaround.NewReconciler(
@@ -154,7 +154,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (node.NewNodeReconciler(
 			log.WithField("controller", controllers.NodeControllerName),
-			kubernetescli)).SetupWithManager(mgr); err != nil {
+			kubernetescli, arocli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller Node: %v", err)
 		}
 		if err = (azurensg.NewReconciler(

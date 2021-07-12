@@ -49,7 +49,23 @@ spec:
               features:
                 description: FeaturesSpec defines ARO operator feature gates
                 properties:
+                  reconcileAlertWebhook:
+                    type: boolean
+                  reconcileDNSMasq:
+                    type: boolean
+                  reconcileGenevaLogging:
+                    type: boolean
+                  reconcileMonitoringConfig:
+                    type: boolean
                   reconcileNSGs:
+                    type: boolean
+                  reconcileNodeDrainer:
+                    type: boolean
+                  reconcilePullSecret:
+                    type: boolean
+                  reconcileRouteFix:
+                    type: boolean
+                  reconcileWorkaroundsController:
                     type: boolean
                 type: object
               genevaLogging:

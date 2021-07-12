@@ -13,7 +13,7 @@ pr: none
 
 variables:
   Cdp_Definition_Build_Count: $[counter('', 0)] # needed for onebranch.pipeline.version task https://aka.ms/obpipelines/versioning
-  LinuxContainerImage: cdpxlinux.azurecr.io/global/ubuntu-1804-all:5.0   # Docker image which is used to build the project https://aka.ms/obpipelines/containers
+  LinuxContainerImage: centos:centos7   # Docker image which is used to build the project https://aka.ms/obpipelines/containers
   Debian_Frontend: noninteractive
 
 resources:
@@ -27,7 +27,7 @@ resources:
     name: ARO.Pipelines
 
 extends:
-  template: v2/OneBranch.Official.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
+  template: v2/OneBranch.NonOfficial.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
   parameters:
     globalSdl: # https://aka.ms/obpipelines/sdl
       # tsa:
@@ -41,19 +41,6 @@ extends:
         suppressionSet: default
 
     stages:
-    - stage: Bootstrapper
+    - stage: LoggingKusto
       jobs:
-      - template: .pipelines/onebranch/templates/template-bootstrapper.yml@self
-
-    - stage: Build_Fluentbit
-      jobs:
-      - job: Build_Fluentbit
-        pool:
-          type: docker
-          os: linux
-
-        variables:
-          ob_git_checkout: true
-
-        steps:
-        - template: .pipelines/onebranch/templates/template-bootstrapper-fluentbit.yml@self
+      - template: .pipelines/onebranch/templates/template-logging-kusto.yml@self

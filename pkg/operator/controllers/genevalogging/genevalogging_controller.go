@@ -53,6 +53,10 @@ func (r *GenevaloggingReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		return reconcile.Result{}, err
 	}
 
+	if !instance.Spec.Features.ReconcileGenevaLogging {
+		return reconcile.Result{}, nil
+	}
+
 	mysec, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
