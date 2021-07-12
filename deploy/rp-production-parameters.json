@@ -29,7 +29,16 @@
         "billingServicePrincipalId": {
             "value": ""
         },
+        "clusterMdmAccount": {
+            "value": ""
+        },
+        "clusterMdsdAccount": {
+            "value": ""
+        },
         "clusterMdsdConfigVersion": {
+            "value": ""
+        },
+        "clusterMdsdNamespace": {
             "value": ""
         },
         "clusterParentDomainName": {
@@ -77,7 +86,16 @@
         "rpImage": {
             "value": ""
         },
+        "rpMdmAccount": {
+            "value": ""
+        },
+        "rpMdsdAccount": {
+            "value": ""
+        },
         "rpMdsdConfigVersion": {
+            "value": ""
+        },
+        "rpMdsdNamespace": {
             "value": ""
         },
         "rpParentDomainName": {

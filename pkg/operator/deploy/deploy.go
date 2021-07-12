@@ -167,7 +167,9 @@ func (o *operator) resources() ([]runtime.Object, error) {
 				VnetID:              vnetID,
 				GenevaLogging: arov1alpha1.GenevaLoggingSpec{
 					ConfigVersion:            o.env.ClusterGenevaLoggingConfigVersion(),
+					MonitoringGCSAccount:     o.env.ClusterGenevaLoggingAccount(),
 					MonitoringGCSEnvironment: o.env.ClusterGenevaLoggingEnvironment(),
+					MonitoringGCSNamespace:   o.env.ClusterGenevaLoggingNamespace(),
 				},
 				InternetChecker: arov1alpha1.InternetCheckerSpec{
 					URLs: []string{

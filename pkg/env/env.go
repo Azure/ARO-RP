@@ -68,8 +68,10 @@ type Interface interface {
 	InitializeAuthorizers() error
 	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
 	AdminClientAuthorizer() clientauthorizer.ClientAuthorizer
+	ClusterGenevaLoggingAccount() string
 	ClusterGenevaLoggingConfigVersion() string
 	ClusterGenevaLoggingEnvironment() string
+	ClusterGenevaLoggingNamespace() string
 	ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
 	ClusterKeyvault() keyvault.Manager
 	Domain() string

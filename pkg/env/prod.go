@@ -46,8 +46,10 @@ type prod struct {
 
 	clusterGenevaLoggingCertificate   *x509.Certificate
 	clusterGenevaLoggingPrivateKey    *rsa.PrivateKey
+	clusterGenevaLoggingAccount       string
 	clusterGenevaLoggingConfigVersion string
 	clusterGenevaLoggingEnvironment   string
+	clusterGenevaLoggingNamespace     string
 
 	log *logrus.Entry
 
@@ -67,7 +69,9 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	if !IsLocalDevelopmentMode() {
 		for _, key := range []string{
 			"CLUSTER_MDSD_CONFIG_VERSION",
+			"CLUSTER_MDSD_ACCOUNT",
 			"MDSD_ENVIRONMENT",
+			"CLUSTER_MDSD_NAMESPACE",
 		} {
 			if _, found := os.LookupEnv(key); !found {
 				return nil, fmt.Errorf("environment variable %q unset", key)
@@ -91,8 +95,10 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 
 		fpClientID: os.Getenv("AZURE_FP_CLIENT_ID"),
 
-		clusterGenevaLoggingEnvironment:   os.Getenv("MDSD_ENVIRONMENT"),
+		clusterGenevaLoggingAccount:       os.Getenv("CLUSTER_MDSD_ACCOUNT"),
 		clusterGenevaLoggingConfigVersion: os.Getenv("CLUSTER_MDSD_CONFIG_VERSION"),
+		clusterGenevaLoggingEnvironment:   os.Getenv("MDSD_ENVIRONMENT"),
+		clusterGenevaLoggingNamespace:     os.Getenv("CLUSTER_MDSD_NAMESPACE"),
 
 		log: log,
 
@@ -265,12 +271,20 @@ func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authoriz
 	return nil
 }
 
+func (p *prod) ClusterGenevaLoggingAccount() string {
+	return p.clusterGenevaLoggingAccount
+}
+
 func (p *prod) ClusterGenevaLoggingConfigVersion() string {
 	return p.clusterGenevaLoggingConfigVersion
 }
 
 func (p *prod) ClusterGenevaLoggingEnvironment() string {
 	return p.clusterGenevaLoggingEnvironment
+}
+
+func (p *prod) ClusterGenevaLoggingNamespace() string {
+	return p.clusterGenevaLoggingNamespace
 }
 
 func (p *prod) ClusterGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate) {
