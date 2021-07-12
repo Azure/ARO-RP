@@ -10,6 +10,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -51,6 +52,16 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, config
 
 // Reconcile makes sure that the workarounds are applied or removed as per the OpenShift version.
 func (r *WorkaroundReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	if err != nil {
+		r.log.Error(err)
+		return reconcile.Result{}, err
+	}
+
+	if !instance.Spec.Features.ReconcileWorkaroundsController {
+		return reconcile.Result{}, nil
+	}
+
 	clusterVersion, err := version.GetClusterVersion(ctx, r.configcli)
 	if err != nil {
 		r.log.Errorf("error getting the OpenShift version: %v", err)

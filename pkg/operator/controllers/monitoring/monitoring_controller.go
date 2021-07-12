@@ -67,6 +67,15 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if !instance.Spec.Features.ReconcileMonitoringConfig {
+		return reconcile.Result{}, nil
+	}
+
 	for _, f := range []func(context.Context, ctrl.Request) (ctrl.Result, error){
 		r.reconcileConfiguration,
 		r.reconcilePVC, // TODO(mj): This should be removed once we don't have PVC anymore

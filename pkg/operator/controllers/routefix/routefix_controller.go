@@ -63,6 +63,10 @@ func (r *RouteFixReconciler) Reconcile(ctx context.Context, request ctrl.Request
 		return reconcile.Result{}, err
 	}
 
+	if !instance.Spec.Features.ReconcileRouteFix {
+		return reconcile.Result{}, nil
+	}
+
 	// cluster version is not set to final until upgrade is completed. We need to
 	// detect if desired version is with the fix, so we can prevent stuck upgrade
 	// by deleting fix resources
