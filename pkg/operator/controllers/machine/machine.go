@@ -1,4 +1,4 @@
-package checker
+package machine
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -6,50 +6,24 @@ package checker
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
-	"github.com/operator-framework/operator-sdk/pkg/status"
-	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
-// MachineChecker reconciles the alertmanager webhook
-type MachineChecker struct {
-	clustercli             maoclient.Interface
-	arocli                 aroclient.Interface
-	log                    *logrus.Entry
-	isLocalDevelopmentMode bool
-	role                   string
-}
-
-func NewMachineChecker(log *logrus.Entry, clustercli maoclient.Interface, arocli aroclient.Interface, role string, isLocalDevelopmentMode bool) *MachineChecker {
-	return &MachineChecker{
-		clustercli:             clustercli,
-		arocli:                 arocli,
-		log:                    log,
-		isLocalDevelopmentMode: isLocalDevelopmentMode,
-		role:                   role,
-	}
-}
-
-func (r *MachineChecker) workerReplicas(ctx context.Context) (int, error) {
+func (r *MachineReconciler) workerReplicas(ctx context.Context) (int, error) {
 	count := 0
-	machinesets, err := r.clustercli.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{})
+	machinesets, err := r.maocli.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return 0, err
 	}
+	// Count MachineSets using Spec.Replicas
 	for _, machineset := range machinesets.Items {
 		if machineset.Spec.Replicas != nil {
 			count += int(*machineset.Spec.Replicas)
@@ -58,7 +32,8 @@ func (r *MachineChecker) workerReplicas(ctx context.Context) (int, error) {
 	return count, nil
 }
 
-func (r *MachineChecker) machineValid(ctx context.Context, machine *machinev1beta1.Machine, isMaster bool) (errs []error) {
+func (r *MachineReconciler) machineValid(ctx context.Context, machine *machinev1beta1.Machine, isMaster bool) (errs []error) {
+	// Validate machine provider spec exists and decode it
 	if machine.Spec.ProviderSpec.Value == nil {
 		return []error{fmt.Errorf("machine %s: provider spec missing", machine.Name)}
 	}
@@ -75,27 +50,29 @@ func (r *MachineChecker) machineValid(ctx context.Context, machine *machinev1bet
 		return []error{fmt.Errorf("machine %s: failed to read provider spec: %T", machine.Name, o)}
 	}
 
+	// Validate VM size in machine provider spec
 	if !validate.VMSizeIsValid(api.VMSize(machineProviderSpec.VMSize), r.isLocalDevelopmentMode, isMaster) {
-		errs = append(errs, fmt.Errorf("machine %s: invalid VM size '%s'", machine.Name, machineProviderSpec.VMSize))
+		errs = append(errs, fmt.Errorf("machine %s: invalid VM size '%v'", machine.Name, machineProviderSpec.VMSize))
 	}
 
+	// Validate disk size in machine provider spec
 	if !isMaster && !validate.DiskSizeIsValid(int(machineProviderSpec.OSDisk.DiskSizeGB)) {
-		errs = append(errs, fmt.Errorf("machine %s: invalid disk size '%d'", machine.Name, machineProviderSpec.OSDisk.DiskSizeGB))
+		errs = append(errs, fmt.Errorf("machine %s: invalid disk size '%v'", machine.Name, machineProviderSpec.OSDisk.DiskSizeGB))
 	}
 
-	// to begin with, just check that the image publisher and offer are correct
+	// Validate image publisher and offer
 	if machineProviderSpec.Image.Publisher != "azureopenshift" || machineProviderSpec.Image.Offer != "aro4" {
 		errs = append(errs, fmt.Errorf("machine %s: invalid image '%v'", machine.Name, machineProviderSpec.Image))
 	}
 
 	if machineProviderSpec.ManagedIdentity != "" {
-		errs = append(errs, fmt.Errorf("machine %s: invalid managedIdentity '%s'", machine.Name, machineProviderSpec.ManagedIdentity))
+		errs = append(errs, fmt.Errorf("machine %s: invalid managedIdentity '%v'", machine.Name, machineProviderSpec.ManagedIdentity))
 	}
 
 	return errs
 }
 
-func (r *MachineChecker) checkMachines(ctx context.Context) (errs []error) {
+func (r *MachineReconciler) checkMachines(ctx context.Context) (errs []error) {
 	actualWorkers := 0
 	actualMasters := 0
 
@@ -105,7 +82,7 @@ func (r *MachineChecker) checkMachines(ctx context.Context) (errs []error) {
 		return []error{err}
 	}
 
-	machines, err := r.clustercli.MachineV1beta1().Machines(machineSetsNamespace).List(ctx, metav1.ListOptions{})
+	machines, err := r.maocli.MachineV1beta1().Machines(machineSetsNamespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return []error{err}
 	}
@@ -135,35 +112,6 @@ func (r *MachineChecker) checkMachines(ctx context.Context) (errs []error) {
 	}
 
 	return errs
-}
-
-func (r *MachineChecker) Name() string {
-	return "MachineChecker"
-}
-
-// Reconcile makes sure that the Machines are in a supportable state
-func (r *MachineChecker) Check(ctx context.Context) error {
-	cond := &status.Condition{
-		Type:    arov1alpha1.MachineValid,
-		Status:  corev1.ConditionTrue,
-		Message: "all machines valid",
-		Reason:  "CheckDone",
-	}
-
-	errs := r.checkMachines(ctx)
-	if len(errs) > 0 {
-		cond.Status = corev1.ConditionFalse
-		cond.Reason = "CheckFailed"
-
-		var sb strings.Builder
-		for _, err := range errs {
-			sb.WriteString(err.Error())
-			sb.WriteByte('\n')
-		}
-		cond.Message = sb.String()
-	}
-
-	return controllers.SetCondition(ctx, r.arocli, cond, r.role)
 }
 
 func isMasterRole(m *machinev1beta1.Machine) (bool, error) {

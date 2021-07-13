@@ -7,17 +7,14 @@ import (
 	"context"
 	"time"
 
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -32,12 +29,11 @@ type CheckerController struct {
 	checkers []Checker
 }
 
-func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.Interface, kubernetescli kubernetes.Interface, role string, isLocalDevelopmentMode bool) *CheckerController {
+func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.Interface, kubernetescli kubernetes.Interface, role string) *CheckerController {
 	checkers := []Checker{NewInternetChecker(log, arocli, role)}
 
 	if role == operator.RoleMaster {
 		checkers = append(checkers,
-			NewMachineChecker(log, maocli, arocli, role, isLocalDevelopmentMode),
 			NewServicePrincipalChecker(log, maocli, arocli, kubernetescli, role),
 		)
 	}
@@ -81,10 +77,5 @@ func (r *CheckerController) SetupWithManager(mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate))
 
-	if r.role == operator.RoleMaster {
-		// https://github.com/kubernetes-sigs/controller-runtime/issues/1173
-		// equivalent to builder = builder.For(&machinev1beta1.Machine{}), but can't call For multiple times on one builder
-		builder = builder.Watches(&source.Kind{Type: &machinev1beta1.Machine{}}, &handler.EnqueueRequestForObject{})
-	}
 	return builder.Named(controllers.CheckerControllerName).Complete(r)
 }

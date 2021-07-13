@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/machine"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/node"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/pullsecret"
@@ -162,11 +163,16 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			arocli, maocli, kubernetescli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller AzureNSG: %v", err)
 		}
+		if err = (machine.NewMachineReconciler(
+			log.WithField("controller", controllers.MachineControllerName),
+			maocli, arocli, isLocalDevelopmentMode, role)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller Machine: %v", err)
+		}
 	}
 
 	if err = (checker.NewReconciler(
 		log.WithField("controller", controllers.CheckerControllerName),
-		maocli, arocli, kubernetescli, role, isLocalDevelopmentMode)).SetupWithManager(mgr); err != nil {
+		maocli, arocli, kubernetescli, role)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller InternetChecker: %v", err)
 	}
 
