@@ -19,9 +19,11 @@ import (
 )
 
 type systemreserved struct {
-	mcocli       mcoclient.Interface
-	dh           dynamichelper.Interface
-	log          *logrus.Entry
+	log *logrus.Entry
+
+	mcocli mcoclient.Interface
+	dh     dynamichelper.Interface
+
 	versionFixed *version.Version
 }
 
@@ -47,9 +49,9 @@ func NewSystemReserved(log *logrus.Entry, mcocli mcoclient.Interface, dh dynamic
 	utilruntime.Must(err)
 
 	return &systemreserved{
+		log:          log,
 		mcocli:       mcocli,
 		dh:           dh,
-		log:          log,
 		versionFixed: verFixed,
 	}
 }

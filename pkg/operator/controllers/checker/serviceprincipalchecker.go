@@ -25,19 +25,21 @@ import (
 )
 
 type ServicePrincipalChecker struct {
-	log           *logrus.Entry
-	clustercli    maoclient.Interface
+	log *logrus.Entry
+
 	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
-	role          string
+	maocli        maoclient.Interface
+
+	role string
 }
 
-func NewServicePrincipalChecker(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.Interface, kubernetescli kubernetes.Interface, role string) *ServicePrincipalChecker {
+func NewServicePrincipalChecker(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli maoclient.Interface, role string) *ServicePrincipalChecker {
 	return &ServicePrincipalChecker{
 		log:           log,
-		clustercli:    maocli,
 		arocli:        arocli,
 		kubernetescli: kubernetescli,
+		maocli:        maocli,
 		role:          role,
 	}
 }

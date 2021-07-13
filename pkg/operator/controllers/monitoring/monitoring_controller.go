@@ -51,13 +51,15 @@ type Config struct {
 }
 
 type Reconciler struct {
+	log *logrus.Entry
+
 	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
-	log           *logrus.Entry
-	jsonHandle    *codec.JsonHandle
+
+	jsonHandle *codec.JsonHandle
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface) *Reconciler {
 	return &Reconciler{
 		arocli:        arocli,
 		kubernetescli: kubernetescli,

@@ -39,15 +39,16 @@ import (
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
 var rhKeys = []string{"registry.redhat.io", "cloud.redhat.com", "registry.connect.redhat.com"}
 
-// PullSecretReconciler reconciles a Cluster object
-type PullSecretReconciler struct {
-	kubernetescli kubernetes.Interface
+// Reconciler reconciles a Cluster object
+type Reconciler struct {
+	log *logrus.Entry
+
 	arocli        aroclient.Interface
-	log           *logrus.Entry
+	kubernetescli kubernetes.Interface
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.Interface) *PullSecretReconciler {
-	return &PullSecretReconciler{
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface) *Reconciler {
+	return &Reconciler{
 		log:           log,
 		kubernetescli: kubernetescli,
 		arocli:        arocli,
@@ -63,7 +64,7 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli
 //   requested).
 // * If the pull Secret object (which is not owned by the Cluster object)
 //   changes, we'll see the pull Secret object requested.
-func (r *PullSecretReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
@@ -107,7 +108,7 @@ func (r *PullSecretReconciler) Reconcile(ctx context.Context, request ctrl.Reque
 }
 
 // SetupWithManager setup our manager
-func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	pullSecretPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return (o.GetName() == pullSecretName.Name && o.GetNamespace() == pullSecretName.Namespace) ||
 			(o.GetName() == operator.SecretName && o.GetNamespace() == operator.Namespace)
@@ -133,7 +134,7 @@ func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // ensureGlobalPullSecret checks the state of the pull secrets, in case of missing or broken ARO pull secret
 // it replaces it with working one from controller Secret
 // it takes care only for ARO pull secret, it does not touch the customer keys
-func (r *PullSecretReconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret, userSecret *corev1.Secret) (secret *corev1.Secret, err error) {
+func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret, userSecret *corev1.Secret) (secret *corev1.Secret, err error) {
 	if operatorSecret == nil {
 		return nil, errors.New("nil operator secret, cannot verify userData integrity")
 	}
@@ -195,7 +196,7 @@ func (r *PullSecretReconciler) ensureGlobalPullSecret(ctx context.Context, opera
 //   - cloud.redhat.com
 //   - registry.connect.redhat.com
 // if present, return error when the parsing fail, which means broken secret
-func (r *PullSecretReconciler) parseRedHatKeys(secret *corev1.Secret) (foundKeys []string, err error) {
+func (r *Reconciler) parseRedHatKeys(secret *corev1.Secret) (foundKeys []string, err error) {
 	// parse keys and validate JSON
 	parsedKeys, err := pullsecret.UnmarshalSecretData(secret)
 	if err != nil {

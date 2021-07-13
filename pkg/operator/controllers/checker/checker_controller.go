@@ -22,23 +22,24 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
-// CheckerController runs a number of checkers
-type CheckerController struct {
-	log      *logrus.Entry
+// Reconciler runs a number of checkers
+type Reconciler struct {
+	log *logrus.Entry
+
 	role     string
 	checkers []Checker
 }
 
-func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.Interface, kubernetescli kubernetes.Interface, role string) *CheckerController {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli maoclient.Interface, role string) *Reconciler {
 	checkers := []Checker{NewInternetChecker(log, arocli, role)}
 
 	if role == operator.RoleMaster {
 		checkers = append(checkers,
-			NewServicePrincipalChecker(log, maocli, arocli, kubernetescli, role),
+			NewServicePrincipalChecker(log, arocli, kubernetescli, maocli, role),
 		)
 	}
 
-	return &CheckerController{
+	return &Reconciler{
 		log:      log,
 		role:     role,
 		checkers: checkers,
@@ -52,7 +53,7 @@ func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclie
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters/status,verbs=get;update;patch
 
 // Reconcile will keep checking that the cluster can connect to essential services.
-func (r *CheckerController) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	var err error
 	for _, c := range r.checkers {
 		thisErr := c.Check(ctx)
@@ -69,7 +70,7 @@ func (r *CheckerController) Reconcile(ctx context.Context, request ctrl.Request)
 }
 
 // SetupWithManager setup our manager
-func (r *CheckerController) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
 	})
