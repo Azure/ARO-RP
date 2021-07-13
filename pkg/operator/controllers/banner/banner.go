@@ -5,6 +5,7 @@ package banner
 
 import (
 	"context"
+	"fmt"
 
 	consolev1 "github.com/openshift/api/console/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,7 +15,7 @@ import (
 
 const (
 	BannerName         = "openshift-aro-sre"
-	TextContactSupport = "Please ask your cluster administrator to contact Azure or Red Hat support."
+	TextContactSupport = "Please ask your cluster administrator to contact Azure or Red Hat support. Your cluster's resourceid: %s"
 )
 
 func (r *BannerReconciler) reconcileBanner(ctx context.Context, instance *arov1alpha1.Cluster) error {
@@ -38,7 +39,7 @@ func (r *BannerReconciler) newBanner(text string, resourceID string) *consolev1.
 			Name: BannerName,
 		},
 		Spec: consolev1.ConsoleNotificationSpec{
-			Text:            TextContactSupport + " Your cluster's resourceid: " + resourceID,
+			Text:            fmt.Sprintf(TextContactSupport, resourceID),
 			Location:        consolev1.BannerTop,
 			Color:           "#000",
 			BackgroundColor: "#ff0",

@@ -26,7 +26,6 @@ require (
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/coreos/ignition/v2 v2.10.1 // indirect
 	github.com/coreos/vcontext v0.0.0-20210511154938-8fbad538d364 // indirect
-	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/docker v20.10.6+incompatible // indirect
 	github.com/docker/spdystream v0.2.0 // indirect
 	github.com/emicklei/go-restful v2.15.0+incompatible // indirect
