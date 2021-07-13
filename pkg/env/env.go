@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/proxy"
@@ -78,10 +79,13 @@ type Interface interface {
 	FPClientID() string
 	Listen() (net.Listener, error)
 	ServiceKeyvault() keyvault.Manager
-	Zones(vmSize string) ([]string, error)
 	ACRResourceID() string
 	ACRDomain() string
 	AROOperatorImage() string
+
+	// VMSku returns SKU for a given vm size. Note that this
+	// returns a pointer to partly populated object.
+	VMSku(vmSize string) (*mgmtcompute.ResourceSku, error)
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {

@@ -11,6 +11,7 @@ import (
 	net "net"
 	reflect "reflect"
 
+	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	autorest "github.com/Azure/go-autorest/autorest"
 	gomock "github.com/golang/mock/gomock"
 
@@ -549,17 +550,17 @@ func (mr *MockInterfaceMockRecorder) TenantID() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TenantID", reflect.TypeOf((*MockInterface)(nil).TenantID))
 }
 
-// Zones mocks base method.
-func (m *MockInterface) Zones(arg0 string) ([]string, error) {
+// VMSku mocks base method.
+func (m *MockInterface) VMSku(arg0 string) (*compute.ResourceSku, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Zones", arg0)
-	ret0, _ := ret[0].([]string)
+	ret := m.ctrl.Call(m, "VMSku", arg0)
+	ret0, _ := ret[0].(*compute.ResourceSku)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Zones indicates an expected call of Zones.
-func (mr *MockInterfaceMockRecorder) Zones(arg0 interface{}) *gomock.Call {
+// VMSku indicates an expected call of VMSku.
+func (mr *MockInterfaceMockRecorder) VMSku(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Zones", reflect.TypeOf((*MockInterface)(nil).Zones), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSku", reflect.TypeOf((*MockInterface)(nil).VMSku), arg0)
 }

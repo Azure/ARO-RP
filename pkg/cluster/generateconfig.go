@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -81,18 +82,20 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 		domain += "." + m.env.Domain()
 	}
 
-	masterZones, err := m.env.Zones(string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize))
+	masterSKU, err := m.env.VMSku(string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize))
 	if err != nil {
 		return nil, nil, err
 	}
+	masterZones := computeskus.Zones(masterSKU)
 	if len(masterZones) == 0 {
 		masterZones = []string{""}
 	}
 
-	workerZones, err := m.env.Zones(string(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize))
+	workerSKU, err := m.env.VMSku(string(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize))
 	if err != nil {
 		return nil, nil, err
 	}
+	workerZones := computeskus.Zones(workerSKU)
 	if len(workerZones) == 0 {
 		workerZones = []string{""}
 	}
