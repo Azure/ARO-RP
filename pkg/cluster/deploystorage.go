@@ -195,15 +195,7 @@ func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.
 	return m.graph.Save(ctx, resourceGroup, account, g)
 }
 
-func (m *manager) attachNSGsAndPatch(ctx context.Context) error {
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
-
-	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
-	if err != nil {
-		return err
-	}
-
+func (m *manager) attachNSGs(ctx context.Context) error {
 	for _, subnetID := range []string{
 		m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
 		m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
@@ -246,6 +238,18 @@ func (m *manager) attachNSGsAndPatch(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (m *manager) generateKubeconfigs(ctx context.Context) error {
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+
+	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
+	if err != nil {
+		return err
 	}
 
 	var adminInternalClient *kubeconfig.AdminInternalClient
