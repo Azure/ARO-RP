@@ -396,7 +396,8 @@ func (d *deployer) configureServiceSecrets(ctx context.Context) error {
 		{d.serviceKeyvault, env.FrontendEncryptionSecretV2Name, 64},
 		{d.portalKeyvault, env.PortalServerSessionKeySecretName, 32},
 	} {
-		err := d.ensureSecret(ctx, s.kv, s.secretName, s.len)
+		// rotate the secret (create a new version of the same secret) every deploy of RP
+		err := d.ensureAndRotateSecret(ctx, s.kv, s.secretName, s.len)
 		if err != nil {
 			return err
 		}
@@ -405,20 +406,9 @@ func (d *deployer) configureServiceSecrets(ctx context.Context) error {
 	return d.ensureSecretKey(ctx, d.portalKeyvault, env.PortalServerSSHKeySecretName)
 }
 
-func (d *deployer) ensureSecret(ctx context.Context, kv keyvault.Manager, secretName string, len int) error {
-	existingSecrets, err := kv.GetSecrets(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, secret := range existingSecrets {
-		if filepath.Base(*secret.ID) == secretName {
-			return nil
-		}
-	}
-
+func (d *deployer) ensureAndRotateSecret(ctx context.Context, kv keyvault.Manager, secretName string, len int) error {
 	key := make([]byte, len)
-	_, err = rand.Read(key)
+	_, err := rand.Read(key)
 	if err != nil {
 		return err
 	}
