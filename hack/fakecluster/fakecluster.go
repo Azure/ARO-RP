@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -28,6 +29,8 @@ import (
 var (
 	certFile = flag.String("certFile", "secrets/proxy.crt", "file containing server certificate")
 	keyFile  = flag.String("keyFile", "secrets/proxy.key", "file containing server key")
+	port     = flag.Int("port", 6443, "Port to listen on")
+	host     = flag.String("host", "localhost", "Host to listen on")
 )
 
 func run(ctx context.Context, l *logrus.Entry) error {
@@ -92,7 +95,8 @@ func run(ctx context.Context, l *logrus.Entry) error {
 		BaseContext: func(net.Listener) context.Context { return ctx },
 	}
 
-	lis, err := net.Listen("tcp", "localhost:6443")
+	l.Printf("Listening on %s", fmt.Sprint(*host, ":", *port))
+	lis, err := net.Listen("tcp", fmt.Sprint(*host, ":", *port))
 	if err != nil {
 		return err
 	}
