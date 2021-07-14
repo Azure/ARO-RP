@@ -25,21 +25,22 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
-type MachineSetReconciler struct {
-	log    *logrus.Entry
+type Reconciler struct {
+	log *logrus.Entry
+
 	maocli maoclient.Interface
 	arocli aroclient.Interface
 }
 
-func NewMachineSetReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.Interface) *MachineSetReconciler {
-	return &MachineSetReconciler{
+func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.Interface) *Reconciler {
+	return &Reconciler{
 		log:    log,
 		maocli: maocli,
 		arocli: arocli,
 	}
 }
 
-func (r *MachineSetReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
@@ -49,35 +50,34 @@ func (r *MachineSetReconciler) Reconcile(ctx context.Context, request ctrl.Reque
 		return reconcile.Result{}, nil
 	}
 
-	machinesetObject, err := r.maocli.MachineV1beta1().MachineSets(machineSetsNamespace).Get(ctx, request.Name, metav1.GetOptions{})
+	machinesets, err := r.maocli.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{LabelSelector: "machine.openshift.io/cluster-api-machine-role=worker"})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	aroMachineset, err := r.maocli.MachineV1beta1().MachineSets(machineSetsNamespace).Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	// Count amount of current worker replicas
 	replicaCount := 0
-	machinesets, err := r.maocli.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{LabelSelector: "machine.openshift.io/cluster-api-machine-role=worker"})
-	if err != nil {
-		return reconcile.Result{}, err
-	}
 	for _, machineset := range machinesets.Items {
 		if machineset.Spec.Replicas != nil {
 			replicaCount += int(*machineset.Spec.Replicas)
-			r.log.Infof("Worker count is %v for InfraID '%v'", replicaCount, instance.Spec.InfraID)
 		}
 	}
 
 	// Verify that MachineSet InfraID matches cluster InfraID
-	matches, err := regexp.Match(instance.Spec.InfraID, []byte(machinesetObject.ObjectMeta.Name))
+	matches, err := regexp.Match(instance.Spec.InfraID, []byte(aroMachineset.ObjectMeta.Name))
 	if err != nil {
 		r.log.Error(err)
 	}
 
-	// Scale up
 	if replicaCount < 3 && matches {
-		r.log.Error("Found less than 3 worker replicas. The MachineSet controller will attempt scaling.")
-		machinesetObject.Spec.Replicas = to.Int32Ptr(int32(1) + *machinesetObject.Spec.Replicas)
-		_, err := r.maocli.MachineV1beta1().MachineSets(machineSetsNamespace).Update(ctx, machinesetObject, metav1.UpdateOptions{})
+		r.log.Info("Found less than 3 worker replicas. The MachineSet controller will attempt scaling.")
+		aroMachineset.Spec.Replicas = to.Int32Ptr(int32(1) + *aroMachineset.Spec.Replicas)
+		_, err := r.maocli.MachineV1beta1().MachineSets(machineSetsNamespace).Update(ctx, aroMachineset, metav1.UpdateOptions{})
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -87,7 +87,7 @@ func (r *MachineSetReconciler) Reconcile(ctx context.Context, request ctrl.Reque
 	return reconcile.Result{}, err
 }
 
-func (r *MachineSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	machineSetPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetNamespace() == machineSetsNamespace
 	})
