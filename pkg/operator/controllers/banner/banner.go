@@ -15,7 +15,7 @@ import (
 
 const (
 	BannerName         = "openshift-aro-sre"
-	TextContactSupport = "Please ask your cluster administrator to contact Azure or Red Hat support. Your cluster's resourceid: %s"
+	TextContactSupport = "Please ask your cluster administrator to contact Azure or Red Hat support. Your cluster's resource ID: %s"
 )
 
 func (r *BannerReconciler) reconcileBanner(ctx context.Context, instance *arov1alpha1.Cluster) error {
