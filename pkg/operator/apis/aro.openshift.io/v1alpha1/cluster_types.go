@@ -12,7 +12,7 @@ type BannerContent int
 
 const (
 	// not using iota to force a stable value mapping
-	BannerEmpty          BannerContent = 0
+	BannerDisabled       BannerContent = 0
 	BannerContactSupport BannerContent = 1
 
 	SingletonClusterName                             = "cluster"
