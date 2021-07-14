@@ -6,14 +6,17 @@ package banner
 import (
 	"context"
 
+	consolev1 "github.com/openshift/api/console/v1"
 	consoleclient "github.com/openshift/client-go/console/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
@@ -36,7 +39,7 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, consolecli con
 	}
 }
 
-//Reconcile posts or removes the notification banner
+// Reconcile posts or removes the notification banner
 func (r *BannerReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
@@ -59,6 +62,7 @@ func (r *BannerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
+		Watches(&source.Kind{Type: &consolev1.ConsoleNotification{}}, &handler.EnqueueRequestForObject{}). //watching ConsoleNotifications in case a user edits it
 		Named(controllers.BannerControllerName).
 		Complete(r)
 }

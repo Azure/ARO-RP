@@ -8,12 +8,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type BannerContent int
+type BannerContent string
 
 const (
 	// not using iota to force a stable value mapping
-	BannerEmpty          BannerContent = 0
-	BannerContactSupport BannerContent = 1
+	BannerDisabled       BannerContent = ""
+	BannerContactSupport BannerContent = "ContactSupport"
 
 	SingletonClusterName                             = "cluster"
 	InternetReachableFromMaster status.ConditionType = "InternetReachableFromMaster"

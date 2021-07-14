@@ -48,7 +48,7 @@ spec:
                 description: Banner defines if a Banner should be shown to the customer
                 properties:
                   content:
-                    type: integer
+                    type: string
                 type: object
               domain:
                 type: string
