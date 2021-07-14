@@ -5,19 +5,18 @@ package cluster
 
 import (
 	"context"
-	"fmt"
 
 	configv1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type OperatorInformation struct {
-	Name      string
-	Available configv1.ConditionStatus
+	Name      string                   `json:"name"`
+	Available configv1.ConditionStatus `json:"available"`
 }
 
 type ClusterOperatorsInformation struct {
-	Operators []OperatorInformation
+	Operators []OperatorInformation `json:"operators"`
 }
 
 func ClusterOperatorsInformationFromClusterDoc(operators *configv1.ClusterOperatorList) *ClusterOperatorsInformation {
@@ -43,16 +42,15 @@ func ClusterOperatorsInformationFromClusterDoc(operators *configv1.ClusterOperat
 	return final
 }
 
-func (f *realFetcher) ClusterOperators(ctx context.Context) (*configv1.ClusterOperatorList, error) {
-	return f.configcli.ConfigV1().ClusterOperators().List(ctx, metav1.ListOptions{})
-}
-
-func (c *client) ClusterOperators(ctx context.Context) (*ClusterOperatorsInformation, error) {
-	r, err := c.fetcher.ClusterOperators(ctx)
+func (f *realFetcher) ClusterOperators(ctx context.Context) (*ClusterOperatorsInformation, error) {
+	r, err := f.configcli.ConfigV1().ClusterOperators().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		fmt.Printf("%+v", err)
 		return nil, err
 	}
 
 	return ClusterOperatorsInformationFromClusterDoc(r), nil
+}
+
+func (c *client) ClusterOperators(ctx context.Context) (*ClusterOperatorsInformation, error) {
+	return c.fetcher.ClusterOperators(ctx)
 }

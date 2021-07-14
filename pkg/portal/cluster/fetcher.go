@@ -14,23 +14,33 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
+// FetchClient is the interface that the Admin Portal Frontend uses to gather
+// information about clusters. It returns frontend-suitable data structures.
 type FetchClient interface {
 	ClusterOperators(context.Context) (*ClusterOperatorsInformation, error)
 }
 
-type realFetcher struct {
-	log       *logrus.Entry
-	configcli configclient.Interface
-}
-
+// client is an implementation of FetchClient. It currently contains a "fetcher"
+// which is responsible for fetching information from the k8s clusters. The
+// mechanism of fetching the data from the cluster and returning it to the
+// frontend is deliberately split since in the future this fetcher will instead
+// operate off a queue-like interface, similar to the RP Cluster backend. The
+// client will then be responsible for caching and access control.
 type client struct {
 	log     *logrus.Entry
 	cluster *api.OpenShiftClusterDocument
 	fetcher *realFetcher
 }
 
-func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument) (*realFetcher, error) {
+// realFetcher is responsible for fetching information from k8s clusters. It
+// contains Kubernetes clients and returns the frontend-suitable data
+// structures. The concrete implementation of FetchClient wraps this.
+type realFetcher struct {
+	log       *logrus.Entry
+	configcli configclient.Interface
+}
 
+func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument) (*realFetcher, error) {
 	restConfig, err := restconfig.RestConfig(dialer, doc.OpenShiftCluster)
 	if err != nil {
 		log.Error(err)
@@ -46,11 +56,9 @@ func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftCl
 		log:       log,
 		configcli: configcli,
 	}, nil
-
 }
 
 func NewFetchClient(log *logrus.Entry, dialer proxy.Dialer, cluster *api.OpenShiftClusterDocument) (FetchClient, error) {
-
 	fetcher, err := newRealFetcher(log, dialer, cluster)
 	if err != nil {
 		return nil, err
