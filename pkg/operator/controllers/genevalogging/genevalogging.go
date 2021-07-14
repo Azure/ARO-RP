@@ -21,11 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-const (
-	GenevaCertName = "gcscert.pem"
-	GenevaKeyName  = "gcskey.pem"
-)
-
 func (r *Reconciler) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
 	scc, err := r.securitycli.SecurityV1().SecurityContextConstraints().Get(ctx, "privileged", metav1.GetOptions{})
 	if err != nil {
