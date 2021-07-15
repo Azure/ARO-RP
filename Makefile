@@ -42,6 +42,8 @@ discoverycache:
 
 generate:
 	go generate ./...
+	gofmt -s -w cmd hack pkg test
+	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg test
 
 image-aro: aro e2e.test
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
@@ -120,8 +122,6 @@ test-e2e: e2e.test
 test-go: generate
 	go build -tags containers_image_openpgp ./...
 
-	gofmt -s -w cmd hack pkg test
-	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg test
 	go run ./hack/validate-imports cmd hack pkg test
 	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)

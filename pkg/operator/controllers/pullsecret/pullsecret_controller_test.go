@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/operator-framework/operator-sdk/pkg/status"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,7 +62,7 @@ func TestPullSecretReconciler(t *testing.T) {
 		request        ctrl.Request
 		fakecli        *fake.Clientset
 		arocli         *arofake.Clientset
-		wantConditions []status.Condition
+		wantConditions []corev1.PodCondition
 		wantKeys       []string
 		wantErr        bool
 		want           string

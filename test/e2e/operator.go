@@ -23,6 +23,7 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
+	"github.com/Azure/ARO-RP/pkg/util/conditions"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
@@ -93,13 +94,13 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 	Specify("the InternetReachable default list should all be reachable", func() {
 		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(context.Background(), "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		Expect(co.Status.Conditions.IsTrueFor(arov1alpha1.InternetReachableFromMaster)).To(BeTrue())
+		Expect(conditions.IsTrue(co.Status.Conditions, arov1alpha1.InternetReachableFromMaster)).To(BeTrue())
 	})
 
 	Specify("the InternetReachable default list should all be reachable from worker", func() {
 		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(context.Background(), "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		Expect(co.Status.Conditions.IsTrueFor(arov1alpha1.InternetReachableFromWorker)).To(BeTrue())
+		Expect(conditions.IsTrue(co.Status.Conditions, arov1alpha1.InternetReachableFromWorker)).To(BeTrue())
 	})
 
 	Specify("custom invalid site shows not InternetReachable", func() {
@@ -124,8 +125,8 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 			}
 
 			log.Debugf("ClusterStatus.Conditions %s", co.Status.Conditions)
-			return co.Status.Conditions.IsFalseFor(arov1alpha1.InternetReachableFromMaster) &&
-				co.Status.Conditions.IsFalseFor(arov1alpha1.InternetReachableFromWorker), nil
+			return conditions.IsFalse(co.Status.Conditions, arov1alpha1.InternetReachableFromMaster) &&
+				conditions.IsFalse(co.Status.Conditions, arov1alpha1.InternetReachableFromWorker), nil
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -261,7 +262,7 @@ var _ = Describe("ARO Operator - Conditions", func() {
 
 			valid := true
 			for _, condition := range arov1alpha1.ClusterChecksTypes() {
-				if !co.Status.Conditions.IsTrueFor(condition) {
+				if !conditions.IsTrue(co.Status.Conditions, condition) {
 					valid = false
 				}
 			}

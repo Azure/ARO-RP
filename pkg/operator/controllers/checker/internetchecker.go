@@ -10,15 +10,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/operator-framework/operator-sdk/pkg/status"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
+	"github.com/Azure/ARO-RP/pkg/util/conditions"
 )
 
 // InternetChecker reconciles a Cluster object
@@ -95,26 +94,26 @@ func (r *InternetChecker) Check(ctx context.Context) error {
 		}
 	}
 
-	var condition *status.Condition
+	var condition *operatorv1.OperatorCondition
 
 	if checkFailed {
-		condition = &status.Condition{
+		condition = &operatorv1.OperatorCondition{
 			Type:    r.conditionType(),
-			Status:  corev1.ConditionFalse,
+			Status:  operatorv1.ConditionFalse,
 			Message: sb.String(),
 			Reason:  "CheckFailed",
 		}
 	} else {
-		condition = &status.Condition{
+		condition = &operatorv1.OperatorCondition{
 			Type:    r.conditionType(),
-			Status:  corev1.ConditionTrue,
+			Status:  operatorv1.ConditionTrue,
 			Message: "Outgoing connection successful",
 			Reason:  "CheckDone",
 		}
 
 	}
 
-	err = controllers.SetCondition(ctx, r.arocli, condition, r.role)
+	err = conditions.SetCondition(ctx, r.arocli, condition, r.role)
 	if err != nil {
 		return err
 	}
@@ -163,14 +162,14 @@ func (r *InternetChecker) checkOnce(client simpleHTTPClient, url string, timeout
 	return nil
 }
 
-func (r *InternetChecker) conditionType() (ctype status.ConditionType) {
+func (r *InternetChecker) conditionType() (ctype string) {
 	switch r.role {
 	case operator.RoleMaster:
-		return arov1alpha1.InternetReachableFromMaster
+		return arov1alpha1.InternetReachableFromMaster.String()
 	case operator.RoleWorker:
-		return arov1alpha1.InternetReachableFromWorker
+		return arov1alpha1.InternetReachableFromWorker.String()
 	default:
 		r.log.Warnf("unknown role %s, assuming worker role", r.role)
-		return arov1alpha1.InternetReachableFromWorker
+		return arov1alpha1.InternetReachableFromWorker.String()
 	}
 }
