@@ -4,7 +4,6 @@ package v20210131preview
 // Licensed under the Apache License 2.0.
 
 import (
-	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -214,9 +213,7 @@ func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, n
 	switch np.SDNProvider {
 	case SDNProviderOVNKubernetes, SDNProviderOpenShiftSDN:
 	default:
-		fmt.Println(np.SDNProvider)
-		errorMsg := fmt.Sprintf("The provided SDNProvider must be either '%s' or '%s'.", SDNProviderOVNKubernetes, SDNProviderOpenShiftSDN)
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".sdnProvider", errorMsg)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".sdnProvider", "The provided SDNProvider '%s' is invalid.", np.SDNProvider)
 	}
 
 	return nil

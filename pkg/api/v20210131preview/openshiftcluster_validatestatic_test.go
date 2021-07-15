@@ -473,7 +473,7 @@ func TestOpenShiftClusterStaticValidateNetworkProfileType(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.NetworkProfile.SDNProvider = "InvalidOption"
 			},
-			wantErr: "400: InvalidParameter: properties.networkProfile.sdnProvider: The provided SDNProvider must be either 'OVNKubernetes' or 'OpenShiftSDN'.",
+			wantErr: "400: InvalidParameter: properties.networkProfile.sdnProvider: The provided SDNProvider 'InvalidOption' is invalid.",
 		},
 		{
 			name: "networkProvider",
@@ -498,7 +498,7 @@ func TestOpenShiftClusterStaticValidateNetworkProfileType(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.NetworkProfile.SDNProvider = "InvalidOption"
 			},
-			wantErr: "400: InvalidParameter: properties.networkProfile.sdnProvider: The provided SDNProvider must be either 'OVNKubernetes' or 'OpenShiftSDN'.",
+			wantErr: "400: InvalidParameter: properties.networkProfile.sdnProvider: The provided SDNProvider 'InvalidOption' is invalid.",
 		},
 		{
 			name: "networkProvider",
