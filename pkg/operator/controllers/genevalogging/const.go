@@ -8,8 +8,7 @@ const (
 	kubeServiceAccount     = "system:serviceaccount:" + kubeNamespace + ":geneva"
 	certificatesSecretName = "certificates"
 
-	ClusterLogsNamespace = "AROClusterLogs"
-	parsersConf          = `
+	parsersConf = `
 [PARSER]
 	Name audit
 	Format json

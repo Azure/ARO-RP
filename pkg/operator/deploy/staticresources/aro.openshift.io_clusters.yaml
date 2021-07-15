@@ -73,10 +73,23 @@ spec:
                   configVersion:
                     pattern: '[0-9]+.[0-9]+'
                     type: string
+                  monitoringGCSAccount:
+                    enum:
+                    - AROClusterLogsINT
+                    - AROClusterLogsPROD
+                    - AROClusterLogs
+                    type: string
                   monitoringGCSEnvironment:
                     enum:
                     - DiagnosticsProd
                     - Test
+                    - CaFairfax
+                    type: string
+                  monitoringGCSNamespace:
+                    enum:
+                    - AROClusterLogsINT
+                    - AROClusterLogsPROD
+                    - AROClusterLogs
                     type: string
                 type: object
               infraId:

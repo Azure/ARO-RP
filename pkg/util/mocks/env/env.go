@@ -251,6 +251,20 @@ func (mr *MockInterfaceMockRecorder) ArmClientAuthorizer() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArmClientAuthorizer", reflect.TypeOf((*MockInterface)(nil).ArmClientAuthorizer))
 }
 
+// ClusterGenevaLoggingAccount mocks base method.
+func (m *MockInterface) ClusterGenevaLoggingAccount() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClusterGenevaLoggingAccount")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// ClusterGenevaLoggingAccount indicates an expected call of ClusterGenevaLoggingAccount.
+func (mr *MockInterfaceMockRecorder) ClusterGenevaLoggingAccount() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterGenevaLoggingAccount", reflect.TypeOf((*MockInterface)(nil).ClusterGenevaLoggingAccount))
+}
+
 // ClusterGenevaLoggingConfigVersion mocks base method.
 func (m *MockInterface) ClusterGenevaLoggingConfigVersion() string {
 	m.ctrl.T.Helper()
@@ -277,6 +291,20 @@ func (m *MockInterface) ClusterGenevaLoggingEnvironment() string {
 func (mr *MockInterfaceMockRecorder) ClusterGenevaLoggingEnvironment() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterGenevaLoggingEnvironment", reflect.TypeOf((*MockInterface)(nil).ClusterGenevaLoggingEnvironment))
+}
+
+// ClusterGenevaLoggingNamespace mocks base method.
+func (m *MockInterface) ClusterGenevaLoggingNamespace() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClusterGenevaLoggingNamespace")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// ClusterGenevaLoggingNamespace indicates an expected call of ClusterGenevaLoggingNamespace.
+func (mr *MockInterfaceMockRecorder) ClusterGenevaLoggingNamespace() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterGenevaLoggingNamespace", reflect.TypeOf((*MockInterface)(nil).ClusterGenevaLoggingNamespace))
 }
 
 // ClusterGenevaLoggingSecret mocks base method.
