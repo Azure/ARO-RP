@@ -41,6 +41,7 @@ type Configuration struct {
 	ARMAPICABundle                     *string       `json:"armApiCaBundle,omitempty"`
 	ARMAPIClientCertCommonName         *string       `json:"armApiClientCertCommonName,omitempty"`
 	ARMClientID                        *string       `json:"armClientId,omitempty"`
+	AzureSecPackVSATenantId            *string       `json:"azureSecPackVSATenantId,omitempty"`
 	BillingE2EStorageAccountID         *string       `json:"billingE2EStorageAccountId,omitempty"`
 	BillingServicePrincipalID          *string       `json:"billingServicePrincipalId,omitempty"`
 	ClusterMDSDConfigVersion           *string       `json:"clusterMdsdConfigVersion,omitempty" value:"required"`

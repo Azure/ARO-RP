@@ -23,6 +23,9 @@
         "azureCloudName": {
             "value": ""
         },
+        "azureSecPackVSATenantId": {
+            "value": ""
+        },
         "billingE2EStorageAccountId": {
             "value": ""
         },

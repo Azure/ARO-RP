@@ -36,6 +36,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"armApiCaBundle",
 			"armApiClientCertCommonName",
 			"armClientId",
+			"azureSecPackVSATenantId",
 			"billingE2EStorageAccountId",
 			"billingServicePrincipalId",
 			"clusterMdsdConfigVersion",
