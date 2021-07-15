@@ -7,7 +7,6 @@ import (
 	"context"
 
 	configv1 "github.com/openshift/api/config/v1"
-	"github.com/sirupsen/logrus"
 )
 
 var clusterVersionConditionsExpected = map[configv1.ClusterStatusConditionType]configv1.ConditionStatus{
@@ -31,15 +30,6 @@ func (mon *Monitor) emitClusterVersionConditions(ctx context.Context) error {
 			"status": string(c.Status),
 			"type":   string(c.Type),
 		})
-
-		if mon.hourlyRun {
-			mon.log.WithFields(logrus.Fields{
-				"metric":  "clusterversion.conditions",
-				"status":  c.Status,
-				"type":    c.Type,
-				"message": c.Message,
-			}).Print()
-		}
 	}
 
 	return nil

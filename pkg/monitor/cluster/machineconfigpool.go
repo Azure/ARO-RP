@@ -69,7 +69,7 @@ func (mon *Monitor) emitMachineConfigPoolUnmanagedNodeCounts(ctx context.Context
 		mon.emitGauge("machineconfigpool.unmanagednodescount", unmanagednodescount, nil)
 	}
 
-	if mon.hourlyRun {
+	if mon.hourlyRun && unmanagednodescount != 0 {
 		mon.log.Printf("machineconfigpool.unmanagednodescount: %d", unmanagednodescount)
 	}
 
