@@ -1,3 +1,19 @@
+trigger:
+  branches:
+    include:
+    - master
+  paths:
+    exclude:
+    - docs/*
+
+pr:
+  branches:
+    include:
+    - master
+  paths:
+    exclude:
+    - docs/*
+
 # Azure DevOps Pipeline running e2e tests
 variables:
 - template: vars.yml

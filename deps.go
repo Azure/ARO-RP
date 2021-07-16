@@ -15,6 +15,7 @@ import (
 	_ "github.com/jstemmer/go-junit-report"
 	_ "github.com/mjudeikis/go-cosmosdb/cmd/gencosmosdb"
 	_ "golang.org/x/tools/cmd/goimports"
+	_ "gotest.tools/gotestsum"
 	_ "k8s.io/code-generator/cmd/client-gen"
 	_ "sigs.k8s.io/controller-tools/cmd/controller-gen"
 )
