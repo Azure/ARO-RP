@@ -32,6 +32,7 @@ type Reconciler struct {
 	arocli aroclient.Interface
 }
 
+// MachineSet reconciler watches MachineSet objects for changes, evaluates total worker replica count, and reverts changes if needed.
 func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.Interface) *Reconciler {
 	return &Reconciler{
 		log:    log,
@@ -60,7 +61,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	// Count amount of current worker replicas
+	// Count amount of total current worker replicas (including custom MachineSets, if present)
 	replicaCount := 0
 	for _, machineset := range machinesets.Items {
 		if machineset.Spec.Replicas != nil {
@@ -68,7 +69,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 	}
 
-	// Verify that MachineSet InfraID matches cluster InfraID
+	// Verify that the MachineSet that was modified matches the cluster's InfraID, otherwise ignore it
 	matches, err := regexp.Match(instance.Spec.InfraID, []byte(aroMachineset.ObjectMeta.Name))
 	if err != nil {
 		r.log.Error(err)
@@ -76,7 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	if replicaCount < 3 && matches {
 		r.log.Info("Found less than 3 worker replicas. The MachineSet controller will attempt scaling.")
-		aroMachineset.Spec.Replicas = to.Int32Ptr(int32(1) + *aroMachineset.Spec.Replicas)
+		aroMachineset.Spec.Replicas = to.Int32Ptr(int32(1) + *aroMachineset.Spec.Replicas) // Add one replica to the object, and call Update
 		_, err := r.maocli.MachineV1beta1().MachineSets(machineSetsNamespace).Update(ctx, aroMachineset, metav1.UpdateOptions{})
 		if err != nil {
 			return reconcile.Result{}, err
@@ -93,7 +94,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	})
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&machinev1beta1.MachineSet{}, builder.WithPredicates(machineSetPredicate)).
-		Watches(&source.Kind{Type: &machinev1beta1.Machine{}}, &handler.EnqueueRequestForObject{}). // Reconcile on changes to MachineSet objects
+		Watches(&source.Kind{Type: &machinev1beta1.MachineSet{}}, &handler.EnqueueRequestForObject{}). // Reconcile on changes to MachineSet objects
 		Named(controllers.MachineSetControllerName).
 		Complete(r)
 }
