@@ -82,8 +82,19 @@ type ServicePrincipalProfile struct {
 	SPObjectID string `json:"spObjectId,omitempty"`
 }
 
+// SDNProvider constants.
+type SDNProvider string
+
+const (
+	SDNProviderOVNKubernetes SDNProvider = "OVNKubernetes"
+	SDNProviderOpenShiftSDN  SDNProvider = "OpenShiftSDN"
+)
+
 // NetworkProfile represents a network profile.
 type NetworkProfile struct {
+	// The SDNProvider to use when installing the cluster.
+	SDNProvider SDNProvider `json:"sdnProvider,omitempty"`
+
 	PodCIDR     string `json:"podCidr,omitempty"`
 	ServiceCIDR string `json:"serviceCidr,omitempty"`
 
