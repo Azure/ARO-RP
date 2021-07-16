@@ -42,7 +42,7 @@ func TestConfigurationFieldParity(t *testing.T) {
 		// check each parameter exists as a field in Configuration
 		for name := range params.Parameters {
 			switch name {
-			case "deployNSGs", "rpImage", "rpServicePrincipalId", "vmssName":
+			case "deployNSGs", "rpImage", "rpServicePrincipalId", "vmssName", "ipRules":
 			default:
 				if _, found := m[name]; !found {
 					t.Errorf("field %s not found in config.Configuration but exists in templates", name)

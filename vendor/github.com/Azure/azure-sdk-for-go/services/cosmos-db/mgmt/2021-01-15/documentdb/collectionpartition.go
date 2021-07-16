@@ -34,7 +34,7 @@ func NewCollectionPartitionClientWithBaseURI(baseURI string, subscriptionID stri
 
 // ListMetrics retrieves the metrics determined by the given filter for the given collection, split by partition.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseRid - cosmos DB database rid.
 // collectionRid - cosmos DB collection rid.
@@ -98,7 +98,7 @@ func (client CollectionPartitionClient) ListMetricsPreparer(ctx context.Context,
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"$filter":     autorest.Encode("query", filter),
 		"api-version": APIVersion,
@@ -132,7 +132,7 @@ func (client CollectionPartitionClient) ListMetricsResponder(resp *http.Response
 
 // ListUsages retrieves the usages (most recent storage data) for the given collection, split by partition.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseRid - cosmos DB database rid.
 // collectionRid - cosmos DB collection rid.
@@ -195,7 +195,7 @@ func (client CollectionPartitionClient) ListUsagesPreparer(ctx context.Context, 
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

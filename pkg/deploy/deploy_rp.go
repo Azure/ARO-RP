@@ -7,8 +7,8 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"strings"
 
+	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -46,8 +46,9 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 			Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.ARMAPICABundle)),
 		}
 	}
-	parameters.Parameters["extraCosmosDBIPs"] = &arm.ParametersParameter{
-		Value: strings.Join(d.config.Configuration.ExtraCosmosDBIPs, ","),
+	ipRules := d.convertToIPAddressOrRange(d.config.Configuration.ExtraCosmosDBIPs)
+	parameters.Parameters["ipRules"] = &arm.ParametersParameter{
+		Value: ipRules,
 	}
 	parameters.Parameters["rpImage"] = &arm.ParametersParameter{
 		Value: *d.config.Configuration.RPImagePrefix + ":" + d.version,
@@ -176,4 +177,12 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 		},
 	}, "", "")
 	return err
+}
+
+func (d *deployer) convertToIPAddressOrRange(ipSlice []string) []mgmtdocumentdb.IPAddressOrRange {
+	var ips []mgmtdocumentdb.IPAddressOrRange
+	for _, v := range ipSlice {
+		ips = append(ips, mgmtdocumentdb.IPAddressOrRange{IPAddressOrRange: to.StringPtr(v)})
+	}
+	return ips
 }

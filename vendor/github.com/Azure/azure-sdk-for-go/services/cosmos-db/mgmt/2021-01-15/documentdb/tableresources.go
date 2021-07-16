@@ -33,7 +33,7 @@ func NewTableResourcesClientWithBaseURI(baseURI string, subscriptionID string) T
 
 // CreateUpdateTable create or update an Azure Cosmos DB Table
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // tableName - cosmos DB table name.
 // createUpdateTableParameters - the parameters to provide for the current Table.
@@ -63,7 +63,6 @@ func (client TableResourcesClient) CreateUpdateTable(ctx context.Context, resour
 			Constraints: []validation.Constraint{{Target: "createUpdateTableParameters.TableCreateUpdateProperties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "createUpdateTableParameters.TableCreateUpdateProperties.Resource", Name: validation.Null, Rule: true,
 					Chain: []validation.Constraint{{Target: "createUpdateTableParameters.TableCreateUpdateProperties.Resource.ID", Name: validation.Null, Rule: true, Chain: nil}}},
-					{Target: "createUpdateTableParameters.TableCreateUpdateProperties.Options", Name: validation.Null, Rule: true, Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.TableResourcesClient", "CreateUpdateTable", err.Error())
 	}
@@ -92,7 +91,7 @@ func (client TableResourcesClient) CreateUpdateTablePreparer(ctx context.Context
 		"tableName":         autorest.Encode("path", tableName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -136,7 +135,7 @@ func (client TableResourcesClient) CreateUpdateTableResponder(resp *http.Respons
 
 // DeleteTable deletes an existing Azure Cosmos DB Table.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // tableName - cosmos DB table name.
 func (client TableResourcesClient) DeleteTable(ctx context.Context, resourceGroupName string, accountName string, tableName string) (result TableResourcesDeleteTableFuture, err error) {
@@ -188,7 +187,7 @@ func (client TableResourcesClient) DeleteTablePreparer(ctx context.Context, reso
 		"tableName":         autorest.Encode("path", tableName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -229,7 +228,7 @@ func (client TableResourcesClient) DeleteTableResponder(resp *http.Response) (re
 
 // GetTable gets the Tables under an existing Azure Cosmos DB database account with the provided name.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // tableName - cosmos DB table name.
 func (client TableResourcesClient) GetTable(ctx context.Context, resourceGroupName string, accountName string, tableName string) (result TableGetResults, err error) {
@@ -288,7 +287,7 @@ func (client TableResourcesClient) GetTablePreparer(ctx context.Context, resourc
 		"tableName":         autorest.Encode("path", tableName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -322,7 +321,7 @@ func (client TableResourcesClient) GetTableResponder(resp *http.Response) (resul
 // GetTableThroughput gets the RUs per second of the Table under an existing Azure Cosmos DB database account with the
 // provided name.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // tableName - cosmos DB table name.
 func (client TableResourcesClient) GetTableThroughput(ctx context.Context, resourceGroupName string, accountName string, tableName string) (result ThroughputSettingsGetResults, err error) {
@@ -381,7 +380,7 @@ func (client TableResourcesClient) GetTableThroughputPreparer(ctx context.Contex
 		"tableName":         autorest.Encode("path", tableName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -414,7 +413,7 @@ func (client TableResourcesClient) GetTableThroughputResponder(resp *http.Respon
 
 // ListTables lists the Tables under an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 func (client TableResourcesClient) ListTables(ctx context.Context, resourceGroupName string, accountName string) (result TableListResult, err error) {
 	if tracing.IsEnabled() {
@@ -471,7 +470,7 @@ func (client TableResourcesClient) ListTablesPreparer(ctx context.Context, resou
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -502,9 +501,197 @@ func (client TableResourcesClient) ListTablesResponder(resp *http.Response) (res
 	return
 }
 
+// MigrateTableToAutoscale migrate an Azure Cosmos DB Table from manual throughput to autoscale
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// accountName - cosmos DB database account name.
+// tableName - cosmos DB table name.
+func (client TableResourcesClient) MigrateTableToAutoscale(ctx context.Context, resourceGroupName string, accountName string, tableName string) (result TableResourcesMigrateTableToAutoscaleFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/TableResourcesClient.MigrateTableToAutoscale")
+		defer func() {
+			sc := -1
+			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+				sc = result.FutureAPI.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
+		{TargetValue: accountName,
+			Constraints: []validation.Constraint{{Target: "accountName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "accountName", Name: validation.MinLength, Rule: 3, Chain: nil},
+				{Target: "accountName", Name: validation.Pattern, Rule: `^[a-z0-9]+(-[a-z0-9]+)*`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("documentdb.TableResourcesClient", "MigrateTableToAutoscale", err.Error())
+	}
+
+	req, err := client.MigrateTableToAutoscalePreparer(ctx, resourceGroupName, accountName, tableName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.TableResourcesClient", "MigrateTableToAutoscale", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.MigrateTableToAutoscaleSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.TableResourcesClient", "MigrateTableToAutoscale", nil, "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// MigrateTableToAutoscalePreparer prepares the MigrateTableToAutoscale request.
+func (client TableResourcesClient) MigrateTableToAutoscalePreparer(ctx context.Context, resourceGroupName string, accountName string, tableName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"accountName":       autorest.Encode("path", accountName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+		"tableName":         autorest.Encode("path", tableName),
+	}
+
+	const APIVersion = "2021-01-15"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/tables/{tableName}/throughputSettings/default/migrateToAutoscale", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// MigrateTableToAutoscaleSender sends the MigrateTableToAutoscale request. The method will close the
+// http.Response Body if it receives an error.
+func (client TableResourcesClient) MigrateTableToAutoscaleSender(req *http.Request) (future TableResourcesMigrateTableToAutoscaleFuture, err error) {
+	var resp *http.Response
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = future.result
+	return
+}
+
+// MigrateTableToAutoscaleResponder handles the response to the MigrateTableToAutoscale request. The method always
+// closes the http.Response Body.
+func (client TableResourcesClient) MigrateTableToAutoscaleResponder(resp *http.Response) (result ThroughputSettingsGetResults, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// MigrateTableToManualThroughput migrate an Azure Cosmos DB Table from autoscale to manual throughput
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// accountName - cosmos DB database account name.
+// tableName - cosmos DB table name.
+func (client TableResourcesClient) MigrateTableToManualThroughput(ctx context.Context, resourceGroupName string, accountName string, tableName string) (result TableResourcesMigrateTableToManualThroughputFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/TableResourcesClient.MigrateTableToManualThroughput")
+		defer func() {
+			sc := -1
+			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+				sc = result.FutureAPI.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
+		{TargetValue: accountName,
+			Constraints: []validation.Constraint{{Target: "accountName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "accountName", Name: validation.MinLength, Rule: 3, Chain: nil},
+				{Target: "accountName", Name: validation.Pattern, Rule: `^[a-z0-9]+(-[a-z0-9]+)*`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("documentdb.TableResourcesClient", "MigrateTableToManualThroughput", err.Error())
+	}
+
+	req, err := client.MigrateTableToManualThroughputPreparer(ctx, resourceGroupName, accountName, tableName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.TableResourcesClient", "MigrateTableToManualThroughput", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.MigrateTableToManualThroughputSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.TableResourcesClient", "MigrateTableToManualThroughput", nil, "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// MigrateTableToManualThroughputPreparer prepares the MigrateTableToManualThroughput request.
+func (client TableResourcesClient) MigrateTableToManualThroughputPreparer(ctx context.Context, resourceGroupName string, accountName string, tableName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"accountName":       autorest.Encode("path", accountName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+		"tableName":         autorest.Encode("path", tableName),
+	}
+
+	const APIVersion = "2021-01-15"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/tables/{tableName}/throughputSettings/default/migrateToManualThroughput", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// MigrateTableToManualThroughputSender sends the MigrateTableToManualThroughput request. The method will close the
+// http.Response Body if it receives an error.
+func (client TableResourcesClient) MigrateTableToManualThroughputSender(req *http.Request) (future TableResourcesMigrateTableToManualThroughputFuture, err error) {
+	var resp *http.Response
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = future.result
+	return
+}
+
+// MigrateTableToManualThroughputResponder handles the response to the MigrateTableToManualThroughput request. The method always
+// closes the http.Response Body.
+func (client TableResourcesClient) MigrateTableToManualThroughputResponder(resp *http.Response) (result ThroughputSettingsGetResults, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
 // UpdateTableThroughput update RUs per second of an Azure Cosmos DB Table
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // tableName - cosmos DB table name.
 // updateThroughputParameters - the parameters to provide for the RUs per second of the current Table.
@@ -533,7 +720,9 @@ func (client TableResourcesClient) UpdateTableThroughput(ctx context.Context, re
 		{TargetValue: updateThroughputParameters,
 			Constraints: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource", Name: validation.Null, Rule: true,
-					Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.Throughput", Name: validation.Null, Rule: true, Chain: nil}}},
+					Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.AutoscaleSettings", Name: validation.Null, Rule: false,
+						Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.AutoscaleSettings.MaxThroughput", Name: validation.Null, Rule: true, Chain: nil}}},
+					}},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.TableResourcesClient", "UpdateTableThroughput", err.Error())
 	}
@@ -562,7 +751,7 @@ func (client TableResourcesClient) UpdateTableThroughputPreparer(ctx context.Con
 		"tableName":         autorest.Encode("path", tableName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
