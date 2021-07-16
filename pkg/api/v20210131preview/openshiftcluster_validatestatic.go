@@ -210,6 +210,12 @@ func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, n
 		}
 	}
 
+	switch np.SDNProvider {
+	case SDNProviderOVNKubernetes, SDNProviderOpenShiftSDN:
+	default:
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".sdnProvider", "The provided SDNProvider '%s' is invalid.", np.SDNProvider)
+	}
+
 	return nil
 }
 
