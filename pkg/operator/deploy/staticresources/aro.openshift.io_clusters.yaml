@@ -44,12 +44,20 @@ spec:
                 type: integer
               azEnvironment:
                 type: string
+              banner:
+                description: Banner defines if a Banner should be shown to the customer
+                properties:
+                  content:
+                    type: integer
+                type: object
               domain:
                 type: string
               features:
                 description: FeaturesSpec defines ARO operator feature gates
                 properties:
                   reconcileAlertWebhook:
+                    type: boolean
+                  reconcileBanner:
                     type: boolean
                   reconcileDNSMasq:
                     type: boolean
