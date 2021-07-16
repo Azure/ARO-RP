@@ -831,7 +831,6 @@ github.com/go-kit/kit v0.10.0/go.mod h1:xUsJbQ/Fp4kEt7AFgCuvyX4a71u8h9jB8tj/ORgO
 github.com/go-ldap/ldap v3.0.2+incompatible/go.mod h1:qfd9rJvER9Q0/D/Sqn1DfHRoBp40uXYvFoEVrNEPqRc=
 github.com/go-ldap/ldap/v3 v3.1.3/go.mod h1:3rbOH3jRS2u6jg2rJnKAMLE/xQyCKIveG2Sa/Cohzb8=
 github.com/go-lintpack/lintpack v0.5.2/go.mod h1:NwZuYi2nUHho8XEIZ6SIxihrnPoqBTDqfpXvXAN0sXM=
-github.com/go-log/log v0.0.0-20181211034820-a514cf01a3eb/go.mod h1:4mBwpdRMFLiuXZDCwU2lKQFsoSCo72j3HqBK9d81N2M=
 github.com/go-logfmt/logfmt v0.3.0/go.mod h1:Qt1PoO58o5twSAckw1HlFXLmHsOX5/0LbT9GBnD5lWE=
 github.com/go-logfmt/logfmt v0.4.0/go.mod h1:3RMwSq7FuexP4Kalkev3ejPJsZTpXXBr9+V4qmtdjCk=
 github.com/go-logfmt/logfmt v0.5.0 h1:TrB8swr/68K7m9CcGut2g3UOihhbcbiMAYiuTXdEih4=
@@ -1197,7 +1196,6 @@ github.com/gophercloud/gophercloud v0.6.0/go.mod h1:GICNByuaEBibcjmjvI7QvYJSZEbG
 github.com/gophercloud/gophercloud v0.6.1-0.20191122030953-d8ac278c1c9d/go.mod h1:ozGNgr9KYOVATV5jsgHl/ceCDXGuguqOZAzoQ/2vcNM=
 github.com/gophercloud/gophercloud v0.10.1-0.20200424014253-c3bfe50899e5/go.mod h1:gmC5oQqMDOMO1t1gq5DquX/yAU808e/4mzjjDA76+Ss=
 github.com/gophercloud/gophercloud v0.12.0/go.mod h1:gmC5oQqMDOMO1t1gq5DquX/yAU808e/4mzjjDA76+Ss=
-github.com/gophercloud/gophercloud v0.12.1-0.20200827191144-bb4781e9de45/go.mod h1:w2NJEd88d4igNL1KUHzBsKMvS/ByJTzgltTGWKT7AC8=
 github.com/gophercloud/gophercloud v0.14.0/go.mod h1:VX0Ibx85B60B5XOrZr6kaNwrmPUzcmMpwxvQ1WQIIWM=
 github.com/gophercloud/gophercloud v0.15.1-0.20210202035223-633d73521055 h1:/wFA5WAzWcHNjpUs/Vuf4g2Sbv0wj3MUkZdeYgU4RkI=
 github.com/gophercloud/gophercloud v0.15.1-0.20210202035223-633d73521055/go.mod h1:wRtmUelyIIv3CSSDI47aUwbs075O6i+LY+pXsKCBsb4=
@@ -1208,8 +1206,6 @@ github.com/gophercloud/gophercloud v0.17.0/go.mod h1:wRtmUelyIIv3CSSDI47aUwbs075
 github.com/gophercloud/utils v0.0.0-20190128072930-fbb6ab446f01/go.mod h1:wjDF8z83zTeg5eMLml5EBSlAhbF7G8DobyI1YsMuyzw=
 github.com/gophercloud/utils v0.0.0-20190313033024-0bcc8e728cb5/go.mod h1:SZ9FTKibIotDtCrxAU/evccoyu1yhKST6hgBvwTB5Eg=
 github.com/gophercloud/utils v0.0.0-20200423144003-7c72efc7435d/go.mod h1:ehWUbLQJPqS0Ep+CxeD559hsm9pthPXadJNKwZkp43w=
-github.com/gophercloud/utils v0.0.0-20201101202656-8677e053dcf1/go.mod h1:ehWUbLQJPqS0Ep+CxeD559hsm9pthPXadJNKwZkp43w=
-github.com/gophercloud/utils v0.0.0-20201212031956-9dc30e126fea/go.mod h1:ehWUbLQJPqS0Ep+CxeD559hsm9pthPXadJNKwZkp43w=
 github.com/gophercloud/utils v0.0.0-20201221031838-d93cf4b3fa50/go.mod h1:ehWUbLQJPqS0Ep+CxeD559hsm9pthPXadJNKwZkp43w=
 github.com/gophercloud/utils v0.0.0-20210202040619-eca783186fc4/go.mod h1:wx8HMD8oQD0Ryhz6+6ykq75PJ79iPyEqYHfwZ4l7OsA=
 github.com/gophercloud/utils v0.0.0-20210323225332-7b186010c04f h1:+SO5iEqu9QjNWL9TfAmOE5u0Uizv1T3jpBuMJfMOVJ0=
@@ -1677,8 +1673,6 @@ github.com/lucas-clemente/quic-go-certificates v0.0.0-20160823095156-d2f86524cce
 github.com/lunixbochs/vtclean v0.0.0-20180621232353-2d01aacdc34a/go.mod h1:pHhQNgMf3btfWnGBVipUOjRYhoOsdGqdm/+2c2E2WMI=
 github.com/lusis/go-artifactory v0.0.0-20160115162124-7e4ce345df82/go.mod h1:y54tfGmO3NKssKveTEFFzH8C/akrSOy/iW9qEAUDV84=
 github.com/lyft/protoc-gen-validate v0.0.13/go.mod h1:XbGvPuh87YZc5TdIa2/I4pLk0QoUACkjt2znoq26NVQ=
-github.com/m1kola/installer v0.9.0-master.0.20210630161242-27df43e9d740 h1:8zCYpBox/rp3xPl5VPJd8F3GBbIv0azl3UpbjzDdD7Q=
-github.com/m1kola/installer v0.9.0-master.0.20210630161242-27df43e9d740/go.mod h1:zpOMUCsYL2u6M2QWWfEXeP15GAgxA7zREDQidMVlb6g=
 github.com/magiconair/properties v1.7.6/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/magiconair/properties v1.8.1 h1:ZC2Vc7/ZFkGmsVC9KvOjumD+G5lXy2RtTKyzRKO2BQ4=
@@ -1826,11 +1820,8 @@ github.com/mitchellh/reflectwalk v1.0.0/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx
 github.com/mitchellh/reflectwalk v1.0.1/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
 github.com/mjudeikis/go-cosmosdb v0.0.0-20210518104404-b205b3cefd36 h1:K0yb4fqa1rYPEbdlv3rYz0vh1aHK0Jkd+EscS1Yi5wI=
 github.com/mjudeikis/go-cosmosdb v0.0.0-20210518104404-b205b3cefd36/go.mod h1:l/LMyUQzbW3Pe62a6huel6S/5ED0KrkkqSQdwiGueUI=
-github.com/mjudeikis/installer v0.9.0-master.0.20210429223823-8452b42b403f/go.mod h1:XopVolWA5M92yeZlj7+QLXyKMXKdU0mCUz3B/QiaMqk=
-github.com/mjudeikis/installer v0.9.0-master.0.20210603071751-c3c375c5034a h1:CUatJN+U9y8AGqzfbvjQcnPKiJaK5gCZEIYpMqZr3/8=
-github.com/mjudeikis/installer v0.9.0-master.0.20210603071751-c3c375c5034a/go.mod h1:wRAY/doOkyi+sihbkl88EAMg11+3ZvPPBpGqI7iPVq0=
-github.com/mjudeikis/installer v0.9.0-master.0.20210705104729-749222c33d4f h1:YFwFCTJ00yKhwCvBXcLEPMMSnrYCxGn2AIQFUORFVtQ=
-github.com/mjudeikis/installer v0.9.0-master.0.20210705104729-749222c33d4f/go.mod h1:2NZuOXMJqLgSEHtluChgLLWrZ3QcAVLKPfNYAClFEQk=
+github.com/mjudeikis/installer v0.9.0-master.0.20210716092641-a368d8344d0d h1:6424GhglSNa/oaUY4qRaXfthMxDFyQOSOqg9EOcrPf4=
+github.com/mjudeikis/installer v0.9.0-master.0.20210716092641-a368d8344d0d/go.mod h1:2NZuOXMJqLgSEHtluChgLLWrZ3QcAVLKPfNYAClFEQk=
 github.com/moby/ipvs v1.0.1/go.mod h1:2pngiyseZbIKXNv7hsKj3O9UEz30c53MT9005gt2hxQ=
 github.com/moby/locker v1.0.1/go.mod h1:S7SDdo5zpBK84bzzVlKr2V0hz+7x9hWbYC/kq7oQppc=
 github.com/moby/sys/mountinfo v0.1.3/go.mod h1:w2t2Avltqx8vE7gX5l+QiBKxODu2TX0+Syr3h52Tw4o=
@@ -1992,7 +1983,6 @@ github.com/openshift/client-go v0.0.0-20210112165513-ebc401615f47 h1:+TEY29DK0Xh
 github.com/openshift/client-go v0.0.0-20210112165513-ebc401615f47/go.mod h1:u7NRAjtYVAKokiI9LouzTv4mhds8P4S1TwdVAfbjKSk=
 github.com/openshift/cloud-credential-operator v0.0.0-20200316201045-d10080b52c9e h1:2gyl9UVyjHSWzdS56KUXxQwIhENbq2x2olqoMQSA/C8=
 github.com/openshift/cloud-credential-operator v0.0.0-20200316201045-d10080b52c9e/go.mod h1:iPn+uhIe7nkP5BMHe2QnbLtg5m/AIQ1xvz9s3cig5ss=
-github.com/openshift/cluster-api v0.0.0-20191030113141-9a3a7bbe9258/go.mod h1:T18COkr6nLh9RyZKPMP7YjnwBME7RX8P2ar1SQbBltM=
 github.com/openshift/cluster-api-provider-aws v0.2.1-0.20210521181620-82202163e220 h1:1IlB0rbC2/+p7NThPKZLZflRdjgFXKI6RO4/8MkSXjE=
 github.com/openshift/cluster-api-provider-aws v0.2.1-0.20210521181620-82202163e220/go.mod h1:Cgv+fW4yIs1jmMu1c/tMB+OqUYufTEHtMxNW1bqIY+Q=
 github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20210318155632-e744815d9f05 h1:CAeRddO33GB66NNlS5jhlogu8BQOpKRkmJn6KDjufA0=
@@ -2156,7 +2146,6 @@ github.com/prometheus/common v0.0.0-20180801064454-c7de2306084e/go.mod h1:daVV7q
 github.com/prometheus/common v0.0.0-20181113130724-41aa239b4cce/go.mod h1:daVV7qP5qjZbuso7PdcryaAu0sAZbrN9i7WWcTMWvro=
 github.com/prometheus/common v0.0.0-20181126121408-4724e9255275/go.mod h1:daVV7qP5qjZbuso7PdcryaAu0sAZbrN9i7WWcTMWvro=
 github.com/prometheus/common v0.0.0-20190104105734-b1c43a6df3ae/go.mod h1:TNfzLD0ON7rHzMJeJkieUDPYmFC7Snx/y86RQel1bk4=
-github.com/prometheus/common v0.1.0/go.mod h1:TNfzLD0ON7rHzMJeJkieUDPYmFC7Snx/y86RQel1bk4=
 github.com/prometheus/common v0.2.0/go.mod h1:TNfzLD0ON7rHzMJeJkieUDPYmFC7Snx/y86RQel1bk4=
 github.com/prometheus/common v0.4.0/go.mod h1:TNfzLD0ON7rHzMJeJkieUDPYmFC7Snx/y86RQel1bk4=
 github.com/prometheus/common v0.4.1/go.mod h1:TNfzLD0ON7rHzMJeJkieUDPYmFC7Snx/y86RQel1bk4=
@@ -2389,7 +2378,6 @@ github.com/tdakkota/asciicheck v0.0.0-20200416200610-e657995f937b h1:HxLVTlqcHhF
 github.com/tdakkota/asciicheck v0.0.0-20200416200610-e657995f937b/go.mod h1:yHp0ai0Z9gUljN3o0xMhYJnH/IcvkdTBOX2fmJ93JEM=
 github.com/tencentcloud/tencentcloud-sdk-go v3.0.82+incompatible/go.mod h1:0PfYow01SHPMhKY31xa+EFz2RStxIqj6JFAJS+IkCi4=
 github.com/tencentyun/cos-go-sdk-v5 v0.0.0-20190808065407-f07404cefc8c/go.mod h1:wk2XFUg6egk4tSDNZtXeKfe2G6690UVyt163PuUxBZk=
-github.com/terraform-provider-openstack/terraform-provider-openstack v1.33.0/go.mod h1:NA2Iaq+p8yIzeHAY9DHEedL/SqrT0AInYP9GTqVLe1k=
 github.com/terraform-provider-openstack/terraform-provider-openstack v1.37.0/go.mod h1:tPCEc/DdR9fVX9rmcJiqa85oTG7BUb5Xc0bSY/aOTf8=
 github.com/terraform-providers/terraform-provider-azuread v0.9.0/go.mod h1:sSDzB/8CD639+yWo5lZf+NJvGSYQBSS6z+GoET9IrzE=
 github.com/terraform-providers/terraform-provider-google v1.20.1-0.20200623174414-27107f2ee160/go.mod h1:QxehqxV8Swl+O2JXJUdS6orHYJXWUEr4HFfYH5JV9ew=
@@ -2731,7 +2719,6 @@ golang.org/x/net v0.0.0-20190619014844-b5b0513f8c1b/go.mod h1:z5CRVTTTmAJ677TzLL
 golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
 golang.org/x/net v0.0.0-20190628185345-da137c7871d7/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
 golang.org/x/net v0.0.0-20190724013045-ca1201d0de80/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
-golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
 golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
 golang.org/x/net v0.0.0-20190923162816-aa69164e4478/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
@@ -3327,7 +3314,6 @@ k8s.io/system-validators v1.1.2/go.mod h1:bPldcLgkIUK22ALflnsXk8pvkTEndYdNuaHH6g
 k8s.io/utils v0.0.0-20190308190857-21c4ce38f2a7/go.mod h1:8k8uAuAQ0rXslZKaEWd0c3oVhZz7sSzSiPnVZayjIX0=
 k8s.io/utils v0.0.0-20190712204705-3dccf664f023/go.mod h1:sZAwmy6armz5eXlNoLmJcl4F1QuKu7sr+mFQ0byX7Ew=
 k8s.io/utils v0.0.0-20190801114015-581e00157fb1/go.mod h1:sZAwmy6armz5eXlNoLmJcl4F1QuKu7sr+mFQ0byX7Ew=
-k8s.io/utils v0.0.0-20190923111123-69764acb6e8e/go.mod h1:sZAwmy6armz5eXlNoLmJcl4F1QuKu7sr+mFQ0byX7Ew=
 k8s.io/utils v0.0.0-20191114200735-6ca3b61696b6/go.mod h1:sZAwmy6armz5eXlNoLmJcl4F1QuKu7sr+mFQ0byX7Ew=
 k8s.io/utils v0.0.0-20200411171748-3d5a2fe318e4/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
 k8s.io/utils v0.0.0-20200414100711-2df71ebbae66/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
