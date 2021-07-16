@@ -39,12 +39,17 @@ type Subnet struct {
 	Path string
 }
 
+type ServicePrincipalValidator interface {
+	ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string) error
+}
+
 // Dynamic validate in the operator context.
 type Dynamic interface {
+	ServicePrincipalValidator
+
 	ValidateVnet(ctx context.Context, location string, subnets []Subnet, additionalCIDRs ...string) error
 	ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
 	ValidateProviders(ctx context.Context) error
-	ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string) error
 	ValidateQuota(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error
@@ -82,6 +87,14 @@ func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEn
 		permissions:        authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer),
 		virtualNetworks:    newVirtualNetworksCache(network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer)),
 		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(azEnv, subscriptionID, authorizer),
+	}, nil
+}
+
+func NewServicePrincipalValidator(log *logrus.Entry, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizerType AuthorizerType) (ServicePrincipalValidator, error) {
+	return &dynamic{
+		log:            log,
+		authorizerType: authorizerType,
+		azEnv:          azEnv,
 	}, nil
 }
 
