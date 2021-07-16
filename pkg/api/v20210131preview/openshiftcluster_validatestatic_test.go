@@ -411,7 +411,16 @@ func TestOpenShiftClusterStaticValidateServicePrincipalProfile(t *testing.T) {
 }
 
 func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
-	tests := []*validateTest{
+	createtests := []*validateTest{
+		{
+			name: "sdnProvider create as OpenShiftSDN",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.SDNProvider = "OpenShiftSDN"
+			},
+		},
+	}
+
+	commontests := []*validateTest{
 		{
 			name: "valid",
 		},
@@ -457,67 +466,31 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.serviceCidr: The provided vnet CIDR '10.0.0.0/23' is invalid: must be /22 or larger.",
 		},
-	}
-
-	runTests(t, testModeCreate, tests)
-	runTests(t, testModeUpdate, tests)
-}
-
-func TestOpenShiftClusterStaticValidateNetworkProfileType(t *testing.T) {
-	createtests := []*validateTest{
 		{
-			name: "valid",
+			name: "sdnProvider given as empty",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.SDNProvider = ""
+			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.sdnProvider: The provided SDNProvider '' is invalid.",
 		},
 		{
-			name: "networkProvider",
+			name: "sdnProvider defaults as OVNKubernetes, no change",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.SDNProvider = "OVNKubernetes"
+			},
+		},
+		{
+			name: "sdnProvider given InvalidOption",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.NetworkProfile.SDNProvider = "InvalidOption"
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.sdnProvider: The provided SDNProvider 'InvalidOption' is invalid.",
 		},
-		{
-			name: "networkProvider",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.SDNProvider = "OpenShiftSDN"
-			},
-		},
-		{
-			name: "networkProvider",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.SDNProvider = "OVNKubernetes"
-			},
-		},
 	}
 
-	updatetests := []*validateTest{
-		{
-			name: "valid",
-		},
-		{
-			name: "networkProvider",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.SDNProvider = "InvalidOption"
-			},
-			wantErr: "400: InvalidParameter: properties.networkProfile.sdnProvider: The provided SDNProvider 'InvalidOption' is invalid.",
-		},
-		{
-			name: "networkProvider",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.SDNProvider = "OpenShiftSDN"
-			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.sdnProvider: Changing property 'properties.networkProfile.sdnProvider' is not allowed.",
-		},
-		{
-			name: "networkProvider",
-			modify: func(oc *OpenShiftCluster) {
-				// no change, object starts in this state
-				oc.Properties.NetworkProfile.SDNProvider = "OVNKubernetes"
-			},
-		},
-	}
-
+	runTests(t, testModeCreate, commontests)
+	runTests(t, testModeUpdate, commontests)
 	runTests(t, testModeCreate, createtests)
-	runTests(t, testModeUpdate, updatetests)
 }
 
 func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
@@ -866,6 +839,11 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		{
 			name:   "clientSecret change",
 			modify: func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientSecret = "invalid" },
+		},
+		{
+			name:    "sdnProvider should fail to change from OVNKubernetes to OpenShiftSDN",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.SDNProvider = "OpenShiftSDN" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.sdnProvider: Changing property 'properties.networkProfile.sdnProvider' is not allowed.",
 		},
 		{
 			name:    "podCidr change",
