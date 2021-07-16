@@ -120,11 +120,27 @@ import_certs_secrets() {
     az keyvault secret list \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --query '[].name' \
+        -o tsv | grep -q ^encryption-key-v2$ || \
+    az keyvault secret set \
+        --vault-name "$KEYVAULT_PREFIX-svc" \
+        --name encryption-key-v2 \
+        --value "$(openssl rand -base64 64)"
+    az keyvault secret list \
+        --vault-name "$KEYVAULT_PREFIX-svc" \
+        --query '[].name' \
         -o tsv | grep -q ^fe-encryption-key$ || \
     az keyvault secret set \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name fe-encryption-key \
         --value "$(openssl rand -base64 32)" >/dev/null
+    az keyvault secret list \
+        --vault-name "$KEYVAULT_PREFIX-svc" \
+        --query '[].name' \
+        -o tsv | grep -q ^fe-encryption-key-v2$ || \
+    az keyvault secret set \
+        --vault-name "$KEYVAULT_PREFIX-svc" \
+        --name fe-encryption-key-v2 \
+        --value "$(openssl rand -base64 64)"
     az keyvault secret list \
         --vault-name "$KEYVAULT_PREFIX-por" \
         --query '[].name' \

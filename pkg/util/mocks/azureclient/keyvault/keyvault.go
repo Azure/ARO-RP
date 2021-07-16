@@ -110,6 +110,21 @@ func (mr *MockBaseClientMockRecorder) GetSecret(arg0, arg1, arg2, arg3 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*MockBaseClient)(nil).GetSecret), arg0, arg1, arg2, arg3)
 }
 
+// GetSecretVersions mocks base method.
+func (m *MockBaseClient) GetSecretVersions(arg0 context.Context, arg1, arg2 string, arg3 *int32) ([]keyvault.SecretItem, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSecretVersions", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].([]keyvault.SecretItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSecretVersions indicates an expected call of GetSecretVersions.
+func (mr *MockBaseClientMockRecorder) GetSecretVersions(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecretVersions", reflect.TypeOf((*MockBaseClient)(nil).GetSecretVersions), arg0, arg1, arg2, arg3)
+}
+
 // GetSecrets mocks base method.
 func (m *MockBaseClient) GetSecrets(arg0 context.Context, arg1 string, arg2 *int32) ([]keyvault.SecretItem, error) {
 	m.ctrl.T.Helper()
