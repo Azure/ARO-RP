@@ -10,7 +10,7 @@ ifneq ($(shell uname -s),Darwin)
 endif
 
 aro: generate
-	go build -tags containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro
+	go build -tags containers_image_openpgp,codec.safe -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro
 
 az: pyenv
 	. pyenv/bin/activate && \
@@ -112,13 +112,13 @@ tunnel:
 	go run ./hack/tunnel $(shell az network public-ip show -g ${RESOURCEGROUP} -n rp-pip --query 'ipAddress')
 
 e2e.test:
-	go test ./test/e2e -tags e2e -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" -o e2e.test
+	go test ./test/e2e -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" -o e2e.test
 
 test-e2e: e2e.test
 	./e2e.test -test.timeout 180m -test.v -ginkgo.v
 
 test-go: generate
-	go build -tags containers_image_openpgp ./...
+	go build -tags containers_image_openpgp,codec.safe ./...
 
 	gofmt -s -w cmd hack pkg test
 	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg test
@@ -127,7 +127,7 @@ test-go: generate
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
-	go test -tags e2e -run ^$$ ./test/e2e/...
+	go test -tags e2e,codec.safe -run ^$$ ./test/e2e/...
 
 	go vet ./...
 	set -o pipefail && go test -v ./... -coverprofile cover.out | tee uts.txt
