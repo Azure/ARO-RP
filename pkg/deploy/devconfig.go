@@ -94,7 +94,9 @@ func DevConfig(_env env.Core) (*Config, error) {
 				SubscriptionID:      _env.SubscriptionID(),
 				RPResourceGroupName: os.Getenv("USER") + "-aro-" + _env.Location(),
 				Configuration: &Configuration{
+					AzureCloudName:       &_env.Environment().ActualCloudName,
 					DatabaseAccountName:  to.StringPtr(os.Getenv("USER") + "-aro-" + _env.Location()),
+					KeyvaultDNSSuffix:    &_env.Environment().KeyVaultDNSSuffix,
 					KeyvaultPrefix:       &keyvaultPrefix,
 					StorageAccountDomain: to.StringPtr(os.Getenv("USER") + "aro" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
 				},
