@@ -37,6 +37,7 @@ func GetConfig(env env.Interface, doc *api.OpenShiftClusterDocument) (*bootstrap
 		Certificate:       string(gcsCertBytes),
 		Key:               string(gcsKeyBytes),
 		Namespace:         env.ClusterGenevaLoggingNamespace(),
+		Account:           env.ClusterGenevaLoggingAccount(),
 		Environment:       env.ClusterGenevaLoggingEnvironment(),
 		ConfigVersion:     env.ClusterGenevaLoggingConfigVersion(),
 		Region:            env.Location(),

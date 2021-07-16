@@ -14,6 +14,7 @@ type Config struct {
 	Key               string
 	Namespace         string
 	Environment       string
+	Account           string
 	ConfigVersion     string
 	ResourceID        string
 	SubscriptionID    string

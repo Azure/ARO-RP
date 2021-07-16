@@ -26,6 +26,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/coreos/ignition/v2 v2.10.1 // indirect
 	github.com/coreos/vcontext v0.0.0-20210511154938-8fbad538d364 // indirect
+	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/docker v20.10.6+incompatible // indirect
 	github.com/docker/spdystream v0.2.0 // indirect
 	github.com/emicklei/go-restful v2.15.0+incompatible // indirect
@@ -243,7 +244,7 @@ replace (
 	github.com/openshift/cluster-api-provider-libvirt => github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20210324200850-033be25ca038
 	github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20210409185359-01b9bf8368a3
 	github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20210323072657-4f933d59784b
-	github.com/openshift/installer => github.com/mjudeikis/installer v0.9.0-master.0.20210705104729-749222c33d4f
+	github.com/openshift/installer => github.com/mjudeikis/installer v0.9.0-master.0.20210716092641-a368d8344d0d
 	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20210205203934-9eb0d970f2f4
 	github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20210521181620-e179bb5ce397
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20210522053223-c4b7e3f5118d
