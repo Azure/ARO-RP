@@ -27,27 +27,29 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
-// GenevaloggingReconciler reconciles a Cluster object
-type GenevaloggingReconciler struct {
+// Reconciler reconciles a Cluster object
+type Reconciler struct {
+	log *logrus.Entry
+
+	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
 	securitycli   securityclient.Interface
-	arocli        aroclient.Interface
-	restConfig    *rest.Config
-	log           *logrus.Entry
+
+	restConfig *rest.Config
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, arocli aroclient.Interface, restConfig *rest.Config) *GenevaloggingReconciler {
-	return &GenevaloggingReconciler{
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, restConfig *rest.Config) *Reconciler {
+	return &Reconciler{
+		log:           log,
 		securitycli:   securitycli,
 		kubernetescli: kubernetescli,
 		arocli:        arocli,
 		restConfig:    restConfig,
-		log:           log,
 	}
 }
 
 // Reconcile the genevalogging deployment.
-func (r *GenevaloggingReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
@@ -99,7 +101,7 @@ func (r *GenevaloggingReconciler) Reconcile(ctx context.Context, request ctrl.Re
 }
 
 // SetupWithManager setup our manager
-func (r *GenevaloggingReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
 	})

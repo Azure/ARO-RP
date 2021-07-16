@@ -229,7 +229,7 @@ func TestPullSecretReconciler(t *testing.T) {
 				return false, nil, nil
 			})
 
-			r := &PullSecretReconciler{
+			r := &Reconciler{
 				kubernetescli: tt.fakecli,
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 				arocli:        tt.arocli,
@@ -306,7 +306,7 @@ func TestParseRedHatKeys(t *testing.T) {
 
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &PullSecretReconciler{
+			r := &Reconciler{
 				log: logrus.NewEntry(logrus.StandardLogger()),
 			}
 
@@ -639,7 +639,7 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &PullSecretReconciler{
+			r := &Reconciler{
 				kubernetescli: tt.fakecli,
 			}
 

@@ -95,7 +95,7 @@ func TestWorkaroundReconciler(t *testing.T) {
 			defer controller.Finish()
 
 			mwa := mock_workaround.NewMockWorkaround(controller)
-			r := &WorkaroundReconciler{
+			r := &Reconciler{
 				arocli:      arocli,
 				configcli:   configfake.NewSimpleClientset(clusterVersion("4.4.10")),
 				workarounds: []Workaround{mwa},

@@ -26,23 +26,24 @@ import (
 
 var alertManagerName = types.NamespacedName{Name: "alertmanager-main", Namespace: "openshift-monitoring"}
 
-// AlertWebhookReconciler reconciles the alertmanager webhook
-type AlertWebhookReconciler struct {
+// Reconciler reconciles the alertmanager webhook
+type Reconciler struct {
+	log *logrus.Entry
+
 	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
-	log           *logrus.Entry
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface) *AlertWebhookReconciler {
-	return &AlertWebhookReconciler{
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface) *Reconciler {
+	return &Reconciler{
+		log:           log,
 		arocli:        arocli,
 		kubernetescli: kubernetescli,
-		log:           log,
 	}
 }
 
 // Reconcile makes sure that the Alertmanager default webhook is set.
-func (r *AlertWebhookReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
@@ -57,7 +58,7 @@ func (r *AlertWebhookReconciler) Reconcile(ctx context.Context, request ctrl.Req
 
 // setAlertManagerWebhook is a hack to disable the
 // AlertmanagerReceiversNotConfigured warning added in 4.3.8.
-func (r *AlertWebhookReconciler) setAlertManagerWebhook(ctx context.Context, addr string) error {
+func (r *Reconciler) setAlertManagerWebhook(ctx context.Context, addr string) error {
 	s, err := r.kubernetescli.CoreV1().Secrets(alertManagerName.Namespace).Get(ctx, alertManagerName.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -109,7 +110,7 @@ func (r *AlertWebhookReconciler) setAlertManagerWebhook(ctx context.Context, add
 }
 
 // SetupWithManager setup our manager
-func (r *AlertWebhookReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.log.Info("starting alertmanager sink")
 
 	isAlertManagerPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {

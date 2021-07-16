@@ -36,23 +36,24 @@ const (
 	reasonInitializing = "Initializing"
 )
 
-type ClusterOperatorAROReconciler struct {
-	// Replace configcli with CO client
-	configcli configclient.Interface
+type Reconciler struct {
+	// TODO: Replace configcli with CO client
+	log *logrus.Entry
+
 	arocli    aroclient.Interface
-	log       *logrus.Entry
+	configcli configclient.Interface
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli configclient.Interface) *ClusterOperatorAROReconciler {
-	return &ClusterOperatorAROReconciler{
-		configcli: configcli,
-		arocli:    arocli,
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli configclient.Interface) *Reconciler {
+	return &Reconciler{
 		log:       log,
+		arocli:    arocli,
+		configcli: configcli,
 	}
 }
 
 // SetupWithManager setup our manager
-func (r *ClusterOperatorAROReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
 	})
@@ -64,7 +65,7 @@ func (r *ClusterOperatorAROReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		Complete(r)
 }
 
-func (r *ClusterOperatorAROReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	cluster, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
@@ -90,7 +91,7 @@ func (r *ClusterOperatorAROReconciler) Reconcile(ctx context.Context, request ct
 	})
 }
 
-func (r *ClusterOperatorAROReconciler) setClusterOperatorStatus(ctx context.Context, co *configv1.ClusterOperator) error {
+func (r *Reconciler) setClusterOperatorStatus(ctx context.Context, co *configv1.ClusterOperator) error {
 	// TODO: Replace with a real conditions based on aro operator conditions
 	currentTime := metav1.Now()
 	conditions := []configv1.ClusterOperatorStatusCondition{
@@ -128,7 +129,7 @@ func (r *ClusterOperatorAROReconciler) setClusterOperatorStatus(ctx context.Cont
 	return err
 }
 
-func (r *ClusterOperatorAROReconciler) getOrCreateClusterOperator(ctx context.Context) (*configv1.ClusterOperator, error) {
+func (r *Reconciler) getOrCreateClusterOperator(ctx context.Context) (*configv1.ClusterOperator, error) {
 	co, err := r.configcli.ConfigV1().ClusterOperators().Get(ctx, clusterOperatorName, metav1.GetOptions{})
 	if !kerrors.IsNotFound(err) {
 		return co, err
@@ -146,7 +147,7 @@ func (r *ClusterOperatorAROReconciler) getOrCreateClusterOperator(ctx context.Co
 	return r.configcli.ConfigV1().ClusterOperators().UpdateStatus(ctx, co, metav1.UpdateOptions{})
 }
 
-func (r *ClusterOperatorAROReconciler) defaultOperator() *configv1.ClusterOperator {
+func (r *Reconciler) defaultOperator() *configv1.ClusterOperator {
 	currentTime := metav1.Now()
 	return &configv1.ClusterOperator{
 		ObjectMeta: metav1.ObjectMeta{

@@ -19,37 +19,24 @@ import (
 )
 
 type systemreserved struct {
-	mcocli       mcoclient.Interface
-	dh           dynamichelper.Interface
-	log          *logrus.Entry
+	log *logrus.Entry
+
+	mcocli mcoclient.Interface
+	dh     dynamichelper.Interface
+
 	versionFixed *version.Version
 }
 
-// Tweaked values from from https://github.com/openshift/kubernetes/blob/master/pkg/kubelet/apis/config/v1beta1/defaults_linux.go
-const (
-	hardEviction                = "500Mi"
-	nodeFsAvailable             = "10%"
-	nodeFsInodes                = "5%"
-	imageFs                     = "15%"
-	labelName                   = "aro.openshift.io/limits"
-	labelValue                  = ""
-	kubeletConfigName           = "aro-limits"
-	workerMachineConfigPoolName = "worker"
-	memReserved                 = "2000Mi"
-)
-
-var (
-	_ Workaround = &systemreserved{}
-)
+var _ Workaround = &systemreserved{}
 
 func NewSystemReserved(log *logrus.Entry, mcocli mcoclient.Interface, dh dynamichelper.Interface) *systemreserved {
 	verFixed, err := version.ParseVersion("4.99.0") // TODO set this correctly when known.
 	utilruntime.Must(err)
 
 	return &systemreserved{
+		log:          log,
 		mcocli:       mcocli,
 		dh:           dh,
-		log:          log,
 		versionFixed: verFixed,
 	}
 }

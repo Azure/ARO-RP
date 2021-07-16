@@ -23,22 +23,22 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
-type RBACReconciler struct {
+type Reconciler struct {
 	log *logrus.Entry
 
 	arocli aroclient.Interface
 	dh     dynamichelper.Interface
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, dh dynamichelper.Interface) *RBACReconciler {
-	return &RBACReconciler{
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, dh dynamichelper.Interface) *Reconciler {
+	return &Reconciler{
 		log:    log,
 		arocli: arocli,
 		dh:     dh,
 	}
 }
 
-func (r *RBACReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		r.log.Error(err)
@@ -84,7 +84,7 @@ func (r *RBACReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 }
 
 // SetupWithManager setup our mananger
-func (r *RBACReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
 	})

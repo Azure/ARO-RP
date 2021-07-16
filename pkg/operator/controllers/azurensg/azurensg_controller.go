@@ -30,26 +30,27 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 )
 
-// AzureNSGReconciler is the controller struct
-type AzureNSGReconciler struct {
+// Reconciler is the controller struct
+type Reconciler struct {
+	log *logrus.Entry
+
 	arocli        aroclient.Interface
-	maocli        maoclient.Interface
 	kubernetescli kubernetes.Interface
-	log           *logrus.Entry
+	maocli        maoclient.Interface
 }
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, maocli maoclient.Interface, kubernetescli kubernetes.Interface) *AzureNSGReconciler {
-	return &AzureNSGReconciler{
-		arocli:        arocli,
-		maocli:        maocli,
-		kubernetescli: kubernetescli,
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli maoclient.Interface) *Reconciler {
+	return &Reconciler{
 		log:           log,
+		arocli:        arocli,
+		kubernetescli: kubernetescli,
+		maocli:        maocli,
 	}
 }
 
 //Reconcile fixes the Network Security Groups
-func (r *AzureNSGReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
@@ -90,7 +91,7 @@ func (r *AzureNSGReconciler) Reconcile(ctx context.Context, request ctrl.Request
 }
 
 // SetupWithManager creates the controller
-func (r *AzureNSGReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
 	})

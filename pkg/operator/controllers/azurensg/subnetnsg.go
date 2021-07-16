@@ -26,7 +26,7 @@ type subnetDescriptor struct {
 	subnetName    string
 }
 
-func (r *AzureNSGReconciler) reconcileSubnetNSG(ctx context.Context, instance *arov1alpha1.Cluster, subscriptionID string, subnetsClient network.SubnetsClient) error {
+func (r *Reconciler) reconcileSubnetNSG(ctx context.Context, instance *arov1alpha1.Cluster, subscriptionID string, subnetsClient network.SubnetsClient) error {
 	// the main logic starts here
 	subnets, masterResourceGroup, err := r.getSubnets(ctx)
 	if err != nil {
@@ -41,7 +41,7 @@ func (r *AzureNSGReconciler) reconcileSubnetNSG(ctx context.Context, instance *a
 	return nil
 }
 
-func (r *AzureNSGReconciler) ensureSubnetNSG(ctx context.Context, subnetsClient network.SubnetsClient, subscriptionID, resourcesResourceGroup, infraID string, architectureVersion api.ArchitectureVersion, vnetResourceGroup, vnetName, subnetName string, isWorkerSubnet bool) error {
+func (r *Reconciler) ensureSubnetNSG(ctx context.Context, subnetsClient network.SubnetsClient, subscriptionID, resourcesResourceGroup, infraID string, architectureVersion api.ArchitectureVersion, vnetResourceGroup, vnetName, subnetName string, isWorkerSubnet bool) error {
 	subnetObject, err := subnetsClient.Get(ctx, vnetResourceGroup, vnetName, subnetName, "")
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (r *AzureNSGReconciler) ensureSubnetNSG(ctx context.Context, subnetsClient 
 	return nil
 }
 
-func (r *AzureNSGReconciler) getSubnets(ctx context.Context) (map[subnetDescriptor]bool, string, error) {
+func (r *Reconciler) getSubnets(ctx context.Context) (map[subnetDescriptor]bool, string, error) {
 	subnetMap := make(map[subnetDescriptor]bool) // bool is true for master subnets
 	var masterResourceGroup *string
 	// select all workers by the  machine.openshift.io/cluster-api-machine-role: not equal to master Label
@@ -102,7 +102,7 @@ func (r *AzureNSGReconciler) getSubnets(ctx context.Context) (map[subnetDescript
 	return subnetMap, *masterResourceGroup, nil
 }
 
-func (r *AzureNSGReconciler) getDescriptorFromProviderSpec(providerSpec *runtime.RawExtension) (*string, *subnetDescriptor, error) {
+func (r *Reconciler) getDescriptorFromProviderSpec(providerSpec *runtime.RawExtension) (*string, *subnetDescriptor, error) {
 	var spec azureproviderv1beta1.AzureMachineProviderSpec
 	err := json.Unmarshal(providerSpec.Raw, &spec)
 	if err != nil {

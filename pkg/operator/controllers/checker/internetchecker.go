@@ -23,15 +23,17 @@ import (
 
 // InternetChecker reconciles a Cluster object
 type InternetChecker struct {
+	log *logrus.Entry
+
 	arocli aroclient.Interface
-	log    *logrus.Entry
-	role   string
+
+	role string
 }
 
 func NewInternetChecker(log *logrus.Entry, arocli aroclient.Interface, role string) *InternetChecker {
 	return &InternetChecker{
-		arocli: arocli,
 		log:    log,
+		arocli: arocli,
 		role:   role,
 	}
 }

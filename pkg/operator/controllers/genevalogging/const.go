@@ -8,6 +8,9 @@ const (
 	kubeServiceAccount     = "system:serviceaccount:" + kubeNamespace + ":geneva"
 	certificatesSecretName = "certificates"
 
+	GenevaCertName = "gcscert.pem"
+	GenevaKeyName  = "gcskey.pem"
+
 	parsersConf = `
 [PARSER]
 	Name audit

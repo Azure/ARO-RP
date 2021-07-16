@@ -17,7 +17,7 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
-func (r *MachineReconciler) workerReplicas(ctx context.Context) (int, error) {
+func (r *Reconciler) workerReplicas(ctx context.Context) (int, error) {
 	count := 0
 	machinesets, err := r.maocli.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -32,7 +32,7 @@ func (r *MachineReconciler) workerReplicas(ctx context.Context) (int, error) {
 	return count, nil
 }
 
-func (r *MachineReconciler) machineValid(ctx context.Context, machine *machinev1beta1.Machine, isMaster bool) (errs []error) {
+func (r *Reconciler) machineValid(ctx context.Context, machine *machinev1beta1.Machine, isMaster bool) (errs []error) {
 	// Validate machine provider spec exists and decode it
 	if machine.Spec.ProviderSpec.Value == nil {
 		return []error{fmt.Errorf("machine %s: provider spec missing", machine.Name)}
@@ -72,7 +72,7 @@ func (r *MachineReconciler) machineValid(ctx context.Context, machine *machinev1
 	return errs
 }
 
-func (r *MachineReconciler) checkMachines(ctx context.Context) (errs []error) {
+func (r *Reconciler) checkMachines(ctx context.Context) (errs []error) {
 	actualWorkers := 0
 	actualMasters := 0
 

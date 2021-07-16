@@ -68,7 +68,7 @@ fi
 #iptables -nvL`
 )
 
-func (r *RouteFixReconciler) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
+func (r *Reconciler) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
 	scc, err := r.securitycli.SecurityV1().SecurityContextConstraints().Get(ctx, "privileged", metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (r *RouteFixReconciler) securityContextConstraints(ctx context.Context, nam
 	return scc, nil
 }
 
-func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster) ([]runtime.Object, error) {
+func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster) ([]runtime.Object, error) {
 	scc, err := r.securityContextConstraints(ctx, "privileged-routefix", kubeServiceAccount)
 	if err != nil {
 		return nil, err

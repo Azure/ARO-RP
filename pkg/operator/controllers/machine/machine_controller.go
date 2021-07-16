@@ -21,25 +21,27 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
-type MachineReconciler struct {
-	maocli                 maoclient.Interface
-	arocli                 aroclient.Interface
-	log                    *logrus.Entry
+type Reconciler struct {
+	log *logrus.Entry
+
+	arocli aroclient.Interface
+	maocli maoclient.Interface
+
 	isLocalDevelopmentMode bool
 	role                   string
 }
 
-func NewMachineReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.Interface, isLocalDevelopmentMode bool, role string) *MachineReconciler {
-	return &MachineReconciler{
-		maocli:                 maocli,
-		arocli:                 arocli,
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, maocli maoclient.Interface, isLocalDevelopmentMode bool, role string) *Reconciler {
+	return &Reconciler{
 		log:                    log,
+		arocli:                 arocli,
+		maocli:                 maocli,
 		isLocalDevelopmentMode: isLocalDevelopmentMode,
 		role:                   role,
 	}
 }
 
-func (r *MachineReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	// Update cluster object's status.
 	cond := &status.Condition{
 		Type:    arov1alpha1.MachineValid,
@@ -64,7 +66,7 @@ func (r *MachineReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 	return reconcile.Result{}, controllers.SetCondition(ctx, r.arocli, cond, r.role)
 }
 
-func (r *MachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&machinev1beta1.Machine{}).
 		Named(controllers.MachineControllerName).

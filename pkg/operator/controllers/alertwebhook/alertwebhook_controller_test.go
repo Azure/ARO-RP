@@ -136,12 +136,12 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		reconciler *AlertWebhookReconciler
+		reconciler *Reconciler
 		want       []byte
 	}{
 		{
 			name: "old cluster",
-			reconciler: &AlertWebhookReconciler{
+			reconciler: &Reconciler{
 				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "alertmanager-main",
@@ -156,7 +156,7 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 		},
 		{
 			name: "new cluster",
-			reconciler: &AlertWebhookReconciler{
+			reconciler: &Reconciler{
 				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "alertmanager-main",
