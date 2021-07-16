@@ -93,11 +93,17 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	shouldDelete := func(resourceGroup mgmtfeatures.ResourceGroup, log *logrus.Entry) bool {
+		//assume its a prod cluster, dev clusters will have purge tag
+		devCluster := false
+		if resourceGroup.Tags != nil {
+			_, devCluster = resourceGroup.Tags["purge"]
+		}
+
 		// don't mess with clusters in RGs managed by a production RP. Although
 		// the production deny assignment will prevent us from breaking most
 		// things, that does not include us potentially detaching the cluster's
 		// NSG from the vnet, thus breaking inbound access to the cluster.
-		if resourceGroup.ManagedBy != nil && *resourceGroup.ManagedBy != "" {
+		if !devCluster && resourceGroup.ManagedBy != nil && *resourceGroup.ManagedBy != "" {
 			return false
 		}
 
