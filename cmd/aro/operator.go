@@ -171,7 +171,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (machineset.NewReconciler(
 			log.WithField("controller", controllers.MachineSetControllerName),
-			maocli, arocli)).SetupWithManager(mgr); err != nil {
+			arocli, maocli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller MachineSet: %v", err)
 		}
 	}

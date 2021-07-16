@@ -28,16 +28,16 @@ import (
 type Reconciler struct {
 	log *logrus.Entry
 
-	maocli maoclient.Interface
 	arocli aroclient.Interface
+	maocli maoclient.Interface
 }
 
 // MachineSet reconciler watches MachineSet objects for changes, evaluates total worker replica count, and reverts changes if needed.
-func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, maocli maoclient.Interface) *Reconciler {
 	return &Reconciler{
 		log:    log,
-		maocli: maocli,
 		arocli: arocli,
+		maocli: maocli,
 	}
 }
 
@@ -77,12 +77,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	if replicaCount < 3 && matches {
 		r.log.Info("Found less than 3 worker replicas. The MachineSet controller will attempt scaling.")
-		aroMachineset.Spec.Replicas = to.Int32Ptr(int32(1) + *aroMachineset.Spec.Replicas) // Add one replica to the object, and call Update
+		aroMachineset.Spec.Replicas = to.Int32Ptr(int32(3-replicaCount) + *aroMachineset.Spec.Replicas) // Add replicas to the object, and call Update
 		_, err := r.maocli.MachineV1beta1().MachineSets(machineSetsNamespace).Update(ctx, aroMachineset, metav1.UpdateOptions{})
 		if err != nil {
-			return reconcile.Result{}, err
+			r.log.Errorf("Error updating MachineSet '%v': %v", aroMachineset, err)
 		}
-		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, err
