@@ -40,6 +40,16 @@ post-install configurations should probably move here.
 * monitor and repair mdsd as needed
 * set the alertmanager webhook
 
+### Controllers and Deployment
+
+The full list of operator controllers with descriptions can be
+found in the README at the root of the repository.
+
+The static pod resources can be found at `pkg/operator/deploy/staticresources`. The
+deploy operation kicks off two deployments in the `openshift-azure-operator` namespace, one for
+master and one for worker. The `aro-operator-master` deployment runs all controllers,
+while the `aro-operator-worker` deployment runs only the internet checker in the worker subnet.
+
 ## Developer documentation
 
 ### How to Run a pre built operator image
