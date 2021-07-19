@@ -100,7 +100,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 		workerZones = []string{""}
 	}
 
-	SDNProvider := "OVNKubernetes"
+	SDNProvider := string(api.SDNProviderOVNKubernetes)
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.SDNProvider != "" {
 		SDNProvider = string(m.doc.OpenShiftCluster.Properties.NetworkProfile.SDNProvider)
 	}

@@ -195,6 +195,11 @@ type ServicePrincipalProfile struct {
 // SDNProvider
 type SDNProvider string
 
+const (
+	SDNProviderOVNKubernetes SDNProvider = "OVNKubernetes"
+	SDNProviderOpenShiftSDN  SDNProvider = "OpenShiftSDN"
+)
+
 // NetworkProfile represents a network profile
 type NetworkProfile struct {
 	MissingFields

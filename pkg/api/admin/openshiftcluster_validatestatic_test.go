@@ -318,7 +318,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				return &OpenShiftCluster{
 					Properties: OpenShiftClusterProperties{
 						NetworkProfile: NetworkProfile{
-							SDNProvider: "OVNKubernetes",
+							SDNProvider: SDNProviderOVNKubernetes,
 						},
 					},
 				}

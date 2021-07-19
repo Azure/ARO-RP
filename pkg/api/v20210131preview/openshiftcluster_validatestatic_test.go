@@ -78,7 +78,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 			NetworkProfile: NetworkProfile{
 				PodCIDR:     "10.128.0.0/14",
 				ServiceCIDR: "172.30.0.0/16",
-				SDNProvider: "OVNKubernetes",
+				SDNProvider: SDNProviderOVNKubernetes,
 			},
 			MasterProfile: MasterProfile{
 				VMSize:   VMSizeStandardD8sV3,
@@ -415,7 +415,7 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 		{
 			name: "sdnProvider create as OpenShiftSDN",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.SDNProvider = "OpenShiftSDN"
+				oc.Properties.NetworkProfile.SDNProvider = SDNProviderOpenShiftSDN
 			},
 		},
 	}
@@ -472,12 +472,6 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 				oc.Properties.NetworkProfile.SDNProvider = ""
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.sdnProvider: The provided SDNProvider '' is invalid.",
-		},
-		{
-			name: "sdnProvider defaults as OVNKubernetes, no change",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.SDNProvider = "OVNKubernetes"
-			},
 		},
 		{
 			name: "sdnProvider given InvalidOption",
@@ -842,7 +836,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		},
 		{
 			name:    "sdnProvider should fail to change from OVNKubernetes to OpenShiftSDN",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.SDNProvider = "OpenShiftSDN" },
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.SDNProvider = SDNProviderOpenShiftSDN },
 			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.sdnProvider: Changing property 'properties.networkProfile.sdnProvider' is not allowed.",
 		},
 		{
