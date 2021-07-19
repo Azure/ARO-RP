@@ -45,7 +45,7 @@ type Reconciler struct {
 
 var (
 	verFixed47, _ = version.ParseVersion("4.7.18")  // fixed in 4.7.18
-	verFixed46, _ = version.ParseVersion("4.6.38 ") // fixed in 4.6.38
+	verFixed46, _ = version.ParseVersion("4.6.37 ") // fixed in 4.6.37
 )
 
 // NewReconciler creates a new Reconciler
