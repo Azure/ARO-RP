@@ -129,6 +129,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 				adminKeyvaultAccessPolicy(_env),
 				deployKeyvaultAccessPolicy(_env),
 			},
+			FluentbitImage:              to.StringPtr(os.Getenv("FLUENTBIT_IMAGE")),
 			FPClientID:                  to.StringPtr(os.Getenv("AZURE_FP_CLIENT_ID")),
 			FPServicePrincipalID:        to.StringPtr(os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
 			GlobalResourceGroupLocation: to.StringPtr(_env.Location()),

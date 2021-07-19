@@ -67,6 +67,9 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	parameters.Parameters["azureCloudName"] = &arm.ParametersParameter{
 		Value: d.env.Environment().ActualCloudName,
 	}
+	parameters.Parameters["fluentbitImage"] = &arm.ParametersParameter{
+		Value: *d.config.Configuration.FluentbitImage,
+	}
 
 	for i := 0; i < 2; i++ {
 		d.log.Printf("deploying %s", deploymentName)

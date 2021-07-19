@@ -53,6 +53,9 @@
         "extraCosmosDBIPs": {
             "value": ""
         },
+        "fluentbitImage": {
+            "value": ""
+        },
         "fpClientId": {
             "value": ""
         },
