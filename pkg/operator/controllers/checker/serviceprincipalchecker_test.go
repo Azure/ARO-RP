@@ -16,7 +16,8 @@ import (
 	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 )
 
-// TODO - once aad.GetToken is mockable add tests for other cases
+// TODO: once aad.GetToken is mockable add tests for other cases
+// TODO: clean up test cases - they seem to be testing code which should have own tests
 func TestServicePrincipalValid(t *testing.T) {
 	ctx := context.Background()
 
@@ -30,19 +31,6 @@ func TestServicePrincipalValid(t *testing.T) {
 			wantErr: `clusters.aro.openshift.io "cluster" not found`,
 		},
 		{
-			name: "fail: invalid cluster resource",
-			aroCluster: &arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: arov1alpha1.SingletonClusterName,
-				},
-				Spec: arov1alpha1.ClusterSpec{
-					AZEnvironment: azuretypes.PublicCloud.Name(),
-					ResourceID:    "invalid_resource",
-				},
-			},
-			wantErr: `parsing failed for invalid_resource. Invalid resource Id format`,
-		},
-		{
 			name: "fail: invalid az environment",
 			aroCluster: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
@@ -50,7 +38,6 @@ func TestServicePrincipalValid(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					AZEnvironment: "NEVERLAND",
-					ResourceID:    "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myresourcegroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/mycluster",
 				},
 			},
 			wantErr: `cloud environment "NEVERLAND" is unsupported by ARO`,
@@ -63,7 +50,6 @@ func TestServicePrincipalValid(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					AZEnvironment: azuretypes.PublicCloud.Name(),
-					ResourceID:    "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myresourcegroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/mycluster",
 				},
 			},
 			wantErr: `secrets "azure-credentials" not found`,
