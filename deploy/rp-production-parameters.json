@@ -56,6 +56,9 @@
         "disableCosmosDBFirewall": {
             "value": false
         },
+        "fluentbitImage": {
+            "value": ""
+        },
         "fpClientId": {
             "value": ""
         },
