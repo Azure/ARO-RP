@@ -377,11 +377,11 @@ func (g *generator) rpVMSS() *arm.Resource {
 
 	for _, variable := range []string{
 		"acrResourceId",
+		"adminApiClientCertCommonName",
+		"armApiClientCertCommonName",
 		"armClientId",
 		"azureCloudName",
 		"azureSecPackVSATenantId",
-		"adminApiClientCertCommonName",
-		"armApiClientCertCommonName",
 		"billingE2EStorageAccountId",
 		"clusterMdmAccount",
 		"clusterMdsdAccount",
@@ -391,8 +391,8 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"databaseAccountName",
 		"fpClientId",
 		"fpServicePrincipalId",
-		"keyvaultPrefix",
 		"keyvaultDNSSuffix",
+		"keyvaultPrefix",
 		"mdmFrontendUrl",
 		"mdsdEnvironment",
 		"portalAccessGroupIds",
