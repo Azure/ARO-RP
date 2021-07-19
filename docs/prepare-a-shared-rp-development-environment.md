@@ -228,6 +228,22 @@ locations.
 
    TODO: more steps are needed to configure aro-v4-portal-shared.
 
+1. Create an AAD application which will fake up the dbtoken client.
+
+   1. Create the application and set `requestedAccessTokenVersion`
+
+   ```bash
+   AZURE_DBTOKEN_CLIENT_ID="$(az ad app create --display-name dbtoken \
+      --oauth2-allow-implicit-flow false \
+      --query appId \
+      -o tsv)"
+
+   OBJ_ID="$(az ad app show --id $AZURE_DBTOKEN_CLIENT_ID --query objectId)"
+
+   az rest --method PATCH \
+      --uri https://graph.microsoft.com/v1.0/applications/$OBJ_ID/ \
+      --body '{"api":{"requestedAccessTokenVersion": 2}}'
+   ```
 
 ## Certificates
 
@@ -320,6 +336,7 @@ locations.
    export AZURE_ARM_CLIENT_ID='$AZURE_ARM_CLIENT_ID'
    export AZURE_FP_CLIENT_ID='$AZURE_FP_CLIENT_ID'
    export AZURE_FP_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)'
+   export AZURE_DBTOKEN_CLIENT_ID='$AZURE_DBTOKEN_CLIENT_ID'
    export AZURE_PORTAL_CLIENT_ID='$AZURE_PORTAL_CLIENT_ID'
    export AZURE_PORTAL_ACCESS_GROUP_IDS='$ADMIN_OBJECT_ID'
    export AZURE_PORTAL_ELEVATED_GROUP_IDS='$ADMIN_OBJECT_ID'
