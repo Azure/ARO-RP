@@ -39,13 +39,17 @@ type Reconciler struct {
 	securitycli   securityclient.Interface
 
 	restConfig *rest.Config
-	verFixed   *version.Version
+	verFixed46 *version.Version
+	verFixed47 *version.Version
 }
+
+var (
+	verFixed47, _ = version.ParseVersion("4.7.18")  // fixed in 4.7.18
+	verFixed46, _ = version.ParseVersion("4.6.38 ") // fixed in 4.6.38
+)
 
 // NewReconciler creates a new Reconciler
 func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli configclient.Interface, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, restConfig *rest.Config) *Reconciler {
-	verFixed, _ := version.ParseVersion("4.7.15")
-
 	return &Reconciler{
 		log:           log,
 		arocli:        arocli,
@@ -53,7 +57,8 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli conf
 		kubernetescli: kubernetescli,
 		securitycli:   securitycli,
 		restConfig:    restConfig,
-		verFixed:      verFixed,
+		verFixed46:    verFixed46,
+		verFixed47:    verFixed47,
 	}
 }
 
@@ -150,5 +155,13 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *Reconciler) isRequired(clusterVersion *version.Version) bool {
-	return clusterVersion.Lt(r.verFixed)
+	y := clusterVersion.V[1]
+	switch y {
+	case 6: // 4.6.X
+		return clusterVersion.Lt(r.verFixed46)
+	case 7: // 4.7.X
+		return clusterVersion.Lt(r.verFixed47)
+	default:
+		return clusterVersion.Lt(r.verFixed47)
+	}
 }
