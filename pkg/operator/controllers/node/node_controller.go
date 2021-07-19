@@ -33,23 +33,24 @@ const (
 	gracePeriod              = time.Hour
 )
 
-// NodeReconciler spots nodes that look like they're stuck upgrading.  When this
+// Reconciler spots nodes that look like they're stuck upgrading.  When this
 // happens, it tries to drain them disabling eviction (so PDBs don't count).
-type NodeReconciler struct {
-	log           *logrus.Entry
+type Reconciler struct {
+	log *logrus.Entry
+
 	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
 }
 
-func NewNodeReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.Interface) *NodeReconciler {
-	return &NodeReconciler{
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface) *Reconciler {
+	return &Reconciler{
 		log:           log,
 		arocli:        arocli,
 		kubernetescli: kubernetescli,
 	}
 }
 
-func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
@@ -142,7 +143,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 }
 
 // SetupWithManager setup our mananger
-func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Node{}).
 		Named(controllers.NodeControllerName).

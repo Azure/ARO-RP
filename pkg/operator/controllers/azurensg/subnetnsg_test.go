@@ -32,7 +32,7 @@ var (
 )
 
 func TestEnsureSubnetNSG(t *testing.T) {
-	r := AzureNSGReconciler{log: utillog.GetLogger()}
+	r := Reconciler{log: utillog.GetLogger()}
 	for _, tt := range []struct {
 		name                string
 		nsgname             string
@@ -111,7 +111,7 @@ func TestEnsureSubnetNSG(t *testing.T) {
 }
 
 func TestGetSubnets(t *testing.T) {
-	r := AzureNSGReconciler{log: utillog.GetLogger()}
+	r := Reconciler{log: utillog.GetLogger()}
 	for _, tt := range []struct {
 		name             string
 		machinelabel     string
