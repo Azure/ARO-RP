@@ -33,7 +33,7 @@ func TestIsRequired(t *testing.T) {
 		},
 		{
 			name:           "4.6 - Not required",
-			clusterVersion: "4.6.38",
+			clusterVersion: "4.6.37",
 			expectedResult: false,
 		},
 		{
