@@ -325,6 +325,10 @@ class MasterProfile(Model):
 class NetworkProfile(Model):
     """NetworkProfile represents a network profile.
 
+    :param sdn_provider: The SDNProvider to use when installing the cluster.
+     Possible values include: 'OVNKubernetes', 'OpenShiftSDN'
+    :type sdn_provider: str or
+     ~azure.mgmt.redhatopenshift.v2021_01_31_preview.models.SDNProvider
     :param pod_cidr: The CIDR used for OpenShift/Kubernetes Pods.
     :type pod_cidr: str
     :param service_cidr: The CIDR used for OpenShift/Kubernetes Services.
@@ -332,12 +336,14 @@ class NetworkProfile(Model):
     """
 
     _attribute_map = {
+        'sdn_provider': {'key': 'sdnProvider', 'type': 'str'},
         'pod_cidr': {'key': 'podCidr', 'type': 'str'},
         'service_cidr': {'key': 'serviceCidr', 'type': 'str'},
     }
 
     def __init__(self, **kwargs):
         super(NetworkProfile, self).__init__(**kwargs)
+        self.sdn_provider = kwargs.get('sdn_provider', None)
         self.pod_cidr = kwargs.get('pod_cidr', None)
         self.service_cidr = kwargs.get('service_cidr', None)
 

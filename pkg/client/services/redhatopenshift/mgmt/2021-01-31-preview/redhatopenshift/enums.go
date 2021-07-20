@@ -59,6 +59,21 @@ func PossibleProvisioningStateValues() []ProvisioningState {
 	return []ProvisioningState{AdminUpdating, Creating, Deleting, Failed, Succeeded, Updating}
 }
 
+// SDNProvider enumerates the values for sdn provider.
+type SDNProvider string
+
+const (
+	// OpenShiftSDN ...
+	OpenShiftSDN SDNProvider = "OpenShiftSDN"
+	// OVNKubernetes ...
+	OVNKubernetes SDNProvider = "OVNKubernetes"
+)
+
+// PossibleSDNProviderValues returns an array of possible values for the SDNProvider const type.
+func PossibleSDNProviderValues() []SDNProvider {
+	return []SDNProvider{OpenShiftSDN, OVNKubernetes}
+}
+
 // Visibility enumerates the values for visibility.
 type Visibility string
 

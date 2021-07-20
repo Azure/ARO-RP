@@ -49,6 +49,12 @@ class VMSize(str, Enum):
     standard_m128ms = "Standard_M128ms"
 
 
+class SDNProvider(str, Enum):
+
+    ovn_kubernetes = "OVNKubernetes"
+    open_shift_sdn = "OpenShiftSDN"
+
+
 class CreatedByType(str, Enum):
 
     user = "User"
