@@ -24,23 +24,24 @@ import (
 )
 
 // BannerReconciler is the controller struct
-type BannerReconciler struct {
+type Reconciler struct {
+	log *logrus.Entry
+
 	arocli     aroclient.Interface
-	log        *logrus.Entry
 	consolecli consoleclient.Interface
 }
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, consolecli consoleclient.Interface) *BannerReconciler {
-	return &BannerReconciler{
-		arocli:     arocli,
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, consolecli consoleclient.Interface) *Reconciler {
+	return &Reconciler{
 		log:        log,
+		arocli:     arocli,
 		consolecli: consolecli,
 	}
 }
 
 // Reconcile posts or removes the notification banner
-func (r *BannerReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
@@ -55,7 +56,7 @@ func (r *BannerReconciler) Reconcile(ctx context.Context, request ctrl.Request) 
 }
 
 // SetupWithManager creates the controller
-func (r *BannerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
 	})

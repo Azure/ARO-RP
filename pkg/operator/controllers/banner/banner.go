@@ -14,12 +14,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
-const (
-	BannerName         = "openshift-aro-sre"
-	TextContactSupport = "Please ask your cluster administrator to contact Azure or Red Hat support. Your cluster's resource ID: %s"
-)
-
-func (r *BannerReconciler) reconcileBanner(ctx context.Context, instance *arov1alpha1.Cluster) (err error) {
+func (r *Reconciler) reconcileBanner(ctx context.Context, instance *arov1alpha1.Cluster) (err error) {
 	switch instance.Spec.Banner.Content {
 	case arov1alpha1.BannerDisabled:
 		err = r.consolecli.ConsoleV1().ConsoleNotifications().Delete(ctx, BannerName, metav1.DeleteOptions{})
@@ -33,7 +28,7 @@ func (r *BannerReconciler) reconcileBanner(ctx context.Context, instance *arov1a
 	return err
 }
 
-func (r *BannerReconciler) newBanner(text string, resourceID string) *consolev1.ConsoleNotification {
+func (r *Reconciler) newBanner(text string, resourceID string) *consolev1.ConsoleNotification {
 	return &consolev1.ConsoleNotification{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: BannerName,
