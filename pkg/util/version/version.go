@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 var rxVersion = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)(.*)`)
@@ -29,7 +30,7 @@ func NewVersion(vs ...uint32) *Version {
 }
 
 func ParseVersion(vsn string) (*Version, error) {
-	m := rxVersion.FindStringSubmatch(vsn)
+	m := rxVersion.FindStringSubmatch(strings.TrimSpace(vsn))
 	if m == nil {
 		return nil, fmt.Errorf("could not parse version %q", vsn)
 	}
