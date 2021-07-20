@@ -2,6 +2,10 @@
     "tool": "Credential Scanner",
     "suppressions": [
         {
+            "file": "pkg/env/certificateRefresher_test.go",
+            "_justification": "sample cert for testing"
+        },
+        {
             "file": "proxy_test.go",
             "_justification": "sample login for testing"
         },
