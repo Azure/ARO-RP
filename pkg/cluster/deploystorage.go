@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-	"time"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -16,7 +15,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
-	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/openshift/installer/pkg/asset/targets"
 	"github.com/openshift/installer/pkg/asset/templates/content/bootkube"
@@ -241,52 +239,4 @@ func (m *manager) attachNSGs(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (m *manager) generateKubeconfigs(ctx context.Context) error {
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
-
-	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
-	if err != nil {
-		return err
-	}
-
-	var adminInternalClient *kubeconfig.AdminInternalClient
-	err = pg.Get(&adminInternalClient)
-	if err != nil {
-		return err
-	}
-
-	aroServiceInternalClient, err := m.generateAROServiceKubeconfig(pg)
-	if err != nil {
-		return err
-	}
-	aroSREInternalClient, err := m.generateAROSREKubeconfig(pg)
-	if err != nil {
-		return err
-	}
-	aroUserInternalClient, err := m.generateUserAdminKubeconfig(pg)
-	if err != nil {
-		return err
-	}
-
-	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		// used for the SAS token with which the bootstrap node retrieves its
-		// ignition payload
-		var t time.Time
-		if doc.OpenShiftCluster.Properties.Install.Now == t {
-			// Only set this if it hasn't been set already, since it is used to
-			// create values for signedStart and signedExpiry in
-			// deployResourceTemplate, and if these are not stable a
-			// redeployment will fail.
-			doc.OpenShiftCluster.Properties.Install.Now = time.Now().UTC()
-		}
-		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminInternalClient.File.Data
-		doc.OpenShiftCluster.Properties.AROServiceKubeconfig = aroServiceInternalClient.File.Data
-		doc.OpenShiftCluster.Properties.AROSREKubeconfig = aroSREInternalClient.File.Data
-		doc.OpenShiftCluster.Properties.UserAdminKubeconfig = aroUserInternalClient.File.Data
-		return nil
-	})
-	return err
 }
