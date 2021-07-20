@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
 func TestNewVersion(t *testing.T) {
@@ -50,6 +52,10 @@ func TestParseVersion(t *testing.T) {
 			want: &Version{V: [3]uint32{40, 30, 10}},
 		},
 		{
+			vsn:  " 40.30.10 ",
+			want: &Version{V: [3]uint32{40, 30, 10}},
+		},
+		{
 			vsn:  "4000.3000.1000",
 			want: &Version{V: [3]uint32{4000, 3000, 1000}},
 		},
@@ -65,7 +71,7 @@ func TestParseVersion(t *testing.T) {
 				t.Error(err)
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Error(got)
+				t.Error(cmp.Diff(got, tt.want))
 			}
 		})
 	}
