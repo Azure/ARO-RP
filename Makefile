@@ -27,7 +27,7 @@ clean:
 	find python -type d -name __pycache__ -delete
 
 client: generate
-	hack/build-client.sh 2020-04-30 2021-01-31-preview
+	hack/build-client.sh 2020-04-30 2021-09-01-preview
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.

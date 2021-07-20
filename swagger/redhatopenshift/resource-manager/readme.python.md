@@ -19,7 +19,7 @@ Generate all API versions currently shipped for this package
 ```yaml $(python) && $(multiapi)
 batch:
   - tag: package-2020-04-30
-  - tag: package-2021-01-31-preview
+  - tag: package-2021-09-01-preview
 ```
 
 ### Tag: package-2020-04-30 and python
@@ -33,12 +33,12 @@ python:
   output-folder: $(python-sdks-folder)/redhatopenshift/azure-mgmt-redhatopenshift/azure/mgmt/redhatopenshift/v2020_04_30
 ```
 
-### Tag: package-2021-01-31-preview and python
+### Tag: package-2021-09-01-preview and python
 
-These settings apply only when `--tag=package-2021-01-31-preview --python` is specified on the command line.
+These settings apply only when `--tag=package-2021-09-01-preview --python` is specified on the command line.
 Please also specify `--python-sdks-folder=<path to the root directory of your azure-sdk-for-python clone>`.
 
-``` yaml $(tag) == 'package-2021-01-31-preview' && $(python)
+``` yaml $(tag) == 'package-2021-09-01-preview' && $(python)
 python:
   namespace: azure.mgmt.redhatopenshift.v2021_01_31_preview
   output-folder: $(python-sdks-folder)/redhatopenshift/azure-mgmt-redhatopenshift/azure/mgmt/redhatopenshift/v2021_01_31_preview
