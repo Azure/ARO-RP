@@ -29,7 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/insights"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
-	redhatopenshift20210131preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-01-31-preview/redhatopenshift"
+	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
@@ -37,8 +37,8 @@ import (
 type clientSet struct {
 	OpenshiftClustersv20200430        redhatopenshift20200430.OpenShiftClustersClient
 	Operationsv20200430               redhatopenshift20200430.OperationsClient
-	OpenshiftClustersv20210131preview redhatopenshift20210131preview.OpenShiftClustersClient
-	Operationsv20210131preview        redhatopenshift20210131preview.OperationsClient
+	OpenshiftClustersv20210901preview redhatopenshift20210901preview.OpenShiftClustersClient
+	Operationsv20210901preview        redhatopenshift20210901preview.OperationsClient
 
 	VirtualMachines compute.VirtualMachinesClient
 	Resources       features.ResourcesClient
@@ -119,8 +119,8 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	return &clientSet{
 		OpenshiftClustersv20200430:        redhatopenshift20200430.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Operationsv20200430:               redhatopenshift20200430.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		OpenshiftClustersv20210131preview: redhatopenshift20210131preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Operationsv20210131preview:        redhatopenshift20210131preview.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClustersv20210901preview: redhatopenshift20210901preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Operationsv20210901preview:        redhatopenshift20210901preview.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		VirtualMachines: compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Resources:       features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
