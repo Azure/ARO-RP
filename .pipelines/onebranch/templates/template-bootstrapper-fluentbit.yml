@@ -1,11 +1,5 @@
-parameters:
-- name: tdAgentVersion
-  displayName: TD Agent Version
-  type: string
-
 steps:
 - task: onebranch.pipeline.imagebuildinfo@1
-  displayName: Build Fluentbit ${{ parameters.tdAgentVersion }}
   inputs:
     repositoryName: fluentbit
     dockerFileRelPath: ./Dockerfile.fluentbit
@@ -14,5 +8,5 @@ steps:
     saveImageToPath: fluentbit.tar
     buildkit: 1
     enable_network: true
-    build_tag: ${{ parameters.tdAgentVersion }}
-    arguments: ' --build-arg VERSION=${{ parameters.tdAgentVersion }}'
+    build_tag: 1.8.1-1
+    arguments: ' --build-arg VERSION=1.8.1-1'

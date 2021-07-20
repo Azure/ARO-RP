@@ -17,9 +17,9 @@ variables:
   Debian_Frontend: noninteractive
 
 parameters:
-- name: tdAgentVersion
-  displayName: TD Agent Version
-  type: string
+- name: buildFluentBit
+  displayName: Build Fluent Bit?
+  type: boolean
 
 resources:
   repositories:
@@ -51,6 +51,7 @@ extends:
       - template: .pipelines/onebranch/templates/template-bootstrapper.yml@self
 
     - stage: Build_Fluentbit
+      condition: eq(${{ parameters.buildFluentBit}}, 'true')
       jobs:
       - job: Build_Fluentbit
         pool:
@@ -62,5 +63,3 @@ extends:
 
         steps:
         - template: .pipelines/onebranch/templates/template-bootstrapper-fluentbit.yml@self
-          parameters:
-            tdAgentVersion: ${{ parameters.tdAgentVersion }}
