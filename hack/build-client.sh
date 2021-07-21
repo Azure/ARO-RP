@@ -18,16 +18,28 @@ function checksum() {
   sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json >> .sha256sum
 }
 
+function build_image() {
+  local AUTOREST_VERSION=$1
+
+	docker build --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" \
+	  -f $PWD/Dockerfile.autorest -t autorest:"${AUTOREST_VERSION}" .
+}
+
 function generate_golang() {
-  local API_VERSION=$1
-  local FOLDER=$2
+  local AUTOREST_VERSION=$1
+  local API_VERSION=$2
+  local FOLDER=$3
 
   sudo docker run \
 		--rm \
 		-v $PWD/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
 		-v $PWD/swagger:/swagger:z \
-		azuresdk/autorest \
+		autorest:"${AUTOREST_VERSION}" \
 		--go \
+    --version=3.4.5 \
+    --track2 \
+    --use=@microsoft.azure/autorest.go@preview \
+    --use=@autorest/modelerfour@~4.20.0 \
 		--license-header=MICROSOFT_APACHE_NO_VERSION \
 		--namespace=redhatopenshift \
 		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
@@ -39,15 +51,19 @@ function generate_golang() {
 }
 
 function generate_python() {
-  local API_VERSION=$1
-  local FOLDER=$2
+  local AUTOREST_VERSION=$1
+  local API_VERSION=$2
+  local FOLDER=$3
 
   sudo docker run \
 		--rm \
 		-v $PWD/python/client:/python/client:z \
 		-v $PWD/swagger:/swagger:z \
-		azuresdk/autorest \
-		--use=@microsoft.azure/autorest.python@4.0.70 \
+		autorest:"${AUTOREST_VERSION}" \
+    --version=3.4.5 \
+    --track2 \
+    --use=@microsoft.azure/autorest.python@preview \
+    --use=@autorest/modelerfour@~4.20.0 \
 		--python \
 		--azure-arm \
 		--license-header=MICROSOFT_APACHE_NO_VERSION \
@@ -63,7 +79,10 @@ function generate_python() {
 
 rm -f .sha256sum
 
-for API_VERSION in "$@"
+AUTOREST_VERSION=$1
+build_image "$AUTOREST_VERSION"
+
+for API_VERSION in "${@: 2}"
 do
   FOLDER=stable
   if [[ "$API_VERSION" =~ .*preview ]]; then
@@ -72,6 +91,6 @@ do
 
   clean "$API_VERSION" "$FOLDER"
   checksum "$API_VERSION" "$FOLDER"
-  generate_golang "$API_VERSION" "$FOLDER"
-  generate_python "$API_VERSION" "$FOLDER"
+  generate_golang "$AUTOREST_VERSION" "$API_VERSION" "$FOLDER"
+  generate_python "$AUTOREST_VERSION" "$API_VERSION" "$FOLDER"
 done

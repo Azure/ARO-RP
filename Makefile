@@ -3,6 +3,7 @@ ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
 FLUENTBIT_VERSION = 1.7.8-1
+AUTOREST_VERSION = 3.3.2
 
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
@@ -27,7 +28,7 @@ clean:
 	find python -type d -name __pycache__ -delete
 
 client: generate
-	hack/build-client.sh 2020-04-30 2021-09-01-preview
+	hack/build-client.sh "$(AUTOREST_VERSION)" 2020-04-30 2021-09-01-preview
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
