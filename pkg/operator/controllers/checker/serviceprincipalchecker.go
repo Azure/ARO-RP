@@ -6,7 +6,6 @@ package checker
 import (
 	"context"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	"github.com/sirupsen/logrus"
@@ -61,11 +60,6 @@ func (r *ServicePrincipalChecker) Check(ctx context.Context) error {
 		return err
 	}
 
-	resource, err := azure.ParseResourceID(cluster.Spec.ResourceID)
-	if err != nil {
-		return err
-	}
-
 	azEnv, err := azureclient.EnvironmentFromName(cluster.Spec.AZEnvironment)
 	if err != nil {
 		return err
@@ -81,7 +75,7 @@ func (r *ServicePrincipalChecker) Check(ctx context.Context) error {
 		updateFailedCondition(cond, err)
 	}
 
-	spDynamic, err := dynamic.NewServicePrincipalValidator(r.log, &azEnv, resource.SubscriptionID, dynamic.AuthorizerClusterServicePrincipal)
+	spDynamic, err := dynamic.NewServicePrincipalValidator(r.log, &azEnv, dynamic.AuthorizerClusterServicePrincipal)
 	if err != nil {
 		return err
 	}
