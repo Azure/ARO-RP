@@ -16,6 +16,11 @@ variables:
   LinuxContainerImage: cdpxlinux.azurecr.io/global/ubuntu-1804-all:5.0   # Docker image which is used to build the project https://aka.ms/obpipelines/containers
   Debian_Frontend: noninteractive
 
+parameters:
+- name: buildFluentBit
+  displayName: Build Fluent Bit?
+  type: boolean
+
 resources:
   repositories:
   - repository: templates
@@ -46,6 +51,7 @@ extends:
       - template: .pipelines/onebranch/templates/template-bootstrapper.yml@self
 
     - stage: Build_Fluentbit
+      condition: eq(${{ parameters.buildFluentBit}}, 'true')
       jobs:
       - job: Build_Fluentbit
         pool:

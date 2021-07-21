@@ -90,7 +90,7 @@ func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEn
 	}, nil
 }
 
-func NewServicePrincipalValidator(log *logrus.Entry, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizerType AuthorizerType) (ServicePrincipalValidator, error) {
+func NewServicePrincipalValidator(log *logrus.Entry, azEnv *azureclient.AROEnvironment, authorizerType AuthorizerType) (ServicePrincipalValidator, error) {
 	return &dynamic{
 		log:            log,
 		authorizerType: authorizerType,
