@@ -38,7 +38,7 @@ function generate_golang() {
 		--go \
     --version=3.4.5 \
     --track2 \
-    --use=@microsoft.azure/autorest.go@preview \
+    --use=@autorest/go@4.0.0-preview.24 \
     --use=@autorest/modelerfour@~4.20.0 \
 		--license-header=MICROSOFT_APACHE_NO_VERSION \
 		--namespace=redhatopenshift \
@@ -62,7 +62,7 @@ function generate_python() {
 		autorest:"${AUTOREST_VERSION}" \
     --version=3.4.5 \
     --track2 \
-    --use=@microsoft.azure/autorest.python@preview \
+    --use=@autorest/python@5.8.4 \
     --use=@autorest/modelerfour@~4.20.0 \
 		--python \
 		--azure-arm \
