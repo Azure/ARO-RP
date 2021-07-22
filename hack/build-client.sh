@@ -31,19 +31,19 @@ function generate_golang() {
   local FOLDER=$3
 
   sudo docker run \
-		--rm \
-		-v $PWD/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
-		-v $PWD/swagger:/swagger:z \
-		autorest:"${AUTOREST_VERSION}" \
-		--go \
+    --rm \
+    -v $PWD/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
+    -v $PWD/swagger:/swagger:z \
+    autorest:"${AUTOREST_VERSION}" \
+    --go \
     --version=3.4.5 \
     --track2 \
     --use=@autorest/go@4.0.0-preview.24 \
     --use=@autorest/modelerfour@~4.20.0 \
-		--license-header=MICROSOFT_APACHE_NO_VERSION \
-		--namespace=redhatopenshift \
-		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
-		--output-folder=/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift
+    --license-header=MICROSOFT_APACHE_NO_VERSION \
+    --namespace=redhatopenshift \
+    --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
+    --output-folder=/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift
 
   sudo chown -R $(id -un):$(id -gn) pkg/client
   sed -i -e 's|azure/aro-rp|Azure/ARO-RP|g' pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift/models.go pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift/redhatopenshiftapi/interfaces.go
@@ -56,20 +56,20 @@ function generate_python() {
   local FOLDER=$3
 
   sudo docker run \
-		--rm \
-		-v $PWD/python/client:/python/client:z \
-		-v $PWD/swagger:/swagger:z \
-		autorest:"${AUTOREST_VERSION}" \
+    --rm \
+    -v $PWD/python/client:/python/client:z \
+    -v $PWD/swagger:/swagger:z \
+    autorest:"${AUTOREST_VERSION}" \
     --version=3.4.5 \
     --track2 \
     --use=@autorest/python@5.8.4 \
     --use=@autorest/modelerfour@~4.20.0 \
-		--python \
-		--azure-arm \
-		--license-header=MICROSOFT_APACHE_NO_VERSION \
-		--namespace=azure.mgmt.redhatopenshift.v"${API_VERSION//-/_}" \
-		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
-		--output-folder=/python/client
+    --python \
+    --azure-arm \
+    --license-header=MICROSOFT_APACHE_NO_VERSION \
+    --namespace=azure.mgmt.redhatopenshift.v"${API_VERSION//-/_}" \
+    --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
+    --output-folder=/python/client
 
   sudo chown -R $(id -un):$(id -gn) python/client
   rm -rf python/client/azure/mgmt/redhatopenshift/v"${API_VERSION//-/_}"/aio
