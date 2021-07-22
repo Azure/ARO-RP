@@ -24,167 +24,47 @@ import (
 )
 
 func TestMachineReconciler(t *testing.T) {
-	newFakeMao := func(diskSize string, imagePublisher string, vmSize string) *maofake.Clientset {
-		master0 := &machinev1beta1.Machine{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo-hx8z7-master-0",
-				Namespace: machineSetsNamespace,
-				Labels:    map[string]string{"machine.openshift.io/cluster-api-machine-role": "master"},
-			},
-			Spec: machinev1beta1.MachineSpec{
-				ProviderSpec: machinev1beta1.ProviderSpec{
-					Value: &runtime.RawExtension{
-						Raw: []byte(`{
-"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
-"kind": "AzureMachineProviderSpec",
-"osDisk": {
-"diskSizeGB": 512
-},
-"image": {
-"publisher": "azureopenshift",
-"offer": "aro4"
-},
-"vmSize": "Standard_D8s_v3"
-}`)},
-				},
-			},
-		}
+	// Fake cluster with AZs
+	newFakeMao1 := func(diskSize, imagePublisher, vmSize, masterVmSize string) *maofake.Clientset {
+		master0 := masterMachine("foo-hx8z7-master-0", "", "", "", "")
+		master1 := masterMachine("foo-hx8z7-master-1", "", "", "", "")
+		master2 := masterMachine("foo-hx8z7-master-2", "", "", masterVmSize, "")
+		worker0 := workerMachine("foo-hx8z7-worker-0", diskSize, "", "", "")
+		worker1 := workerMachine("foo-hx8z7-worker-1", "", imagePublisher, "", "")
+		worker2 := workerMachine("foo-hx8z7-worker-2", "", "", vmSize, "")
+		workerMachineSet0 := workerMachineSet("foo-hx8z7-machineset-0")
+		workerMachineSet1 := workerMachineSet("foo-hx8z7-machineset-1")
+		workerMachineSet2 := workerMachineSet("foo-hx8z7-machineset-2")
 
-		master1 := &machinev1beta1.Machine{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo1-hx8z7-master-1",
-				Namespace: machineSetsNamespace,
-				Labels:    map[string]string{"machine.openshift.io/cluster-api-machine-role": "master"},
-			},
-			Spec: machinev1beta1.MachineSpec{
-				ProviderSpec: machinev1beta1.ProviderSpec{
-					Value: &runtime.RawExtension{
-						Raw: []byte(`{
-"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
-"kind": "AzureMachineProviderSpec",
-"osDisk": {
-"diskSizeGB": 512
-},
-"image": {
-"publisher": "azureopenshift",
-"offer": "aro4"
-},
-"vmSize": "Standard_D8s_v3"
-}`)},
-				},
-			},
-		}
+		return maofake.NewSimpleClientset(worker0, worker1, worker2, master0, master1, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
+	}
 
-		master2 := &machinev1beta1.Machine{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo-hx8z7-master-2",
-				Namespace: machineSetsNamespace,
-				Labels:    map[string]string{"machine.openshift.io/cluster-api-machine-role": "master"},
-			},
-			Spec: machinev1beta1.MachineSpec{
-				ProviderSpec: machinev1beta1.ProviderSpec{
-					Value: &runtime.RawExtension{
-						Raw: []byte(`{
-"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
-"kind": "AzureMachineProviderSpec",
-"osDisk": {
-"diskSizeGB": 512
-},
-"image": {
-"publisher": "azureopenshift",
-"offer": "aro4"
-},
-"vmSize": "Standard_D8s_v3"
-}`)},
-				},
-			},
-		}
+	// Fake cluster missing a master
+	newFakeMao2 := func() *maofake.Clientset {
+		master0 := masterMachine("foo-hx8z7-master-0", "", "", "", "")
+		master2 := masterMachine("foo-hx8z7-master-2", "", "", "", "")
+		worker0 := workerMachine("foo-hx8z7-worker-0", "", "", "", "")
+		worker1 := workerMachine("foo-hx8z7-worker-1", "", "", "", "")
+		worker2 := workerMachine("foo-hx8z7-worker-2", "", "", "", "")
+		workerMachineSet0 := workerMachineSet("foo-hx8z7-machineset-0")
+		workerMachineSet1 := workerMachineSet("foo-hx8z7-machineset-1")
+		workerMachineSet2 := workerMachineSet("foo-hx8z7-machineset-2")
 
-		worker0 := &machinev1beta1.Machine{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo-hx8z7-worker-0",
-				Namespace: machineSetsNamespace,
-				Labels:    map[string]string{"machine.openshift.io/cluster-api-machine-role": "worker"},
-			},
-			Spec: machinev1beta1.MachineSpec{
-				ProviderSpec: machinev1beta1.ProviderSpec{
-					Value: &runtime.RawExtension{
-						Raw: []byte(fmt.Sprintf(`{
-"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
-"kind": "AzureMachineProviderSpec",
-"osDisk": {
-"diskSizeGB": %v
-},
-"image": {
-"publisher": "%v",
-"offer": "aro4"
-},
-"vmSize": "%v"
-}`, diskSize, imagePublisher, vmSize))},
-				},
-			},
-		}
+		return maofake.NewSimpleClientset(worker0, worker1, worker2, master0, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
+	}
 
-		worker1 := &machinev1beta1.Machine{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo-hx8z7-worker-1",
-				Namespace: machineSetsNamespace,
-				Labels:    map[string]string{"machine.openshift.io/cluster-api-machine-role": "worker"},
-			},
-			Spec: machinev1beta1.MachineSpec{
-				ProviderSpec: machinev1beta1.ProviderSpec{
-					Value: &runtime.RawExtension{
-						Raw: []byte(`{
-"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
-"kind": "AzureMachineProviderSpec",
-"osDisk": {
-"diskSizeGB": 128
-},
-"image": {
-"publisher": "azureopenshift",
-"offer": "aro4"
-},
-"vmSize": "Standard_D4s_v3"
-}`)},
-				},
-			},
-		}
+	// Fake cluster missing a worker
+	newFakeMao3 := func() *maofake.Clientset {
+		master0 := masterMachine("foo-hx8z7-master-0", "", "", "", "")
+		master1 := masterMachine("foo-hx8z7-master-1", "", "", "", "")
+		master2 := masterMachine("foo-hx8z7-master-2", "", "", "", "")
+		worker0 := workerMachine("foo-hx8z7-worker-0", "", "", "", "")
+		worker1 := workerMachine("foo-hx8z7-worker-1", "", "", "", "")
+		workerMachineSet0 := workerMachineSet("foo-hx8z7-machineset-0")
+		workerMachineSet1 := workerMachineSet("foo-hx8z7-machineset-1")
+		workerMachineSet2 := workerMachineSet("foo-hx8z7-machineset-2")
 
-		worker2 := &machinev1beta1.Machine{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo-hx8z7-worker-2",
-				Namespace: machineSetsNamespace,
-				Labels:    map[string]string{"machine.openshift.io/cluster-api-machine-role": "worker"},
-			},
-			Spec: machinev1beta1.MachineSpec{
-				ProviderSpec: machinev1beta1.ProviderSpec{
-					Value: &runtime.RawExtension{
-						Raw: []byte(`{
-"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
-"kind": "AzureMachineProviderSpec",
-"osDisk": {
-"diskSizeGB": 128
-},
-"image": {
-"publisher": "azureopenshift",
-"offer": "aro4"
-},
-"vmSize": "Standard_D4s_v3"
-}`)},
-				},
-			},
-		}
-
-		workerMachineSet := &machinev1beta1.MachineSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "workermachineset",
-				Namespace: machineSetsNamespace,
-			},
-			Spec: machinev1beta1.MachineSetSpec{
-				Replicas: to.Int32Ptr(3),
-			},
-		}
-		return maofake.NewSimpleClientset(worker0, worker1, worker2, master0, master1, master2, workerMachineSet)
+		return maofake.NewSimpleClientset(worker0, worker1, master0, master1, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
 	}
 
 	baseCluster := arov1alpha1.Cluster{
@@ -201,7 +81,7 @@ func TestMachineReconciler(t *testing.T) {
 	}{
 		{
 			name:   "valid",
-			maocli: newFakeMao("512", "azureopenshift", "Standard_D4s_v3"),
+			maocli: newFakeMao1("", "", "", ""),
 			wantConditions: []status.Condition{{
 				Type:    arov1alpha1.MachineValid,
 				Status:  corev1.ConditionTrue,
@@ -211,17 +91,17 @@ func TestMachineReconciler(t *testing.T) {
 		},
 		{
 			name:   "wrong vm size",
-			maocli: newFakeMao("512", "azureopenshift", "Standard_D4s_v9"),
+			maocli: newFakeMao1("", "", "Standard_D4s_v9", ""),
 			wantConditions: []status.Condition{{
 				Type:    arov1alpha1.MachineValid,
 				Status:  corev1.ConditionFalse,
-				Message: "machine foo-hx8z7-worker-0: invalid VM size 'Standard_D4s_v9'",
+				Message: "machine foo-hx8z7-worker-2: invalid VM size 'Standard_D4s_v9'",
 				Reason:  "CheckFailed",
 			}},
 		},
 		{
 			name:   "wrong disk size",
-			maocli: newFakeMao("64", "azureopenshift", "Standard_D4s_v3"),
+			maocli: newFakeMao1("64", "", "", ""),
 			wantConditions: []status.Condition{{
 				Type:    arov1alpha1.MachineValid,
 				Status:  corev1.ConditionFalse,
@@ -231,11 +111,41 @@ func TestMachineReconciler(t *testing.T) {
 		},
 		{
 			name:   "wrong image publisher",
-			maocli: newFakeMao("512", "bananas", "Standard_D4s_v3"),
+			maocli: newFakeMao1("", "bananas", "", ""),
 			wantConditions: []status.Condition{{
 				Type:    arov1alpha1.MachineValid,
 				Status:  corev1.ConditionFalse,
-				Message: "machine foo-hx8z7-worker-0: invalid image '{bananas aro4   }'",
+				Message: "machine foo-hx8z7-worker-1: invalid image '{bananas aro4   }'",
+				Reason:  "CheckFailed",
+			}},
+		},
+		{
+			name:   "wrong vm size on master",
+			maocli: newFakeMao1("", "", "", "Standard_D4s_v9"),
+			wantConditions: []status.Condition{{
+				Type:    arov1alpha1.MachineValid,
+				Status:  corev1.ConditionFalse,
+				Message: "machine foo-hx8z7-master-2: invalid VM size 'Standard_D4s_v9'",
+				Reason:  "CheckFailed",
+			}},
+		},
+		{
+			name:   "invalid master machine count",
+			maocli: newFakeMao2(),
+			wantConditions: []status.Condition{{
+				Type:    arov1alpha1.MachineValid,
+				Status:  corev1.ConditionFalse,
+				Message: "invalid number of master machines 2, expected 3",
+				Reason:  "CheckFailed",
+			}},
+		},
+		{
+			name:   "invalid worker machine count",
+			maocli: newFakeMao3(),
+			wantConditions: []status.Condition{{
+				Type:    arov1alpha1.MachineValid,
+				Status:  corev1.ConditionFalse,
+				Message: "invalid number of worker machines 2, expected 3",
 				Reason:  "CheckFailed",
 			}},
 		},
@@ -276,5 +186,97 @@ func TestMachineReconciler(t *testing.T) {
 				t.Error(cluster.Status.Conditions[0].Reason)
 			}
 		})
+	}
+}
+
+func masterMachine(name, diskSize, imagePublisher, vmSize, offer string) *machinev1beta1.Machine {
+	if diskSize == "" {
+		diskSize = "512"
+	}
+	if imagePublisher == "" {
+		imagePublisher = "azureopenshift"
+	}
+	if vmSize == "" {
+		vmSize = "Standard_D8s_v3"
+	}
+	if offer == "" {
+		offer = "aro4"
+	}
+
+	return &machinev1beta1.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: machineSetsNamespace,
+			Labels:    map[string]string{"machine.openshift.io/cluster-api-machine-role": "master"},
+		},
+		Spec: machinev1beta1.MachineSpec{
+			ProviderSpec: machinev1beta1.ProviderSpec{
+				Value: &runtime.RawExtension{
+					Raw: []byte(fmt.Sprintf(`{
+"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+"kind": "AzureMachineProviderSpec",
+"osDisk": {
+"diskSizeGB": %v
+},
+"image": {
+"publisher": "%v",
+"offer": "%v"
+},
+"vmSize": "%v"
+}`, diskSize, imagePublisher, offer, vmSize))},
+			},
+		},
+	}
+}
+
+func workerMachine(name, diskSize, imagePublisher, vmSize, offer string) *machinev1beta1.Machine {
+	if diskSize == "" {
+		diskSize = "128"
+	}
+	if imagePublisher == "" {
+		imagePublisher = "azureopenshift"
+	}
+	if vmSize == "" {
+		vmSize = "Standard_D4s_v3"
+	}
+	if offer == "" {
+		offer = "aro4"
+	}
+
+	return &machinev1beta1.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: machineSetsNamespace,
+			Labels:    map[string]string{"machine.openshift.io/cluster-api-machine-role": "worker"},
+		},
+		Spec: machinev1beta1.MachineSpec{
+			ProviderSpec: machinev1beta1.ProviderSpec{
+				Value: &runtime.RawExtension{
+					Raw: []byte(fmt.Sprintf(`{
+"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+"kind": "AzureMachineProviderSpec",
+"osDisk": {
+"diskSizeGB": %v
+},
+"image": {
+"publisher": "%v",
+"offer": "%v"
+},
+"vmSize": "%v"
+}`, diskSize, imagePublisher, offer, vmSize))},
+			},
+		},
+	}
+}
+
+func workerMachineSet(name string) *machinev1beta1.MachineSet {
+	return &machinev1beta1.MachineSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: machineSetsNamespace,
+		},
+		Spec: machinev1beta1.MachineSetSpec{
+			Replicas: to.Int32Ptr(1),
+		},
 	}
 }
