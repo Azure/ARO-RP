@@ -43,6 +43,7 @@ func getBaseLogger() *logrus.Logger {
 
 	logger.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp: true,
+		DisableQuote:  true,
 	})
 
 	if journal.Enabled() {
