@@ -22,17 +22,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
-const (
-	annotationCurrentConfig  = "machineconfiguration.openshift.io/currentConfig"
-	annotationDesiredConfig  = "machineconfiguration.openshift.io/desiredConfig"
-	annotationReason         = "machineconfiguration.openshift.io/reason"
-	annotationState          = "machineconfiguration.openshift.io/state"
-	annotationDrainStartTime = "aro.openshift.io/drainStartTime"
-	stateDegraded            = "Degraded"
-	stateWorking             = "Working"
-	gracePeriod              = time.Hour
-)
-
 // Reconciler spots nodes that look like they're stuck upgrading.  When this
 // happens, it tries to drain them disabling eviction (so PDBs don't count).
 type Reconciler struct {
