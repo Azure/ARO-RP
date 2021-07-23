@@ -37,11 +37,11 @@ function generate_golang() {
     autorest:"${AUTOREST_VERSION}" \
     --go \
     --version=3.4.5 \
-    --track2 \
     --use=@autorest/go@4.0.0-preview.24 \
     --use=@autorest/modelerfour@~4.20.0 \
     --license-header=MICROSOFT_APACHE_NO_VERSION \
     --namespace=redhatopenshift \
+    --verbose \
     --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
     --output-folder=/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift
 
@@ -61,7 +61,6 @@ function generate_python() {
     -v $PWD/swagger:/swagger:z \
     autorest:"${AUTOREST_VERSION}" \
     --version=3.4.5 \
-    --track2 \
     --use=@autorest/python@5.8.4 \
     --use=@autorest/modelerfour@~4.20.0 \
     --python \
