@@ -169,7 +169,6 @@ func TestRefreshingCertificate(t *testing.T) {
 		wantKey        *rsa.PrivateKey
 		wantCert       *x509.Certificate
 		wantErr        error
-		wantUpdate     bool
 	}{
 		{
 			name:     "test initial certificate, pull exactly once, ticker is still waiting",
@@ -230,12 +229,12 @@ func TestRefreshingCertificate(t *testing.T) {
 			wantErr:  nil,
 		},
 		{
-			name:     "test refresh, pull exactly 10 times",
-			interval: 10 * time.Millisecond,
-			sleep:    100 * time.Millisecond,
+			name:     "test refresh, pull exactly 2 times",
+			interval: 1 * time.Second,
+			sleep:    1800 * time.Millisecond,
 			managerFactory: func(controller *gomock.Controller) keyvault.Manager {
 				manager := mock_keyvault.NewMockManager(controller)
-				manager.EXPECT().GetCertificateSecret(gomock.Any(), testCertName).Return(key1, certs1, nil).Times(10)
+				manager.EXPECT().GetCertificateSecret(gomock.Any(), testCertName).Return(key1, certs1, nil).Times(2)
 				return manager
 			},
 			wantKey:  key1,
