@@ -166,7 +166,7 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 						ResultType:        resultType,
 						ResultDescription: fmt.Sprintf("Status code: %d", statusCode),
 					},
-				}).Info(audit.DefaultLogMessage)
+				}).Info(auditEntry.Data[audit.MetadataPayload])
 			}()
 
 			h.ServeHTTP(w, r)

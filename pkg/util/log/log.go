@@ -41,9 +41,10 @@ var (
 func getBaseLogger() *logrus.Logger {
 	logger := logrus.New()
 
-	logger.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp: true,
-		DisableQuote:  true,
+	logger.SetFormatter(&logrus.JSONFormatter{
+		TimestampFormat:  "2006-01-02T15:04:05.000Z07:00",
+		CallerPrettyfier: relativeFilePathPrettier,
+		PrettyPrint:      false,
 	})
 
 	if journal.Enabled() {
@@ -65,9 +66,10 @@ func GetLogger() *logrus.Entry {
 	logger := getBaseLogger()
 
 	logger.SetReportCaller(true)
-	logger.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:    true,
+	logger.SetFormatter(&logrus.JSONFormatter{
+		TimestampFormat:  "2006-01-02T15:04:05.000Z07:00",
 		CallerPrettyfier: relativeFilePathPrettier,
+		PrettyPrint:      false,
 	})
 
 	logger.AddHook(&logrHook{})
