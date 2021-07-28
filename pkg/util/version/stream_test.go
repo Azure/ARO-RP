@@ -6,10 +6,19 @@ package version
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
+
+func TestOpenShiftReleaseImages(t *testing.T) {
+	for _, u := range Streams {
+		if !regexp.MustCompile(`^quay.io/openshift-release-dev/ocp-release@sha256:[a-z0-9]{64}$`).MatchString(u.PullSpec) {
+			t.Errorf("PullSpec format invalid: %s", u.PullSpec)
+		}
+	}
+}
 
 func TestOpenShiftVersions(t *testing.T) {
 	for _, u := range Streams {
