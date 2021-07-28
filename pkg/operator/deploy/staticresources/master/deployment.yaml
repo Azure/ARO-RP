@@ -27,13 +27,6 @@ spec:
         - master
         image: GENERATED
         name: aro-operator
-        resources:
-          limits:
-            cpu: 50m
-            memory: 500Mi
-          requests:
-            cpu: 50m
-            memory: 500Mi
         ports:
         - containerPort: 8080
           name: http
