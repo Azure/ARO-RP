@@ -202,8 +202,6 @@ replace (
 	github.com/terraform-providers/terraform-provider-aws => github.com/openshift/terraform-provider-aws v1.60.1-0.20200630224953-76d1fb4e5699
 	github.com/terraform-providers/terraform-provider-azurerm => github.com/openshift/terraform-provider-azurerm v1.40.1-0.20200707062554-97ea089cc12a
 	github.com/terraform-providers/terraform-provider-ignition/v2 => github.com/community-terraform-providers/terraform-provider-ignition/v2 v2.1.0
-	// https://github.com/ugorji/go/issues/357
-	github.com/ugorji/go/codec => github.com/ugorji/go/codec v1.2.2
 	golang.org/x/tools => golang.org/x/tools v0.1.0 // We are still using Go 1.14, but >=v0.1.1 depends on standard library from Go 1.16
 	k8s.io/api => k8s.io/api v0.19.0-rc.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.0-rc.2
