@@ -134,6 +134,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.updateClusterData),
 			steps.Action(m.configureIngressCertificate),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute),
+			steps.Action(m.configureDefaultStorageClass),
 			steps.Action(m.finishInstallation),
 		},
 	}
