@@ -43,6 +43,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clusterMdsdAccount",
 			"clusterMdsdConfigVersion",
 			"clusterMdsdNamespace",
+			"dbtokenClientId",
 			"disableCosmosDBFirewall",
 			"extraCosmosDBIPs",
 			"fpClientId",

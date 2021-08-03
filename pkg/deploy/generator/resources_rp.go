@@ -377,11 +377,11 @@ func (g *generator) rpVMSS() *arm.Resource {
 
 	for _, variable := range []string{
 		"acrResourceId",
+		"adminApiClientCertCommonName",
+		"armApiClientCertCommonName",
 		"armClientId",
 		"azureCloudName",
 		"azureSecPackVSATenantId",
-		"adminApiClientCertCommonName",
-		"armApiClientCertCommonName",
 		"billingE2EStorageAccountId",
 		"clusterMdmAccount",
 		"clusterMdsdAccount",
@@ -389,10 +389,11 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"clusterMdsdNamespace",
 		"clusterParentDomainName",
 		"databaseAccountName",
+		"dbtokenClientId",
 		"fpClientId",
 		"fpServicePrincipalId",
-		"keyvaultPrefix",
 		"keyvaultDNSSuffix",
+		"keyvaultPrefix",
 		"mdmFrontendUrl",
 		"mdsdEnvironment",
 		"portalAccessGroupIds",
@@ -660,6 +661,7 @@ EOF
 
 cat >/etc/sysconfig/aro-dbtoken <<EOF
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
+AZURE_DBTOKEN_CLIENT_ID='$DBTOKENCLIENTID'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=DBToken
@@ -679,6 +681,7 @@ ExecStart=/usr/bin/docker run \
   --name %N \
   --rm \
   -e DATABASE_ACCOUNT_NAME \
+  -e AZURE_DBTOKEN_CLIENT_ID \
   -e KEYVAULT_PREFIX \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \

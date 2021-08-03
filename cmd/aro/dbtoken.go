@@ -30,6 +30,7 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		for _, key := range []string{
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
+			"AZURE_DBTOKEN_CLIENT_ID",
 		} {
 			if _, found := os.LookupEnv(key); !found {
 				return fmt.Errorf("environment variable %q unset", key)
@@ -85,9 +86,7 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 
 	// example value: https://login.microsoftonline.com/11111111-1111-1111-1111-111111111111/v2.0
 	issuer := _env.Environment().ActiveDirectoryEndpoint + _env.TenantID() + "/v2.0"
-
-	// example value: https://dbtoken.aro.azure.com/
-	clientID := "https://dbtoken." + _env.Environment().AppSuffix + "/"
+	clientID := os.Getenv("AZURE_DBTOKEN_CLIENT_ID")
 
 	verifier, err := oidc.NewVerifier(ctx, issuer, clientID)
 	if err != nil {

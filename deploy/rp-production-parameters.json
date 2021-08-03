@@ -50,6 +50,9 @@
         "databaseAccountName": {
             "value": ""
         },
+        "dbtokenClientId": {
+            "value": ""
+        },
         "disableCosmosDBFirewall": {
             "value": false
         },
