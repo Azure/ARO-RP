@@ -33,7 +33,7 @@ func NewCollectionClientWithBaseURI(baseURI string, subscriptionID string) Colle
 
 // ListMetricDefinitions retrieves metric definitions for the given collection.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseRid - cosmos DB database rid.
 // collectionRid - cosmos DB collection rid.
@@ -94,7 +94,7 @@ func (client CollectionClient) ListMetricDefinitionsPreparer(ctx context.Context
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -127,7 +127,7 @@ func (client CollectionClient) ListMetricDefinitionsResponder(resp *http.Respons
 
 // ListMetrics retrieves the metrics determined by the given filter for the given database account and collection.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseRid - cosmos DB database rid.
 // collectionRid - cosmos DB collection rid.
@@ -191,7 +191,7 @@ func (client CollectionClient) ListMetricsPreparer(ctx context.Context, resource
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"$filter":     autorest.Encode("query", filter),
 		"api-version": APIVersion,
@@ -225,7 +225,7 @@ func (client CollectionClient) ListMetricsResponder(resp *http.Response) (result
 
 // ListUsages retrieves the usages (most recent storage data) for the given collection.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseRid - cosmos DB database rid.
 // collectionRid - cosmos DB collection rid.
@@ -288,7 +288,7 @@ func (client CollectionClient) ListUsagesPreparer(ctx context.Context, resourceG
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

@@ -33,7 +33,7 @@ func NewSQLResourcesClientWithBaseURI(baseURI string, subscriptionID string) SQL
 
 // CreateUpdateSQLContainer create or update an Azure Cosmos DB SQL container
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -71,7 +71,6 @@ func (client SQLResourcesClient) CreateUpdateSQLContainer(ctx context.Context, r
 								}},
 							}},
 					}},
-					{Target: "createUpdateSQLContainerParameters.SQLContainerCreateUpdateProperties.Options", Name: validation.Null, Rule: true, Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.SQLResourcesClient", "CreateUpdateSQLContainer", err.Error())
 	}
@@ -101,7 +100,7 @@ func (client SQLResourcesClient) CreateUpdateSQLContainerPreparer(ctx context.Co
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -145,7 +144,7 @@ func (client SQLResourcesClient) CreateUpdateSQLContainerResponder(resp *http.Re
 
 // CreateUpdateSQLDatabase create or update an Azure Cosmos DB SQL database
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // createUpdateSQLDatabaseParameters - the parameters to provide for the current SQL database.
@@ -175,7 +174,6 @@ func (client SQLResourcesClient) CreateUpdateSQLDatabase(ctx context.Context, re
 			Constraints: []validation.Constraint{{Target: "createUpdateSQLDatabaseParameters.SQLDatabaseCreateUpdateProperties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "createUpdateSQLDatabaseParameters.SQLDatabaseCreateUpdateProperties.Resource", Name: validation.Null, Rule: true,
 					Chain: []validation.Constraint{{Target: "createUpdateSQLDatabaseParameters.SQLDatabaseCreateUpdateProperties.Resource.ID", Name: validation.Null, Rule: true, Chain: nil}}},
-					{Target: "createUpdateSQLDatabaseParameters.SQLDatabaseCreateUpdateProperties.Options", Name: validation.Null, Rule: true, Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.SQLResourcesClient", "CreateUpdateSQLDatabase", err.Error())
 	}
@@ -204,7 +202,7 @@ func (client SQLResourcesClient) CreateUpdateSQLDatabasePreparer(ctx context.Con
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -248,7 +246,7 @@ func (client SQLResourcesClient) CreateUpdateSQLDatabaseResponder(resp *http.Res
 
 // CreateUpdateSQLStoredProcedure create or update an Azure Cosmos DB SQL storedProcedure
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -280,7 +278,6 @@ func (client SQLResourcesClient) CreateUpdateSQLStoredProcedure(ctx context.Cont
 			Constraints: []validation.Constraint{{Target: "createUpdateSQLStoredProcedureParameters.SQLStoredProcedureCreateUpdateProperties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "createUpdateSQLStoredProcedureParameters.SQLStoredProcedureCreateUpdateProperties.Resource", Name: validation.Null, Rule: true,
 					Chain: []validation.Constraint{{Target: "createUpdateSQLStoredProcedureParameters.SQLStoredProcedureCreateUpdateProperties.Resource.ID", Name: validation.Null, Rule: true, Chain: nil}}},
-					{Target: "createUpdateSQLStoredProcedureParameters.SQLStoredProcedureCreateUpdateProperties.Options", Name: validation.Null, Rule: true, Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.SQLResourcesClient", "CreateUpdateSQLStoredProcedure", err.Error())
 	}
@@ -311,7 +308,7 @@ func (client SQLResourcesClient) CreateUpdateSQLStoredProcedurePreparer(ctx cont
 		"subscriptionId":      autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -355,7 +352,7 @@ func (client SQLResourcesClient) CreateUpdateSQLStoredProcedureResponder(resp *h
 
 // CreateUpdateSQLTrigger create or update an Azure Cosmos DB SQL trigger
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -387,7 +384,6 @@ func (client SQLResourcesClient) CreateUpdateSQLTrigger(ctx context.Context, res
 			Constraints: []validation.Constraint{{Target: "createUpdateSQLTriggerParameters.SQLTriggerCreateUpdateProperties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "createUpdateSQLTriggerParameters.SQLTriggerCreateUpdateProperties.Resource", Name: validation.Null, Rule: true,
 					Chain: []validation.Constraint{{Target: "createUpdateSQLTriggerParameters.SQLTriggerCreateUpdateProperties.Resource.ID", Name: validation.Null, Rule: true, Chain: nil}}},
-					{Target: "createUpdateSQLTriggerParameters.SQLTriggerCreateUpdateProperties.Options", Name: validation.Null, Rule: true, Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.SQLResourcesClient", "CreateUpdateSQLTrigger", err.Error())
 	}
@@ -418,7 +414,7 @@ func (client SQLResourcesClient) CreateUpdateSQLTriggerPreparer(ctx context.Cont
 		"triggerName":       autorest.Encode("path", triggerName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -462,7 +458,7 @@ func (client SQLResourcesClient) CreateUpdateSQLTriggerResponder(resp *http.Resp
 
 // CreateUpdateSQLUserDefinedFunction create or update an Azure Cosmos DB SQL userDefinedFunction
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -495,7 +491,6 @@ func (client SQLResourcesClient) CreateUpdateSQLUserDefinedFunction(ctx context.
 			Constraints: []validation.Constraint{{Target: "createUpdateSQLUserDefinedFunctionParameters.SQLUserDefinedFunctionCreateUpdateProperties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "createUpdateSQLUserDefinedFunctionParameters.SQLUserDefinedFunctionCreateUpdateProperties.Resource", Name: validation.Null, Rule: true,
 					Chain: []validation.Constraint{{Target: "createUpdateSQLUserDefinedFunctionParameters.SQLUserDefinedFunctionCreateUpdateProperties.Resource.ID", Name: validation.Null, Rule: true, Chain: nil}}},
-					{Target: "createUpdateSQLUserDefinedFunctionParameters.SQLUserDefinedFunctionCreateUpdateProperties.Options", Name: validation.Null, Rule: true, Chain: nil},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.SQLResourcesClient", "CreateUpdateSQLUserDefinedFunction", err.Error())
 	}
@@ -526,7 +521,7 @@ func (client SQLResourcesClient) CreateUpdateSQLUserDefinedFunctionPreparer(ctx 
 		"userDefinedFunctionName": autorest.Encode("path", userDefinedFunctionName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -570,7 +565,7 @@ func (client SQLResourcesClient) CreateUpdateSQLUserDefinedFunctionResponder(res
 
 // DeleteSQLContainer deletes an existing Azure Cosmos DB SQL container.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -624,7 +619,7 @@ func (client SQLResourcesClient) DeleteSQLContainerPreparer(ctx context.Context,
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -665,7 +660,7 @@ func (client SQLResourcesClient) DeleteSQLContainerResponder(resp *http.Response
 
 // DeleteSQLDatabase deletes an existing Azure Cosmos DB SQL database.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 func (client SQLResourcesClient) DeleteSQLDatabase(ctx context.Context, resourceGroupName string, accountName string, databaseName string) (result SQLResourcesDeleteSQLDatabaseFuture, err error) {
@@ -717,7 +712,7 @@ func (client SQLResourcesClient) DeleteSQLDatabasePreparer(ctx context.Context, 
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -758,7 +753,7 @@ func (client SQLResourcesClient) DeleteSQLDatabaseResponder(resp *http.Response)
 
 // DeleteSQLStoredProcedure deletes an existing Azure Cosmos DB SQL storedProcedure.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -814,7 +809,7 @@ func (client SQLResourcesClient) DeleteSQLStoredProcedurePreparer(ctx context.Co
 		"subscriptionId":      autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -855,7 +850,7 @@ func (client SQLResourcesClient) DeleteSQLStoredProcedureResponder(resp *http.Re
 
 // DeleteSQLTrigger deletes an existing Azure Cosmos DB SQL trigger.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -911,7 +906,7 @@ func (client SQLResourcesClient) DeleteSQLTriggerPreparer(ctx context.Context, r
 		"triggerName":       autorest.Encode("path", triggerName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -952,7 +947,7 @@ func (client SQLResourcesClient) DeleteSQLTriggerResponder(resp *http.Response) 
 
 // DeleteSQLUserDefinedFunction deletes an existing Azure Cosmos DB SQL userDefinedFunction.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -1008,7 +1003,7 @@ func (client SQLResourcesClient) DeleteSQLUserDefinedFunctionPreparer(ctx contex
 		"userDefinedFunctionName": autorest.Encode("path", userDefinedFunctionName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1049,7 +1044,7 @@ func (client SQLResourcesClient) DeleteSQLUserDefinedFunctionResponder(resp *htt
 
 // GetSQLContainer gets the SQL container under an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -1110,7 +1105,7 @@ func (client SQLResourcesClient) GetSQLContainerPreparer(ctx context.Context, re
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1144,7 +1139,7 @@ func (client SQLResourcesClient) GetSQLContainerResponder(resp *http.Response) (
 // GetSQLContainerThroughput gets the RUs per second of the SQL container under an existing Azure Cosmos DB database
 // account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -1205,7 +1200,7 @@ func (client SQLResourcesClient) GetSQLContainerThroughputPreparer(ctx context.C
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1238,7 +1233,7 @@ func (client SQLResourcesClient) GetSQLContainerThroughputResponder(resp *http.R
 
 // GetSQLDatabase gets the SQL database under an existing Azure Cosmos DB database account with the provided name.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 func (client SQLResourcesClient) GetSQLDatabase(ctx context.Context, resourceGroupName string, accountName string, databaseName string) (result SQLDatabaseGetResults, err error) {
@@ -1297,7 +1292,7 @@ func (client SQLResourcesClient) GetSQLDatabasePreparer(ctx context.Context, res
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1331,7 +1326,7 @@ func (client SQLResourcesClient) GetSQLDatabaseResponder(resp *http.Response) (r
 // GetSQLDatabaseThroughput gets the RUs per second of the SQL database under an existing Azure Cosmos DB database
 // account with the provided name.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 func (client SQLResourcesClient) GetSQLDatabaseThroughput(ctx context.Context, resourceGroupName string, accountName string, databaseName string) (result ThroughputSettingsGetResults, err error) {
@@ -1390,7 +1385,7 @@ func (client SQLResourcesClient) GetSQLDatabaseThroughputPreparer(ctx context.Co
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1423,7 +1418,7 @@ func (client SQLResourcesClient) GetSQLDatabaseThroughputResponder(resp *http.Re
 
 // GetSQLStoredProcedure gets the SQL storedProcedure under an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -1486,7 +1481,7 @@ func (client SQLResourcesClient) GetSQLStoredProcedurePreparer(ctx context.Conte
 		"subscriptionId":      autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1519,7 +1514,7 @@ func (client SQLResourcesClient) GetSQLStoredProcedureResponder(resp *http.Respo
 
 // GetSQLTrigger gets the SQL trigger under an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -1582,7 +1577,7 @@ func (client SQLResourcesClient) GetSQLTriggerPreparer(ctx context.Context, reso
 		"triggerName":       autorest.Encode("path", triggerName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1615,7 +1610,7 @@ func (client SQLResourcesClient) GetSQLTriggerResponder(resp *http.Response) (re
 
 // GetSQLUserDefinedFunction gets the SQL userDefinedFunction under an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -1678,7 +1673,7 @@ func (client SQLResourcesClient) GetSQLUserDefinedFunctionPreparer(ctx context.C
 		"userDefinedFunctionName": autorest.Encode("path", userDefinedFunctionName),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1711,7 +1706,7 @@ func (client SQLResourcesClient) GetSQLUserDefinedFunctionResponder(resp *http.R
 
 // ListSQLContainers lists the SQL container under an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 func (client SQLResourcesClient) ListSQLContainers(ctx context.Context, resourceGroupName string, accountName string, databaseName string) (result SQLContainerListResult, err error) {
@@ -1770,7 +1765,7 @@ func (client SQLResourcesClient) ListSQLContainersPreparer(ctx context.Context, 
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1803,7 +1798,7 @@ func (client SQLResourcesClient) ListSQLContainersResponder(resp *http.Response)
 
 // ListSQLDatabases lists the SQL databases under an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 func (client SQLResourcesClient) ListSQLDatabases(ctx context.Context, resourceGroupName string, accountName string) (result SQLDatabaseListResult, err error) {
 	if tracing.IsEnabled() {
@@ -1860,7 +1855,7 @@ func (client SQLResourcesClient) ListSQLDatabasesPreparer(ctx context.Context, r
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1893,7 +1888,7 @@ func (client SQLResourcesClient) ListSQLDatabasesResponder(resp *http.Response) 
 
 // ListSQLStoredProcedures lists the SQL storedProcedure under an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -1954,7 +1949,7 @@ func (client SQLResourcesClient) ListSQLStoredProceduresPreparer(ctx context.Con
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1987,7 +1982,7 @@ func (client SQLResourcesClient) ListSQLStoredProceduresResponder(resp *http.Res
 
 // ListSQLTriggers lists the SQL trigger under an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -2048,7 +2043,7 @@ func (client SQLResourcesClient) ListSQLTriggersPreparer(ctx context.Context, re
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -2081,7 +2076,7 @@ func (client SQLResourcesClient) ListSQLTriggersResponder(resp *http.Response) (
 
 // ListSQLUserDefinedFunctions lists the SQL userDefinedFunction under an existing Azure Cosmos DB database account.
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -2142,7 +2137,7 @@ func (client SQLResourcesClient) ListSQLUserDefinedFunctionsPreparer(ctx context
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -2173,9 +2168,389 @@ func (client SQLResourcesClient) ListSQLUserDefinedFunctionsResponder(resp *http
 	return
 }
 
+// MigrateSQLContainerToAutoscale migrate an Azure Cosmos DB SQL container from manual throughput to autoscale
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// accountName - cosmos DB database account name.
+// databaseName - cosmos DB database name.
+// containerName - cosmos DB container name.
+func (client SQLResourcesClient) MigrateSQLContainerToAutoscale(ctx context.Context, resourceGroupName string, accountName string, databaseName string, containerName string) (result SQLResourcesMigrateSQLContainerToAutoscaleFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/SQLResourcesClient.MigrateSQLContainerToAutoscale")
+		defer func() {
+			sc := -1
+			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+				sc = result.FutureAPI.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
+		{TargetValue: accountName,
+			Constraints: []validation.Constraint{{Target: "accountName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "accountName", Name: validation.MinLength, Rule: 3, Chain: nil},
+				{Target: "accountName", Name: validation.Pattern, Rule: `^[a-z0-9]+(-[a-z0-9]+)*`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("documentdb.SQLResourcesClient", "MigrateSQLContainerToAutoscale", err.Error())
+	}
+
+	req, err := client.MigrateSQLContainerToAutoscalePreparer(ctx, resourceGroupName, accountName, databaseName, containerName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.SQLResourcesClient", "MigrateSQLContainerToAutoscale", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.MigrateSQLContainerToAutoscaleSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.SQLResourcesClient", "MigrateSQLContainerToAutoscale", nil, "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// MigrateSQLContainerToAutoscalePreparer prepares the MigrateSQLContainerToAutoscale request.
+func (client SQLResourcesClient) MigrateSQLContainerToAutoscalePreparer(ctx context.Context, resourceGroupName string, accountName string, databaseName string, containerName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"accountName":       autorest.Encode("path", accountName),
+		"containerName":     autorest.Encode("path", containerName),
+		"databaseName":      autorest.Encode("path", databaseName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2021-01-15"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}/throughputSettings/default/migrateToAutoscale", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// MigrateSQLContainerToAutoscaleSender sends the MigrateSQLContainerToAutoscale request. The method will close the
+// http.Response Body if it receives an error.
+func (client SQLResourcesClient) MigrateSQLContainerToAutoscaleSender(req *http.Request) (future SQLResourcesMigrateSQLContainerToAutoscaleFuture, err error) {
+	var resp *http.Response
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = future.result
+	return
+}
+
+// MigrateSQLContainerToAutoscaleResponder handles the response to the MigrateSQLContainerToAutoscale request. The method always
+// closes the http.Response Body.
+func (client SQLResourcesClient) MigrateSQLContainerToAutoscaleResponder(resp *http.Response) (result ThroughputSettingsGetResults, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// MigrateSQLContainerToManualThroughput migrate an Azure Cosmos DB SQL container from autoscale to manual throughput
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// accountName - cosmos DB database account name.
+// databaseName - cosmos DB database name.
+// containerName - cosmos DB container name.
+func (client SQLResourcesClient) MigrateSQLContainerToManualThroughput(ctx context.Context, resourceGroupName string, accountName string, databaseName string, containerName string) (result SQLResourcesMigrateSQLContainerToManualThroughputFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/SQLResourcesClient.MigrateSQLContainerToManualThroughput")
+		defer func() {
+			sc := -1
+			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+				sc = result.FutureAPI.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
+		{TargetValue: accountName,
+			Constraints: []validation.Constraint{{Target: "accountName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "accountName", Name: validation.MinLength, Rule: 3, Chain: nil},
+				{Target: "accountName", Name: validation.Pattern, Rule: `^[a-z0-9]+(-[a-z0-9]+)*`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("documentdb.SQLResourcesClient", "MigrateSQLContainerToManualThroughput", err.Error())
+	}
+
+	req, err := client.MigrateSQLContainerToManualThroughputPreparer(ctx, resourceGroupName, accountName, databaseName, containerName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.SQLResourcesClient", "MigrateSQLContainerToManualThroughput", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.MigrateSQLContainerToManualThroughputSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.SQLResourcesClient", "MigrateSQLContainerToManualThroughput", nil, "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// MigrateSQLContainerToManualThroughputPreparer prepares the MigrateSQLContainerToManualThroughput request.
+func (client SQLResourcesClient) MigrateSQLContainerToManualThroughputPreparer(ctx context.Context, resourceGroupName string, accountName string, databaseName string, containerName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"accountName":       autorest.Encode("path", accountName),
+		"containerName":     autorest.Encode("path", containerName),
+		"databaseName":      autorest.Encode("path", databaseName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2021-01-15"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}/throughputSettings/default/migrateToManualThroughput", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// MigrateSQLContainerToManualThroughputSender sends the MigrateSQLContainerToManualThroughput request. The method will close the
+// http.Response Body if it receives an error.
+func (client SQLResourcesClient) MigrateSQLContainerToManualThroughputSender(req *http.Request) (future SQLResourcesMigrateSQLContainerToManualThroughputFuture, err error) {
+	var resp *http.Response
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = future.result
+	return
+}
+
+// MigrateSQLContainerToManualThroughputResponder handles the response to the MigrateSQLContainerToManualThroughput request. The method always
+// closes the http.Response Body.
+func (client SQLResourcesClient) MigrateSQLContainerToManualThroughputResponder(resp *http.Response) (result ThroughputSettingsGetResults, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// MigrateSQLDatabaseToAutoscale migrate an Azure Cosmos DB SQL database from manual throughput to autoscale
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// accountName - cosmos DB database account name.
+// databaseName - cosmos DB database name.
+func (client SQLResourcesClient) MigrateSQLDatabaseToAutoscale(ctx context.Context, resourceGroupName string, accountName string, databaseName string) (result SQLResourcesMigrateSQLDatabaseToAutoscaleFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/SQLResourcesClient.MigrateSQLDatabaseToAutoscale")
+		defer func() {
+			sc := -1
+			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+				sc = result.FutureAPI.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
+		{TargetValue: accountName,
+			Constraints: []validation.Constraint{{Target: "accountName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "accountName", Name: validation.MinLength, Rule: 3, Chain: nil},
+				{Target: "accountName", Name: validation.Pattern, Rule: `^[a-z0-9]+(-[a-z0-9]+)*`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("documentdb.SQLResourcesClient", "MigrateSQLDatabaseToAutoscale", err.Error())
+	}
+
+	req, err := client.MigrateSQLDatabaseToAutoscalePreparer(ctx, resourceGroupName, accountName, databaseName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.SQLResourcesClient", "MigrateSQLDatabaseToAutoscale", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.MigrateSQLDatabaseToAutoscaleSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.SQLResourcesClient", "MigrateSQLDatabaseToAutoscale", nil, "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// MigrateSQLDatabaseToAutoscalePreparer prepares the MigrateSQLDatabaseToAutoscale request.
+func (client SQLResourcesClient) MigrateSQLDatabaseToAutoscalePreparer(ctx context.Context, resourceGroupName string, accountName string, databaseName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"accountName":       autorest.Encode("path", accountName),
+		"databaseName":      autorest.Encode("path", databaseName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2021-01-15"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/throughputSettings/default/migrateToAutoscale", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// MigrateSQLDatabaseToAutoscaleSender sends the MigrateSQLDatabaseToAutoscale request. The method will close the
+// http.Response Body if it receives an error.
+func (client SQLResourcesClient) MigrateSQLDatabaseToAutoscaleSender(req *http.Request) (future SQLResourcesMigrateSQLDatabaseToAutoscaleFuture, err error) {
+	var resp *http.Response
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = future.result
+	return
+}
+
+// MigrateSQLDatabaseToAutoscaleResponder handles the response to the MigrateSQLDatabaseToAutoscale request. The method always
+// closes the http.Response Body.
+func (client SQLResourcesClient) MigrateSQLDatabaseToAutoscaleResponder(resp *http.Response) (result ThroughputSettingsGetResults, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// MigrateSQLDatabaseToManualThroughput migrate an Azure Cosmos DB SQL database from autoscale to manual throughput
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// accountName - cosmos DB database account name.
+// databaseName - cosmos DB database name.
+func (client SQLResourcesClient) MigrateSQLDatabaseToManualThroughput(ctx context.Context, resourceGroupName string, accountName string, databaseName string) (result SQLResourcesMigrateSQLDatabaseToManualThroughputFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/SQLResourcesClient.MigrateSQLDatabaseToManualThroughput")
+		defer func() {
+			sc := -1
+			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+				sc = result.FutureAPI.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
+		{TargetValue: accountName,
+			Constraints: []validation.Constraint{{Target: "accountName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "accountName", Name: validation.MinLength, Rule: 3, Chain: nil},
+				{Target: "accountName", Name: validation.Pattern, Rule: `^[a-z0-9]+(-[a-z0-9]+)*`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("documentdb.SQLResourcesClient", "MigrateSQLDatabaseToManualThroughput", err.Error())
+	}
+
+	req, err := client.MigrateSQLDatabaseToManualThroughputPreparer(ctx, resourceGroupName, accountName, databaseName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.SQLResourcesClient", "MigrateSQLDatabaseToManualThroughput", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.MigrateSQLDatabaseToManualThroughputSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "documentdb.SQLResourcesClient", "MigrateSQLDatabaseToManualThroughput", nil, "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// MigrateSQLDatabaseToManualThroughputPreparer prepares the MigrateSQLDatabaseToManualThroughput request.
+func (client SQLResourcesClient) MigrateSQLDatabaseToManualThroughputPreparer(ctx context.Context, resourceGroupName string, accountName string, databaseName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"accountName":       autorest.Encode("path", accountName),
+		"databaseName":      autorest.Encode("path", databaseName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2021-01-15"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/throughputSettings/default/migrateToManualThroughput", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// MigrateSQLDatabaseToManualThroughputSender sends the MigrateSQLDatabaseToManualThroughput request. The method will close the
+// http.Response Body if it receives an error.
+func (client SQLResourcesClient) MigrateSQLDatabaseToManualThroughputSender(req *http.Request) (future SQLResourcesMigrateSQLDatabaseToManualThroughputFuture, err error) {
+	var resp *http.Response
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = future.result
+	return
+}
+
+// MigrateSQLDatabaseToManualThroughputResponder handles the response to the MigrateSQLDatabaseToManualThroughput request. The method always
+// closes the http.Response Body.
+func (client SQLResourcesClient) MigrateSQLDatabaseToManualThroughputResponder(resp *http.Response) (result ThroughputSettingsGetResults, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
 // UpdateSQLContainerThroughput update RUs per second of an Azure Cosmos DB SQL container
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // containerName - cosmos DB container name.
@@ -2205,7 +2580,9 @@ func (client SQLResourcesClient) UpdateSQLContainerThroughput(ctx context.Contex
 		{TargetValue: updateThroughputParameters,
 			Constraints: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource", Name: validation.Null, Rule: true,
-					Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.Throughput", Name: validation.Null, Rule: true, Chain: nil}}},
+					Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.AutoscaleSettings", Name: validation.Null, Rule: false,
+						Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.AutoscaleSettings.MaxThroughput", Name: validation.Null, Rule: true, Chain: nil}}},
+					}},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.SQLResourcesClient", "UpdateSQLContainerThroughput", err.Error())
 	}
@@ -2235,7 +2612,7 @@ func (client SQLResourcesClient) UpdateSQLContainerThroughputPreparer(ctx contex
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -2279,7 +2656,7 @@ func (client SQLResourcesClient) UpdateSQLContainerThroughputResponder(resp *htt
 
 // UpdateSQLDatabaseThroughput update RUs per second of an Azure Cosmos DB SQL database
 // Parameters:
-// resourceGroupName - name of an Azure resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // accountName - cosmos DB database account name.
 // databaseName - cosmos DB database name.
 // updateThroughputParameters - the parameters to provide for the RUs per second of the current SQL database.
@@ -2308,7 +2685,9 @@ func (client SQLResourcesClient) UpdateSQLDatabaseThroughput(ctx context.Context
 		{TargetValue: updateThroughputParameters,
 			Constraints: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties", Name: validation.Null, Rule: true,
 				Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource", Name: validation.Null, Rule: true,
-					Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.Throughput", Name: validation.Null, Rule: true, Chain: nil}}},
+					Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.AutoscaleSettings", Name: validation.Null, Rule: false,
+						Chain: []validation.Constraint{{Target: "updateThroughputParameters.ThroughputSettingsUpdateProperties.Resource.AutoscaleSettings.MaxThroughput", Name: validation.Null, Rule: true, Chain: nil}}},
+					}},
 				}}}}}); err != nil {
 		return result, validation.NewError("documentdb.SQLResourcesClient", "UpdateSQLDatabaseThroughput", err.Error())
 	}
@@ -2337,7 +2716,7 @@ func (client SQLResourcesClient) UpdateSQLDatabaseThroughputPreparer(ctx context
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-08-01"
+	const APIVersion = "2021-01-15"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

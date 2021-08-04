@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb"
+	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
@@ -1325,6 +1325,13 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 				},
 			},
 			DatabaseAccountOfferType: to.StringPtr(string(mgmtdocumentdb.Standard)),
+			BackupPolicy: mgmtdocumentdb.PeriodicModeBackupPolicy{
+				Type: mgmtdocumentdb.TypePeriodic,
+				PeriodicModeProperties: &mgmtdocumentdb.PeriodicModeProperties{
+					BackupIntervalInMinutes:        to.Int32Ptr(240), //4 hours
+					BackupRetentionIntervalInHours: to.Int32Ptr(720), //30 days
+				},
+			},
 		},
 		Name:     to.StringPtr("[parameters('databaseAccountName')]"),
 		Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts"),
@@ -1338,9 +1345,8 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 		Resource:   cosmosdb,
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 	}
-
 	if g.production {
-		cosmosdb.IPRangeFilter = to.StringPtr("[if(parameters('disableCosmosDBFirewall'), '', concat('104.42.195.92,40.76.54.131,52.176.6.30,52.169.50.45,52.187.184.26', if(equals(parameters('extraCosmosDBIPs'), ''), '', ','), parameters('extraCosmosDBIPs')))]")
+		cosmosdb.IPRules = &[]mgmtdocumentdb.IPAddressOrRange{}
 		cosmosdb.IsVirtualNetworkFilterEnabled = to.BoolPtr(true)
 		cosmosdb.VirtualNetworkRules = &[]mgmtdocumentdb.VirtualNetworkRule{}
 		cosmosdb.DisableKeyBasedMetadataWriteAccess = to.BoolPtr(true)
@@ -1373,7 +1379,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 					},
 					DefaultTTL: to.Int32Ptr(-1),
 				},
-				Options: map[string]*string{},
+				Options: &mgmtdocumentdb.CreateUpdateOptions{},
 			},
 			Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Portal')]"),
 			Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
@@ -1386,7 +1392,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 	}
 
 	if g.production {
-		portal.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options["throughput"] = to.StringPtr("400")
+		portal.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options.Throughput = to.Int32Ptr(400)
 	}
 
 	rs := []*arm.Resource{
@@ -1396,8 +1402,8 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 					Resource: &mgmtdocumentdb.SQLDatabaseResource{
 						ID: to.StringPtr("[" + databaseName + "]"),
 					},
-					Options: map[string]*string{
-						"throughput": to.StringPtr("500"),
+					Options: &mgmtdocumentdb.CreateUpdateOptions{
+						Throughput: to.Int32Ptr(500),
 					},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ")]"),
@@ -1419,7 +1425,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 						},
 						DefaultTTL: to.Int32Ptr(7 * 86400), // 7 days
 					},
-					Options: map[string]*string{},
+					Options: &mgmtdocumentdb.CreateUpdateOptions{},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/AsyncOperations')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
@@ -1442,7 +1448,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 							Kind: mgmtdocumentdb.PartitionKindHash,
 						},
 					},
-					Options: map[string]*string{},
+					Options: &mgmtdocumentdb.CreateUpdateOptions{},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Billing')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
@@ -1466,7 +1472,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 						},
 						DefaultTTL: to.Int32Ptr(-1),
 					},
-					Options: map[string]*string{},
+					Options: &mgmtdocumentdb.CreateUpdateOptions{},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Monitors')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
@@ -1508,7 +1514,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 							},
 						},
 					},
-					Options: map[string]*string{},
+					Options: &mgmtdocumentdb.CreateUpdateOptions{},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/OpenShiftClusters')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
@@ -1532,7 +1538,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 							Kind: mgmtdocumentdb.PartitionKindHash,
 						},
 					},
-					Options: map[string]*string{},
+					Options: &mgmtdocumentdb.CreateUpdateOptions{},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Subscriptions')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),

@@ -56,13 +56,13 @@
         "disableCosmosDBFirewall": {
             "value": false
         },
-        "extraCosmosDBIPs": {
-            "value": ""
-        },
         "fpClientId": {
             "value": ""
         },
         "fpServicePrincipalId": {
+            "value": ""
+        },
+        "ipRules": {
             "value": ""
         },
         "keyvaultDNSSuffix": {
