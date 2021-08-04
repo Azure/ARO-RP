@@ -124,8 +124,8 @@ type MasterProfile struct {
 	VMSize VMSize `json:"vmSize,omitempty"`
 	// SubnetID - The Azure resource ID of the master subnet.
 	SubnetID *string `json:"subnetId,omitempty"`
-	// EncryptionAtHost - Whether master virtual machines are encrypted at host.
-	EncryptionAtHost *bool `json:"encryptionAtHost,omitempty"`
+	// EncryptionAtHost - Whether master virtual machines are encrypted at host. Possible values include: 'Disabled', 'Enabled'
+	EncryptionAtHost EncryptionAtHost `json:"encryptionAtHost,omitempty"`
 	// DiskEncryptionSetID - The resource ID of an associated DiskEncryptionSet, if applicable.
 	DiskEncryptionSetID *string `json:"diskEncryptionSetId,omitempty"`
 }
@@ -901,8 +901,8 @@ type WorkerProfile struct {
 	SubnetID *string `json:"subnetId,omitempty"`
 	// Count - The number of worker VMs.
 	Count *int32 `json:"count,omitempty"`
-	// EncryptionAtHost - Whether master virtual machines are encrypted at host.
-	EncryptionAtHost *bool `json:"encryptionAtHost,omitempty"`
+	// EncryptionAtHost - Whether master virtual machines are encrypted at host. Possible values include: 'EncryptionAtHost1Disabled', 'EncryptionAtHost1Enabled'
+	EncryptionAtHost EncryptionAtHost1 `json:"encryptionAtHost,omitempty"`
 	// DiskEncryptionSetID - The resource ID of an associated DiskEncryptionSet, if applicable.
 	DiskEncryptionSetID *string `json:"diskEncryptionSetId,omitempty"`
 }

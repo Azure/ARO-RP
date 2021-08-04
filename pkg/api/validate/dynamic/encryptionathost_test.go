@@ -33,11 +33,11 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					MasterProfile: api.MasterProfile{
-						EncryptionAtHost: true,
+						EncryptionAtHost: api.EncryptionAtHostEnabled,
 						VMSize:           api.VMSizeStandardD8sV3,
 					},
 					WorkerProfiles: []api.WorkerProfile{{
-						EncryptionAtHost: true,
+						EncryptionAtHost: api.EncryptionAtHostEnabled,
 						VMSize:           api.VMSizeStandardD4asV4,
 					}},
 				},
@@ -62,11 +62,11 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					MasterProfile: api.MasterProfile{
-						EncryptionAtHost: true,
+						EncryptionAtHost: api.EncryptionAtHostEnabled,
 						VMSize:           api.VMSizeStandardG5,
 					},
 					WorkerProfiles: []api.WorkerProfile{{
-						EncryptionAtHost: true,
+						EncryptionAtHost: api.EncryptionAtHostEnabled,
 						VMSize:           api.VMSizeStandardD4asV4,
 					}},
 				},
@@ -86,11 +86,11 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					MasterProfile: api.MasterProfile{
-						EncryptionAtHost: true,
+						EncryptionAtHost: api.EncryptionAtHostEnabled,
 						VMSize:           api.VMSizeStandardD8sV3,
 					},
 					WorkerProfiles: []api.WorkerProfile{{
-						EncryptionAtHost: true,
+						EncryptionAtHost: api.EncryptionAtHostEnabled,
 						VMSize:           api.VMSizeStandardG5,
 					}},
 				},
@@ -116,11 +116,11 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					MasterProfile: api.MasterProfile{
-						EncryptionAtHost: true,
+						EncryptionAtHost: api.EncryptionAtHostEnabled,
 						VMSize:           "invalid",
 					},
 					WorkerProfiles: []api.WorkerProfile{{
-						EncryptionAtHost: true,
+						EncryptionAtHost: api.EncryptionAtHostEnabled,
 						VMSize:           api.VMSizeStandardG5,
 					}},
 				},

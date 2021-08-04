@@ -15,7 +15,7 @@ import (
 func (dv *dynamic) ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error {
 	dv.log.Print("ValidateEncryptionAtHost")
 
-	if oc.Properties.MasterProfile.EncryptionAtHost {
+	if oc.Properties.MasterProfile.EncryptionAtHost == api.EncryptionAtHostEnabled {
 		err := dv.validateEncryptionAtHostSupport(oc.Properties.MasterProfile.VMSize, "properties.masterProfile.encryptionAtHost")
 		if err != nil {
 			return err
@@ -23,7 +23,7 @@ func (dv *dynamic) ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShi
 	}
 
 	for i, wp := range oc.Properties.WorkerProfiles {
-		if wp.EncryptionAtHost {
+		if wp.EncryptionAtHost == api.EncryptionAtHostEnabled {
 			err := dv.validateEncryptionAtHostSupport(wp.VMSize, fmt.Sprintf("properties.workerProfiles[%d].encryptionAtHost", i))
 			if err != nil {
 				return err

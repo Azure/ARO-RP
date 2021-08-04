@@ -96,9 +96,14 @@ func (ef *workerProfilesEnricherTask) FetchData(ctx context.Context, callbacks c
 			r.SubscriptionID, machineProviderSpec.NetworkResourceGroup, machineProviderSpec.Vnet, machineProviderSpec.Subnet,
 		)
 
-		workerProfiles[i].EncryptionAtHost = machineProviderSpec.SecurityProfile != nil &&
+		encryptionAtHost := api.EncryptionAtHostDisabled
+		if machineProviderSpec.SecurityProfile != nil &&
 			machineProviderSpec.SecurityProfile.EncryptionAtHost != nil &&
-			*machineProviderSpec.SecurityProfile.EncryptionAtHost
+			*machineProviderSpec.SecurityProfile.EncryptionAtHost {
+			encryptionAtHost = api.EncryptionAtHostEnabled
+		}
+
+		workerProfiles[i].EncryptionAtHost = encryptionAtHost
 
 		if machineProviderSpec.OSDisk.ManagedDisk.DiskEncryptionSet != nil {
 			workerProfiles[i].DiskEncryptionSetID = machineProviderSpec.OSDisk.ManagedDisk.DiskEncryptionSet.ID

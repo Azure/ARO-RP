@@ -548,6 +548,14 @@
         }
       }
     },
+    "EncryptionAtHost": {
+      "description": "EncryptionAtHost represents encryption at host state",
+      "enum": [
+        "Disabled",
+        "Enabled"
+      ],
+      "type": "string"
+    },
     "IngressProfile": {
       "description": "IngressProfile represents an ingress profile.",
       "properties": {
@@ -577,8 +585,8 @@
           "type": "string"
         },
         "encryptionAtHost": {
-          "description": "Whether master virtual machines are encrypted at host.",
-          "type": "boolean"
+          "$ref": "#/definitions/EncryptionAtHost",
+          "description": "Whether master virtual machines are encrypted at host."
         },
         "diskEncryptionSetId": {
           "description": "The resource ID of an associated DiskEncryptionSet, if applicable.",
@@ -869,8 +877,8 @@
           "type": "integer"
         },
         "encryptionAtHost": {
-          "description": "Whether master virtual machines are encrypted at host.",
-          "type": "boolean"
+          "$ref": "#/definitions/EncryptionAtHost",
+          "description": "Whether master virtual machines are encrypted at host."
         },
         "diskEncryptionSetId": {
           "description": "The resource ID of an associated DiskEncryptionSet, if applicable.",
