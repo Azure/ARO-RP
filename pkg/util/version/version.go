@@ -4,6 +4,7 @@ package version
 // Licensed under the Apache License 2.0.
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -19,6 +20,10 @@ type Version struct {
 
 func (v *Version) String() string {
 	return fmt.Sprintf("%d.%d.%d%s", v.V[0], v.V[1], v.V[2], v.Suffix)
+}
+
+func (v *Version) MarshalJSON() ([]byte, error) {
+	return json.Marshal(v.String())
 }
 
 func NewVersion(vs ...uint32) *Version {

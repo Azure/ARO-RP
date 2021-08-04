@@ -100,6 +100,18 @@
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]"
             ]
+        },
+        {
+            "properties": {
+                "publicAccess": "Container",
+                "metadata": null
+            },
+            "name": "[concat(parameters('rpVersionStorageAccountName'), '/default/ocpversions')]",
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2019-04-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]"
+            ]
         }
     ]
 }
