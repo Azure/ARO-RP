@@ -19,7 +19,7 @@ import (
 )
 
 func (k *kubeActions) Upgrade(ctx context.Context, upgradeY bool) error {
-	return upgrade(ctx, k.log, k.configcli, version.Streams, upgradeY)
+	return upgrade(ctx, k.log, k.configcli, version.UpgradeStreams, upgradeY)
 }
 
 func upgrade(ctx context.Context, log *logrus.Entry, configcli configclient.Interface, streams []*version.Stream, upgradeY bool) error {

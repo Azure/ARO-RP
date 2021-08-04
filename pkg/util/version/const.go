@@ -31,9 +31,9 @@ var InstallStream = &Stream{
 	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:60454c3270a61432447c752a9d5ee3e7d84cebcfd5d371eb4daa263623923dac",
 }
 
-// Streams describes list of streams we support for upgrades
+// UpgradeStreams describes list of streams we support for upgrades
 var (
-	Streams = []*Stream{
+	UpgradeStreams = []*Stream{
 		InstallStream,
 		{
 			Version:  NewVersion(4, 6, 40),

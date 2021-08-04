@@ -13,7 +13,7 @@ import (
 )
 
 func TestOpenShiftReleaseImages(t *testing.T) {
-	for _, u := range Streams {
+	for _, u := range UpgradeStreams {
 		if !regexp.MustCompile(`^quay.io/openshift-release-dev/ocp-release@sha256:[a-z0-9]{64}$`).MatchString(u.PullSpec) {
 			t.Errorf("PullSpec format invalid: %s", u.PullSpec)
 		}
@@ -21,7 +21,7 @@ func TestOpenShiftReleaseImages(t *testing.T) {
 }
 
 func TestOpenShiftVersions(t *testing.T) {
-	for _, u := range Streams {
+	for _, u := range UpgradeStreams {
 		_, err := ParseVersion(u.Version.String())
 		if err != nil {
 			t.Error(err)
@@ -30,8 +30,8 @@ func TestOpenShiftVersions(t *testing.T) {
 }
 
 func TestUnique(t *testing.T) {
-	unique := make(map[string]int, len(Streams))
-	for _, u := range Streams {
+	unique := make(map[string]int, len(UpgradeStreams))
+	for _, u := range UpgradeStreams {
 		unique[fmt.Sprintf("%d.%d", u.Version.V[0], u.Version.V[1])]++
 	}
 

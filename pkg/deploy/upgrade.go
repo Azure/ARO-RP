@@ -50,10 +50,10 @@ func (d *deployer) SaveVersion(ctx context.Context) error {
 		return err
 	}
 
-	// save OCP streams which are used by RP in this location
+	// save OCP upgrade streams which are used by RP in this location
 	containerRef = blobClient.GetContainerReference("ocpversions")
 	blobRef = containerRef.GetBlobReference(d.config.Location)
-	streams, err := json.Marshal(version.Streams)
+	streams, err := json.Marshal(version.UpgradeStreams)
 	if err != nil {
 		return err
 	}
