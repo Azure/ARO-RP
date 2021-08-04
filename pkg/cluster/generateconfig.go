@@ -139,7 +139,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 					Azure: &azuretypes.MachinePool{
 						Zones:            masterZones,
 						InstanceType:     string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize),
-						EncryptionAtHost: m.doc.OpenShiftCluster.Properties.MasterProfile.EncryptionAtHost,
+						EncryptionAtHost: m.doc.OpenShiftCluster.Properties.MasterProfile.EncryptionAtHost == api.EncryptionAtHostEnabled,
 						OSDisk: azuretypes.OSDisk{
 							DiskEncryptionSetID: m.doc.OpenShiftCluster.Properties.MasterProfile.DiskEncryptionSetID,
 						},
@@ -156,7 +156,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 						Azure: &azuretypes.MachinePool{
 							Zones:            workerZones,
 							InstanceType:     string(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize),
-							EncryptionAtHost: m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].EncryptionAtHost,
+							EncryptionAtHost: m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].EncryptionAtHost == api.EncryptionAtHostEnabled,
 							OSDisk: azuretypes.OSDisk{
 								DiskEncryptionSetID: m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskEncryptionSetID,
 								DiskSizeGB:          int32(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB),

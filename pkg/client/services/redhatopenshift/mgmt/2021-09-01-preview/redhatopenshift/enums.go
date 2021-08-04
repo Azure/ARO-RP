@@ -36,6 +36,36 @@ func PossibleCreatedByTypeValues() []CreatedByType {
 	return []CreatedByType{Application, Key, ManagedIdentity, User}
 }
 
+// EncryptionAtHost enumerates the values for encryption at host.
+type EncryptionAtHost string
+
+const (
+	// Disabled ...
+	Disabled EncryptionAtHost = "Disabled"
+	// Enabled ...
+	Enabled EncryptionAtHost = "Enabled"
+)
+
+// PossibleEncryptionAtHostValues returns an array of possible values for the EncryptionAtHost const type.
+func PossibleEncryptionAtHostValues() []EncryptionAtHost {
+	return []EncryptionAtHost{Disabled, Enabled}
+}
+
+// EncryptionAtHost1 enumerates the values for encryption at host 1.
+type EncryptionAtHost1 string
+
+const (
+	// EncryptionAtHost1Disabled ...
+	EncryptionAtHost1Disabled EncryptionAtHost1 = "Disabled"
+	// EncryptionAtHost1Enabled ...
+	EncryptionAtHost1Enabled EncryptionAtHost1 = "Enabled"
+)
+
+// PossibleEncryptionAtHost1Values returns an array of possible values for the EncryptionAtHost1 const type.
+func PossibleEncryptionAtHost1Values() []EncryptionAtHost1 {
+	return []EncryptionAtHost1{EncryptionAtHost1Disabled, EncryptionAtHost1Enabled}
+}
+
 // ProvisioningState enumerates the values for provisioning state.
 type ProvisioningState string
 

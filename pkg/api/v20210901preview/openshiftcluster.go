@@ -134,6 +134,15 @@ type NetworkProfile struct {
 	ServiceCIDR string `json:"serviceCidr,omitempty"`
 }
 
+// EncryptionAtHost represents encryption at host state
+type EncryptionAtHost string
+
+// EncryptionAtHost constants
+const (
+	EncryptionAtHostEnabled  EncryptionAtHost = "Enabled"
+	EncryptionAtHostDisabled EncryptionAtHost = "Disabled"
+)
+
 // MasterProfile represents a master profile.
 type MasterProfile struct {
 	// The size of the master VMs.
@@ -143,7 +152,7 @@ type MasterProfile struct {
 	SubnetID string `json:"subnetId,omitempty"`
 
 	// Whether master virtual machines are encrypted at host.
-	EncryptionAtHost bool `json:"encryptionAtHost,omitempty"`
+	EncryptionAtHost EncryptionAtHost `json:"encryptionAtHost,omitempty"`
 
 	// The resource ID of an associated DiskEncryptionSet, if applicable.
 	DiskEncryptionSetID string `json:"diskEncryptionSetId,omitempty"`
@@ -202,7 +211,7 @@ type WorkerProfile struct {
 	Count int `json:"count,omitempty"`
 
 	// Whether master virtual machines are encrypted at host.
-	EncryptionAtHost bool `json:"encryptionAtHost,omitempty"`
+	EncryptionAtHost EncryptionAtHost `json:"encryptionAtHost,omitempty"`
 
 	// The resource ID of an associated DiskEncryptionSet, if applicable.
 	DiskEncryptionSetID string `json:"diskEncryptionSetId,omitempty"`

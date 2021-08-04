@@ -211,14 +211,23 @@ type NetworkProfile struct {
 	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
 }
 
+// EncryptionAtHost represents encryption at host.
+type EncryptionAtHost string
+
+// EncryptionAtHost constants
+const (
+	EncryptionAtHostEnabled  EncryptionAtHost = "Enabled"
+	EncryptionAtHostDisabled EncryptionAtHost = "Disabled"
+)
+
 // MasterProfile represents a master profile
 type MasterProfile struct {
 	MissingFields
 
-	VMSize              VMSize `json:"vmSize,omitempty"`
-	SubnetID            string `json:"subnetId,omitempty"`
-	EncryptionAtHost    bool   `json:"encryptionAtHost,omitempty"`
-	DiskEncryptionSetID string `json:"diskEncryptionSetId,omitempty"`
+	VMSize              VMSize           `json:"vmSize,omitempty"`
+	SubnetID            string           `json:"subnetId,omitempty"`
+	EncryptionAtHost    EncryptionAtHost `json:"encryptionAtHost,omitempty"`
+	DiskEncryptionSetID string           `json:"diskEncryptionSetId,omitempty"`
 }
 
 // VMSize represents a VM size
@@ -261,13 +270,13 @@ const (
 type WorkerProfile struct {
 	MissingFields
 
-	Name                string `json:"name,omitempty"`
-	VMSize              VMSize `json:"vmSize,omitempty"`
-	DiskSizeGB          int    `json:"diskSizeGB,omitempty"`
-	SubnetID            string `json:"subnetId,omitempty"`
-	Count               int    `json:"count,omitempty"`
-	EncryptionAtHost    bool   `json:"encryptionAtHost,omitempty"`
-	DiskEncryptionSetID string `json:"diskEncryptionSetId,omitempty"`
+	Name                string           `json:"name,omitempty"`
+	VMSize              VMSize           `json:"vmSize,omitempty"`
+	DiskSizeGB          int              `json:"diskSizeGB,omitempty"`
+	SubnetID            string           `json:"subnetId,omitempty"`
+	Count               int              `json:"count,omitempty"`
+	EncryptionAtHost    EncryptionAtHost `json:"encryptionAtHost,omitempty"`
+	DiskEncryptionSetID string           `json:"diskEncryptionSetId,omitempty"`
 }
 
 // APIServerProfile represents an API server profile
