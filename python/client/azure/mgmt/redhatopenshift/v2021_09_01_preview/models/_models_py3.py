@@ -300,8 +300,9 @@ class MasterProfile(Model):
     :param subnet_id: The Azure resource ID of the master subnet.
     :type subnet_id: str
     :param encryption_at_host: Whether master virtual machines are encrypted
-     at host.
-    :type encryption_at_host: bool
+     at host. Possible values include: 'Disabled', 'Enabled'
+    :type encryption_at_host: str or
+     ~azure.mgmt.redhatopenshift.v2021_09_01_preview.models.enum
     :param disk_encryption_set_id: The resource ID of an associated
      DiskEncryptionSet, if applicable.
     :type disk_encryption_set_id: str
@@ -310,11 +311,11 @@ class MasterProfile(Model):
     _attribute_map = {
         'vm_size': {'key': 'vmSize', 'type': 'str'},
         'subnet_id': {'key': 'subnetId', 'type': 'str'},
-        'encryption_at_host': {'key': 'encryptionAtHost', 'type': 'bool'},
+        'encryption_at_host': {'key': 'encryptionAtHost', 'type': 'str'},
         'disk_encryption_set_id': {'key': 'diskEncryptionSetId', 'type': 'str'},
     }
 
-    def __init__(self, *, vm_size=None, subnet_id: str=None, encryption_at_host: bool=None, disk_encryption_set_id: str=None, **kwargs) -> None:
+    def __init__(self, *, vm_size=None, subnet_id: str=None, encryption_at_host=None, disk_encryption_set_id: str=None, **kwargs) -> None:
         super(MasterProfile, self).__init__(**kwargs)
         self.vm_size = vm_size
         self.subnet_id = subnet_id
@@ -742,8 +743,9 @@ class WorkerProfile(Model):
     :param count: The number of worker VMs.
     :type count: int
     :param encryption_at_host: Whether master virtual machines are encrypted
-     at host.
-    :type encryption_at_host: bool
+     at host. Possible values include: 'Disabled', 'Enabled'
+    :type encryption_at_host: str or
+     ~azure.mgmt.redhatopenshift.v2021_09_01_preview.models.enum
     :param disk_encryption_set_id: The resource ID of an associated
      DiskEncryptionSet, if applicable.
     :type disk_encryption_set_id: str
@@ -755,11 +757,11 @@ class WorkerProfile(Model):
         'disk_size_gb': {'key': 'diskSizeGB', 'type': 'int'},
         'subnet_id': {'key': 'subnetId', 'type': 'str'},
         'count': {'key': 'count', 'type': 'int'},
-        'encryption_at_host': {'key': 'encryptionAtHost', 'type': 'bool'},
+        'encryption_at_host': {'key': 'encryptionAtHost', 'type': 'str'},
         'disk_encryption_set_id': {'key': 'diskEncryptionSetId', 'type': 'str'},
     }
 
-    def __init__(self, *, name: str=None, vm_size=None, disk_size_gb: int=None, subnet_id: str=None, count: int=None, encryption_at_host: bool=None, disk_encryption_set_id: str=None, **kwargs) -> None:
+    def __init__(self, *, name: str=None, vm_size=None, disk_size_gb: int=None, subnet_id: str=None, count: int=None, encryption_at_host=None, disk_encryption_set_id: str=None, **kwargs) -> None:
         super(WorkerProfile, self).__init__(**kwargs)
         self.name = name
         self.vm_size = vm_size
