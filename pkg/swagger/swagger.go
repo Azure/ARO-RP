@@ -189,6 +189,16 @@ func (s *Swagger) defineSystemData(resources []string, commonVersion string) {
 		// but should not be generated into API or swagger as API/SDK type
 		delete(s.Definitions, "SystemData")
 		delete(s.Definitions, "CreatedByType")
+		//s.Definitions[resource].Properties = append(s.Definitions[resource].Properties,
+		//	NameSchema{
+		//		Name: "systemData",
+		//		Schema: &Schema{
+		//			ReadOnly:    true,
+		//			Description: "The system meta data relating to this resource.",
+		//			Ref:         "../../../../../common-types/resource-management/" + commonVersion + "/types.json#/definitions/systemData",
+		//		},
+		//	},
+		//)
 	}
 }
 
