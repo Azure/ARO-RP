@@ -22,10 +22,23 @@ func (r *Reconciler) reconcileBanner(ctx context.Context, instance *arov1alpha1.
 			// we don't care if the object doesn't exist
 			err = nil
 		}
+		return err
 	case arov1alpha1.BannerContactSupport:
-		_, err = r.consolecli.ConsoleV1().ConsoleNotifications().Create(ctx, r.newBanner(TextContactSupport, instance.Spec.ResourceID), metav1.CreateOptions{})
+		_, err := r.consolecli.ConsoleV1().ConsoleNotifications().Get(ctx, BannerName, metav1.GetOptions{})
+		if err != nil && kerrors.IsNotFound(err) {
+			// if the object doesn't exist Create
+			_, err = r.consolecli.ConsoleV1().ConsoleNotifications().Create(ctx, r.newBanner(TextContactSupport, instance.Spec.ResourceID), metav1.CreateOptions{})
+			return err
+		}
+		if err != nil {
+			// if there's a different error abort
+			return err
+		}
+		// if there's no errors, object found then update
+		_, err = r.consolecli.ConsoleV1().ConsoleNotifications().Update(ctx, r.newBanner(TextContactSupport, instance.Spec.ResourceID), metav1.UpdateOptions{})
+		return err
 	}
-	return err
+	return fmt.Errorf("wrong banner setting '%s'", instance.Spec.Banner.Content)
 }
 
 func (r *Reconciler) newBanner(text string, resourceID string) *consolev1.ConsoleNotification {

@@ -4,6 +4,7 @@ package banner
 // Licensed under the Apache License 2.0.
 
 const (
-	BannerName         = "openshift-aro-sre"
-	TextContactSupport = "Please ask your cluster administrator to contact Azure or Red Hat support. Your cluster's resource ID: %s"
+	BannerName = "openshift-aro-sre"
+	//Banner messages are approved by PM, don't modify the messages without re-approval
+	TextContactSupport = "We have noticed an issue regarding your cluster requiring an action on your part, please contact support with your cluster resource ID: %s"
 )

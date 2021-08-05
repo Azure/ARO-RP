@@ -63,7 +63,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
-		Watches(&source.Kind{Type: &consolev1.ConsoleNotification{}}, &handler.EnqueueRequestForObject{}). //watching ConsoleNotifications in case a user edits it
+		// watching ConsoleNotifications in case a user edits it
+		Watches(&source.Kind{Type: &consolev1.ConsoleNotification{}}, &handler.EnqueueRequestForObject{}).
 		Named(controllers.BannerControllerName).
 		Complete(r)
 }

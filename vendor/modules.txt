@@ -254,6 +254,7 @@ github.com/coreos/vcontext/tree
 # github.com/daixiang0/gci v0.2.4
 github.com/daixiang0/gci/pkg/gci
 # github.com/davecgh/go-spew v1.1.1
+## explicit
 github.com/davecgh/go-spew/spew
 # github.com/denis-tingajkin/go-header v0.3.1
 github.com/denis-tingajkin/go-header
@@ -757,9 +758,12 @@ github.com/openshift/client-go/config/clientset/versioned/scheme
 github.com/openshift/client-go/config/clientset/versioned/typed/config/v1
 github.com/openshift/client-go/config/clientset/versioned/typed/config/v1/fake
 github.com/openshift/client-go/console/clientset/versioned
+github.com/openshift/client-go/console/clientset/versioned/fake
 github.com/openshift/client-go/console/clientset/versioned/scheme
 github.com/openshift/client-go/console/clientset/versioned/typed/console/v1
+github.com/openshift/client-go/console/clientset/versioned/typed/console/v1/fake
 github.com/openshift/client-go/console/clientset/versioned/typed/console/v1alpha1
+github.com/openshift/client-go/console/clientset/versioned/typed/console/v1alpha1/fake
 github.com/openshift/client-go/operator/clientset/versioned
 github.com/openshift/client-go/operator/clientset/versioned/fake
 github.com/openshift/client-go/operator/clientset/versioned/scheme
