@@ -173,6 +173,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 				ReconcileAlertWebhook:          true,
 				ReconcileDNSMasq:               true,
 				ReconcileGenevaLogging:         true,
+				ReconcileMachineSet:            true,
 				ReconcileMonitoringConfig:      true,
 				ReconcileNodeDrainer:           true,
 				ReconcilePullSecret:            true,

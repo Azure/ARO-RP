@@ -18,6 +18,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
+const (
+	machineSetsNamespace = "openshift-machine-api"
+	minSupportedReplicas = 2
+)
+
 var _ = Describe("Scale nodes", func() {
 	// hack: do this before we scale down, because it takes a while for the
 	// nodes to settle after scale down
@@ -59,7 +64,7 @@ var _ = Describe("Scale nodes", func() {
 	})
 
 	Specify("nodes should scale up and down", func() {
-		mss, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").List(context.Background(), metav1.ListOptions{})
+		mss, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).List(context.Background(), metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(mss.Items).NotTo(BeEmpty())
 
@@ -75,17 +80,58 @@ var _ = Describe("Scale nodes", func() {
 		err = waitForScale(mss.Items[0].Name)
 		Expect(err).NotTo(HaveOccurred())
 	})
+
+	Specify("operator should maintain at least two worker replicas", func() {
+		mss, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).List(context.Background(), metav1.ListOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(mss.Items).NotTo(BeEmpty())
+
+		switch {
+		case len(mss.Items) == 3:
+			// E2E cluster has AZs, remove one replica from 2 machinesets
+			err = scale(mss.Items[0].Name, -1)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = scale(mss.Items[1].Name, -1)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = waitForScale(mss.Items[0].Name)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = waitForScale(mss.Items[1].Name)
+			Expect(err).NotTo(HaveOccurred())
+
+		case len(mss.Items) < 3:
+			// E2E cluster has no AZs, remove two replicas from 1 machineset
+			err = scale(mss.Items[0].Name, -2)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = waitForScale(mss.Items[0].Name)
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		ms, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).List(context.Background(), metav1.ListOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		replicaCount := 0
+		for _, machineset := range ms.Items {
+			if machineset.Spec.Replicas != nil {
+				replicaCount += int(*machineset.Spec.Replicas)
+			}
+		}
+		Expect(replicaCount).To(BeEquivalentTo(minSupportedReplicas))
+	})
 })
 
 func scale(name string, delta int32) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ms, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Get(context.Background(), name, metav1.GetOptions{})
+		ms, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
 		if ms.Spec.Replicas == nil {
-			ms.Spec.Replicas = to.Int32Ptr(1)
+			ms.Spec.Replicas = to.Int32Ptr(0)
 		}
 		*ms.Spec.Replicas += delta
 
@@ -96,14 +142,14 @@ func scale(name string, delta int32) error {
 
 func waitForScale(name string) error {
 	return wait.PollImmediate(10*time.Second, 30*time.Minute, func() (bool, error) {
-		ms, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Get(context.Background(), name, metav1.GetOptions{})
+		ms, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			log.Warn(err)
 			return false, nil // swallow error
 		}
 
 		if ms.Spec.Replicas == nil {
-			ms.Spec.Replicas = to.Int32Ptr(1)
+			return false, nil
 		}
 
 		return ms.Status.ObservedGeneration == ms.Generation &&
