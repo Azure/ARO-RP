@@ -20,4 +20,5 @@ const (
 	DnsmasqMachineConfigPoolControllerName = "DnsmasqMachineConfigPool"
 	NodeControllerName                     = "Node"
 	MachineControllerName                  = "Machine"
+	MachineSetControllerName               = "MachineSet"
 )

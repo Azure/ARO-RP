@@ -76,6 +76,7 @@ type FeaturesSpec struct {
 	ReconcileAlertWebhook          bool `json:"reconcileAlertWebhook,omitempty"`
 	ReconcileDNSMasq               bool `json:"reconcileDNSMasq,omitempty"`
 	ReconcileGenevaLogging         bool `json:"reconcileGenevaLogging,omitempty"`
+	ReconcileMachineSet            bool `json:"reconcileMachineSet,omitempty"`
 	ReconcileMonitoringConfig      bool `json:"reconcileMonitoringConfig,omitempty"`
 	ReconcileNodeDrainer           bool `json:"reconcileNodeDrainer,omitempty"`
 	ReconcilePullSecret            bool `json:"reconcilePullSecret,omitempty"`
