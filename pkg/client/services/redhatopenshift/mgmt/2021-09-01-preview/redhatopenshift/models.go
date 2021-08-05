@@ -112,8 +112,8 @@ type Display struct {
 type IngressProfile struct {
 	// Name - The ingress profile name.
 	Name *string `json:"name,omitempty"`
-	// Visibility - Ingress visibility. Possible values include: 'Visibility1Private', 'Visibility1Public'
-	Visibility Visibility1 `json:"visibility,omitempty"`
+	// Visibility - Ingress visibility. Possible values include: 'Private', 'Public'
+	Visibility Visibility `json:"visibility,omitempty"`
 	// IP - The IP of the ingress.
 	IP *string `json:"ip,omitempty"`
 }
@@ -132,8 +132,8 @@ type MasterProfile struct {
 
 // NetworkProfile networkProfile represents a network profile.
 type NetworkProfile struct {
-	// SdnProvider - The SDNProvider to use when installing the cluster. Possible values include: 'OVNKubernetes', 'OpenShiftSDN'
-	SdnProvider SDNProvider `json:"sdnProvider,omitempty"`
+	// SoftwareDefinedNetwork - The software defined network (SDN) to use when installing the cluster. Possible values include: 'OVNKubernetes', 'OpenShiftSDN'
+	SoftwareDefinedNetwork SoftwareDefinedNetwork `json:"softwareDefinedNetwork,omitempty"`
 	// PodCidr - The CIDR used for OpenShift/Kubernetes Pods.
 	PodCidr *string `json:"podCidr,omitempty"`
 	// ServiceCidr - The CIDR used for OpenShift/Kubernetes Services.
@@ -901,8 +901,8 @@ type WorkerProfile struct {
 	SubnetID *string `json:"subnetId,omitempty"`
 	// Count - The number of worker VMs.
 	Count *int32 `json:"count,omitempty"`
-	// EncryptionAtHost - Whether master virtual machines are encrypted at host. Possible values include: 'EncryptionAtHost1Disabled', 'EncryptionAtHost1Enabled'
-	EncryptionAtHost EncryptionAtHost1 `json:"encryptionAtHost,omitempty"`
+	// EncryptionAtHost - Whether master virtual machines are encrypted at host. Possible values include: 'Disabled', 'Enabled'
+	EncryptionAtHost EncryptionAtHost `json:"encryptionAtHost,omitempty"`
 	// DiskEncryptionSetID - The resource ID of an associated DiskEncryptionSet, if applicable.
 	DiskEncryptionSetID *string `json:"diskEncryptionSetId,omitempty"`
 }

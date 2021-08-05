@@ -17,6 +17,7 @@ func exampleOpenShiftCluster() *OpenShiftCluster {
 func ExampleOpenShiftClusterPatchParameter() interface{} {
 	oc := ExampleOpenShiftClusterPutParameter().(*OpenShiftCluster)
 	oc.Location = ""
+	oc.SystemData = nil
 
 	return oc
 }
@@ -34,6 +35,7 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 	oc.Properties.APIServerProfile.URL = ""
 	oc.Properties.APIServerProfile.IP = ""
 	oc.Properties.IngressProfiles[0].IP = ""
+	oc.SystemData = nil
 
 	return oc
 }

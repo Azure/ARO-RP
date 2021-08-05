@@ -95,13 +95,13 @@ func Run(api, outputDir string) error {
 		names = append(names, "OpenShiftClusterAdminKubeconfig")
 	}
 
-	err = define(s.Definitions, api, g.xmsEnum, names...)
+	err = define(s.Definitions, api, g.xmsEnum, g.xmsSecretList, names...)
 	if err != nil {
 		return err
 	}
 
 	names = []string{"CloudError", "OperationList"}
-	err = define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api", g.xmsEnum, names...)
+	err = define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api", g.xmsEnum, g.xmsSecretList, names...)
 	if err != nil {
 		return err
 	}

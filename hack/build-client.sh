@@ -28,8 +28,10 @@ function generate_golang() {
 		--rm \
 		-v $PWD/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
 		-v $PWD/swagger:/swagger:z \
-		azuresdk/autorest \
+    "${AUTOREST_IMAGE}" \
 		--go \
+    --use=@microsoft.azure/autorest.go@2.1.183 \
+    --version=V2 \
 		--license-header=MICROSOFT_APACHE_NO_VERSION \
 		--namespace=redhatopenshift \
 		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \

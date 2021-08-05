@@ -29,7 +29,7 @@ type OpenShiftCluster struct {
 	Location string `json:"location,omitempty"`
 
 	// SystemData - The system metadata relating to this resource
-	SystemData SystemData `json:"systemData,omitempty"`
+	SystemData *SystemData `json:"systemData,omitempty"`
 
 	// The resource tags.
 	Tags Tags `json:"tags,omitempty" mutable:"true"`
@@ -114,18 +114,18 @@ type ServicePrincipalProfile struct {
 	ClientSecret string `json:"clientSecret,omitempty" mutable:"true"`
 }
 
-// SDNProvider constants.
-type SDNProvider string
+// SoftwareDefinedNetwork constants.
+type SoftwareDefinedNetwork string
 
 const (
-	SDNProviderOVNKubernetes SDNProvider = "OVNKubernetes"
-	SDNProviderOpenShiftSDN  SDNProvider = "OpenShiftSDN"
+	SoftwareDefinedNetworkOVNKubernetes SoftwareDefinedNetwork = "OVNKubernetes"
+	SoftwareDefinedNetworkOpenShiftSDN  SoftwareDefinedNetwork = "OpenShiftSDN"
 )
 
 // NetworkProfile represents a network profile.
 type NetworkProfile struct {
-	// The SDNProvider to use when installing the cluster.
-	SDNProvider SDNProvider `json:"sdnProvider,omitempty"`
+	// The software defined network (SDN) to use when installing the cluster.
+	SoftwareDefinedNetwork SoftwareDefinedNetwork `json:"softwareDefinedNetwork,omitempty"`
 
 	// The CIDR used for OpenShift/Kubernetes Pods.
 	PodCIDR string `json:"podCidr,omitempty"`

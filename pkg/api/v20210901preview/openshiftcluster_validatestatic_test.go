@@ -52,7 +52,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 		Tags: Tags{
 			"key": "value",
 		},
-		SystemData: SystemData{
+		SystemData: &SystemData{
 			CreatedBy:          "00000000-0000-0000-0000-000000000000",
 			CreatedByType:      CreatedByTypeApplication,
 			CreatedAt:          &timestamp,
@@ -76,9 +76,9 @@ func validOpenShiftCluster() *OpenShiftCluster {
 				ClientID:     "11111111-1111-1111-1111-111111111111",
 			},
 			NetworkProfile: NetworkProfile{
-				PodCIDR:     "10.128.0.0/14",
-				ServiceCIDR: "172.30.0.0/16",
-				SDNProvider: SDNProviderOVNKubernetes,
+				PodCIDR:                "10.128.0.0/14",
+				ServiceCIDR:            "172.30.0.0/16",
+				SoftwareDefinedNetwork: SoftwareDefinedNetworkOVNKubernetes,
 			},
 			MasterProfile: MasterProfile{
 				VMSize:           VMSizeStandardD8sV3,
@@ -415,9 +415,9 @@ func TestOpenShiftClusterStaticValidateServicePrincipalProfile(t *testing.T) {
 func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 	createtests := []*validateTest{
 		{
-			name: "sdnProvider create as OpenShiftSDN",
+			name: "SoftwareDefinedNetwork create as OpenShiftSDN",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.SDNProvider = SDNProviderOpenShiftSDN
+				oc.Properties.NetworkProfile.SoftwareDefinedNetwork = SoftwareDefinedNetworkOpenShiftSDN
 			},
 		},
 	}
@@ -469,18 +469,18 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 			wantErr: "400: InvalidParameter: properties.networkProfile.serviceCidr: The provided vnet CIDR '10.0.0.0/23' is invalid: must be /22 or larger.",
 		},
 		{
-			name: "sdnProvider given as empty",
+			name: "SoftwareDefinedNetwork given as empty",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.SDNProvider = ""
+				oc.Properties.NetworkProfile.SoftwareDefinedNetwork = ""
 			},
-			wantErr: "400: InvalidParameter: properties.networkProfile.sdnProvider: The provided SDNProvider '' is invalid.",
+			wantErr: "400: InvalidParameter: properties.networkProfile.SoftwareDefinedNetwork: The provided SoftwareDefinedNetwork '' is invalid.",
 		},
 		{
-			name: "sdnProvider given InvalidOption",
+			name: "SoftwareDefinedNetwork given InvalidOption",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.SDNProvider = "InvalidOption"
+				oc.Properties.NetworkProfile.SoftwareDefinedNetwork = "InvalidOption"
 			},
-			wantErr: "400: InvalidParameter: properties.networkProfile.sdnProvider: The provided SDNProvider 'InvalidOption' is invalid.",
+			wantErr: "400: InvalidParameter: properties.networkProfile.SoftwareDefinedNetwork: The provided SoftwareDefinedNetwork 'InvalidOption' is invalid.",
 		},
 	}
 
@@ -851,9 +851,11 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientSecret = "invalid" },
 		},
 		{
-			name:    "sdnProvider should fail to change from OVNKubernetes to OpenShiftSDN",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.SDNProvider = SDNProviderOpenShiftSDN },
-			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.sdnProvider: Changing property 'properties.networkProfile.sdnProvider' is not allowed.",
+			name: "SoftwareDefinedNetwork should fail to change from OVNKubernetes to OpenShiftSDN",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.SoftwareDefinedNetwork = SoftwareDefinedNetworkOpenShiftSDN
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.softwareDefinedNetwork: Changing property 'properties.networkProfile.softwareDefinedNetwork' is not allowed.",
 		},
 		{
 			name:    "podCidr change",
@@ -916,7 +918,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		{
 			name: "systemData set to empty",
 			modify: func(oc *OpenShiftCluster) {
-				oc.SystemData = SystemData{}
+				oc.SystemData = &SystemData{}
 			},
 			wantErr: "400: PropertyChangeNotAllowed: systemData.createdBy: Changing property 'systemData.createdBy' is not allowed.",
 		},

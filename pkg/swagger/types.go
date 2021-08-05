@@ -247,6 +247,7 @@ type Schema struct {
 
 	ClientFlatten bool     `json:"x-ms-client-flatten,omitempty"`
 	XMSEnum       *XMSEnum `json:"x-ms-enum,omitempty"`
+	XMSSecret     bool     `json:"x-ms-secret,omitempty"`
 }
 
 // XMSEnum is x-ms-enum swagger extension adding the ability to generate static enums

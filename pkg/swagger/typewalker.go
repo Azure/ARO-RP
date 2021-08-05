@@ -20,12 +20,13 @@ import (
 type ModelAsString bool
 
 type typeWalker struct {
-	pkg         *packages.Package
-	enums       map[types.Type][]interface{}
-	xmsEnumList []string
+	pkg           *packages.Package
+	enums         map[types.Type][]interface{}
+	xmsEnumList   []string
+	xmsSecretList []string
 }
 
-func newTypeWalker(pkgname string, xmsEnumList []string) (*typeWalker, error) {
+func newTypeWalker(pkgname string, xmsEnumList, xmsSecretList []string) (*typeWalker, error) {
 	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo}, pkgname)
 	if err != nil {
 		return nil, err
@@ -35,9 +36,10 @@ func newTypeWalker(pkgname string, xmsEnumList []string) (*typeWalker, error) {
 	}
 
 	tw := &typeWalker{
-		pkg:         pkgs[0],
-		enums:       map[types.Type][]interface{}{},
-		xmsEnumList: xmsEnumList,
+		pkg:           pkgs[0],
+		enums:         map[types.Type][]interface{}{},
+		xmsEnumList:   xmsEnumList,
+		xmsSecretList: xmsSecretList,
 	}
 
 	// populate enums: walk all types declared at package scope
@@ -117,7 +119,7 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 		}
 
 	case *types.Struct:
-
+		s.Type = "object"
 		for i := 0; i < t.NumFields(); i++ {
 			field := t.Field(i)
 			if field.Exported() {
@@ -133,11 +135,19 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 				properties := tw.schemaFromType(field.Type(), deps)
 				properties.Description = strings.Trim(node.Doc.Text(), "\n")
 
-				s.Properties = append(s.Properties, NameSchema{
+				ns := NameSchema{
 					Name:   name,
 					Schema: properties,
-				})
+				}
+
+				for _, xname := range tw.xmsSecretList {
+					if xname == name {
+						ns.Schema.XMSSecret = true
+					}
+				}
+				s.Properties = append(s.Properties, ns)
 			}
+
 		}
 
 	default:
@@ -189,8 +199,8 @@ func (tw *typeWalker) define(definitions Definitions, name string) {
 }
 
 // define adds a Definition for the named types in the given package
-func define(definitions Definitions, pkgname string, xmsEnumList []string, names ...string) error {
-	th, err := newTypeWalker(pkgname, xmsEnumList)
+func define(definitions Definitions, pkgname string, xmsEnumList, xmsSecretList []string, names ...string) error {
+	th, err := newTypeWalker(pkgname, xmsEnumList, xmsSecretList)
 	if err != nil {
 		return err
 	}

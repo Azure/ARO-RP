@@ -35,9 +35,9 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				ClientSecret: string(oc.Properties.ServicePrincipalProfile.ClientSecret),
 			},
 			NetworkProfile: NetworkProfile{
-				PodCIDR:     oc.Properties.NetworkProfile.PodCIDR,
-				ServiceCIDR: oc.Properties.NetworkProfile.ServiceCIDR,
-				SDNProvider: SDNProvider(oc.Properties.NetworkProfile.SDNProvider),
+				PodCIDR:                oc.Properties.NetworkProfile.PodCIDR,
+				ServiceCIDR:            oc.Properties.NetworkProfile.ServiceCIDR,
+				SoftwareDefinedNetwork: SoftwareDefinedNetwork(oc.Properties.NetworkProfile.SoftwareDefinedNetwork),
 			},
 			MasterProfile: MasterProfile{
 				VMSize:              VMSize(oc.Properties.MasterProfile.VMSize),
@@ -86,7 +86,7 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 		}
 	}
 
-	out.SystemData = SystemData{
+	out.SystemData = &SystemData{
 		CreatedBy:          oc.SystemData.CreatedBy,
 		CreatedAt:          oc.SystemData.CreatedAt,
 		CreatedByType:      CreatedByType(oc.SystemData.CreatedByType),
@@ -141,7 +141,7 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.ServicePrincipalProfile.ClientSecret = api.SecureString(oc.Properties.ServicePrincipalProfile.ClientSecret)
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
-	out.Properties.NetworkProfile.SDNProvider = api.SDNProvider(oc.Properties.NetworkProfile.SDNProvider)
+	out.Properties.NetworkProfile.SoftwareDefinedNetwork = api.SoftwareDefinedNetwork(oc.Properties.NetworkProfile.SoftwareDefinedNetwork)
 	out.Properties.MasterProfile.VMSize = api.VMSize(oc.Properties.MasterProfile.VMSize)
 	out.Properties.MasterProfile.SubnetID = oc.Properties.MasterProfile.SubnetID
 	out.Properties.MasterProfile.EncryptionAtHost = api.EncryptionAtHost(oc.Properties.MasterProfile.EncryptionAtHost)

@@ -105,7 +105,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							ProvisioningState:     api.ProvisioningStateAdminUpdating,
 							LastProvisioningState: api.ProvisioningStateSucceeded,
 							NetworkProfile: api.NetworkProfile{
-								SDNProvider: api.SDNProviderOpenShiftSDN,
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -124,7 +124,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					ProvisioningState:     admin.ProvisioningStateAdminUpdating,
 					LastProvisioningState: admin.ProvisioningStateSucceeded,
 					NetworkProfile: admin.NetworkProfile{
-						SDNProvider: admin.SDNProviderOpenShiftSDN,
+						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -190,7 +190,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 								Domain: "changed",
 							},
 							NetworkProfile: api.NetworkProfile{
-								SDNProvider: api.SDNProviderOpenShiftSDN,
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -213,7 +213,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						Domain: "changed",
 					},
 					NetworkProfile: admin.NetworkProfile{
-						SDNProvider: admin.SDNProviderOpenShiftSDN,
+						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -381,7 +381,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								Version: "4.3.0",
 							},
 							NetworkProfile: api.NetworkProfile{
-								SDNProvider: api.SDNProviderOpenShiftSDN,
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -438,7 +438,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								ClientSecret: "will-be-kept",
 							},
 							NetworkProfile: api.NetworkProfile{
-								SDNProvider: api.SDNProviderOpenShiftSDN,
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -474,7 +474,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								ClientSecret: "will-be-kept",
 							},
 							NetworkProfile: api.NetworkProfile{
-								SDNProvider: api.SDNProviderOpenShiftSDN,
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -552,7 +552,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								Domain: "changed",
 							},
 							NetworkProfile: api.NetworkProfile{
-								SDNProvider: api.SDNProviderOpenShiftSDN,
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -601,7 +601,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ProvisioningState:       api.ProvisioningStateFailed,
 							FailedProvisioningState: api.ProvisioningStateCreating,
 							NetworkProfile: api.NetworkProfile{
-								SDNProvider: api.SDNProviderOpenShiftSDN,
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -638,7 +638,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ProvisioningState:       api.ProvisioningStateFailed,
 							FailedProvisioningState: api.ProvisioningStateDeleting,
 							NetworkProfile: api.NetworkProfile{
-								SDNProvider: api.SDNProviderOpenShiftSDN,
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -685,7 +685,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								},
 							},
 							NetworkProfile: api.NetworkProfile{
-								SDNProvider: api.SDNProviderOpenShiftSDN,
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -724,7 +724,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								},
 							},
 							NetworkProfile: api.NetworkProfile{
-								SDNProvider: api.SDNProviderOpenShiftSDN,
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -785,7 +785,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								},
 							},
 							NetworkProfile: api.NetworkProfile{
-								SDNProvider: api.SDNProviderOpenShiftSDN,
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -825,7 +825,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								},
 							},
 							NetworkProfile: api.NetworkProfile{
-								SDNProvider: api.SDNProviderOpenShiftSDN,
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -878,7 +878,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ProvisioningState:       api.ProvisioningStateFailed,
 							FailedProvisioningState: api.ProvisioningStateCreating,
 							NetworkProfile: api.NetworkProfile{
-								SDNProvider: api.SDNProviderOpenShiftSDN,
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -916,7 +916,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ProvisioningState:       api.ProvisioningStateFailed,
 							FailedProvisioningState: api.ProvisioningStateDeleting,
 							NetworkProfile: api.NetworkProfile{
-								SDNProvider: api.SDNProviderOpenShiftSDN,
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -958,7 +958,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID),
 							},
 							NetworkProfile: api.NetworkProfile{
-								SDNProvider: api.SDNProviderOpenShiftSDN,
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1000,7 +1000,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								Version: "4.3.0",
 							},
 							NetworkProfile: api.NetworkProfile{
-								SDNProvider: api.SDNProviderOpenShiftSDN,
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,

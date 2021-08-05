@@ -100,9 +100,9 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 		workerZones = []string{""}
 	}
 
-	SDNProvider := string(api.SDNProviderOpenShiftSDN)
-	if m.doc.OpenShiftCluster.Properties.NetworkProfile.SDNProvider != "" {
-		SDNProvider = string(m.doc.OpenShiftCluster.Properties.NetworkProfile.SDNProvider)
+	SoftwareDefinedNetwork := string(api.SoftwareDefinedNetworkOpenShiftSDN)
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork != "" {
+		SoftwareDefinedNetwork = string(m.doc.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork)
 	}
 
 	installConfig := &installconfig.InstallConfig{
@@ -121,7 +121,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 						CIDR: *ipnet.MustParseCIDR("127.0.0.0/8"), // dummy
 					},
 				},
-				NetworkType: SDNProvider,
+				NetworkType: SoftwareDefinedNetwork,
 				ClusterNetwork: []types.ClusterNetworkEntry{
 					{
 						CIDR:       *ipnet.MustParseCIDR(m.doc.OpenShiftCluster.Properties.NetworkProfile.PodCIDR),

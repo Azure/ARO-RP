@@ -313,18 +313,18 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.spObjectId: Changing property 'properties.servicePrincipalProfile.spObjectId' is not allowed.",
 		},
 		{
-			name: "sdnProvider change is not allowed",
+			name: "softwareDefinedNetwork change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
 					Properties: OpenShiftClusterProperties{
 						NetworkProfile: NetworkProfile{
-							SDNProvider: SDNProviderOVNKubernetes,
+							SoftwareDefinedNetwork: SoftwareDefinedNetworkOVNKubernetes,
 						},
 					},
 				}
 			},
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.SDNProvider = "anything" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.sdnProvider: Changing property 'properties.networkProfile.sdnProvider' is not allowed.",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.SoftwareDefinedNetwork = "anything" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.softwareDefinedNetwork: Changing property 'properties.networkProfile.softwareDefinedNetwork' is not allowed.",
 		},
 		{
 			name: "podCidr change is not allowed",
