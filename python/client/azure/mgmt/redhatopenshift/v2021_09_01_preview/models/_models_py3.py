@@ -442,9 +442,6 @@ class OpenShiftCluster(TrackedResource):
     :param ingress_profiles: The cluster ingress profiles.
     :type ingress_profiles:
      list[~azure.mgmt.redhatopenshift.v2021_09_01_preview.models.IngressProfile]
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data:
-     ~azure.mgmt.redhatopenshift.v2021_09_01_preview.models.SystemData
     """
 
     _validation = {
@@ -452,7 +449,6 @@ class OpenShiftCluster(TrackedResource):
         'name': {'readonly': True},
         'type': {'readonly': True},
         'location': {'required': True},
-        'system_data': {'readonly': True},
     }
 
     _attribute_map = {
@@ -470,7 +466,6 @@ class OpenShiftCluster(TrackedResource):
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
     }
 
     def __init__(self, *, location: str, tags=None, provisioning_state=None, cluster_profile=None, console_profile=None, service_principal_profile=None, network_profile=None, master_profile=None, worker_profiles=None, apiserver_profile=None, ingress_profiles=None, **kwargs) -> None:
@@ -484,7 +479,6 @@ class OpenShiftCluster(TrackedResource):
         self.worker_profiles = worker_profiles
         self.apiserver_profile = apiserver_profile
         self.ingress_profiles = ingress_profiles
-        self.system_data = None
 
 
 class OpenShiftClusterAdminKubeconfig(Model):
@@ -527,9 +521,6 @@ class OpenShiftClusterCredentials(Model):
 class OpenShiftClusterUpdate(Model):
     """OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 
-    Variables are only populated by the server, and will be ignored when
-    sending a request.
-
     :param tags: The resource tags.
     :type tags: dict[str, str]
     :param provisioning_state: The cluster provisioning state. Possible values
@@ -561,14 +552,7 @@ class OpenShiftClusterUpdate(Model):
     :param ingress_profiles: The cluster ingress profiles.
     :type ingress_profiles:
      list[~azure.mgmt.redhatopenshift.v2021_09_01_preview.models.IngressProfile]
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data:
-     ~azure.mgmt.redhatopenshift.v2021_09_01_preview.models.SystemData
     """
-
-    _validation = {
-        'system_data': {'readonly': True},
-    }
 
     _attribute_map = {
         'tags': {'key': 'tags', 'type': '{str}'},
@@ -581,7 +565,6 @@ class OpenShiftClusterUpdate(Model):
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
     }
 
     def __init__(self, *, tags=None, provisioning_state=None, cluster_profile=None, console_profile=None, service_principal_profile=None, network_profile=None, master_profile=None, worker_profiles=None, apiserver_profile=None, ingress_profiles=None, **kwargs) -> None:
@@ -596,7 +579,6 @@ class OpenShiftClusterUpdate(Model):
         self.worker_profiles = worker_profiles
         self.apiserver_profile = apiserver_profile
         self.ingress_profiles = ingress_profiles
-        self.system_data = None
 
 
 class Operation(Model):
@@ -676,48 +658,6 @@ class ServicePrincipalProfile(Model):
         super(ServicePrincipalProfile, self).__init__(**kwargs)
         self.client_id = client_id
         self.client_secret = client_secret
-
-
-class SystemData(Model):
-    """Metadata pertaining to creation and last modification of the resource.
-
-    :param created_by: The identity that created the resource.
-    :type created_by: str
-    :param created_by_type: The type of identity that created the resource.
-     Possible values include: 'User', 'Application', 'ManagedIdentity', 'Key'
-    :type created_by_type: str or
-     ~azure.mgmt.redhatopenshift.v2021_09_01_preview.models.CreatedByType
-    :param created_at: The timestamp of resource creation (UTC).
-    :type created_at: datetime
-    :param last_modified_by: The identity that last modified the resource.
-    :type last_modified_by: str
-    :param last_modified_by_type: The type of identity that last modified the
-     resource. Possible values include: 'User', 'Application',
-     'ManagedIdentity', 'Key'
-    :type last_modified_by_type: str or
-     ~azure.mgmt.redhatopenshift.v2021_09_01_preview.models.CreatedByType
-    :param last_modified_at: The type of identity that last modified the
-     resource.
-    :type last_modified_at: datetime
-    """
-
-    _attribute_map = {
-        'created_by': {'key': 'createdBy', 'type': 'str'},
-        'created_by_type': {'key': 'createdByType', 'type': 'str'},
-        'created_at': {'key': 'createdAt', 'type': 'iso-8601'},
-        'last_modified_by': {'key': 'lastModifiedBy', 'type': 'str'},
-        'last_modified_by_type': {'key': 'lastModifiedByType', 'type': 'str'},
-        'last_modified_at': {'key': 'lastModifiedAt', 'type': 'iso-8601'},
-    }
-
-    def __init__(self, *, created_by: str=None, created_by_type=None, created_at=None, last_modified_by: str=None, last_modified_by_type=None, last_modified_at=None, **kwargs) -> None:
-        super(SystemData, self).__init__(**kwargs)
-        self.created_by = created_by
-        self.created_by_type = created_by_type
-        self.created_at = created_at
-        self.last_modified_by = last_modified_by
-        self.last_modified_by_type = last_modified_by_type
-        self.last_modified_at = last_modified_at
 
 
 class WorkerProfile(Model):
