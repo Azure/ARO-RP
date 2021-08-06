@@ -142,6 +142,8 @@ type OpenShiftClusterProperties struct {
 	UserAdminKubeconfig SecureBytes `json:"userAdminKubeconfig,omitempty"`
 
 	RegistryProfiles []*RegistryProfile `json:"registryProfiles,omitempty"`
+
+	ImageRegistryStorageAccountName string `json:"imageRegistryStorageAccountName,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state
