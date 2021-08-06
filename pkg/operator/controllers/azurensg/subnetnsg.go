@@ -68,7 +68,7 @@ func (r *Reconciler) ensureSubnetNSG(ctx context.Context, subnetsClient network.
 }
 
 func (r *Reconciler) getSubnets(ctx context.Context) (map[subnetDescriptor]bool, string, error) {
-	subnetMap := make(map[subnetDescriptor]bool) // bool is true for master subnets
+	subnetMap := make(map[subnetDescriptor]bool) // bool is true for worker subnets
 	var masterResourceGroup *string
 	// select all workers by the  machine.openshift.io/cluster-api-machine-role: not equal to master Label
 	machines, err := r.maocli.MachineV1beta1().Machines(machineSetsNamespace).List(ctx, metav1.ListOptions{LabelSelector: "machine.openshift.io/cluster-api-machine-role!=master"})
@@ -82,8 +82,10 @@ func (r *Reconciler) getSubnets(ctx context.Context) (map[subnetDescriptor]bool,
 			return nil, "", err
 		}
 
-		subnetMap[*subnetDesc] = false
+		// subnetMap stores boolean isWorker
+		subnetMap[*subnetDesc] = true
 	}
+	// select all masters
 	machines, err = r.maocli.MachineV1beta1().Machines(machineSetsNamespace).List(ctx, metav1.ListOptions{LabelSelector: "machine.openshift.io/cluster-api-machine-role=master"})
 	if err != nil {
 		return nil, "", err
@@ -94,7 +96,9 @@ func (r *Reconciler) getSubnets(ctx context.Context) (map[subnetDescriptor]bool,
 		if err != nil {
 			return nil, "", err
 		}
-		subnetMap[*subnetDesc] = true
+
+		// subnetMap stores boolean isWorker
+		subnetMap[*subnetDesc] = false
 	}
 	if masterResourceGroup == nil {
 		return nil, "", fmt.Errorf("master resource group not found")
