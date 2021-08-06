@@ -94,7 +94,9 @@ pyenv:
 	python3 -m venv pyenv
 	. pyenv/bin/activate && \
 		pip install -U pip && \
-		pip install autopep8 azure-mgmt-loganalytics==0.2.0 ruamel.yaml wheel
+		pip install autopep8 azdev azure-mgmt-loganalytics==0.2.0 ruamel.yaml wheel && \
+		azdev setup -r . && \
+		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
 
 secrets:
 	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
@@ -139,6 +141,8 @@ lint-go:
 
 test-python: generate pyenv az
 	. pyenv/bin/activate && \
+		azdev linter && \
+		azdev style && \
 		hack/format-yaml/format-yaml.py .pipelines
 
 admin.kubeconfig:
