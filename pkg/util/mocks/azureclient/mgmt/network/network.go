@@ -510,6 +510,34 @@ func (m *MockSecurityGroupsClient) EXPECT() *MockSecurityGroupsClientMockRecorde
 	return m.recorder
 }
 
+// CreateOrUpdateAndWait mocks base method.
+func (m *MockSecurityGroupsClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2 string, arg3 network.SecurityGroup) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
+func (mr *MockSecurityGroupsClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockSecurityGroupsClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3)
+}
+
+// DeleteAndWait mocks base method.
+func (m *MockSecurityGroupsClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAndWait indicates an expected call of DeleteAndWait.
+func (mr *MockSecurityGroupsClientMockRecorder) DeleteAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockSecurityGroupsClient)(nil).DeleteAndWait), arg0, arg1, arg2)
+}
+
 // Get mocks base method.
 func (m *MockSecurityGroupsClient) Get(arg0 context.Context, arg1, arg2, arg3 string) (network.SecurityGroup, error) {
 	m.ctrl.T.Helper()

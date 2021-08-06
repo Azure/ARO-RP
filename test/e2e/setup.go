@@ -45,6 +45,8 @@ type clientSet struct {
 	VirtualNetworks    network.VirtualNetworksClient
 	DiskEncryptionSets compute.DiskEncryptionSetsClient
 	Disks              compute.DisksClient
+	NetworkSecurityGroups network.SecurityGroupsClient
+	Subnet                network.SubnetsClient
 
 	RestConfig    *rest.Config
 	Kubernetes    kubernetes.Interface
@@ -134,6 +136,8 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		VirtualNetworks:    network.NewVirtualNetworksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Disks:              compute.NewDisksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		DiskEncryptionSets: compute.NewDiskEncryptionSetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Subnet:                network.NewSubnetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		NetworkSecurityGroups: network.NewSecurityGroupsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		RestConfig:    restconfig,
 		Kubernetes:    cli,
