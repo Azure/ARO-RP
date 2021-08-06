@@ -19,7 +19,7 @@ func (m *manager) ensureDefaults(ctx context.Context) error {
 	})
 	if err != nil {
 		m.log.Print(err)
-		return nil
+		return err
 	}
 	return nil
 }
