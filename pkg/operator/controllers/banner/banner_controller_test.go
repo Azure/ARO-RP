@@ -90,7 +90,7 @@ func TestBannerReconcile(t *testing.T) {
 			name:            "Support banner from empty",
 			bannerSetting:   "ContactSupport",
 			expectBanner:    true,
-			expectedMessage: "We have noticed an issue regarding your cluster requiring an action on your part, please contact support with your cluster resource ID: FAKE_RESOURCE_ID",
+			expectedMessage: "We have noticed an issue regarding your cluster requiring an action on your part. Please contact support with your cluster resource ID: FAKE_RESOURCE_ID",
 			featureFlag:     true,
 		},
 		{
@@ -125,7 +125,7 @@ func TestBannerReconcile(t *testing.T) {
 			},
 			bannerSetting:   "ContactSupport",
 			expectBanner:    true,
-			expectedMessage: "We have noticed an issue regarding your cluster requiring an action on your part, please contact support with your cluster resource ID: FAKE_RESOURCE_ID",
+			expectedMessage: "We have noticed an issue regarding your cluster requiring an action on your part. Please contact support with your cluster resource ID: FAKE_RESOURCE_ID",
 			featureFlag:     true,
 		},
 	} {
