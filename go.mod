@@ -234,7 +234,7 @@ replace (
 replace (
 	github.com/kubevirt/terraform-provider-kubevirt => github.com/nirarg/terraform-provider-kubevirt v0.0.0-20201222125919-101cee051ed3
 	github.com/metal3-io/baremetal-operator => github.com/openshift/baremetal-operator v0.0.0-20210517134619-524201a0dbaa
-	github.com/metal3-io/cluster-api-provider-baremetal => github.com/openshift/cluster-api-provider-baremetal v0.0.0-20210326083810-25cbb8d8f9e5
+	github.com/metal3-io/cluster-api-provider-baremetal => github.com/openshift/cluster-api-provider-baremetal v0.0.0-20210721192732-726d97e15db7
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20210428205234-a8389931bee7
 	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20210112165513-ebc401615f47
 	github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20200316201045-d10080b52c9e
@@ -242,15 +242,15 @@ replace (
 	github.com/openshift/cluster-api-provider-kubevirt => github.com/openshift/cluster-api-provider-kubevirt v0.0.0-20210114164510-1f8fc18a50aa
 	github.com/openshift/cluster-api-provider-libvirt => github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20210324200850-033be25ca038
 	github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20210409185359-01b9bf8368a3
-	github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20210323072657-4f933d59784b
-	github.com/openshift/installer => github.com/mjudeikis/installer v0.9.0-master.0.20210716092641-a368d8344d0d
-	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20210205203934-9eb0d970f2f4
+	github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20210526201839-44a0308f894a
+	github.com/openshift/installer => github.com/mjudeikis/installer v0.9.0-master.0.20210806071517-1eb41d5665c8
+	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20210615164315-be4204e96f56
 	github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20210521181620-e179bb5ce397
-	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20210522053223-c4b7e3f5118d
+	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20210730044813-c9fce5a27bb7
 	github.com/ovirt/go-ovirt => github.com/ovirt/go-ovirt v0.0.0-20210112072624-e4d3b104de71
 	kubevirt.io/client-go => kubevirt.io/client-go v0.29.0
-	sigs.k8s.io/cluster-api-provider-aws => github.com/openshift/cluster-api-provider-aws v0.2.1-0.20210521181620-82202163e220
-	sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20210318155632-e744815d9f05
+	sigs.k8s.io/cluster-api-provider-aws => github.com/openshift/cluster-api-provider-aws v0.2.1-0.20210625171553-5368195c02ca
+	sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20210805185638-723b7ab15767
 	sigs.k8s.io/cluster-api-provider-openstack => github.com/openshift/cluster-api-provider-openstack v0.0.0-20210122093124-471cf3ab636c
 	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
 )

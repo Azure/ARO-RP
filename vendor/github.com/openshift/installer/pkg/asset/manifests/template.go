@@ -42,7 +42,6 @@ type OvirtCredsSecretData struct {
 	Base64encodeURL      string
 	Base64encodeUsername string
 	Base64encodePassword string
-	Base64encodeCAFile   string
 	Base64encodeInsecure string
 	Base64encodeCABundle string
 }
@@ -64,25 +63,29 @@ type cloudCredsSecretData struct {
 }
 
 type bootkubeTemplateData struct {
-	CVOClusterID               string
-	EtcdCaBundle               string
-	EtcdMetricCaCert           string
-	EtcdMetricSignerCert       string
-	EtcdMetricSignerClientCert string
-	EtcdMetricSignerClientKey  string
-	EtcdMetricSignerKey        string
-	EtcdSignerCert             string
-	EtcdSignerClientCert       string
-	EtcdSignerClientKey        string
-	EtcdSignerKey              string
-	McsTLSCert                 string
-	McsTLSKey                  string
-	PullSecretBase64           string
-	RootCaCert                 string
-	WorkerIgnConfig            string
-	AROWorkerRegistries        string
-	AROIngressIP               string
-	AROIngressInternal         bool
+	CVOClusterID                  string
+	EtcdCaBundle                  string
+	EtcdMetricCaCert              string
+	EtcdMetricSignerCert          string
+	EtcdMetricSignerClientCert    string
+	EtcdMetricSignerClientKey     string
+	EtcdMetricSignerKey           string
+	EtcdSignerCert                string
+	EtcdSignerClientCert          string
+	EtcdSignerClientKey           string
+	EtcdSignerKey                 string
+	McsTLSCert                    string
+	McsTLSKey                     string
+	PullSecretBase64              string
+	RootCaCert                    string
+	WorkerIgnConfig               string
+	AROWorkerRegistries           string
+	AROIngressIP                  string
+	AROIngressInternal            bool
+	AROImageRegistryHTTPSecret    string
+	AROImageRegistryAccountName   string
+	AROImageRegistryContainerName string
+	AROCloudName                  string
 }
 
 type baremetalTemplateData struct {

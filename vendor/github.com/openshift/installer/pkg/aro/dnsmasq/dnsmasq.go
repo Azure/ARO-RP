@@ -23,6 +23,9 @@ strict-order
 address=/api.{{ .ClusterDomain }}/{{ .APIIntIP }}
 address=/api-int.{{ .ClusterDomain }}/{{ .APIIntIP }}
 address=/.apps.{{ .ClusterDomain }}/{{ .IngressIP }}
+{{- range $GatewayDomain := .GatewayDomains }}
+address=/{{ $GatewayDomain }}/{{ $.GatewayPrivateEndpointIP }}
+{{- end }}
 user=dnsmasq
 group=dnsmasq
 no-hosts
@@ -107,17 +110,21 @@ chmod 0744 /etc/resolv.conf.dnsmasq
 {{ end }}
 `))
 
-func config(clusterDomain, apiIntIP, ingressIP string) ([]byte, error) {
+func config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string) ([]byte, error) {
 	buf := &bytes.Buffer{}
 
 	err := t.ExecuteTemplate(buf, "dnsmasq.conf", &struct {
-		ClusterDomain string
-		APIIntIP      string
-		IngressIP     string
+		ClusterDomain            string
+		APIIntIP                 string
+		IngressIP                string
+		GatewayDomains           []string
+		GatewayPrivateEndpointIP string
 	}{
-		ClusterDomain: clusterDomain,
-		APIIntIP:      apiIntIP,
-		IngressIP:     ingressIP,
+		ClusterDomain:            clusterDomain,
+		APIIntIP:                 apiIntIP,
+		IngressIP:                ingressIP,
+		GatewayDomains:           gatewayDomains,
+		GatewayPrivateEndpointIP: gatewayPrivateEndpointIP,
 	})
 	if err != nil {
 		return nil, err
@@ -148,13 +155,13 @@ func startpre() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func Ignition2Config(clusterDomain, apiIntIP, ingressIP string) (*ign2types.Config, error) {
+func Ignition2Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string) (*ign2types.Config, error) {
 	service, err := service()
 	if err != nil {
 		return nil, err
 	}
 
-	config, err := config(clusterDomain, apiIntIP, ingressIP)
+	config, err := config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
 	if err != nil {
 		return nil, err
 	}
@@ -216,13 +223,13 @@ func Ignition2Config(clusterDomain, apiIntIP, ingressIP string) (*ign2types.Conf
 	}, nil
 }
 
-func Ignition3Config(clusterDomain, apiIntIP, ingressIP string) (*ign3types.Config, error) {
+func Ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string) (*ign3types.Config, error) {
 	service, err := service()
 	if err != nil {
 		return nil, err
 	}
 
-	config, err := config(clusterDomain, apiIntIP, ingressIP)
+	config, err := config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
 	if err != nil {
 		return nil, err
 	}
@@ -282,8 +289,8 @@ func Ignition3Config(clusterDomain, apiIntIP, ingressIP string) (*ign3types.Conf
 	}, nil
 }
 
-func MachineConfig(clusterDomain, apiIntIP, ingressIP, role string) (*mcfgv1.MachineConfig, error) {
-	ignConfig, err := Ignition2Config(clusterDomain, apiIntIP, ingressIP)
+func MachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string) (*mcfgv1.MachineConfig, error) {
+	ignConfig, err := Ignition2Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
 	if err != nil {
 		return nil, err
 	}
