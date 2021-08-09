@@ -98,6 +98,7 @@ func (client OpenShiftClustersClient) CreateOrUpdatePreparer(ctx context.Context
 		"api-version": APIVersion,
 	}
 
+	parameters.SystemData = nil
 	preparer := autorest.CreatePreparer(
 		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
@@ -112,6 +113,7 @@ func (client OpenShiftClustersClient) CreateOrUpdatePreparer(ctx context.Context
 // http.Response Body if it receives an error.
 func (client OpenShiftClustersClient) CreateOrUpdateSender(req *http.Request) (future OpenShiftClustersCreateOrUpdateFuture, err error) {
 	var resp *http.Response
+	future.FutureAPI = &azure.Future{}
 	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
@@ -200,6 +202,7 @@ func (client OpenShiftClustersClient) DeletePreparer(ctx context.Context, resour
 // http.Response Body if it receives an error.
 func (client OpenShiftClustersClient) DeleteSender(req *http.Request) (future OpenShiftClustersDeleteFuture, err error) {
 	var resp *http.Response
+	future.FutureAPI = &azure.Future{}
 	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
@@ -793,6 +796,7 @@ func (client OpenShiftClustersClient) UpdatePreparer(ctx context.Context, resour
 // http.Response Body if it receives an error.
 func (client OpenShiftClustersClient) UpdateSender(req *http.Request) (future OpenShiftClustersUpdateFuture, err error) {
 	var resp *http.Response
+	future.FutureAPI = &azure.Future{}
 	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return

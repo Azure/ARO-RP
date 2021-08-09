@@ -39,10 +39,7 @@ func TestSetDefaults(t *testing.T) {
 		{
 			name: "no defaults needed",
 			want: func() *OpenShiftClusterDocument {
-				doc := validOpenShiftClusterDocument()
-				return doc
-			},
-			input: func(base *OpenShiftClusterDocument) {
+				return validOpenShiftClusterDocument()
 			},
 		},
 		{
@@ -89,7 +86,9 @@ func TestSetDefaults(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			doc := validOpenShiftClusterDocument()
 			want := tt.want()
-			tt.input(doc)
+			if tt.input != nil {
+				tt.input(doc)
+			}
 
 			SetDefaults(doc)
 

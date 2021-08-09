@@ -38,6 +38,7 @@ try:
     from ._models_py3 import ProxyResource
     from ._models_py3 import Resource
     from ._models_py3 import ServicePrincipalProfile
+    from ._models_py3 import SystemData
     from ._models_py3 import TrackedResource
     from ._models_py3 import WorkerProfile
 except (SyntaxError, ImportError):
@@ -59,6 +60,7 @@ except (SyntaxError, ImportError):
     from ._models import ProxyResource
     from ._models import Resource
     from ._models import ServicePrincipalProfile
+    from ._models import SystemData
     from ._models import TrackedResource
     from ._models import WorkerProfile
 from ._paged_models import OpenShiftClusterPaged
@@ -66,6 +68,7 @@ from ._paged_models import OperationPaged
 from ._azure_red_hat_open_shift_client_enums import (
     VMSize,
     SDNProvider,
+    CreatedByType,
 )
 
 __all__ = [
@@ -87,10 +90,12 @@ __all__ = [
     'ProxyResource',
     'Resource',
     'ServicePrincipalProfile',
+    'SystemData',
     'TrackedResource',
     'WorkerProfile',
     'OperationPaged',
     'OpenShiftClusterPaged',
     'VMSize',
     'SDNProvider',
+    'CreatedByType',
 ]

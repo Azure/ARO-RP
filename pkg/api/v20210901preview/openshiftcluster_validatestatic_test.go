@@ -538,7 +538,7 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 			wantErr: "400: InvalidParameter: properties.masterProfile.encryptionAtHost: The provided value 'Banana' is invalid.",
 		},
 		{
-			name: "encryption at host invalid",
+			name: "encryption at host empty",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.MasterProfile.EncryptionAtHost = ""
 			},
