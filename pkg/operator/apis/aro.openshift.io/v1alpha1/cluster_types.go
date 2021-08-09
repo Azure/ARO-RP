@@ -52,6 +52,7 @@ type ClusterSpec struct {
 	AZEnvironment          string              `json:"azEnvironment,omitempty"`
 	Location               string              `json:"location,omitempty"`
 	InfraID                string              `json:"infraId,omitempty"`
+	StorageSuffix          string              `json:"storageSuffix,omitempty"`
 	ArchitectureVersion    int                 `json:"architectureVersion,omitempty"`
 	GenevaLogging          GenevaLoggingSpec   `json:"genevaLogging,omitempty"`
 	InternetChecker        InternetCheckerSpec `json:"internetChecker,omitempty"`
@@ -64,7 +65,8 @@ type ClusterSpec struct {
 
 // FeaturesSpec defines ARO operator feature gates
 type FeaturesSpec struct {
-	ReconcileSubnets               bool `json:"ReconcileSubnets,omitempty"`
+	ReconcileSubnets               bool `json:"reconcileSubnets,omitempty"`
+	ReconcileStorageAccounts       bool `json:"reconcileStorageAccounts,omitempty"`
 	ReconcileAlertWebhook          bool `json:"reconcileAlertWebhook,omitempty"`
 	ReconcileDNSMasq               bool `json:"reconcileDNSMasq,omitempty"`
 	ReconcileGenevaLogging         bool `json:"reconcileGenevaLogging,omitempty"`
