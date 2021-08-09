@@ -33,6 +33,7 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 		steps.Action(m.fixupClusterSPObjectID),
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)), // re-create RP RBAC if needed after tenant migration
 		steps.Action(m.createOrUpdateDenyAssignment),
+		steps.Action(m.fixStorageAccounts),
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute),
 		steps.Action(m.ensureBillingRecord), // belt and braces
@@ -97,6 +98,7 @@ func (m *manager) Install(ctx context.Context) error {
 				return m.ensureInfraID(ctx, installConfig)
 			}),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableStorageAccountEndpoints)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
 				return m.deployStorageTemplate(ctx, installConfig)
 			})),

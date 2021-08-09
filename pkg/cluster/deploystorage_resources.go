@@ -8,7 +8,7 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 
@@ -75,17 +75,71 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 }
 
 func (m *manager) storageAccount(name, region string) *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtstorage.Account{
-			Sku: &mgmtstorage.Sku{
-				Name: "Standard_LRS",
-			},
-			Name:     &name,
-			Location: &region,
-			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+	sa := &mgmtstorage.Account{
+		Kind: mgmtstorage.StorageV2,
+		Sku: &mgmtstorage.Sku{
+			Name: "Standard_LRS",
 		},
+		AccountProperties: &mgmtstorage.AccountProperties{
+			AllowBlobPublicAccess:  to.BoolPtr(false),
+			EnableHTTPSTrafficOnly: to.BoolPtr(true),
+			Encryption: &mgmtstorage.Encryption{
+				RequireInfrastructureEncryption: to.BoolPtr(true),
+				Services: &mgmtstorage.EncryptionServices{
+					Blob: &mgmtstorage.EncryptionService{
+						KeyType: mgmtstorage.KeyTypeAccount,
+					},
+					File: &mgmtstorage.EncryptionService{
+						KeyType: mgmtstorage.KeyTypeAccount,
+					},
+					Table: &mgmtstorage.EncryptionService{
+						KeyType: mgmtstorage.KeyTypeAccount,
+					},
+					Queue: &mgmtstorage.EncryptionService{
+						KeyType: mgmtstorage.KeyTypeAccount,
+					},
+				},
+				KeySource: mgmtstorage.KeySourceMicrosoftStorage,
+			},
+			NetworkRuleSet: &mgmtstorage.NetworkRuleSet{
+				Bypass: mgmtstorage.AzureServices,
+				VirtualNetworkRules: &[]mgmtstorage.VirtualNetworkRule{
+					{
+						VirtualNetworkResourceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+						Action:                   mgmtstorage.Allow,
+					},
+					{
+						VirtualNetworkResourceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID),
+						Action:                   mgmtstorage.Allow,
+					},
+					{
+						VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
+						Action:                   mgmtstorage.Allow,
+					},
+					{
+						VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-subnet"),
+						Action:                   mgmtstorage.Allow,
+					},
+				},
+				DefaultAction: "Deny",
+			},
+		},
+		Name:     &name,
+		Location: &region,
+		Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+	}
+
+	// In development API calls originates from user laptop so we allow all.
+	// TODO(mjudeikis): Move to development on VPN so we can make this IPRule
+	if m.env.IsLocalDevelopmentMode() {
+		sa.NetworkRuleSet.DefaultAction = mgmtstorage.DefaultActionAllow
+	}
+
+	return &arm.Resource{
+		Resource:   sa,
 		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 	}
+
 }
 
 func (m *manager) storageAccountBlobContainer(storageAccountName, name string) *arm.Resource {

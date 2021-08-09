@@ -134,6 +134,8 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		m.storageAccount(clusterStorageAccountName, installConfig.Config.Azure.Region),
 		m.storageAccountBlobContainer(clusterStorageAccountName, "ignition"),
 		m.storageAccountBlobContainer(clusterStorageAccountName, "aro"),
+		m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, installConfig.Config.Azure.Region),
+		m.storageAccountBlobContainer(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, "image-registry"),
 		m.clusterNSG(infraID, installConfig.Config.Azure.Region),
 		m.clusterServicePrincipalRBAC(),
 		m.networkPrivateLinkService(installConfig),

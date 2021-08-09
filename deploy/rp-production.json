@@ -470,7 +470,7 @@
             "location": "[resourceGroup().location]",
             "name": "[substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.'))]",
             "type": "Microsoft.Storage/storageAccounts",
-            "apiVersion": "2019-04-01"
+            "apiVersion": "2019-06-01"
         },
         {
             "properties": {
@@ -647,6 +647,12 @@
                                     "locations": [
                                         "*"
                                     ]
+                                },
+                                {
+                                    "service": "Microsoft.Storage",
+                                    "locations": [
+                                        "*"
+                                    ]
                                 }
                             ]
                         },
@@ -674,6 +680,14 @@
                                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]",
                                 "tags": null
                             },
+                            "serviceEndpoints": [
+                                {
+                                    "service": "Microsoft.Storage",
+                                    "locations": [
+                                        "*"
+                                    ]
+                                }
+                            ],
                             "privateEndpointNetworkPolicies": "Disabled"
                         },
                         "name": "rp-pe-subnet"

@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
@@ -19,25 +18,19 @@ import (
 	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	mocksubnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
+	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 var (
-	subscriptionId = "0000000-0000-0000-0000-000000000000"
-	vnet           = azure.Resource{
-		SubscriptionID: subscriptionId,
-		ResourceGroup:  "vnet-rg",
-		ResourceName:   "vnet-name",
-	}
-	clusterResourceGroupName    = "aro-iljrzb5a"
-	infraId                     = "abcd"
-	clusterResourceGroupId      = "/subscriptions/" + subscriptionId + "/resourcegroups/" + clusterResourceGroupName
-	vnetResourceGroup           = "vnet-rg"
-	vnetResourceGroupResourceId = "/subscriptions/" + subscriptionId + "/resourcegroups/" + vnetResourceGroup
-	vnetName                    = "vnet"
-	subnetNameWorker            = "worker"
-	subnetNameMaster            = "master"
+	subscriptionId           = "0000000-0000-0000-0000-000000000000"
+	clusterResourceGroupName = "aro-iljrzb5a"
+	infraId                  = "abcd"
+	clusterResourceGroupId   = "/subscriptions/" + subscriptionId + "/resourcegroups/" + clusterResourceGroupName
+	vnetResourceGroup        = "vnet-rg"
+	vnetName                 = "vnet"
+	subnetNameWorker         = "worker"
+	subnetNameMaster         = "master"
 
 	nsgv1NodeResourceId   = clusterResourceGroupId + "/providers/Microsoft.Network/networkSecurityGroups/" + infraId + subnet.NSGNodeSuffixV1
 	nsgv1MasterResourceId = clusterResourceGroupId + "/providers/Microsoft.Network/networkSecurityGroups/" + infraId + subnet.NSGControlPlaneSuffixV1
@@ -50,15 +43,6 @@ func getValidClusterInstance() *arov1alpha1.Cluster {
 			ArchitectureVersion:    0,
 			ClusterResourceGroupID: clusterResourceGroupId,
 			InfraID:                infraId,
-		},
-	}
-}
-
-func getValidWorkerMachine() *machinev1beta1.Machine {
-	return &machinev1beta1.Machine{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "worker",
-			Namespace: machineSetsNamespace,
 		},
 	}
 }
@@ -109,7 +93,7 @@ func TestReconcileManager(t *testing.T) {
 
 	for _, tt := range []struct {
 		name       string
-		subnetMock func(*mocksubnet.MockManager)
+		subnetMock func(*mock_subnet.MockManager)
 		maocli     func() (*maofake.Clientset, error)
 		instance   func(*arov1alpha1.Cluster)
 		wantErr    error
@@ -129,7 +113,7 @@ func TestReconcileManager(t *testing.T) {
 
 				return maofake.NewSimpleClientset(machine1, machine2), nil
 			},
-			subnetMock: func(mock *mocksubnet.MockManager) {
+			subnetMock: func(mock *mock_subnet.MockManager) {
 
 				resourceId := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 				subnetObjectMaster := getValidSubnet()
@@ -156,7 +140,7 @@ func TestReconcileManager(t *testing.T) {
 
 				return maofake.NewSimpleClientset(machine1, machine2), nil
 			},
-			subnetMock: func(mock *mocksubnet.MockManager) {
+			subnetMock: func(mock *mock_subnet.MockManager) {
 
 				resourceId := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 				subnetObjectMaster := getValidSubnet()
@@ -192,7 +176,7 @@ func TestReconcileManager(t *testing.T) {
 
 				return maofake.NewSimpleClientset(machine1, machine2), nil
 			},
-			subnetMock: func(mock *mocksubnet.MockManager) {
+			subnetMock: func(mock *mock_subnet.MockManager) {
 
 				resourceId := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 				subnetObjectMaster := getValidSubnet()
@@ -223,7 +207,7 @@ func TestReconcileManager(t *testing.T) {
 
 				return maofake.NewSimpleClientset(machine1, machine2), nil
 			},
-			subnetMock: func(mock *mocksubnet.MockManager) {
+			subnetMock: func(mock *mock_subnet.MockManager) {
 
 				resourceId := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 				subnetObjectMaster := getValidSubnet()
@@ -254,7 +238,7 @@ func TestReconcileManager(t *testing.T) {
 
 				return maofake.NewSimpleClientset(machine1, machine2), nil
 			},
-			subnetMock: func(mock *mocksubnet.MockManager) {
+			subnetMock: func(mock *mock_subnet.MockManager) {
 
 				resourceId := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 				subnetObjectMaster := getValidSubnet()
@@ -283,7 +267,7 @@ func TestReconcileManager(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			manager := mocksubnet.NewMockManager(controller)
+			manager := mock_subnet.NewMockManager(controller)
 			if tt.subnetMock != nil {
 				tt.subnetMock(manager)
 			}

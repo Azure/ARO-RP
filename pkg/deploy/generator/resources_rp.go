@@ -115,6 +115,10 @@ func (g *generator) rpVnet() *arm.Resource {
 				Service:   to.StringPtr("Microsoft.AzureCosmosDB"),
 				Locations: &[]string{"*"},
 			},
+			{
+				Service:   to.StringPtr("Microsoft.Storage"),
+				Locations: &[]string{"*"},
+			},
 		}
 	}
 
@@ -130,6 +134,12 @@ func (g *generator) rpPEVnet() *arm.Resource {
 					ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"),
 				},
 				PrivateEndpointNetworkPolicies: to.StringPtr("Disabled"),
+				ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+					{
+						Service:   to.StringPtr("Microsoft.Storage"),
+						Locations: &[]string{"*"},
+					},
+				},
 			},
 			Name: to.StringPtr("rp-pe-subnet"),
 		},

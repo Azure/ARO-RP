@@ -431,12 +431,6 @@ func TestValidateCIDRRanges(t *testing.T) {
 								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 									ID: &masterNSGv1,
 								},
-								ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
-									{
-										Service:           to.StringPtr("Microsoft.ContainerRegistry"),
-										ProvisioningState: mgmtnetwork.Succeeded,
-									},
-								},
 								PrivateLinkServiceNetworkPolicies: to.StringPtr("Disabled"),
 							},
 						},
@@ -446,12 +440,6 @@ func TestValidateCIDRRanges(t *testing.T) {
 								AddressPrefix: to.StringPtr("10.0.1.0/24"),
 								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 									ID: &workerNSGv1,
-								},
-								ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
-									{
-										Service:           to.StringPtr("Microsoft.ContainerRegistry"),
-										ProvisioningState: mgmtnetwork.Succeeded,
-									},
 								},
 							},
 						},
@@ -604,26 +592,6 @@ func TestValidateSubnets(t *testing.T) {
 			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must have privateLinkServiceNetworkPolicies disabled.",
 		},
 		{
-			name: "fail: container registry endpoint doesn't exist",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].ServiceEndpoints = nil
-				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
-					Return(vnet, nil)
-			},
-			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.",
-		},
-		{
-			name: "fail: network provisioning state not succeeded",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*(*vnet.Subnets)[0].ServiceEndpoints)[0].ProvisioningState = mgmtnetwork.Failed
-				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
-					Return(vnet, nil)
-			},
-			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.",
-		},
-		{
 			name: "fail: provisioning state creating: subnet has NSG",
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.ProvisioningState = api.ProvisioningStateCreating
@@ -699,12 +667,6 @@ func TestValidateSubnets(t *testing.T) {
 								AddressPrefix: to.StringPtr("10.0.0.0/24"),
 								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 									ID: &masterNSGv1,
-								},
-								ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
-									{
-										Service:           to.StringPtr("Microsoft.ContainerRegistry"),
-										ProvisioningState: mgmtnetwork.Succeeded,
-									},
 								},
 								PrivateLinkServiceNetworkPolicies: to.StringPtr("Disabled"),
 							},

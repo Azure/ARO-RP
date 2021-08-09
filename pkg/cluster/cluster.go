@@ -135,7 +135,7 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.
 
 		dns:     dns.NewManager(env, localFPAuthorizer),
 		storage: storage,
-		subnet:  subnet.NewManager(env, r.SubscriptionID, fpAuthorizer),
+		subnet:  subnet.NewManager(env.Environment(), r.SubscriptionID, fpAuthorizer),
 		graph:   graph.NewManager(log, aead, storage),
 	}, nil
 }

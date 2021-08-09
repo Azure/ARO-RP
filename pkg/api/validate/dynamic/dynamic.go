@@ -362,20 +362,6 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 			}
 		}
 
-		var found bool
-		if ss.ServiceEndpoints != nil {
-			for _, se := range *ss.ServiceEndpoints {
-				if strings.EqualFold(*se.Service, "Microsoft.ContainerRegistry") &&
-					se.ProvisioningState == mgmtnetwork.Succeeded {
-					found = true
-					break
-				}
-			}
-		}
-		if !found {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.", s.ID)
-		}
-
 		if oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
 			if ss.SubnetPropertiesFormat != nil &&
 				ss.SubnetPropertiesFormat.NetworkSecurityGroup != nil {

@@ -44,11 +44,15 @@ spec:
                 type: integer
               azEnvironment:
                 type: string
+              clusterResourceGroupId:
+                type: string
               domain:
                 type: string
               features:
                 description: FeaturesSpec defines ARO operator feature gates
                 properties:
+                  ReconcileSubnets:
+                    type: boolean
                   reconcileAlertWebhook:
                     type: boolean
                   reconcileDNSMasq:
@@ -56,8 +60,6 @@ spec:
                   reconcileGenevaLogging:
                     type: boolean
                   reconcileMonitoringConfig:
-                    type: boolean
-                  reconcileNSGs:
                     type: boolean
                   reconcileNodeDrainer:
                     type: boolean

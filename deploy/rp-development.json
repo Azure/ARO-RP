@@ -66,6 +66,14 @@
                                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]",
                                 "tags": null
                             },
+                            "serviceEndpoints": [
+                                {
+                                    "service": "Microsoft.Storage",
+                                    "locations": [
+                                        "*"
+                                    ]
+                                }
+                            ],
                             "privateEndpointNetworkPolicies": "Disabled"
                         },
                         "name": "rp-pe-subnet"
