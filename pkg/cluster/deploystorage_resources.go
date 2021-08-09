@@ -86,24 +86,7 @@ func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resou
 		AccountProperties: &mgmtstorage.AccountProperties{
 			AllowBlobPublicAccess:  to.BoolPtr(false),
 			EnableHTTPSTrafficOnly: to.BoolPtr(true),
-			Encryption: &mgmtstorage.Encryption{
-				RequireInfrastructureEncryption: to.BoolPtr(encrypted),
-				Services: &mgmtstorage.EncryptionServices{
-					Blob: &mgmtstorage.EncryptionService{
-						KeyType: mgmtstorage.KeyTypeAccount,
-					},
-					File: &mgmtstorage.EncryptionService{
-						KeyType: mgmtstorage.KeyTypeAccount,
-					},
-					Table: &mgmtstorage.EncryptionService{
-						KeyType: mgmtstorage.KeyTypeAccount,
-					},
-					Queue: &mgmtstorage.EncryptionService{
-						KeyType: mgmtstorage.KeyTypeAccount,
-					},
-				},
-				KeySource: mgmtstorage.KeySourceMicrosoftStorage,
-			},
+
 			NetworkRuleSet: &mgmtstorage.NetworkRuleSet{
 				Bypass: mgmtstorage.AzureServices,
 				VirtualNetworkRules: &[]mgmtstorage.VirtualNetworkRule{
@@ -136,6 +119,26 @@ func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resou
 	// TODO(mjudeikis): Move to development on VPN so we can make this IPRule
 	if m.env.IsLocalDevelopmentMode() {
 		sa.NetworkRuleSet.DefaultAction = mgmtstorage.DefaultActionAllow
+	}
+	if encrypted {
+		sa.AccountProperties.Encryption = &mgmtstorage.Encryption{
+			RequireInfrastructureEncryption: to.BoolPtr(encrypted),
+			Services: &mgmtstorage.EncryptionServices{
+				Blob: &mgmtstorage.EncryptionService{
+					KeyType: mgmtstorage.KeyTypeAccount,
+				},
+				File: &mgmtstorage.EncryptionService{
+					KeyType: mgmtstorage.KeyTypeAccount,
+				},
+				Table: &mgmtstorage.EncryptionService{
+					KeyType: mgmtstorage.KeyTypeAccount,
+				},
+				Queue: &mgmtstorage.EncryptionService{
+					KeyType: mgmtstorage.KeyTypeAccount,
+				},
+			},
+			KeySource: mgmtstorage.KeySourceMicrosoftStorage,
+		}
 	}
 
 	return &arm.Resource{

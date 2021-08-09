@@ -15,9 +15,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-// enableStorageAccountEndpoints should enable Microsoft.Storage endpoints on
+// enableServiceEndpointstEndpoints should enable Microsoft.Storage endpoints on
 // subnets for storage account access
-func (m *manager) enableStorageAccountEndpoints(ctx context.Context) error {
+func (m *manager) enableServiceEndpointstEndpoints(ctx context.Context) error {
 	//resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	subnets := []string{
 		m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
