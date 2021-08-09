@@ -58,6 +58,9 @@ func (d *deployer) DeployGateway(ctx context.Context) error {
 	parameters.Parameters["vmssName"] = &arm.ParametersParameter{
 		Value: d.version,
 	}
+	parameters.Parameters["azureCloudName"] = &arm.ParametersParameter{
+		Value: d.env.Environment().ActualCloudName,
+	}
 
 	return d.deploy(ctx, template, parameters, d.config.GatewayResourceGroupName, deploymentName, gatewayVMSSPrefix+d.version)
 }
