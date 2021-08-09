@@ -13,28 +13,43 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/apparentlymart/go-cidr/cidr"
+	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 )
 
+type Subnet struct {
+	ResourceID string
+	IsMaster   bool
+}
+
 type Manager interface {
-	List(ctx context.Context, vnetID string) ([]mgmtnetwork.Subnet, error)
 	Get(ctx context.Context, subnetID string) (*mgmtnetwork.Subnet, error)
 	GetHighestFreeIP(ctx context.Context, subnetID string) (string, error)
 	CreateOrUpdate(ctx context.Context, subnetID string, subnet *mgmtnetwork.Subnet) error
+
+	// ListFromCluster uses kube clients, instead of azure go get cluster
+	// subnets
+	ListFromCluster(ctx context.Context) ([]Subnet, error)
 }
 
 type manager struct {
 	subnets         network.SubnetsClient
 	virtualNetworks network.VirtualNetworksClient
+
+	maocli maoclient.Interface
+
+	subscriptionID string
 }
 
-func NewManager(environment *azureclient.AROEnvironment, subscriptionID string, spAuthorizer autorest.Authorizer) Manager {
+func NewManager(maocli maoclient.Interface, environment *azureclient.AROEnvironment, subscriptionID string, spAuthorizer autorest.Authorizer) Manager {
 	return &manager{
 		subnets:         network.NewSubnetsClient(environment, subscriptionID, spAuthorizer),
 		virtualNetworks: network.NewVirtualNetworksClient(environment, subscriptionID, spAuthorizer),
+		maocli:          maocli,
+		subscriptionID:  subscriptionID,
 	}
 }
 
@@ -116,24 +131,6 @@ func (m *manager) CreateOrUpdate(ctx context.Context, subnetID string, subnet *m
 	}
 
 	return m.subnets.CreateOrUpdateAndWait(ctx, r.ResourceGroup, r.ResourceName, subnetName, *subnet)
-}
-
-func (m *manager) List(ctx context.Context, vnetID string) ([]mgmtnetwork.Subnet, error) {
-	r, err := azure.ParseResourceID(vnetID)
-	if err != nil {
-		return nil, err
-	}
-
-	vnet, err := m.virtualNetworks.Get(ctx, r.ResourceGroup, r.ResourceName, "")
-	if err != nil {
-		return nil, err
-	}
-
-	subnets := []mgmtnetwork.Subnet{}
-	subnets = append(subnets, *vnet.Subnets...)
-
-	return subnets, nil
-
 }
 
 // Split splits the given subnetID into a vnetID and subnetName

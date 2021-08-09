@@ -267,9 +267,9 @@ func TestReconcileManager(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			manager := mock_subnet.NewMockManager(controller)
+			subnets := mock_subnet.NewMockManager(controller)
 			if tt.subnetMock != nil {
-				tt.subnetMock(manager)
+				tt.subnetMock(subnets)
 			}
 
 			instance := getValidClusterInstance()
@@ -277,20 +277,14 @@ func TestReconcileManager(t *testing.T) {
 				tt.instance(instance)
 			}
 
-			maocli, err := tt.maocli()
-			if err != nil {
-				t.Fatalf(err.Error())
-			}
-
 			r := reconcileManager{
 				log:            log,
-				maocli:         maocli,
 				instance:       instance,
 				subscriptionID: subscriptionId,
-				manager:        manager,
+				subnets:        subnets,
 			}
 
-			err = r.reconcileSubnets(context.Background())
+			err := r.reconcileSubnets(context.Background())
 			if err != nil {
 				if tt.wantErr == nil {
 					t.Fatal(err)
@@ -304,112 +298,3 @@ func TestReconcileManager(t *testing.T) {
 		})
 	}
 }
-
-//func TestGetSubnets(t *testing.T) {
-//	r := Reconciler{log: utillog.GetLogger()}
-//	for _, tt := range []struct {
-//		name             string
-//		machinelabel     string
-//		expectedMap      map[subnetDescriptor]bool
-//		expectedMasterRG string
-//		modify           func(*machinev1beta1.Machine, *machinev1beta1.Machine)
-//		expectedErr      error
-//	}{
-//		{
-//			name: "main path",
-//			expectedMap: map[subnetDescriptor]bool{
-//				{
-//					resourceGroup: "netRG",
-//					vnetName:      "workerVnet",
-//					subnetName:    "workerSubnet",
-//				}: false,
-//				{
-//					resourceGroup: "netRG",
-//					vnetName:      "masterVnet",
-//					subnetName:    "masterSubnet",
-//				}: true,
-//			},
-//			expectedMasterRG: "masterRG",
-//			modify:           func(worker *machinev1beta1.Machine, master *machinev1beta1.Machine) {},
-//		},
-//		{
-//			name:             "missing providerSpec",
-//			expectedMap:      nil,
-//			expectedMasterRG: "",
-//			modify: func(worker *machinev1beta1.Machine, master *machinev1beta1.Machine) {
-//				master.Spec.ProviderSpec.Value.Raw = []byte("")
-//			},
-//			expectedErr: fmt.Errorf("unexpected end of JSON input"),
-//		},
-//		{
-//			name:             "missing master nodes",
-//			expectedMap:      nil,
-//			expectedMasterRG: "masterRG",
-//			modify: func(worker *machinev1beta1.Machine, master *machinev1beta1.Machine) {
-//				master.Labels = map[string]string{}
-//			},
-//			expectedErr: fmt.Errorf("master resource group not found"),
-//		},
-//	} {
-//		t.Run(tt.name, func(t *testing.T) {
-//			masterMachine := machinev1beta1.Machine{
-//				ObjectMeta: metav1.ObjectMeta{
-//					Name:      "master-0",
-//					Namespace: "openshift-machine-api",
-//					Labels:    map[string]string{"machine.openshift.io/cluster-api-machine-role": "master"},
-//				},
-//				Spec: machinev1beta1.MachineSpec{
-//					ProviderSpec: machinev1beta1.ProviderSpec{
-//						Value: &runtime.RawExtension{
-//							Raw: []byte("{\"resourceGroup\":\"masterRG\",\"publicIP\":false,\"osDisk\":{\"diskSizeGB\": 1024,\"managedDisk\":{\"storageAccountType\": \"Premium_LRS\"},\"osType\":\"Linux\"},\"image\":{\"offer\": \"aro4\",\"publisher\": \"azureopenshift\", \"resourceID\": \"\", \"sku\": \"aro_43\", \"version\": \"43.81.20200311\"},\"networkResourceGroup\":\"netRG\",\"vnet\":\"masterVnet\",\"subnet\":\"masterSubnet\"}"),
-//						},
-//					},
-//				},
-//			}
-//			workerMachine := machinev1beta1.Machine{
-//				ObjectMeta: metav1.ObjectMeta{
-//					Name:      "worker-0",
-//					Namespace: "openshift-machine-api",
-//					Labels:    map[string]string{"machine.openshift.io/cluster-api-machine-role": "worker"},
-//				},
-//				Spec: machinev1beta1.MachineSpec{
-//					ProviderSpec: machinev1beta1.ProviderSpec{
-//						Value: &runtime.RawExtension{
-//							Raw: []byte("{\"resourceGroup\":\"workerRG\",\"publicIP\":false,\"osDisk\":{\"diskSizeGB\": 1024,\"managedDisk\":{\"storageAccountType\": \"Premium_LRS\"},\"osType\":\"Linux\"},\"image\":{\"offer\": \"aro4\",\"publisher\": \"azureopenshift\", \"resourceID\": \"\", \"sku\": \"aro_43\", \"version\": \"43.81.20200311\"},\"networkResourceGroup\":\"netRG\",\"vnet\":\"workerVnet\",\"subnet\":\"workerSubnet\"}"),
-//						},
-//					},
-//				},
-//			}
-//			tt.modify(&workerMachine, &masterMachine)
-//			r.maocli = maofake.NewSimpleClientset(&workerMachine, &masterMachine)
-//			subnetMap, masterRG, err := r.getSubnets(context.Background())
-//			if err != nil {
-//				if tt.expectedErr == nil {
-//					t.Fatal(err)
-//				}
-//				if !strings.EqualFold(err.Error(), tt.expectedErr.Error()) {
-//					t.Errorf("Expected Error %s, got %s when processing %s testcase", tt.expectedErr.Error(), err.Error(), tt.name)
-//				}
-//				return
-//			}
-//			if !strings.EqualFold(tt.expectedMasterRG, masterRG) {
-//				t.Errorf("Expected Master Resource Group %s, got %s when processing %s testcase", tt.expectedMasterRG, masterRG, tt.name)
-//			}
-//			if tt.expectedMap != nil {
-//				if len(tt.expectedMap) != len(subnetMap) {
-//					t.Errorf("Expected Map length %d, doesn't match result map length %d when processing %s testcase", len(tt.expectedMap), len(subnetMap), tt.name)
-//				}
-//				for subnet := range tt.expectedMap {
-//					value, present := subnetMap[subnet]
-//					if !present {
-//						t.Errorf("Subnet %s, %s, %s expected but not present in result when processing %s testcase", subnet.resourceGroup, subnet.vnetName, subnet.subnetName, tt.name)
-//					}
-//					if tt.expectedMap[subnet] != value {
-//						t.Errorf("Value of isMaster boolean doesn't match for subnet %s, %s, %s when processing %s testcase", subnet.resourceGroup, subnet.vnetName, subnet.subnetName, tt.name)
-//					}
-//				}
-//			}
-//		})
-//	}
-//}
-//

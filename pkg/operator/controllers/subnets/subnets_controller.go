@@ -40,17 +40,13 @@ type Reconciler struct {
 }
 
 // reconcileManager is instance of manager instanciated per request
-// Reconciler is not thread safe so we create new instance of separete object every
-// time Reconcile is called
 type reconcileManager struct {
 	log *logrus.Entry
-
-	maocli maoclient.Interface
 
 	instance       *arov1alpha1.Cluster
 	subscriptionID string
 
-	manager subnet.Manager
+	subnets subnet.Manager
 }
 
 // NewReconciler creates a new Reconciler
@@ -102,10 +98,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	manager := reconcileManager{
 		log:            r.log,
-		maocli:         r.maocli,
 		instance:       instance,
 		subscriptionID: resource.SubscriptionID,
-		manager:        subnet.NewManager(&azEnv, resource.SubscriptionID, authorizer),
+		subnets:        subnet.NewManager(r.maocli, &azEnv, resource.SubscriptionID, authorizer),
 	}
 
 	return reconcile.Result{}, manager.reconcileSubnets(ctx)
