@@ -74,7 +74,10 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 	)
 }
 
-func (m *manager) storageAccount(name, region string) *arm.Resource {
+// storageAccount will return storage account resource.
+// Old accounts are not encrypted and can't be retrofitted.
+// flag is to controll this behaviour in update/create
+func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resource {
 	sa := &mgmtstorage.Account{
 		Kind: mgmtstorage.StorageV2,
 		Sku: &mgmtstorage.Sku{
@@ -84,7 +87,7 @@ func (m *manager) storageAccount(name, region string) *arm.Resource {
 			AllowBlobPublicAccess:  to.BoolPtr(false),
 			EnableHTTPSTrafficOnly: to.BoolPtr(true),
 			Encryption: &mgmtstorage.Encryption{
-				RequireInfrastructureEncryption: to.BoolPtr(true),
+				RequireInfrastructureEncryption: to.BoolPtr(encrypted),
 				Services: &mgmtstorage.EncryptionServices{
 					Blob: &mgmtstorage.EncryptionService{
 						KeyType: mgmtstorage.KeyTypeAccount,

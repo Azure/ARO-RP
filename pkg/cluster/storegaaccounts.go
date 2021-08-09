@@ -81,7 +81,7 @@ func (m *manager) fixStorageAccounts(ctx context.Context) error {
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
 		Resources: []*arm.Resource{
-			m.storageAccount(clusterStorageAccountName, installConfig.Config.Azure.Region),
+			m.storageAccount(clusterStorageAccountName, installConfig.Config.Azure.Region, false),
 		},
 	}
 
