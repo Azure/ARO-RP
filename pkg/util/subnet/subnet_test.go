@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 
@@ -330,6 +331,73 @@ func TestNetworkSecurityGroupID(t *testing.T) {
 
 			if nsgID != tt.wantNSGID {
 				t.Error(nsgID)
+			}
+		})
+	}
+}
+
+func TestList(t *testing.T) {
+	ctx := context.Background()
+
+	type test struct {
+		name        string
+		vnetID      string
+		mocks       func(*test, *mock_network.MockVirtualNetworksClient)
+		wantSubnets []mgmtnetwork.Subnet
+		wantErr     string
+	}
+
+	for _, tt := range []*test{
+		{
+			name:   "valid",
+			vnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet",
+			mocks: func(tt *test, vnet *mock_network.MockVirtualNetworksClient) {
+				r, _ := azure.ParseResourceID(tt.vnetID)
+				vnet.EXPECT().Get(ctx, r.ResourceGroup, r.ResourceName, "").
+					Return(mgmtnetwork.VirtualNetwork{
+						VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
+							Subnets: &[]mgmtnetwork.Subnet{
+								{
+									Name: to.StringPtr("subnet"),
+								},
+								{
+									Name: to.StringPtr("subnet2"),
+								},
+							},
+						},
+					}, nil)
+			},
+			wantSubnets: []mgmtnetwork.Subnet{
+				{
+					Name: to.StringPtr("subnet"),
+				},
+				{
+					Name: to.StringPtr("subnet2"),
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			vnets := mock_network.NewMockVirtualNetworksClient(controller)
+			if tt.mocks != nil {
+				tt.mocks(tt, vnets)
+			}
+
+			m := &manager{
+				virtualNetworks: vnets,
+			}
+
+			subnets, err := m.List(ctx, tt.vnetID)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+
+			if !reflect.DeepEqual(subnets, tt.wantSubnets) {
+				t.Error(subnets)
 			}
 		})
 	}

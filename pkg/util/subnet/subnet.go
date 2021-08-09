@@ -20,18 +20,21 @@ import (
 )
 
 type Manager interface {
+	List(ctx context.Context, vnetID string) ([]mgmtnetwork.Subnet, error)
 	Get(ctx context.Context, subnetID string) (*mgmtnetwork.Subnet, error)
 	GetHighestFreeIP(ctx context.Context, subnetID string) (string, error)
 	CreateOrUpdate(ctx context.Context, subnetID string, subnet *mgmtnetwork.Subnet) error
 }
 
 type manager struct {
-	subnets network.SubnetsClient
+	subnets         network.SubnetsClient
+	virtualNetworks network.VirtualNetworksClient
 }
 
 func NewManager(environment *azureclient.AROEnvironment, subscriptionID string, spAuthorizer autorest.Authorizer) Manager {
 	return &manager{
-		subnets: network.NewSubnetsClient(environment, subscriptionID, spAuthorizer),
+		subnets:         network.NewSubnetsClient(environment, subscriptionID, spAuthorizer),
+		virtualNetworks: network.NewVirtualNetworksClient(environment, subscriptionID, spAuthorizer),
 	}
 }
 
@@ -113,6 +116,24 @@ func (m *manager) CreateOrUpdate(ctx context.Context, subnetID string, subnet *m
 	}
 
 	return m.subnets.CreateOrUpdateAndWait(ctx, r.ResourceGroup, r.ResourceName, subnetName, *subnet)
+}
+
+func (m *manager) List(ctx context.Context, vnetID string) ([]mgmtnetwork.Subnet, error) {
+	r, err := azure.ParseResourceID(vnetID)
+	if err != nil {
+		return nil, err
+	}
+
+	vnet, err := m.virtualNetworks.Get(ctx, r.ResourceGroup, r.ResourceName, "")
+	if err != nil {
+		return nil, err
+	}
+
+	subnets := []mgmtnetwork.Subnet{}
+	subnets = append(subnets, *vnet.Subnets...)
+
+	return subnets, nil
+
 }
 
 // Split splits the given subnetID into a vnetID and subnetName
