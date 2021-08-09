@@ -10,6 +10,8 @@ import (
 
 	network "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	gomock "github.com/golang/mock/gomock"
+
+	subnet "github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 // MockManager is a mock of Manager interface.
@@ -77,4 +79,19 @@ func (m *MockManager) GetHighestFreeIP(arg0 context.Context, arg1 string) (strin
 func (mr *MockManagerMockRecorder) GetHighestFreeIP(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHighestFreeIP", reflect.TypeOf((*MockManager)(nil).GetHighestFreeIP), arg0, arg1)
+}
+
+// ListFromCluster mocks base method.
+func (m *MockManager) ListFromCluster(arg0 context.Context) ([]subnet.Subnet, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListFromCluster", arg0)
+	ret0, _ := ret[0].([]subnet.Subnet)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListFromCluster indicates an expected call of ListFromCluster.
+func (mr *MockManagerMockRecorder) ListFromCluster(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFromCluster", reflect.TypeOf((*MockManager)(nil).ListFromCluster), arg0)
 }
