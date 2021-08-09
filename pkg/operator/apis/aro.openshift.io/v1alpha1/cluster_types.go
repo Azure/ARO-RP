@@ -45,25 +45,26 @@ type InternetCheckerSpec struct {
 // ClusterSpec defines the desired state of Cluster
 type ClusterSpec struct {
 	// ResourceID is the Azure resourceId of the cluster
-	ResourceID          string              `json:"resourceId,omitempty"`
-	Domain              string              `json:"domain,omitempty"`
-	ACRDomain           string              `json:"acrDomain,omitempty"`
-	AZEnvironment       string              `json:"azEnvironment,omitempty"`
-	Location            string              `json:"location,omitempty"`
-	InfraID             string              `json:"infraId,omitempty"`
-	ArchitectureVersion int                 `json:"architectureVersion,omitempty"`
-	GenevaLogging       GenevaLoggingSpec   `json:"genevaLogging,omitempty"`
-	InternetChecker     InternetCheckerSpec `json:"internetChecker,omitempty"`
-	VnetID              string              `json:"vnetId,omitempty"`
-	APIIntIP            string              `json:"apiIntIP,omitempty"`
-	IngressIP           string              `json:"ingressIP,omitempty"`
+	ResourceID             string              `json:"resourceId,omitempty"`
+	ClusterResourceGroupID string              `json:"clusterResourceGroupId,omitempty"`
+	Domain                 string              `json:"domain,omitempty"`
+	ACRDomain              string              `json:"acrDomain,omitempty"`
+	AZEnvironment          string              `json:"azEnvironment,omitempty"`
+	Location               string              `json:"location,omitempty"`
+	InfraID                string              `json:"infraId,omitempty"`
+	ArchitectureVersion    int                 `json:"architectureVersion,omitempty"`
+	GenevaLogging          GenevaLoggingSpec   `json:"genevaLogging,omitempty"`
+	InternetChecker        InternetCheckerSpec `json:"internetChecker,omitempty"`
+	VnetID                 string              `json:"vnetId,omitempty"`
+	APIIntIP               string              `json:"apiIntIP,omitempty"`
+	IngressIP              string              `json:"ingressIP,omitempty"`
 
 	Features FeaturesSpec `json:"features,omitempty"`
 }
 
 // FeaturesSpec defines ARO operator feature gates
 type FeaturesSpec struct {
-	ReconcileNSGs                  bool `json:"reconcileNSGs,omitempty"`
+	ReconcileSubnets               bool `json:"ReconcileSubnets,omitempty"`
 	ReconcileAlertWebhook          bool `json:"reconcileAlertWebhook,omitempty"`
 	ReconcileDNSMasq               bool `json:"reconcileDNSMasq,omitempty"`
 	ReconcileGenevaLogging         bool `json:"reconcileGenevaLogging,omitempty"`

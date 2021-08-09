@@ -1,4 +1,4 @@
-package azurensg
+package subnets
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -26,8 +26,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 // Reconciler is the controller struct
@@ -37,6 +37,20 @@ type Reconciler struct {
 	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
 	maocli        maoclient.Interface
+}
+
+// reconcileManager is instance of manager instanciated per request
+// Reconciler is not thread safe so we create new instance of separete object every
+// time Reconcile is called
+type reconcileManager struct {
+	log *logrus.Entry
+
+	maocli maoclient.Interface
+
+	instance       *arov1alpha1.Cluster
+	subscriptionID string
+
+	manager subnet.Manager
 }
 
 // NewReconciler creates a new Reconciler
@@ -56,8 +70,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.Features.ReconcileNSGs {
-		// reconciling NSGs is disabled
+	if !instance.Spec.Features.ReconcileSubnets {
+		// reconciling subnets is disabled
 		return reconcile.Result{}, nil
 	}
 
@@ -85,9 +99,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	subnetsClient := network.NewSubnetsClient(&azEnv, resource.SubscriptionID, authorizer)
 
-	return reconcile.Result{}, r.reconcileSubnetNSG(ctx, instance, resource.SubscriptionID, subnetsClient)
+	manager := reconcileManager{
+		log:            r.log,
+		maocli:         r.maocli,
+		instance:       instance,
+		subscriptionID: resource.SubscriptionID,
+		manager:        subnet.NewManager(&azEnv, resource.SubscriptionID, authorizer),
+	}
+
+	return reconcile.Result{}, manager.reconcileSubnets(ctx)
 }
 
 // SetupWithManager creates the controller
@@ -100,6 +121,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		Watches(&source.Kind{Type: &machinev1beta1.Machine{}}, &handler.EnqueueRequestForObject{}). // to reconcile on machine replacement
 		Watches(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForObject{}).            // to reconcile on node status change
-		Named(controllers.AzureNSGControllerName).
+		Named(controllers.AzureSubnetsControllerName).
 		Complete(r)
 }
