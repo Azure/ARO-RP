@@ -192,7 +192,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 }
 
 func (d *deployer) convertToIPAddressOrRange(ipSlice []string) []mgmtdocumentdb.IPAddressOrRange {
-	var ips []mgmtdocumentdb.IPAddressOrRange
+	ips := []mgmtdocumentdb.IPAddressOrRange{}
 	for _, v := range ipSlice {
 		ips = append(ips, mgmtdocumentdb.IPAddressOrRange{IPAddressOrRange: to.StringPtr(v)})
 	}

@@ -87,7 +87,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"armClientId",
 			"billingServicePrincipalId",
 			"billingE2EStorageAccountId",
-			"extraCosmosDBIPs",
 			"gatewayDomains",
 			"rpFeatures":
 			p.DefaultValue = ""
