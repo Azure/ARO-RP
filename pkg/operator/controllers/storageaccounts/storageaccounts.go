@@ -7,9 +7,10 @@ import (
 	"context"
 	"strings"
 
-	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
+
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {

@@ -114,15 +114,26 @@ func TestReconcileManager(t *testing.T) {
 				return maofake.NewSimpleClientset(machine1, machine2), nil
 			},
 			subnetMock: func(mock *mock_subnet.MockManager) {
+				resourceIdMaster := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
+				resourceIdWorker := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 
-				resourceId := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
+				mock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
+					{
+						ResourceID: resourceIdMaster,
+						IsMaster:   true,
+					},
+					{
+						ResourceID: resourceIdWorker,
+						IsMaster:   false,
+					},
+				}, nil)
+
 				subnetObjectMaster := getValidSubnet()
-				mock.EXPECT().Get(gomock.Any(), resourceId).Return(subnetObjectMaster, nil)
+				mock.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(subnetObjectMaster, nil)
 
-				resourceId = "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 				subnetObjectWorker := getValidSubnet()
 				subnetObjectWorker.NetworkSecurityGroup.ID = to.StringPtr(nsgv1NodeResourceId)
-				mock.EXPECT().Get(gomock.Any(), resourceId).Return(subnetObjectWorker, nil)
+				mock.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(subnetObjectWorker, nil)
 			},
 		},
 		{
@@ -142,23 +153,35 @@ func TestReconcileManager(t *testing.T) {
 			},
 			subnetMock: func(mock *mock_subnet.MockManager) {
 
-				resourceId := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
+				resourceIdMaster := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
+				resourceIdWorker := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
+
+				mock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
+					{
+						ResourceID: resourceIdMaster,
+						IsMaster:   true,
+					},
+					{
+						ResourceID: resourceIdWorker,
+						IsMaster:   false,
+					},
+				}, nil)
+
 				subnetObjectMaster := getValidSubnet()
 				subnetObjectMaster.NetworkSecurityGroup.ID = to.StringPtr(nsgv1MasterResourceId + "new")
-				mock.EXPECT().Get(gomock.Any(), resourceId).Return(subnetObjectMaster, nil)
+				mock.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(subnetObjectMaster, nil)
 
 				subnetObjectMasterUpdate := getValidSubnet()
 				subnetObjectMasterUpdate.NetworkSecurityGroup.ID = to.StringPtr(nsgv1MasterResourceId)
-				mock.EXPECT().CreateOrUpdate(gomock.Any(), resourceId, subnetObjectMasterUpdate).Return(nil)
+				mock.EXPECT().CreateOrUpdate(gomock.Any(), resourceIdMaster, subnetObjectMasterUpdate).Return(nil)
 
-				resourceId = "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 				subnetObjectWorker := getValidSubnet()
 				subnetObjectWorker.NetworkSecurityGroup.ID = to.StringPtr(nsgv1NodeResourceId + "new")
-				mock.EXPECT().Get(gomock.Any(), resourceId).Return(subnetObjectWorker, nil)
+				mock.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(subnetObjectWorker, nil)
 
 				subnetObjectWorkerUpdate := getValidSubnet()
 				subnetObjectWorkerUpdate.NetworkSecurityGroup.ID = to.StringPtr(nsgv1NodeResourceId)
-				mock.EXPECT().CreateOrUpdate(gomock.Any(), resourceId, subnetObjectWorkerUpdate).Return(nil)
+				mock.EXPECT().CreateOrUpdate(gomock.Any(), resourceIdWorker, subnetObjectWorkerUpdate).Return(nil)
 			},
 		},
 		{
@@ -178,18 +201,30 @@ func TestReconcileManager(t *testing.T) {
 			},
 			subnetMock: func(mock *mock_subnet.MockManager) {
 
-				resourceId := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
-				subnetObjectMaster := getValidSubnet()
-				mock.EXPECT().Get(gomock.Any(), resourceId).Return(subnetObjectMaster, nil)
+				resourceIdMaster := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
+				resourceIdWorker := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 
-				resourceId = "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
+				mock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
+					{
+						ResourceID: resourceIdMaster,
+						IsMaster:   true,
+					},
+					{
+						ResourceID: resourceIdWorker,
+						IsMaster:   false,
+					},
+				}, nil)
+
+				subnetObjectMaster := getValidSubnet()
+				mock.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(subnetObjectMaster, nil)
+
 				subnetObjectWorker := getValidSubnet()
 				subnetObjectWorker.NetworkSecurityGroup.ID = to.StringPtr(nsgv1NodeResourceId + "new")
-				mock.EXPECT().Get(gomock.Any(), resourceId).Return(subnetObjectWorker, nil)
+				mock.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(subnetObjectWorker, nil)
 
 				subnetObjectWorkerUpdate := getValidSubnet()
 				subnetObjectWorkerUpdate.NetworkSecurityGroup.ID = to.StringPtr(nsgv1NodeResourceId)
-				mock.EXPECT().CreateOrUpdate(gomock.Any(), resourceId, subnetObjectWorkerUpdate).Return(nil)
+				mock.EXPECT().CreateOrUpdate(gomock.Any(), resourceIdWorker, subnetObjectWorkerUpdate).Return(nil)
 			},
 		},
 		{
@@ -209,15 +244,27 @@ func TestReconcileManager(t *testing.T) {
 			},
 			subnetMock: func(mock *mock_subnet.MockManager) {
 
-				resourceId := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
+				resourceIdMaster := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
+				resourceIdWorker := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
+
+				mock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
+					{
+						ResourceID: resourceIdMaster,
+						IsMaster:   true,
+					},
+					{
+						ResourceID: resourceIdWorker,
+						IsMaster:   false,
+					},
+				}, nil)
+
 				subnetObjectMaster := getValidSubnet()
 				subnetObjectMaster.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
-				mock.EXPECT().Get(gomock.Any(), resourceId).Return(subnetObjectMaster, nil)
+				mock.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(subnetObjectMaster, nil)
 
-				resourceId = "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 				subnetObjectWorker := getValidSubnet()
 				subnetObjectWorker.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
-				mock.EXPECT().Get(gomock.Any(), resourceId).Return(subnetObjectWorker, nil)
+				mock.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(subnetObjectWorker, nil)
 			},
 			instance: func(instace *arov1alpha1.Cluster) {
 				instace.Spec.ArchitectureVersion = 1
@@ -240,23 +287,35 @@ func TestReconcileManager(t *testing.T) {
 			},
 			subnetMock: func(mock *mock_subnet.MockManager) {
 
-				resourceId := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
+				resourceIdMaster := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
+				resourceIdWorker := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
+
+				mock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
+					{
+						ResourceID: resourceIdMaster,
+						IsMaster:   true,
+					},
+					{
+						ResourceID: resourceIdWorker,
+						IsMaster:   false,
+					},
+				}, nil)
+
 				subnetObjectMaster := getValidSubnet()
 				subnetObjectMaster.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId + "new")
-				mock.EXPECT().Get(gomock.Any(), resourceId).Return(subnetObjectMaster, nil)
+				mock.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(subnetObjectMaster, nil)
 
 				subnetObjectMasterUpdate := getValidSubnet()
 				subnetObjectMasterUpdate.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
-				mock.EXPECT().CreateOrUpdate(gomock.Any(), resourceId, subnetObjectMasterUpdate).Return(nil)
+				mock.EXPECT().CreateOrUpdate(gomock.Any(), resourceIdMaster, subnetObjectMasterUpdate).Return(nil)
 
-				resourceId = "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 				subnetObjectWorker := getValidSubnet()
 				subnetObjectWorker.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId + "new")
-				mock.EXPECT().Get(gomock.Any(), resourceId).Return(subnetObjectWorker, nil)
+				mock.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(subnetObjectWorker, nil)
 
 				subnetObjectWorkerUpdate := getValidSubnet()
 				subnetObjectWorkerUpdate.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
-				mock.EXPECT().CreateOrUpdate(gomock.Any(), resourceId, subnetObjectWorkerUpdate).Return(nil)
+				mock.EXPECT().CreateOrUpdate(gomock.Any(), resourceIdWorker, subnetObjectWorkerUpdate).Return(nil)
 			},
 			instance: func(instace *arov1alpha1.Cluster) {
 				instace.Spec.ArchitectureVersion = 1
