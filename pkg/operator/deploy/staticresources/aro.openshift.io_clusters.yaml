@@ -50,11 +50,15 @@ spec:
                   content:
                     type: string
                 type: object
+              clusterResourceGroupId:
+                type: string
               domain:
                 type: string
               features:
                 description: FeaturesSpec defines ARO operator feature gates
                 properties:
+                  ReconcileSubnets:
+                    type: boolean
                   reconcileAlertWebhook:
                     type: boolean
                   reconcileBanner:
@@ -66,8 +70,6 @@ spec:
                   reconcileMachineSet:
                     type: boolean
                   reconcileMonitoringConfig:
-                    type: boolean
-                  reconcileNSGs:
                     type: boolean
                   reconcileNodeDrainer:
                     type: boolean

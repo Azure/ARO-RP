@@ -15,7 +15,7 @@ import (
 	"github.com/apparentlymart/go-cidr/cidr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 )
 
@@ -29,9 +29,9 @@ type manager struct {
 	subnets network.SubnetsClient
 }
 
-func NewManager(env env.Core, subscriptionID string, spAuthorizer autorest.Authorizer) Manager {
+func NewManager(azEnv *azureclient.AROEnvironment, subscriptionID string, spAuthorizer autorest.Authorizer) Manager {
 	return &manager{
-		subnets: network.NewSubnetsClient(env.Environment(), subscriptionID, spAuthorizer),
+		subnets: network.NewSubnetsClient(azEnv, subscriptionID, spAuthorizer),
 	}
 }
 
