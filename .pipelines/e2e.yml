@@ -1,18 +1,11 @@
-trigger:
-  branches:
-    include:
-    - master
-  paths:
-    exclude:
-    - docs/*
+trigger: none
+pr: none
 
-pr:
-  branches:
-    include:
-    - master
-  paths:
-    exclude:
-    - docs/*
+resources:
+  pipelines:
+  - pipeline: e2e
+    source: CI
+    trigger: true
 
 # Azure DevOps Pipeline running e2e tests
 variables:
