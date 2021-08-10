@@ -6,7 +6,7 @@ package storage
 import (
 	"context"
 
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 )
 
 // AccountsClientAddons contains addons for AccountsClient
