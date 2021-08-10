@@ -41,11 +41,11 @@ func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
 	mon.emitGauge("cluster.versions", 1, map[string]string{
 		"actualVersion":                        actualVersion(cv),
 		"desiredVersion":                       desiredVersion(cv),
-		"provisionedByResourceProviderVersion": mon.oc.Properties.ProvisionedBy,       // last successful Put or Patch
-		"resourceProviderVersion":              version.GitCommit,                     // RP version currently running
-		"operatorVersion":                      operatorVersion,                       // operator version in the cluster
-		"availableVersion":                     availableVersion(cv, version.Streams), // current available version for upgrade from stream
-		"availableRP":                          availableRP,                           // current RP version available for document update, empty when none
+		"provisionedByResourceProviderVersion": mon.oc.Properties.ProvisionedBy,              // last successful Put or Patch
+		"resourceProviderVersion":              version.GitCommit,                            // RP version currently running
+		"operatorVersion":                      operatorVersion,                              // operator version in the cluster
+		"availableVersion":                     availableVersion(cv, version.UpgradeStreams), // current available version for upgrade from stream
+		"availableRP":                          availableRP,                                  // current RP version available for document update, empty when none
 	})
 
 	return nil

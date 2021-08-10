@@ -4,8 +4,8 @@ package version
 // Licensed under the Apache License 2.0.
 
 type Stream struct {
-	Version  *Version
-	PullSpec string
+	Version  *Version `json:"version"`
+	PullSpec string   `json:"-"`
 }
 
 // GetUpgradeStream returns an upgrade Stream for a Version or nil if no upgrade

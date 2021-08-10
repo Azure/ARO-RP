@@ -1693,6 +1693,19 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 				"[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]",
 			},
 		},
+		{
+			Resource: &mgmtstorage.BlobContainer{
+				Name: to.StringPtr("[concat(parameters('rpVersionStorageAccountName'), '/default/ocpversions')]"),
+				Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
+				ContainerProperties: &mgmtstorage.ContainerProperties{
+					PublicAccess: mgmtstorage.PublicAccessContainer,
+				},
+			},
+			APIVersion: azureclient.APIVersion("Microsoft.Storage"),
+			DependsOn: []string{
+				"[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]",
+			},
+		},
 	}
 }
 
