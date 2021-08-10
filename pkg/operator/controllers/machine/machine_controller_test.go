@@ -26,12 +26,12 @@ import (
 func TestMachineReconciler(t *testing.T) {
 	// Fake cluster with AZs
 	newFakeMao1 := func(diskSize, imagePublisher, vmSize, masterVmSize string) *maofake.Clientset {
-		master0 := masterMachine("foo-hx8z7-master-0", "", "", "", "")
-		master1 := masterMachine("foo-hx8z7-master-1", "", "", "", "")
-		master2 := masterMachine("foo-hx8z7-master-2", "", "", masterVmSize, "")
-		worker0 := workerMachine("foo-hx8z7-worker-0", diskSize, "", "", "")
-		worker1 := workerMachine("foo-hx8z7-worker-1", "", imagePublisher, "", "")
-		worker2 := workerMachine("foo-hx8z7-worker-2", "", "", vmSize, "")
+		master0 := getValidMachine("foo-hx8z7-master-0", "", "", "", "", true)
+		master1 := getValidMachine("foo-hx8z7-master-1", "", "", "", "", true)
+		master2 := getValidMachine("foo-hx8z7-master-2", "", "", masterVmSize, "", true)
+		worker0 := getValidMachine("foo-hx8z7-worker-0", diskSize, "", "", "", false)
+		worker1 := getValidMachine("foo-hx8z7-worker-1", "", imagePublisher, "", "", false)
+		worker2 := getValidMachine("foo-hx8z7-worker-2", "", "", vmSize, "", false)
 		workerMachineSet0 := workerMachineSet("foo-hx8z7-machineset-0")
 		workerMachineSet1 := workerMachineSet("foo-hx8z7-machineset-1")
 		workerMachineSet2 := workerMachineSet("foo-hx8z7-machineset-2")
@@ -41,11 +41,11 @@ func TestMachineReconciler(t *testing.T) {
 
 	// Fake cluster missing a master
 	newFakeMao2 := func() *maofake.Clientset {
-		master0 := masterMachine("foo-hx8z7-master-0", "", "", "", "")
-		master2 := masterMachine("foo-hx8z7-master-2", "", "", "", "")
-		worker0 := workerMachine("foo-hx8z7-worker-0", "", "", "", "")
-		worker1 := workerMachine("foo-hx8z7-worker-1", "", "", "", "")
-		worker2 := workerMachine("foo-hx8z7-worker-2", "", "", "", "")
+		master0 := getValidMachine("foo-hx8z7-master-0", "", "", "", "", true)
+		master2 := getValidMachine("foo-hx8z7-master-2", "", "", "", "", true)
+		worker0 := getValidMachine("foo-hx8z7-worker-0", "", "", "", "", false)
+		worker1 := getValidMachine("foo-hx8z7-worker-1", "", "", "", "", false)
+		worker2 := getValidMachine("foo-hx8z7-worker-2", "", "", "", "", false)
 		workerMachineSet0 := workerMachineSet("foo-hx8z7-machineset-0")
 		workerMachineSet1 := workerMachineSet("foo-hx8z7-machineset-1")
 		workerMachineSet2 := workerMachineSet("foo-hx8z7-machineset-2")
@@ -55,11 +55,11 @@ func TestMachineReconciler(t *testing.T) {
 
 	// Fake cluster missing a worker
 	newFakeMao3 := func() *maofake.Clientset {
-		master0 := masterMachine("foo-hx8z7-master-0", "", "", "", "")
-		master1 := masterMachine("foo-hx8z7-master-1", "", "", "", "")
-		master2 := masterMachine("foo-hx8z7-master-2", "", "", "", "")
-		worker0 := workerMachine("foo-hx8z7-worker-0", "", "", "", "")
-		worker1 := workerMachine("foo-hx8z7-worker-1", "", "", "", "")
+		master0 := getValidMachine("foo-hx8z7-master-0", "", "", "", "", true)
+		master1 := getValidMachine("foo-hx8z7-master-1", "", "", "", "", true)
+		master2 := getValidMachine("foo-hx8z7-master-2", "", "", "", "", true)
+		worker0 := getValidMachine("foo-hx8z7-worker-0", "", "", "", "", false)
+		worker1 := getValidMachine("foo-hx8z7-worker-1", "", "", "", "", false)
 		workerMachineSet0 := workerMachineSet("foo-hx8z7-machineset-0")
 		workerMachineSet1 := workerMachineSet("foo-hx8z7-machineset-1")
 		workerMachineSet2 := workerMachineSet("foo-hx8z7-machineset-2")
@@ -189,65 +189,38 @@ func TestMachineReconciler(t *testing.T) {
 	}
 }
 
-func masterMachine(name, diskSize, imagePublisher, vmSize, offer string) *machinev1beta1.Machine {
+func getValidMachine(name, diskSize, imagePublisher, vmSize, offer string, isMaster bool) *machinev1beta1.Machine {
 	if diskSize == "" {
-		diskSize = "512"
+		if isMaster {
+			diskSize = "512"
+		} else {
+			diskSize = "128"
+		}
 	}
 	if imagePublisher == "" {
 		imagePublisher = "azureopenshift"
 	}
 	if vmSize == "" {
-		vmSize = "Standard_D8s_v3"
+		if isMaster {
+			vmSize = "Standard_D8s_v3"
+		} else {
+			vmSize = "Standard_D4s_v3"
+		}
 	}
+
 	if offer == "" {
 		offer = "aro4"
+	}
+	labels := map[string]string{"machine.openshift.io/cluster-api-machine-role": "worker"}
+	if isMaster {
+		labels = map[string]string{"machine.openshift.io/cluster-api-machine-role": "master"}
 	}
 
 	return &machinev1beta1.Machine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: machineSetsNamespace,
-			Labels:    map[string]string{"machine.openshift.io/cluster-api-machine-role": "master"},
-		},
-		Spec: machinev1beta1.MachineSpec{
-			ProviderSpec: machinev1beta1.ProviderSpec{
-				Value: &runtime.RawExtension{
-					Raw: []byte(fmt.Sprintf(`{
-"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
-"kind": "AzureMachineProviderSpec",
-"osDisk": {
-"diskSizeGB": %v
-},
-"image": {
-"publisher": "%v",
-"offer": "%v"
-},
-"vmSize": "%v"
-}`, diskSize, imagePublisher, offer, vmSize))},
-			},
-		},
-	}
-}
-
-func workerMachine(name, diskSize, imagePublisher, vmSize, offer string) *machinev1beta1.Machine {
-	if diskSize == "" {
-		diskSize = "128"
-	}
-	if imagePublisher == "" {
-		imagePublisher = "azureopenshift"
-	}
-	if vmSize == "" {
-		vmSize = "Standard_D4s_v3"
-	}
-	if offer == "" {
-		offer = "aro4"
-	}
-
-	return &machinev1beta1.Machine{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: machineSetsNamespace,
-			Labels:    map[string]string{"machine.openshift.io/cluster-api-machine-role": "worker"},
+			Labels:    labels,
 		},
 		Spec: machinev1beta1.MachineSpec{
 			ProviderSpec: machinev1beta1.ProviderSpec{
