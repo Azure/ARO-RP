@@ -166,7 +166,7 @@ func TestBannerReconcile(t *testing.T) {
 					t.Error(err)
 				}
 				if !strings.EqualFold(resultBanner.Spec.Text, tt.expectedMessage) {
-					t.Errorf("Expected banner with text '%s', got '%s'", tt.expectedMessage, resultBanner.Spec.Text)
+					t.Error(resultBanner.Spec.Text)
 				}
 			} else {
 				if err != nil && !kerrors.IsNotFound(err) {
