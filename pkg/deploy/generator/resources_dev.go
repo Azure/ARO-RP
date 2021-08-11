@@ -318,11 +318,11 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install azure-cli docker jq gcc rh-git29 rh-python36 tmpwatch
-
-GO_VERSION=1.14.9
-curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz | tar -C /usr/local -xz
-ln -s /usr/local/go/bin/* /usr/local/bin
+GO_VERSION=1.14
+yum-config-manager --enable rhel-7-server-devtools-rpms 
+yum-config-manager --enable rhui-rhel-7-server-optional-rpms 
+yum-config-manager --enable rhui-rhel7-server-rpms
+yum -y install azure-cli docker jq gcc rh-git29 rh-python36 tmpwatch go-toolset-$GO_VERSION
 
 VSTS_AGENT_VERSION=2.188.3
 mkdir /home/cloud-user/agent
@@ -336,8 +336,8 @@ sudo -u cloud-user ./config.sh --unattended --url https://dev.azure.com/msazure 
 popd
 
 # merge in /opt/rh/rh-*/enable
-cat >/home/cloud-user/agent/.path <<'EOF'
-/opt/rh/rh-python36/root/usr/bin:/opt/rh/rh-git29/root/usr/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/cloud-user/.local/bin:/home/cloud-user/bin
+cat >/home/cloud-user/agent/.path <<EOF
+/opt/rh/go-toolset-$GO_VERSION/root/usr/bin:opt/rh/rh-python36/root/usr/bin:/opt/rh/rh-git29/root/usr/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/cloud-user/.local/bin:/home/cloud-user/bin
 EOF
 
 cat >/home/cloud-user/agent/.env <<'EOF'
@@ -346,6 +346,7 @@ MANPATH=/opt/rh/rh-python36/root/usr/share/man:/opt/rh/rh-git29/root/usr/share/m
 PERL5LIB=/opt/rh/rh-git29/root/usr/share/perl5/vendor_perl
 PKG_CONFIG_PATH=/opt/rh/rh-python36/root/usr/lib64/pkgconfig
 XDG_DATA_DIRS=/opt/rh/rh-python36/root/usr/share:/usr/local/share:/usr/share
+GOLANG_FIPS=1
 EOF
 
 sed -i -e 's/^OPTIONS='\''/OPTIONS='\''-G cloud-user /' /etc/sysconfig/docker
