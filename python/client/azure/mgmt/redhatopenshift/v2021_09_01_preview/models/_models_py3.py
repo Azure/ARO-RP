@@ -527,6 +527,9 @@ class OpenShiftClusterCredentials(Model):
 class OpenShiftClusterUpdate(Model):
     """OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 
+    Variables are only populated by the server, and will be ignored when
+    sending a request.
+
     :param tags: The resource tags.
     :type tags: dict[str, str]
     :param provisioning_state: The cluster provisioning state. Possible values
@@ -558,7 +561,14 @@ class OpenShiftClusterUpdate(Model):
     :param ingress_profiles: The cluster ingress profiles.
     :type ingress_profiles:
      list[~azure.mgmt.redhatopenshift.v2021_09_01_preview.models.IngressProfile]
+    :ivar system_data: The system meta data relating to this resource.
+    :vartype system_data:
+     ~azure.mgmt.redhatopenshift.v2021_09_01_preview.models.SystemData
     """
+
+    _validation = {
+        'system_data': {'readonly': True},
+    }
 
     _attribute_map = {
         'tags': {'key': 'tags', 'type': '{str}'},
@@ -571,6 +581,7 @@ class OpenShiftClusterUpdate(Model):
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
+        'system_data': {'key': 'systemData', 'type': 'SystemData'},
     }
 
     def __init__(self, *, tags=None, provisioning_state=None, cluster_profile=None, console_profile=None, service_principal_profile=None, network_profile=None, master_profile=None, worker_profiles=None, apiserver_profile=None, ingress_profiles=None, **kwargs) -> None:
@@ -585,6 +596,7 @@ class OpenShiftClusterUpdate(Model):
         self.worker_profiles = worker_profiles
         self.apiserver_profile = apiserver_profile
         self.ingress_profiles = ingress_profiles
+        self.system_data = None
 
 
 class Operation(Model):
