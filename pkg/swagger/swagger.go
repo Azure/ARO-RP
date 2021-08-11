@@ -68,7 +68,7 @@ func Run(api, outputDir string) error {
 				Tags:        []string{"OpenShiftClusters"},
 				Summary:     "Lists admin kubeconfig of an OpenShift cluster with the specified subscription, resource group and resource name.",
 				Description: "The operation returns the admin kubeconfig.",
-				OperationID: "OpenShiftClusters_ListAdminKubeconfig",
+				OperationID: "OpenShiftClusters_ListAdminCredentials",
 				Parameters:  g.populateParameters(3, "OpenShiftCluster", "OpenShift cluster"),
 				Responses:   g.populateResponses("OpenShiftClusterAdminKubeconfig", false, http.StatusOK),
 			},
@@ -191,17 +191,15 @@ func (s *Swagger) defineSystemData(resources []string, commonVersion string) {
 		// but should not be generated into API or swagger as API/SDK type
 		delete(s.Definitions, "SystemData")
 		delete(s.Definitions, "CreatedByType")
-		if resource == resourceName {
-			s.Definitions[resource].Properties = append(s.Definitions[resource].Properties,
-				NameSchema{
-					Name: "systemData",
-					Schema: &Schema{
-						ReadOnly:    true,
-						Description: "The system meta data relating to this resource.",
-						Ref:         "../../../../../common-types/resource-management/" + commonVersion + "/types.json#/definitions/systemData",
-					},
-				})
-		}
+		s.Definitions[resource].Properties = append(s.Definitions[resource].Properties,
+			NameSchema{
+				Name: "systemData",
+				Schema: &Schema{
+					ReadOnly:    true,
+					Description: "The system meta data relating to this resource.",
+					Ref:         "../../../../../common-types/resource-management/" + commonVersion + "/types.json#/definitions/systemData",
+				},
+			})
 	}
 }
 
