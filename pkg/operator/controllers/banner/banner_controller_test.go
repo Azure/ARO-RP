@@ -163,7 +163,7 @@ func TestBannerReconcile(t *testing.T) {
 			resultBanner, err := r.consolecli.ConsoleV1().ConsoleNotifications().Get(context.Background(), BannerName, metav1.GetOptions{})
 			if tt.expectBanner {
 				if err != nil {
-					t.Errorf("Got Error when checking ConsoleNotification: %s", err)
+					t.Error(err)
 				}
 				if !strings.EqualFold(resultBanner.Spec.Text, tt.expectedMessage) {
 					t.Errorf("Expected banner with text '%s', got '%s'", tt.expectedMessage, resultBanner.Spec.Text)
