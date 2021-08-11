@@ -20,12 +20,14 @@ import (
 	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
 )
 
 func init() {
 	utilruntime.Must(extensionsv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(securityv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(arov1alpha1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(aropreviewv1alpha1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(azureproviderv1beta1.SchemeBuilder.AddToScheme(scheme.Scheme))
 	utilruntime.Must(mcv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(configv1.AddToScheme(scheme.Scheme))
