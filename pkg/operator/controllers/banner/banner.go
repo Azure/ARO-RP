@@ -26,15 +26,16 @@ func (r *Reconciler) reconcileBanner(ctx context.Context, instance *arov1alpha1.
 	case arov1alpha1.BannerContactSupport:
 		banner := r.newBanner(TextContactSupport, instance.Spec.ResourceID)
 		_, err := r.consolecli.ConsoleV1().ConsoleNotifications().Get(ctx, BannerName, metav1.GetOptions{})
+		if err != nil && !kerrors.IsNotFound(err) {
+			return err
+		}
+
+		// if the object doesn't exist Create
 		if err != nil && kerrors.IsNotFound(err) {
-			// if the object doesn't exist Create
 			_, err = r.consolecli.ConsoleV1().ConsoleNotifications().Create(ctx, banner, metav1.CreateOptions{})
 			return err
 		}
-		if err != nil {
-			// if there's a different error - surface it
-			return err
-		}
+
 		// if there's no errors, object found then update
 		_, err = r.consolecli.ConsoleV1().ConsoleNotifications().Update(ctx, banner, metav1.UpdateOptions{})
 		return err
