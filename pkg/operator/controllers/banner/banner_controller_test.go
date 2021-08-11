@@ -35,7 +35,7 @@ func TestBannerReconcile(t *testing.T) {
 			name:          "Wrong banner setting",
 			bannerSetting: "WRONG",
 			expectBanner:  false,
-			expectedErr:   fmt.Errorf("wrong banner setting '%s'", "WRONG"),
+			expectedErr:   fmt.Errorf("wrong banner setting 'WRONG'"),
 			featureFlag:   true,
 		},
 		{
@@ -81,13 +81,13 @@ func TestBannerReconcile(t *testing.T) {
 			featureFlag:     false,
 		},
 		{
-			name:          "No banner from empty",
+			name:          "No banner from 0 ConsoleNotifications",
 			bannerSetting: "",
 			expectBanner:  false,
 			featureFlag:   true,
 		},
 		{
-			name:            "Support banner from empty",
+			name:            "Support banner from 0 ConsoleNotifications",
 			bannerSetting:   "ContactSupport",
 			expectBanner:    true,
 			expectedMessage: "We have noticed an issue regarding your cluster requiring an action on your part. Please contact support with your cluster resource ID: FAKE_RESOURCE_ID",
@@ -111,7 +111,7 @@ func TestBannerReconcile(t *testing.T) {
 			featureFlag:   true,
 		},
 		{
-			name: "Support banner from existing CN",
+			name: "Support banner from existing ConsoleNotification",
 			oldCN: consolev1.ConsoleNotification{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: BannerName,
