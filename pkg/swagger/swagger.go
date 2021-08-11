@@ -12,6 +12,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
+var resourceName = "OpenShiftCluster"
+
 func Run(api, outputDir string) error {
 	g, err := New(api)
 	if err != nil {
@@ -66,7 +68,7 @@ func Run(api, outputDir string) error {
 				Tags:        []string{"OpenShiftClusters"},
 				Summary:     "Lists admin kubeconfig of an OpenShift cluster with the specified subscription, resource group and resource name.",
 				Description: "The operation returns the admin kubeconfig.",
-				OperationID: "OpenShiftClusters_ListAdminKubeconfig",
+				OperationID: "OpenShiftClusters_ListAdminCredentials",
 				Parameters:  g.populateParameters(3, "OpenShiftCluster", "OpenShift cluster"),
 				Responses:   g.populateResponses("OpenShiftClusterAdminKubeconfig", false, http.StatusOK),
 			},
@@ -104,7 +106,7 @@ func Run(api, outputDir string) error {
 		return err
 	}
 
-	for _, azureResource := range []string{"OpenShiftCluster"} {
+	for _, azureResource := range []string{resourceName} {
 		def, err := deepCopy(s.Definitions[azureResource])
 		if err != nil {
 			return err
@@ -197,8 +199,7 @@ func (s *Swagger) defineSystemData(resources []string, commonVersion string) {
 					Description: "The system meta data relating to this resource.",
 					Ref:         "../../../../../common-types/resource-management/" + commonVersion + "/types.json#/definitions/systemData",
 				},
-			},
-		)
+			})
 	}
 }
 

@@ -168,6 +168,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// is not provided in the header must be preserved
 	f.systemDataEnricher(doc, systemData)
 
+	// SetDefaults will set defaults on cluster document
+	api.SetDefaults(doc)
+
 	if isCreate {
 		// on create, make the cluster resourcegroup ID lower case to work
 		// around LB/PLS bug

@@ -356,16 +356,18 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				SDNProvider: api.SDNProviderOVNKubernetes,
 			},
 			MasterProfile: api.MasterProfile{
-				VMSize:   api.VMSizeStandardD8sV3,
-				SubnetID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
+				VMSize:           api.VMSizeStandardD8sV3,
+				EncryptionAtHost: api.EncryptionAtHostDisabled,
+				SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
 			},
 			WorkerProfiles: []api.WorkerProfile{
 				{
-					Name:       "worker",
-					VMSize:     api.VMSizeStandardD4sV3,
-					DiskSizeGB: 128,
-					SubnetID:   fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
-					Count:      3,
+					Name:             "worker",
+					VMSize:           api.VMSizeStandardD4sV3,
+					EncryptionAtHost: api.EncryptionAtHostDisabled,
+					DiskSizeGB:       128,
+					SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
+					Count:            3,
 				},
 			},
 			APIServerProfile: api.APIServerProfile{

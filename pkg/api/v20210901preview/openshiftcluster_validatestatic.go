@@ -233,6 +233,11 @@ func (sv *openShiftClusterStaticValidator) validateMasterProfile(path string, mp
 	if sr.SubscriptionID != sv.r.SubscriptionID {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", "The provided master VM subnet '%s' is invalid: must be in same subscription as cluster.", mp.SubnetID)
 	}
+	switch mp.EncryptionAtHost {
+	case EncryptionAtHostDisabled, EncryptionAtHostEnabled:
+	default:
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".encryptionAtHost", "The provided value '%s' is invalid.", mp.EncryptionAtHost)
+	}
 	if mp.DiskEncryptionSetID != "" {
 		if !validate.RxDiskEncryptionSetID.MatchString(mp.DiskEncryptionSetID) {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".diskEncryptionSetId", "The provided master disk encryption set '%s' is invalid.", mp.DiskEncryptionSetID)
@@ -261,6 +266,11 @@ func (sv *openShiftClusterStaticValidator) validateWorkerProfile(path string, wp
 	}
 	if !validate.RxSubnetID.MatchString(wp.SubnetID) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", "The provided worker VM subnet '%s' is invalid.", wp.SubnetID)
+	}
+	switch mp.EncryptionAtHost {
+	case EncryptionAtHostDisabled, EncryptionAtHostEnabled:
+	default:
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".encryptionAtHost", "The provided value '%s' is invalid.", mp.EncryptionAtHost)
 	}
 	workerVnetID, _, err := subnet.Split(wp.SubnetID)
 	if err != nil {

@@ -81,16 +81,18 @@ func validOpenShiftCluster() *OpenShiftCluster {
 				SDNProvider: SDNProviderOVNKubernetes,
 			},
 			MasterProfile: MasterProfile{
-				VMSize:   VMSizeStandardD8sV3,
-				SubnetID: fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID),
+				VMSize:           VMSizeStandardD8sV3,
+				EncryptionAtHost: EncryptionAtHostDisabled,
+				SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID),
 			},
 			WorkerProfiles: []WorkerProfile{
 				{
-					Name:       "worker",
-					VMSize:     VMSizeStandardD4sV3,
-					DiskSizeGB: 128,
-					SubnetID:   fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID),
-					Count:      3,
+					Name:             "worker",
+					VMSize:           VMSizeStandardD4sV3,
+					EncryptionAtHost: EncryptionAtHostDisabled,
+					DiskSizeGB:       128,
+					SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID),
+					Count:            3,
 				},
 			},
 			APIServerProfile: APIServerProfile{
@@ -527,6 +529,20 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 				oc.Properties.MasterProfile.DiskEncryptionSetID = "/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1"
 			},
 			wantErr: "400: InvalidParameter: properties.masterProfile.diskEncryptionSetId: The provided master disk encryption set '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1' is invalid: must be in same subscription as cluster.",
+		},
+		{
+			name: "encryption at host invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MasterProfile.EncryptionAtHost = "Banana"
+			},
+			wantErr: "400: InvalidParameter: properties.masterProfile.encryptionAtHost: The provided value 'Banana' is invalid.",
+		},
+		{
+			name: "encryption at host empty",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MasterProfile.EncryptionAtHost = ""
+			},
+			wantErr: "400: InvalidParameter: properties.masterProfile.encryptionAtHost: The provided value '' is invalid.",
 		},
 	}
 
