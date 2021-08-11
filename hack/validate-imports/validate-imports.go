@@ -114,6 +114,8 @@ func acceptableNames(path string) []string {
 		return []string{"dbmetrics"}
 	case "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1":
 		return []string{"arov1alpha1"}
+	case "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1":
+		return []string{"aropreviewv1alpha1"}
 	case "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned":
 		return []string{"aroclient"}
 	case "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake":
