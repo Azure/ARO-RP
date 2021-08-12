@@ -26,7 +26,7 @@ func validateDotImport(path string) error {
 }
 
 func validateUnderscoreImport(path string) error {
-	if regexp.MustCompile(`^github.com/Azure/ARO-RP/pkg/api/(admin|v[^/]+)$`).MatchString(path) {
+	if regexp.MustCompile(`^github\.com/Azure/ARO-RP/pkg/api/(admin|v[^/]+)$`).MatchString(path) {
 		return nil
 	}
 
@@ -42,67 +42,67 @@ func validateUnderscoreImport(path string) error {
 // acceptableNames returns a list of acceptable names for an import; empty
 // string = no import override; nil list = don't care
 func acceptableNames(path string) []string {
-	m := regexp.MustCompile(`^github.com/Azure/ARO-RP/pkg/api/(v[^/]*[0-9])$`).FindStringSubmatch(path)
+	m := regexp.MustCompile(`^github\.com/Azure/ARO-RP/pkg/api/(v[^/]*[0-9])$`).FindStringSubmatch(path)
 	if m != nil {
 		return []string{m[1]}
 	}
 
-	m = regexp.MustCompile(`^github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/([^/]+)/redhatopenshift$`).FindStringSubmatch(path)
+	m = regexp.MustCompile(`^github\.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/([^/]+)/redhatopenshift$`).FindStringSubmatch(path)
 	if m != nil {
 		return []string{"mgmtredhatopenshift" + strings.ReplaceAll(m[1], "-", "")}
 	}
 
-	m = regexp.MustCompile(`^github.com/Azure/ARO-RP/pkg/(dbtoken|deploy|mirror|monitor|operator|portal)$`).FindStringSubmatch(path)
+	m = regexp.MustCompile(`^github\.com/Azure/ARO-RP/pkg/(dbtoken|deploy|mirror|monitor|operator|portal)$`).FindStringSubmatch(path)
 	if m != nil {
 		return []string{"", "pkg" + m[1]}
 	}
 
-	m = regexp.MustCompile(`^github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/([^/]+)/redhatopenshift$`).FindStringSubmatch(path)
+	m = regexp.MustCompile(`^github\.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/([^/]+)/redhatopenshift$`).FindStringSubmatch(path)
 	if m != nil {
 		return []string{"redhatopenshift" + strings.ReplaceAll(m[1], "-", "")}
 	}
 
-	m = regexp.MustCompile(`^github.com/Azure/ARO-RP/pkg/util/(log|pem|tls)$`).FindStringSubmatch(path)
+	m = regexp.MustCompile(`^github\.com/Azure/ARO-RP/pkg/util/(log|pem|tls)$`).FindStringSubmatch(path)
 	if m != nil {
 		return []string{"util" + m[1]}
 	}
 
-	m = regexp.MustCompile(`^github.com/Azure/ARO-RP/pkg/util/mocks/(?:.+/)?([^/]+)$`).FindStringSubmatch(path)
+	m = regexp.MustCompile(`^github\.com/Azure/ARO-RP/pkg/util/mocks/(?:.+/)?([^/]+)$`).FindStringSubmatch(path)
 	if m != nil {
 		return []string{"mock_" + m[1]}
 	}
 
-	m = regexp.MustCompile(`^github.com/Azure/azure-sdk-for-go/services/(?:preview/)?(?:[^/]+)/mgmt/(?:[^/]+)/([^/]+)$`).FindStringSubmatch(path)
+	m = regexp.MustCompile(`^github\.com/Azure/azure-sdk-for-go/services/(?:preview/)?(?:[^/]+)/mgmt/(?:[^/]+)/([^/]+)$`).FindStringSubmatch(path)
 	if m != nil {
 		return []string{"mgmt" + m[1]}
 	}
 
-	m = regexp.MustCompile(`^github.com/openshift/api/([^/]+)/(v[^/]+)$`).FindStringSubmatch(path)
+	m = regexp.MustCompile(`^github\.com/openshift/api/([^/]+)/(v[^/]+)$`).FindStringSubmatch(path)
 	if m != nil {
 		return []string{m[1] + m[2]}
 	}
 
-	m = regexp.MustCompile(`^github.com/openshift/client-go/([^/]+)/clientset/versioned$`).FindStringSubmatch(path)
+	m = regexp.MustCompile(`^github\.com/openshift/client-go/([^/]+)/clientset/versioned$`).FindStringSubmatch(path)
 	if m != nil {
 		return []string{m[1] + "client"}
 	}
 
-	m = regexp.MustCompile(`^github.com/openshift/client-go/([^/]+)/clientset/versioned/fake$`).FindStringSubmatch(path)
+	m = regexp.MustCompile(`^github\.com/openshift/client-go/([^/]+)/clientset/versioned/fake$`).FindStringSubmatch(path)
 	if m != nil {
 		return []string{m[1] + "fake"}
 	}
 
-	m = regexp.MustCompile(`^k8s.io/api/([^/]+)/(v[^/]+)$`).FindStringSubmatch(path)
+	m = regexp.MustCompile(`^k8s\.io/api/([^/]+)/(v[^/]+)$`).FindStringSubmatch(path)
 	if m != nil {
 		return []string{m[1] + m[2]}
 	}
 
-	m = regexp.MustCompile(`^k8s.io/kubernetes/pkg/apis/[^/]+/v[^/]+$`).FindStringSubmatch(path)
+	m = regexp.MustCompile(`^k8s\.io/kubernetes/pkg/apis/[^/]+/v[^/]+$`).FindStringSubmatch(path)
 	if m != nil {
 		return nil
 	}
 
-	m = regexp.MustCompile(`^k8s.io/client-go/kubernetes/typed/([^/]+)/(v[^/]+)$`).FindStringSubmatch(path)
+	m = regexp.MustCompile(`^k8s\.io/client-go/kubernetes/typed/([^/]+)/(v[^/]+)$`).FindStringSubmatch(path)
 	if m != nil {
 		return []string{m[1] + m[2] + "client"}
 	}
