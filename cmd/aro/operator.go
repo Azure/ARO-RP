@@ -35,6 +35,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/node"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/previewfeature"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/rbac"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/routefix"
@@ -197,6 +198,9 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		if err = (imageconfig.NewReconciler(
 			arocli, configcli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller ImageConfig: %v", err)
+		if err = (previewfeature.NewReconciler(
+			log.WithField("controller", controllers.PreviewFeatureControllerName),
+			arocli, kubernetescli)).SetupWithManager(mgr); err != nil {
 		}
 		if err = (storageaccounts.NewReconciler(
 			log.WithField("controller", controllers.StorageAccountsControllerName),
