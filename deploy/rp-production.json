@@ -311,7 +311,8 @@
                                 "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"
                             }
                         },
-                        "name": "dbtoken-frontend"
+                        "name": "dbtoken-frontend",
+                        "zones": "[pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3)]"
                     }
                 ],
                 "backendAddressPools": [
