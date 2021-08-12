@@ -62,7 +62,7 @@ func MdmImage(acrDomain string) string {
 		return os.Getenv("GENEVA_MDM_IMAGE_OVERRIDE")
 	}
 
-	return acrDomain + "/genevamdm:master_20210704.1"
+	return acrDomain + "/genevamdm:master_20210808.1"
 }
 
 // MdsdImage contains the location of the MDSD container image
@@ -72,5 +72,5 @@ func MdsdImage(acrDomain string) string {
 		return os.Getenv("GENEVA_MDSD_IMAGE_OVERRIDE")
 	}
 
-	return acrDomain + "/genevamdsd:master_20210713.2"
+	return acrDomain + "/genevamdsd:master_20210808.1"
 }
