@@ -7,6 +7,7 @@ const (
 	AlertwebhookControllerName             = "Alertwebhook"
 	AzureSubnetsControllerName             = "AzureSubnets"
 	BannerControllerName                   = "Banner"
+	PreviewFeatureControllerName           = "PreviewFeature"
 	ClusterOperatorAROName                 = "ClusterOperatorARO"
 	GenevaLoggingControllerName            = "GenevaLogging"
 	PullSecretControllerName               = "PullSecret"
