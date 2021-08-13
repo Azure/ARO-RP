@@ -132,7 +132,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     sp_obj_ids = [client_sp.object_id, rp_client_sp.object_id]
     ensure_resource_permissions(cmd.cli_ctx, oc, True, sp_obj_ids)
 
-    return sdk_no_wait(no_wait, client.create_or_update,
+    return sdk_no_wait(no_wait, client.begin_create_or_update,
                        resource_group_name=resource_group_name,
                        resource_name=resource_name,
                        parameters=oc)

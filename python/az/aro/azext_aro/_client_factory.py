@@ -13,8 +13,8 @@ def cf_aro(cli_ctx, *_):
         cli_ctx, AzureRedHatOpenShiftClient).open_shift_clusters
 
     if rp_mode_development():
-        client.config.base_url = 'https://localhost:8443/'
-        client.config.connection.verify = False
+        client._config.base_url = 'https://localhost:8443/'  # pylint: disable=W0212
+        client._config.connection_verify = False             # pylint: disable=W0212
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     return client
