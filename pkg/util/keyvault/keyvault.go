@@ -32,11 +32,14 @@ const (
 
 type Manager interface {
 	CreateSignedCertificate(context.Context, string, string, string, Eku) error
+	DeleteKey(context.Context, string) error
 	EnsureCertificateDeleted(context.Context, string) error
 	GetBase64Secret(context.Context, string) ([]byte, error)
 	GetCertificateSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
 	GetSecret(context.Context, string) (azkeyvault.SecretBundle, error)
 	GetSecrets(context.Context) ([]azkeyvault.SecretItem, error)
+	GetKey(ctx context.Context, keyName string) (result azkeyvault.KeyBundle, err error)
+	RecoverDeletedKey(context.Context, string) error
 	SetCertificateIssuer(ctx context.Context, issuerName string, parameter azkeyvault.CertificateIssuerSetParameters) (result azkeyvault.IssuerBundle, err error)
 	SetSecret(context.Context, string, azkeyvault.SecretSetParameters) error
 	WaitForCertificateOperation(context.Context, string) error
@@ -74,6 +77,11 @@ func getShortCommonName(commonName string) string {
 		shortCommonName = "reserved." + baseDomain
 	}
 	return shortCommonName
+}
+
+func (m *manager) DeleteKey(ctx context.Context, name string) error {
+	_, err := m.kv.DeleteKey(ctx, m.keyvaultURI, name)
+	return err
 }
 
 func (m *manager) CreateSignedCertificate(ctx context.Context, issuer string, certificateName, commonName string, eku Eku) error {
@@ -178,6 +186,15 @@ func (m *manager) GetSecret(ctx context.Context, secretName string) (azkeyvault.
 
 func (m *manager) GetSecrets(ctx context.Context) ([]azkeyvault.SecretItem, error) {
 	return m.kv.GetSecrets(ctx, m.keyvaultURI, nil)
+}
+
+func (m *manager) RecoverDeletedKey(ctx context.Context, keyName string) error {
+	_, err := m.kv.RecoverDeletedKey(ctx, m.keyvaultURI, keyName)
+	return err
+}
+
+func (m *manager) GetKey(ctx context.Context, keyName string) (azkeyvault.KeyBundle, error) {
+	return m.kv.GetKey(ctx, m.keyvaultURI, keyName, "")
 }
 
 func (m *manager) SetCertificateIssuer(ctx context.Context, issuerName string, parameter azkeyvault.CertificateIssuerSetParameters) (azkeyvault.IssuerBundle, error) {

@@ -33,9 +33,11 @@ func (g *generator) devSharedTemplate() *arm.Template {
 		g.devVnet(),
 		g.devVPN(),
 		g.devCIPool(),
+		g.devDiskEncryptionKeyvault(),
 		g.devProxyVMSS())
 
 	for _, param := range []string{
+		"azureServicePrincipalId",
 		"ciAzpToken",
 		"ciCapacity",
 		"ciPoolName",

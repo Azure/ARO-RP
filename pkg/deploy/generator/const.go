@@ -20,7 +20,7 @@ const (
 	FileGatewayProduction                    = "gateway-production.json"
 	FileGatewayProductionParameters          = "gateway-production-parameters.json"
 
-	FileClusterPredeploy       = "cluster-predeploy.json"
+	FileClusterPredeploy       = "cluster-development-predeploy.json"
 	fileEnvDevelopment         = "env-development.json"
 	fileDatabaseDevelopment    = "databases-development.json"
 	fileRPDevelopmentPredeploy = "rp-development-predeploy.json"

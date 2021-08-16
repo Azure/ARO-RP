@@ -45,6 +45,7 @@ type clientSet struct {
 	Resources       features.ResourcesClient
 	ActivityLogs    insights.ActivityLogsClient
 	VirtualNetworks network.VirtualNetworksClient
+	Disks           compute.DisksClient
 
 	RestConfig    *rest.Config
 	Kubernetes    kubernetes.Interface
@@ -133,6 +134,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		Resources:       features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		ActivityLogs:    insights.NewActivityLogsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		VirtualNetworks: network.NewVirtualNetworksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Disks:           compute.NewDisksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		RestConfig:    restconfig,
 		Kubernetes:    cli,

@@ -65,6 +65,21 @@ func (mr *MockBaseClientMockRecorder) DeleteCertificate(arg0, arg1, arg2 interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCertificate", reflect.TypeOf((*MockBaseClient)(nil).DeleteCertificate), arg0, arg1, arg2)
 }
 
+// DeleteKey mocks base method.
+func (m *MockBaseClient) DeleteKey(arg0 context.Context, arg1, arg2 string) (keyvault.DeletedKeyBundle, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteKey", arg0, arg1, arg2)
+	ret0, _ := ret[0].(keyvault.DeletedKeyBundle)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteKey indicates an expected call of DeleteKey.
+func (mr *MockBaseClientMockRecorder) DeleteKey(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteKey", reflect.TypeOf((*MockBaseClient)(nil).DeleteKey), arg0, arg1, arg2)
+}
+
 // GetCertificateOperation mocks base method.
 func (m *MockBaseClient) GetCertificateOperation(arg0 context.Context, arg1, arg2 string) (keyvault.CertificateOperation, error) {
 	m.ctrl.T.Helper()
@@ -95,6 +110,21 @@ func (mr *MockBaseClientMockRecorder) GetCertificates(arg0, arg1, arg2, arg3 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCertificates", reflect.TypeOf((*MockBaseClient)(nil).GetCertificates), arg0, arg1, arg2, arg3)
 }
 
+// GetKey mocks base method.
+func (m *MockBaseClient) GetKey(arg0 context.Context, arg1, arg2, arg3 string) (keyvault.KeyBundle, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetKey", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(keyvault.KeyBundle)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetKey indicates an expected call of GetKey.
+func (mr *MockBaseClientMockRecorder) GetKey(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKey", reflect.TypeOf((*MockBaseClient)(nil).GetKey), arg0, arg1, arg2, arg3)
+}
+
 // GetSecret mocks base method.
 func (m *MockBaseClient) GetSecret(arg0 context.Context, arg1, arg2, arg3 string) (keyvault.SecretBundle, error) {
 	m.ctrl.T.Helper()
@@ -123,6 +153,21 @@ func (m *MockBaseClient) GetSecrets(arg0 context.Context, arg1 string, arg2 *int
 func (mr *MockBaseClientMockRecorder) GetSecrets(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecrets", reflect.TypeOf((*MockBaseClient)(nil).GetSecrets), arg0, arg1, arg2)
+}
+
+// RecoverDeletedKey mocks base method.
+func (m *MockBaseClient) RecoverDeletedKey(arg0 context.Context, arg1, arg2 string) (keyvault.KeyBundle, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecoverDeletedKey", arg0, arg1, arg2)
+	ret0, _ := ret[0].(keyvault.KeyBundle)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RecoverDeletedKey indicates an expected call of RecoverDeletedKey.
+func (mr *MockBaseClientMockRecorder) RecoverDeletedKey(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecoverDeletedKey", reflect.TypeOf((*MockBaseClient)(nil).RecoverDeletedKey), arg0, arg1, arg2)
 }
 
 // SetCertificateIssuer mocks base method.

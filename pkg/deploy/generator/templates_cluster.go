@@ -19,6 +19,11 @@ func (g *generator) clusterPredeploy() *arm.Template {
 		"vnetAddressPrefix",
 		"masterAddressPrefix",
 		"workerAddressPrefix",
+		"diskEncryptionSetName",
+		"shouldCreateKeyVault",
+		"shouldCreateKey",
+		"rpServicePrincipalId",
+		"kvName",
 	}
 
 	for _, param := range params {
@@ -39,6 +44,10 @@ func (g *generator) clusterPredeploy() *arm.Template {
 		g.clusterRouteTable(),
 		g.clusterMasterSubnet(),
 		g.clusterWorkerSubnet(),
+		g.diskEncryptionKeyVault(),
+		g.diskEncryptionKey(),
+		g.diskEncryptionSet(),
+		g.diskEncryptionKeyVaultAccessPolicy(),
 	)
 
 	return t

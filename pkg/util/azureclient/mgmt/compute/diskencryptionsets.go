@@ -15,6 +15,8 @@ import (
 // DiskEncryptionSetsClient is a minimal interface for azure DiskEncryptionSetsClient
 type DiskEncryptionSetsClient interface {
 	Get(ctx context.Context, resourceGroupName string, diskEncryptionSetName string) (result mgmtcompute.DiskEncryptionSet, err error)
+
+	DiskEncryptionSetsClientAddons
 }
 
 type diskEncryptionSetsClient struct {

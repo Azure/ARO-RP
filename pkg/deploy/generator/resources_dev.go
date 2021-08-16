@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 
@@ -466,4 +467,21 @@ chmod +x /etc/cron.hourly/tmpwatch
 			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
 		},
 	}
+}
+
+// shared keyvault for keys used for disk encryption sets when creating clusters locally
+func (g *generator) devDiskEncryptionKeyvault() *arm.Resource {
+	vaultResource := g.keyVault("[concat(resourceGroup().name, '-diskEncKV')]", &[]mgmtkeyvault.AccessPolicyEntry{
+		{
+			ObjectID: to.StringPtr("[parameters('azureServicePrincipalId')]"),
+			Permissions: &mgmtkeyvault.Permissions{
+				Keys: &[]mgmtkeyvault.KeyPermissions{mgmtkeyvault.KeyPermissionsCreate, mgmtkeyvault.KeyPermissionsGet, mgmtkeyvault.KeyPermissionsDelete, mgmtkeyvault.KeyPermissionsRecover},
+			},
+			// is later replaced by "[subscription().tenantId]"
+			TenantID: &tenantUUIDHack,
+		},
+	})
+
+	vaultResource.APIVersion = azureclient.APIVersion("Microsoft.KeyVault")
+	return vaultResource
 }
