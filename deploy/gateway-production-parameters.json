@@ -32,6 +32,9 @@
         "gatewayVmssCapacity": {
             "value": 3
         },
+        "keyvaultDNSSuffix": {
+            "value": ""
+        },
         "keyvaultPrefix": {
             "value": ""
         },
@@ -42,6 +45,15 @@
             "value": ""
         },
         "rpImage": {
+            "value": ""
+        },
+        "rpMdmAccount": {
+            "value": ""
+        },
+        "rpMdsdAccount": {
+            "value": ""
+        },
+        "rpMdsdNamespace": {
             "value": ""
         },
         "rpResourceGroupName": {

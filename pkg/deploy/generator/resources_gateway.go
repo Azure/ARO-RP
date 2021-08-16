@@ -203,8 +203,12 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 		"gatewayMdsdConfigVersion",
 		"gatewayDomains",
 		"gatewayFeatures",
+		"keyvaultDNSSuffix",
 		"keyvaultPrefix",
 		"rpImage",
+		"rpMdmAccount",
+		"rpMdsdAccount",
+		"rpMdsdNamespace",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
@@ -369,7 +373,7 @@ ACR_RESOURCE_ID='$ACRRESOURCEID'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 AZURE_DBTOKEN_CLIENT_ID='$DBTOKENCLIENTID'
 DBTOKEN_URL='$DBTOKENURL'
-MDM_ACCOUNT=AzureRedHatOpenShiftRP
+MDM_ACCOUNT="$RPMDMACCOUNT"
 MDM_NAMESPACE=Gateway
 GATEWAY_DOMAINS='$GATEWAYDOMAINS'
 GATEWAY_FEATURES='$GATEWAYFEATURES'
@@ -471,7 +475,7 @@ fi
 SECRET_NAME="gwy-\${COMPONENT}"
 NEW_CERT_FILE="\$TEMP_DIR/\$COMPONENT.pem"
 for attempt in {1..5}; do
-  az keyvault secret download --file \$NEW_CERT_FILE --id "https://$KEYVAULTPREFIX-gwy.vault.azure.net/secrets/\$SECRET_NAME" && break
+  az keyvault secret download --file \$NEW_CERT_FILE --id "https://$KEYVAULTPREFIX-gwy.$KEYVAULTDNSSUFFIX/secrets/\$SECRET_NAME" && break
   if [[ \$attempt -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
@@ -508,11 +512,11 @@ MDSD_ROLE_PREFIX=/var/run/mdsd/default
 MDSD_OPTIONS="-A -d -r \$MDSD_ROLE_PREFIX"
 
 export MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
-export MONITORING_GCS_ACCOUNT=ARORPLogs
+export MONITORING_GCS_ACCOUNT='$RPMDSDACCOUNT'
 export MONITORING_GCS_REGION='$LOCATION'
 export MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault
 export MONITORING_GCS_AUTH_ID='$MDSDCERTIFICATESAN'
-export MONITORING_GCS_NAMESPACE=ARORPLogs
+export MONITORING_GCS_NAMESPACE='$RPMDSDNAMESPACE'
 export MONITORING_CONFIG_VERSION='$GATEWAYMDSDCONFIGVERSION'
 export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
 
