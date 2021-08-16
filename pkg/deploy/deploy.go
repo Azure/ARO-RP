@@ -41,7 +41,6 @@ type deployer struct {
 	globalrecordsets       dns.RecordSetsClient
 	globalaccounts         storage.AccountsClient
 	deployments            features.DeploymentsClient
-	features               features.Client
 	groups                 features.ResourceGroupsClient
 	loadbalancers          network.LoadBalancersClient
 	userassignedidentities msi.UserAssignedIdentitiesClient
@@ -87,7 +86,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		globalrecordsets:       dns.NewRecordSetsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
 		globalaccounts:         storage.NewAccountsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
 		deployments:            features.NewDeploymentsClient(_env.Environment(), config.SubscriptionID, authorizer),
-		features:               features.NewClient(_env.Environment(), config.SubscriptionID, authorizer),
 		groups:                 features.NewResourceGroupsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		loadbalancers:          network.NewLoadBalancersClient(_env.Environment(), config.SubscriptionID, authorizer),
 		userassignedidentities: msi.NewUserAssignedIdentitiesClient(_env.Environment(), config.SubscriptionID, authorizer),

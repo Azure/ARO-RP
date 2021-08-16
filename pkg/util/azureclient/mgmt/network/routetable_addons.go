@@ -13,7 +13,7 @@ type RouteTablesClientAddons interface {
 }
 
 func (c *routeTablesClient) DeleteAndWait(ctx context.Context, resourceGroupName string, routeTableName string) error {
-	future, err := c.Delete(ctx, resourceGroupName, routeTableName)
+	future, err := c.RouteTablesClient.Delete(ctx, resourceGroupName, routeTableName)
 	if err != nil {
 		return err
 	}

@@ -18,7 +18,6 @@ type AccountsClient interface {
 	Update(ctx context.Context, resourceGroupName string, accountName string, parameters mgmtstorage.AccountUpdateParameters) (result mgmtstorage.Account, err error)
 	ListAccountSAS(ctx context.Context, resourceGroupName string, accountName string, parameters mgmtstorage.AccountSasParameters) (result mgmtstorage.ListAccountSasResponse, err error)
 	ListKeys(ctx context.Context, resourceGroupName string, accountName string, expand mgmtstorage.ListKeyExpand) (result mgmtstorage.AccountListKeysResult, err error)
-	AccountsClientAddons
 }
 
 type accountsClient struct {

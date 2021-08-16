@@ -5,8 +5,6 @@ package network
 
 import (
 	"context"
-
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 )
 
 // PublicIPAddressesClientAddons contains addons for PublicIPAddressesClient
@@ -21,22 +19,4 @@ func (c *publicIPAddressesClient) DeleteAndWait(ctx context.Context, resourceGro
 	}
 
 	return future.WaitForCompletionRef(ctx, c.Client)
-}
-
-func (c *publicIPAddressesClient) List(ctx context.Context, resourceGroupName string) (ips []mgmtnetwork.PublicIPAddress, err error) {
-	page, err := c.PublicIPAddressesClient.List(ctx, resourceGroupName)
-	if err != nil {
-		return nil, err
-	}
-
-	for page.NotDone() {
-		ips = append(ips, page.Values()...)
-
-		err = page.NextWithContext(ctx)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return ips, nil
 }

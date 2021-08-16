@@ -20,7 +20,7 @@ type DeploymentsClientAddons interface {
 }
 
 func (c *deploymentsClient) CreateOrUpdateAtSubscriptionScopeAndWait(ctx context.Context, deploymentName string, parameters mgmtfeatures.Deployment) error {
-	future, err := c.CreateOrUpdateAtSubscriptionScope(ctx, deploymentName, parameters)
+	future, err := c.DeploymentsClient.CreateOrUpdateAtSubscriptionScope(ctx, deploymentName, parameters)
 	if err != nil {
 		return err
 	}
@@ -29,7 +29,7 @@ func (c *deploymentsClient) CreateOrUpdateAtSubscriptionScopeAndWait(ctx context
 }
 
 func (c *deploymentsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, deploymentName string, parameters mgmtfeatures.Deployment) error {
-	future, err := c.CreateOrUpdate(ctx, resourceGroupName, deploymentName, parameters)
+	future, err := c.DeploymentsClient.CreateOrUpdate(ctx, resourceGroupName, deploymentName, parameters)
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func (c *deploymentsClient) CreateOrUpdateAndWait(ctx context.Context, resourceG
 }
 
 func (c *deploymentsClient) DeleteAndWait(ctx context.Context, resourceGroupName string, deploymentName string) error {
-	future, err := c.Delete(ctx, resourceGroupName, deploymentName)
+	future, err := c.DeploymentsClient.Delete(ctx, resourceGroupName, deploymentName)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func (c *deploymentsClient) DeleteAndWait(ctx context.Context, resourceGroupName
 
 func (c *deploymentsClient) Wait(ctx context.Context, resourceGroupName string, deploymentName string) error {
 	return wait.Poll(c.Client.PollingDelay, c.Client.PollingDuration, func() (bool, error) {
-		deployment, err := c.Get(ctx, resourceGroupName, deploymentName)
+		deployment, err := c.DeploymentsClient.Get(ctx, resourceGroupName, deploymentName)
 		if err != nil {
 			return false, err
 		}
