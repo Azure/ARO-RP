@@ -9,12 +9,18 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 
 
 def cf_aro(cli_ctx, *_):
-    client = get_mgmt_service_client(
-        cli_ctx, AzureRedHatOpenShiftClient).open_shift_clusters
+
+    opt_args = {}
 
     if rp_mode_development():
-        client._config.base_url = 'https://localhost:8443/'  # pylint: disable=W0212
-        client._config.connection_verify = False             # pylint: disable=W0212
+        opt_args = {
+            "base_url": "https://localhost:8443/",
+            "connection_verify": False
+        }
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    client = get_mgmt_service_client(cli_ctx,
+                                     AzureRedHatOpenShiftClient,
+                                     **opt_args).open_shift_clusters
 
     return client
