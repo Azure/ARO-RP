@@ -1,4 +1,4 @@
-import {useState, useEffect, useRef, useCallback} from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import {
   Stack,
   Text,
@@ -21,17 +21,17 @@ import {
   MessageBarType,
   Icon,
 } from "@fluentui/react"
-import {AxiosResponse} from "axios"
-import {useBoolean} from "@fluentui/react-hooks"
-import {SSHModal} from "./SSHModal"
-import {ClusterDetailPanel} from "./ClusterDetail"
-import {ClusterList} from "./ClusterList"
-import {FetchInfo, ProcessLogOut} from "./Request"
+import { AxiosResponse } from "axios"
+import { useBoolean } from "@fluentui/react-hooks"
+import { SSHModal } from "./SSHModal"
+import { ClusterDetailPanel } from "./ClusterDetail"
+import { ClusterList } from "./ClusterList"
+import { FetchInfo, ProcessLogOut } from "./Request"
 
 const containerStackTokens: IStackTokens = {}
-const appStackTokens: IStackTokens = {childrenGap: 10}
+const appStackTokens: IStackTokens = { childrenGap: 10 }
 
-const errorBarStyles: Partial<IMessageBarStyles> = {root: {marginBottom: 15}}
+const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
 
 const stackStyles: IStackStyles = {
   root: [
@@ -64,7 +64,7 @@ const stackNavStyles: IStackStyles = {
 }
 
 const MenuButtonStyles: IButtonStyles = {
-  icon: {color: DefaultPalette.white},
+  icon: { color: DefaultPalette.white },
 }
 
 const darkTheme: PartialTheme = {
@@ -86,9 +86,9 @@ const navPanelStyles: Partial<IPanelStyles> = {
 }
 
 function App() {
-  const [data, updateData] = useState({location: "", csrf: "", elevated: false, username: ""})
+  const [data, updateData] = useState({ location: "", csrf: "", elevated: false, username: "" })
   const [error, setError] = useState<AxiosResponse | null>(null)
-  const [isOpen, {setTrue: openPanel, setFalse: dismissPanel}] = useBoolean(false)
+  const [isOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false)
   const [fetching, setFetching] = useState("")
 
   const sshRef = useRef<typeof SSHModal | null>(null)
@@ -115,7 +115,7 @@ function App() {
   const onRenderNavigationContent: IRenderFunction<IPanelProps> = useCallback(
     (props, defaultRender) => (
       <>
-        <IconButton iconProps={{iconName: "GlobalNavButton"}} onClick={dismissPanel} />
+        <IconButton iconProps={{ iconName: "GlobalNavButton" }} onClick={dismissPanel} />
       </>
     ),
     [dismissPanel]
@@ -165,7 +165,7 @@ function App() {
           >
             <Stack.Item>
               <IconButton
-                iconProps={{iconName: "GlobalNavButton"}}
+                iconProps={{ iconName: "GlobalNavButton" }}
                 onClick={openPanel}
                 styles={MenuButtonStyles}
               />
@@ -186,7 +186,7 @@ function App() {
             </Stack.Item>
             <Stack.Item>
               <IconButton
-                iconProps={{iconName: "SignOut"}}
+                iconProps={{ iconName: "SignOut" }}
                 onClick={logOut}
                 styles={MenuButtonStyles}
               />
@@ -200,7 +200,7 @@ function App() {
           </Stack.Item>
         </Stack>
         <SSHModal csrfToken={csrfRef} ref={sshRef} />
-        <ClusterDetailPanel csrfToken={csrfRef} loaded={fetching} name={""} resourceGroup={""} subscription={""} ref={clusterDetailPanelRef}/> 
+        <ClusterDetailPanel csrfToken={csrfRef} loaded={fetching} name={""} resourceGroup={""} subscription={""} ref={clusterDetailPanelRef} />
         {/* ClusterDetailPanel should be moved into ClusterList 
         --- loaded is a prop that stops the panel loading further data until 
         main api has fetched api/info 
