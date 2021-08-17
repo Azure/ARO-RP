@@ -8,13 +8,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/portal/cluster"
 	"github.com/Azure/ARO-RP/pkg/proxy"
+
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 type AdminOpenShiftCluster struct {
@@ -42,8 +43,6 @@ func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	clusters := make([]*AdminOpenShiftCluster, 0, len(docs.OpenShiftClusterDocuments))
-
-	re := regexp.MustCompile(`(?m)^/subscriptions/([^/]*)/resourceGroups/([^/]*)/providers/Microsoft.RedHatOpenShift/openShiftClusters/(.*)`)
 	for _, doc := range docs.OpenShiftClusterDocuments {
 		if doc.OpenShiftCluster == nil {
 			continue
@@ -54,10 +53,11 @@ func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
 		subscription := "Unknown"
 		resourceGroup := "Unknown"
 		name := "Unknown"
-		if m := re.FindAllStringSubmatch(doc.OpenShiftCluster.ID, -1); len(m) == 1 && len(m[0]) == 4 {
-			subscription = m[0][1]
-			resourceGroup = m[0][2]
-			name = m[0][3]
+
+		if resource, err := azure.ParseResourceID(doc.OpenShiftCluster.ID); err == nil {
+			subscription = doc.OpenShiftCluster.ID
+			resourceGroup = resource.ResourceGroup
+			name = resource.ResourceName
 		}
 		LastModified := "Unknown"
 		if doc.OpenShiftCluster.SystemData.LastModifiedAt != nil {
