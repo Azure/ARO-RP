@@ -24,6 +24,7 @@ type AdminOpenShiftCluster struct {
 	State         string `json:"state"`
 	Version       string `json:"version"`
 	CreatedDate   string `json:"createdDate"`
+	LastModified  string `json:"lastModified"`
 	ProvisionedBy string `json:"provisionedBy"`
 	FailedState   string `json:"failedState"`
 	Subscription  string `json:"subscription"`
@@ -43,6 +44,10 @@ func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
 
 	re := regexp.MustCompile(`(?m)^/subscriptions/([^/]*)/resourceGroups/([^/]*)/providers/Microsoft.RedHatOpenShift/openShiftClusters/(.*)`)
 	for _, doc := range docs.OpenShiftClusterDocuments {
+		if doc.OpenShiftCluster == nil {
+			continue
+		}
+
 		ps := doc.OpenShiftCluster.Properties.ProvisioningState
 		fps := doc.OpenShiftCluster.Properties.FailedProvisioningState
 		subscription := "Unknown"
@@ -51,6 +56,11 @@ func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
 			subscription = m[0][1]
 			name = m[0][3]
 		}
+		LastModified := "Unknown"
+		if doc.OpenShiftCluster.SystemData.LastModifiedAt != nil {
+			LastModified = doc.OpenShiftCluster.SystemData.LastModifiedAt.String()
+		}
+
 		clusters = append(clusters, &AdminOpenShiftCluster{
 			Key:           doc.ID,
 			Id:            doc.OpenShiftCluster.ID,
@@ -58,6 +68,7 @@ func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
 			Subscription:  subscription,
 			Version:       doc.OpenShiftCluster.Properties.ClusterProfile.Version,
 			CreatedDate:   doc.OpenShiftCluster.Properties.CreatedAt.String(),
+			LastModified:  LastModified,
 			ProvisionedBy: doc.OpenShiftCluster.Properties.ProvisionedBy,
 			State:         ps.String(),
 			FailedState:   fps.String(),
