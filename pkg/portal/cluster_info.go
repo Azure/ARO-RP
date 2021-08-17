@@ -6,6 +6,7 @@ package portal
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/gorilla/mux"
@@ -44,9 +45,14 @@ func (p *portal) clusterInfo(w http.ResponseWriter, r *http.Request) {
 	resourceGroup := apiVars["resourceGroup"]
 	clusterName := apiVars["name"]
 
-	resourceId := "/subscriptions/" + subscription + "/resourceGroups/" + resourceGroup + "/providers/Microsoft.RedHatOpenShift/openShiftClusters/" + clusterName
+	resourceId := strings.ToLower("/subscriptions/" + subscription + "/resourceGroups/" + resourceGroup + "/providers/Microsoft.RedHatOpenShift/openShiftClusters/" + clusterName)
 
 	doc, err := p.dbOpenShiftClusters.Get(ctx, resourceId)
+
+	if err != nil {
+		http.Error(w, "Cluster not found", http.StatusNotFound)
+		return
+	}
 
 	createdAt := "Unknown"
 	if doc.OpenShiftCluster.SystemData.CreatedAt != nil {

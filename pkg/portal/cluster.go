@@ -55,7 +55,7 @@ func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
 		name := "Unknown"
 
 		if resource, err := azure.ParseResourceID(doc.OpenShiftCluster.ID); err == nil {
-			subscription = doc.OpenShiftCluster.ID
+			subscription = resource.SubscriptionID
 			resourceGroup = resource.ResourceGroup
 			name = resource.ResourceName
 		}
