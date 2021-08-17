@@ -261,6 +261,7 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 
 	// Cluster-specific routes
 	r.NewRoute().PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/clusteroperators").HandlerFunc(p.clusterOperators)
+	r.NewRoute().Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{name}/clusterinfo").HandlerFunc(p.clusterInfo)
 }
 
 func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request) {
