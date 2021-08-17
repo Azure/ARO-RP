@@ -14,16 +14,19 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	frontendmiddleware "github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/portal/cluster"
 	"github.com/Azure/ARO-RP/pkg/portal/kubeconfig"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/portal/prometheus"
@@ -260,8 +263,35 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 	r.NewRoute().Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
 
 	// Cluster-specific routes
-	r.NewRoute().PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/clusteroperators").HandlerFunc(p.clusterOperators)
-	r.NewRoute().Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{name}/clusterinfo").HandlerFunc(p.clusterInfo)
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{name}/clusteroperators").HandlerFunc(p.clusterOperators)
+	r.NewRoute().Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{name}").HandlerFunc(p.clusterInfo)
+}
+
+// makeFetcher creates a cluster.FetchClient suitable for use by the Portal REST API
+func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.FetchClient, error) {
+	resourceID := strings.Join(strings.Split(r.URL.Path, "/")[:9], "/")
+	if !validate.RxClusterID.MatchString(resourceID) {
+		return nil, fmt.Errorf("invalid resource ID")
+	}
+
+	doc, err := p.dbOpenShiftClusters.Get(ctx, resourceID)
+	if err != nil {
+		return nil, err
+	}
+
+	// In development mode, we can have localhost "fake" APIServers which don't
+	// get proxied, so use a direct dialer for this
+	var dialer proxy.Dialer
+	if p.env.IsLocalDevelopmentMode() && doc.OpenShiftCluster.Properties.APIServerProfile.IP == "127.0.0.1" {
+		dialer, err = proxy.NewDialer(false)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		dialer = p.dialer
+	}
+
+	return cluster.NewFetchClient(p.log, dialer, doc)
 }
 
 func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request) {

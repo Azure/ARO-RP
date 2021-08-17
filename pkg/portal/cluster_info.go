@@ -5,32 +5,31 @@ package portal
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 )
 
-// TODO: Commented out fields contain complex objects
-type AdminOpenShiftClusterDocument struct {
-	ResourceID              string `json:"resourceId"`
+type AdminOpenShiftClusterDetail struct {
 	Name                    string `json:"name"`
-	Location                string `json:"location"`
-	CreatedBy               string `json:"createdBy"`
-	CreatedAt               string `json:"createdAt"`
-	LastModifiedBy          string `json:"lastModifiedBy"`
-	LastModifiedAt          string `json:"lastModifiedAt"`
-	ArchitectureVersion     string `json:"architectureVersion"`
+	Subscription            string `json:"subscription"`
+	ResourceGroup           string `json:"resourceGroup"`
+	ResourceId              string `json:"resourceId"`
 	ProvisioningState       string `json:"provisioningState"`
-	LastProvisioningState   string `json:"lastProvisioningState"`
 	FailedProvisioningState string `json:"failedProvisioningState"`
-	LastAdminUpdateError    string `json:"lastAdminUpdateError"`
 	Version                 string `json:"version"`
-	ConsoleLink             string `json:"consoleLink"`
+	CreatedAt               string `json:"createdAt"`
+	ProvisionedBy           string `json:"provisionedBy"`
+	CreatedBy               string `json:"createdBy"`
+	ArchitectureVersion     string `json:"architectureVersion"`
+	LastProvisioningState   string `json:"lastProvisioningState"`
+	LastAdminUpdateError    string `json:"lastAdminUpdateError"`
 	InfraId                 string `json:"infraId"`
 	ApiServerVisibility     string `json:"apiServerVisibility"`
-	ApiServerURL            string `json:"apiServerURL"`
 	InstallPhase            string `json:"installStatus"`
 }
 
@@ -43,23 +42,17 @@ func (p *portal) clusterInfo(w http.ResponseWriter, r *http.Request) {
 	resourceGroup := apiVars["resourceGroup"]
 	clusterName := apiVars["name"]
 
-	resourceId := strings.ToLower("/subscriptions/" + subscription + "/resourceGroups/" + resourceGroup + "/providers/Microsoft.RedHatOpenShift/openShiftClusters/" + clusterName)
+	resourceId := strings.ToLower(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", subscription, resourceGroup, clusterName))
 
 	doc, err := p.dbOpenShiftClusters.Get(ctx, resourceId)
-
 	if err != nil {
 		http.Error(w, "Cluster not found", http.StatusNotFound)
 		return
 	}
 
 	createdAt := "Unknown"
-	if doc.OpenShiftCluster.SystemData.CreatedAt != nil {
-		createdAt = doc.OpenShiftCluster.SystemData.CreatedAt.Format("2006-01-02 15:04:05")
-	}
-
-	lastModifiedAt := "Unknown"
-	if doc.OpenShiftCluster.SystemData.CreatedAt != nil {
-		lastModifiedAt = doc.OpenShiftCluster.SystemData.LastModifiedAt.Format("2006-01-02 15:04:05")
+	if !doc.OpenShiftCluster.Properties.CreatedAt.IsZero() {
+		createdAt = doc.OpenShiftCluster.Properties.CreatedAt.Format(time.RFC3339)
 	}
 
 	installPhase := "Installed"
@@ -67,26 +60,24 @@ func (p *portal) clusterInfo(w http.ResponseWriter, r *http.Request) {
 		installPhase = doc.OpenShiftCluster.Properties.Install.Phase.String()
 	}
 
-	// TODO: Commented out fields contain complex objects
-	clusterInfo := AdminOpenShiftClusterDocument{
-		ResourceID:              resourceId,
+	clusterInfo := AdminOpenShiftClusterDetail{
+		ResourceId:              resourceId,
 		Name:                    clusterName,
-		Location:                doc.OpenShiftCluster.Location,
-		CreatedBy:               doc.OpenShiftCluster.SystemData.CreatedBy,
+		Subscription:            subscription,
+		ResourceGroup:           resourceGroup,
 		CreatedAt:               createdAt,
-		LastModifiedBy:          doc.OpenShiftCluster.SystemData.LastModifiedBy,
-		LastModifiedAt:          lastModifiedAt,
-		ArchitectureVersion:     strconv.Itoa(int(doc.OpenShiftCluster.Properties.ArchitectureVersion)),
+		ProvisionedBy:           doc.OpenShiftCluster.Properties.ProvisionedBy,
 		ProvisioningState:       doc.OpenShiftCluster.Properties.ProvisioningState.String(),
-		LastProvisioningState:   doc.OpenShiftCluster.Properties.LastProvisioningState.String(),
 		FailedProvisioningState: doc.OpenShiftCluster.Properties.FailedProvisioningState.String(),
-		LastAdminUpdateError:    doc.OpenShiftCluster.Properties.LastAdminUpdateError,
 		Version:                 doc.OpenShiftCluster.Properties.ClusterProfile.Version,
-		ConsoleLink:             doc.OpenShiftCluster.Properties.ConsoleProfile.URL,
-		InfraId:                 doc.OpenShiftCluster.Properties.InfraID,
-		ApiServerVisibility:     string(doc.OpenShiftCluster.Properties.APIServerProfile.Visibility),
-		ApiServerURL:            doc.OpenShiftCluster.Properties.APIServerProfile.URL,
-		InstallPhase:            installPhase,
+
+		CreatedBy:             doc.OpenShiftCluster.Properties.CreatedBy,
+		ArchitectureVersion:   strconv.Itoa(int(doc.OpenShiftCluster.Properties.ArchitectureVersion)),
+		LastProvisioningState: doc.OpenShiftCluster.Properties.LastProvisioningState.String(),
+		LastAdminUpdateError:  doc.OpenShiftCluster.Properties.LastAdminUpdateError,
+		InfraId:               doc.OpenShiftCluster.Properties.InfraID,
+		ApiServerVisibility:   string(doc.OpenShiftCluster.Properties.APIServerProfile.Visibility),
+		InstallPhase:          installPhase,
 	}
 
 	b, err := json.MarshalIndent(clusterInfo, "", "    ")

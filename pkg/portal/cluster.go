@@ -4,33 +4,26 @@ package portal
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"sort"
 	"strings"
-
-	"github.com/Azure/ARO-RP/pkg/api/validate"
-	"github.com/Azure/ARO-RP/pkg/portal/cluster"
-	"github.com/Azure/ARO-RP/pkg/proxy"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 type AdminOpenShiftCluster struct {
-	Key           string `json:"key"`
-	Name          string `json:"name"`
-	Id            string `json:"id"`
-	State         string `json:"state"`
-	Version       string `json:"version"`
-	CreatedDate   string `json:"createdDate"`
-	LastModified  string `json:"lastModified"`
-	ProvisionedBy string `json:"provisionedBy"`
-	FailedState   string `json:"failedState"`
-	Subscription  string `json:"subscription"`
-	ResourceGroup string `json:"resourceGroup"`
-	ConsoleLink   string `json:"consoleLink"`
+	Key                     string `json:"key"`
+	Name                    string `json:"name"`
+	Subscription            string `json:"subscription"`
+	ResourceGroup           string `json:"resourceGroup"`
+	ResourceId              string `json:"resourceId"`
+	ProvisioningState       string `json:"provisioningState"`
+	FailedProvisioningState string `json:"failedprovisioningState"`
+	Version                 string `json:"version"`
+	CreatedAt               string `json:"createdAt"`
+	ProvisionedBy           string `json:"provisionedBy"`
 }
 
 func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
@@ -59,23 +52,23 @@ func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
 			resourceGroup = resource.ResourceGroup
 			name = resource.ResourceName
 		}
-		LastModified := "Unknown"
-		if doc.OpenShiftCluster.SystemData.LastModifiedAt != nil {
-			LastModified = doc.OpenShiftCluster.SystemData.LastModifiedAt.Format("2006-01-02 15:04:05")
+
+		createdAt := "Unknown"
+		if !doc.OpenShiftCluster.Properties.CreatedAt.IsZero() {
+			createdAt = doc.OpenShiftCluster.Properties.CreatedAt.Format(time.RFC3339)
 		}
 
 		clusters = append(clusters, &AdminOpenShiftCluster{
-			Key:           doc.ID,
-			Id:            doc.OpenShiftCluster.ID,
-			Name:          name,
-			Subscription:  subscription,
-			ResourceGroup: resourceGroup,
-			Version:       doc.OpenShiftCluster.Properties.ClusterProfile.Version,
-			CreatedDate:   doc.OpenShiftCluster.Properties.CreatedAt.Format("2006-01-02 15:04:05"),
-			LastModified:  LastModified,
-			ProvisionedBy: doc.OpenShiftCluster.Properties.ProvisionedBy,
-			State:         ps.String(),
-			FailedState:   fps.String(),
+			Key:                     doc.ID,
+			ResourceId:              doc.OpenShiftCluster.ID,
+			Name:                    name,
+			Subscription:            subscription,
+			ResourceGroup:           resourceGroup,
+			Version:                 doc.OpenShiftCluster.Properties.ClusterProfile.Version,
+			CreatedAt:               createdAt,
+			ProvisionedBy:           doc.OpenShiftCluster.Properties.ProvisionedBy,
+			ProvisioningState:       ps.String(),
+			FailedProvisioningState: fps.String(),
 		})
 	}
 
@@ -89,32 +82,6 @@ func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(b)
-}
-
-func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.FetchClient, error) {
-	resourceID := strings.Join(strings.Split(r.URL.Path, "/")[:9], "/")
-	if !validate.RxClusterID.MatchString(resourceID) {
-		return nil, fmt.Errorf("invalid resource ID")
-	}
-
-	doc, err := p.dbOpenShiftClusters.Get(ctx, resourceID)
-	if err != nil {
-		return nil, err
-	}
-
-	// In development mode, we can have localhost "fake" APIServers which don't
-	// get proxied, so use a direct dialer for this
-	var dialer proxy.Dialer
-	if p.env.IsLocalDevelopmentMode() && doc.OpenShiftCluster.Properties.APIServerProfile.IP == "127.0.0.1" {
-		dialer, err = proxy.NewDialer(false)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		dialer = p.dialer
-	}
-
-	return cluster.NewFetchClient(p.log, dialer, doc)
 }
 
 func (p *portal) clusterOperators(w http.ResponseWriter, r *http.Request) {
