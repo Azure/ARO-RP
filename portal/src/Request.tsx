@@ -19,6 +19,16 @@ export const FetchClusters = async (): Promise<AxiosResponse | null> => {
   }
 }
 
+export const FetchClusterInfo = async (subscription: string, resourceGroup: string, name: string): Promise<AxiosResponse | null> => {
+  try {
+    const result = await axios("/api/" + subscription + "/" + resourceGroup +  "/" + name + "/clusterinfo")
+    return result
+  } catch (e) {
+    let err = e.response as AxiosResponse
+    return OnError(err)
+  }
+}
+
 export const FetchInfo = async (): Promise<AxiosResponse | null> => {
   try {
     const result = await axios("/api/info")
