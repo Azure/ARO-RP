@@ -9,10 +9,10 @@ import { FetchClusterInfo } from './Request';
 // does the controller need props?
 type ClusterDetailPanelProps = {
   csrfToken: MutableRefObject<string>
-  name : any
-  subscription : any
-  resourceGroup : any
-  loaded : string
+  name: any
+  subscription: any
+  resourceGroup: any
+  loaded: string
 }
 
 // interface IClusterDetails {
@@ -33,7 +33,7 @@ type ClusterDetailPanelProps = {
 interface ClusterDetailComponentProps {
   item: MutableRefObject<any> // probably bad... maybe should be specific interface of details?
   ref: MutableRefObject<any>
-//  csrfToken: MutableRefObject<string>
+  //  csrfToken: MutableRefObject<string>
 }
 
 interface IClusterDetailComponentState {
@@ -43,9 +43,9 @@ interface IClusterDetailComponentState {
 
 
 class ClusterDetailComponent extends Component<ClusterDetailComponentProps, IClusterDetailComponentState> {
-//export const ClusterDetailComponent = forwardRef<any, ClusterDetailProps>(({ csrfToken }, ref) => {
+  //export const ClusterDetailComponent = forwardRef<any, ClusterDetailProps>(({ csrfToken }, ref) => {
   public render() {
-   // const {item} = this.state
+    // const {item} = this.state
 
     return (
       <p>Test data</p>
@@ -53,18 +53,18 @@ class ClusterDetailComponent extends Component<ClusterDetailComponentProps, IClu
   }
 };
 
-const errorBarStyles: Partial<IMessageBarStyles> = {root: {marginBottom: 15}}
+const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
 
-export const ClusterDetailPanel = forwardRef<any, ClusterDetailPanelProps>(({csrfToken, name, subscription, resourceGroup, loaded}, ref) => {
+export const ClusterDetailPanel = forwardRef<any, ClusterDetailPanelProps>(({ csrfToken, name, subscription, resourceGroup, loaded }, ref) => {
 
-/*export function ClusterDetailPanel(props: {
-  csrfToken: MutableRefObject<string>
-  name : any
-  subscription : any
-  resourceGroup : any
-  loaded : string
-
-}) {*/
+  /*export function ClusterDetailPanel(props: {
+    csrfToken: MutableRefObject<string>
+    name : any
+    subscription : any
+    resourceGroup : any
+    loaded : string
+  
+  }) {*/
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
   const state = useRef<ClusterDetailComponent>(null)
@@ -106,7 +106,7 @@ export const ClusterDetailPanel = forwardRef<any, ClusterDetailPanelProps>(({csr
   const updateData = (newData: any) => {
     setData(newData)
     if (state && state.current) {
-      state.current.setState({item: newData})
+      state.current.setState({ item: newData })
     }
   }
 
@@ -126,7 +126,7 @@ export const ClusterDetailPanel = forwardRef<any, ClusterDetailPanelProps>(({csr
     }
   }, [data, fetching, setFetching, loaded]) // props.loaded should be tied to the cluster list - or not used.. this component doesn't care.
 
-  return (  
+  return (
     <Panel
       isLightDismiss
       isOpen={isOpen}
@@ -134,13 +134,13 @@ export const ClusterDetailPanel = forwardRef<any, ClusterDetailPanelProps>(({csr
       onDismiss={dismissPanel}
       closeButtonAriaLabel="Close"
       headerText={resourceID}
-    > 
-    {error && errorBar()}
-    <ClusterDetailComponent 
-     item={data}
-     ref={state} // why do we need ref here?
-     //csrfToken={props.csrfToken} // probably don't need this? we already have fetched the data.
-    />
-  </Panel>
+    >
+      {error && errorBar()}
+      <ClusterDetailComponent
+        item={data}
+        ref={state} // why do we need ref here?
+      //csrfToken={props.csrfToken} // probably don't need this? we already have fetched the data.
+      />
+    </Panel>
   )
 })
