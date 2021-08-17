@@ -6,6 +6,7 @@ package portal
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -75,7 +76,7 @@ func (p *portal) clusterInfo(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:               createdAt,
 		LastModifiedBy:          doc.OpenShiftCluster.SystemData.LastModifiedBy,
 		LastModifiedAt:          lastModifiedAt,
-		ArchitectureVersion:     string(rune(doc.OpenShiftCluster.Properties.ArchitectureVersion)),
+		ArchitectureVersion:     strconv.Itoa(int(doc.OpenShiftCluster.Properties.ArchitectureVersion)),
 		ProvisioningState:       doc.OpenShiftCluster.Properties.ProvisioningState.String(),
 		LastProvisioningState:   doc.OpenShiftCluster.Properties.LastProvisioningState.String(),
 		FailedProvisioningState: doc.OpenShiftCluster.Properties.FailedProvisioningState.String(),
