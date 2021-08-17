@@ -16,7 +16,7 @@ import (
 
 func (r *reconcileManager) reconcileSubnets(ctx context.Context) error {
 	// the main logic starts here
-	subnets, err := r.subnets.ListFromCluster(ctx)
+	subnets, err := r.kSubnets.ListFromCluster(ctx)
 	if err != nil {
 		return err
 	}

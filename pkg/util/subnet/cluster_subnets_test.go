@@ -92,7 +92,7 @@ func TestListFromCluster(t *testing.T) {
 			}
 			tt.modify(&workerMachine, &masterMachine)
 
-			m := manager{
+			m := kubeManager{
 				maocli: maofake.NewSimpleClientset(&workerMachine, &masterMachine),
 			}
 

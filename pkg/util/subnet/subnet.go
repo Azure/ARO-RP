@@ -13,7 +13,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/apparentlymart/go-cidr/cidr"
-	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -29,26 +28,18 @@ type Manager interface {
 	Get(ctx context.Context, subnetID string) (*mgmtnetwork.Subnet, error)
 	GetHighestFreeIP(ctx context.Context, subnetID string) (string, error)
 	CreateOrUpdate(ctx context.Context, subnetID string, subnet *mgmtnetwork.Subnet) error
-
-	// ListFromCluster uses kube clients, instead of azure go get cluster
-	// subnets
-	ListFromCluster(ctx context.Context) ([]Subnet, error)
 }
-
 type manager struct {
 	subnets         network.SubnetsClient
 	virtualNetworks network.VirtualNetworksClient
 
-	maocli maoclient.Interface
-
 	subscriptionID string
 }
 
-func NewManager(maocli maoclient.Interface, environment *azureclient.AROEnvironment, subscriptionID string, spAuthorizer autorest.Authorizer) Manager {
+func NewManager(environment *azureclient.AROEnvironment, subscriptionID string, spAuthorizer autorest.Authorizer) Manager {
 	return &manager{
 		subnets:         network.NewSubnetsClient(environment, subscriptionID, spAuthorizer),
 		virtualNetworks: network.NewVirtualNetworksClient(environment, subscriptionID, spAuthorizer),
-		maocli:          maocli,
 		subscriptionID:  subscriptionID,
 	}
 }

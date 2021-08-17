@@ -49,7 +49,7 @@ func NewResourceCleaner(log *logrus.Entry, env env.Core, shouldDelete checkFn, d
 		privatelinkservicescli: network.NewPrivateLinkServicesClient(env.Environment(), env.SubscriptionID(), authorizer),
 		securitygroupscli:      network.NewSecurityGroupsClient(env.Environment(), env.SubscriptionID(), authorizer),
 
-		subnet: subnet.NewManager(nil, env.Environment(), env.SubscriptionID(), authorizer),
+		subnet: subnet.NewManager(env.Environment(), env.SubscriptionID(), authorizer),
 
 		// ShouldDelete decides whether the resource group gets deleted
 		shouldDelete: shouldDelete,

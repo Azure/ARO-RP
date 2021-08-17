@@ -93,7 +93,7 @@ func TestReconcileManager(t *testing.T) {
 
 	for _, tt := range []struct {
 		name       string
-		subnetMock func(*mock_subnet.MockManager)
+		subnetMock func(*mock_subnet.MockManager, *mock_subnet.MockKubeManager)
 		maocli     func() (*maofake.Clientset, error)
 		instance   func(*arov1alpha1.Cluster)
 		wantErr    error
@@ -113,11 +113,11 @@ func TestReconcileManager(t *testing.T) {
 
 				return maofake.NewSimpleClientset(machine1, machine2), nil
 			},
-			subnetMock: func(mock *mock_subnet.MockManager) {
+			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 				resourceIdMaster := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 				resourceIdWorker := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 
-				mock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
+				kmock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: resourceIdMaster,
 						IsMaster:   true,
@@ -151,12 +151,12 @@ func TestReconcileManager(t *testing.T) {
 
 				return maofake.NewSimpleClientset(machine1, machine2), nil
 			},
-			subnetMock: func(mock *mock_subnet.MockManager) {
+			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
 				resourceIdMaster := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 				resourceIdWorker := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 
-				mock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
+				kmock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: resourceIdMaster,
 						IsMaster:   true,
@@ -199,12 +199,12 @@ func TestReconcileManager(t *testing.T) {
 
 				return maofake.NewSimpleClientset(machine1, machine2), nil
 			},
-			subnetMock: func(mock *mock_subnet.MockManager) {
+			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
 				resourceIdMaster := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 				resourceIdWorker := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 
-				mock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
+				kmock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: resourceIdMaster,
 						IsMaster:   true,
@@ -242,12 +242,12 @@ func TestReconcileManager(t *testing.T) {
 
 				return maofake.NewSimpleClientset(machine1, machine2), nil
 			},
-			subnetMock: func(mock *mock_subnet.MockManager) {
+			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
 				resourceIdMaster := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 				resourceIdWorker := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 
-				mock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
+				kmock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: resourceIdMaster,
 						IsMaster:   true,
@@ -285,12 +285,12 @@ func TestReconcileManager(t *testing.T) {
 
 				return maofake.NewSimpleClientset(machine1, machine2), nil
 			},
-			subnetMock: func(mock *mock_subnet.MockManager) {
+			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
 				resourceIdMaster := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 				resourceIdWorker := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 
-				mock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
+				kmock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: resourceIdMaster,
 						IsMaster:   true,
@@ -327,8 +327,9 @@ func TestReconcileManager(t *testing.T) {
 			defer controller.Finish()
 
 			subnets := mock_subnet.NewMockManager(controller)
+			kSubnets := mock_subnet.NewMockKubeManager(controller)
 			if tt.subnetMock != nil {
-				tt.subnetMock(subnets)
+				tt.subnetMock(subnets, kSubnets)
 			}
 
 			instance := getValidClusterInstance()
@@ -341,6 +342,7 @@ func TestReconcileManager(t *testing.T) {
 				instance:       instance,
 				subscriptionID: subscriptionId,
 				subnets:        subnets,
+				kSubnets:       kSubnets,
 			}
 
 			err := r.reconcileSubnets(context.Background())
