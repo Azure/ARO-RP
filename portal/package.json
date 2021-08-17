@@ -5,6 +5,8 @@
     "license": "Apache2",
     "proxy": "https://localhost:8444",
     "dependencies": {
+        "@fluentui/example-data": "^8.2.4",
+        "@fluentui/examples": "^0.3.23",
         "@fluentui/react": "^8.20.2",
         "@testing-library/jest-dom": "^5.14.1",
         "@testing-library/react": "^11.2.7",
