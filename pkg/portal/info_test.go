@@ -18,7 +18,6 @@ import (
 )
 
 func TestInfo(t *testing.T) {
-
 	ctx := context.Background()
 
 	controller := gomock.NewController(t)
@@ -74,7 +73,6 @@ func TestInfo(t *testing.T) {
 			},
 		},
 	} {
-
 		resp, err := p.Request("GET", "/api/info", tt.authenticated, tt.elevated)
 		if err != nil {
 			p.DumpLogs(t)
@@ -105,7 +103,5 @@ func TestInfo(t *testing.T) {
 		for _, l := range deep.Equal(readResp, tt.expectedResponse) {
 			t.Error(l)
 		}
-
 	}
-
 }

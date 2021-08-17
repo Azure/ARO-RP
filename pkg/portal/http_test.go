@@ -50,7 +50,6 @@ func (p *testPortal) DumpLogs(t *testing.T) {
 }
 
 func (p *testPortal) Run(ctx context.Context) error {
-
 	err := p.p.setupRouter()
 	if err != nil {
 		return err
