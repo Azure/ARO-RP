@@ -27,6 +27,7 @@ import {
 import { FetchClusters, FetchClusterInfo } from "./Request"
 import { KubeconfigButton } from "./Kubeconfig"
 import { AxiosResponse } from "axios"
+import { IClusterDetail } from "./App"
 
 var currentName: string
 var currentSubscription: string
@@ -131,31 +132,22 @@ const clusterListDetailStyles: Partial<IDetailsListStyles> = {
   },
 }
 
-interface ClusterListControlProps {
+interface ClusterListComponentProps {
   items: ICluster[]
   sshModalRef: MutableRefObject<any>
-  clusterDetailPanelRef: MutableRefObject<any>
+  setCurrentCluster: any // TODO: fix this. help function reference. Any... probably bad
   csrfToken: MutableRefObject<string>
 }
-function handleClickOnLink(ev: React.MouseEvent<unknown>) {
-  // {currentName = item.name}
-  // {currentSubscription = item.subscription}
-  // {currentResourceGroup = item.resourceGroup}
-  FetchClusterInfo(currentSubscription, currentResourceGroup, currentName).then(
-    function (result) {
-      console.log(result?.data)
-    })
-}
 
-class ClusterListControl extends Component<ClusterListControlProps, IClusterListState> {
+class ClusterListComponent extends Component<ClusterListComponentProps, IClusterListState> {
   private _sshModal: MutableRefObject<any>
-  private _clusterDetailPanel: MutableRefObject<any>
+  private _setCurrentCluster: any // TODO: why, its already part of the props? any... probably bad
 
-  constructor(props: ClusterListControlProps) {
+  constructor(props: ClusterListComponentProps) {
     super(props)
 
     this._sshModal = props.sshModalRef
-    this._clusterDetailPanel = props.clusterDetailPanelRef
+    this._setCurrentCluster = props.setCurrentCluster
 
     const columns: IColumn[] = [
       {
@@ -188,7 +180,7 @@ class ClusterListControl extends Component<ClusterListControlProps, IClusterList
         onColumnClick: this._onColumnClick,
         data: "string",
         onRender: (item: ICluster) => (
-          <Link onClick={(_) => this._onClusterDetailPanelClick(item)} >
+          <Link onClick={(_) => this._onClusterInfoLinkClick(item)} >
             {item.name}
           </Link>
         ),
@@ -407,11 +399,9 @@ class ClusterListControl extends Component<ClusterListControlProps, IClusterList
     }
   }
 
-  private _onClusterDetailPanelClick(item: any): void {
-    const panel = this._clusterDetailPanel
-    if (panel && panel.current) {
-      panel.current.LoadClusterDetailPanel(item)
-    }
+  private _onClusterInfoLinkClick(item: any): void { // TODO: item ---- should not be any, create an interface or something.
+    const thisCluster: IClusterDetail = {clusterName: item.name, subscription: item.subscription, resource: item.resourceGroup}
+    this._setCurrentCluster(thisCluster)
   }
 
   private _onItemInvoked(item: any): void {
@@ -441,12 +431,12 @@ class ClusterListControl extends Component<ClusterListControlProps, IClusterList
 export function ClusterList(props: {
   csrfToken: MutableRefObject<string>
   sshBox: MutableRefObject<any>
-  clusterDetailPanel: MutableRefObject<any>
+  setCurrentCluster: any // TODO: fix this. probably bad - this is a helper function..
   loaded: string
 }) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
-  const state = useRef<ClusterListControl>(null)
+  const state = useRef<ClusterListComponent>(null)
   const [fetching, setFetching] = useState("")
 
   const errorBar = (): any => {
@@ -513,11 +503,11 @@ export function ClusterList(props: {
       <Separator styles={separatorStyle} />
 
       {error && errorBar()}
-      <ClusterListControl
+      <ClusterListComponent
         items={data}
-        ref={state}
+        ref={state} // why do we need ref here?
         sshModalRef={props.sshBox}
-        clusterDetailPanelRef={props.clusterDetailPanel}
+        setCurrentCluster={props.setCurrentCluster}
         csrfToken={props.csrfToken}
       />
     </Stack>
