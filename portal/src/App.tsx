@@ -24,6 +24,7 @@ import {
 import {AxiosResponse} from "axios"
 import {useBoolean} from "@fluentui/react-hooks"
 import {SSHModal} from "./SSHModal"
+import {ClusterDetailPanel} from "./ClusterDetail"
 import {ClusterList} from "./ClusterList"
 import {FetchInfo, ProcessLogOut} from "./Request"
 
@@ -91,6 +92,7 @@ function App() {
   const [fetching, setFetching] = useState("")
 
   const sshRef = useRef<typeof SSHModal | null>(null)
+  const clusterDetailPanelRef = useRef<typeof ClusterDetailPanel | null>(null)
   const csrfRef = useRef<string>("")
 
   useEffect(() => {
@@ -194,10 +196,18 @@ function App() {
         <Stack styles={contentStackStyles}>
           <Stack.Item grow>{error && errorBar()}</Stack.Item>
           <Stack.Item grow>
-            <ClusterList csrfToken={csrfRef} sshBox={sshRef} loaded={fetching} />
+            <ClusterList csrfToken={csrfRef} sshBox={sshRef} clusterDetailPanel={clusterDetailPanelRef} loaded={fetching} />
           </Stack.Item>
         </Stack>
         <SSHModal csrfToken={csrfRef} ref={sshRef} />
+        <ClusterDetailPanel csrfToken={csrfRef} loaded={fetching} name={""} resourceGroup={""} subscription={""} ref={clusterDetailPanelRef}/> 
+        {/* ClusterDetailPanel should be moved into ClusterList 
+        --- loaded is a prop that stops the panel loading further data until 
+        main api has fetched api/info 
+        
+        when we move this component in... ref to error bar in clusterlist.. ? 
+        ... maybe not - no., actual not.. we want the error to appear in panel.
+        */}
       </Stack>
     </>
   )
