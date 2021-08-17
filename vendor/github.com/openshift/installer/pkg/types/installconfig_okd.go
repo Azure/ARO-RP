@@ -1,4 +1,3 @@
-//go:build okd
 // +build okd
 
 package types

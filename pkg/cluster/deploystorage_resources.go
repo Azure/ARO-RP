@@ -10,6 +10,7 @@ import (
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/openshift/installer/pkg/asset/installconfig"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -77,13 +78,14 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 // Legacy storage accounts (public) are not encrypted and cannot be retrofitted.
 // The flag controls this behavior in update/create.
 func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resource {
+
 	virtualNetworkRules := []mgmtstorage.VirtualNetworkRule{
 		{
-			VirtualNetworkResourceID: &m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
+			VirtualNetworkResourceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 			Action:                   mgmtstorage.Allow,
 		},
 		{
-			VirtualNetworkResourceID: &m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
+			VirtualNetworkResourceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID),
 			Action:                   mgmtstorage.Allow,
 		},
 		{
@@ -176,7 +178,7 @@ func (m *manager) storageAccountBlobContainer(storageAccountName, name string) *
 	}
 }
 
-func (m *manager) networkPrivateLinkService(azureRegion string) *arm.Resource {
+func (m *manager) networkPrivateLinkService(installConfig *installconfig.InstallConfig) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.PrivateLinkService{
 			PrivateLinkServiceProperties: &mgmtnetwork.PrivateLinkServiceProperties{
@@ -189,7 +191,7 @@ func (m *manager) networkPrivateLinkService(azureRegion string) *arm.Resource {
 					{
 						PrivateLinkServiceIPConfigurationProperties: &mgmtnetwork.PrivateLinkServiceIPConfigurationProperties{
 							Subnet: &mgmtnetwork.Subnet{
-								ID: &m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
+								ID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 							},
 						},
 						Name: to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pls-nic"),
@@ -208,7 +210,7 @@ func (m *manager) networkPrivateLinkService(azureRegion string) *arm.Resource {
 			},
 			Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pls"),
 			Type:     to.StringPtr("Microsoft.Network/privateLinkServices"),
-			Location: &azureRegion,
+			Location: &installConfig.Config.Azure.Region,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
@@ -244,7 +246,7 @@ func (m *manager) networkPrivateEndpoint() *arm.Resource {
 	}
 }
 
-func (m *manager) networkPublicIPAddress(azureRegion string, name string) *arm.Resource {
+func (m *manager) networkPublicIPAddress(installConfig *installconfig.InstallConfig, name string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.PublicIPAddress{
 			Sku: &mgmtnetwork.PublicIPAddressSku{
@@ -255,13 +257,13 @@ func (m *manager) networkPublicIPAddress(azureRegion string, name string) *arm.R
 			},
 			Name:     &name,
 			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
-			Location: &azureRegion,
+			Location: &installConfig.Config.Azure.Region,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
-func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource {
+func (m *manager) networkInternalLoadBalancer(installConfig *installconfig.InstallConfig) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.LoadBalancer{
 			Sku: &mgmtnetwork.LoadBalancerSku{
@@ -281,7 +283,7 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 				},
 				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 					{
-						Name: &m.doc.OpenShiftCluster.Properties.InfraID,
+						Name: to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID),
 					},
 					{
 						Name: to.StringPtr("ssh-0"),
@@ -428,13 +430,13 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 			},
 			Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-internal"),
 			Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
-			Location: &azureRegion,
+			Location: &installConfig.Config.Azure.Region,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
-func (m *manager) networkPublicLoadBalancer(azureRegion string) *arm.Resource {
+func (m *manager) networkPublicLoadBalancer(installConfig *installconfig.InstallConfig) *arm.Resource {
 	lb := &mgmtnetwork.LoadBalancer{
 		Sku: &mgmtnetwork.LoadBalancerSku{
 			Name: mgmtnetwork.LoadBalancerSkuNameStandard,
@@ -475,9 +477,9 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string) *arm.Resource {
 				},
 			},
 		},
-		Name:     &m.doc.OpenShiftCluster.Properties.InfraID,
+		Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID),
 		Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
-		Location: &azureRegion,
+		Location: &installConfig.Config.Azure.Region,
 	}
 
 	if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {

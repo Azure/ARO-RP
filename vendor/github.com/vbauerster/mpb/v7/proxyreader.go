@@ -14,6 +14,9 @@ type proxyReader struct {
 func (x proxyReader) Read(p []byte) (int, error) {
 	n, err := x.ReadCloser.Read(p)
 	x.bar.IncrBy(n)
+	if err == io.EOF {
+		go x.bar.SetTotal(-1, true)
+	}
 	return n, err
 }
 
@@ -25,6 +28,9 @@ type proxyWriterTo struct {
 func (x proxyWriterTo) WriteTo(w io.Writer) (int64, error) {
 	n, err := x.wt.WriteTo(w)
 	x.bar.IncrInt64(n)
+	if err == io.EOF {
+		go x.bar.SetTotal(-1, true)
+	}
 	return n, err
 }
 
@@ -59,12 +65,12 @@ func (b *Bar) newProxyReader(r io.Reader) (rc io.ReadCloser) {
 	pr := proxyReader{toReadCloser(r), b}
 	if wt, ok := r.(io.WriterTo); ok {
 		pw := proxyWriterTo{pr, wt}
-		if b.hasEwma {
+		if b.hasEwmaDecorators {
 			rc = ewmaProxyWriterTo{ewmaProxyReader{pr}, pw}
 		} else {
 			rc = pw
 		}
-	} else if b.hasEwma {
+	} else if b.hasEwmaDecorators {
 		rc = ewmaProxyReader{pr}
 	} else {
 		rc = pr

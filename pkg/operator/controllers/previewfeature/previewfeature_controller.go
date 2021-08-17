@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -41,10 +41,10 @@ type Reconciler struct {
 
 	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
-	maocli        machineclient.Interface
+	maocli        maoclient.Interface
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli machineclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli maoclient.Interface) *Reconciler {
 	return &Reconciler{
 		log:           log,
 		arocli:        arocli,

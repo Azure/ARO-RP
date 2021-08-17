@@ -101,6 +101,7 @@ func TestReconcileManager(t *testing.T) {
 				result := getValidAccount([]string{resourceIdMaster, resourceIdWorker})
 				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
 				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
+
 			},
 			imageregistrycli: imageregistryfake.NewSimpleClientset(
 				&imageregistryv1.Config{
@@ -137,6 +138,7 @@ func TestReconcileManager(t *testing.T) {
 				result := getValidAccount([]string{resourceIdMaster, resourceIdWorker})
 				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
 				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
+
 			},
 			imageregistrycli: imageregistryfake.NewSimpleClientset(
 				&imageregistryv1.Config{
@@ -157,6 +159,7 @@ func TestReconcileManager(t *testing.T) {
 			name:         "Operator Flag enabled - all rules to all accounts",
 			operatorFlag: true,
 			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager) {
+
 				// cluster subnets
 				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{

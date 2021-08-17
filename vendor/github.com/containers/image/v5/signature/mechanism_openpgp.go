@@ -20,7 +20,6 @@ import (
 	// For this verify-only fallback, we haven't reviewed any of the
 	// existing alternatives to choose; so, for now, continue to
 	// use this frozen deprecated implementation.
-	//lint:ignore SA1019 See above
 	"golang.org/x/crypto/openpgp" //nolint:staticcheck
 )
 
@@ -31,7 +30,7 @@ type openpgpSigningMechanism struct {
 
 // newGPGSigningMechanismInDirectory returns a new GPG/OpenPGP signing mechanism, using optionalDir if not empty.
 // The caller must call .Close() on the returned SigningMechanism.
-func newGPGSigningMechanismInDirectory(optionalDir string) (signingMechanismWithPassphrase, error) {
+func newGPGSigningMechanismInDirectory(optionalDir string) (SigningMechanism, error) {
 	m := &openpgpSigningMechanism{
 		keyring: openpgp.EntityList{},
 	}
@@ -62,7 +61,7 @@ func newGPGSigningMechanismInDirectory(optionalDir string) (signingMechanismWith
 // recognizes _only_ public keys from the supplied blob, and returns the identities
 // of these keys.
 // The caller must call .Close() on the returned SigningMechanism.
-func newEphemeralGPGSigningMechanism(blob []byte) (signingMechanismWithPassphrase, []string, error) {
+func newEphemeralGPGSigningMechanism(blob []byte) (SigningMechanism, []string, error) {
 	m := &openpgpSigningMechanism{
 		keyring: openpgp.EntityList{},
 	}
@@ -111,14 +110,8 @@ func (m *openpgpSigningMechanism) SupportsSigning() error {
 
 // Sign creates a (non-detached) signature of input using keyIdentity.
 // Fails with a SigningNotSupportedError if the mechanism does not support signing.
-func (m *openpgpSigningMechanism) SignWithPassphrase(input []byte, keyIdentity string, passphrase string) ([]byte, error) {
-	return nil, SigningNotSupportedError("signing is not supported in github.com/containers/image built with the containers_image_openpgp build tag")
-}
-
-// Sign creates a (non-detached) signature of input using keyIdentity.
-// Fails with a SigningNotSupportedError if the mechanism does not support signing.
 func (m *openpgpSigningMechanism) Sign(input []byte, keyIdentity string) ([]byte, error) {
-	return m.SignWithPassphrase(input, keyIdentity, "")
+	return nil, SigningNotSupportedError("signing is not supported in github.com/containers/image built with the containers_image_openpgp build tag")
 }
 
 // Verify parses unverifiedSignature and returns the content and the signer's identity

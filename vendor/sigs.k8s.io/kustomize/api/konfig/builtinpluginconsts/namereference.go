@@ -3,7 +3,6 @@
 
 package builtinpluginconsts
 
-// LINT.IfChange
 const (
 	nameReferenceFieldSpecs = `
 nameReference:
@@ -399,5 +398,3 @@ nameReference:
     kind: Ingress
 `
 )
-
-// LINT.ThenChange(/examples/transformerconfigs/README.md)

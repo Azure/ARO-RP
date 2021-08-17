@@ -54,6 +54,14 @@ func (g *gateway) gatewayVerification(host, linkID string) (string, bool, error)
 		})
 	}
 
+	// Emit a gauge for the linkID if the host is empty
+	if host == "" {
+		g.m.EmitGauge("gateway.nohost", 1, map[string]string{
+			"linkid": linkID,
+			"action": "denied",
+		})
+	}
+
 	if _, found := g.allowList[strings.ToLower(host)]; found {
 		return gateway.ID, true, nil
 	}

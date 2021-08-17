@@ -9,9 +9,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	machineapi "github.com/openshift/api/machine/v1beta1"
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/azure"
+	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	azureprovider "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 )
 
 const (
@@ -78,9 +79,8 @@ func Machines(clusterID string, config *types.InstallConfig, pool *types.Machine
 	return machines, nil
 }
 
-func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string, userDataSecret string, clusterID string, role string, azIdx *int) (*machineapi.AzureMachineProviderSpec, error) {
-	var image machineapi.Image
-
+func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string, userDataSecret string, clusterID string, role string, azIdx *int) (*azureprovider.AzureMachineProviderSpec, error) {
+	var image azureprovider.Image
 	var az *string
 	if len(mpool.Zones) > 0 && azIdx != nil {
 		az = &mpool.Zones[*azIdx]
@@ -90,11 +90,11 @@ func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string
 
 	if platform.Image != nil {
 		if platform.Image.ResourceID != "" {
-			image = machineapi.Image{
+			image = azureprovider.Image{
 				ResourceID: platform.Image.ResourceID,
 			}
 		} else {
-			image = machineapi.Image{
+			image = azureprovider.Image{
 				Publisher: platform.Image.Publisher,
 				Offer:     platform.Image.Offer,
 				SKU:       platform.Image.SKU,
@@ -102,7 +102,7 @@ func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string
 			}
 		}
 	} else {
-		image = machineapi.Image{
+		image = azureprovider.Image{
 			ResourceID: fmt.Sprintf("/resourceGroups/%s/providers/Microsoft.Compute/images/%s", rg, clusterID),
 		}
 	}
@@ -116,9 +116,9 @@ func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string
 		mpool.OSDisk.DiskType = "Premium_LRS"
 	}
 
-	var diskEncryptionSet *machineapi.DiskEncryptionSetParameters = nil
+	var diskEncryptionSet *azureprovider.DiskEncryptionSetParameters = nil
 	if mpool.OSDisk.DiskEncryptionSetID != "" {
-		diskEncryptionSet = &machineapi.DiskEncryptionSetParameters{
+		diskEncryptionSet = &azureprovider.DiskEncryptionSetParameters{
 			ID: mpool.OSDisk.DiskEncryptionSetID,
 		}
 	}
@@ -133,16 +133,16 @@ func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string
 		managedIdentity = ""
 	}
 
-	var securityProfile *machineapi.SecurityProfile = nil
+	var securityProfile *azureprovider.SecurityProfile = nil
 	if mpool.EncryptionAtHost {
-		securityProfile = &machineapi.SecurityProfile{
+		securityProfile = &azureprovider.SecurityProfile{
 			EncryptionAtHost: &mpool.EncryptionAtHost,
 		}
 	}
 
-	spec := &machineapi.AzureMachineProviderSpec{
+	return &azureprovider.AzureMachineProviderSpec{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "machine.openshift.io/v1beta1",
+			APIVersion: "azureproviderconfig.openshift.io/v1beta1",
 			Kind:       "AzureMachineProviderSpec",
 		},
 		UserDataSecret:    &corev1.SecretReference{Name: userDataSecret},
@@ -150,10 +150,10 @@ func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string
 		Location:          platform.Region,
 		VMSize:            mpool.InstanceType,
 		Image:             image,
-		OSDisk: machineapi.OSDisk{
+		OSDisk: azureprovider.OSDisk{
 			OSType:     "Linux",
 			DiskSizeGB: mpool.OSDisk.DiskSizeGB,
-			ManagedDisk: machineapi.ManagedDiskParameters{
+			ManagedDisk: azureprovider.ManagedDiskParameters{
 				StorageAccountType: mpool.OSDisk.DiskType,
 				DiskEncryptionSet:  diskEncryptionSet,
 			},
@@ -166,13 +166,7 @@ func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string
 		NetworkResourceGroup: networkResourceGroup,
 		PublicLoadBalancer:   publicLB,
 		SecurityProfile:      securityProfile,
-	}
-
-	if platform.CloudName == azure.StackCloud {
-		spec.AvailabilitySet = fmt.Sprintf("%s-cluster", clusterID)
-	}
-
-	return spec, nil
+	}, nil
 }
 
 // ConfigMasters sets the PublicIP flag and assigns a set of load balancers to the given machines

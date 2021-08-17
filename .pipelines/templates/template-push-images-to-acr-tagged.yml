@@ -4,7 +4,7 @@ parameters:
 steps:
 - script: |
     set -e
-    trap 'set +e; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af ; rm -rf ~/.docker/config.json; rm -rf /run/user/$(id -u $USERNAME)/containers/auth.json' EXIT
+    trap 'set +e; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af ; rm -rf ~/.docker/config.json' EXIT
     export RP_IMAGE_ACR=${{ parameters.rpImageACR }}
     export TAG=${{ parameters.imageTag }}
     az acr login --name "$RP_IMAGE_ACR"

@@ -4,16 +4,13 @@ package deploy
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
 	"context"
-	"embed"
-	"errors"
 	"fmt"
 	"strings"
-	"text/template"
 	"time"
 
 	"github.com/sirupsen/logrus"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -24,8 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-	appsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
-	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -41,16 +36,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
-
-//go:embed staticresources
-var embeddedFiles embed.FS
 
 type Operator interface {
 	CreateOrUpdate(context.Context) error
 	IsReady(context.Context) (bool, error)
-	IsRunningDesiredVersion(context.Context) (bool, error)
-	RenewMDSDCertificate(context.Context) error
 }
 
 type operator struct {
@@ -86,90 +77,40 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli 
 	}, nil
 }
 
-type deploymentData struct {
-	Image              string
-	Version            string
-	IsLocalDevelopment bool
-}
-
-func templateManifests(data deploymentData) ([][]byte, error) {
-	templatesRoot, err := template.ParseFS(embeddedFiles, "staticresources/*.yaml")
-	if err != nil {
-		return nil, err
-	}
-	templatesMaster, err := template.ParseFS(embeddedFiles, "staticresources/master/*")
-	if err != nil {
-		return nil, err
-	}
-	templatesWorker, err := template.ParseFS(embeddedFiles, "staticresources/worker/*")
-	if err != nil {
-		return nil, err
-	}
-
-	templatedFiles := make([][]byte, 0)
-	templatesArray := []*template.Template{templatesMaster, templatesRoot, templatesWorker}
-
-	for _, templates := range templatesArray {
-		for _, templ := range templates.Templates() {
-			buff := &bytes.Buffer{}
-			if err := templ.Execute(buff, data); err != nil {
-				return nil, err
-			}
-			templatedFiles = append(templatedFiles, buff.Bytes())
-		}
-	}
-	return templatedFiles, nil
-}
-
-func (o *operator) createDeploymentData() deploymentData {
-	image := o.env.AROOperatorImage()
-
-	// HACK: Override for ARO_IMAGE env variable setup in local-dev mode
-	version := "latest"
-	if strings.Contains(image, ":") {
-		str := strings.Split(image, ":")
-		version = str[len(str)-1]
-	}
-
-	// Set version correctly if it's overridden
-	if o.oc.Properties.OperatorVersion != "" {
-		version = o.oc.Properties.OperatorVersion
-		image = fmt.Sprintf("%s/aro:%s", o.env.ACRDomain(), version)
-	}
-
-	return deploymentData{
-		IsLocalDevelopment: o.env.IsLocalDevelopmentMode(),
-		Image:              image,
-		Version:            version,
-	}
-}
-
-func (o *operator) createObjects() ([]kruntime.Object, error) {
-	deploymentData := o.createDeploymentData()
-	templated, err := templateManifests(deploymentData)
-	if err != nil {
-		return nil, err
-	}
-	objects := make([]kruntime.Object, 0, len(templated))
-	for _, v := range templated {
-		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(v, nil, nil)
+func (o *operator) resources() ([]kruntime.Object, error) {
+	// first static resources from Assets
+	results := []kruntime.Object{}
+	for _, assetName := range AssetNames() {
+		b, err := Asset(assetName)
 		if err != nil {
 			return nil, err
 		}
-		objects = append(objects, obj)
+
+		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(b, nil, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		// set the image for the deployments
+		if d, ok := obj.(*appsv1.Deployment); ok {
+			if d.Labels == nil {
+				d.Labels = map[string]string{}
+			}
+			d.Labels["version"] = version.GitCommit
+			for i := range d.Spec.Template.Spec.Containers {
+				d.Spec.Template.Spec.Containers[i].Image = o.env.AROOperatorImage()
+
+				if o.env.IsLocalDevelopmentMode() {
+					d.Spec.Template.Spec.Containers[i].Env = append(d.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
+						Name:  "RP_MODE",
+						Value: "development",
+					})
+				}
+			}
+		}
+
+		results = append(results, obj)
 	}
-
-	return objects, nil
-}
-
-func (o *operator) resources() ([]kruntime.Object, error) {
-	// first static resources from Assets
-
-	results, err := o.createObjects()
-	if err != nil {
-		return nil, err
-	}
-
 	// then dynamic resources
 	key, cert := o.env.ClusterGenevaLoggingSecret()
 	gcsKeyBytes, err := utiltls.PrivateKeyAsBytes(key)
@@ -195,11 +136,6 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 	domain := o.oc.Properties.ClusterProfile.Domain
 	if !strings.ContainsRune(domain, '.') {
 		domain += "." + o.env.Domain()
-	}
-
-	ingressIP, err := checkIngressIP(o.oc.Properties.IngressProfiles)
-	if err != nil {
-		return nil, err
 	}
 
 	serviceSubnets := []string{
@@ -244,7 +180,7 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 			},
 
 			APIIntIP:                 o.oc.Properties.APIServerProfile.IntIP,
-			IngressIP:                ingressIP,
+			IngressIP:                o.oc.Properties.IngressProfiles[0].IP,
 			GatewayPrivateEndpointIP: o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP,
 			// Update the OperatorFlags from the version in the RP
 			OperatorFlags: arov1alpha1.OperatorFlags(o.oc.Properties.OperatorFlags),
@@ -365,31 +301,6 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 	return nil
 }
 
-func (o *operator) RenewMDSDCertificate(ctx context.Context) error {
-	key, cert := o.env.ClusterGenevaLoggingSecret()
-	gcsKeyBytes, err := utiltls.PrivateKeyAsBytes(key)
-	if err != nil {
-		return err
-	}
-	gcsCertBytes, err := utiltls.CertAsBytes(cert)
-	if err != nil {
-		return err
-	}
-
-	s, err := o.kubernetescli.CoreV1().Secrets(pkgoperator.Namespace).Get(ctx, pkgoperator.SecretName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	s.Data["gcscert.pem"] = gcsCertBytes
-	s.Data["gcskey.pem"] = gcsKeyBytes
-
-	_, err = o.kubernetescli.CoreV1().Secrets(pkgoperator.Namespace).Update(ctx, s, metav1.UpdateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (o *operator) IsReady(ctx context.Context) (bool, error) {
 	ok, err := ready.CheckDeploymentIsReady(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-master")()
 	if !ok || err != nil {
@@ -401,89 +312,6 @@ func (o *operator) IsReady(ctx context.Context) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func checkOperatorDeploymentVersion(ctx context.Context, cli appsv1client.DeploymentInterface, name string, desiredVersion string) (bool, error) {
-	d, err := cli.Get(ctx, name, metav1.GetOptions{})
-	switch {
-	case kerrors.IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, err
-	}
-	if d.Labels["version"] != desiredVersion {
-		return false, nil
-	}
-	return true, nil
-}
-
-func checkPodImageVersion(ctx context.Context, cli corev1client.PodInterface, role string, desiredVersion string) (bool, error) {
-	podList, err := cli.List(ctx, metav1.ListOptions{LabelSelector: "app=" + role})
-	switch {
-	case kerrors.IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, err
-	}
-	imageTag := "latest"
-	for _, pod := range podList.Items {
-		if strings.Contains(pod.Spec.Containers[0].Image, ":") {
-			str := strings.Split(pod.Spec.Containers[0].Image, ":")
-			imageTag = str[len(str)-1]
-		}
-	}
-	if imageTag != desiredVersion {
-		return false, nil
-	}
-	return true, nil
-}
-
-func (o *operator) IsRunningDesiredVersion(ctx context.Context) (bool, error) {
-	// Get the desired Version
-	image := o.env.AROOperatorImage()
-	desiredVersion := "latest"
-	if strings.Contains(image, ":") {
-		str := strings.Split(image, ":")
-		desiredVersion = str[len(str)-1]
-	}
-	if o.oc.Properties.OperatorVersion != "" {
-		desiredVersion = o.oc.Properties.OperatorVersion
-	}
-
-	// Check if aro-operator-master is running desired version
-	ok, err := checkOperatorDeploymentVersion(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-master", desiredVersion)
-	if !ok || err != nil {
-		return ok, err
-	}
-	ok, err = checkPodImageVersion(ctx, o.kubernetescli.CoreV1().Pods(pkgoperator.Namespace), "aro-operator-master", desiredVersion)
-	if !ok || err != nil {
-		return ok, err
-	}
-	// Check if aro-operator-worker is running desired version
-	ok, err = checkOperatorDeploymentVersion(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-worker", desiredVersion)
-	if !ok || err != nil {
-		return ok, err
-	}
-	ok, err = checkPodImageVersion(ctx, o.kubernetescli.CoreV1().Pods(pkgoperator.Namespace), "aro-operator-worker", desiredVersion)
-	if !ok || err != nil {
-		return ok, err
-	}
-	return true, nil
-}
-
-func checkIngressIP(ingressProfiles []api.IngressProfile) (string, error) {
-	if ingressProfiles == nil || len(ingressProfiles) < 1 {
-		return "", errors.New("no Ingress Profiles found")
-	}
-	ingressIP := ingressProfiles[0].IP
-	if len(ingressProfiles) > 1 {
-		for _, p := range ingressProfiles {
-			if p.Name == "default" {
-				return p.IP, nil
-			}
-		}
-	}
-	return ingressIP, nil
 }
 
 func isCRDEstablished(crd *extensionsv1.CustomResourceDefinition) bool {

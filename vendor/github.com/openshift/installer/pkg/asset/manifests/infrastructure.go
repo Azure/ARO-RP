@@ -1,7 +1,6 @@
 package manifests
 
 import (
-	"context"
 	"path/filepath"
 	"sort"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	gcpmanifests "github.com/openshift/installer/pkg/asset/manifests/gcp"
-	"github.com/openshift/installer/pkg/types/alibabacloud"
 	"github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
 	"github.com/openshift/installer/pkg/types/baremetal"
@@ -149,12 +147,6 @@ func (i *Infrastructure) Generate(dependencies asset.Parents) error {
 		if installConfig.Config.Platform.Azure.CloudName == azure.StackCloud {
 			config.Status.PlatformStatus.Azure.ARMEndpoint = installConfig.Config.Platform.Azure.ARMEndpoint
 		}
-	case alibabacloud.Name:
-		config.Spec.PlatformSpec.Type = configv1.AlibabaCloudPlatformType
-		config.Status.PlatformStatus.AlibabaCloud = &configv1.AlibabaCloudPlatformStatus{
-			Region:          installConfig.Config.Platform.AlibabaCloud.Region,
-			ResourceGroupID: installConfig.Config.Platform.AlibabaCloud.ResourceGroupID,
-		}
 	case baremetal.Name:
 		config.Spec.PlatformSpec.Type = configv1.BareMetalPlatformType
 		config.Status.PlatformStatus.BareMetal = &configv1.BareMetalPlatformStatus{
@@ -178,15 +170,9 @@ func (i *Infrastructure) Generate(dependencies asset.Parents) error {
 		})
 	case ibmcloud.Name:
 		config.Spec.PlatformSpec.Type = configv1.IBMCloudPlatformType
-		cisInstanceCRN, err := installConfig.IBMCloud.CISInstanceCRN(context.TODO())
-		if err != nil {
-			return errors.Wrap(err, "cannot retrieve IBM Cloud Internet Services instance CRN")
-		}
 		config.Status.PlatformStatus.IBMCloud = &configv1.IBMCloudPlatformStatus{
 			Location:          installConfig.Config.Platform.IBMCloud.Region,
 			ResourceGroupName: installConfig.Config.Platform.IBMCloud.ClusterResourceGroupName(clusterID.InfraID),
-			CISInstanceCRN:    cisInstanceCRN,
-			ProviderType:      configv1.IBMCloudProviderTypeVPC,
 		}
 	case libvirt.Name:
 		config.Spec.PlatformSpec.Type = configv1.LibvirtPlatformType

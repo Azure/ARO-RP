@@ -62,8 +62,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			obj = pass.TypesInfo.Uses[v.Sel]
 		case *ast.IndexExpr, *typeparams.IndexListExpr:
 			// Check generic functions such as "f[T1,T2]".
-			x, _, _, _ := typeparams.UnpackIndexExpr(v)
-			if id, ok := x.(*ast.Ident); ok {
+			if id, ok := typeparams.GetIndexExprData(v).X.(*ast.Ident); ok {
 				obj = pass.TypesInfo.Uses[id]
 			}
 		default:

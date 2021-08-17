@@ -1061,8 +1061,6 @@ export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
 export MONITORING_TENANT='$LOCATION'
 export MONITORING_ROLE=rp
 export MONITORING_ROLE_INSTANCE='$(hostname)'
-
-export MDSD_MSGPACK_SORT_COLUMNS=1
 EOF
 
 # setting MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault seems to have caused mdsd not
@@ -1085,8 +1083,8 @@ cat >/etc/default/vsa-nodescan-agent.config <<EOF
   }
 EOF
 
-# we start a cron job to run every hour to ensure the said directory is accessible
-# by the correct user as it gets created by root and may cause a race condition
+# we start a cron job to run every hour to ensure the said directory is accessible 
+# by the correct user as it gets created by root and may cause a race condition 
 # where root owns the dir instead of syslog
 # TODO: https://msazure.visualstudio.com/AzureRedHatOpenShift/_workitems/edit/12591207
 cat >/etc/cron.d/mdsd-chown-workaround <<EOF
@@ -1103,9 +1101,6 @@ for scan in baseline clamav software; do
   /usr/local/bin/azsecd config -s $scan -d P1D
 done
 
-# We need to manually set PasswordAuthentication to true in order for the VMSS Access JIT to work
-sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
-
 restorecon -RF /var/log/*
 (sleep 30; reboot) &
 `))
@@ -1120,9 +1115,6 @@ restorecon -RF /var/log/*
 				Name:     to.StringPtr("[parameters('vmSize')]"),
 				Tier:     to.StringPtr("Standard"),
 				Capacity: to.Int64Ptr(1338),
-			},
-			Tags: map[string]*string{
-				"SkipLinuxAzSecPack": to.StringPtr("true"),
 			},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
 				UpgradePolicy: &mgmtcompute.UpgradePolicy{

@@ -127,8 +127,11 @@ func typeIsTestingDotTOrB(expr ast.Expr) (string, bool) {
 func goStmtFun(goStmt *ast.GoStmt) ast.Node {
 	switch fun := goStmt.Call.Fun.(type) {
 	case *ast.IndexExpr, *typeparams.IndexListExpr:
-		x, _, _, _ := typeparams.UnpackIndexExpr(fun)
-		id, _ := x.(*ast.Ident)
+		ix := typeparams.GetIndexExprData(fun)
+		if ix == nil {
+			break
+		}
+		id, _ := ix.X.(*ast.Ident)
 		if id == nil {
 			break
 		}

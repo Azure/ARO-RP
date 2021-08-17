@@ -6,7 +6,8 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/pkg/errors"
 
-	machineapi "github.com/openshift/api/machine/v1beta1"
+	azureprovider "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
+
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/azure"
 	"github.com/openshift/installer/pkg/types/azure/defaults"
@@ -21,45 +22,41 @@ type Auth struct {
 }
 
 type config struct {
-	Auth                            `json:",inline"`
-	Environment                     string            `json:"azure_environment"`
-	ARMEndpoint                     string            `json:"azure_arm_endpoint"`
-	ExtraTags                       map[string]string `json:"azure_extra_tags,omitempty"`
-	BootstrapInstanceType           string            `json:"azure_bootstrap_vm_type,omitempty"`
-	MasterInstanceType              string            `json:"azure_master_vm_type,omitempty"`
-	MasterAvailabilityZones         []string          `json:"azure_master_availability_zones"`
-	VolumeType                      string            `json:"azure_master_root_volume_type"`
-	VolumeSize                      int32             `json:"azure_master_root_volume_size"`
-	ImageURL                        string            `json:"azure_image_url,omitempty"`
-	Region                          string            `json:"azure_region,omitempty"`
-	BaseDomainResourceGroupName     string            `json:"azure_base_domain_resource_group_name,omitempty"`
-	ResourceGroupName               string            `json:"azure_resource_group_name"`
-	NetworkResourceGroupName        string            `json:"azure_network_resource_group_name"`
-	VirtualNetwork                  string            `json:"azure_virtual_network"`
-	ControlPlaneSubnet              string            `json:"azure_control_plane_subnet"`
-	ComputeSubnet                   string            `json:"azure_compute_subnet"`
-	PreexistingNetwork              bool              `json:"azure_preexisting_network"`
-	Private                         bool              `json:"azure_private"`
-	OutboundUDR                     bool              `json:"azure_outbound_user_defined_routing"`
-	BootstrapIgnitionStub           string            `json:"azure_bootstrap_ignition_stub"`
-	BootstrapIgnitionURLPlaceholder string            `json:"azure_bootstrap_ignition_url_placeholder"`
+	Auth                        `json:",inline"`
+	Environment                 string            `json:"azure_environment"`
+	ARMEndpoint                 string            `json:"azure_arm_endpoint,omitempty"`
+	ExtraTags                   map[string]string `json:"azure_extra_tags,omitempty"`
+	BootstrapInstanceType       string            `json:"azure_bootstrap_vm_type,omitempty"`
+	MasterInstanceType          string            `json:"azure_master_vm_type,omitempty"`
+	MasterAvailabilityZones     []string          `json:"azure_master_availability_zones"`
+	VolumeType                  string            `json:"azure_master_root_volume_type"`
+	VolumeSize                  int32             `json:"azure_master_root_volume_size"`
+	ImageURL                    string            `json:"azure_image_url,omitempty"`
+	Region                      string            `json:"azure_region,omitempty"`
+	BaseDomainResourceGroupName string            `json:"azure_base_domain_resource_group_name,omitempty"`
+	ResourceGroupName           string            `json:"azure_resource_group_name"`
+	NetworkResourceGroupName    string            `json:"azure_network_resource_group_name"`
+	VirtualNetwork              string            `json:"azure_virtual_network"`
+	ControlPlaneSubnet          string            `json:"azure_control_plane_subnet"`
+	ComputeSubnet               string            `json:"azure_compute_subnet"`
+	PreexistingNetwork          bool              `json:"azure_preexisting_network"`
+	Private                     bool              `json:"azure_private"`
+	OutboundUDR                 bool              `json:"azure_outbound_user_defined_routing"`
 }
 
 // TFVarsSources contains the parameters to be converted into Terraform variables
 type TFVarsSources struct {
-	Auth                            Auth
-	CloudName                       azure.CloudEnvironment
-	ARMEndpoint                     string
-	ResourceGroupName               string
-	BaseDomainResourceGroupName     string
-	MasterConfigs                   []*machineapi.AzureMachineProviderSpec
-	WorkerConfigs                   []*machineapi.AzureMachineProviderSpec
-	ImageURL                        string
-	PreexistingNetwork              bool
-	Publish                         types.PublishingStrategy
-	OutboundType                    azure.OutboundType
-	BootstrapIgnStub                string
-	BootstrapIgnitionURLPlaceholder string
+	Auth                        Auth
+	CloudName                   azure.CloudEnvironment
+	ARMEndpoint                 string
+	ResourceGroupName           string
+	BaseDomainResourceGroupName string
+	MasterConfigs               []*azureprovider.AzureMachineProviderSpec
+	WorkerConfigs               []*azureprovider.AzureMachineProviderSpec
+	ImageURL                    string
+	PreexistingNetwork          bool
+	Publish                     types.PublishingStrategy
+	OutboundType                azure.OutboundType
 }
 
 // TFVars generates Azure-specific Terraform variables launching the cluster.
@@ -80,27 +77,25 @@ func TFVars(sources TFVarsSources) ([]byte, error) {
 	}
 
 	cfg := &config{
-		Auth:                            sources.Auth,
-		Environment:                     environment,
-		ARMEndpoint:                     sources.ARMEndpoint,
-		Region:                          region,
-		BootstrapInstanceType:           defaults.BootstrapInstanceType(sources.CloudName, region),
-		MasterInstanceType:              masterConfig.VMSize,
-		MasterAvailabilityZones:         masterAvailabilityZones,
-		VolumeType:                      masterConfig.OSDisk.ManagedDisk.StorageAccountType,
-		VolumeSize:                      masterConfig.OSDisk.DiskSizeGB,
-		ImageURL:                        sources.ImageURL,
-		Private:                         sources.Publish == types.InternalPublishingStrategy,
-		OutboundUDR:                     sources.OutboundType == azure.UserDefinedRoutingOutboundType,
-		ResourceGroupName:               sources.ResourceGroupName,
-		BaseDomainResourceGroupName:     sources.BaseDomainResourceGroupName,
-		NetworkResourceGroupName:        masterConfig.NetworkResourceGroup,
-		VirtualNetwork:                  masterConfig.Vnet,
-		ControlPlaneSubnet:              masterConfig.Subnet,
-		ComputeSubnet:                   workerConfig.Subnet,
-		PreexistingNetwork:              sources.PreexistingNetwork,
-		BootstrapIgnitionStub:           sources.BootstrapIgnStub,
-		BootstrapIgnitionURLPlaceholder: sources.BootstrapIgnitionURLPlaceholder,
+		Auth:                        sources.Auth,
+		Environment:                 environment,
+		ARMEndpoint:                 sources.ARMEndpoint,
+		Region:                      region,
+		BootstrapInstanceType:       defaults.BootstrapInstanceType(sources.CloudName, region),
+		MasterInstanceType:          masterConfig.VMSize,
+		MasterAvailabilityZones:     masterAvailabilityZones,
+		VolumeType:                  masterConfig.OSDisk.ManagedDisk.StorageAccountType,
+		VolumeSize:                  masterConfig.OSDisk.DiskSizeGB,
+		ImageURL:                    sources.ImageURL,
+		Private:                     sources.Publish == types.InternalPublishingStrategy,
+		OutboundUDR:                 sources.OutboundType == azure.UserDefinedRoutingOutboundType,
+		ResourceGroupName:           sources.ResourceGroupName,
+		BaseDomainResourceGroupName: sources.BaseDomainResourceGroupName,
+		NetworkResourceGroupName:    masterConfig.NetworkResourceGroup,
+		VirtualNetwork:              masterConfig.Vnet,
+		ControlPlaneSubnet:          masterConfig.Subnet,
+		ComputeSubnet:               workerConfig.Subnet,
+		PreexistingNetwork:          sources.PreexistingNetwork,
 	}
 
 	return json.MarshalIndent(cfg, "", "  ")

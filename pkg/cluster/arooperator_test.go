@@ -143,7 +143,7 @@ func TestAroDeploymentReady(t *testing.T) {
 		wantRes bool
 	}{
 		{
-			name: "operator is ready",
+			name: "create/update success",
 			doc: &api.OpenShiftClusterDocument{
 				Key: strings.ToLower(key),
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -164,29 +164,6 @@ func TestAroDeploymentReady(t *testing.T) {
 					Return(true, nil)
 			},
 			wantRes: true,
-		},
-		{
-			name: "operator is not ready",
-			doc: &api.OpenShiftClusterDocument{
-				Key: strings.ToLower(key),
-				OpenShiftCluster: &api.OpenShiftCluster{
-					ID: key,
-					Properties: api.OpenShiftClusterProperties{
-						IngressProfiles: []api.IngressProfile{
-							{
-								Visibility: api.VisibilityPublic,
-								Name:       "default",
-							},
-						},
-					},
-				},
-			},
-			mocks: func(dep *mock_deploy.MockOperator) {
-				dep.EXPECT().
-					IsReady(gomock.Any()).
-					Return(false, nil)
-			},
-			wantRes: false,
 		},
 		{
 			name: "enriched data not available - skip",
@@ -221,6 +198,7 @@ func TestAroDeploymentReady(t *testing.T) {
 			if err != nil || ok != tt.wantRes {
 				t.Error(err)
 			}
+
 		})
 	}
 }

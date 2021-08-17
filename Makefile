@@ -5,10 +5,10 @@ ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
-FLUENTBIT_VERSION = 1.9.4-1
+FLUENTBIT_VERSION = 1.7.8-1
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)
-AUTOREST_VERSION = 3.6.2
-AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
+AUTOREST_VERSION = 3.3.2
+AUTOREST_IMAGE = "quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}"
 
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
@@ -20,17 +20,6 @@ else
 	VERSION = $(TAG)
 endif
 
-# default to registry.access.redhat.com for build images on local builds and CI builds without $RP_IMAGE_ACR set.
-ifeq ($(RP_IMAGE_ACR),arointsvc)
-	REGISTRY = arointsvc.azurecr.io
-else ifeq ($(RP_IMAGE_ACR),arosvc)
-	REGISTRY = arosvc.azurecr.io
-else ifeq ($(RP_IMAGE_ACR),)
-	REGISTRY = registry.access.redhat.com
-else
-	REGISTRY = $(RP_IMAGE_ACR)
-endif
-
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 
 build-all:
@@ -40,7 +29,7 @@ aro: generate
 	go build -tags aro,containers_image_openpgp,codec.safe -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
 
 runlocal-rp:
-	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro rp
+	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro rp
 
 az: pyenv
 	. pyenv/bin/activate && \
@@ -56,12 +45,12 @@ clean:
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 client: generate
-	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04
+	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 deploy:
-	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
+	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 dev-config.yaml:
 	go run ./hack/gendevconfig >dev-config.yaml
@@ -75,21 +64,23 @@ generate:
 	go generate ./...
 
 image-aro: aro e2e.test
-	docker pull $(REGISTRY)/ubi8/ubi-minimal
-	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
+	docker pull registry.access.redhat.com/ubi8/ubi-minimal
+	docker build --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
 
 image-aro-multistage:
-	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
+	docker build --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) .
 
 image-autorest:
-	docker build --platform=linux/amd64 --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
+	docker build --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" \
+	  -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
 
 image-fluentbit:
-	docker build --platform=linux/amd64 --network=host --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
+	docker build --network=host --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) \
+	  -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
 
 image-proxy: proxy
-	docker pull $(REGISTRY)/ubi8/ubi-minimal
-	docker build --platform=linux/amd64 --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) .
+	docker pull registry.access.redhat.com/ubi8/ubi-minimal
+	docker build --no-cache -f Dockerfile.proxy -t ${RP_IMAGE_ACR}.azurecr.io/proxy:latest .
 
 publish-image-aro: image-aro
 	docker push $(ARO_IMAGE)
@@ -118,17 +109,16 @@ proxy:
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
 
 run-portal:
-	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
+	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
 
 build-portal:
-	cd portal/v1 && npm install && npm run build && cd ../v2 && npm install && npm run build
-	make generate
+	cd portal && npm install && npm run build
 
 pyenv:
 	python3 -m venv pyenv
 	. pyenv/bin/activate && \
 		pip install -U pip && \
-		pip install -r requirements.txt && \
+		pip install autopep8 azdev azure-mgmt-loganalytics==0.2.0 colorama ruamel.yaml wheel && \
 		azdev setup -r . && \
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
 
@@ -142,7 +132,7 @@ secrets:
 secrets-update:
 	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
 	tar -czf secrets.tar.gz secrets
-	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --overwrite --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
+	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
 	rm secrets.tar.gz
 
 tunnel:
@@ -164,50 +154,29 @@ validate-go:
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
-	go vet -tags containers_image_openpgp ./...
+	go vet ./...
 	go test -tags e2e -run ^$$ ./test/e2e/...
-
-validate-go-action:
-	go run ./hack/licenses -validate -ignored-go vendor,pkg/client,.git -ignored-python python/client,vendor,.git
-	go run ./hack/validate-imports cmd hack pkg test
-	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
-	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
-	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
 
 validate-fips:
 	hack/fips/validate-fips.sh
 
 unit-test-go:
-	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverprofile=cover.out ./...
+	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro -coverprofile=cover.out ./...
 
 lint-go:
-	hack/lint-go.sh
-
-lint-admin-portal:
-	docker build --platform=linux/amd64 --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.portal_lint . -t linter:latest --no-cache
-	docker run --platform=linux/amd64 -t --rm linter:latest
+	go run ./vendor/github.com/golangci/golangci-lint/cmd/golangci-lint run
 
 test-python: pyenv az
 	. pyenv/bin/activate && \
 		azdev linter && \
 		azdev style && \
-		hack/unit-test-python.sh
-
-
-shared-cluster-login:
-	@oc login ${SHARED_CLUSTER_API} -u kubeadmin -p ${SHARED_CLUSTER_KUBEADMIN_PASSWORD}
-
-unit-test-python:
-	hack/unit-test-python.sh
+		hack/format-yaml/format-yaml.py .pipelines
 
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
-
-aks.kubeconfig:
-	hack/get-admin-aks-kubeconfig.sh
 
 vendor:
 	# See comments in the script for background on why we need it
 	hack/update-go-module-dependencies.sh
 
-.PHONY: admin.kubeconfig aks.kubeconfig aro az clean client deploy dev-config.yaml discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy lint-go runlocal-rp proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go  unit-test-go coverage-go validate-fips
+.PHONY: admin.kubeconfig aro az clean client deploy dev-config.yaml discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy lint-go runlocal-rp proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go  unit-test-go coverage-go validate-fips

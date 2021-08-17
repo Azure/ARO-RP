@@ -58,10 +58,7 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 	return c.tracker
 }
 
-var (
-	_ clientset.Interface = &Clientset{}
-	_ testing.FakeClient  = &Clientset{}
-)
+var _ clientset.Interface = &Clientset{}
 
 // ImageregistryV1 retrieves the ImageregistryV1Client
 func (c *Clientset) ImageregistryV1() imageregistryv1.ImageregistryV1Interface {

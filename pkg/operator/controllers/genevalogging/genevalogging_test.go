@@ -143,6 +143,7 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+
 			cluster := &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 				Status:     arov1alpha1.ClusterStatus{Conditions: []operatorv1.OperatorCondition{}},
@@ -167,6 +168,7 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 			for _, err := range errs {
 				t.Error(err)
 			}
+
 		})
 	}
 }

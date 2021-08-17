@@ -35,8 +35,6 @@ linters:
     - godot
     - exhaustivestruct
     - paralleltest
-    - varnamelen
-    - ireturn
     #- thelper
 
 issues:

@@ -14,14 +14,11 @@ import (
 
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
-	ibmcloudmachines "github.com/openshift/installer/pkg/asset/machines/ibmcloud"
-	alibabacloudmanifests "github.com/openshift/installer/pkg/asset/manifests/alibabacloud"
 	"github.com/openshift/installer/pkg/asset/manifests/azure"
 	gcpmanifests "github.com/openshift/installer/pkg/asset/manifests/gcp"
 	ibmcloudmanifests "github.com/openshift/installer/pkg/asset/manifests/ibmcloud"
 	openstackmanifests "github.com/openshift/installer/pkg/asset/manifests/openstack"
 	vspheremanifests "github.com/openshift/installer/pkg/asset/manifests/vsphere"
-	alibabacloudtypes "github.com/openshift/installer/pkg/types/alibabacloud"
 	awstypes "github.com/openshift/installer/pkg/types/aws"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
@@ -99,23 +96,7 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 			return nil
 		}
 		cm.Data[cloudProviderConfigCABundleDataKey] = trustBundle
-		// Include a non-empty kube config to appease components--such as the kube-apiserver--that
-		// expect there to be a kube config if the cloud-provider-config ConfigMap exists. See
-		// https://bugzilla.redhat.com/show_bug.cgi?id=1926975.
-		// Note that the newline is required in order to be valid yaml.
-		cm.Data[cloudProviderConfigDataKey] = `[Global]
-`
-	case alibabacloudtypes.Name:
-		alibabacloudConfig, err := alibabacloudmanifests.CloudConfig{
-			Global: alibabacloudmanifests.GlobalConfig{
-				ClusterID: clusterID.InfraID,
-				Region:    installConfig.Config.AlibabaCloud.Region,
-			},
-		}.JSON()
-		if err != nil {
-			return errors.Wrap(err, "could not create Alibaba Cloud provider config")
-		}
-		cm.Data[cloudProviderConfigDataKey] = alibabacloudConfig
+
 	case openstacktypes.Name:
 		cloudProviderConfigData, cloudProviderConfigCABundleData, err := openstackmanifests.GenerateCloudProviderConfig(*installConfig.Config)
 		if err != nil {
@@ -186,29 +167,7 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 		if err != nil {
 			return err
 		}
-
-		controlPlane := &ibmcloudtypes.MachinePool{}
-		controlPlane.Set(installConfig.Config.Platform.IBMCloud.DefaultMachinePlatform)
-		controlPlane.Set(installConfig.Config.ControlPlane.Platform.IBMCloud)
-		compute := &ibmcloudtypes.MachinePool{}
-		compute.Set(installConfig.Config.Platform.IBMCloud.DefaultMachinePlatform)
-		compute.Set(installConfig.Config.WorkerMachinePool().Platform.IBMCloud)
-
-		if len(controlPlane.Zones) == 0 || len(compute.Zones) == 0 {
-			zones, err := ibmcloudmachines.AvailabilityZones(installConfig.Config.IBMCloud.Region)
-			if err != nil {
-				return errors.Wrapf(err, "could not get availability zones for %s", installConfig.Config.IBMCloud.Region)
-			}
-			if len(controlPlane.Zones) == 0 {
-				controlPlane.Zones = zones
-			}
-			if len(compute.Zones) == 0 {
-				compute.Zones = zones
-			}
-		}
-
-		resourceGroupName := installConfig.Config.Platform.IBMCloud.ClusterResourceGroupName(clusterID.InfraID)
-		ibmcloudConfig, err := ibmcloudmanifests.CloudProviderConfig(clusterID.InfraID, accountID, installConfig.Config.IBMCloud.Region, resourceGroupName, controlPlane.Zones, compute.Zones)
+		ibmcloudConfig, err := ibmcloudmanifests.CloudProviderConfig(clusterID.InfraID, accountID)
 		if err != nil {
 			return errors.Wrap(err, "could not create cloud provider config")
 		}

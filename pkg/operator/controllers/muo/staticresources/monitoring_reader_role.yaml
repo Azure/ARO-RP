@@ -7,7 +7,7 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - configmaps
+  - configmaps  
   - serviceaccounts
   - secrets
   - services

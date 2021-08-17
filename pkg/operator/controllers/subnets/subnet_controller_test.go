@@ -137,6 +137,7 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
+
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: subnetResourceIdMaster,
@@ -171,6 +172,7 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
+
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: subnetResourceIdMaster,
@@ -200,6 +202,7 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
+
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: subnetResourceIdMaster,
@@ -229,6 +232,7 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
+
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: subnetResourceIdMaster,
@@ -266,6 +270,7 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
+
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: subnetResourceIdWorker,
@@ -305,43 +310,6 @@ func TestReconcileManager(t *testing.T) {
 					(*subnetObjectWorkerUpdate.SubnetPropertiesFormat.ServiceEndpoints)[i].Locations = &[]string{"*"}
 					(*subnetObjectWorkerUpdate.SubnetPropertiesFormat.ServiceEndpoints)[i].ProvisioningState = ""
 				}
-				mock.EXPECT().CreateOrUpdate(gomock.Any(), subnetResourceIdWorker, subnetObjectWorkerUpdate).Return(nil)
-			},
-			instance: func(instace *arov1alpha1.Cluster) {
-				instace.Spec.ArchitectureVersion = int(api.ArchitectureVersionV2)
-			},
-		},
-		{
-			name:                        "Architecture V2 - empty NSG",
-			operatorFlagEnabled:         true,
-			operatorFlagNSG:             true,
-			operatorFlagServiceEndpoint: true,
-			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
-				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
-					{
-						ResourceID: subnetResourceIdMaster,
-						IsMaster:   true,
-					},
-					{
-						ResourceID: subnetResourceIdWorker,
-						IsMaster:   false,
-					},
-				}, nil)
-
-				subnetObjectMaster := getValidSubnet()
-				subnetObjectMaster.NetworkSecurityGroup = nil
-				mock.EXPECT().Get(gomock.Any(), subnetResourceIdMaster).Return(subnetObjectMaster, nil).MaxTimes(2)
-
-				subnetObjectMasterUpdate := getValidSubnet()
-				subnetObjectMasterUpdate.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
-				mock.EXPECT().CreateOrUpdate(gomock.Any(), subnetResourceIdMaster, subnetObjectMasterUpdate).Return(nil)
-
-				subnetObjectWorker := getValidSubnet()
-				subnetObjectWorker.NetworkSecurityGroup = nil
-				mock.EXPECT().Get(gomock.Any(), subnetResourceIdWorker).Return(subnetObjectWorker, nil).MaxTimes(2)
-
-				subnetObjectWorkerUpdate := getValidSubnet()
-				subnetObjectWorkerUpdate.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
 				mock.EXPECT().CreateOrUpdate(gomock.Any(), subnetResourceIdWorker, subnetObjectWorkerUpdate).Return(nil)
 			},
 			instance: func(instace *arov1alpha1.Cluster) {

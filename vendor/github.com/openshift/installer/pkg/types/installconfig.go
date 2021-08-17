@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/openshift/installer/pkg/ipnet"
-	"github.com/openshift/installer/pkg/types/alibabacloud"
 	"github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
 	"github.com/openshift/installer/pkg/types/baremetal"
@@ -32,11 +31,9 @@ var (
 	// platform names in alphabetical order. This is the list of
 	// platforms presented to the user in the interactive wizard.
 	PlatformNames = []string{
-		alibabacloud.Name,
 		aws.Name,
 		azure.Name,
 		gcp.Name,
-		ibmcloud.Name,
 		openstack.Name,
 		ovirt.Name,
 		vsphere.Name,
@@ -46,6 +43,7 @@ var (
 	// to the user in the interactive wizard.
 	HiddenPlatformNames = []string{
 		baremetal.Name,
+		ibmcloud.Name,
 		none.Name,
 	}
 
@@ -143,11 +141,10 @@ type InstallConfig struct {
 	// For each of the following platforms, the field can set to the specified values. For all other platforms, the
 	// field must not be set.
 	// AWS: "Mint", "Passthrough", "Manual"
-	// Azure: "Passthrough", "Manual"
+	// Azure: "Mint", "Passthrough", "Manual"
 	// AzureStack: "Manual"
 	// GCP: "Mint", "Passthrough", "Manual"
 	// IBMCloud: "Manual"
-	// AlibabaCloud: "Manual"
 	// +optional
 	CredentialsMode CredentialsMode `json:"credentialsMode,omitempty"`
 
@@ -169,10 +166,6 @@ func (c *InstallConfig) IsOKD() bool {
 // Platform is the configuration for the specific platform upon which to perform
 // the installation. Only one of the platform configuration should be set.
 type Platform struct {
-	// AlibabaCloud is the configuration used when installing on Alibaba Cloud.
-	// +optional
-	AlibabaCloud *alibabacloud.Platform `json:"alibabacloud,omitempty"`
-
 	// AWS is the configuration used when installing on AWS.
 	// +optional
 	AWS *aws.Platform `json:"aws,omitempty"`
@@ -221,8 +214,6 @@ func (p *Platform) Name() string {
 	switch {
 	case p == nil:
 		return ""
-	case p.AlibabaCloud != nil:
-		return alibabacloud.Name
 	case p.AWS != nil:
 		return aws.Name
 	case p.Azure != nil:
@@ -281,8 +272,8 @@ type Networking struct {
 
 	// Deprecated types, scheduled to be removed
 
-	// Deprecated way to configure an IP address pool for machines.
-	// Replaced by MachineNetwork which allows for multiple pools.
+	// Deprecated name for MachineCIDRs. If set, MachineCIDRs must
+	// be empty or the first index must match.
 	// +optional
 	DeprecatedMachineCIDR *ipnet.IPNet `json:"machineCIDR,omitempty"`
 
@@ -290,8 +281,7 @@ type Networking struct {
 	// +optional
 	DeprecatedType string `json:"type,omitempty"`
 
-	// Deprecated way to configure an IP address pool for services.
-	// Replaced by ServiceNetwork which allows for multiple pools.
+	// Deprecated name for ServiceNetwork
 	// +optional
 	DeprecatedServiceCIDR *ipnet.IPNet `json:"serviceCIDR,omitempty"`
 

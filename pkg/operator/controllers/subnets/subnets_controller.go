@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,7 +44,7 @@ type Reconciler struct {
 
 	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
-	maocli        machineclient.Interface
+	maocli        maoclient.Interface
 }
 
 // reconcileManager is an instance of the manager instantiated per request
@@ -59,7 +59,7 @@ type reconcileManager struct {
 }
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli machineclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli maoclient.Interface) *Reconciler {
 	return &Reconciler{
 		log:           log,
 		arocli:        arocli,
@@ -114,6 +114,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 }
 
 func (r *reconcileManager) reconcileSubnets(ctx context.Context, instance *arov1alpha1.Cluster) error {
+
 	subnets, err := r.kubeSubnets.List(ctx)
 	if err != nil {
 		return err
@@ -124,6 +125,7 @@ func (r *reconcileManager) reconcileSubnets(ctx context.Context, instance *arov1
 	// This potentially calls an update twice for the same loop, but this is the price
 	// to pay for keeping logic split, separate, and simple
 	for _, s := range subnets {
+
 		if instance.Spec.OperatorFlags.GetSimpleBoolean(controllerNSGManaged) {
 			err = r.ensureSubnetNSG(ctx, s)
 			if err != nil {

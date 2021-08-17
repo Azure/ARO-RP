@@ -67,7 +67,7 @@ docker run \
   -CertFile /etc/mdm.pem \
   -FrontEndUrl $MDMFRONTENDURL \
   -Logger Console \
-  -LogLevel Debug \
+  -LogLevel Warning \
   -PrivateKeyFile /etc/mdm.pem \
   -SourceEnvironment $MDMSOURCEENVIRONMENT \
   -SourceRole $MDMSOURCEROLE \
@@ -85,6 +85,7 @@ ssh $CLOUDUSER@$PUBLICIP "sudo sed -i 's/SELINUX=enforcing/SELINUX=permissive/g'
 
 ssh $CLOUDUSER@$PUBLICIP "sudo firewall-cmd --zone=public --add-port=12345/tcp --permanent"
 ssh $CLOUDUSER@$PUBLICIP "sudo firewall-cmd --reload"
+
 
 scp $BASE/dockerStartCommand.sh $CLOUDUSER@$PUBLICIP:
 ssh $CLOUDUSER@$PUBLICIP "chmod +x dockerStartCommand.sh"

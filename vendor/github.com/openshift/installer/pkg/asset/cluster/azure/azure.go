@@ -24,6 +24,7 @@ func Metadata(config *types.InstallConfig) *azure.Metadata {
 		Region:                      config.Platform.Azure.Region,
 		ResourceGroupName:           config.Azure.ResourceGroupName,
 		BaseDomainResourceGroupName: config.Azure.BaseDomainResourceGroupName,
+		ClusterName:                 config.ClusterName,
 	}
 }
 

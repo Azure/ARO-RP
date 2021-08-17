@@ -68,8 +68,6 @@ func DefaultOperatorFlags() OperatorFlags {
 		"aro.imageconfig.enabled":                  flagTrue,
 		"aro.machine.enabled":                      flagTrue,
 		"aro.machineset.enabled":                   flagTrue,
-		"aro.machinehealthcheck.enabled":           flagTrue,
-		"aro.machinehealthcheck.managed":           flagTrue,
 		"aro.monitoring.enabled":                   flagTrue,
 		"aro.nodedrainer.enabled":                  flagTrue,
 		"aro.pullsecret.enabled":                   flagTrue,

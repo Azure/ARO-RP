@@ -5,10 +5,7 @@
 package gensupport
 
 import (
-	"errors"
 	"io"
-	"net"
-	"strings"
 	"time"
 
 	"github.com/googleapis/gax-go/v2"
@@ -23,8 +20,8 @@ type Backoff interface {
 
 // These are declared as global variables so that tests can overwrite them.
 var (
-	// Default per-chunk deadline for resumable uploads.
-	defaultRetryDeadline = 32 * time.Second
+	// Per-chunk deadline for resumable uploads.
+	retryDeadline = 32 * time.Second
 	// Default backoff timer.
 	backoff = func() Backoff {
 		return &gax.Backoff{Initial: 100 * time.Millisecond}
@@ -39,10 +36,6 @@ const (
 	// should be retried.
 	// https://cloud.google.com/storage/docs/json_api/v1/status-codes#standardcodes
 	statusTooManyRequests = 429
-
-	// statusRequestTimeout is returned by the storage API if the
-	// upload connection was broken. The request should be retried.
-	statusRequestTimeout = 408
 )
 
 // shouldRetry indicates whether an error is retryable for the purposes of this
@@ -53,7 +46,7 @@ func shouldRetry(status int, err error) bool {
 	if 500 <= status && status <= 599 {
 		return true
 	}
-	if status == statusTooManyRequests || status == statusRequestTimeout {
+	if status == statusTooManyRequests {
 		return true
 	}
 	if err == io.ErrUnexpectedEOF {
@@ -68,14 +61,6 @@ func shouldRetry(status int, err error) bool {
 			return true
 		}
 	}
-	var opErr *net.OpError
-	if errors.As(err, &opErr) {
-		if strings.Contains(opErr.Error(), "use of closed network connection") {
-			// TODO: check against net.ErrClosed (go 1.16+) instead of string
-			return true
-		}
-	}
-
 	// If Go 1.13 error unwrapping is available, use this to examine wrapped
 	// errors.
 	if err, ok := err.(interface{ Unwrap() error }); ok {
