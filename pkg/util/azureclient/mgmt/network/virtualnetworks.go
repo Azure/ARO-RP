@@ -14,9 +14,7 @@ import (
 
 // VirtualNetworksClient is a minimal interface for azure VirtualNetworksClient
 type VirtualNetworksClient interface {
-	CreateOrUpdate(ctx context.Context, resourceGroupName string, virtualNetworkName string, parameters mgmtnetwork.VirtualNetwork) (result mgmtnetwork.VirtualNetworksCreateOrUpdateFuture, err error)
 	Get(ctx context.Context, resourceGroupName string, virtualNetworkName string, expand string) (vnet mgmtnetwork.VirtualNetwork, err error)
-	VirtualNetworksClientAddons
 }
 
 type virtualNetworksClient struct {

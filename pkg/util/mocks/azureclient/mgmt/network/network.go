@@ -301,21 +301,6 @@ func (mr *MockPublicIPAddressesClientMockRecorder) Get(arg0, arg1, arg2, arg3 in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPublicIPAddressesClient)(nil).Get), arg0, arg1, arg2, arg3)
 }
 
-// List mocks base method.
-func (m *MockPublicIPAddressesClient) List(arg0 context.Context, arg1 string) ([]network.PublicIPAddress, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1)
-	ret0, _ := ret[0].([]network.PublicIPAddress)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// List indicates an expected call of List.
-func (mr *MockPublicIPAddressesClientMockRecorder) List(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockPublicIPAddressesClient)(nil).List), arg0, arg1)
-}
-
 // MockRouteTablesClient is a mock of RouteTablesClient interface.
 type MockRouteTablesClient struct {
 	ctrl     *gomock.Controller
@@ -457,21 +442,6 @@ func (m *MockVirtualNetworksClient) EXPECT() *MockVirtualNetworksClientMockRecor
 	return m.recorder
 }
 
-// CreateOrUpdate mocks base method.
-func (m *MockVirtualNetworksClient) CreateOrUpdate(arg0 context.Context, arg1, arg2 string, arg3 network.VirtualNetwork) (network.VirtualNetworksCreateOrUpdateFuture, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(network.VirtualNetworksCreateOrUpdateFuture)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateOrUpdate indicates an expected call of CreateOrUpdate.
-func (mr *MockVirtualNetworksClientMockRecorder) CreateOrUpdate(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockVirtualNetworksClient)(nil).CreateOrUpdate), arg0, arg1, arg2, arg3)
-}
-
 // Get mocks base method.
 func (m *MockVirtualNetworksClient) Get(arg0 context.Context, arg1, arg2, arg3 string) (network.VirtualNetwork, error) {
 	m.ctrl.T.Helper()
@@ -485,21 +455,6 @@ func (m *MockVirtualNetworksClient) Get(arg0 context.Context, arg1, arg2, arg3 s
 func (mr *MockVirtualNetworksClientMockRecorder) Get(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockVirtualNetworksClient)(nil).Get), arg0, arg1, arg2, arg3)
-}
-
-// List mocks base method.
-func (m *MockVirtualNetworksClient) List(arg0 context.Context, arg1 string) ([]network.VirtualNetwork, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1)
-	ret0, _ := ret[0].([]network.VirtualNetwork)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// List indicates an expected call of List.
-func (mr *MockVirtualNetworksClientMockRecorder) List(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVirtualNetworksClient)(nil).List), arg0, arg1)
 }
 
 // MockSecurityGroupsClient is a mock of SecurityGroupsClient interface.
@@ -523,20 +478,6 @@ func NewMockSecurityGroupsClient(ctrl *gomock.Controller) *MockSecurityGroupsCli
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockSecurityGroupsClient) EXPECT() *MockSecurityGroupsClientMockRecorder {
 	return m.recorder
-}
-
-// CreateOrUpdateAndWait mocks base method.
-func (m *MockSecurityGroupsClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2 string, arg3 network.SecurityGroup) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
-func (mr *MockSecurityGroupsClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockSecurityGroupsClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3)
 }
 
 // Get mocks base method.
@@ -592,50 +533,6 @@ func (m *MockVirtualNetworkPeeringsClient) EXPECT() *MockVirtualNetworkPeeringsC
 	return m.recorder
 }
 
-// CreateOrUpdate mocks base method.
-func (m *MockVirtualNetworkPeeringsClient) CreateOrUpdate(arg0 context.Context, arg1, arg2, arg3 string, arg4 network.VirtualNetworkPeering) (network.VirtualNetworkPeeringsCreateOrUpdateFuture, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0, arg1, arg2, arg3, arg4)
-	ret0, _ := ret[0].(network.VirtualNetworkPeeringsCreateOrUpdateFuture)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateOrUpdate indicates an expected call of CreateOrUpdate.
-func (mr *MockVirtualNetworkPeeringsClientMockRecorder) CreateOrUpdate(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockVirtualNetworkPeeringsClient)(nil).CreateOrUpdate), arg0, arg1, arg2, arg3, arg4)
-}
-
-// CreateOrUpdateAndWait mocks base method.
-func (m *MockVirtualNetworkPeeringsClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2, arg3 string, arg4 network.VirtualNetworkPeering) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3, arg4)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
-func (mr *MockVirtualNetworkPeeringsClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockVirtualNetworkPeeringsClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3, arg4)
-}
-
-// Delete mocks base method.
-func (m *MockVirtualNetworkPeeringsClient) Delete(arg0 context.Context, arg1, arg2, arg3 string) (network.VirtualNetworkPeeringsDeleteFuture, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(network.VirtualNetworkPeeringsDeleteFuture)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Delete indicates an expected call of Delete.
-func (mr *MockVirtualNetworkPeeringsClientMockRecorder) Delete(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockVirtualNetworkPeeringsClient)(nil).Delete), arg0, arg1, arg2, arg3)
-}
-
 // DeleteAndWait mocks base method.
 func (m *MockVirtualNetworkPeeringsClient) DeleteAndWait(arg0 context.Context, arg1, arg2, arg3 string) error {
 	m.ctrl.T.Helper()
@@ -648,21 +545,6 @@ func (m *MockVirtualNetworkPeeringsClient) DeleteAndWait(arg0 context.Context, a
 func (mr *MockVirtualNetworkPeeringsClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockVirtualNetworkPeeringsClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3)
-}
-
-// Get mocks base method.
-func (m *MockVirtualNetworkPeeringsClient) Get(arg0 context.Context, arg1, arg2, arg3 string) (network.VirtualNetworkPeering, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(network.VirtualNetworkPeering)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Get indicates an expected call of Get.
-func (mr *MockVirtualNetworkPeeringsClientMockRecorder) Get(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockVirtualNetworkPeeringsClient)(nil).Get), arg0, arg1, arg2, arg3)
 }
 
 // MockUsageClient is a mock of UsageClient interface.

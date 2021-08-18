@@ -15,7 +15,7 @@ type VirtualMachineScaleSetsClientAddons interface {
 }
 
 func (c *virtualMachineScaleSetsClient) DeleteAndWait(ctx context.Context, resourceGroupName string, VMScaleSetName string) error {
-	future, err := c.Delete(ctx, resourceGroupName, VMScaleSetName)
+	future, err := c.VirtualMachineScaleSetsClient.Delete(ctx, resourceGroupName, VMScaleSetName)
 	if err != nil {
 		return err
 	}
