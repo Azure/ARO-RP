@@ -79,13 +79,13 @@ func (m *manager) overrideEthernetMTU(g graph.Graph) error {
 
 	ignitionFile, err := newMTUMachineConfigIgnitionFile("master")
 	if err != nil {
-		return nil
+		return err
 	}
 	bootstrap.Config.Storage.Files = append(bootstrap.Config.Storage.Files, ignitionFile)
 
 	ignitionFile, err = newMTUMachineConfigIgnitionFile("worker")
 	if err != nil {
-		return nil
+		return err
 	}
 	bootstrap.Config.Storage.Files = append(bootstrap.Config.Storage.Files, ignitionFile)
 
