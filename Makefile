@@ -4,6 +4,8 @@ ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
 FLUENTBIT_VERSION = 1.7.8-1
+AUTOREST_VERSION = 3.3.2
+AUTOREST_IMAGE = "quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}"
 
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
@@ -28,7 +30,7 @@ clean:
 	find python -type d -name __pycache__ -delete
 
 client: generate
-	hack/build-client.sh 2020-04-30 2021-09-01-preview
+	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
@@ -53,6 +55,10 @@ image-aro: aro e2e.test
 image-aro-multistage:
 	docker build --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) .
 
+image-autorest:
+	docker build --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" \
+	  -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
+
 image-fluentbit:
 	docker build --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) \
 	  -f Dockerfile.fluentbit -t ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION) .
@@ -74,6 +80,9 @@ ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
 		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
 		docker push arointsvc.azurecr.io/aro:latest
 endif
+
+publish-image-autorest: image-autorest
+	docker push ${AUTOREST_IMAGE}
 
 publish-image-fluentbit: image-fluentbit
 	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)

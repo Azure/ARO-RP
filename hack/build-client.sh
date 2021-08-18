@@ -19,9 +19,11 @@ function checksum() {
 }
 
 function generate_golang() {
-  local API_VERSION=$1
-  local FOLDER=$2
+  local AUTOREST_IMAGE=$1
+  local API_VERSION=$2
+  local FOLDER=$3
 
+  # Generating Track 1 SDK. Needs work to migrate to Track 2.
   sudo docker run \
 		--rm \
 		-v $PWD/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
@@ -39,21 +41,25 @@ function generate_golang() {
 }
 
 function generate_python() {
-  local API_VERSION=$1
-  local FOLDER=$2
+  local AUTOREST_IMAGE=$1
+  local API_VERSION=$2
+  local FOLDER=$3
 
+  # Generating Track 2 SDK
   sudo docker run \
-		--rm \
-		-v $PWD/python/client:/python/client:z \
-		-v $PWD/swagger:/swagger:z \
-		azuresdk/autorest \
-		--use=@microsoft.azure/autorest.python@4.0.70 \
-		--python \
-		--azure-arm \
-		--license-header=MICROSOFT_APACHE_NO_VERSION \
-		--namespace=azure.mgmt.redhatopenshift.v"${API_VERSION//-/_}" \
-		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
-		--output-folder=/python/client
+    --rm \
+    -v $PWD/python/client:/python/client:z \
+    -v $PWD/swagger:/swagger:z \
+    "${AUTOREST_IMAGE}" \
+    --version=3.4.5 \
+    --use=@autorest/python@5.8.4 \
+    --use=@autorest/modelerfour@~4.20.0 \
+    --python \
+    --azure-arm \
+    --license-header=MICROSOFT_APACHE_NO_VERSION \
+    --namespace=azure.mgmt.redhatopenshift.v"${API_VERSION//-/_}" \
+    --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
+    --output-folder=/python/client
 
   sudo chown -R $(id -un):$(id -gn) python/client
   rm -rf python/client/azure/mgmt/redhatopenshift/v"${API_VERSION//-/_}"/aio
@@ -63,7 +69,9 @@ function generate_python() {
 
 rm -f .sha256sum
 
-for API_VERSION in "$@"
+AUTOREST_IMAGE=$1
+
+for API_VERSION in "${@: 2}"
 do
   FOLDER=stable
   if [[ "$API_VERSION" =~ .*preview ]]; then
@@ -72,6 +80,6 @@ do
 
   clean "$API_VERSION" "$FOLDER"
   checksum "$API_VERSION" "$FOLDER"
-  generate_golang "$API_VERSION" "$FOLDER"
-  generate_python "$API_VERSION" "$FOLDER"
+  generate_golang "$AUTOREST_IMAGE" "$API_VERSION" "$FOLDER"
+  generate_python "$AUTOREST_IMAGE" "$API_VERSION" "$FOLDER"
 done

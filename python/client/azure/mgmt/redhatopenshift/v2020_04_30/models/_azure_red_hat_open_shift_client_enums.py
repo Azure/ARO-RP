@@ -34,22 +34,6 @@ class _CaseInsensitiveEnumMeta(EnumMeta):
             raise AttributeError(name)
 
 
-class CreatedByType(with_metaclass(_CaseInsensitiveEnumMeta, str, Enum)):
-    """The type of identity that created the resource.
-    """
-
-    USER = "User"
-    APPLICATION = "Application"
-    MANAGED_IDENTITY = "ManagedIdentity"
-    KEY = "Key"
-
-class EncryptionAtHost(with_metaclass(_CaseInsensitiveEnumMeta, str, Enum)):
-    """EncryptionAtHost represents encryption at host state
-    """
-
-    DISABLED = "Disabled"
-    ENABLED = "Enabled"
-
 class ProvisioningState(with_metaclass(_CaseInsensitiveEnumMeta, str, Enum)):
     """ProvisioningState represents a provisioning state.
     """
@@ -60,13 +44,6 @@ class ProvisioningState(with_metaclass(_CaseInsensitiveEnumMeta, str, Enum)):
     FAILED = "Failed"
     SUCCEEDED = "Succeeded"
     UPDATING = "Updating"
-
-class SDNProvider(with_metaclass(_CaseInsensitiveEnumMeta, str, Enum)):
-    """SDNProvider constants.
-    """
-
-    OVN_KUBERNETES = "OVNKubernetes"
-    OPEN_SHIFT_SDN = "OpenShiftSDN"
 
 class Visibility(with_metaclass(_CaseInsensitiveEnumMeta, str, Enum)):
     """Visibility represents visibility.
@@ -91,14 +68,8 @@ class VMSize(with_metaclass(_CaseInsensitiveEnumMeta, str, Enum)):
     STANDARD_E16_S_V3 = "Standard_E16s_v3"
     STANDARD_E32_S_V3 = "Standard_E32s_v3"
     STANDARD_E4_S_V3 = "Standard_E4s_v3"
-    STANDARD_E64_I_V3 = "Standard_E64i_v3"
-    STANDARD_E64_IS_V3 = "Standard_E64is_v3"
     STANDARD_E8_S_V3 = "Standard_E8s_v3"
     STANDARD_F16_S_V2 = "Standard_F16s_v2"
     STANDARD_F32_S_V2 = "Standard_F32s_v2"
     STANDARD_F4_S_V2 = "Standard_F4s_v2"
-    STANDARD_F72_S_V2 = "Standard_F72s_v2"
     STANDARD_F8_S_V2 = "Standard_F8s_v2"
-    STANDARD_G5 = "Standard_G5"
-    STANDARD_GS5 = "Standard_GS5"
-    STANDARD_M128_MS = "Standard_M128ms"
