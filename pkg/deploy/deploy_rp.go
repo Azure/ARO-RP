@@ -112,12 +112,12 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 }
 
 func (d *deployer) configureDNS(ctx context.Context) error {
-	rpPip, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "rp-pip", "")
+	rpPIP, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "rp-pip", "")
 	if err != nil {
 		return err
 	}
 
-	portalPip, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "portal-pip", "")
+	portalPIP, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "portal-pip", "")
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	dbtokenIp := *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
+	dbtokenIP := *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
 
 	zone, err := d.zones.Get(ctx, d.config.RPResourceGroupName, d.config.Location+"."+*d.config.Configuration.ClusterParentDomainName)
 	if err != nil {
@@ -138,7 +138,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 			TTL: to.Int64Ptr(3600),
 			ARecords: &[]mgmtdns.ARecord{
 				{
-					Ipv4Address: rpPip.IPAddress,
+					Ipv4Address: rpPIP.IPAddress,
 				},
 			},
 		},
@@ -152,7 +152,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 			TTL: to.Int64Ptr(3600),
 			ARecords: &[]mgmtdns.ARecord{
 				{
-					Ipv4Address: portalPip.IPAddress,
+					Ipv4Address: portalPIP.IPAddress,
 				},
 			},
 		},
@@ -166,7 +166,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 			TTL: to.Int64Ptr(3600),
 			ARecords: &[]mgmtdns.ARecord{
 				{
-					Ipv4Address: &dbtokenIp,
+					Ipv4Address: &dbtokenIP,
 				},
 			},
 		},
