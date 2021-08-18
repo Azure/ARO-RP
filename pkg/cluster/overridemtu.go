@@ -26,6 +26,10 @@ if [ "$1" == "eth0" ] && [ "$2" == "up" ]; then
 fi`
 )
 
+func newMTUIgnitionFile() types.File {
+	return ignition.FileFromString(IgnFilePath, "root", 0555, IgnFileData)
+}
+
 func newMTUMachineConfigIgnitionFile(role string) (types.File, error) {
 	mtuIgnitionConfig := types.Config{
 		Ignition: types.Ignition{
@@ -33,7 +37,7 @@ func newMTUMachineConfigIgnitionFile(role string) (types.File, error) {
 		},
 		Storage: types.Storage{
 			Files: []types.File{
-				ignition.FileFromString(IgnFilePath, "root", 0555, IgnFileData),
+				newMTUIgnitionFile(),
 			},
 		},
 	}
@@ -69,13 +73,20 @@ func newMTUMachineConfigIgnitionFile(role string) (types.File, error) {
 }
 
 func (m *manager) overrideEthernetMTU(g graph.Graph) error {
-	// This adds the following MachineConfig manifest files to the bootstrap
+	bootstrap := g.Get(&bootstrap.Bootstrap{}).(*bootstrap.Bootstrap)
+
+	// Override MTU on the bootstrap node itself, so cluster-network-operator
+	// gets an appropriate default MTU for OpenshiftSDN or OVNKubernetes when
+	// it first starts up on the bootstrap node.
+
+	ignitionFile := newMTUIgnitionFile()
+	bootstrap.Config.Storage.Files = append(bootstrap.Config.Storage.Files, ignitionFile)
+
+	// Then add the following MachineConfig manifest files to the bootstrap
 	// node's Ignition config:
 	//
 	// /opt/openshift/openshift/99_openshift-machineconfig_99-master-mtu.yaml
 	// /opt/openshift/openshift/99_openshift-machineconfig_99-worker-mtu.yaml
-
-	bootstrap := g.Get(&bootstrap.Bootstrap{}).(*bootstrap.Bootstrap)
 
 	ignitionFile, err := newMTUMachineConfigIgnitionFile("master")
 	if err != nil {
