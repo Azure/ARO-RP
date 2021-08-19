@@ -28,6 +28,7 @@ import (
 const (
 	collAsyncOperations   = "AsyncOperations"
 	collBilling           = "Billing"
+	collGateway           = "Gateway"
 	collMonitors          = "Monitors"
 	collOpenShiftClusters = "OpenShiftClusters"
 	collPortal            = "Portal"

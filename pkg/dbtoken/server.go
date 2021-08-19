@@ -22,7 +22,9 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 )
 
@@ -39,6 +41,7 @@ type server struct {
 	l                       net.Listener
 	verifier                oidc.Verifier
 	permissionClientFactory func(userid string) cosmosdb.PermissionClient
+	m                       metrics.Interface
 }
 
 func NewServer(
@@ -51,6 +54,7 @@ func NewServer(
 	servingCerts []*x509.Certificate,
 	verifier oidc.Verifier,
 	userc cosmosdb.UserClient,
+	m metrics.Interface,
 ) (Server, error) {
 	config := &tls.Config{
 		Certificates: []tls.Certificate{
@@ -89,10 +93,13 @@ func NewServer(
 		permissionClientFactory: func(userid string) cosmosdb.PermissionClient {
 			return cosmosdb.NewPermissionClient(userc, userid)
 		},
+		m: m,
 	}, nil
 }
 
 func (s *server) Run(ctx context.Context) error {
+	go heartbeat.EmitHeartbeat(s.log, s.m, "dbtoken.heartbeat", nil, func() bool { return true })
+
 	r := mux.NewRouter()
 	r.Use(middleware.Panic(s.log))
 

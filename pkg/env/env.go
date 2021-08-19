@@ -40,14 +40,13 @@ const (
 	EncryptionSecretName             = "encryption-key"
 	FrontendEncryptionSecretName     = "fe-encryption-key"
 	DBTokenServerSecretName          = "dbtoken-server"
-	RPLoggingSecretName              = "rp-mdsd"
-	RPMonitoringSecretName           = "rp-mdm"
 	PortalServerSecretName           = "portal-server"
 	PortalServerClientSecretName     = "portal-client"
 	PortalServerSessionKeySecretName = "portal-session-key"
 	PortalServerSSHKeySecretName     = "portal-sshkey"
 	ClusterKeyvaultSuffix            = "-cls"
 	DBTokenKeyvaultSuffix            = "-dbt"
+	GatewayKeyvaultSuffix            = "-gwy"
 	PortalKeyvaultSuffix             = "-por"
 	ServiceKeyvaultSuffix            = "-svc"
 	RPPrivateEndpointPrefix          = "rp-pe-"
@@ -80,6 +79,8 @@ type Interface interface {
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
 	FPClientID() string
 	Listen() (net.Listener, error)
+	GatewayDomains() []string
+	GatewayResourceGroup() string
 	ServiceKeyvault() keyvault.Manager
 	ACRResourceID() string
 	ACRDomain() string

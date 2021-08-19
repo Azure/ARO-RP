@@ -18,12 +18,11 @@ github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault
 github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault
 github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi
 github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-12-01/network
-github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network
+github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network
 github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization
 github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry
 github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights
 github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns
-github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2015-12-01/features
 github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-05-01/resources
 github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-06-01/subscriptions
 github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features
@@ -35,11 +34,11 @@ github.com/Azure/go-ansiterm
 github.com/Azure/go-ansiterm/winterm
 # github.com/Azure/go-autorest v14.2.0+incompatible
 github.com/Azure/go-autorest
-# github.com/Azure/go-autorest/autorest v0.11.18
+# github.com/Azure/go-autorest/autorest v0.11.19
 ## explicit
 github.com/Azure/go-autorest/autorest
 github.com/Azure/go-autorest/autorest/azure
-# github.com/Azure/go-autorest/autorest/adal v0.9.13
+# github.com/Azure/go-autorest/autorest/adal v0.9.14
 ## explicit
 github.com/Azure/go-autorest/autorest/adal
 # github.com/Azure/go-autorest/autorest/azure/auth v0.5.7
@@ -946,6 +945,9 @@ github.com/pelletier/go-toml
 github.com/peterbourgon/diskv
 # github.com/phayes/checkstyle v0.0.0-20170904204023-bfd46e6a821d
 github.com/phayes/checkstyle
+# github.com/pires/go-proxyproto v0.5.0
+## explicit
+github.com/pires/go-proxyproto
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0

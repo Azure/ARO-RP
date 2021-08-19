@@ -107,6 +107,8 @@ type OpenShiftClusterProperties struct {
 
 	ClusterProfile ClusterProfile `json:"clusterProfile,omitempty"`
 
+	FeatureProfile FeatureProfile `json:"featureProfile,omitempty"`
+
 	ConsoleProfile ConsoleProfile `json:"consoleProfile,omitempty"`
 
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
@@ -124,7 +126,8 @@ type OpenShiftClusterProperties struct {
 	// Install is non-nil only when an install is in progress
 	Install *Install `json:"install,omitempty"`
 
-	StorageSuffix string `json:"storageSuffix,omitempty"`
+	StorageSuffix                   string `json:"storageSuffix,omitempty"`
+	ImageRegistryStorageAccountName string `json:"imageRegistryStorageAccountName,omitempty"`
 
 	InfraID string      `json:"infraId,omitempty"`
 	SSHKey  SecureBytes `json:"sshKey,omitempty"`
@@ -142,8 +145,6 @@ type OpenShiftClusterProperties struct {
 	UserAdminKubeconfig SecureBytes `json:"userAdminKubeconfig,omitempty"`
 
 	RegistryProfiles []*RegistryProfile `json:"registryProfiles,omitempty"`
-
-	ImageRegistryStorageAccountName string `json:"imageRegistryStorageAccountName,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state
@@ -176,6 +177,13 @@ type ClusterProfile struct {
 	Domain          string       `json:"domain,omitempty"`
 	Version         string       `json:"version,omitempty"`
 	ResourceGroupID string       `json:"resourceGroupId,omitempty"`
+}
+
+// FeatureProfile represents a feature profile.
+type FeatureProfile struct {
+	MissingFields
+
+	GatewayEnabled bool `json:"gatewayEnabled,omitempty"`
 }
 
 // ConsoleProfile represents a console profile.
@@ -211,6 +219,8 @@ type NetworkProfile struct {
 	SDNProvider SDNProvider `json:"sdnProvider,omitempty"`
 
 	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
+	GatewayPrivateEndpointIP   string `json:"gatewayPrivateEndpointIp,omitempty"`
+	GatewayPrivateLinkID       string `json:"gatewayPrivateLinkId,omitempty"`
 }
 
 // EncryptionAtHost represents encryption at host.

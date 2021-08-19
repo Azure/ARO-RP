@@ -14,7 +14,8 @@ import (
 type MSIContext string
 
 const (
-	MSIContextRP MSIContext = "RP"
+	MSIContextRP      MSIContext = "RP"
+	MSIContextGateway MSIContext = "GATEWAY"
 )
 
 func (c *core) NewMSIAuthorizer(msiContext MSIContext, resource string) (autorest.Authorizer, error) {

@@ -27,7 +27,7 @@ import (
 type openShiftClusterBackend struct {
 	*backend
 
-	newManager func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument) (cluster.Interface, error)
+	newManager func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument) (cluster.Interface, error)
 }
 
 func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
@@ -100,7 +100,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		return err
 	}
 
-	m, err := ocb.newManager(ctx, log, ocb.env, ocb.dbOpenShiftClusters, ocb.aead, ocb.billing, doc, subscriptionDoc)
+	m, err := ocb.newManager(ctx, log, ocb.env, ocb.dbOpenShiftClusters, ocb.dbGateway, ocb.aead, ocb.billing, doc, subscriptionDoc)
 	if err != nil {
 		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 	}

@@ -436,6 +436,34 @@ func (mr *MockInterfaceMockRecorder) FeatureIsSet(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FeatureIsSet", reflect.TypeOf((*MockInterface)(nil).FeatureIsSet), arg0)
 }
 
+// GatewayDomains mocks base method.
+func (m *MockInterface) GatewayDomains() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GatewayDomains")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// GatewayDomains indicates an expected call of GatewayDomains.
+func (mr *MockInterfaceMockRecorder) GatewayDomains() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GatewayDomains", reflect.TypeOf((*MockInterface)(nil).GatewayDomains))
+}
+
+// GatewayResourceGroup mocks base method.
+func (m *MockInterface) GatewayResourceGroup() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GatewayResourceGroup")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GatewayResourceGroup indicates an expected call of GatewayResourceGroup.
+func (mr *MockInterfaceMockRecorder) GatewayResourceGroup() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GatewayResourceGroup", reflect.TypeOf((*MockInterface)(nil).GatewayResourceGroup))
+}
+
 // Hostname mocks base method.
 func (m *MockInterface) Hostname() string {
 	m.ctrl.T.Helper()

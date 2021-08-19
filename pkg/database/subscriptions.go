@@ -78,13 +78,13 @@ func NewSubscriptions(ctx context.Context, isLocalDevelopmentMode bool, dbc cosm
 	}
 
 	documentClient := cosmosdb.NewSubscriptionDocumentClient(collc, collSubscriptions)
-	return NewSubscriptionsWithProvidedClient(documentClient), nil
+	return NewSubscriptionsWithProvidedClient(documentClient, uuid.Must(uuid.NewV4()).String()), nil
 }
 
-func NewSubscriptionsWithProvidedClient(client cosmosdb.SubscriptionDocumentClient) Subscriptions {
+func NewSubscriptionsWithProvidedClient(client cosmosdb.SubscriptionDocumentClient, uuid string) Subscriptions {
 	return &subscriptions{
 		c:    client,
-		uuid: uuid.Must(uuid.NewV4()).String(),
+		uuid: uuid,
 	}
 }
 

@@ -5,6 +5,8 @@ package dbtoken
 
 import (
 	"context"
+	"fmt"
+	"runtime/debug"
 	"sync/atomic"
 	"time"
 
@@ -13,12 +15,13 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/recover"
+	"github.com/Azure/ARO-RP/pkg/metrics"
+	utilrecover "github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
 type Refresher interface {
 	Run(context.Context) error
-	Ready() bool
+	HasSyncedOnce() bool
 }
 
 type refresher struct {
@@ -29,9 +32,12 @@ type refresher struct {
 	permission string
 
 	lastRefresh atomic.Value //time.Time
+
+	m            metrics.Interface
+	metricPrefix string
 }
 
-func NewRefresher(log *logrus.Entry, env env.Core, authorizer autorest.Authorizer, insecureSkipVerify bool, dbc cosmosdb.DatabaseClient, permission string) (Refresher, error) {
+func NewRefresher(log *logrus.Entry, env env.Core, authorizer autorest.Authorizer, insecureSkipVerify bool, dbc cosmosdb.DatabaseClient, permission string, m metrics.Interface, metricPrefix string) (Refresher, error) {
 	c, err := NewClient(env, authorizer, insecureSkipVerify)
 	if err != nil {
 		return nil, err
@@ -43,11 +49,16 @@ func NewRefresher(log *logrus.Entry, env env.Core, authorizer autorest.Authorize
 
 		dbc:        dbc,
 		permission: permission,
+
+		m:            m,
+		metricPrefix: metricPrefix,
 	}, nil
 }
 
 func (r *refresher) Run(ctx context.Context) error {
-	defer recover.Panic(r.log)
+	defer utilrecover.Panic(r.log)
+
+	go r.metrics()
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
@@ -64,7 +75,30 @@ func (r *refresher) Run(ctx context.Context) error {
 	}
 }
 
-func (r *refresher) runOnce(ctx context.Context) error {
+func (r *refresher) metrics() {
+	defer utilrecover.Panic(r.log)
+
+	t := time.NewTicker(time.Minute)
+	defer t.Stop()
+
+	for {
+		if lastRefresh, ok := r.lastRefresh.Load().(time.Time); ok {
+			r.m.EmitGauge(r.metricPrefix+".lastrefresh", lastRefresh.Unix(), nil)
+		}
+
+		<-t.C
+	}
+}
+
+func (r *refresher) runOnce(ctx context.Context) (err error) {
+	// extra hardening to prevent a panic under runOnce taking out the refresher
+	// goroutine
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("panic: %s (original err: %v)\n\n%s", e, err, string(debug.Stack()))
+		}
+	}()
+
 	timeoutCtx, done := context.WithTimeout(ctx, time.Minute)
 	defer done()
 
@@ -78,7 +112,7 @@ func (r *refresher) runOnce(ctx context.Context) error {
 	return nil
 }
 
-func (r *refresher) Ready() bool {
-	lastRefresh, _ := r.lastRefresh.Load().(time.Time)
-	return time.Since(lastRefresh) < time.Hour
+func (r *refresher) HasSyncedOnce() bool {
+	_, ok := r.lastRefresh.Load().(time.Time)
+	return ok
 }

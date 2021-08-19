@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"strings"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -134,6 +134,8 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		m.storageAccount(clusterStorageAccountName, installConfig.Config.Azure.Region),
 		m.storageAccountBlobContainer(clusterStorageAccountName, "ignition"),
 		m.storageAccountBlobContainer(clusterStorageAccountName, "aro"),
+		m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, installConfig.Config.Azure.Region),
+		m.storageAccountBlobContainer(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, "image-registry"),
 		m.clusterNSG(infraID, installConfig.Config.Azure.Region),
 		m.clusterServicePrincipalRBAC(),
 		m.networkPrivateLinkService(installConfig),
@@ -145,6 +147,12 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPublic {
 		resources = append(resources,
 			m.networkPublicIPAddress(installConfig, infraID+"-default-v4"),
+		)
+	}
+
+	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
+		resources = append(resources,
+			m.networkPrivateEndpoint(),
 		)
 	}
 
@@ -196,6 +204,11 @@ func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.
 	dnsConfig := &bootkube.ARODNSConfig{
 		APIIntIP:  m.doc.OpenShiftCluster.Properties.APIServerProfile.IntIP,
 		IngressIP: m.doc.OpenShiftCluster.Properties.IngressProfiles[0].IP,
+	}
+
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
+		dnsConfig.GatewayPrivateEndpointIP = m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP
+		dnsConfig.GatewayDomains = append(m.env.GatewayDomains(), m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName+".blob."+m.env.Environment().StorageEndpointSuffix)
 	}
 
 	g := graph.Graph{}
@@ -259,4 +272,23 @@ func (m *manager) attachNSGs(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
+	// TODO: there is probably an undesirable race condition here - check if etags can help.
+	s, err := m.subnet.Get(ctx, m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+	if err != nil {
+		return err
+	}
+
+	if s.SubnetPropertiesFormat == nil {
+		s.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
+	}
+
+	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
+		s.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies = to.StringPtr("Disabled")
+	}
+	s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies = to.StringPtr("Disabled")
+
+	return m.subnet.CreateOrUpdate(ctx, m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID, s)
 }

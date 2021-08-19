@@ -6,8 +6,8 @@ require (
 	cloud.google.com/go v0.82.0 // indirect
 	github.com/AlekSi/gocov-xml v0.0.0-20190121064608-3a14fb1c4737
 	github.com/Azure/azure-sdk-for-go v56.1.0+incompatible
-	github.com/Azure/go-autorest/autorest v0.11.18
-	github.com/Azure/go-autorest/autorest/adal v0.9.13
+	github.com/Azure/go-autorest/autorest v0.11.19
+	github.com/Azure/go-autorest/autorest/adal v0.9.14
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.7
 	github.com/Azure/go-autorest/autorest/date v0.3.0
 	github.com/Azure/go-autorest/autorest/to v0.4.0
@@ -83,8 +83,9 @@ require (
 	github.com/openshift/machine-config-operator v4.2.0-alpha.0.0.20190917115525-033375cbe820+incompatible
 	github.com/operator-framework/operator-sdk v1.7.2
 	github.com/pborman/uuid v1.2.1 // indirect
+	github.com/pires/go-proxyproto v0.5.0
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
-	github.com/prometheus/client_golang v1.10.0 // indirect
+	github.com/prometheus/client_golang v1.10.0
 	github.com/prometheus/common v0.25.0
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/sirupsen/logrus v1.8.1

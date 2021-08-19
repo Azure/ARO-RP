@@ -6,7 +6,7 @@ package cluster
 import (
 	"fmt"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -139,6 +139,33 @@ func (m *manager) networkPrivateLinkService(installConfig *installconfig.Install
 		DependsOn: []string{
 			"Microsoft.Network/loadBalancers/" + m.doc.OpenShiftCluster.Properties.InfraID + "-internal",
 		},
+	}
+}
+
+func (m *manager) networkPrivateEndpoint() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtnetwork.PrivateEndpoint{
+			PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
+				Subnet: &mgmtnetwork.Subnet{
+					ID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+				},
+				ManualPrivateLinkServiceConnections: &[]mgmtnetwork.PrivateLinkServiceConnection{
+					{
+						Name: to.StringPtr("gateway-plsconnection"),
+						PrivateLinkServiceConnectionProperties: &mgmtnetwork.PrivateLinkServiceConnectionProperties{
+							// TODO: in the future we will need multiple PLSes.
+							// It will be necessary to decide which the PLS for
+							// a cluster somewhere around here.
+							PrivateLinkServiceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.GatewayResourceGroup() + "/providers/Microsoft.Network/privateLinkServices/gateway-pls-001"),
+						},
+					},
+				},
+			},
+			Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pe"),
+			Type:     to.StringPtr("Microsoft.Network/privateEndpoints"),
+			Location: &m.doc.OpenShiftCluster.Location,
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 

@@ -33,6 +33,9 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				Version:         oc.Properties.ClusterProfile.Version,
 				ResourceGroupID: oc.Properties.ClusterProfile.ResourceGroupID,
 			},
+			FeatureProfile: FeatureProfile{
+				GatewayEnabled: oc.Properties.FeatureProfile.GatewayEnabled,
+			},
 			ConsoleProfile: ConsoleProfile{
 				URL: oc.Properties.ConsoleProfile.URL,
 			},
@@ -45,6 +48,8 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				PodCIDR:                    oc.Properties.NetworkProfile.PodCIDR,
 				ServiceCIDR:                oc.Properties.NetworkProfile.ServiceCIDR,
 				APIServerPrivateEndpointIP: oc.Properties.NetworkProfile.APIServerPrivateEndpointIP,
+				GatewayPrivateEndpointIP:   oc.Properties.NetworkProfile.GatewayPrivateEndpointIP,
+				GatewayPrivateLinkID:       oc.Properties.NetworkProfile.GatewayPrivateLinkID,
 			},
 			MasterProfile: MasterProfile{
 				VMSize:              VMSize(oc.Properties.MasterProfile.VMSize),
@@ -58,8 +63,9 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				IP:         oc.Properties.APIServerProfile.IP,
 				IntIP:      oc.Properties.APIServerProfile.IntIP,
 			},
-			StorageSuffix: oc.Properties.StorageSuffix,
-			InfraID:       oc.Properties.InfraID,
+			StorageSuffix:                   oc.Properties.StorageSuffix,
+			ImageRegistryStorageAccountName: oc.Properties.ImageRegistryStorageAccountName,
+			InfraID:                         oc.Properties.InfraID,
 		},
 	}
 
@@ -167,6 +173,7 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.ClusterProfile.Domain = oc.Properties.ClusterProfile.Domain
 	out.Properties.ClusterProfile.Version = oc.Properties.ClusterProfile.Version
 	out.Properties.ClusterProfile.ResourceGroupID = oc.Properties.ClusterProfile.ResourceGroupID
+	out.Properties.FeatureProfile.GatewayEnabled = oc.Properties.FeatureProfile.GatewayEnabled
 	out.Properties.ConsoleProfile.URL = oc.Properties.ConsoleProfile.URL
 	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
 	out.Properties.ServicePrincipalProfile.SPObjectID = oc.Properties.ServicePrincipalProfile.SPObjectID
@@ -174,11 +181,14 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
 	out.Properties.NetworkProfile.SDNProvider = api.SDNProvider(oc.Properties.NetworkProfile.SDNProvider)
 	out.Properties.NetworkProfile.APIServerPrivateEndpointIP = oc.Properties.NetworkProfile.APIServerPrivateEndpointIP
+	out.Properties.NetworkProfile.GatewayPrivateEndpointIP = oc.Properties.NetworkProfile.GatewayPrivateEndpointIP
+	out.Properties.NetworkProfile.GatewayPrivateLinkID = oc.Properties.NetworkProfile.GatewayPrivateLinkID
 	out.Properties.MasterProfile.VMSize = api.VMSize(oc.Properties.MasterProfile.VMSize)
 	out.Properties.MasterProfile.SubnetID = oc.Properties.MasterProfile.SubnetID
 	out.Properties.MasterProfile.EncryptionAtHost = api.EncryptionAtHost(oc.Properties.MasterProfile.EncryptionAtHost)
 	out.Properties.MasterProfile.DiskEncryptionSetID = oc.Properties.MasterProfile.DiskEncryptionSetID
 	out.Properties.StorageSuffix = oc.Properties.StorageSuffix
+	out.Properties.ImageRegistryStorageAccountName = oc.Properties.ImageRegistryStorageAccountName
 	out.Properties.WorkerProfiles = nil
 	if oc.Properties.WorkerProfiles != nil {
 		out.Properties.WorkerProfiles = make([]api.WorkerProfile, len(oc.Properties.WorkerProfiles))

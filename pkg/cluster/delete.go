@@ -17,6 +17,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -123,6 +124,7 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 var deleteOrder = map[string]int{
 	"microsoft.compute/virtualmachines":     -1, // first, and before microsoft.compute/disks, microsoft.network/networkinterfaces
 	"microsoft.network/privatelinkservices": -1, // before microsoft.network/loadbalancers
+	"microsoft.network/privateendpoints":    -1, // before microsoft.network/networkinterfaces
 	"microsoft.network/privatednszones":     1,  // after everything else: get other deletions underway first
 }
 
@@ -258,6 +260,24 @@ func (m *manager) deleteRoleDefinition(ctx context.Context) error {
 	return nil
 }
 
+func (m *manager) deleteGateway(ctx context.Context) error {
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateLinkID == "" {
+		return nil
+	}
+
+	// https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
+	_, err := m.dbGateway.Patch(ctx, m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateLinkID, func(doc *api.GatewayDocument) error {
+		doc.Gateway.Deleting = true
+		doc.TTL = 600
+		return nil
+	})
+	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) /* already gone */ {
+		return err
+	}
+
+	return nil
+}
+
 func (m *manager) deleteResourcesAndResourceGroup(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	// In edge case of CRG not being managedBy ARO, we have a different delete path
@@ -330,6 +350,12 @@ func (m *manager) Delete(ctx context.Context) error {
 	}
 
 	err = m.deleteResourcesAndResourceGroup(ctx)
+	if err != nil {
+		return err
+	}
+
+	m.log.Printf("deleting gateway record")
+	err = m.deleteGateway(ctx)
 	if err != nil {
 		return err
 	}

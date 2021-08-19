@@ -16,6 +16,7 @@ import (
 	pkgdbtoken "github.com/Azure/ARO-RP/pkg/dbtoken"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 )
@@ -26,11 +27,19 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	for _, key := range []string{
+		"AZURE_GATEWAY_SERVICE_PRINCIPAL_ID",
+		"AZURE_DBTOKEN_CLIENT_ID",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return fmt.Errorf("environment variable %q unset", key)
+		}
+	}
+
 	if !_env.IsLocalDevelopmentMode() {
 		for _, key := range []string{
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
-			"AZURE_DBTOKEN_CLIENT_ID",
 		} {
 			if _, found := os.LookupEnv(key); !found {
 				return fmt.Errorf("environment variable %q unset", key)
@@ -49,6 +58,13 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	m := statsd.New(ctx, log.WithField("component", "dbtoken"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
+
+	g, err := golang.NewMetrics(log.WithField("component", "dbtoken"), m)
+	if err != nil {
+		return err
+	}
+
+	go g.Run()
 
 	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer)
 	if err != nil {
@@ -105,7 +121,7 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 
 	log.Print("listening")
 
-	server, err := pkgdbtoken.NewServer(ctx, _env, log.WithField("component", "dbtoken"), log.WithField("component", "dbtoken-access"), l, servingKey, servingCerts, verifier, userc)
+	server, err := pkgdbtoken.NewServer(ctx, _env, log.WithField("component", "dbtoken"), log.WithField("component", "dbtoken-access"), l, servingKey, servingCerts, verifier, userc, m)
 	if err != nil {
 		return err
 	}

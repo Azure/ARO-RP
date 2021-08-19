@@ -26,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -69,6 +70,13 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 
 	m := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
 
+	g, err := golang.NewMetrics(log.WithField("component", "metrics"), m)
+	if err != nil {
+		return err
+	}
+
+	go g.Run()
+
 	tracing.Register(azure.New(m))
 	kmetrics.Register(kmetrics.RegisterOpts{
 		RequestResult:  k8s.NewResult(m),
@@ -110,6 +118,11 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
+	dbGateway, err := database.NewGateway(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	if err != nil {
+		return err
+	}
+
 	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc)
 	if err != nil {
 		return err
@@ -137,7 +150,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, dbAsyncOperations, dbBilling, dbOpenShiftClusters, dbSubscriptions, aead, m)
+	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, dbAsyncOperations, dbBilling, dbGateway, dbOpenShiftClusters, dbSubscriptions, aead, m)
 	if err != nil {
 		return err
 	}

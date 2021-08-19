@@ -5,16 +5,19 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/password"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -193,6 +196,77 @@ func (m *manager) updateAPIIPEarly(ctx context.Context) error {
 	return err
 }
 
+// ensureGatewayCreate approves the gateway PE/PLS connection, creates the
+// gateway database record and updates the model with the private endpoint IP.
+func (m *manager) ensureGatewayCreate(ctx context.Context) error {
+	if !m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled ||
+		m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
+		return nil
+	}
+
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
+
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	pe, err := m.privateEndpoints.Get(ctx, resourceGroup, infraID+"-pe", "networkInterfaces")
+	if err != nil {
+		return err
+	}
+
+	pls, err := m.rpPrivateLinkServices.Get(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", "")
+	if err != nil {
+		return err
+	}
+
+	// this is O(N), which is not great, but this is only called once per
+	// cluster, and N < 1000.  The portal handles this by making a kusto-style
+	// call to the resource graph service, but it's not worth the effort to do
+	// that here.
+	var linkIdentifier string
+	for _, conn := range *pls.PrivateEndpointConnections {
+		if !strings.EqualFold(*conn.PrivateEndpoint.ID, *pe.ID) {
+			continue
+		}
+
+		linkIdentifier = *conn.LinkIdentifier
+
+		if !strings.EqualFold(*conn.PrivateLinkServiceConnectionState.Status, "Approved") {
+			conn.PrivateLinkServiceConnectionState.Status = to.StringPtr("Approved")
+			conn.PrivateLinkServiceConnectionState.Description = to.StringPtr("Approved")
+
+			_, err = m.rpPrivateLinkServices.UpdatePrivateEndpointConnection(ctx, m.env.GatewayResourceGroup(), "gateway-pls-001", *conn.Name, conn)
+			if err != nil {
+				return err
+			}
+		}
+
+		break
+	}
+
+	if linkIdentifier == "" {
+		return errors.New("private endpoint connection not found")
+	}
+
+	_, err = m.dbGateway.Create(ctx, &api.GatewayDocument{
+		ID: linkIdentifier,
+		Gateway: &api.Gateway{
+			ID:                              m.doc.OpenShiftCluster.ID,
+			StorageSuffix:                   m.doc.OpenShiftCluster.Properties.StorageSuffix,
+			ImageRegistryStorageAccountName: m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName,
+		},
+	})
+	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) /* already exists */ {
+		return err
+	}
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP = *(*(*pe.PrivateEndpointProperties.NetworkInterfaces)[0].IPConfigurations)[0].PrivateIPAddress
+		doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateLinkID = linkIdentifier
+		return nil
+	})
+	return err
+}
+
 func (m *manager) createAPIServerPrivateEndpoint(ctx context.Context) error {
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 	if infraID == "" {
@@ -202,6 +276,9 @@ func (m *manager) createAPIServerPrivateEndpoint(ctx context.Context) error {
 	err := m.fpPrivateEndpoints.CreateOrUpdateAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID, mgmtnetwork.PrivateEndpoint{
 		PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
 			Subnet: &mgmtnetwork.Subnet{
+				// TODO: in the future we will need multiple vnets for our PEs.
+				// It will be necessary to decide the vnet for a cluster's PE
+				// somewhere around here.
 				ID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
 			},
 			ManualPrivateLinkServiceConnections: &[]mgmtnetwork.PrivateLinkServiceConnection{

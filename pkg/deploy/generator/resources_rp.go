@@ -12,7 +12,7 @@ import (
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
 	mgmtinsights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
@@ -72,19 +72,60 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 			Name: to.StringPtr("ssh_in"),
 		})
 	} else {
-		rules = append(rules, mgmtnetwork.SecurityRule{
-			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-				SourcePortRange:          to.StringPtr("*"),
-				DestinationPortRange:     to.StringPtr("443"),
-				SourceAddressPrefixes:    to.StringSlicePtr([]string{}),
-				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-				DestinationAddressPrefix: to.StringPtr("*"),
-				Priority:                 to.Int32Ptr(130),
-				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+		rules = append(rules,
+			mgmtnetwork.SecurityRule{
+				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+					SourcePortRange:          to.StringPtr("*"),
+					DestinationPortRange:     to.StringPtr("445"),
+					SourceAddressPrefix:      to.StringPtr("10.0.8.0/24"),
+					DestinationAddressPrefix: to.StringPtr("*"),
+					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+					Priority:                 to.Int32Ptr(140),
+					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+				},
+				Name: to.StringPtr("dbtoken_in_gateway_445"),
 			},
-			Name: to.StringPtr("rp_in_geneva"),
-		})
+			mgmtnetwork.SecurityRule{
+				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+					SourcePortRange:          to.StringPtr("*"),
+					DestinationPortRange:     to.StringPtr("8445"),
+					SourceAddressPrefix:      to.StringPtr("10.0.8.0/24"),
+					DestinationAddressPrefix: to.StringPtr("*"),
+					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+					Priority:                 to.Int32Ptr(141),
+					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+				},
+				Name: to.StringPtr("dbtoken_in_gateway_8445"),
+			},
+			mgmtnetwork.SecurityRule{
+				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+					SourcePortRange:          to.StringPtr("*"),
+					DestinationPortRange:     to.StringPtr("*"),
+					SourceAddressPrefix:      to.StringPtr("10.0.8.0/24"),
+					DestinationAddressPrefix: to.StringPtr("*"),
+					Access:                   mgmtnetwork.SecurityRuleAccessDeny,
+					Priority:                 to.Int32Ptr(145),
+					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+				},
+				Name: to.StringPtr("deny_in_gateway"),
+			},
+			mgmtnetwork.SecurityRule{
+				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+					SourcePortRange:          to.StringPtr("*"),
+					DestinationPortRange:     to.StringPtr("443"),
+					SourceAddressPrefixes:    to.StringSlicePtr([]string{}),
+					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+					DestinationAddressPrefix: to.StringPtr("*"),
+					Priority:                 to.Int32Ptr(130),
+					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+				},
+				Name: to.StringPtr("rp_in_geneva"),
+			},
+		)
 	}
 
 	return g.securityGroup("rp-nsg", &rules, g.conditionStanza("deployNSGs"))
@@ -118,7 +159,7 @@ func (g *generator) rpVnet() *arm.Resource {
 		}
 	}
 
-	return g.virtualNetwork("rp-vnet", "10.0.0.0/24", &[]mgmtnetwork.Subnet{subnet}, nil)
+	return g.virtualNetwork("rp-vnet", "10.0.0.0/24", &[]mgmtnetwork.Subnet{subnet}, nil, []string{"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"})
 }
 
 func (g *generator) rpPEVnet() *arm.Resource {
@@ -133,7 +174,7 @@ func (g *generator) rpPEVnet() *arm.Resource {
 			},
 			Name: to.StringPtr("rp-pe-subnet"),
 		},
-	}, nil)
+	}, nil, []string{"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"})
 }
 
 func (g *generator) rpLB() *arm.Resource {
@@ -277,7 +318,8 @@ func (g *generator) rpLBInternal() *arm.Resource {
 								ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
 							},
 						},
-						Name: to.StringPtr("dbtoken-frontend"),
+						Name:  to.StringPtr("dbtoken-frontend"),
+						Zones: &[]string{},
 					},
 				},
 				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
@@ -299,7 +341,7 @@ func (g *generator) rpLBInternal() *arm.Resource {
 							},
 							Protocol:         mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:     to.Int32Ptr(443),
+							FrontendPort:     to.Int32Ptr(8445),
 							BackendPort:      to.Int32Ptr(445),
 						},
 						Name: to.StringPtr("dbtoken-lbrule"),
@@ -371,6 +413,8 @@ func (g *generator) rpLBAlert(threshold float64, severity int32, name string, ev
 }
 
 func (g *generator) rpVMSS() *arm.Resource {
+	// TODO: there is a lot of duplication with gatewayVMSS() (and other places)
+
 	parts := []string{
 		fmt.Sprintf("base64ToString('%s')", base64.StdEncoding.EncodeToString([]byte("set -ex\n\n"))),
 	}
@@ -392,6 +436,9 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"dbtokenClientId",
 		"fpClientId",
 		"fpServicePrincipalId",
+		"gatewayDomains",
+		"gatewayResourceGroupName",
+		"gatewayServicePrincipalId",
 		"keyvaultDNSSuffix",
 		"keyvaultPrefix",
 		"mdmFrontendUrl",
@@ -531,7 +578,7 @@ EOF
 
 export AZURE_CLOUD_NAME=$AZURECLOUDNAME
 
-az login -i
+az login -i --allow-no-subscriptions
 az account set -s "$SUBSCRIPTIONID"
 
 systemctl start docker.service
@@ -606,6 +653,8 @@ CLUSTER_MDSD_CONFIG_VERSION='$CLUSTERMDSDCONFIGVERSION'
 CLUSTER_MDSD_NAMESPACE='$CLUSTERMDSDNAMESPACE'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 DOMAIN_NAME='$LOCATION.$CLUSTERPARENTDOMAINNAME'
+GATEWAY_DOMAINS='$GATEWAYDOMAINS'
+GATEWAY_RESOURCEGROUP='$GATEWAYRESOURCEGROUPNAME'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=RP
@@ -637,6 +686,8 @@ ExecStart=/usr/bin/docker run \
   -e CLUSTER_MDSD_NAMESPACE \
   -e DATABASE_ACCOUNT_NAME \
   -e DOMAIN_NAME \
+  -e GATEWAY_DOMAINS \
+  -e GATEWAY_RESOURCEGROUP \
   -e KEYVAULT_PREFIX \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
@@ -662,6 +713,7 @@ EOF
 cat >/etc/sysconfig/aro-dbtoken <<EOF
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 AZURE_DBTOKEN_CLIENT_ID='$DBTOKENCLIENTID'
+AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$GATEWAYSERVICEPRINCIPALID'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=DBToken
@@ -680,6 +732,7 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  -e AZURE_GATEWAY_SERVICE_PRINCIPAL_ID \
   -e DATABASE_ACCOUNT_NAME \
   -e AZURE_DBTOKEN_CLIENT_ID \
   -e KEYVAULT_PREFIX \
@@ -826,8 +879,7 @@ echo "Download \$COMPONENT credentials"
 
 TEMP_DIR=\$(mktemp -d)
 export AZURE_CONFIG_DIR=\$(mktemp -d)
-az login -i
-az account set -s "$SUBSCRIPTIONID"
+az login -i --allow-no-subscriptions
 
 trap "cleanup" EXIT
 
@@ -1047,7 +1099,6 @@ done
 		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
-			"[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb-internal')]",
 			"[resourceId('Microsoft.Storage/storageAccounts', substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')))]",
@@ -1350,8 +1401,6 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 		cosmosdb.IsVirtualNetworkFilterEnabled = to.BoolPtr(true)
 		cosmosdb.VirtualNetworkRules = &[]mgmtdocumentdb.VirtualNetworkRule{}
 		cosmosdb.DisableKeyBasedMetadataWriteAccess = to.BoolPtr(true)
-
-		r.DependsOn = append(r.DependsOn, "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]")
 	}
 
 	rs := []*arm.Resource{
@@ -1391,8 +1440,34 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		},
 	}
 
+	gateway := &arm.Resource{
+		Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
+			SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
+				Resource: &mgmtdocumentdb.SQLContainerResource{
+					ID: to.StringPtr("Gateway"),
+					PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
+						Paths: &[]string{
+							"/id",
+						},
+						Kind: mgmtdocumentdb.PartitionKindHash,
+					},
+					DefaultTTL: to.Int32Ptr(-1),
+				},
+				Options: &mgmtdocumentdb.CreateUpdateOptions{},
+			},
+			Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Gateway')]"),
+			Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+		DependsOn: []string{
+			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+		},
+	}
+
 	if g.production {
 		portal.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options.Throughput = to.Int32Ptr(400)
+		gateway.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options.Throughput = to.Int32Ptr(400)
 	}
 
 	rs := []*arm.Resource{
@@ -1459,6 +1534,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
 		},
+		gateway,
 		{
 			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
 				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
@@ -1636,6 +1712,10 @@ func (g *generator) rpACR() *arm.Resource {
 			Sku: &mgmtcontainerregistry.Sku{
 				Name: mgmtcontainerregistry.Premium,
 			},
+			RegistryProperties: &mgmtcontainerregistry.RegistryProperties{
+				// enable data hostname stability: https://azure.microsoft.com/en-gb/blog/azure-container-registry-mitigating-data-exfiltration-with-dedicated-data-endpoints/
+				DataEndpointEnabled: to.BoolPtr(true),
+			},
 			Name: to.StringPtr("[substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))]"),
 			Type: to.StringPtr("Microsoft.ContainerRegistry/registries"),
 			// TODO: INT ACR has wrong location - should be redeployed at globalResourceGroupLocation then remove acrLocationOverride configurable.
@@ -1664,6 +1744,13 @@ func (g *generator) rpACRRBAC() []*arm.Resource {
 			"Microsoft.ContainerRegistry/registries",
 			"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",
 			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull')))",
+		),
+		rbac.ResourceRoleAssignmentWithName(
+			rbac.RoleACRPull,
+			"parameters('gatewayServicePrincipalId')",
+			"Microsoft.ContainerRegistry/registries",
+			"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",
+			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('gatewayServicePrincipalId'), 'RP / AcrPull')))",
 		),
 		rbac.ResourceRoleAssignmentWithName(
 			"48983534-3d06-4dcb-a566-08a694eb1279", // ARO v4 ContainerRegistry Token Contributor

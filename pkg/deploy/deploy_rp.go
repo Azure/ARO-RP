@@ -19,7 +19,13 @@ import (
 )
 
 func (d *deployer) DeployRP(ctx context.Context) error {
+	// TODO: there is a lot of duplication with DeployGateway()
 	rpMSI, err := d.userassignedidentities.Get(ctx, d.config.RPResourceGroupName, "aro-rp-"+d.config.Location)
+	if err != nil {
+		return err
+	}
+
+	gwMSI, err := d.userassignedidentities.Get(ctx, d.config.GatewayResourceGroupName, "aro-gateway-"+d.config.Location)
 	if err != nil {
 		return err
 	}
@@ -49,6 +55,12 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	ipRules := d.convertToIPAddressOrRange(d.config.Configuration.ExtraCosmosDBIPs)
 	parameters.Parameters["ipRules"] = &arm.ParametersParameter{
 		Value: ipRules,
+	}
+	parameters.Parameters["gatewayResourceGroupName"] = &arm.ParametersParameter{
+		Value: d.config.GatewayResourceGroupName,
+	}
+	parameters.Parameters["gatewayServicePrincipalId"] = &arm.ParametersParameter{
+		Value: gwMSI.PrincipalID.String(),
 	}
 	parameters.Parameters["rpImage"] = &arm.ParametersParameter{
 		Value: *d.config.Configuration.RPImagePrefix + ":" + d.version,
@@ -180,7 +192,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 }
 
 func (d *deployer) convertToIPAddressOrRange(ipSlice []string) []mgmtdocumentdb.IPAddressOrRange {
-	var ips []mgmtdocumentdb.IPAddressOrRange
+	ips := []mgmtdocumentdb.IPAddressOrRange{}
 	for _, v := range ipSlice {
 		ips = append(ips, mgmtdocumentdb.IPAddressOrRange{IPAddressOrRange: to.StringPtr(v)})
 	}

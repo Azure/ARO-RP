@@ -6,7 +6,7 @@ package network
 import (
 	"context"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -15,6 +15,8 @@ import (
 // PrivateLinkServicesClient is a minimal interface for azure PrivateLinkServicesClient
 type PrivateLinkServicesClient interface {
 	DeletePrivateEndpointConnection(ctx context.Context, resourceGroupName string, serviceName string, peConnectionName string) (result mgmtnetwork.PrivateLinkServicesDeletePrivateEndpointConnectionFuture, err error)
+	Get(ctx context.Context, resourceGroupName string, serviceName string, expand string) (result mgmtnetwork.PrivateLinkService, err error)
+	UpdatePrivateEndpointConnection(ctx context.Context, resourceGroupName string, serviceName string, peConnectionName string, parameters mgmtnetwork.PrivateEndpointConnection) (result mgmtnetwork.PrivateEndpointConnection, err error)
 	PrivateLinkServicesClientAddons
 }
 

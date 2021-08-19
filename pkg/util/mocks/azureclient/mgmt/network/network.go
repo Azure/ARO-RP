@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	network "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	network "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -234,6 +234,21 @@ func (mr *MockPrivateLinkServicesClientMockRecorder) DeletePrivateEndpointConnec
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePrivateEndpointConnection", reflect.TypeOf((*MockPrivateLinkServicesClient)(nil).DeletePrivateEndpointConnection), arg0, arg1, arg2, arg3)
 }
 
+// Get mocks base method.
+func (m *MockPrivateLinkServicesClient) Get(arg0 context.Context, arg1, arg2, arg3 string) (network.PrivateLinkService, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(network.PrivateLinkService)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockPrivateLinkServicesClientMockRecorder) Get(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPrivateLinkServicesClient)(nil).Get), arg0, arg1, arg2, arg3)
+}
+
 // List mocks base method.
 func (m *MockPrivateLinkServicesClient) List(arg0 context.Context, arg1 string) ([]network.PrivateLinkService, error) {
 	m.ctrl.T.Helper()
@@ -247,6 +262,21 @@ func (m *MockPrivateLinkServicesClient) List(arg0 context.Context, arg1 string) 
 func (mr *MockPrivateLinkServicesClientMockRecorder) List(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockPrivateLinkServicesClient)(nil).List), arg0, arg1)
+}
+
+// UpdatePrivateEndpointConnection mocks base method.
+func (m *MockPrivateLinkServicesClient) UpdatePrivateEndpointConnection(arg0 context.Context, arg1, arg2, arg3 string, arg4 network.PrivateEndpointConnection) (network.PrivateEndpointConnection, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePrivateEndpointConnection", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(network.PrivateEndpointConnection)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdatePrivateEndpointConnection indicates an expected call of UpdatePrivateEndpointConnection.
+func (mr *MockPrivateLinkServicesClientMockRecorder) UpdatePrivateEndpointConnection(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePrivateEndpointConnection", reflect.TypeOf((*MockPrivateLinkServicesClient)(nil).UpdatePrivateEndpointConnection), arg0, arg1, arg2, arg3, arg4)
 }
 
 // MockPublicIPAddressesClient is a mock of PublicIPAddressesClient interface.
