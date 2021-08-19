@@ -44,6 +44,12 @@ type NSGFlowLogs struct {
 
 // PreviewFeatureSpec defines the preview feature for ARO
 type PreviewFeatureSpec struct {
+	// AZEnvironment is Azure cloud environment name. READ ONLY.
+	AZEnvironment string `json:"azEnvironment"`
+
+	// ResourceID is a cluster resource id. READ ONLY.
+	ResourceID string `json:"resourceId"`
+
 	// NSGFlowLogs contains configuration for NSG flow logs.
 	// Omit the configuration if you don't want the controller
 	// to reconcile NSG flow logs.
