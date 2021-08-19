@@ -6,6 +6,9 @@ trigger:
   paths:
     exclude:
     - docs/*
+  tags:
+    include:
+    - v2*
 
 pr:
   branches:
