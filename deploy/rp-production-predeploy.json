@@ -136,6 +136,9 @@
             "apiVersion": "2019-07-01"
         },
         {
+            "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
             "properties": {
                 "tenantId": "[subscription().tenantId]",
                 "sku": {
@@ -145,12 +148,12 @@
                 "accessPolicies": "[concat(variables('clusterKeyvaultAccessPolicies'), parameters('extraClusterKeyvaultAccessPolicies'))]",
                 "enableSoftDelete": true
             },
-            "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
-            "type": "Microsoft.KeyVault/vaults",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2016-10-01"
+            "apiVersion": "2019-09-01"
         },
         {
+            "name": "[concat(parameters('keyvaultPrefix'), '-dbt')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
             "properties": {
                 "tenantId": "[subscription().tenantId]",
                 "sku": {
@@ -160,12 +163,12 @@
                 "accessPolicies": "[concat(variables('dbTokenKeyvaultAccessPolicies'), parameters('extraDBTokenKeyvaultAccessPolicies'))]",
                 "enableSoftDelete": true
             },
-            "name": "[concat(parameters('keyvaultPrefix'), '-dbt')]",
-            "type": "Microsoft.KeyVault/vaults",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2016-10-01"
+            "apiVersion": "2019-09-01"
         },
         {
+            "name": "[concat(parameters('keyvaultPrefix'), '-por')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
             "properties": {
                 "tenantId": "[subscription().tenantId]",
                 "sku": {
@@ -175,12 +178,12 @@
                 "accessPolicies": "[concat(variables('portalKeyvaultAccessPolicies'), parameters('extraPortalKeyvaultAccessPolicies'))]",
                 "enableSoftDelete": true
             },
-            "name": "[concat(parameters('keyvaultPrefix'), '-por')]",
-            "type": "Microsoft.KeyVault/vaults",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2016-10-01"
+            "apiVersion": "2019-09-01"
         },
         {
+            "name": "[concat(parameters('keyvaultPrefix'), '-svc')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
             "properties": {
                 "tenantId": "[subscription().tenantId]",
                 "sku": {
@@ -190,10 +193,7 @@
                 "accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraServiceKeyvaultAccessPolicies'))]",
                 "enableSoftDelete": true
             },
-            "name": "[concat(parameters('keyvaultPrefix'), '-svc')]",
-            "type": "Microsoft.KeyVault/vaults",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2016-10-01"
+            "apiVersion": "2019-09-01"
         }
     ]
 }

@@ -19,7 +19,7 @@ import (
 )
 
 // The package's fully qualified name.
-const fqdn = "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
+const fqdn = "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 
 // AccessPolicyEntry an identity that have access to the key vault. All identities in the array must use
 // the same tenant ID as the key vault's tenant ID.
@@ -32,6 +32,37 @@ type AccessPolicyEntry struct {
 	ApplicationID *uuid.UUID `json:"applicationId,omitempty"`
 	// Permissions - Permissions the identity has for keys, secrets and certificates.
 	Permissions *Permissions `json:"permissions,omitempty"`
+}
+
+// Attributes the object attributes managed by the Azure Key Vault service.
+type Attributes struct {
+	// Enabled - Determines whether or not the object is enabled.
+	Enabled *bool `json:"enabled,omitempty"`
+	// NotBefore - Not before date in seconds since 1970-01-01T00:00:00Z.
+	NotBefore *int64 `json:"nbf,omitempty"`
+	// Expires - Expiry date in seconds since 1970-01-01T00:00:00Z.
+	Expires *int64 `json:"exp,omitempty"`
+	// Created - READ-ONLY; Creation time in seconds since 1970-01-01T00:00:00Z.
+	Created *int64 `json:"created,omitempty"`
+	// Updated - READ-ONLY; Last updated time in seconds since 1970-01-01T00:00:00Z.
+	Updated *int64 `json:"updated,omitempty"`
+	// RecoveryLevel - READ-ONLY; The deletion recovery level currently in effect for the object. If it contains 'Purgeable', then the object can be permanently deleted by a privileged user; otherwise, only the system can purge the object at the end of the retention interval. Possible values include: 'Purgeable', 'RecoverablePurgeable', 'Recoverable', 'RecoverableProtectedSubscription'
+	RecoveryLevel DeletionRecoveryLevel `json:"recoveryLevel,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for Attributes.
+func (a Attributes) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if a.Enabled != nil {
+		objectMap["enabled"] = a.Enabled
+	}
+	if a.NotBefore != nil {
+		objectMap["nbf"] = a.NotBefore
+	}
+	if a.Expires != nil {
+		objectMap["exp"] = a.Expires
+	}
+	return json.Marshal(objectMap)
 }
 
 // CheckNameAvailabilityResult the CheckNameAvailability operation response.
@@ -49,6 +80,19 @@ type CheckNameAvailabilityResult struct {
 func (cnar CheckNameAvailabilityResult) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
 	return json.Marshal(objectMap)
+}
+
+// CloudError an error response from Key Vault resource provider
+type CloudError struct {
+	Error *CloudErrorBody `json:"error,omitempty"`
+}
+
+// CloudErrorBody an error response from Key Vault resource provider
+type CloudErrorBody struct {
+	// Code - Error code. This is a mnemonic that can be consumed programmatically.
+	Code *string `json:"code,omitempty"`
+	// Message - User friendly error message. The message is typically localized and may vary with service version.
+	Message *string `json:"message,omitempty"`
 }
 
 // DeletedVault deleted vault information with extended details.
@@ -252,6 +296,355 @@ func (dvp DeletedVaultProperties) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
+// IPRule a rule governing the accessibility of a vault from a specific ip address or ip range.
+type IPRule struct {
+	// Value - An IPv4 address range in CIDR notation, such as '124.56.78.91' (simple IP address) or '124.56.78.0/24' (all addresses that start with 124.56.78).
+	Value *string `json:"value,omitempty"`
+}
+
+// Key the key resource.
+type Key struct {
+	autorest.Response `json:"-"`
+	// KeyProperties - The properties of the key.
+	*KeyProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; Fully qualified identifier of the key vault resource.
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; Name of the key vault resource.
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; Resource type of the key vault resource.
+	Type *string `json:"type,omitempty"`
+	// Location - READ-ONLY; Azure location of the key vault resource.
+	Location *string `json:"location,omitempty"`
+	// Tags - READ-ONLY; Tags assigned to the key vault resource.
+	Tags map[string]*string `json:"tags"`
+}
+
+// MarshalJSON is the custom marshaler for Key.
+func (kVar Key) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if kVar.KeyProperties != nil {
+		objectMap["properties"] = kVar.KeyProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for Key struct.
+func (kVar *Key) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var keyProperties KeyProperties
+				err = json.Unmarshal(*v, &keyProperties)
+				if err != nil {
+					return err
+				}
+				kVar.KeyProperties = &keyProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				kVar.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				kVar.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				kVar.Type = &typeVar
+			}
+		case "location":
+			if v != nil {
+				var location string
+				err = json.Unmarshal(*v, &location)
+				if err != nil {
+					return err
+				}
+				kVar.Location = &location
+			}
+		case "tags":
+			if v != nil {
+				var tags map[string]*string
+				err = json.Unmarshal(*v, &tags)
+				if err != nil {
+					return err
+				}
+				kVar.Tags = tags
+			}
+		}
+	}
+
+	return nil
+}
+
+// KeyAttributes the attributes of the key.
+type KeyAttributes struct {
+	// Enabled - Determines whether or not the object is enabled.
+	Enabled *bool `json:"enabled,omitempty"`
+	// NotBefore - Not before date in seconds since 1970-01-01T00:00:00Z.
+	NotBefore *int64 `json:"nbf,omitempty"`
+	// Expires - Expiry date in seconds since 1970-01-01T00:00:00Z.
+	Expires *int64 `json:"exp,omitempty"`
+	// Created - READ-ONLY; Creation time in seconds since 1970-01-01T00:00:00Z.
+	Created *int64 `json:"created,omitempty"`
+	// Updated - READ-ONLY; Last updated time in seconds since 1970-01-01T00:00:00Z.
+	Updated *int64 `json:"updated,omitempty"`
+	// RecoveryLevel - READ-ONLY; The deletion recovery level currently in effect for the object. If it contains 'Purgeable', then the object can be permanently deleted by a privileged user; otherwise, only the system can purge the object at the end of the retention interval. Possible values include: 'Purgeable', 'RecoverablePurgeable', 'Recoverable', 'RecoverableProtectedSubscription'
+	RecoveryLevel DeletionRecoveryLevel `json:"recoveryLevel,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for KeyAttributes.
+func (ka KeyAttributes) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ka.Enabled != nil {
+		objectMap["enabled"] = ka.Enabled
+	}
+	if ka.NotBefore != nil {
+		objectMap["nbf"] = ka.NotBefore
+	}
+	if ka.Expires != nil {
+		objectMap["exp"] = ka.Expires
+	}
+	return json.Marshal(objectMap)
+}
+
+// KeyCreateParameters the parameters used to create a key.
+type KeyCreateParameters struct {
+	// Tags - The tags that will be assigned to the key.
+	Tags map[string]*string `json:"tags"`
+	// Properties - The properties of the key to be created.
+	Properties *KeyProperties `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for KeyCreateParameters.
+func (kcp KeyCreateParameters) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if kcp.Tags != nil {
+		objectMap["tags"] = kcp.Tags
+	}
+	if kcp.Properties != nil {
+		objectMap["properties"] = kcp.Properties
+	}
+	return json.Marshal(objectMap)
+}
+
+// KeyListResult the page of keys.
+type KeyListResult struct {
+	autorest.Response `json:"-"`
+	// Value - The key resources.
+	Value *[]Key `json:"value,omitempty"`
+	// NextLink - The URL to get the next page of keys.
+	NextLink *string `json:"nextLink,omitempty"`
+}
+
+// KeyListResultIterator provides access to a complete listing of Key values.
+type KeyListResultIterator struct {
+	i    int
+	page KeyListResultPage
+}
+
+// NextWithContext advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+func (iter *KeyListResultIterator) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/KeyListResultIterator.NextWithContext")
+		defer func() {
+			sc := -1
+			if iter.Response().Response.Response != nil {
+				sc = iter.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	iter.i++
+	if iter.i < len(iter.page.Values()) {
+		return nil
+	}
+	err = iter.page.NextWithContext(ctx)
+	if err != nil {
+		iter.i--
+		return err
+	}
+	iter.i = 0
+	return nil
+}
+
+// Next advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (iter *KeyListResultIterator) Next() error {
+	return iter.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the enumeration should be started or is not yet complete.
+func (iter KeyListResultIterator) NotDone() bool {
+	return iter.page.NotDone() && iter.i < len(iter.page.Values())
+}
+
+// Response returns the raw server response from the last page request.
+func (iter KeyListResultIterator) Response() KeyListResult {
+	return iter.page.Response()
+}
+
+// Value returns the current value or a zero-initialized value if the
+// iterator has advanced beyond the end of the collection.
+func (iter KeyListResultIterator) Value() Key {
+	if !iter.page.NotDone() {
+		return Key{}
+	}
+	return iter.page.Values()[iter.i]
+}
+
+// Creates a new instance of the KeyListResultIterator type.
+func NewKeyListResultIterator(page KeyListResultPage) KeyListResultIterator {
+	return KeyListResultIterator{page: page}
+}
+
+// IsEmpty returns true if the ListResult contains no values.
+func (klr KeyListResult) IsEmpty() bool {
+	return klr.Value == nil || len(*klr.Value) == 0
+}
+
+// hasNextLink returns true if the NextLink is not empty.
+func (klr KeyListResult) hasNextLink() bool {
+	return klr.NextLink != nil && len(*klr.NextLink) != 0
+}
+
+// keyListResultPreparer prepares a request to retrieve the next set of results.
+// It returns nil if no more results exist.
+func (klr KeyListResult) keyListResultPreparer(ctx context.Context) (*http.Request, error) {
+	if !klr.hasNextLink() {
+		return nil, nil
+	}
+	return autorest.Prepare((&http.Request{}).WithContext(ctx),
+		autorest.AsJSON(),
+		autorest.AsGet(),
+		autorest.WithBaseURL(to.String(klr.NextLink)))
+}
+
+// KeyListResultPage contains a page of Key values.
+type KeyListResultPage struct {
+	fn  func(context.Context, KeyListResult) (KeyListResult, error)
+	klr KeyListResult
+}
+
+// NextWithContext advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+func (page *KeyListResultPage) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/KeyListResultPage.NextWithContext")
+		defer func() {
+			sc := -1
+			if page.Response().Response.Response != nil {
+				sc = page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	for {
+		next, err := page.fn(ctx, page.klr)
+		if err != nil {
+			return err
+		}
+		page.klr = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
+	}
+	return nil
+}
+
+// Next advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (page *KeyListResultPage) Next() error {
+	return page.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the page enumeration should be started or is not yet complete.
+func (page KeyListResultPage) NotDone() bool {
+	return !page.klr.IsEmpty()
+}
+
+// Response returns the raw server response from the last page request.
+func (page KeyListResultPage) Response() KeyListResult {
+	return page.klr
+}
+
+// Values returns the slice of values for the current page or nil if there are no values.
+func (page KeyListResultPage) Values() []Key {
+	if page.klr.IsEmpty() {
+		return nil
+	}
+	return *page.klr.Value
+}
+
+// Creates a new instance of the KeyListResultPage type.
+func NewKeyListResultPage(cur KeyListResult, getNextPage func(context.Context, KeyListResult) (KeyListResult, error)) KeyListResultPage {
+	return KeyListResultPage{
+		fn:  getNextPage,
+		klr: cur,
+	}
+}
+
+// KeyProperties the properties of the key.
+type KeyProperties struct {
+	// Attributes - The attributes of the key.
+	Attributes *KeyAttributes `json:"attributes,omitempty"`
+	// Kty - The type of the key. For valid values, see JsonWebKeyType. Possible values include: 'EC', 'ECHSM', 'RSA', 'RSAHSM'
+	Kty    JSONWebKeyType         `json:"kty,omitempty"`
+	KeyOps *[]JSONWebKeyOperation `json:"keyOps,omitempty"`
+	// KeySize - The key size in bits. For example: 2048, 3072, or 4096 for RSA.
+	KeySize *int32 `json:"keySize,omitempty"`
+	// CurveName - The elliptic curve name. For valid values, see JsonWebKeyCurveName. Possible values include: 'P256', 'P384', 'P521', 'P256K'
+	CurveName JSONWebKeyCurveName `json:"curveName,omitempty"`
+	// KeyURI - READ-ONLY; The URI to retrieve the current version of the key.
+	KeyURI *string `json:"keyUri,omitempty"`
+	// KeyURIWithVersion - READ-ONLY; The URI to retrieve the specific version of the key.
+	KeyURIWithVersion *string `json:"keyUriWithVersion,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for KeyProperties.
+func (kp KeyProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if kp.Attributes != nil {
+		objectMap["attributes"] = kp.Attributes
+	}
+	if kp.Kty != "" {
+		objectMap["kty"] = kp.Kty
+	}
+	if kp.KeyOps != nil {
+		objectMap["keyOps"] = kp.KeyOps
+	}
+	if kp.KeySize != nil {
+		objectMap["keySize"] = kp.KeySize
+	}
+	if kp.CurveName != "" {
+		objectMap["curveName"] = kp.CurveName
+	}
+	return json.Marshal(objectMap)
+}
+
 // LogSpecification log specification of operation.
 type LogSpecification struct {
 	// Name - Name of log specification.
@@ -260,6 +653,18 @@ type LogSpecification struct {
 	DisplayName *string `json:"displayName,omitempty"`
 	// BlobDuration - Blob duration of specification.
 	BlobDuration *string `json:"blobDuration,omitempty"`
+}
+
+// NetworkRuleSet a set of rules governing the network accessibility of a vault.
+type NetworkRuleSet struct {
+	// Bypass - Tells what traffic can bypass network rules. This can be 'AzureServices' or 'None'.  If not specified the default is 'AzureServices'. Possible values include: 'AzureServices', 'None'
+	Bypass NetworkRuleBypassOptions `json:"bypass,omitempty"`
+	// DefaultAction - The default action when no rule from ipRules and from virtualNetworkRules match. This is only used after the bypass property has been evaluated. Possible values include: 'Allow', 'Deny'
+	DefaultAction NetworkRuleAction `json:"defaultAction,omitempty"`
+	// IPRules - The list of IP address rules.
+	IPRules *[]IPRule `json:"ipRules,omitempty"`
+	// VirtualNetworkRules - The list of virtual network rules.
+	VirtualNetworkRules *[]VirtualNetworkRule `json:"virtualNetworkRules,omitempty"`
 }
 
 // Operation key Vault REST API operation definition.
@@ -533,29 +938,353 @@ type Permissions struct {
 	Storage *[]StoragePermissions `json:"storage,omitempty"`
 }
 
+// PrivateEndpoint private endpoint object properties.
+type PrivateEndpoint struct {
+	// ID - READ-ONLY; Full identifier of the private endpoint resource.
+	ID *string `json:"id,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PrivateEndpoint.
+func (peVar PrivateEndpoint) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	return json.Marshal(objectMap)
+}
+
+// PrivateEndpointConnection private endpoint connection resource.
+type PrivateEndpointConnection struct {
+	autorest.Response `json:"-"`
+	// PrivateEndpointConnectionProperties - Resource properties.
+	*PrivateEndpointConnectionProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; Fully qualified identifier of the key vault resource.
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; Name of the key vault resource.
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; Resource type of the key vault resource.
+	Type *string `json:"type,omitempty"`
+	// Location - READ-ONLY; Azure location of the key vault resource.
+	Location *string `json:"location,omitempty"`
+	// Tags - READ-ONLY; Tags assigned to the key vault resource.
+	Tags map[string]*string `json:"tags"`
+}
+
+// MarshalJSON is the custom marshaler for PrivateEndpointConnection.
+func (pec PrivateEndpointConnection) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if pec.PrivateEndpointConnectionProperties != nil {
+		objectMap["properties"] = pec.PrivateEndpointConnectionProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for PrivateEndpointConnection struct.
+func (pec *PrivateEndpointConnection) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var privateEndpointConnectionProperties PrivateEndpointConnectionProperties
+				err = json.Unmarshal(*v, &privateEndpointConnectionProperties)
+				if err != nil {
+					return err
+				}
+				pec.PrivateEndpointConnectionProperties = &privateEndpointConnectionProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				pec.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				pec.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				pec.Type = &typeVar
+			}
+		case "location":
+			if v != nil {
+				var location string
+				err = json.Unmarshal(*v, &location)
+				if err != nil {
+					return err
+				}
+				pec.Location = &location
+			}
+		case "tags":
+			if v != nil {
+				var tags map[string]*string
+				err = json.Unmarshal(*v, &tags)
+				if err != nil {
+					return err
+				}
+				pec.Tags = tags
+			}
+		}
+	}
+
+	return nil
+}
+
+// PrivateEndpointConnectionItem private endpoint connection item.
+type PrivateEndpointConnectionItem struct {
+	// PrivateEndpointConnectionProperties - Private endpoint connection properties.
+	*PrivateEndpointConnectionProperties `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PrivateEndpointConnectionItem.
+func (peci PrivateEndpointConnectionItem) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if peci.PrivateEndpointConnectionProperties != nil {
+		objectMap["properties"] = peci.PrivateEndpointConnectionProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for PrivateEndpointConnectionItem struct.
+func (peci *PrivateEndpointConnectionItem) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var privateEndpointConnectionProperties PrivateEndpointConnectionProperties
+				err = json.Unmarshal(*v, &privateEndpointConnectionProperties)
+				if err != nil {
+					return err
+				}
+				peci.PrivateEndpointConnectionProperties = &privateEndpointConnectionProperties
+			}
+		}
+	}
+
+	return nil
+}
+
+// PrivateEndpointConnectionProperties properties of the private endpoint connection resource.
+type PrivateEndpointConnectionProperties struct {
+	// PrivateEndpoint - Properties of the private endpoint object.
+	PrivateEndpoint *PrivateEndpoint `json:"privateEndpoint,omitempty"`
+	// PrivateLinkServiceConnectionState - Approval state of the private link connection.
+	PrivateLinkServiceConnectionState *PrivateLinkServiceConnectionState `json:"privateLinkServiceConnectionState,omitempty"`
+	// ProvisioningState - Provisioning state of the private endpoint connection. Possible values include: 'Succeeded', 'Creating', 'Updating', 'Deleting', 'Failed', 'Disconnected'
+	ProvisioningState PrivateEndpointConnectionProvisioningState `json:"provisioningState,omitempty"`
+}
+
+// PrivateEndpointConnectionsDeleteFuture an abstraction for monitoring and retrieving the results of a
+// long-running operation.
+type PrivateEndpointConnectionsDeleteFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(PrivateEndpointConnectionsClient) (PrivateEndpointConnection, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *PrivateEndpointConnectionsDeleteFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for PrivateEndpointConnectionsDeleteFuture.Result.
+func (future *PrivateEndpointConnectionsDeleteFuture) result(client PrivateEndpointConnectionsClient) (pec PrivateEndpointConnection, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "keyvault.PrivateEndpointConnectionsDeleteFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		pec.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("keyvault.PrivateEndpointConnectionsDeleteFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if pec.Response.Response, err = future.GetResult(sender); err == nil && pec.Response.Response.StatusCode != http.StatusNoContent {
+		pec, err = client.DeleteResponder(pec.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "keyvault.PrivateEndpointConnectionsDeleteFuture", "Result", pec.Response.Response, "Failure responding to request")
+		}
+	}
+	return
+}
+
+// PrivateLinkResource a private link resource
+type PrivateLinkResource struct {
+	// PrivateLinkResourceProperties - Resource properties.
+	*PrivateLinkResourceProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; Fully qualified identifier of the key vault resource.
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; Name of the key vault resource.
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; Resource type of the key vault resource.
+	Type *string `json:"type,omitempty"`
+	// Location - READ-ONLY; Azure location of the key vault resource.
+	Location *string `json:"location,omitempty"`
+	// Tags - READ-ONLY; Tags assigned to the key vault resource.
+	Tags map[string]*string `json:"tags"`
+}
+
+// MarshalJSON is the custom marshaler for PrivateLinkResource.
+func (plr PrivateLinkResource) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if plr.PrivateLinkResourceProperties != nil {
+		objectMap["properties"] = plr.PrivateLinkResourceProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for PrivateLinkResource struct.
+func (plr *PrivateLinkResource) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var privateLinkResourceProperties PrivateLinkResourceProperties
+				err = json.Unmarshal(*v, &privateLinkResourceProperties)
+				if err != nil {
+					return err
+				}
+				plr.PrivateLinkResourceProperties = &privateLinkResourceProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				plr.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				plr.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				plr.Type = &typeVar
+			}
+		case "location":
+			if v != nil {
+				var location string
+				err = json.Unmarshal(*v, &location)
+				if err != nil {
+					return err
+				}
+				plr.Location = &location
+			}
+		case "tags":
+			if v != nil {
+				var tags map[string]*string
+				err = json.Unmarshal(*v, &tags)
+				if err != nil {
+					return err
+				}
+				plr.Tags = tags
+			}
+		}
+	}
+
+	return nil
+}
+
+// PrivateLinkResourceListResult a list of private link resources
+type PrivateLinkResourceListResult struct {
+	autorest.Response `json:"-"`
+	// Value - Array of private link resources
+	Value *[]PrivateLinkResource `json:"value,omitempty"`
+}
+
+// PrivateLinkResourceProperties properties of a private link resource.
+type PrivateLinkResourceProperties struct {
+	// GroupID - READ-ONLY; Group identifier of private link resource.
+	GroupID *string `json:"groupId,omitempty"`
+	// RequiredMembers - READ-ONLY; Required member names of private link resource.
+	RequiredMembers *[]string `json:"requiredMembers,omitempty"`
+	// RequiredZoneNames - Required DNS zone names of the the private link resource.
+	RequiredZoneNames *[]string `json:"requiredZoneNames,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PrivateLinkResourceProperties.
+func (plrp PrivateLinkResourceProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if plrp.RequiredZoneNames != nil {
+		objectMap["requiredZoneNames"] = plrp.RequiredZoneNames
+	}
+	return json.Marshal(objectMap)
+}
+
+// PrivateLinkServiceConnectionState an object that represents the approval state of the private link
+// connection.
+type PrivateLinkServiceConnectionState struct {
+	// Status - Indicates whether the connection has been approved, rejected or removed by the key vault owner. Possible values include: 'PrivateEndpointServiceConnectionStatusPending', 'PrivateEndpointServiceConnectionStatusApproved', 'PrivateEndpointServiceConnectionStatusRejected', 'PrivateEndpointServiceConnectionStatusDisconnected'
+	Status PrivateEndpointServiceConnectionStatus `json:"status,omitempty"`
+	// Description - The reason for approval or rejection.
+	Description *string `json:"description,omitempty"`
+	// ActionRequired - A message indicating if changes on the service provider require any updates on the consumer.
+	ActionRequired *string `json:"actionRequired,omitempty"`
+}
+
 // Resource key Vault resource
 type Resource struct {
-	// ID - READ-ONLY; The Azure Resource Manager resource ID for the key vault.
+	// ID - READ-ONLY; Fully qualified identifier of the key vault resource.
 	ID *string `json:"id,omitempty"`
-	// Name - READ-ONLY; The name of the key vault.
+	// Name - READ-ONLY; Name of the key vault resource.
 	Name *string `json:"name,omitempty"`
-	// Type - READ-ONLY; The resource type of the key vault.
+	// Type - READ-ONLY; Resource type of the key vault resource.
 	Type *string `json:"type,omitempty"`
-	// Location - The supported Azure location where the key vault should be created.
+	// Location - READ-ONLY; Azure location of the key vault resource.
 	Location *string `json:"location,omitempty"`
-	// Tags - The tags that will be assigned to the key vault.
+	// Tags - READ-ONLY; Tags assigned to the key vault resource.
 	Tags map[string]*string `json:"tags"`
 }
 
 // MarshalJSON is the custom marshaler for Resource.
 func (r Resource) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
-	if r.Location != nil {
-		objectMap["location"] = r.Location
-	}
-	if r.Tags != nil {
-		objectMap["tags"] = r.Tags
-	}
 	return json.Marshal(objectMap)
 }
 
@@ -735,31 +1464,31 @@ type Sku struct {
 // Vault resource information with extended details.
 type Vault struct {
 	autorest.Response `json:"-"`
+	// ID - READ-ONLY; Fully qualified identifier of the key vault resource.
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; Name of the key vault resource.
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; Resource type of the key vault resource.
+	Type *string `json:"type,omitempty"`
+	// Location - Azure location of the key vault resource.
+	Location *string `json:"location,omitempty"`
+	// Tags - Tags assigned to the key vault resource.
+	Tags map[string]*string `json:"tags"`
 	// Properties - Properties of the vault
 	Properties *VaultProperties `json:"properties,omitempty"`
-	// ID - READ-ONLY; The Azure Resource Manager resource ID for the key vault.
-	ID *string `json:"id,omitempty"`
-	// Name - READ-ONLY; The name of the key vault.
-	Name *string `json:"name,omitempty"`
-	// Type - READ-ONLY; The resource type of the key vault.
-	Type *string `json:"type,omitempty"`
-	// Location - The supported Azure location where the key vault should be created.
-	Location *string `json:"location,omitempty"`
-	// Tags - The tags that will be assigned to the key vault.
-	Tags map[string]*string `json:"tags"`
 }
 
 // MarshalJSON is the custom marshaler for Vault.
 func (vVar Vault) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
-	if vVar.Properties != nil {
-		objectMap["properties"] = vVar.Properties
-	}
 	if vVar.Location != nil {
 		objectMap["location"] = vVar.Location
 	}
 	if vVar.Tags != nil {
 		objectMap["tags"] = vVar.Tags
+	}
+	if vVar.Properties != nil {
+		objectMap["properties"] = vVar.Properties
 	}
 	return json.Marshal(objectMap)
 }
@@ -1020,12 +1749,18 @@ type VaultPatchProperties struct {
 	EnabledForDiskEncryption *bool `json:"enabledForDiskEncryption,omitempty"`
 	// EnabledForTemplateDeployment - Property to specify whether Azure Resource Manager is permitted to retrieve secrets from the key vault.
 	EnabledForTemplateDeployment *bool `json:"enabledForTemplateDeployment,omitempty"`
-	// EnableSoftDelete - Property specifying whether recoverable deletion ('soft' delete) is enabled for this key vault. The property may not be set to false.
+	// EnableSoftDelete - Property to specify whether the 'soft delete' functionality is enabled for this key vault. Once set to true, it cannot be reverted to false.
 	EnableSoftDelete *bool `json:"enableSoftDelete,omitempty"`
+	// EnableRbacAuthorization - Property that controls how data actions are authorized. When true, the key vault will use Role Based Access Control (RBAC) for authorization of data actions, and the access policies specified in vault properties will be  ignored (warning: this is a preview feature). When false, the key vault will use the access policies specified in vault properties, and any policy stored on Azure Resource Manager will be ignored. If null or not specified, the value of this property will not change.
+	EnableRbacAuthorization *bool `json:"enableRbacAuthorization,omitempty"`
+	// SoftDeleteRetentionInDays - softDelete data retention days. It accepts >=7 and <=90.
+	SoftDeleteRetentionInDays *int32 `json:"softDeleteRetentionInDays,omitempty"`
 	// CreateMode - The vault's create mode to indicate whether the vault need to be recovered or not. Possible values include: 'CreateModeRecover', 'CreateModeDefault'
 	CreateMode CreateMode `json:"createMode,omitempty"`
-	// EnablePurgeProtection - Property specifying whether protection against purge is enabled for this vault; it is only effective if soft delete is also enabled. Once activated, the property may no longer be reset to false.
+	// EnablePurgeProtection - Property specifying whether protection against purge is enabled for this vault. Setting this property to true activates protection against purge for this vault and its content - only the Key Vault service may initiate a hard, irrecoverable deletion. The setting is effective only if soft delete is also enabled. Enabling this functionality is irreversible - that is, the property does not accept false as its value.
 	EnablePurgeProtection *bool `json:"enablePurgeProtection,omitempty"`
+	// NetworkAcls - A collection of rules governing the accessibility of the vault from specific network locations.
+	NetworkAcls *NetworkRuleSet `json:"networkAcls,omitempty"`
 }
 
 // VaultProperties properties of the vault
@@ -1034,7 +1769,7 @@ type VaultProperties struct {
 	TenantID *uuid.UUID `json:"tenantId,omitempty"`
 	// Sku - SKU details
 	Sku *Sku `json:"sku,omitempty"`
-	// AccessPolicies - An array of 0 to 16 identities that have access to the key vault. All identities in the array must use the same tenant ID as the key vault's tenant ID. When `createMode` is set to `recover`, access policies are not required. Otherwise, access policies are required.
+	// AccessPolicies - An array of 0 to 1024 identities that have access to the key vault. All identities in the array must use the same tenant ID as the key vault's tenant ID. When `createMode` is set to `recover`, access policies are not required. Otherwise, access policies are required.
 	AccessPolicies *[]AccessPolicyEntry `json:"accessPolicies,omitempty"`
 	// VaultURI - The URI of the vault for performing operations on keys and secrets.
 	VaultURI *string `json:"vaultUri,omitempty"`
@@ -1044,12 +1779,108 @@ type VaultProperties struct {
 	EnabledForDiskEncryption *bool `json:"enabledForDiskEncryption,omitempty"`
 	// EnabledForTemplateDeployment - Property to specify whether Azure Resource Manager is permitted to retrieve secrets from the key vault.
 	EnabledForTemplateDeployment *bool `json:"enabledForTemplateDeployment,omitempty"`
-	// EnableSoftDelete - Property specifying whether recoverable deletion is enabled for this key vault. Setting this property to true activates the soft delete feature, whereby vaults or vault entities can be recovered after deletion. Enabling this functionality is irreversible - that is, the property does not accept false as its value.
+	// EnableSoftDelete - Property to specify whether the 'soft delete' functionality is enabled for this key vault. If it's not set to any value(true or false) when creating new key vault, it will be set to true by default. Once set to true, it cannot be reverted to false.
 	EnableSoftDelete *bool `json:"enableSoftDelete,omitempty"`
+	// SoftDeleteRetentionInDays - softDelete data retention days. It accepts >=7 and <=90.
+	SoftDeleteRetentionInDays *int32 `json:"softDeleteRetentionInDays,omitempty"`
+	// EnableRbacAuthorization - Property that controls how data actions are authorized. When true, the key vault will use Role Based Access Control (RBAC) for authorization of data actions, and the access policies specified in vault properties will be  ignored (warning: this is a preview feature). When false, the key vault will use the access policies specified in vault properties, and any policy stored on Azure Resource Manager will be ignored. If null or not specified, the vault is created with the default value of false. Note that management actions are always authorized with RBAC.
+	EnableRbacAuthorization *bool `json:"enableRbacAuthorization,omitempty"`
 	// CreateMode - The vault's create mode to indicate whether the vault need to be recovered or not. Possible values include: 'CreateModeRecover', 'CreateModeDefault'
 	CreateMode CreateMode `json:"createMode,omitempty"`
 	// EnablePurgeProtection - Property specifying whether protection against purge is enabled for this vault. Setting this property to true activates protection against purge for this vault and its content - only the Key Vault service may initiate a hard, irrecoverable deletion. The setting is effective only if soft delete is also enabled. Enabling this functionality is irreversible - that is, the property does not accept false as its value.
 	EnablePurgeProtection *bool `json:"enablePurgeProtection,omitempty"`
+	// NetworkAcls - Rules governing the accessibility of the key vault from specific network locations.
+	NetworkAcls *NetworkRuleSet `json:"networkAcls,omitempty"`
+	// PrivateEndpointConnections - READ-ONLY; List of private endpoint connections associated with the key vault.
+	PrivateEndpointConnections *[]PrivateEndpointConnectionItem `json:"privateEndpointConnections,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for VaultProperties.
+func (vp VaultProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if vp.TenantID != nil {
+		objectMap["tenantId"] = vp.TenantID
+	}
+	if vp.Sku != nil {
+		objectMap["sku"] = vp.Sku
+	}
+	if vp.AccessPolicies != nil {
+		objectMap["accessPolicies"] = vp.AccessPolicies
+	}
+	if vp.VaultURI != nil {
+		objectMap["vaultUri"] = vp.VaultURI
+	}
+	if vp.EnabledForDeployment != nil {
+		objectMap["enabledForDeployment"] = vp.EnabledForDeployment
+	}
+	if vp.EnabledForDiskEncryption != nil {
+		objectMap["enabledForDiskEncryption"] = vp.EnabledForDiskEncryption
+	}
+	if vp.EnabledForTemplateDeployment != nil {
+		objectMap["enabledForTemplateDeployment"] = vp.EnabledForTemplateDeployment
+	}
+	if vp.EnableSoftDelete != nil {
+		objectMap["enableSoftDelete"] = vp.EnableSoftDelete
+	}
+	if vp.SoftDeleteRetentionInDays != nil {
+		objectMap["softDeleteRetentionInDays"] = vp.SoftDeleteRetentionInDays
+	}
+	if vp.EnableRbacAuthorization != nil {
+		objectMap["enableRbacAuthorization"] = vp.EnableRbacAuthorization
+	}
+	if vp.CreateMode != "" {
+		objectMap["createMode"] = vp.CreateMode
+	}
+	if vp.EnablePurgeProtection != nil {
+		objectMap["enablePurgeProtection"] = vp.EnablePurgeProtection
+	}
+	if vp.NetworkAcls != nil {
+		objectMap["networkAcls"] = vp.NetworkAcls
+	}
+	return json.Marshal(objectMap)
+}
+
+// VaultsCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
+type VaultsCreateOrUpdateFuture struct {
+	azure.FutureAPI
+	// Result returns the result of the asynchronous operation.
+	// If the operation has not completed it will return an error.
+	Result func(VaultsClient) (Vault, error)
+}
+
+// UnmarshalJSON is the custom unmarshaller for CreateFuture.
+func (future *VaultsCreateOrUpdateFuture) UnmarshalJSON(body []byte) error {
+	var azFuture azure.Future
+	if err := json.Unmarshal(body, &azFuture); err != nil {
+		return err
+	}
+	future.FutureAPI = &azFuture
+	future.Result = future.result
+	return nil
+}
+
+// result is the default implementation for VaultsCreateOrUpdateFuture.Result.
+func (future *VaultsCreateOrUpdateFuture) result(client VaultsClient) (vVar Vault, err error) {
+	var done bool
+	done, err = future.DoneWithContext(context.Background(), client)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "keyvault.VaultsCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
+		return
+	}
+	if !done {
+		vVar.Response.Response = future.Response()
+		err = azure.NewAsyncOpIncompleteError("keyvault.VaultsCreateOrUpdateFuture")
+		return
+	}
+	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	if vVar.Response.Response, err = future.GetResult(sender); err == nil && vVar.Response.Response.StatusCode != http.StatusNoContent {
+		vVar, err = client.CreateOrUpdateResponder(vVar.Response.Response)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "keyvault.VaultsCreateOrUpdateFuture", "Result", vVar.Response.Response, "Failure responding to request")
+		}
+	}
+	return
 }
 
 // VaultsPurgeDeletedFuture an abstraction for monitoring and retrieving the results of a long-running
@@ -1087,4 +1918,10 @@ func (future *VaultsPurgeDeletedFuture) result(client VaultsClient) (ar autorest
 	}
 	ar.Response = future.Response()
 	return
+}
+
+// VirtualNetworkRule a rule governing the accessibility of a vault from a specific virtual network.
+type VirtualNetworkRule struct {
+	// ID - Full resource id of a vnet subnet, such as '/subscriptions/subid/resourceGroups/rg1/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/subnet1'.
+	ID *string `json:"id,omitempty"`
 }
