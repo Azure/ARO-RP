@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -218,6 +219,15 @@ func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.
 	for _, a := range targets.Cluster {
 		err = g.Resolve(a)
 		if err != nil {
+			return err
+		}
+	}
+
+	// Handle MTU3900 feature flag
+	subProperties := m.subscriptionDoc.Subscription.Properties
+	if feature.IsRegisteredForFeature(subProperties, api.FeatureFlagMTU3900) {
+		m.log.Printf("applying feature flag %s", api.FeatureFlagMTU3900)
+		if err = m.overrideEthernetMTU(g); err != nil {
 			return err
 		}
 	}
