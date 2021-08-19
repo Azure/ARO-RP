@@ -30,11 +30,17 @@ func TestSystemreservedEnsure(t *testing.T) {
 	}{
 		{
 			name: "first time create",
-			mcocli: mcofake.NewSimpleClientset(&mcv1.MachineConfigPool{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "worker",
+			mcocli: mcofake.NewSimpleClientset(
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "worker",
+					},
 				},
-			}),
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "master",
+					},
+				}),
 			machineConfigPoolNeedsUpdate: true,
 			mocker: func(mdh *mock_dynamichelper.MockInterface) {
 				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil)
@@ -42,12 +48,40 @@ func TestSystemreservedEnsure(t *testing.T) {
 		},
 		{
 			name: "nothing to be done",
-			mcocli: mcofake.NewSimpleClientset(&mcv1.MachineConfigPool{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "worker",
-					Labels: map[string]string{labelName: labelValue},
+			mcocli: mcofake.NewSimpleClientset(
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "worker",
+						Labels: map[string]string{labelName: labelValue},
+					},
 				},
-			}),
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "master",
+						Labels: map[string]string{labelName: labelValue},
+					},
+				},
+			),
+			mocker: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
+		{
+			name: "masters needs update",
+			mcocli: mcofake.NewSimpleClientset(
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "worker",
+						Labels: map[string]string{labelName: labelValue},
+					},
+				},
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "master",
+					},
+				},
+			),
+			machineConfigPoolNeedsUpdate: true,
 			mocker: func(mdh *mock_dynamichelper.MockInterface) {
 				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil)
 			},

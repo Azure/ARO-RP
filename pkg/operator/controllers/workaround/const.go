@@ -14,6 +14,7 @@ const (
 	labelValue                  = ""
 	kubeletConfigName           = "aro-limits"
 	workerMachineConfigPoolName = "worker"
+	masterMachineConfigPoolName = "master"
 	memReserved                 = "2000Mi"
 
 	// ifreload workaround

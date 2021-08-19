@@ -10,6 +10,7 @@ import (
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -84,30 +85,55 @@ func (sr *systemreserved) kubeletConfig() (*mcv1.KubeletConfig, error) {
 func (sr *systemreserved) Ensure(ctx context.Context) error {
 	// Step 1. Add label to worker MachineConfigPool.
 	// Get the worker MachineConfigPool, modify it to add a label aro.openshift.io/limits: "", and apply the modified config.
-	mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, workerMachineConfigPoolName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	// don't update if we don't need to.
-	if _, ok := mcp.Labels[labelName]; !ok {
-		if mcp.Labels == nil {
-			mcp.Labels = map[string]string{}
+	var changed bool
+	for _, mcpName := range []string{masterMachineConfigPoolName, workerMachineConfigPoolName} {
+		mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, mcpName, metav1.GetOptions{})
+		if err != nil {
+			// if machineSet does not exist - skip
+			if kerrors.IsNotFound(err) {
+				continue
+			}
+			return err
 		}
-		mcp.Labels[labelName] = labelValue
+		// don't update if we don't need to.
+		if _, ok := mcp.Labels[labelName]; !ok {
+			if mcp.Labels == nil {
+				mcp.Labels = map[string]string{}
+			}
+			mcp.Labels[labelName] = labelValue
 
-		_, err = sr.mcocli.MachineconfigurationV1().MachineConfigPools().Update(ctx, mcp, metav1.UpdateOptions{})
+			_, err = sr.mcocli.MachineconfigurationV1().MachineConfigPools().Update(ctx, mcp, metav1.UpdateOptions{})
+			if err != nil {
+				return err
+			}
+			changed = true
+		}
+	}
+
+	_, err := sr.mcocli.MachineconfigurationV1().KubeletConfigs().Get(ctx, kubeletConfigName, metav1.GetOptions{})
+	if kerrors.IsNotFound(err) {
+		changed = true
+	}
+
+	if changed {
+		//  Step 2. Create KubeletConfig CRD with appropriate limits.
+		kc, err := sr.kubeletConfig()
 		if err != nil {
 			return err
 		}
-	}
 
-	//   Step 2. Create KubeletConfig CRD with appropriate limits.
-	kc, err := sr.kubeletConfig()
-	if err != nil {
-		return err
-	}
+		// we have to recreate due to https://bugzilla.redhat.com/show_bug.cgi?id=1995621
+		_, err = sr.mcocli.MachineconfigurationV1().KubeletConfigs().Get(ctx, kubeletConfigName, metav1.GetOptions{})
+		if err == nil { // exits and change detected - recreate
+			err := sr.mcocli.MachineconfigurationV1().KubeletConfigs().Delete(ctx, kubeletConfigName, metav1.DeleteOptions{})
+			if err != nil {
+				return err
+			}
+		}
 
-	return sr.dh.Ensure(ctx, kc)
+		return sr.dh.Ensure(ctx, kc)
+	}
+	return nil
 }
 
 func (sr *systemreserved) Remove(ctx context.Context) error {
