@@ -36,6 +36,9 @@ spec:
           spec:
             description: PreviewFeatureSpec defines the preview feature for ARO
             properties:
+              azEnvironment:
+                description: AZEnvironment is Azure cloud environment name. READ ONLY.
+                type: string
               nsgFlowLogs:
                 description: NSGFlowLogs contains configuration for NSG flow logs.
                   Omit the configuration if you don't want the controller to reconcile
@@ -76,6 +79,12 @@ spec:
                 required:
                 - enabled
                 type: object
+              resourceId:
+                description: ResourceID is a cluster resource id. READ ONLY.
+                type: string
+            required:
+            - azEnvironment
+            - resourceId
             type: object
           status:
             description: PreviewFeatureStatus defines the observed state of PreviewFeature
