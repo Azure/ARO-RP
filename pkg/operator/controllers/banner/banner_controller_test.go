@@ -153,10 +153,10 @@ func TestBannerReconcile(t *testing.T) {
 
 			if err != nil {
 				if tt.expectedErr == nil {
-					t.Errorf("Got unexpected Error when running Reconcile: %s", err)
+					t.Error(err)
 				}
 				if !strings.EqualFold(err.Error(), tt.expectedErr.Error()) {
-					t.Errorf("Expected Error %s, got %s when processing %s testcase", tt.expectedErr.Error(), err.Error(), tt.name)
+					t.Error(err)
 				}
 				return
 			}
@@ -170,7 +170,7 @@ func TestBannerReconcile(t *testing.T) {
 				}
 			} else {
 				if err != nil && !kerrors.IsNotFound(err) {
-					t.Errorf("Got Error when checking for empty ConsoleNotification: %s", err)
+					t.Error(err)
 				}
 				if err == nil || !kerrors.IsNotFound(err) || resultBanner != nil {
 					t.Errorf("Expected not to get a ConsoleNotification, but it exists")
