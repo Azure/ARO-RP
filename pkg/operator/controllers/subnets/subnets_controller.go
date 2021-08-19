@@ -46,8 +46,8 @@ type reconcileManager struct {
 	instance       *arov1alpha1.Cluster
 	subscriptionID string
 
-	subnets  subnet.Manager
-	kSubnets subnet.KubeManager
+	subnets     subnet.Manager
+	kubeSubnets subnet.KubeManager
 }
 
 // NewReconciler creates a new Reconciler
@@ -101,7 +101,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		log:            r.log,
 		instance:       instance,
 		subscriptionID: resource.SubscriptionID,
-		kSubnets:       subnet.NewKubeManager(r.maocli, resource.SubscriptionID),
+		kubeSubnets:    subnet.NewKubeManager(r.maocli, resource.SubscriptionID),
 		subnets:        subnet.NewManager(&azEnv, resource.SubscriptionID, authorizer),
 	}
 

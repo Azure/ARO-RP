@@ -73,7 +73,7 @@ type ClusterSpec struct {
 
 // FeaturesSpec defines ARO operator feature gates
 type FeaturesSpec struct {
-	ReconcileSubnets               bool `json:"ReconcileSubnets,omitempty"`
+	ReconcileSubnets               bool `json:"reconcileSubnets,omitempty"`
 	ReconcileAlertWebhook          bool `json:"reconcileAlertWebhook,omitempty"`
 	ReconcileDNSMasq               bool `json:"reconcileDNSMasq,omitempty"`
 	ReconcileGenevaLogging         bool `json:"reconcileGenevaLogging,omitempty"`

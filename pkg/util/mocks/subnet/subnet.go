@@ -104,17 +104,17 @@ func (m *MockKubeManager) EXPECT() *MockKubeManagerMockRecorder {
 	return m.recorder
 }
 
-// ListFromCluster mocks base method.
-func (m *MockKubeManager) ListFromCluster(arg0 context.Context) ([]subnet.Subnet, error) {
+// List mocks base method.
+func (m *MockKubeManager) List(arg0 context.Context) ([]subnet.Subnet, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListFromCluster", arg0)
+	ret := m.ctrl.Call(m, "List", arg0)
 	ret0, _ := ret[0].([]subnet.Subnet)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListFromCluster indicates an expected call of ListFromCluster.
-func (mr *MockKubeManagerMockRecorder) ListFromCluster(arg0 interface{}) *gomock.Call {
+// List indicates an expected call of List.
+func (mr *MockKubeManagerMockRecorder) List(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFromCluster", reflect.TypeOf((*MockKubeManager)(nil).ListFromCluster), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockKubeManager)(nil).List), arg0)
 }

@@ -5,18 +5,14 @@ package subnets
 
 import (
 	"context"
-	"strings"
 	"testing"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	maofake "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -57,67 +53,22 @@ func getValidSubnet() *mgmtnetwork.Subnet {
 	}
 }
 
-func getMachineObject(name, networkResourceGroup, vnet, subnet string, isMaster bool) (*machinev1beta1.Machine, error) {
-	raw, err := azureproviderv1beta1.EncodeMachineSpec(&azureproviderv1beta1.AzureMachineProviderSpec{
-		NetworkResourceGroup: networkResourceGroup,
-		Vnet:                 vnet,
-		Subnet:               subnet,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	role := "worker"
-	if isMaster {
-		role = "master"
-	}
-
-	return &machinev1beta1.Machine{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: machineSetsNamespace,
-			Labels: map[string]string{
-				"machine.openshift.io/cluster-api-machine-role": role,
-			},
-		},
-		Spec: machinev1beta1.MachineSpec{
-			ProviderSpec: machinev1beta1.ProviderSpec{
-				Value: raw,
-			},
-		},
-	}, nil
-}
-
 func TestReconcileManager(t *testing.T) {
 	log := logrus.NewEntry(logrus.StandardLogger())
 
 	for _, tt := range []struct {
 		name       string
 		subnetMock func(*mock_subnet.MockManager, *mock_subnet.MockKubeManager)
-		maocli     func() (*maofake.Clientset, error)
 		instance   func(*arov1alpha1.Cluster)
 		wantErr    error
 	}{
 		{
 			name: "Architecture V1 - no change",
-			maocli: func() (*maofake.Clientset, error) {
-				machine1, err := getMachineObject("master", vnetResourceGroup, vnetName, subnetNameMaster, true)
-				if err != nil {
-					return nil, err
-				}
-
-				machine2, err := getMachineObject("worker", vnetResourceGroup, vnetName, subnetNameWorker, false)
-				if err != nil {
-					return nil, err
-				}
-
-				return maofake.NewSimpleClientset(machine1, machine2), nil
-			},
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 				resourceIdMaster := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 				resourceIdWorker := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 
-				kmock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
+				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: resourceIdMaster,
 						IsMaster:   true,
@@ -138,25 +89,12 @@ func TestReconcileManager(t *testing.T) {
 		},
 		{
 			name: "Architecture V1 - all fixup",
-			maocli: func() (*maofake.Clientset, error) {
-				machine1, err := getMachineObject("master", vnetResourceGroup, vnetName, subnetNameMaster, true)
-				if err != nil {
-					return nil, err
-				}
-
-				machine2, err := getMachineObject("worker", vnetResourceGroup, vnetName, subnetNameWorker, false)
-				if err != nil {
-					return nil, err
-				}
-
-				return maofake.NewSimpleClientset(machine1, machine2), nil
-			},
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
 				resourceIdMaster := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 				resourceIdWorker := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 
-				kmock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
+				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: resourceIdMaster,
 						IsMaster:   true,
@@ -186,25 +124,12 @@ func TestReconcileManager(t *testing.T) {
 		},
 		{
 			name: "Architecture V1 - node only fixup",
-			maocli: func() (*maofake.Clientset, error) {
-				machine1, err := getMachineObject("master", vnetResourceGroup, vnetName, subnetNameMaster, true)
-				if err != nil {
-					return nil, err
-				}
-
-				machine2, err := getMachineObject("worker", vnetResourceGroup, vnetName, subnetNameWorker, false)
-				if err != nil {
-					return nil, err
-				}
-
-				return maofake.NewSimpleClientset(machine1, machine2), nil
-			},
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
 				resourceIdMaster := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 				resourceIdWorker := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 
-				kmock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
+				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: resourceIdMaster,
 						IsMaster:   true,
@@ -229,25 +154,12 @@ func TestReconcileManager(t *testing.T) {
 		},
 		{
 			name: "Architecture V2 - no fixups",
-			maocli: func() (*maofake.Clientset, error) {
-				machine1, err := getMachineObject("master", vnetResourceGroup, vnetName, subnetNameMaster, true)
-				if err != nil {
-					return nil, err
-				}
-
-				machine2, err := getMachineObject("worker", vnetResourceGroup, vnetName, subnetNameWorker, false)
-				if err != nil {
-					return nil, err
-				}
-
-				return maofake.NewSimpleClientset(machine1, machine2), nil
-			},
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
 				resourceIdMaster := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 				resourceIdWorker := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 
-				kmock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
+				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: resourceIdMaster,
 						IsMaster:   true,
@@ -267,30 +179,17 @@ func TestReconcileManager(t *testing.T) {
 				mock.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(subnetObjectWorker, nil)
 			},
 			instance: func(instace *arov1alpha1.Cluster) {
-				instace.Spec.ArchitectureVersion = 1
+				instace.Spec.ArchitectureVersion = int(api.ArchitectureVersionV2)
 			},
 		},
 		{
 			name: "Architecture V2 - all nodes fixup",
-			maocli: func() (*maofake.Clientset, error) {
-				machine1, err := getMachineObject("master", vnetResourceGroup, vnetName, subnetNameMaster, true)
-				if err != nil {
-					return nil, err
-				}
-
-				machine2, err := getMachineObject("worker", vnetResourceGroup, vnetName, subnetNameWorker, false)
-				if err != nil {
-					return nil, err
-				}
-
-				return maofake.NewSimpleClientset(machine1, machine2), nil
-			},
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
 				resourceIdMaster := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 				resourceIdWorker := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 
-				kmock.EXPECT().ListFromCluster(gomock.Any()).Return([]subnet.Subnet{
+				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: resourceIdMaster,
 						IsMaster:   true,
@@ -318,7 +217,7 @@ func TestReconcileManager(t *testing.T) {
 				mock.EXPECT().CreateOrUpdate(gomock.Any(), resourceIdWorker, subnetObjectWorkerUpdate).Return(nil)
 			},
 			instance: func(instace *arov1alpha1.Cluster) {
-				instace.Spec.ArchitectureVersion = 1
+				instace.Spec.ArchitectureVersion = int(api.ArchitectureVersionV2)
 			},
 		},
 	} {
@@ -327,9 +226,9 @@ func TestReconcileManager(t *testing.T) {
 			defer controller.Finish()
 
 			subnets := mock_subnet.NewMockManager(controller)
-			kSubnets := mock_subnet.NewMockKubeManager(controller)
+			kubeSubnets := mock_subnet.NewMockKubeManager(controller)
 			if tt.subnetMock != nil {
-				tt.subnetMock(subnets, kSubnets)
+				tt.subnetMock(subnets, kubeSubnets)
 			}
 
 			instance := getValidClusterInstance()
@@ -342,7 +241,7 @@ func TestReconcileManager(t *testing.T) {
 				instance:       instance,
 				subscriptionID: subscriptionId,
 				subnets:        subnets,
-				kSubnets:       kSubnets,
+				kubeSubnets:    kubeSubnets,
 			}
 
 			err := r.reconcileSubnets(context.Background())
@@ -350,7 +249,7 @@ func TestReconcileManager(t *testing.T) {
 				if tt.wantErr == nil {
 					t.Fatal(err)
 				}
-				if !strings.EqualFold(tt.wantErr.Error(), err.Error()) {
+				if err != nil && err.Error() != tt.wantErr.Error() || err == nil && tt.wantErr != nil {
 					t.Errorf("Expected Error %s, got %s when processing %s testcase", tt.wantErr.Error(), err.Error(), tt.name)
 				}
 			}

@@ -57,8 +57,6 @@ spec:
               features:
                 description: FeaturesSpec defines ARO operator feature gates
                 properties:
-                  ReconcileSubnets:
-                    type: boolean
                   reconcileAlertWebhook:
                     type: boolean
                   reconcileBanner:
@@ -76,6 +74,8 @@ spec:
                   reconcilePullSecret:
                     type: boolean
                   reconcileRouteFix:
+                    type: boolean
+                  reconcileSubnets:
                     type: boolean
                   reconcileWorkaroundsController:
                     type: boolean

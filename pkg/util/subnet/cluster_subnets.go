@@ -6,18 +6,18 @@ package subnet
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 )
 
 // KubeManager interface interact with kubernetes layer to extract required information
 type KubeManager interface {
-	ListFromCluster(ctx context.Context) ([]Subnet, error)
+	List(ctx context.Context) ([]Subnet, error)
 }
 
 type kubeManager struct {
@@ -33,13 +33,10 @@ func NewKubeManager(maocli maoclient.Interface, subscriptionID string) KubeManag
 	}
 }
 
-// ListFromCluster reconstructs subnetId used in machines object in the cluster
+// List reconstructs subnetId used in machines object in the cluster
 // In cases we interat with customer vnets, we don't know which subnets are used in ARO.
 // Example : /subscriptions/{subscriptionID}/resourceGroups/{vnet-resource-group}/providers/Microsoft.Network/virtualNetworks/{vnet-name}/subnets/{subnet-name}
-func (m *kubeManager) ListFromCluster(ctx context.Context) ([]Subnet, error) {
-	if m.maocli == nil {
-		return nil, fmt.Errorf("subnets.Manager was initiated without kubernetes client")
-	}
+func (m *kubeManager) List(ctx context.Context) ([]Subnet, error) {
 	subnetMap := []Subnet{}
 
 	// select all workers by the  machine.openshift.io/cluster-api-machine-role: not equal to master Label
@@ -72,7 +69,7 @@ func (m *kubeManager) ListFromCluster(ctx context.Context) ([]Subnet, error) {
 	return unique(subnetMap), nil
 }
 
-func (m *kubeManager) getDescriptorFromProviderSpec(providerSpec *runtime.RawExtension) (*Subnet, error) {
+func (m *kubeManager) getDescriptorFromProviderSpec(providerSpec *kruntime.RawExtension) (*Subnet, error) {
 	var spec azureproviderv1beta1.AzureMachineProviderSpec
 	err := json.Unmarshal(providerSpec.Raw, &spec)
 	if err != nil {
@@ -93,11 +90,12 @@ func (m *kubeManager) getDescriptorFromProviderSpec(providerSpec *runtime.RawExt
 }
 
 func unique(s []Subnet) []Subnet {
-	keys := make(map[string]bool)
+	keys := make(map[string]struct{})
 	list := []Subnet{}
 	for _, entry := range s {
-		if _, value := keys[entry.ResourceID]; !value {
-			keys[entry.ResourceID] = true
+		key := strings.ToLower(entry.ResourceID)
+		if _, ok := keys[key]; !ok {
+			keys[key] = struct{}{}
 			list = append(list, entry)
 		}
 	}

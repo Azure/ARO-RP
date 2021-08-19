@@ -32,15 +32,12 @@ type Manager interface {
 type manager struct {
 	subnets         network.SubnetsClient
 	virtualNetworks network.VirtualNetworksClient
-
-	subscriptionID string
 }
 
 func NewManager(environment *azureclient.AROEnvironment, subscriptionID string, spAuthorizer autorest.Authorizer) Manager {
 	return &manager{
 		subnets:         network.NewSubnetsClient(environment, subscriptionID, spAuthorizer),
 		virtualNetworks: network.NewVirtualNetworksClient(environment, subscriptionID, spAuthorizer),
-		subscriptionID:  subscriptionID,
 	}
 }
 

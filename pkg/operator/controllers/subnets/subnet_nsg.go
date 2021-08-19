@@ -8,15 +8,14 @@ import (
 	"fmt"
 	"strings"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 func (r *reconcileManager) reconcileSubnets(ctx context.Context) error {
-	// the main logic starts here
-	subnets, err := r.kSubnets.ListFromCluster(ctx)
+	subnets, err := r.kubeSubnets.List(ctx)
 	if err != nil {
 		return err
 	}
@@ -48,7 +47,7 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 
 	if !strings.EqualFold(*subnetObject.NetworkSecurityGroup.ID, correctNSGResourceID) {
 		r.log.Infof("Fixing NSG from %s to %s", *subnetObject.NetworkSecurityGroup.ID, correctNSGResourceID)
-		// NSG doesn't match - fixing
+
 		subnetObject.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{ID: &correctNSGResourceID}
 		err = r.subnets.CreateOrUpdate(ctx, s.ResourceID, subnetObject)
 		if err != nil {
