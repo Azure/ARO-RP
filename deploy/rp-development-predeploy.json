@@ -61,6 +61,9 @@
             "apiVersion": "2019-07-01"
         },
         {
+            "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
             "properties": {
                 "tenantId": "[subscription().tenantId]",
                 "sku": {
@@ -96,53 +99,12 @@
                 ],
                 "enableSoftDelete": true
             },
-            "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
-            "type": "Microsoft.KeyVault/vaults",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2016-10-01"
+            "apiVersion": "2019-09-01"
         },
         {
-            "properties": {
-                "tenantId": "[subscription().tenantId]",
-                "sku": {
-                    "family": "A",
-                    "name": "standard"
-                },
-                "accessPolicies": [
-                    {
-                        "tenantId": "[subscription().tenantId]",
-                        "objectId": "[parameters('rpServicePrincipalId')]",
-                        "permissions": {
-                            "secrets": [
-                                "get"
-                            ]
-                        }
-                    },
-                    {
-                        "tenantId": "[subscription().tenantId]",
-                        "objectId": "[parameters('adminObjectId')]",
-                        "permissions": {
-                            "secrets": [
-                                "set",
-                                "list"
-                            ],
-                            "certificates": [
-                                "delete",
-                                "get",
-                                "import",
-                                "list"
-                            ]
-                        }
-                    }
-                ],
-                "enableSoftDelete": true
-            },
             "name": "[concat(parameters('keyvaultPrefix'), '-dbt')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2016-10-01"
-        },
-        {
             "properties": {
                 "tenantId": "[subscription().tenantId]",
                 "sku": {
@@ -178,12 +140,53 @@
                 ],
                 "enableSoftDelete": true
             },
+            "apiVersion": "2019-09-01"
+        },
+        {
             "name": "[concat(parameters('keyvaultPrefix'), '-por')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2016-10-01"
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": [
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[parameters('rpServicePrincipalId')]",
+                        "permissions": {
+                            "secrets": [
+                                "get"
+                            ]
+                        }
+                    },
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[parameters('adminObjectId')]",
+                        "permissions": {
+                            "secrets": [
+                                "set",
+                                "list"
+                            ],
+                            "certificates": [
+                                "delete",
+                                "get",
+                                "import",
+                                "list"
+                            ]
+                        }
+                    }
+                ],
+                "enableSoftDelete": true
+            },
+            "apiVersion": "2019-09-01"
         },
         {
+            "name": "[concat(parameters('keyvaultPrefix'), '-svc')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
             "properties": {
                 "tenantId": "[subscription().tenantId]",
                 "sku": {
@@ -220,10 +223,7 @@
                 ],
                 "enableSoftDelete": true
             },
-            "name": "[concat(parameters('keyvaultPrefix'), '-svc')]",
-            "type": "Microsoft.KeyVault/vaults",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2016-10-01"
+            "apiVersion": "2019-09-01"
         }
     ]
 }
