@@ -24,6 +24,7 @@ type conditionFunction func(context.Context) (bool, error)
 // The Condition will execute f repeatedly (every Runner.pollInterval), timing
 // out with a failure when more time than the provided timeout has elapsed
 // without f returning (true, nil). Errors from `f` are returned directly.
+// If fail is set to false - it will not fail after timeout.
 func Condition(f conditionFunction, timeout time.Duration, fail bool) conditionStep {
 	return conditionStep{
 		f:       f,
