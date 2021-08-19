@@ -24,7 +24,6 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
-	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -77,22 +76,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	// Grab azure-credentials from secret
-	credentials, err := clusterauthorizer.AzCredentials(ctx, r.kubernetescli)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+
 	resource, err := azure.ParseResourceID(instance.Spec.ResourceID)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	// create service principal token from azure-credentials
-	token, err := aad.GetToken(ctx, r.log, string(credentials.ClientID), string(credentials.ClientSecret), string(credentials.TenantID), azEnv.ActiveDirectoryEndpoint, azEnv.ResourceManagerEndpoint)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+
 	// create refreshable authorizer from token
-	authorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(token)
+	authorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(ctx, r.log, &azEnv, r.kubernetescli)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
