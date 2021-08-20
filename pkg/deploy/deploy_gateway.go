@@ -7,8 +7,6 @@ import (
 	"context"
 	"encoding/json"
 
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
@@ -61,12 +59,5 @@ func (d *deployer) DeployGateway(ctx context.Context) error {
 		Value: d.version,
 	}
 
-	d.log.Printf("deploying %s", deploymentName)
-	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.GatewayResourceGroupName, deploymentName, mgmtfeatures.Deployment{
-		Properties: &mgmtfeatures.DeploymentProperties{
-			Template:   template,
-			Mode:       mgmtfeatures.Incremental,
-			Parameters: parameters.Parameters,
-		},
-	})
+	return d.deploy(ctx, template, parameters, d.config.GatewayResourceGroupName, deploymentName, gatewayVMSSPrefix+d.version)
 }

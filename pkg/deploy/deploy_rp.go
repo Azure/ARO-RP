@@ -10,8 +10,6 @@ import (
 
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
@@ -81,43 +79,21 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		Value: d.env.Environment().ActualCloudName,
 	}
 
-	for i := 0; i < 2; i++ {
-		d.log.Printf("deploying %s", deploymentName)
-		err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.RPResourceGroupName, deploymentName, mgmtfeatures.Deployment{
-			Properties: &mgmtfeatures.DeploymentProperties{
-				Template:   template,
-				Mode:       mgmtfeatures.Incremental,
-				Parameters: parameters.Parameters,
-			},
-		})
-		if serviceErr, ok := err.(*azure.ServiceError); ok &&
-			serviceErr.Code == "DeploymentFailed" &&
-			i < 1 {
-			// on new RP deployments, we get a spurious DeploymentFailed error
-			// from the Microsoft.Insights/metricAlerts resources indicating
-			// that rp-lb can't be found, even though it exists and the
-			// resources correctly have a dependsOn stanza referring to it.
-			// Retry once.
-			d.log.Print(err)
-			continue
-		}
-		if err != nil {
-			return err
-		}
-
-		break
+	err = d.deploy(ctx, template, parameters, d.config.RPResourceGroupName, deploymentName, rpVMSSPrefix+d.version)
+	if err != nil {
+		return err
 	}
 
 	return d.configureDNS(ctx)
 }
 
 func (d *deployer) configureDNS(ctx context.Context) error {
-	rpPip, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "rp-pip", "")
+	rpPIP, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "rp-pip", "")
 	if err != nil {
 		return err
 	}
 
-	portalPip, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "portal-pip", "")
+	portalPIP, err := d.publicipaddresses.Get(ctx, d.config.RPResourceGroupName, "portal-pip", "")
 	if err != nil {
 		return err
 	}
@@ -126,7 +102,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	dbtokenIp := *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
+	dbtokenIP := *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
 
 	zone, err := d.zones.Get(ctx, d.config.RPResourceGroupName, d.config.Location+"."+*d.config.Configuration.ClusterParentDomainName)
 	if err != nil {
@@ -138,7 +114,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 			TTL: to.Int64Ptr(3600),
 			ARecords: &[]mgmtdns.ARecord{
 				{
-					Ipv4Address: rpPip.IPAddress,
+					Ipv4Address: rpPIP.IPAddress,
 				},
 			},
 		},
@@ -152,7 +128,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 			TTL: to.Int64Ptr(3600),
 			ARecords: &[]mgmtdns.ARecord{
 				{
-					Ipv4Address: portalPip.IPAddress,
+					Ipv4Address: portalPIP.IPAddress,
 				},
 			},
 		},
@@ -166,7 +142,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 			TTL: to.Int64Ptr(3600),
 			ARecords: &[]mgmtdns.ARecord{
 				{
-					Ipv4Address: &dbtokenIp,
+					Ipv4Address: &dbtokenIP,
 				},
 			},
 		},
