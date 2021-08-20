@@ -21,23 +21,24 @@ type CertificateRefresher interface {
 }
 
 type refreshingCertificate struct {
-	lock     sync.RWMutex
-	certs    []*x509.Certificate
-	key      *rsa.PrivateKey
-	interval time.Duration
-	logger   *logrus.Entry
-	kv       keyvault.Manager
-	certName string
-	stop     <-chan struct{}
+	lock      sync.RWMutex
+	certs     []*x509.Certificate
+	key       *rsa.PrivateKey
+	logger    *logrus.Entry
+	kv        keyvault.Manager
+	certName  string
+	newTicker func() (tick <-chan time.Time, stop func())
 }
 
-func newCertificateRefresher(logger *logrus.Entry, interval time.Duration, kv keyvault.Manager, certificateName string, stop <-chan struct{}) CertificateRefresher {
+func newCertificateRefresher(logger *logrus.Entry, interval time.Duration, kv keyvault.Manager, certificateName string) CertificateRefresher {
 	return &refreshingCertificate{
 		logger:   logger,
-		interval: interval,
 		kv:       kv,
 		certName: certificateName,
-		stop:     stop,
+		newTicker: func() (tick <-chan time.Time, stop func()) {
+			ticker := time.NewTicker(interval)
+			return ticker.C, func() { ticker.Stop() }
+		},
 	}
 }
 
@@ -81,15 +82,15 @@ func (r *refreshingCertificate) fetchCertificateOnce(ctx context.Context) error 
 
 // fetchCertificate starts goroutine to poll certificates
 func (r *refreshingCertificate) fetchCertificate(ctx context.Context) {
-	ticker := time.NewTicker(r.interval)
+	tick, stop := r.newTicker()
 
 	go func() {
-		defer ticker.Stop()
+		defer stop()
 		for {
 			select {
-			case <-r.stop:
+			case <-ctx.Done():
 				return
-			case <-ticker.C:
+			case <-tick:
 				err := r.fetchCertificateOnce(ctx)
 				if err != nil {
 					r.logger.Errorf("cannot pull certificate leaving old one, %s", err.Error())

@@ -58,7 +58,7 @@ type prod struct {
 	features map[Feature]bool
 }
 
-func newProd(ctx context.Context, stop <-chan struct{}, log *logrus.Entry) (*prod, error) {
+func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	for _, key := range []string{
 		"AZURE_FP_CLIENT_ID",
 		"DOMAIN_NAME",
@@ -144,7 +144,7 @@ func newProd(ctx context.Context, stop <-chan struct{}, log *logrus.Entry) (*pro
 		return nil, err
 	}
 
-	p.fpCertificateRefresher = newCertificateRefresher(log, 1*time.Hour, p.serviceKeyvault, RPFirstPartySecretName, stop)
+	p.fpCertificateRefresher = newCertificateRefresher(log, 1*time.Hour, p.serviceKeyvault, RPFirstPartySecretName)
 	err = p.fpCertificateRefresher.Start(ctx)
 	if err != nil {
 		return nil, err

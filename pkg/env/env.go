@@ -91,12 +91,12 @@ type Interface interface {
 	VMSku(vmSize string) (*mgmtcompute.ResourceSku, error)
 }
 
-func NewEnv(ctx context.Context, stop <-chan struct{}, log *logrus.Entry) (Interface, error) {
+func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	if IsLocalDevelopmentMode() {
-		return newDev(ctx, stop, log)
+		return newDev(ctx, log)
 	}
 
-	return newProd(ctx, stop, log)
+	return newProd(ctx, log)
 }
 
 func IsLocalDevelopmentMode() bool {

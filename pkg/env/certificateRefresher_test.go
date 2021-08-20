@@ -161,32 +161,71 @@ func TestRefreshingCertificate(t *testing.T) {
 
 	cannotPull := errors.New("Cannot pull certificates from keyvault")
 
+	// newMockTicker inline function is used to mock time.Ticker to pull the certificate
+	// return two functions:
+	//
+	// mockTicker := func() (tick <-chan time.Time, stop func()) returns chanel to pass ticks and stop signal
+	// which is roughly equivalent to:
+	//         ticker := time.NewTicker(time.Minute)
+	//         ticker.Stop() // <- this
+	// when stop() is called, done is passed to signal end of processing
+	//
+	// func(context.CancelFunc) is used to generate ticks, passed func() is used as cancel signal
+	// for context.WithCancel to signal all ticks are passed
+	//
+	// Call order is depicted in example for two ticks bellow
+	//
+	//        context       mockSource        mockTicker             fetchCertificate
+	//    --------------------------------------------------------------------------
+	//      withCancel
+	//                         1       ->       tick        ->    fetchCertificateonce
+	//                         2       ->       tick        ->    fetchCertificateonce
+	//                   <-  cancel
+	//        Done                                          ->        stop
+	//                        done     <-        stop       <-
+	newMockTicker := func(n int) (func() (<-chan time.Time, func()), func(context.CancelFunc)) {
+		s := make(chan time.Time)
+		done := make(chan struct{})
+
+		mockTicker := func() (tick <-chan time.Time, stop func()) {
+			return s, func() {
+				done <- struct{}{}
+			}
+		}
+
+		mockSource := func(cancel context.CancelFunc) {
+			for i := 0; i < n; i++ {
+				s <- time.Time{}
+			}
+			cancel()
+			<-done
+		}
+
+		return mockTicker, mockSource
+	}
+
 	tt := []struct {
 		name           string
-		interval       time.Duration
-		sleep          time.Duration
+		tickCount      int
 		managerFactory func(*gomock.Controller) keyvault.Manager
 		wantKey        *rsa.PrivateKey
 		wantCert       *x509.Certificate
 		wantErr        error
 	}{
 		{
-			name:     "test initial certificate, pull exactly once, ticker is still waiting",
-			interval: 10 * time.Minute,
-			sleep:    10 * time.Millisecond,
+			name: "test initial certificate, pull exactly once, ticks one time",
 			managerFactory: func(controller *gomock.Controller) keyvault.Manager {
 				manager := mock_keyvault.NewMockManager(controller)
 				manager.EXPECT().GetCertificateSecret(gomock.Any(), testCertName).Return(key1, certs1, nil)
 				return manager
 			},
-			wantKey:  key1,
-			wantCert: certs1[0],
-			wantErr:  nil,
+			tickCount: 0,
+			wantKey:   key1,
+			wantCert:  certs1[0],
+			wantErr:   nil,
 		},
 		{
-			name:     "test refresh certificate, pull exactly twice, first on start, second on refresh",
-			interval: 50 * time.Millisecond,
-			sleep:    60 * time.Millisecond,
+			name: "test refresh certificate, pull exactly twice, first on start, second on refresh, one tick",
 			managerFactory: func(controller *gomock.Controller) keyvault.Manager {
 				manager := mock_keyvault.NewMockManager(mockController)
 				gomock.InOrder(
@@ -195,27 +234,25 @@ func TestRefreshingCertificate(t *testing.T) {
 				)
 				return manager
 			},
-			wantKey:  key2,
-			wantCert: certs2[0],
-			wantErr:  nil,
+			tickCount: 1,
+			wantKey:   key2,
+			wantCert:  certs2[0],
+			wantErr:   nil,
 		},
 		{
-			name:     "test initial error, pull exactly once with an error",
-			interval: 1 * time.Minute,
-			sleep:    20 * time.Millisecond,
+			name: "test initial error, pull exactly once with an error, no tick",
 			managerFactory: func(controller *gomock.Controller) keyvault.Manager {
 				manager := mock_keyvault.NewMockManager(mockController)
 				manager.EXPECT().GetCertificateSecret(gomock.Any(), testCertName).Return(nil, nil, cannotPull)
 				return manager
 			},
-			wantKey:  nil,
-			wantCert: nil,
-			wantErr:  cannotPull,
+			tickCount: 0,
+			wantKey:   nil,
+			wantCert:  nil,
+			wantErr:   cannotPull,
 		},
 		{
-			name:     "test refresh error, pull exactly twice, first on start, second time with an error",
-			interval: 50 * time.Millisecond,
-			sleep:    60 * time.Millisecond,
+			name: "test refresh error, pull exactly twice, first on start, second time with an error, one tick",
 			managerFactory: func(controller *gomock.Controller) keyvault.Manager {
 				manager := mock_keyvault.NewMockManager(controller)
 				gomock.InOrder(
@@ -224,39 +261,42 @@ func TestRefreshingCertificate(t *testing.T) {
 				)
 				return manager
 			},
-			wantKey:  key1,
-			wantCert: certs1[0],
-			wantErr:  nil,
+			tickCount: 1,
+			wantKey:   key1,
+			wantCert:  certs1[0],
+			wantErr:   nil,
 		},
 		{
-			name:     "test refresh, pull exactly 2 times",
-			interval: 1 * time.Second,
-			sleep:    1800 * time.Millisecond,
+			name: "test refresh, pull exactly 5 times, 4 ticks",
 			managerFactory: func(controller *gomock.Controller) keyvault.Manager {
 				manager := mock_keyvault.NewMockManager(controller)
-				manager.EXPECT().GetCertificateSecret(gomock.Any(), testCertName).Return(key1, certs1, nil).Times(2)
+				manager.EXPECT().GetCertificateSecret(gomock.Any(), testCertName).Return(key1, certs1, nil).Times(5)
 				return manager
 			},
-			wantKey:  key1,
-			wantCert: certs1[0],
-			wantErr:  nil,
+			tickCount: 4,
+			wantKey:   key1,
+			wantCert:  certs1[0],
+			wantErr:   nil,
 		},
 	}
 
 	for _, test := range tt {
 		t.Run(test.name, func(t *testing.T) {
-			stop := make(chan struct{})
-			defer close(stop)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			mock, tick := newMockTicker(test.tickCount)
 
 			refreshing := newCertificateRefresher(
 				logrus.NewEntry(logrus.StandardLogger()),
-				test.interval,
+				// interval is not used in tests, it is mocked
+				0,
 				test.managerFactory(mockController),
 				testCertName,
-				stop,
 			)
+			refreshing.(*refreshingCertificate).newTicker = mock
 
-			err := refreshing.Start(context.Background())
+			err := refreshing.Start(ctx)
 			if err != test.wantErr {
 				t.Fatal(err)
 			}
@@ -265,7 +305,10 @@ func TestRefreshingCertificate(t *testing.T) {
 				return
 			}
 
-			time.Sleep(test.sleep)
+			// call tick to do all registered ticks, once finished, cancel context and wait for done channel
+			// canceled context finishes the fetchCertificate goroutine, this triggers registered stop()
+			// which sends done, which finally tells tick to end and allow code to continue
+			tick(cancel)
 
 			testkey, testCerts := refreshing.GetCertificates()
 			if !equalPrivKey(testkey, test.wantKey) {
