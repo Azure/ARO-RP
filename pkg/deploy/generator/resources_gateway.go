@@ -195,6 +195,8 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 
 	for _, variable := range []string{
 		"acrResourceId",
+		"azureCloudName",
+		"azureSecPackVSATenantId",
 		"databaseAccountName",
 		"dbtokenClientId",
 		"dbtokenUrl",
@@ -314,7 +316,9 @@ cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 	Port 29230
 EOF
 
+export AZURE_CLOUD_NAME=$AZURECLOUDNAME
 az login -i --allow-no-subscriptions
+az account set -s "$SUBSCRIPTIONID"
 
 systemctl start docker.service
 az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
@@ -530,6 +534,19 @@ EOF
 mkdir -p /usr/lib/ssl/certs
 csplit -f /usr/lib/ssl/certs/cert- -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 {*} >/dev/null
 c_rehash /usr/lib/ssl/certs
+
+# we leave clientId blank as long as only 1 managed identity assigned to vmss
+# if we have more than 1, we will need to populate with clientId used for off-node scanning
+cat >/etc/default/vsa-nodescan-agent.config <<EOF
+{
+    "Nice": 19,
+    "Timeout": 10800,
+    "ClientId": "",
+    "TenantId": "$AZURESECPACKVSATENANTID",
+    "ProcessTimeout": 300,
+    "CommandDelay": 0
+  }
+EOF
 
 for service in aro-gateway auoms azsecd azsecmond mdsd mdm chronyd td-agent-bit; do
   systemctl enable $service.service

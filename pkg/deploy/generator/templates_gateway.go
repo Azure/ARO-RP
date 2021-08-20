@@ -23,6 +23,8 @@ func (g *generator) gatewayTemplate() *arm.Template {
 
 	params := []string{
 		"acrResourceId",
+		"azureCloudName",
+		"azureSecPackVSATenantId",
 		"databaseAccountName",
 		"dbtokenClientId",
 		"dbtokenUrl",

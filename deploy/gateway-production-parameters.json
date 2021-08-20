@@ -5,6 +5,12 @@
         "acrResourceId": {
             "value": ""
         },
+        "azureCloudName": {
+            "value": ""
+        },
+        "azureSecPackVSATenantId": {
+            "value": ""
+        },
         "databaseAccountName": {
             "value": ""
         },
