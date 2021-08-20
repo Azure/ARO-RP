@@ -11,11 +11,11 @@ import (
 
 type VirtualMachineScaleSetsClientAddons interface {
 	List(ctx context.Context, resourceGroupName string) ([]mgmtcompute.VirtualMachineScaleSet, error)
-	DeleteAndWait(ctx context.Context, resourceGroupName, VMScaleSetName string) error
+	DeleteAndWait(ctx context.Context, resourceGroupName, vmScaleSetName string) error
 }
 
-func (c *virtualMachineScaleSetsClient) DeleteAndWait(ctx context.Context, resourceGroupName string, VMScaleSetName string) error {
-	future, err := c.VirtualMachineScaleSetsClient.Delete(ctx, resourceGroupName, VMScaleSetName)
+func (c *virtualMachineScaleSetsClient) DeleteAndWait(ctx context.Context, resourceGroupName string, vmScaleSetName string) error {
+	future, err := c.VirtualMachineScaleSetsClient.Delete(ctx, resourceGroupName, vmScaleSetName)
 	if err != nil {
 		return err
 	}

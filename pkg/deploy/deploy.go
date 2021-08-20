@@ -5,9 +5,14 @@ package deploy
 
 import (
 	"context"
+	"net/http"
 	"reflect"
 	"strings"
 
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
@@ -145,4 +150,65 @@ func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
 	}
 
 	return parameters
+}
+
+// TODO: add unit test
+func (d *deployer) deploy(ctx context.Context, t map[string]interface{}, p *arm.Parameters, rgName, deploymentName, vmssName string) (err error) {
+	for i := 0; i < 3; i++ {
+		d.log.Printf("deploying %s", deploymentName)
+		err = d.deployments.CreateOrUpdateAndWait(ctx, rgName, deploymentName, mgmtfeatures.Deployment{
+			Properties: &mgmtfeatures.DeploymentProperties{
+				Template:   t,
+				Mode:       mgmtfeatures.Incremental,
+				Parameters: p.Parameters,
+			},
+		})
+		if serviceErr, ok := err.(*azure.ServiceError); ok &&
+			serviceErr.Code == "DeploymentFailed" &&
+			i < 1 {
+			// on new RP deployments, we get a spurious DeploymentFailed error
+			// from the Microsoft.Insights/metricAlerts resources indicating
+			// that rp-lb can't be found, even though it exists and the
+			// resources correctly have a dependsOn stanza referring to it.
+			// Retry once.
+			d.log.Print(err)
+			continue
+		}
+		if err != nil {
+			if deleted := d.removeFailedScaleset(ctx, rgName, vmssName); deleted && i < 2 {
+				continue // Retry deployment after deleting failed VMSS.
+			}
+		}
+		break
+	}
+	return err
+}
+
+func (d *deployer) removeFailedScaleset(ctx context.Context, rgName, vmssName string) (deleted bool) {
+	// Check if scaleset exists. If not, no need to delete it.
+	vmss, err := d.vmss.Get(ctx, rgName, vmssName)
+	if isNotFound(err) {
+		return true
+	}
+
+	// If it is not in failed state, don't delete it.
+	if *vmss.ProvisioningState != string(mgmtcompute.ProvisioningStateFailed) {
+		return false
+	}
+
+	// If it is in failed state, try deleting so naming conflict doesn't occur during retry.
+	d.log.Printf("deleting failed scaleset %s", *vmss.Name)
+	err = d.vmss.DeleteAndWait(ctx, rgName, *vmss.Name)
+	if err != nil {
+		d.log.Warn(err)
+		return false
+	}
+	return true
+}
+
+func isNotFound(err error) bool {
+	if detailedErr, ok := err.(autorest.DetailedError); ok && detailedErr.StatusCode == http.StatusNotFound {
+		return true
+	}
+	return false
 }
