@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-02-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -246,7 +246,7 @@ func (g *generator) devVPN() *arm.Resource {
 						Name: to.StringPtr("default"),
 					},
 				},
-				VpnType: mgmtnetwork.RouteBased,
+				VpnType: mgmtnetwork.VpnTypeRouteBased,
 				Sku: &mgmtnetwork.VirtualNetworkGatewaySku{
 					Name: mgmtnetwork.VirtualNetworkGatewaySkuNameVpnGw1,
 					Tier: mgmtnetwork.VirtualNetworkGatewaySkuTierVpnGw1,
@@ -264,7 +264,7 @@ func (g *generator) devVPN() *arm.Resource {
 						},
 					},
 					VpnClientProtocols: &[]mgmtnetwork.VpnClientProtocol{
-						mgmtnetwork.OpenVPN,
+						mgmtnetwork.VpnClientProtocolOpenVPN,
 					},
 				},
 			},

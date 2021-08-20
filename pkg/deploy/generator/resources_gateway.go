@@ -11,7 +11,7 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-02-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -66,7 +66,7 @@ func (g *generator) gatewayVnet() *arm.Resource {
 						Locations: &[]string{"*"},
 					},
 				},
-				PrivateLinkServiceNetworkPolicies: to.StringPtr("Disabled"),
+				PrivateLinkServiceNetworkPolicies: mgmtnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled,
 			},
 			Name: to.StringPtr("gateway-subnet"),
 		},

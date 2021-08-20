@@ -12,7 +12,7 @@ import (
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-02-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
 	mgmtinsights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
@@ -170,7 +170,7 @@ func (g *generator) rpPEVnet() *arm.Resource {
 				NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 					ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"),
 				},
-				PrivateEndpointNetworkPolicies: to.StringPtr("Disabled"),
+				PrivateEndpointNetworkPolicies: mgmtnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled,
 			},
 			Name: to.StringPtr("rp-pe-subnet"),
 		},

@@ -8,11 +8,10 @@ import (
 	"fmt"
 	"testing"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-02-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
@@ -125,7 +124,7 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 				subnet.EXPECT().Get(ctx, "subnetID").Return(&mgmtnetwork.Subnet{}, nil)
 				subnet.EXPECT().CreateOrUpdate(ctx, "subnetID", &mgmtnetwork.Subnet{
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						PrivateLinkServiceNetworkPolicies: to.StringPtr("Disabled"),
+						PrivateLinkServiceNetworkPolicies: mgmtnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled,
 					},
 				}).Return(nil)
 			},
@@ -136,8 +135,8 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 				subnet.EXPECT().Get(ctx, "subnetID").Return(&mgmtnetwork.Subnet{}, nil)
 				subnet.EXPECT().CreateOrUpdate(ctx, "subnetID", &mgmtnetwork.Subnet{
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-						PrivateEndpointNetworkPolicies:    to.StringPtr("Disabled"),
-						PrivateLinkServiceNetworkPolicies: to.StringPtr("Disabled"),
+						PrivateEndpointNetworkPolicies:    mgmtnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled,
+						PrivateLinkServiceNetworkPolicies: mgmtnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled,
 					},
 				}).Return(nil)
 			},

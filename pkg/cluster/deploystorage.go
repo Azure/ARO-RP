@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"strings"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-02-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -296,9 +296,9 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 	}
 
 	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
-		s.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies = to.StringPtr("Disabled")
+		s.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies = mgmtnetwork.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled
 	}
-	s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies = to.StringPtr("Disabled")
+	s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies = mgmtnetwork.VirtualNetworkPrivateLinkServiceNetworkPoliciesDisabled
 
 	return m.subnet.CreateOrUpdate(ctx, m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID, s)
 }
