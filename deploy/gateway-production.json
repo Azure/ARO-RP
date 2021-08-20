@@ -160,7 +160,7 @@
             "name": "gateway-lb-internal",
             "type": "Microsoft.Network/loadBalancers",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01"
+            "apiVersion": "2021-02-01"
         },
         {
             "properties": {
@@ -184,7 +184,7 @@
             "name": "gateway-pls-001",
             "type": "Microsoft.Network/privateLinkServices",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2021-02-01",
             "dependsOn": [
                 "Microsoft.Network/loadBalancers/gateway-lb-internal"
             ]
@@ -314,7 +314,7 @@
             },
             "name": "gateway-vnet/peering-rp-vnet",
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2021-02-01",
             "location": "[resourceGroup().location]"
         },
         {

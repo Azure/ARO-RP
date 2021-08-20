@@ -167,7 +167,7 @@
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
             "condition": "[parameters('deployNSGs')]",
-            "apiVersion": "2020-08-01"
+            "apiVersion": "2021-02-01"
         },
         {
             "properties": {},
@@ -175,7 +175,7 @@
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
             "condition": "[parameters('deployNSGs')]",
-            "apiVersion": "2020-08-01"
+            "apiVersion": "2021-02-01"
         },
         {
             "properties": {
@@ -214,7 +214,7 @@
             "name": "rp-vnet",
             "type": "Microsoft.Network/virtualNetworks",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2021-02-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"
             ]
@@ -243,7 +243,7 @@
             "name": "rp-pe-vnet-001",
             "type": "Microsoft.Network/virtualNetworks",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2021-02-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"
             ]
