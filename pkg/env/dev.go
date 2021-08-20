@@ -21,7 +21,7 @@ type dev struct {
 	*prod
 }
 
-func newDev(ctx context.Context, stop <-chan struct{}, log *logrus.Entry) (Interface, error) {
+func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	for _, key := range []string{
 		"PROXY_HOSTNAME",
 	} {
@@ -33,7 +33,7 @@ func newDev(ctx context.Context, stop <-chan struct{}, log *logrus.Entry) (Inter
 	d := &dev{}
 
 	var err error
-	d.prod, err = newProd(ctx, stop, log)
+	d.prod, err = newProd(ctx, log)
 	if err != nil {
 		return nil, err
 	}

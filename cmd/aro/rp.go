@@ -34,7 +34,7 @@ import (
 func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	stop := make(chan struct{})
 
-	_env, err := env.NewEnv(ctx, stop, log)
+	_env, err := env.NewEnv(ctx, log)
 	if err != nil {
 		return err
 	}
