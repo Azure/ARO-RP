@@ -50,7 +50,7 @@ func (sr *systemreserved) IsRequired(clusterVersion *version.Version) bool {
 	return clusterVersion.Lt(sr.versionFixed)
 }
 
-func (sr *systemreserved) kubeletConfig() (*mcv1.KubeletConfig, error) {
+func kubeletConfig() (*mcv1.KubeletConfig, error) {
 	b, err := json.Marshal(map[string]interface{}{
 		"systemReserved": map[string]interface{}{
 			"memory": memReserved,
@@ -110,30 +110,28 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 		}
 	}
 
+	// If there is no KubeletConfig - mark it as changed too
 	_, err := sr.mcocli.MachineconfigurationV1().KubeletConfigs().Get(ctx, kubeletConfigName, metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
 		changed = true
 	}
 
-	if changed {
-		//  Step 2. Create KubeletConfig CRD with appropriate limits.
-		kc, err := sr.kubeletConfig()
+	//  Step 2. Create KubeletConfig CRD with appropriate limits.
+	kc, err := kubeletConfig()
+	if err != nil {
+		return err
+	}
+
+	// we have to recreate due to https://bugzilla.redhat.com/show_bug.cgi?id=1995621
+	_, err = sr.mcocli.MachineconfigurationV1().KubeletConfigs().Get(ctx, kubeletConfigName, metav1.GetOptions{})
+	if err == nil && changed { // exits and change detected - recreate
+		err := sr.mcocli.MachineconfigurationV1().KubeletConfigs().Delete(ctx, kubeletConfigName, metav1.DeleteOptions{})
 		if err != nil {
 			return err
 		}
-
-		// we have to recreate due to https://bugzilla.redhat.com/show_bug.cgi?id=1995621
-		_, err = sr.mcocli.MachineconfigurationV1().KubeletConfigs().Get(ctx, kubeletConfigName, metav1.GetOptions{})
-		if err == nil { // exits and change detected - recreate
-			err := sr.mcocli.MachineconfigurationV1().KubeletConfigs().Delete(ctx, kubeletConfigName, metav1.DeleteOptions{})
-			if err != nil {
-				return err
-			}
-		}
-
-		return sr.dh.Ensure(ctx, kc)
 	}
-	return nil
+
+	return sr.dh.Ensure(ctx, kc)
 }
 
 func (sr *systemreserved) Remove(ctx context.Context) error {

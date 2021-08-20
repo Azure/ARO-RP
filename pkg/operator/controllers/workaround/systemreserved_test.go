@@ -21,11 +21,18 @@ import (
 )
 
 func TestSystemreservedEnsure(t *testing.T) {
+
+	kc, err := kubeletConfig()
+	if err != nil {
+		t.Fail()
+	}
+
 	tests := []struct {
 		name                         string
 		mcocli                       *mcofake.Clientset
 		mocker                       func(mdh *mock_dynamichelper.MockInterface)
 		machineConfigPoolNeedsUpdate bool
+		kubeletConfigNeedsDelete     bool
 		wantErr                      bool
 	}{
 		{
@@ -80,8 +87,10 @@ func TestSystemreservedEnsure(t *testing.T) {
 						Name: "master",
 					},
 				},
+				kc,
 			),
 			machineConfigPoolNeedsUpdate: true,
+			kubeletConfigNeedsDelete:     true,
 			mocker: func(mdh *mock_dynamichelper.MockInterface) {
 				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -99,9 +108,13 @@ func TestSystemreservedEnsure(t *testing.T) {
 				log:    utillog.GetLogger(),
 			}
 
-			var updated bool
+			var updated, deleted bool
 			tt.mcocli.PrependReactor("update", "machineconfigpools", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
 				updated = true
+				return false, nil, nil
+			})
+			tt.mcocli.PrependReactor("delete", "kubeletconfigs", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+				deleted = true
 				return false, nil, nil
 			})
 
@@ -112,13 +125,15 @@ func TestSystemreservedEnsure(t *testing.T) {
 			if tt.machineConfigPoolNeedsUpdate != updated {
 				t.Errorf("systemreserved.Ensure() updated %v, machineConfigPoolNeedsUpdate = %v", updated, tt.machineConfigPoolNeedsUpdate)
 			}
+			if tt.kubeletConfigNeedsDelete != deleted {
+				t.Errorf("KubeletConfigs().Delete deleted %v, kubeletConfigNeedsDelete = %v", deleted, tt.kubeletConfigNeedsDelete)
+			}
 		})
 	}
 }
 
 func TestKubeletConfig(t *testing.T) {
-	sr := &systemreserved{}
-	got, err := sr.kubeletConfig()
+	got, err := kubeletConfig()
 	if err != nil {
 		t.Errorf("systemreserved.kubeletConfig() error = %v", err)
 		return
