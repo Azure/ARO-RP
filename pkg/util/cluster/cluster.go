@@ -370,9 +370,9 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				ClientSecret: api.SecureString(clientSecret),
 			},
 			NetworkProfile: api.NetworkProfile{
-				PodCIDR:     "10.128.0.0/14",
-				ServiceCIDR: "172.30.0.0/16",
-				SDNProvider: api.SDNProviderOVNKubernetes,
+				PodCIDR:                "10.128.0.0/14",
+				ServiceCIDR:            "172.30.0.0/16",
+				SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOVNKubernetes,
 			},
 			MasterProfile: api.MasterProfile{
 				VMSize:           api.VMSizeStandardD8sV3,

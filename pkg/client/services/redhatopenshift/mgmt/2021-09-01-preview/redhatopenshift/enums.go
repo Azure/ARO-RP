@@ -51,21 +51,6 @@ func PossibleEncryptionAtHostValues() []EncryptionAtHost {
 	return []EncryptionAtHost{Disabled, Enabled}
 }
 
-// EncryptionAtHost1 enumerates the values for encryption at host 1.
-type EncryptionAtHost1 string
-
-const (
-	// EncryptionAtHost1Disabled ...
-	EncryptionAtHost1Disabled EncryptionAtHost1 = "Disabled"
-	// EncryptionAtHost1Enabled ...
-	EncryptionAtHost1Enabled EncryptionAtHost1 = "Enabled"
-)
-
-// PossibleEncryptionAtHost1Values returns an array of possible values for the EncryptionAtHost1 const type.
-func PossibleEncryptionAtHost1Values() []EncryptionAtHost1 {
-	return []EncryptionAtHost1{EncryptionAtHost1Disabled, EncryptionAtHost1Enabled}
-}
-
 // ProvisioningState enumerates the values for provisioning state.
 type ProvisioningState string
 
@@ -89,19 +74,19 @@ func PossibleProvisioningStateValues() []ProvisioningState {
 	return []ProvisioningState{AdminUpdating, Creating, Deleting, Failed, Succeeded, Updating}
 }
 
-// SDNProvider enumerates the values for sdn provider.
-type SDNProvider string
+// SoftwareDefinedNetwork enumerates the values for software defined network.
+type SoftwareDefinedNetwork string
 
 const (
 	// OpenShiftSDN ...
-	OpenShiftSDN SDNProvider = "OpenShiftSDN"
+	OpenShiftSDN SoftwareDefinedNetwork = "OpenShiftSDN"
 	// OVNKubernetes ...
-	OVNKubernetes SDNProvider = "OVNKubernetes"
+	OVNKubernetes SoftwareDefinedNetwork = "OVNKubernetes"
 )
 
-// PossibleSDNProviderValues returns an array of possible values for the SDNProvider const type.
-func PossibleSDNProviderValues() []SDNProvider {
-	return []SDNProvider{OpenShiftSDN, OVNKubernetes}
+// PossibleSoftwareDefinedNetworkValues returns an array of possible values for the SoftwareDefinedNetwork const type.
+func PossibleSoftwareDefinedNetworkValues() []SoftwareDefinedNetwork {
+	return []SoftwareDefinedNetwork{OpenShiftSDN, OVNKubernetes}
 }
 
 // Visibility enumerates the values for visibility.
@@ -117,21 +102,6 @@ const (
 // PossibleVisibilityValues returns an array of possible values for the Visibility const type.
 func PossibleVisibilityValues() []Visibility {
 	return []Visibility{Private, Public}
-}
-
-// Visibility1 enumerates the values for visibility 1.
-type Visibility1 string
-
-const (
-	// Visibility1Private ...
-	Visibility1Private Visibility1 = "Private"
-	// Visibility1Public ...
-	Visibility1Public Visibility1 = "Public"
-)
-
-// PossibleVisibility1Values returns an array of possible values for the Visibility1 const type.
-func PossibleVisibility1Values() []Visibility1 {
-	return []Visibility1{Visibility1Private, Visibility1Public}
 }
 
 // VMSize enumerates the values for vm size.

@@ -61,7 +61,7 @@ from ._azure_red_hat_open_shift_client_enums import (
     CreatedByType,
     EncryptionAtHost,
     ProvisioningState,
-    SDNProvider,
+    SoftwareDefinedNetwork,
     VMSize,
     Visibility,
 )
@@ -90,7 +90,7 @@ __all__ = [
     'CreatedByType',
     'EncryptionAtHost',
     'ProvisioningState',
-    'SDNProvider',
+    'SoftwareDefinedNetwork',
     'VMSize',
     'Visibility',
 ]

@@ -14,7 +14,7 @@ func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
 		OpenShiftCluster: &OpenShiftCluster{
 			Properties: OpenShiftClusterProperties{
 				NetworkProfile: NetworkProfile{
-					SDNProvider: SDNProviderOpenShiftSDN,
+					SoftwareDefinedNetwork: SoftwareDefinedNetworkOpenShiftSDN,
 				},
 				MasterProfile: MasterProfile{
 					EncryptionAtHost: EncryptionAtHostDisabled,
@@ -48,18 +48,18 @@ func TestSetDefaults(t *testing.T) {
 				return validOpenShiftClusterDocument()
 			},
 			input: func(base *OpenShiftClusterDocument) {
-				base.OpenShiftCluster.Properties.NetworkProfile.SDNProvider = ""
+				base.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork = ""
 			},
 		},
 		{
 			name: "preserve SDN",
 			want: func() *OpenShiftClusterDocument {
 				doc := validOpenShiftClusterDocument()
-				doc.OpenShiftCluster.Properties.NetworkProfile.SDNProvider = SDNProviderOVNKubernetes
+				doc.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork = SoftwareDefinedNetworkOVNKubernetes
 				return doc
 			},
 			input: func(base *OpenShiftClusterDocument) {
-				base.OpenShiftCluster.Properties.NetworkProfile.SDNProvider = SDNProviderOVNKubernetes
+				base.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork = SoftwareDefinedNetworkOVNKubernetes
 			},
 		},
 		{

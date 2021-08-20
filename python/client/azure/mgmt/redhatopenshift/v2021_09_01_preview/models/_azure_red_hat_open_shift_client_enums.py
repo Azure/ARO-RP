@@ -61,8 +61,8 @@ class ProvisioningState(with_metaclass(_CaseInsensitiveEnumMeta, str, Enum)):
     SUCCEEDED = "Succeeded"
     UPDATING = "Updating"
 
-class SDNProvider(with_metaclass(_CaseInsensitiveEnumMeta, str, Enum)):
-    """SDNProvider constants.
+class SoftwareDefinedNetwork(with_metaclass(_CaseInsensitiveEnumMeta, str, Enum)):
+    """SoftwareDefinedNetwork constants.
     """
 
     OVN_KUBERNETES = "OVNKubernetes"

@@ -44,7 +44,7 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				SPObjectID: oc.Properties.ServicePrincipalProfile.SPObjectID,
 			},
 			NetworkProfile: NetworkProfile{
-				SDNProvider:                SDNProvider(oc.Properties.NetworkProfile.SDNProvider),
+				SoftwareDefinedNetwork:     SoftwareDefinedNetwork(oc.Properties.NetworkProfile.SoftwareDefinedNetwork),
 				PodCIDR:                    oc.Properties.NetworkProfile.PodCIDR,
 				ServiceCIDR:                oc.Properties.NetworkProfile.ServiceCIDR,
 				APIServerPrivateEndpointIP: oc.Properties.NetworkProfile.APIServerPrivateEndpointIP,
@@ -179,7 +179,7 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.ServicePrincipalProfile.SPObjectID = oc.Properties.ServicePrincipalProfile.SPObjectID
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
-	out.Properties.NetworkProfile.SDNProvider = api.SDNProvider(oc.Properties.NetworkProfile.SDNProvider)
+	out.Properties.NetworkProfile.SoftwareDefinedNetwork = api.SoftwareDefinedNetwork(oc.Properties.NetworkProfile.SoftwareDefinedNetwork)
 	out.Properties.NetworkProfile.APIServerPrivateEndpointIP = oc.Properties.NetworkProfile.APIServerPrivateEndpointIP
 	out.Properties.NetworkProfile.GatewayPrivateEndpointIP = oc.Properties.NetworkProfile.GatewayPrivateEndpointIP
 	out.Properties.NetworkProfile.GatewayPrivateLinkID = oc.Properties.NetworkProfile.GatewayPrivateLinkID
