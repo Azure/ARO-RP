@@ -160,7 +160,7 @@ func TestStepRunner(t *testing.T) {
 			steps: func(controller *gomock.Controller) []Step {
 				return []Step{
 					Action(successfulFunc),
-					Condition(alwaysTrueCondition, 50*time.Millisecond),
+					Condition(alwaysTrueCondition, 50*time.Millisecond, true),
 					Action(successfulFunc),
 				}
 			},
@@ -172,6 +172,34 @@ func TestStepRunner(t *testing.T) {
 				{
 					"msg":   gomega.Equal("running step [Condition github.com/Azure/ARO-RP/pkg/util/steps.alwaysTrueCondition, timeout 50ms]"),
 					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+			},
+		},
+		{
+			name: "A failed condition with fail=false will allow steps to continue",
+			steps: func(controller *gomock.Controller) []Step {
+				return []Step{
+					Action(successfulFunc),
+					Condition(alwaysFalseCondition, 50*time.Millisecond, false),
+					Action(successfulFunc),
+				}
+			},
+			wantEntries: []map[string]types.GomegaMatcher{
+				{
+					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("running step [Condition github.com/Azure/ARO-RP/pkg/util/steps.alwaysFalseCondition, timeout 50ms]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("step [Condition github.com/Azure/ARO-RP/pkg/util/steps.alwaysFalseCondition, timeout 50ms] failed but has configured 'fail=false'. Continuing. Error: timed out waiting for the condition"),
+					"level": gomega.Equal(logrus.WarnLevel),
 				},
 				{
 					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
@@ -243,6 +271,7 @@ func TestStepRunner(t *testing.T) {
 					Action(successfulFunc),
 					&conditionStep{
 						f:            timingOutCondition,
+						fail:         true,
 						pollInterval: 20 * time.Millisecond,
 						timeout:      50 * time.Millisecond,
 					},
@@ -270,7 +299,7 @@ func TestStepRunner(t *testing.T) {
 			steps: func(controller *gomock.Controller) []Step {
 				return []Step{
 					Action(successfulFunc),
-					Condition(alwaysFalseCondition, 50*time.Millisecond),
+					Condition(alwaysFalseCondition, 50*time.Millisecond, true),
 					Action(successfulFunc),
 				}
 			},

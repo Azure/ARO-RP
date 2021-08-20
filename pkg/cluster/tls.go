@@ -21,6 +21,8 @@ import (
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
+var secretNamespaces = []string{"openshift-config", "openshift-azure-operator"}
+
 func (m *manager) createCertificates(ctx context.Context) error {
 	if m.env.FeatureIsSet(env.FeatureDisableSignedCertificates) {
 		return nil
@@ -134,9 +136,11 @@ func (m *manager) configureAPIServerCertificate(ctx context.Context) error {
 		return nil
 	}
 
-	err = m.ensureSecret(ctx, m.kubernetescli.CoreV1().Secrets("openshift-config"), m.doc.ID+"-apiserver")
-	if err != nil {
-		return err
+	for _, namespace := range secretNamespaces {
+		err = m.ensureSecret(ctx, m.kubernetescli.CoreV1().Secrets(namespace), m.doc.ID+"-apiserver")
+		if err != nil {
+			return err
+		}
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -175,9 +179,11 @@ func (m *manager) configureIngressCertificate(ctx context.Context) error {
 		return nil
 	}
 
-	err = m.ensureSecret(ctx, m.kubernetescli.CoreV1().Secrets("openshift-ingress"), m.doc.ID+"-ingress")
-	if err != nil {
-		return err
+	for _, namespace := range secretNamespaces {
+		err = m.ensureSecret(ctx, m.kubernetescli.CoreV1().Secrets(namespace), m.doc.ID+"-ingress")
+		if err != nil {
+			return err
+		}
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {

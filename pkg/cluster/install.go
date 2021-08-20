@@ -35,8 +35,10 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)), // re-create RP RBAC if needed after tenant migration
 		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.startVMs),
-		steps.Condition(m.apiServersReady, 30*time.Minute),
+		steps.Condition(m.apiServersReady, 30*time.Minute, false),
 		steps.Action(m.ensureBillingRecord), // belt and braces
+		steps.Action(m.configureAPIServerCertificate),
+		steps.Action(m.configureIngressCertificate),
 		steps.Action(m.fixSSH),
 		steps.Action(m.fixInfraID),        // Old clusters lacks infraID in the database. Which makes code prone to errors.
 		steps.Action(m.populateCreatedAt), // TODO(mikalai): Remove after a round of admin updates
@@ -48,9 +50,7 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 		steps.Action(m.fixMCSUserData),
 		steps.Action(m.ensureGatewayUpgrade),
 		steps.Action(m.ensureAROOperator),
-		steps.Condition(m.aroDeploymentReady, 20*time.Minute),
-		steps.Action(m.configureAPIServerCertificate),
-		steps.Action(m.configureIngressCertificate),
+		steps.Condition(m.aroDeploymentReady, 20*time.Minute, false),
 		//steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communiate this out
 		steps.Action(m.updateProvisionedBy), // Run this last so we capture the resource provider only once the upgrade has been fully performed
 	}
@@ -116,7 +116,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.createAPIServerPrivateEndpoint),
 			steps.Action(m.createCertificates),
 			steps.Action(m.initializeKubernetesClients),
-			steps.Condition(m.bootstrapConfigMapReady, 30*time.Minute),
+			steps.Condition(m.bootstrapConfigMapReady, 30*time.Minute, true),
 			steps.Action(m.ensureAROOperator),
 			steps.Action(m.incrInstallPhase),
 		},
@@ -125,19 +125,19 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.removeBootstrap),
 			steps.Action(m.removeBootstrapIgnition),
 			steps.Action(m.configureAPIServerCertificate),
-			steps.Condition(m.apiServersReady, 30*time.Minute),
-			steps.Condition(m.minimumWorkerNodesReady, 30*time.Minute),
-			steps.Condition(m.operatorConsoleExists, 30*time.Minute),
+			steps.Condition(m.apiServersReady, 30*time.Minute, true),
+			steps.Condition(m.minimumWorkerNodesReady, 30*time.Minute, true),
+			steps.Condition(m.operatorConsoleExists, 30*time.Minute, true),
 			steps.Action(m.updateConsoleBranding),
-			steps.Condition(m.operatorConsoleReady, 20*time.Minute),
-			steps.Condition(m.clusterVersionReady, 30*time.Minute),
-			steps.Condition(m.aroDeploymentReady, 20*time.Minute),
+			steps.Condition(m.operatorConsoleReady, 20*time.Minute, true),
+			steps.Condition(m.clusterVersionReady, 30*time.Minute, true),
+			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
 			steps.Action(m.disableUpdates),
 			steps.Action(m.disableSamples),
 			steps.Action(m.disableOperatorHubSources),
 			steps.Action(m.updateClusterData),
 			steps.Action(m.configureIngressCertificate),
-			steps.Condition(m.ingressControllerReady, 30*time.Minute),
+			steps.Condition(m.ingressControllerReady, 30*time.Minute, true),
 			steps.Action(m.configureDefaultStorageClass),
 			steps.Action(m.finishInstallation),
 		},
