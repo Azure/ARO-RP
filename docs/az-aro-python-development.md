@@ -61,12 +61,10 @@ azdev test aro (--live) (--lf) (--verbose) (--debug)
 ```
 
 > An issue was discovered on macOS when running tests due to additional security to restrict multithreading in macOS High Sierra and later versions of macOS. \
-> If getting the following error:
-```
-+[__NSCFConstantString initialize] may have been in progress in another thread when fork() was called.
-```
->Add this variable to your env or add it to your profile to make it permanent in `~/.bash_profile` or `~/.zshrc`:\
-`export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`\
+If getting the following error:\
+`+[__NSCFConstantString initialize] may have been in progress in another thread when fork() was called.`\
+Add this variable to your env or add it to your profile to make it permanent in `~/.bash_profile` or `~/.zshrc`:\
+`export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`
 
 
 There are two main types of tests:
