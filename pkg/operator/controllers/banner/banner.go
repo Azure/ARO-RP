@@ -24,7 +24,7 @@ func (r *Reconciler) reconcileBanner(ctx context.Context, instance *arov1alpha1.
 		}
 		return err
 	case arov1alpha1.BannerContactSupport:
-		banner := r.newBanner(TextContactSupport, instance.Spec.ResourceID)
+		banner := r.newBanner(fmt.Sprintf(TextContactSupport, instance.Spec.ResourceID))
 		_, err := r.consolecli.ConsoleV1().ConsoleNotifications().Get(ctx, BannerName, metav1.GetOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {
 			return err
@@ -43,13 +43,13 @@ func (r *Reconciler) reconcileBanner(ctx context.Context, instance *arov1alpha1.
 	return fmt.Errorf("wrong banner setting '%s'", instance.Spec.Banner.Content)
 }
 
-func (r *Reconciler) newBanner(text string, resourceID string) *consolev1.ConsoleNotification {
+func (r *Reconciler) newBanner(text string) *consolev1.ConsoleNotification {
 	return &consolev1.ConsoleNotification{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: BannerName,
 		},
 		Spec: consolev1.ConsoleNotificationSpec{
-			Text:            fmt.Sprintf(TextContactSupport, resourceID),
+			Text:            text,
 			Location:        consolev1.BannerTop,
 			Color:           "#000",
 			BackgroundColor: "#ff0",

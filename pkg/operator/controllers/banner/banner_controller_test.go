@@ -5,7 +5,6 @@ package banner
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -28,14 +27,14 @@ func TestBannerReconcile(t *testing.T) {
 		bannerSetting   string
 		expectBanner    bool
 		expectedMessage string
-		expectedErr     error
+		wantErr         string
 		featureFlag     bool
 	}{
 		{
 			name:          "Wrong banner setting",
 			bannerSetting: "WRONG",
 			expectBanner:  false,
-			expectedErr:   fmt.Errorf("wrong banner setting 'WRONG'"),
+			wantErr:       "wrong banner setting 'WRONG'",
 			featureFlag:   true,
 		},
 		{
@@ -151,14 +150,9 @@ func TestBannerReconcile(t *testing.T) {
 			// function under test
 			_, err := r.Reconcile(context.Background(), ctrl.Request{})
 
-			if err != nil {
-				if tt.expectedErr == nil {
-					t.Error(err)
-				}
-				if !strings.EqualFold(err.Error(), tt.expectedErr.Error()) {
-					t.Error(err)
-				}
-				return
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
 			}
 			resultBanner, err := r.consolecli.ConsoleV1().ConsoleNotifications().Get(context.Background(), BannerName, metav1.GetOptions{})
 			if tt.expectBanner {
