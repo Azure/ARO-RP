@@ -5,17 +5,15 @@ package deploy
 
 import (
 	"context"
-	"net/http"
 	"reflect"
 	"strings"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/deploy/vmsscleaner"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
@@ -63,8 +61,9 @@ type deployer struct {
 	portalKeyvault         keyvault.Manager
 	serviceKeyvault        keyvault.Manager
 
-	config  *RPConfig
-	version string
+	config      *RPConfig
+	version     string
+	vmssCleaner vmsscleaner.Interface
 }
 
 // New initiates new deploy utility object
@@ -84,6 +83,8 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		return nil, err
 	}
 
+	vmssClient := compute.NewVirtualMachineScaleSetsClient(_env.Environment(), config.SubscriptionID, authorizer)
+
 	return &deployer{
 		log: log,
 		env: _env,
@@ -100,7 +101,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		roleassignments:        authorization.NewRoleAssignmentsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		resourceskus:           compute.NewResourceSkusClient(_env.Environment(), config.SubscriptionID, authorizer),
 		publicipaddresses:      network.NewPublicIPAddressesClient(_env.Environment(), config.SubscriptionID, authorizer),
-		vmss:                   compute.NewVirtualMachineScaleSetsClient(_env.Environment(), config.SubscriptionID, authorizer),
+		vmss:                   vmssClient,
 		vmssvms:                compute.NewVirtualMachineScaleSetVMsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		zones:                  dns.NewZonesClient(_env.Environment(), config.SubscriptionID, authorizer),
 		clusterKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.ClusterKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
@@ -108,8 +109,9 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		portalKeyvault:         keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.PortalKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
 		serviceKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.ServiceKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
 
-		config:  config,
-		version: version,
+		config:      config,
+		version:     version,
+		vmssCleaner: vmsscleaner.New(log, vmssClient),
 	}, nil
 }
 
@@ -152,17 +154,10 @@ func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
 	return parameters
 }
 
-// TODO: add unit test
-func (d *deployer) deploy(ctx context.Context, t map[string]interface{}, p *arm.Parameters, rgName, deploymentName, vmssName string) (err error) {
+func (d *deployer) deploy(ctx context.Context, vmssName, rgName, deploymentName string, deployment mgmtfeatures.Deployment) (err error) {
 	for i := 0; i < 3; i++ {
 		d.log.Printf("deploying %s", deploymentName)
-		err = d.deployments.CreateOrUpdateAndWait(ctx, rgName, deploymentName, mgmtfeatures.Deployment{
-			Properties: &mgmtfeatures.DeploymentProperties{
-				Template:   t,
-				Mode:       mgmtfeatures.Incremental,
-				Parameters: p.Parameters,
-			},
-		})
+		err = d.deployments.CreateOrUpdateAndWait(ctx, rgName, deploymentName, deployment)
 		if serviceErr, ok := err.(*azure.ServiceError); ok &&
 			serviceErr.Code == "DeploymentFailed" &&
 			i < 1 {
@@ -175,40 +170,11 @@ func (d *deployer) deploy(ctx context.Context, t map[string]interface{}, p *arm.
 			continue
 		}
 		if err != nil {
-			if deleted := d.removeFailedScaleset(ctx, rgName, vmssName); deleted && i < 2 {
+			if deleted := d.vmssCleaner.RemoveFailedScaleset(ctx, rgName, vmssName); deleted && i < 2 {
 				continue // Retry deployment after deleting failed VMSS.
 			}
 		}
 		break
 	}
 	return err
-}
-
-func (d *deployer) removeFailedScaleset(ctx context.Context, rgName, vmssName string) (deleted bool) {
-	// Check if scaleset exists. If not, no need to delete it.
-	vmss, err := d.vmss.Get(ctx, rgName, vmssName)
-	if isNotFound(err) {
-		return true
-	}
-
-	// If it is not in failed state, don't delete it.
-	if *vmss.ProvisioningState != string(mgmtcompute.ProvisioningStateFailed) {
-		return false
-	}
-
-	// If it is in failed state, try deleting so naming conflict doesn't occur during retry.
-	d.log.Printf("deleting failed scaleset %s", *vmss.Name)
-	err = d.vmss.DeleteAndWait(ctx, rgName, *vmss.Name)
-	if err != nil {
-		d.log.Warn(err)
-		return false
-	}
-	return true
-}
-
-func isNotFound(err error) bool {
-	if detailedErr, ok := err.(autorest.DetailedError); ok && detailedErr.StatusCode == http.StatusNotFound {
-		return true
-	}
-	return false
 }
