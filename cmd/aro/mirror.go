@@ -133,6 +133,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	for _, ref := range []string{
 		"registry.redhat.io/rhel7/support-tools:latest",
 		"registry.redhat.io/rhel8/support-tools:latest",
+		"registry.redhat.io/openshift4/ose-tools-rhel7:latest",
+		"registry.redhat.io/openshift4/ose-tools-rhel8:latest",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
 		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthRedhat)
