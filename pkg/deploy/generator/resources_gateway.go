@@ -318,7 +318,11 @@ EOF
 
 export AZURE_CLOUD_NAME=$AZURECLOUDNAME
 az login -i --allow-no-subscriptions
-az account set -s "$SUBSCRIPTIONID"
+
+# Running "az account set" is not working in the pipeline.
+# we are running VM ScaleSet in a named ResourceGroup, it should
+# be OK to to remove this set subscription
+# az account set -s "$SUBSCRIPTIONID"
 
 systemctl start docker.service
 az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
