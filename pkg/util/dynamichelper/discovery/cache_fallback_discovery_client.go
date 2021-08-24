@@ -8,7 +8,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -85,11 +85,11 @@ func (d *cacheFallbackDiscoveryClient) ServerPreferredNamespacedResources() ([]*
 	return discovery.ServerPreferredNamespacedResources(d)
 }
 
-func (d *cacheFallbackDiscoveryClient) getCached(filename string, out runtime.Object) error {
+func (d *cacheFallbackDiscoveryClient) getCached(filename string, out kruntime.Object) error {
 	cachedBytes, err := d.asset(filename)
 	if err != nil {
 		return err
 	}
 
-	return runtime.DecodeInto(scheme.Codecs.UniversalDecoder(), cachedBytes, out)
+	return kruntime.DecodeInto(scheme.Codecs.UniversalDecoder(), cachedBytes, out)
 }

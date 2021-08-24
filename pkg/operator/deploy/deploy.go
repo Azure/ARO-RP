@@ -17,7 +17,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -77,9 +77,9 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli 
 	}, nil
 }
 
-func (o *operator) resources() ([]runtime.Object, error) {
+func (o *operator) resources() ([]kruntime.Object, error) {
 	// first static resources from Assets
-	results := []runtime.Object{}
+	results := []kruntime.Object{}
 	for _, assetName := range AssetNames() {
 		b, err := Asset(assetName)
 		if err != nil {

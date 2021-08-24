@@ -15,7 +15,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/tls"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
 
@@ -77,7 +77,7 @@ func TestFixMCSCert(t *testing.T) {
 						corev1.TLSCertKey: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCerts[0].Raw}),
 					},
 				})
-				kubernetescli.AddReactor("delete-collection", "pods", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+				kubernetescli.AddReactor("delete-collection", "pods", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					if action, ok := action.(ktesting.DeleteCollectionAction); ok {
 						if action.GetListRestrictions().Labels.String() == "k8s-app=machine-config-server" {
 							*deleteCalled = true

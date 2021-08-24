@@ -11,7 +11,7 @@ import (
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ktesting "k8s.io/client-go/testing"
 
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -163,7 +163,7 @@ func TestUpgradeCluster(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var updated bool
 
-			tt.fakecli.PrependReactor("update", "clusterversions", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+			tt.fakecli.PrependReactor("update", "clusterversions", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 				updated = true
 				return false, nil, nil
 			})

@@ -12,7 +12,7 @@ import (
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ktesting "k8s.io/client-go/testing"
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
@@ -66,7 +66,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 			}
 
 			var updated bool
-			tt.mcocli.PrependReactor("update", "machineconfigpools", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+			tt.mcocli.PrependReactor("update", "machineconfigpools", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 				updated = true
 				return false, nil, nil
 			})
@@ -102,7 +102,7 @@ func TestKubeletConfig(t *testing.T) {
 					"aro.openshift.io/limits": "",
 				},
 			},
-			KubeletConfig: &runtime.RawExtension{
+			KubeletConfig: &kruntime.RawExtension{
 				Raw: []byte(`{"evictionHard":{"imagefs.available":"15%","memory.available":"500Mi","nodefs.available":"10%","nodefs.inodesFree":"5%"},"systemReserved":{"memory":"2000Mi"}}`),
 			},
 		},

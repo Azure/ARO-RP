@@ -13,13 +13,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func SetControllerReferences(resources []runtime.Object, owner metav1.Object) error {
+func SetControllerReferences(resources []kruntime.Object, owner metav1.Object) error {
 	for _, resource := range resources {
 		r, err := meta.Accessor(resource)
 		if err != nil {
@@ -35,7 +35,7 @@ func SetControllerReferences(resources []runtime.Object, owner metav1.Object) er
 	return nil
 }
 
-func Prepare(resources []runtime.Object) error {
+func Prepare(resources []kruntime.Object) error {
 	err := hashWorkloadConfigs(resources)
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func addWorkloadHashes(o *metav1.ObjectMeta, t *corev1.PodTemplateSpec, configTo
 // hashWorkloadConfigs iterates daemonsets, walks their volumes, and updates
 // their pod templates with annotations that include the hashes of the content
 // for each configmap or secret.
-func hashWorkloadConfigs(resources []runtime.Object) error {
+func hashWorkloadConfigs(resources []kruntime.Object) error {
 	// map config resources to their hashed content
 	configToHash := map[string]string{}
 	for _, o := range resources {

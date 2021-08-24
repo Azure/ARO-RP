@@ -14,7 +14,7 @@ import (
 	maofake "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/kubernetes/fake"
@@ -102,7 +102,7 @@ func testMachine(t *testing.T, namespace, name string, spec *azureproviderv1beta
 		},
 		Spec: machinev1beta1.MachineSpec{
 			ProviderSpec: machinev1beta1.ProviderSpec{
-				Value: &runtime.RawExtension{
+				Value: &kruntime.RawExtension{
 					Raw: marshalAzureMachineProviderSpec(t, spec),
 				},
 			},
@@ -120,7 +120,7 @@ func testMachineSet(t *testing.T, namespace, name string, spec *azureproviderv1b
 			Template: machinev1beta1.MachineTemplateSpec{
 				Spec: machinev1beta1.MachineSpec{
 					ProviderSpec: machinev1beta1.ProviderSpec{
-						Value: &runtime.RawExtension{
+						Value: &kruntime.RawExtension{
 							Raw: marshalAzureMachineProviderSpec(t, spec),
 						},
 					},

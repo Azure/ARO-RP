@@ -11,7 +11,7 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
 
@@ -38,7 +38,7 @@ func TestConfigureStorageClass(t *testing.T) {
 			name:  "error getting old default StorageClass",
 			desID: "fake-des-id",
 			mocks: func(kubernetescli *fake.Clientset) {
-				kubernetescli.PrependReactor("get", "storageclasses", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+				kubernetescli.PrependReactor("get", "storageclasses", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					if action.(ktesting.GetAction).GetName() != "managed-premium" {
 						return false, nil, nil
 					}
@@ -51,7 +51,7 @@ func TestConfigureStorageClass(t *testing.T) {
 			name:  "error removing default annotation from old StorageClass",
 			desID: "fake-des-id",
 			mocks: func(kubernetescli *fake.Clientset) {
-				kubernetescli.PrependReactor("update", "storageclasses", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+				kubernetescli.PrependReactor("update", "storageclasses", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					obj := action.(ktesting.UpdateAction).GetObject().(*storagev1.StorageClass)
 					if obj.Name != "managed-premium" {
 						return false, nil, nil
@@ -65,7 +65,7 @@ func TestConfigureStorageClass(t *testing.T) {
 			name:  "error creating the new default encrypted StorageClass",
 			desID: "fake-des-id",
 			mocks: func(kubernetescli *fake.Clientset) {
-				kubernetescli.PrependReactor("create", "storageclasses", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+				kubernetescli.PrependReactor("create", "storageclasses", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					obj := action.(ktesting.CreateAction).GetObject().(*storagev1.StorageClass)
 					if obj.Name != "managed-premium-encrypted-cmk" {
 						return false, nil, nil

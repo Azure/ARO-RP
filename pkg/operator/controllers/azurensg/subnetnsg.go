@@ -11,7 +11,7 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -106,7 +106,7 @@ func (r *Reconciler) getSubnets(ctx context.Context) (map[subnetDescriptor]bool,
 	return subnetMap, *masterResourceGroup, nil
 }
 
-func (r *Reconciler) getDescriptorFromProviderSpec(providerSpec *runtime.RawExtension) (*string, *subnetDescriptor, error) {
+func (r *Reconciler) getDescriptorFromProviderSpec(providerSpec *kruntime.RawExtension) (*string, *subnetDescriptor, error) {
 	var spec azureproviderv1beta1.AzureMachineProviderSpec
 	err := json.Unmarshal(providerSpec.Raw, &spec)
 	if err != nil {

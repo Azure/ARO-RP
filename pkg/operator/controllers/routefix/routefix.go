@@ -14,7 +14,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
@@ -81,7 +81,7 @@ func (r *Reconciler) securityContextConstraints(ctx context.Context, name, servi
 	return scc, nil
 }
 
-func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster) ([]runtime.Object, error) {
+func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster) ([]kruntime.Object, error) {
 	scc, err := r.securityContextConstraints(ctx, "privileged-routefix", kubeServiceAccount)
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 		return nil, err
 	}
 
-	return []runtime.Object{
+	return []kruntime.Object{
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        kubeNamespace,
