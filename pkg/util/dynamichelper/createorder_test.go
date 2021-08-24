@@ -11,11 +11,11 @@ import (
 	securityv1 "github.com/openshift/api/security/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 )
 
 func TestCreateOrder(t *testing.T) {
-	test := []runtime.Object{
+	test := []kruntime.Object{
 		&corev1.ServiceAccount{},
 		&appsv1.Deployment{},
 		&corev1.Namespace{},
@@ -23,7 +23,7 @@ func TestCreateOrder(t *testing.T) {
 		&corev1.ConfigMap{},
 	}
 
-	expect := []runtime.Object{
+	expect := []kruntime.Object{
 		&securityv1.SecurityContextConstraints{},
 		&corev1.Namespace{},
 		&corev1.ConfigMap{},

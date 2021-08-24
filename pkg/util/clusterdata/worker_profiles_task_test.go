@@ -16,7 +16,7 @@ import (
 	maofake "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ktesting "k8s.io/client-go/testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -58,7 +58,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 							Template: machinev1beta1.MachineTemplateSpec{
 								Spec: machinev1beta1.MachineSpec{
 									ProviderSpec: machinev1beta1.ProviderSpec{
-										Value: &runtime.RawExtension{
+										Value: &kruntime.RawExtension{
 											Raw: []byte(fmt.Sprintf(`{
 	"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
 	"kind": "AzureMachineProviderSpec",
@@ -88,7 +88,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 							Template: machinev1beta1.MachineTemplateSpec{
 								Spec: machinev1beta1.MachineSpec{
 									ProviderSpec: machinev1beta1.ProviderSpec{
-										Value: &runtime.RawExtension{
+										Value: &kruntime.RawExtension{
 											Raw: []byte(fmt.Sprintf(`{
 	"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
 	"kind": "AzureMachineProviderSpec",
@@ -147,7 +147,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 							Template: machinev1beta1.MachineTemplateSpec{
 								Spec: machinev1beta1.MachineSpec{
 									ProviderSpec: machinev1beta1.ProviderSpec{
-										Value: &runtime.RawExtension{
+										Value: &kruntime.RawExtension{
 											Raw: []byte("invalid"),
 										},
 									},
@@ -196,7 +196,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 							Template: machinev1beta1.MachineTemplateSpec{
 								Spec: machinev1beta1.MachineSpec{
 									ProviderSpec: machinev1beta1.ProviderSpec{
-										Value: &runtime.RawExtension{},
+										Value: &kruntime.RawExtension{},
 									},
 								},
 							},
@@ -227,7 +227,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 			name: "machine set list request failed",
 			client: func() maoclient.Interface {
 				client := maofake.NewSimpleClientset()
-				client.PrependReactor("list", "machinesets", func(action ktesting.Action) (bool, runtime.Object, error) {
+				client.PrependReactor("list", "machinesets", func(action ktesting.Action) (bool, kruntime.Object, error) {
 					return true, nil, errors.New("fake list error")
 				})
 				return client

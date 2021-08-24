@@ -10,7 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	extensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 )
 
 // rather than list every object, just list the ones whose creation really has
@@ -34,6 +34,6 @@ var createOrderMap = map[reflect.Type]int{
 
 // createOrder is to be used in a sort.Slice() comparison.  It is to help make
 // sure that resources are created in an order that causes a reliable startup.
-func createOrder(i, j runtime.Object) bool {
+func createOrder(i, j kruntime.Object) bool {
 	return createOrderMap[reflect.TypeOf(i)] < createOrderMap[reflect.TypeOf(j)]
 }

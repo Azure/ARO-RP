@@ -16,7 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -224,7 +224,7 @@ func getValidMachine(name, diskSize, imagePublisher, vmSize, offer string, isMas
 		},
 		Spec: machinev1beta1.MachineSpec{
 			ProviderSpec: machinev1beta1.ProviderSpec{
-				Value: &runtime.RawExtension{
+				Value: &kruntime.RawExtension{
 					Raw: []byte(fmt.Sprintf(`{
 "apiVersion": "azureproviderconfig.openshift.io/v1beta1",
 "kind": "AzureMachineProviderSpec",

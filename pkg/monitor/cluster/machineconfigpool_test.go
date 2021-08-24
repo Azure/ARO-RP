@@ -12,7 +12,7 @@ import (
 	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
@@ -23,8 +23,8 @@ func TestEmitMachineConfigPoolUnmanagedNodes(t *testing.T) {
 
 	for _, tt := range []struct {
 		name   string
-		mcps   runtime.Object
-		nodes  runtime.Object
+		mcps   kruntime.Object
+		nodes  kruntime.Object
 		expect int64
 	}{
 		{

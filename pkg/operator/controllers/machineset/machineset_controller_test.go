@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ktesting "k8s.io/client-go/testing"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -24,7 +24,7 @@ import (
 )
 
 func TestReconciler(t *testing.T) {
-	fakeMachineSets := func(replicas0 int32, replicas1 int32, replicas2 int32) []runtime.Object {
+	fakeMachineSets := func(replicas0 int32, replicas1 int32, replicas2 int32) []kruntime.Object {
 		workerMachineSet0 := &machinev1beta1.MachineSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "aro-fake-machineset-0",
@@ -61,13 +61,13 @@ func TestReconciler(t *testing.T) {
 				Replicas: to.Int32Ptr(replicas2),
 			},
 		}
-		return []runtime.Object{workerMachineSet0, workerMachineSet1, workerMachineSet2}
+		return []kruntime.Object{workerMachineSet0, workerMachineSet1, workerMachineSet2}
 	}
 
 	tests := []struct {
 		name           string
 		objectName     string
-		machinesets    []runtime.Object
+		machinesets    []kruntime.Object
 		mocks          func(maocli *maofake.Clientset)
 		wantReplicas   int32
 		featureFlag    bool
@@ -95,7 +95,7 @@ func TestReconciler(t *testing.T) {
 		{
 			name:       "no worker replicas, custom machineset is present",
 			objectName: "aro-fake-machineset-0",
-			machinesets: func() []runtime.Object {
+			machinesets: func() []kruntime.Object {
 				return append(
 					fakeMachineSets(0, 0, 0),
 					&machinev1beta1.MachineSet{
@@ -149,7 +149,7 @@ func TestReconciler(t *testing.T) {
 			objectName:  "aro-fake-machineset-0",
 			machinesets: fakeMachineSets(2, 0, 0),
 			mocks: func(maocli *maofake.Clientset) {
-				maocli.PrependReactor("get", "machinesets", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+				maocli.PrependReactor("get", "machinesets", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					return true, nil, &kerrors.StatusError{ErrStatus: metav1.Status{
 						Message: "machineset-0 not found",
 						Reason:  metav1.StatusReasonNotFound,
@@ -165,7 +165,7 @@ func TestReconciler(t *testing.T) {
 			objectName:  "aro-fake-machineset-0",
 			machinesets: fakeMachineSets(1, 0, 0),
 			mocks: func(maocli *maofake.Clientset) {
-				maocli.PrependReactor("get", "machinesets", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+				maocli.PrependReactor("get", "machinesets", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					return true, nil, errors.New("fake error")
 				})
 			},
@@ -178,7 +178,7 @@ func TestReconciler(t *testing.T) {
 			objectName:  "aro-fake-machineset-0",
 			machinesets: fakeMachineSets(1, 0, 0),
 			mocks: func(maocli *maofake.Clientset) {
-				maocli.PrependReactor("update", "machinesets", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+				maocli.PrependReactor("update", "machinesets", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					return true, nil, errors.New("fake error from update")
 				})
 			},

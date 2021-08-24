@@ -11,7 +11,7 @@ import (
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
@@ -74,7 +74,7 @@ func (sr *systemreserved) kubeletConfig() (*mcv1.KubeletConfig, error) {
 			MachineConfigPoolSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{labelName: labelValue},
 			},
-			KubeletConfig: &runtime.RawExtension{
+			KubeletConfig: &kruntime.RawExtension{
 				Raw: b,
 			},
 		},

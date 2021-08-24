@@ -10,7 +10,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 )
 
 func TestHashWorkloadConfigs(t *testing.T) {
@@ -91,7 +91,7 @@ func TestHashWorkloadConfigs(t *testing.T) {
 		},
 	}
 
-	err := hashWorkloadConfigs([]runtime.Object{cm, sec, ds})
+	err := hashWorkloadConfigs([]kruntime.Object{cm, sec, ds})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -16,7 +16,7 @@ import (
 	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	maofake "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -165,7 +165,7 @@ func TestGetSubnets(t *testing.T) {
 				},
 				Spec: machinev1beta1.MachineSpec{
 					ProviderSpec: machinev1beta1.ProviderSpec{
-						Value: &runtime.RawExtension{
+						Value: &kruntime.RawExtension{
 							Raw: []byte("{\"resourceGroup\":\"masterRG\",\"publicIP\":false,\"osDisk\":{\"diskSizeGB\": 1024,\"managedDisk\":{\"storageAccountType\": \"Premium_LRS\"},\"osType\":\"Linux\"},\"image\":{\"offer\": \"aro4\",\"publisher\": \"azureopenshift\", \"resourceID\": \"\", \"sku\": \"aro_43\", \"version\": \"43.81.20200311\"},\"networkResourceGroup\":\"netRG\",\"vnet\":\"masterVnet\",\"subnet\":\"masterSubnet\"}"),
 						},
 					},
@@ -179,7 +179,7 @@ func TestGetSubnets(t *testing.T) {
 				},
 				Spec: machinev1beta1.MachineSpec{
 					ProviderSpec: machinev1beta1.ProviderSpec{
-						Value: &runtime.RawExtension{
+						Value: &kruntime.RawExtension{
 							Raw: []byte("{\"resourceGroup\":\"workerRG\",\"publicIP\":false,\"osDisk\":{\"diskSizeGB\": 1024,\"managedDisk\":{\"storageAccountType\": \"Premium_LRS\"},\"osType\":\"Linux\"},\"image\":{\"offer\": \"aro4\",\"publisher\": \"azureopenshift\", \"resourceID\": \"\", \"sku\": \"aro_43\", \"version\": \"43.81.20200311\"},\"networkResourceGroup\":\"netRG\",\"vnet\":\"workerVnet\",\"subnet\":\"workerSubnet\"}"),
 						},
 					},

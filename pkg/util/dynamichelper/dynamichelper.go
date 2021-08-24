@@ -17,7 +17,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -31,7 +31,7 @@ import (
 type Interface interface {
 	Refresh() error
 	EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error
-	Ensure(ctx context.Context, objs ...runtime.Object) error
+	Ensure(ctx context.Context, objs ...kruntime.Object) error
 }
 
 type dynamicHelper struct {
@@ -79,7 +79,7 @@ func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace
 
 // Ensure that one or more objects match their desired state.  Only update
 // objects that need to be updated.
-func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...runtime.Object) error {
+func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) error {
 	for _, o := range objs {
 		err := dh.ensureOne(ctx, o)
 		if err != nil {
@@ -90,7 +90,7 @@ func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...runtime.Object) err
 	return nil
 }
 
-func (dh *dynamicHelper) ensureOne(ctx context.Context, new runtime.Object) error {
+func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) error {
 	gvks, _, err := scheme.Scheme.ObjectKinds(new)
 	if err != nil {
 		return err
@@ -131,7 +131,7 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new runtime.Object) erro
 // merge takes the existing (old) and desired (new) objects.  It compares them
 // to see if an update is necessary, fixes up the new object if needed, and
 // returns the difference for debugging purposes.
-func merge(old, new runtime.Object) (runtime.Object, bool, string, error) {
+func merge(old, new kruntime.Object) (kruntime.Object, bool, string, error) {
 	if reflect.TypeOf(old) != reflect.TypeOf(new) {
 		return nil, false, "", fmt.Errorf("types differ: %T %T", old, new)
 	}

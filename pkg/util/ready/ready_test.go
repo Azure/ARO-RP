@@ -13,7 +13,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
 )
@@ -455,7 +455,7 @@ func TestCheckDaemonSetIsRunningError(t *testing.T) {
 	ctx := context.Background()
 
 	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("get", "daemonsets", func(action ktesting.Action) (bool, runtime.Object, error) {
+	clientset.Fake.PrependReactor("get", "daemonsets", func(action ktesting.Action) (bool, kruntime.Object, error) {
 		return true, &appsv1.DaemonSet{}, errors.New("error getting daemonset")
 	})
 	_, err := CheckDaemonSetIsReady(ctx, clientset.AppsV1().DaemonSets("default"), "")()
@@ -505,7 +505,7 @@ func TestCheckPodIsRunningError(t *testing.T) {
 	ctx := context.Background()
 
 	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("get", "pods", func(action ktesting.Action) (bool, runtime.Object, error) {
+	clientset.Fake.PrependReactor("get", "pods", func(action ktesting.Action) (bool, kruntime.Object, error) {
 		return true, &corev1.Pod{}, errors.New("error getting pod")
 	})
 	_, err := CheckPodIsRunning(ctx, clientset.CoreV1().Pods("default"), "")()
@@ -556,7 +556,7 @@ func TestCheckDeploymentIsReadyError(t *testing.T) {
 	ctx := context.Background()
 
 	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("get", "deployments", func(action ktesting.Action) (bool, runtime.Object, error) {
+	clientset.Fake.PrependReactor("get", "deployments", func(action ktesting.Action) (bool, kruntime.Object, error) {
 		return true, &appsv1.Deployment{}, errors.New("error getting deployment")
 	})
 	_, err := CheckDeploymentIsReady(ctx, clientset.AppsV1().Deployments("default"), "")()
@@ -607,7 +607,7 @@ func TestCheckStatefulSetIsReadyError(t *testing.T) {
 	ctx := context.Background()
 
 	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("get", "statefulsets", func(action ktesting.Action) (bool, runtime.Object, error) {
+	clientset.Fake.PrependReactor("get", "statefulsets", func(action ktesting.Action) (bool, kruntime.Object, error) {
 		return true, &appsv1.StatefulSet{}, errors.New("error getting deployment")
 	})
 	_, err := CheckStatefulSetIsReady(ctx, clientset.AppsV1().StatefulSets("default"), "")()
@@ -656,7 +656,7 @@ func TestCheckMachineConfigPoolIsReadyError(t *testing.T) {
 	ctx := context.Background()
 
 	clientset := mcofake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("get", "machineconfigpools", func(action ktesting.Action) (bool, runtime.Object, error) {
+	clientset.Fake.PrependReactor("get", "machineconfigpools", func(action ktesting.Action) (bool, kruntime.Object, error) {
 		return true, &mcv1.MachineConfigPool{}, errors.New("error getting machineconfigpool")
 	})
 	_, err := CheckMachineConfigPoolIsReady(ctx, clientset.MachineconfigurationV1().MachineConfigPools(), "")()
@@ -671,7 +671,7 @@ func TestCheckPodsAreRunning(t *testing.T) {
 	labels := make(map[string]string)
 	labels["app"] = "running"
 	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("list", "pods", func(action ktesting.Action) (bool, runtime.Object, error) {
+	clientset.Fake.PrependReactor("list", "pods", func(action ktesting.Action) (bool, kruntime.Object, error) {
 		return false, &corev1.PodList{Items: []corev1.Pod{
 			{ObjectMeta: metav1.ObjectMeta{
 				Name:      "one-pod",
@@ -691,7 +691,7 @@ func TestCheckPodsAreReadyError(t *testing.T) {
 	ctx := context.Background()
 
 	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("list", "pods", func(action ktesting.Action) (bool, runtime.Object, error) {
+	clientset.Fake.PrependReactor("list", "pods", func(action ktesting.Action) (bool, kruntime.Object, error) {
 		return true, &corev1.PodList{}, errors.New("error getting pods")
 	})
 	labels := make(map[string]string)

@@ -126,6 +126,8 @@ func acceptableNames(path string) []string {
 		return []string{"", "utilrecover"}
 	case "github.com/Azure/ARO-RP/test/database":
 		return []string{"testdatabase"}
+	case "github.com/Azure/ARO-RP/test/util/dynamichelper":
+		return []string{"testdynamichelper"}
 	case "github.com/Azure/ARO-RP/test/util/log":
 		return []string{"testlog"}
 	case "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac":
@@ -152,6 +154,8 @@ func acceptableNames(path string) []string {
 		return []string{"mcofake"}
 	case "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1":
 		return []string{"mcoclientv1"}
+	case "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake":
+		return []string{"extensionsfake"}
 	case "github.com/openshift/installer/pkg/asset/installconfig/azure":
 		return []string{"icazure"}
 	case "github.com/openshift/installer/pkg/types/azure":
@@ -166,6 +170,8 @@ func acceptableNames(path string) []string {
 		return []string{"extensionsclient"}
 	case "k8s.io/apimachinery/pkg/api/errors":
 		return []string{"kerrors"}
+	case "k8s.io/apimachinery/pkg/runtime":
+		return []string{"kruntime"}
 	case "k8s.io/apimachinery/pkg/apis/meta/v1":
 		return []string{"metav1"}
 	case "k8s.io/apimachinery/pkg/runtime/serializer/json":
