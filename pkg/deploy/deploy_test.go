@@ -4,14 +4,119 @@ package deploy
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/golang/mock/gomock"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
+	mock_vmsscleaner "github.com/Azure/ARO-RP/pkg/util/mocks/vmsscleaner"
 )
 
+func TestDeploy(t *testing.T) {
+	ctx := context.Background()
+	rgName := "testRG"
+	deploymentName := "testDeployment"
+	vmssName := "testVMSS"
+
+	deployment := &mgmtfeatures.Deployment{
+		Properties: &mgmtfeatures.DeploymentProperties{
+			Template:   nil,
+			Mode:       mgmtfeatures.Incremental,
+			Parameters: nil,
+		},
+	}
+
+	type mock func(*mock_features.MockDeploymentsClient, *mock_vmsscleaner.MockInterface)
+
+	deploymentFailed := func(d *mock_features.MockDeploymentsClient, v *mock_vmsscleaner.MockInterface) {
+		d.EXPECT().CreateOrUpdateAndWait(ctx, rgName, deploymentName, *deployment).Return(
+			&azure.ServiceError{
+				Code: "DeploymentFailed",
+			},
+		)
+	}
+	otherDeploymentError := func(d *mock_features.MockDeploymentsClient, v *mock_vmsscleaner.MockInterface) {
+		d.EXPECT().CreateOrUpdateAndWait(ctx, rgName, deploymentName, *deployment).Return(
+			&azure.ServiceError{
+				Code: "Computer says 'no'",
+			},
+		)
+	}
+	deploymentSuccessful := func(d *mock_features.MockDeploymentsClient, v *mock_vmsscleaner.MockInterface) {
+		d.EXPECT().CreateOrUpdateAndWait(ctx, rgName, deploymentName, *deployment).Return(nil)
+	}
+	vmssNotRemoved := func(d *mock_features.MockDeploymentsClient, v *mock_vmsscleaner.MockInterface) {
+		v.EXPECT().RemoveFailedScaleset(ctx, rgName, vmssName).Return(false)
+	}
+	vmssRemoved := func(d *mock_features.MockDeploymentsClient, v *mock_vmsscleaner.MockInterface) {
+		v.EXPECT().RemoveFailedScaleset(ctx, rgName, vmssName).Return(true)
+	}
+
+	for _, tt := range []struct {
+		name    string
+		mocks   []mock
+		wantErr string
+	}{
+		{
+			name: "continue after initial deploymentFailed; don't continue if vmssNotRemoved",
+			mocks: []mock{
+				deploymentFailed, otherDeploymentError, vmssNotRemoved,
+			},
+			wantErr: `Code="Computer says 'no'" Message=""`,
+		},
+		{
+			name: "continue if vmssRemoved after error",
+			mocks: []mock{
+				otherDeploymentError, vmssRemoved, otherDeploymentError, vmssRemoved, otherDeploymentError, vmssRemoved,
+			},
+			wantErr: `Code="Computer says 'no'" Message=""`,
+		},
+		{
+			name: "otherDeploymentError, vmssRemoved; deploymentSuccessful",
+			mocks: []mock{
+				otherDeploymentError, vmssRemoved, deploymentSuccessful,
+			},
+		},
+		{
+			name: "deploymentSuccessful",
+			mocks: []mock{
+				deploymentSuccessful,
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			mockDeployments := mock_features.NewMockDeploymentsClient(controller)
+			mockVMSSCleaner := mock_vmsscleaner.NewMockInterface(controller)
+
+			d := deployer{
+				log:         logrus.NewEntry(logrus.StandardLogger()),
+				deployments: mockDeployments,
+				vmssCleaner: mockVMSSCleaner,
+			}
+
+			for _, m := range tt.mocks {
+				m(mockDeployments, mockVMSSCleaner)
+			}
+
+			err := d.deploy(ctx, vmssName, rgName, deploymentName, *deployment)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Fatal(err)
+			}
+
+		})
+	}
+}
 func TestGetParameters(t *testing.T) {
 	databaseAccountName := to.StringPtr("databaseAccountName")
 	adminApiCaBundle := to.StringPtr("adminApiCaBundle")
