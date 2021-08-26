@@ -160,6 +160,10 @@ func acceptableNames(path string) []string {
 		return []string{"icazure"}
 	case "github.com/openshift/installer/pkg/types/azure":
 		return []string{"azuretypes"}
+	case "github.com/coreos/stream-metadata-go/arch":
+		return []string{"coreosarch"}
+	case "github.com/openshift/installer/pkg/rhcos":
+		return []string{"rhcospkg"}
 	case "golang.org/x/crypto/ssh":
 		return []string{"", "cryptossh"}
 	case "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1":

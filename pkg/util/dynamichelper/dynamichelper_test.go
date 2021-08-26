@@ -81,6 +81,7 @@ func TestMerge(t *testing.T) {
 						"openshift.io/sa.scc.supplemental-groups": "groups",
 						"openshift.io/sa.scc.uid-range":           "uids",
 					},
+					Labels: map[string]string{"kubernetes.io/metadata.name": "test"},
 				},
 				Spec: corev1.NamespaceSpec{
 					Finalizers: []corev1.FinalizerName{
