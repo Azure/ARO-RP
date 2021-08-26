@@ -4,62 +4,105 @@ package node
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
+	ctrl "sigs.k8s.io/controller-runtime"
 
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
-func TestIsDraining(t *testing.T) {
-	for _, tt := range []struct {
-		name string
-		node *corev1.Node
-		want bool
+func TestReconciler(t *testing.T) {
+	tests := []struct {
+		name            string
+		nodeName        string
+		nodeObject      corev1.Node
+		clusterNotFound bool
+		featureFlag     bool
+		wantErr         string
 	}{
 		{
-			name: "current config doesn't match desired",
-			node: &corev1.Node{
-				Status: corev1.NodeStatus{
-					Conditions: []corev1.NodeCondition{
-						{
-							Type:   corev1.NodeReady,
-							Status: corev1.ConditionTrue,
-						},
-					},
-				},
-				Spec: corev1.NodeSpec{
-					Unschedulable: true,
-				},
+			name:     "node is a master, don't touch it",
+			nodeName: "aro-fake-node-0",
+			nodeObject: corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						annotationState:         "noop",
-						annotationReason:        "no reason",
-						annotationCurrentConfig: "foo",
-						annotationDesiredConfig: "bar",
+					Name: "aro-fake-node-0",
+					Labels: map[string]string{
+						"node-role.kubernetes.io/master": "true",
 					},
 				},
 			},
-			want: false,
+			featureFlag: true,
+			wantErr:     "",
 		},
 		{
-			name: "node is not ready",
-			node: &corev1.Node{
-				Status: corev1.NodeStatus{
-					Conditions: []corev1.NodeCondition{
-						{
-							Type:   corev1.NodeReady,
-							Status: corev1.ConditionFalse,
-						},
+			name:     "node doesn't exist",
+			nodeName: "nonexistent-node",
+			nodeObject: corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "aro-fake-node-0",
+				},
+			},
+			featureFlag: true,
+			wantErr:     `nodes "nonexistent-node" not found`,
+		},
+		{
+			name:            "can't fetch cluster instance",
+			nodeName:        "aro-fake-node-0",
+			nodeObject:      corev1.Node{},
+			clusterNotFound: true,
+			featureFlag:     true,
+			wantErr:         `clusters.aro.openshift.io "cluster" not found`,
+		},
+		{
+			name:        "feature flag is false, don't touch it",
+			nodeName:    "aro-fake-node-0",
+			nodeObject:  corev1.Node{},
+			featureFlag: false,
+			wantErr:     "",
+		},
+		{
+			name:     "isDraining false, annotation start time is blank",
+			nodeName: "aro-fake-node-0",
+			nodeObject: corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "aro-fake-node-0",
+					Annotations: map[string]string{
+						annotationDrainStartTime: "",
 					},
-				}},
-			want: false,
+				},
+			},
+			featureFlag: true,
+			wantErr:     "",
 		},
 		{
-			name: "node is unschedulable=false",
-			node: &corev1.Node{
+			name:     "isDraining false, delete our annotation",
+			nodeName: "aro-fake-node-0",
+			nodeObject: corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "aro-fake-node-0",
+					Annotations: map[string]string{
+						annotationDrainStartTime: "some-start-time",
+					},
+				},
+			},
+			featureFlag: true,
+			wantErr:     "",
+		},
+		{
+			name:     "isDraining false, node is unschedulable=false",
+			nodeName: "aro-fake-node-0",
+			nodeObject: corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "aro-fake-node-0",
+				},
 				Status: corev1.NodeStatus{
 					Conditions: []corev1.NodeCondition{
 						{
@@ -72,11 +115,13 @@ func TestIsDraining(t *testing.T) {
 					Unschedulable: false,
 				},
 			},
-			want: false,
+			featureFlag: true,
+			wantErr:     "",
 		},
 		{
-			name: "current config matches desired config",
-			node: &corev1.Node{
+			name:     "isDraining false, annotationDesiredConfig is blank",
+			nodeName: "aro-fake-node-0",
+			nodeObject: corev1.Node{
 				Status: corev1.NodeStatus{
 					Conditions: []corev1.NodeCondition{
 						{
@@ -89,31 +134,7 @@ func TestIsDraining(t *testing.T) {
 					Unschedulable: true,
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						annotationState:         "noop",
-						annotationReason:        "no reason",
-						annotationCurrentConfig: "foo",
-						annotationDesiredConfig: "foo",
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "annotationDesiredConfig is blank",
-			node: &corev1.Node{
-				Status: corev1.NodeStatus{
-					Conditions: []corev1.NodeCondition{
-						{
-							Type:   corev1.NodeReady,
-							Status: corev1.ConditionTrue,
-						},
-					},
-				},
-				Spec: corev1.NodeSpec{
-					Unschedulable: true,
-				},
-				ObjectMeta: metav1.ObjectMeta{
+					Name: "aro-fake-node-0",
 					Annotations: map[string]string{
 						annotationState:         "noop",
 						annotationReason:        "no reason",
@@ -122,11 +143,13 @@ func TestIsDraining(t *testing.T) {
 					},
 				},
 			},
-			want: false,
+			featureFlag: true,
+			wantErr:     "",
 		},
 		{
-			name: "annotationCurrentConfig is blank",
-			node: &corev1.Node{
+			name:     "isDraining false, annotationCurrentConfig is blank",
+			nodeName: "aro-fake-node-0",
+			nodeObject: corev1.Node{
 				Status: corev1.NodeStatus{
 					Conditions: []corev1.NodeCondition{
 						{
@@ -139,6 +162,7 @@ func TestIsDraining(t *testing.T) {
 					Unschedulable: true,
 				},
 				ObjectMeta: metav1.ObjectMeta{
+					Name: "aro-fake-node-0",
 					Annotations: map[string]string{
 						annotationState:         "noop",
 						annotationReason:        "no reason",
@@ -147,11 +171,13 @@ func TestIsDraining(t *testing.T) {
 					},
 				},
 			},
-			want: false,
+			featureFlag: true,
+			wantErr:     "",
 		},
 		{
-			name: "state is working",
-			node: &corev1.Node{
+			name:     "isDraining false, no conditions are met",
+			nodeName: "aro-fake-node-0",
+			nodeObject: corev1.Node{
 				Status: corev1.NodeStatus{
 					Conditions: []corev1.NodeCondition{
 						{
@@ -164,18 +190,61 @@ func TestIsDraining(t *testing.T) {
 					Unschedulable: true,
 				},
 				ObjectMeta: metav1.ObjectMeta{
+					Name: "aro-fake-node-0",
 					Annotations: map[string]string{
+						annotationState:         "noop",
+						annotationReason:        "no reason",
+						annotationCurrentConfig: "foo",
+						annotationDesiredConfig: "bar",
+					},
+				},
+			},
+			featureFlag: true,
+			wantErr:     "",
+		},
+		{
+			name:     "isDraining false, current config matches desired",
+			nodeName: "aro-fake-node-0",
+			nodeObject: corev1.Node{
+				Status: corev1.NodeStatus{
+					Conditions: []corev1.NodeCondition{
+						{
+							Type:   corev1.NodeReady,
+							Status: corev1.ConditionTrue,
+						},
+					},
+				},
+				Spec: corev1.NodeSpec{
+					Unschedulable: true,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "aro-fake-node-0",
+					Annotations: map[string]string{
+						annotationState:         "noop",
+						annotationReason:        "no reason",
+						annotationCurrentConfig: "foo",
+						annotationDesiredConfig: "foo",
+					},
+				},
+			},
+			featureFlag: true,
+			wantErr:     "",
+		},
+		{
+			name:     "isDraining true, set annotation",
+			nodeName: "aro-fake-node-0",
+			nodeObject: corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "aro-fake-node-0",
+					Annotations: map[string]string{
+						annotationCurrentConfig: "config",
+						annotationDesiredConfig: "config-2",
 						annotationState:         stateWorking,
-						annotationCurrentConfig: "foo",
-						annotationDesiredConfig: "bar",
 					},
 				},
-			},
-			want: true,
-		},
-		{
-			name: "state is degraded and annotationReason is correct",
-			node: &corev1.Node{
+				Spec: corev1.NodeSpec{
+					Unschedulable: true,
+				},
 				Status: corev1.NodeStatus{
 					Conditions: []corev1.NodeCondition{
 						{
@@ -184,23 +253,53 @@ func TestIsDraining(t *testing.T) {
 						},
 					},
 				},
+			},
+			featureFlag: true,
+			wantErr:     "",
+		},
+		{
+			name:     "isDraining true, set annotation",
+			nodeName: "aro-fake-node-0",
+			nodeObject: corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "aro-fake-node-0",
+					Annotations: map[string]string{
+						annotationCurrentConfig: "config",
+						annotationDesiredConfig: "config-2",
+						annotationState:         stateWorking,
+					},
+				},
 				Spec: corev1.NodeSpec{
 					Unschedulable: true,
 				},
+				Status: corev1.NodeStatus{
+					Conditions: []corev1.NodeCondition{
+						{
+							Type:   corev1.NodeReady,
+							Status: corev1.ConditionTrue,
+						},
+					},
+				},
+			},
+			featureFlag: true,
+			wantErr:     "",
+		},
+		{
+			name:     "isDraining true, degraded state, unable to drain",
+			nodeName: "aro-fake-node-0",
+			nodeObject: corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
+					Name: "aro-fake-node-0",
 					Annotations: map[string]string{
+						annotationCurrentConfig: "config",
+						annotationDesiredConfig: "config-2",
 						annotationState:         stateDegraded,
 						annotationReason:        "failed to drain node",
-						annotationCurrentConfig: "foo",
-						annotationDesiredConfig: "bar",
 					},
 				},
-			},
-			want: true,
-		},
-		{
-			name: "state is degraded but annotationReason is incorrect",
-			node: &corev1.Node{
+				Spec: corev1.NodeSpec{
+					Unschedulable: true,
+				},
 				Status: corev1.NodeStatus{
 					Conditions: []corev1.NodeCondition{
 						{
@@ -209,23 +308,39 @@ func TestIsDraining(t *testing.T) {
 						},
 					},
 				},
+			},
+			featureFlag: true,
+			wantErr:     "",
+		},
+		{
+			name:     `node has nil annotations, return ""`,
+			nodeName: "aro-fake-node-0",
+			nodeObject: corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "aro-fake-node-0",
+					Annotations: nil,
+				},
+			},
+			featureFlag: true,
+			wantErr:     "",
+		},
+		{
+			name:     "node is draining, deadline was exceeded, execute the drain",
+			nodeName: "aro-fake-node-0",
+			nodeObject: corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "aro-fake-node-0",
+					Annotations: map[string]string{
+						annotationCurrentConfig:  "config",
+						annotationDesiredConfig:  "config-2",
+						annotationState:          stateDegraded,
+						annotationReason:         "failed to drain node",
+						annotationDrainStartTime: "2006-01-02T15:04:05Z",
+					},
+				},
 				Spec: corev1.NodeSpec{
 					Unschedulable: true,
 				},
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						annotationState:         stateDegraded,
-						annotationReason:        "some-random-reason",
-						annotationCurrentConfig: "foo",
-						annotationDesiredConfig: "bar",
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "annotationReason is correct but state is incorrect",
-			node: &corev1.Node{
 				Status: corev1.NodeStatus{
 					Conditions: []corev1.NodeCondition{
 						{
@@ -234,53 +349,42 @@ func TestIsDraining(t *testing.T) {
 						},
 					},
 				},
-				Spec: corev1.NodeSpec{
-					Unschedulable: true,
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						annotationState:         "not-a-valid-state",
-						annotationReason:        "failed to drain node",
-						annotationCurrentConfig: "foo",
-						annotationDesiredConfig: "bar",
-					},
-				},
 			},
-			want: false,
+			featureFlag: true,
+			wantErr:     "",
 		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := isDraining(tt.node); tt.want != got {
-				t.Error(got)
-			}
-		})
 	}
-}
 
-func TestGetAnnotation(t *testing.T) {
-	for _, tt := range []struct {
-		name            string
-		objectMeta      *metav1.ObjectMeta
-		annotationKey   string
-		annotationValue string
-	}{
-		{
-			name:            "no annotations set, return a blank annotation",
-			objectMeta:      &metav1.ObjectMeta{},
-			annotationValue: "",
-		},
-		{
-			name: "annotation is set, return its value",
-			objectMeta: &metav1.ObjectMeta{
-				Annotations: map[string]string{"some-random-annotation": "is-set"},
-			},
-			annotationKey:   "some-random-annotation",
-			annotationValue: "is-set",
-		},
-	} {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getAnnotation(tt.objectMeta, tt.annotationKey); tt.annotationValue != got {
-				t.Error(got)
+			baseCluster := arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
+				Spec: arov1alpha1.ClusterSpec{
+					InfraID:  "aro-fake",
+					Features: arov1alpha1.FeaturesSpec{ReconcileNodeDrainer: tt.featureFlag},
+				},
+			}
+
+			if tt.clusterNotFound == true {
+				baseCluster = arov1alpha1.Cluster{}
+			}
+
+			r := &Reconciler{
+				log: logrus.NewEntry(logrus.StandardLogger()),
+
+				arocli:        arofake.NewSimpleClientset(&baseCluster),
+				kubernetescli: fake.NewSimpleClientset(&tt.nodeObject),
+			}
+
+			request := ctrl.Request{}
+			request.Name = tt.nodeName
+			request.Namespace = ""
+			ctx := context.Background()
+
+			_, err := r.Reconcile(ctx, request)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
 			}
 		})
 	}
@@ -294,22 +398,15 @@ func TestSetAnnotation(t *testing.T) {
 		annotationValue string
 	}{
 		{
-			name:            "ensure annotations are being set",
-			node:            &corev1.Node{},
-			annotationKey:   "foo",
-			annotationValue: "bar",
-		},
-		{
-			name: "ensure annotations are being overidden when new value is provided",
+			// This test case is still necessary for coverage, because Reconcile only uses setAnnotaion() to set annotationDrainStartTime and never sets nil k/v.
+			name: "ensure an empty map is returned when k and v are nil",
 			node: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						annotationCurrentConfig: "old",
-					},
+					Annotations: nil,
 				},
 			},
-			annotationKey:   "machineconfiguration.openshift.io/currentConfig",
-			annotationValue: "new",
+			annotationKey:   "",
+			annotationValue: "",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
