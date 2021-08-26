@@ -170,7 +170,7 @@ func (d *deployer) deploy(ctx context.Context, vmssName, rgName, deploymentName 
 			continue
 		}
 		if err != nil {
-			if deleted := d.vmssCleaner.RemoveFailedScaleset(ctx, rgName, vmssName); deleted && i < 2 {
+			if deleted := d.vmssCleaner.RemoveFailedScaleset(ctx, rgName, vmssName); deleted {
 				continue // Retry deployment after deleting failed VMSS.
 			}
 		}
