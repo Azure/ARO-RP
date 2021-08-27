@@ -7,6 +7,7 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"fmt"
+	"html"
 	"mime"
 	"net"
 	"net/http"
@@ -98,14 +99,13 @@ type response struct {
 
 func (s *ssh) new(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
 	parts := strings.Split(r.URL.Path, "/")
 	if len(parts) < 9 {
 		http.Error(w, "invalid resourceId", http.StatusBadRequest)
 		return
 	}
 
-	resourceID := strings.Join(parts[:9], "/")
+	resourceID := html.EscapeString(strings.Join(parts[:9], "/"))
 	if !validate.RxClusterID.MatchString(resourceID) {
 		http.Error(w, fmt.Sprintf("invalid resourceId %q", resourceID), http.StatusBadRequest)
 		return
