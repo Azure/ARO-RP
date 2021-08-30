@@ -4,7 +4,7 @@ package v1alpha1
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/operator-framework/operator-sdk/pkg/status"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -15,22 +15,22 @@ const (
 	BannerDisabled       BannerContent = ""
 	BannerContactSupport BannerContent = "ContactSupport"
 
-	SingletonClusterName                             = "cluster"
-	InternetReachableFromMaster status.ConditionType = "InternetReachableFromMaster"
-	InternetReachableFromWorker status.ConditionType = "InternetReachableFromWorker"
-	MachineValid                status.ConditionType = "MachineValid"
-	ServicePrincipalValid       status.ConditionType = "ServicePrincipalValid"
+	SingletonClusterName        = "cluster"
+	InternetReachableFromMaster = "InternetReachableFromMaster"
+	InternetReachableFromWorker = "InternetReachableFromWorker"
+	MachineValid                = "MachineValid"
+	ServicePrincipalValid       = "ServicePrincipalValid"
 )
 
 // AllConditionTypes is a operator conditions currently in use, any condition not in this list is not
 // added to the operator.status.conditions list
-func AllConditionTypes() []status.ConditionType {
-	return []status.ConditionType{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid, ServicePrincipalValid}
+func AllConditionTypes() []string {
+	return []string{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid, ServicePrincipalValid}
 }
 
 // ClusterChecksTypes represents checks performed on the cluster to verify basic functionality
-func ClusterChecksTypes() []status.ConditionType {
-	return []status.ConditionType{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid, ServicePrincipalValid}
+func ClusterChecksTypes() []string {
+	return []string{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid, ServicePrincipalValid}
 }
 
 type GenevaLoggingSpec struct {
@@ -92,9 +92,9 @@ type Banner struct {
 
 // ClusterStatus defines the observed state of Cluster
 type ClusterStatus struct {
-	OperatorVersion   string            `json:"operatorVersion,omitempty"`
-	Conditions        status.Conditions `json:"conditions,omitempty"`
-	RedHatKeysPresent []string          `json:"redHatKeysPresent,omitempty"`
+	OperatorVersion   string                         `json:"operatorVersion,omitempty"`
+	Conditions        []operatorv1.OperatorCondition `json:"conditions,omitempty"`
+	RedHatKeysPresent []string                       `json:"redHatKeysPresent,omitempty"`
 }
 
 // +kubebuilder:object:root=true

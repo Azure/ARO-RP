@@ -10,11 +10,10 @@ import (
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/to"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	maofake "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
-	"github.com/operator-framework/operator-sdk/pkg/status"
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -69,7 +68,7 @@ func TestMachineReconciler(t *testing.T) {
 
 	baseCluster := arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-		Status:     arov1alpha1.ClusterStatus{Conditions: []status.Condition{}},
+		Status:     arov1alpha1.ClusterStatus{Conditions: []operatorv1.OperatorCondition{}},
 	}
 
 	tests := []struct {
@@ -77,14 +76,14 @@ func TestMachineReconciler(t *testing.T) {
 		request        ctrl.Request
 		maocli         *maofake.Clientset
 		arocli         *arofake.Clientset
-		wantConditions []status.Condition
+		wantConditions []operatorv1.OperatorCondition
 	}{
 		{
 			name:   "valid",
 			maocli: newFakeMao1("", "", "", ""),
-			wantConditions: []status.Condition{{
+			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
-				Status:  corev1.ConditionTrue,
+				Status:  operatorv1.ConditionTrue,
 				Message: "All machines valid",
 				Reason:  "CheckDone",
 			}},
@@ -92,9 +91,9 @@ func TestMachineReconciler(t *testing.T) {
 		{
 			name:   "wrong vm size",
 			maocli: newFakeMao1("", "", "Standard_D4s_v9", ""),
-			wantConditions: []status.Condition{{
+			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
-				Status:  corev1.ConditionFalse,
+				Status:  operatorv1.ConditionFalse,
 				Message: "machine foo-hx8z7-worker-2: invalid VM size 'Standard_D4s_v9'",
 				Reason:  "CheckFailed",
 			}},
@@ -102,9 +101,9 @@ func TestMachineReconciler(t *testing.T) {
 		{
 			name:   "wrong disk size",
 			maocli: newFakeMao1("64", "", "", ""),
-			wantConditions: []status.Condition{{
+			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
-				Status:  corev1.ConditionFalse,
+				Status:  operatorv1.ConditionFalse,
 				Message: "machine foo-hx8z7-worker-0: invalid disk size '64'",
 				Reason:  "CheckFailed",
 			}},
@@ -112,9 +111,9 @@ func TestMachineReconciler(t *testing.T) {
 		{
 			name:   "wrong image publisher",
 			maocli: newFakeMao1("", "bananas", "", ""),
-			wantConditions: []status.Condition{{
+			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
-				Status:  corev1.ConditionFalse,
+				Status:  operatorv1.ConditionFalse,
 				Message: "machine foo-hx8z7-worker-1: invalid image '{bananas aro4   }'",
 				Reason:  "CheckFailed",
 			}},
@@ -122,9 +121,9 @@ func TestMachineReconciler(t *testing.T) {
 		{
 			name:   "wrong vm size on master",
 			maocli: newFakeMao1("", "", "", "Standard_D4s_v9"),
-			wantConditions: []status.Condition{{
+			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
-				Status:  corev1.ConditionFalse,
+				Status:  operatorv1.ConditionFalse,
 				Message: "machine foo-hx8z7-master-2: invalid VM size 'Standard_D4s_v9'",
 				Reason:  "CheckFailed",
 			}},
@@ -132,9 +131,9 @@ func TestMachineReconciler(t *testing.T) {
 		{
 			name:   "invalid master machine count",
 			maocli: newFakeMao2(),
-			wantConditions: []status.Condition{{
+			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
-				Status:  corev1.ConditionFalse,
+				Status:  operatorv1.ConditionFalse,
 				Message: "invalid number of master machines 2, expected 3",
 				Reason:  "CheckFailed",
 			}},
@@ -142,9 +141,9 @@ func TestMachineReconciler(t *testing.T) {
 		{
 			name:   "invalid worker machine count",
 			maocli: newFakeMao3(),
-			wantConditions: []status.Condition{{
+			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
-				Status:  corev1.ConditionFalse,
+				Status:  operatorv1.ConditionFalse,
 				Message: "invalid number of worker machines 2, expected 3",
 				Reason:  "CheckFailed",
 			}},

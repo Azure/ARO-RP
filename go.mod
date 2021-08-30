@@ -24,7 +24,7 @@ require (
 	github.com/containers/storage v1.31.2 // indirect
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/coreos/go-systemd/v22 v22.3.2
-	github.com/coreos/ignition/v2 v2.10.1 // indirect
+	github.com/coreos/ignition/v2 v2.10.1
 	github.com/coreos/vcontext v0.0.0-20210511154938-8fbad538d364 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/docker v20.10.6+incompatible // indirect
@@ -81,9 +81,9 @@ require (
 	github.com/openshift/library-go v0.0.0-20210521084623-7392ea9b02ca
 	github.com/openshift/machine-api-operator v0.2.1-0.20210516083017-bb9e0b5c1170
 	github.com/openshift/machine-config-operator v4.2.0-alpha.0.0.20190917115525-033375cbe820+incompatible
-	github.com/operator-framework/operator-sdk v1.7.2
 	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/pires/go-proxyproto v0.5.0
+	github.com/pkg/errors v0.9.1
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/prometheus/client_golang v1.10.0
 	github.com/prometheus/common v0.25.0
