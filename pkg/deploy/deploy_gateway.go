@@ -37,9 +37,6 @@ func (d *deployer) DeployGateway(ctx context.Context) error {
 	}
 
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
-	parameters.Parameters["dbtokenClientId"] = &arm.ParametersParameter{
-		Value: &d.config.Configuration.DBTokenClientID,
-	}
 	parameters.Parameters["dbtokenURL"] = &arm.ParametersParameter{
 		Value: "https://dbtoken." + d.config.Location + "." + *d.config.Configuration.RPParentDomainName + ":8445",
 	}
