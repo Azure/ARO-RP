@@ -11,7 +11,7 @@ import (
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/clock"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -32,7 +32,7 @@ func TestSetCondition(t *testing.T) {
 	for _, tt := range []struct {
 		name      string
 		aroclient aroclient.Interface
-		objects   []runtime.Object
+		objects   []kruntime.Object
 		input     *operatorv1.OperatorCondition
 
 		expected arov1alpha1.ClusterStatus
@@ -40,7 +40,7 @@ func TestSetCondition(t *testing.T) {
 	}{
 		{
 			name: "no condition provided",
-			objects: []runtime.Object{&arov1alpha1.Cluster{
+			objects: []kruntime.Object{&arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: objectName,
 				},
@@ -49,7 +49,7 @@ func TestSetCondition(t *testing.T) {
 		},
 		{
 			name: "new condition provided",
-			objects: []runtime.Object{&arov1alpha1.Cluster{
+			objects: []kruntime.Object{&arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: objectName,
 				},
@@ -74,7 +74,7 @@ func TestSetCondition(t *testing.T) {
 		},
 		{
 			name: "condition provided without status change - only update operator version",
-			objects: []runtime.Object{&arov1alpha1.Cluster{
+			objects: []kruntime.Object{&arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: objectName,
 				},
@@ -104,7 +104,7 @@ func TestSetCondition(t *testing.T) {
 		},
 		{
 			name: "condition provided without status change - no update",
-			objects: []runtime.Object{&arov1alpha1.Cluster{
+			objects: []kruntime.Object{&arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: objectName,
 				},
@@ -137,7 +137,7 @@ func TestSetCondition(t *testing.T) {
 		},
 		{
 			name: "update one of the existing conditions",
-			objects: []runtime.Object{&arov1alpha1.Cluster{
+			objects: []kruntime.Object{&arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: objectName,
 				},
@@ -176,7 +176,7 @@ func TestSetCondition(t *testing.T) {
 		},
 		{
 			name: "cleanup stale conditions",
-			objects: []runtime.Object{&arov1alpha1.Cluster{
+			objects: []kruntime.Object{&arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: objectName,
 				},
