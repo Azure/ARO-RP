@@ -93,6 +93,7 @@ type Configuration struct {
 	SSHPublicKey                       *string       `json:"sshPublicKey,omitempty" value:"required"`
 	StorageAccountDomain               *string       `json:"storageAccountDomain,omitempty" value:"required"`
 	VMSize                             *string       `json:"vmSize,omitempty" value:"required"`
+	VMSSCleanupEnabled                 *bool         `json:"vmssCleanupEnabled,omitempty"`
 }
 
 // GetConfig return RP configuration from the file

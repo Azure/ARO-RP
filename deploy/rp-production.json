@@ -162,6 +162,10 @@
             "type": "string",
             "defaultValue": "Standard_D2s_v3"
         },
+        "vmssCleanupEnabled": {
+            "type": "bool",
+            "defaultValue": true
+        },
         "vmssName": {
             "type": "string"
         }
