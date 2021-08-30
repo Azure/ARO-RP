@@ -72,9 +72,6 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	parameters.Parameters["keyvaultDNSSuffix"] = &arm.ParametersParameter{
 		Value: d.env.Environment().KeyVaultDNSSuffix,
 	}
-	parameters.Parameters["fpServicePrincipalId"] = &arm.ParametersParameter{
-		Value: *d.config.Configuration.FPServicePrincipalID,
-	}
 	parameters.Parameters["azureCloudName"] = &arm.ParametersParameter{
 		Value: d.env.Environment().ActualCloudName,
 	}
