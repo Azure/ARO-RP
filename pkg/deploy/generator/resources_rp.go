@@ -550,8 +550,7 @@ firewall-cmd --add-port=2222/tcp --permanent
 
 export AZURE_CLOUD_NAME=$AZURECLOUDNAME
 
-az login -i
-az account set -s "$SUBSCRIPTIONID"
+az login -i --allow-no-subscriptions
 
 systemctl start docker.service
 az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
@@ -601,8 +600,6 @@ StartLimitIntervalSec=0
 RestartSec=1s
 EnvironmentFile=/etc/sysconfig/fluentbit
 ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStartPre=-/usr/bin/docker pull $FLUENTBITIMAGE
-ExecStartPre=-/bin/mkdir -p /var/lib/fluent
 ExecStart=/usr/bin/docker run \
   --security-opt label=disable \
   --entrypoint /opt/td-agent-bit/bin/td-agent-bit \
