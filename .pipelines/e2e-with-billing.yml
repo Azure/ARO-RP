@@ -1,4 +1,15 @@
 # Azure DevOps Pipeline running RP e2e and Billing e2e
+trigger: none
+pr: none
+
+schedules:
+- cron: 0 23 * * 1-5,7
+  displayName: Run daily at 23:00 UTC except Saturday
+  branches:
+    include:
+    - master
+  always: true
+
 variables:
 - template: vars.yml
 stages:

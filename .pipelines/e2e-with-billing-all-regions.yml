@@ -1,4 +1,15 @@
 # Azure DevOps Pipeline running RP e2e and Billing e2e in all supported regions
+trigger: none
+pr: none
+
+schedules:
+- cron: 0 5 * * *
+  displayName: Run daily at 05:00 UTC
+  branches:
+    include:
+    - master
+  always: true
+
 variables:
 - template: vars.yml
 stages:
