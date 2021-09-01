@@ -104,8 +104,7 @@
                                 "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"
                             }
                         },
-                        "name": "gateway-frontend",
-                        "zones": "[pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3)]"
+                        "name": "gateway-frontend"
                     }
                 ],
                 "backendAddressPools": [

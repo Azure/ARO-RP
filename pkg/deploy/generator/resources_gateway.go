@@ -87,8 +87,7 @@ func (g *generator) gatewayLB() *arm.Resource {
 								ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"),
 							},
 						},
-						Zones: &[]string{},
-						Name:  to.StringPtr("gateway-frontend"),
+						Name: to.StringPtr("gateway-frontend"),
 					},
 				},
 				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{

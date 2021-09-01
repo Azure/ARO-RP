@@ -318,8 +318,7 @@ func (g *generator) rpLBInternal() *arm.Resource {
 								ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
 							},
 						},
-						Name:  to.StringPtr("dbtoken-frontend"),
-						Zones: &[]string{},
+						Name: to.StringPtr("dbtoken-frontend"),
 					},
 				},
 				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{

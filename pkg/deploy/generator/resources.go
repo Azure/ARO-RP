@@ -65,7 +65,6 @@ func (g *generator) publicIPAddress(name string) *arm.Resource {
 			PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
 				PublicIPAllocationMethod: mgmtnetwork.Static,
 			},
-			Zones:    &[]string{},
 			Name:     &name,
 			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 			Location: to.StringPtr("[resourceGroup().location]"),

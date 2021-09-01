@@ -47,7 +47,6 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 	b = bytes.ReplaceAll(b, []byte(`"capacity": 1337`), []byte(`"capacity": "[parameters('ciCapacity')]"`))
 	b = bytes.ReplaceAll(b, []byte(`"capacity": 1338`), []byte(`"capacity": "[parameters('rpVmssCapacity')]"`))
 	b = bytes.ReplaceAll(b, []byte(`"capacity": 1339`), []byte(`"capacity": "[parameters('gatewayVmssCapacity')]"`))
-	b = bytes.ReplaceAll(b, []byte(`"zones": []`), []byte(`"zones": "[pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3)]"`))
 	b = bytes.ReplaceAll(b, []byte(`"routes": []`), []byte(`"routes": "[parameters('routes')]"`))
 	if g.production {
 		b = regexp.MustCompile(`(?m)"accessPolicies": \[[^]]*`+clusterAccessPolicyHack+`[^]]*\]`).ReplaceAll(b, []byte(`"accessPolicies": "[concat(variables('clusterKeyvaultAccessPolicies'), parameters('extraClusterKeyvaultAccessPolicies'))]"`))
