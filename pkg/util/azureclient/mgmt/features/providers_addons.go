@@ -6,15 +6,15 @@ package features
 import (
 	"context"
 
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2020-10-01/resources"
 )
 
 // ProvidersClientAddons is a minimal interface for azure ProvidersClient
 type ProvidersClientAddons interface {
-	List(ctx context.Context, top *int32, expand string) (providers []mgmtfeatures.Provider, err error)
+	List(ctx context.Context, top *int32, expand string) (providers []mgmtresources.Provider, err error)
 }
 
-func (c *providersClient) List(ctx context.Context, top *int32, expand string) (providers []mgmtfeatures.Provider, err error) {
+func (c *providersClient) List(ctx context.Context, top *int32, expand string) (providers []mgmtresources.Provider, err error) {
 	page, err := c.ProvidersClient.List(ctx, top, expand)
 	if err != nil {
 		return nil, err

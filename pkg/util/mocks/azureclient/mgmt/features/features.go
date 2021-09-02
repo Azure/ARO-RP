@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	features "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	resources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2020-10-01/resources"
 	autorest "github.com/Azure/go-autorest/autorest"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -131,10 +132,10 @@ func (m *MockProvidersClient) EXPECT() *MockProvidersClientMockRecorder {
 }
 
 // List mocks base method.
-func (m *MockProvidersClient) List(arg0 context.Context, arg1 *int32, arg2 string) ([]features.Provider, error) {
+func (m *MockProvidersClient) List(arg0 context.Context, arg1 *int32, arg2 string) ([]resources.Provider, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
-	ret0, _ := ret[0].([]features.Provider)
+	ret0, _ := ret[0].([]resources.Provider)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

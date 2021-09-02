@@ -7,7 +7,7 @@ import (
 	"context"
 	"net/http"
 
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2020-10-01/resources"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 )
@@ -20,7 +20,7 @@ func (dv *dynamic) ValidateProviders(ctx context.Context) error {
 		return err
 	}
 
-	providerMap := make(map[string]mgmtfeatures.Provider, len(providers))
+	providerMap := make(map[string]mgmtresources.Provider, len(providers))
 
 	for _, provider := range providers {
 		providerMap[*provider.Namespace] = provider

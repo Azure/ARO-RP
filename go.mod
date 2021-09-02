@@ -5,7 +5,7 @@ go 1.14
 require (
 	cloud.google.com/go v0.82.0 // indirect
 	github.com/AlekSi/gocov-xml v0.0.0-20190121064608-3a14fb1c4737
-	github.com/Azure/azure-sdk-for-go v56.1.0+incompatible
+	github.com/Azure/azure-sdk-for-go v57.0.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.19
 	github.com/Azure/go-autorest/autorest/adal v0.9.14
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.7

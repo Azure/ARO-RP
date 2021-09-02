@@ -6,7 +6,7 @@ cloud.google.com/go/compute/metadata
 # github.com/AlekSi/gocov-xml v0.0.0-20190121064608-3a14fb1c4737
 ## explicit
 github.com/AlekSi/gocov-xml
-# github.com/Azure/azure-sdk-for-go v56.1.0+incompatible
+# github.com/Azure/azure-sdk-for-go v57.0.0+incompatible
 ## explicit
 github.com/Azure/azure-sdk-for-go/profiles/latest/dns/mgmt/dns
 github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-10-01/compute
@@ -26,6 +26,8 @@ github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns
 github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-05-01/resources
 github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-06-01/subscriptions
 github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features
+github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2020-10-01/resources
+github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2021-07-01/features
 github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage
 github.com/Azure/azure-sdk-for-go/storage
 github.com/Azure/azure-sdk-for-go/version
