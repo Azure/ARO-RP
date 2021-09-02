@@ -156,7 +156,7 @@
             "properties": {
                 "publicIPAllocationMethod": "Static"
             },
-            "zones": "[pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3)]",
+            "zones": "[parameters('ipAddressZones')]",
             "name": "rp-pip",
             "type": "Microsoft.Network/publicIPAddresses",
             "location": "[resourceGroup().location]",
@@ -169,7 +169,7 @@
             "properties": {
                 "publicIPAllocationMethod": "Static"
             },
-            "zones": "[pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3)]",
+            "zones": "[parameters('ipAddressZones')]",
             "name": "portal-pip",
             "type": "Microsoft.Network/publicIPAddresses",
             "location": "[resourceGroup().location]",
@@ -312,7 +312,7 @@
                             }
                         },
                         "name": "dbtoken-frontend",
-                        "zones": "[pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3)]"
+                        "zones": "[parameters('ipAddressZones')]"
                     }
                 ],
                 "backendAddressPools": [

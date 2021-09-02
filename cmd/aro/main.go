@@ -27,6 +27,7 @@ func usage() {
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s mirror [release_image...]\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s monitor\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s portal\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s lb\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s rp\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s operator {master,worker}\n", os.Args[0])
 	flag.PrintDefaults()
@@ -68,6 +69,9 @@ func main() {
 	case "rp":
 		checkArgs(1)
 		err = rp(ctx, log, audit)
+	case "lb":
+		checkArgs(1)
+		err = lb(ctx, log)
 	case "portal":
 		checkArgs(1)
 		err = portal(ctx, log, audit)

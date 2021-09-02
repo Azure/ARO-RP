@@ -4,6 +4,8 @@ package features
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2020-10-01/resources"
 	"github.com/Azure/go-autorest/autorest"
 
@@ -12,6 +14,7 @@ import (
 
 // ProvidersClient is a minimal interface for azure ProvidersClient
 type ProvidersClient interface {
+	Get(ctx context.Context, resourceProviderNamespace string, expand string) (result mgmtresources.Provider, err error)
 	ProvidersClientAddons
 }
 

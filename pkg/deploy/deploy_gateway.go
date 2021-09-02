@@ -61,6 +61,13 @@ func (d *deployer) DeployGateway(ctx context.Context) error {
 	parameters.Parameters["azureCloudName"] = &arm.ParametersParameter{
 		Value: d.env.Environment().ActualCloudName,
 	}
+	zones, err := d.getIPAddressZones(ctx, d.config.Location)
+	if err != nil {
+		return err
+	}
+	parameters.Parameters["ipAddressZones"] = &arm.ParametersParameter{
+		Value: zones,
+	}
 
 	return d.deploy(ctx, template, parameters, d.config.GatewayResourceGroupName, deploymentName, gatewayVMSSPrefix+d.version)
 }

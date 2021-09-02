@@ -78,6 +78,13 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	parameters.Parameters["azureCloudName"] = &arm.ParametersParameter{
 		Value: d.env.Environment().ActualCloudName,
 	}
+	zones, err := d.getIPAddressZones(ctx, d.config.Location)
+	if err != nil {
+		return err
+	}
+	parameters.Parameters["ipAddressZones"] = &arm.ParametersParameter{
+		Value: zones,
+	}
 
 	err = d.deploy(ctx, template, parameters, d.config.RPResourceGroupName, deploymentName, rpVMSSPrefix+d.version)
 	if err != nil {
@@ -173,4 +180,24 @@ func (d *deployer) convertToIPAddressOrRange(ipSlice []string) []mgmtdocumentdb.
 		ips = append(ips, mgmtdocumentdb.IPAddressOrRange{IPAddressOrRange: to.StringPtr(v)})
 	}
 	return ips
+}
+
+func (d *deployer) getIPAddressZones(ctx context.Context, location string) ([]string, error) {
+	provider, err := d.providers.Get(ctx, "Microsoft.Network", "")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, rt := range *provider.ResourceTypes {
+		if *rt.ResourceType == "publicIPAddresses" {
+			for _, zoneMapping := range *rt.ZoneMappings {
+				if *zoneMapping.Location == location {
+					return *zoneMapping.Zones, nil
+				}
+			}
+		}
+	}
+	// default
+	return []string{"1", "2", "3"}, nil
+
 }
