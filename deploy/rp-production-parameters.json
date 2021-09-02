@@ -86,6 +86,13 @@
         "mdsdEnvironment": {
             "value": ""
         },
+        "nonZonalRegions": {
+            "value": [
+                "eastasia",
+                "centralindia",
+                "koreacentral"
+            ]
+        },
         "portalAccessGroupIds": {
             "value": ""
         },

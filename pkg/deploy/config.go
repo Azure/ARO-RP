@@ -74,6 +74,7 @@ type Configuration struct {
 	KeyvaultPrefix                     *string       `json:"keyvaultPrefix,omitempty" value:"required"`
 	MDMFrontendURL                     *string       `json:"mdmFrontendUrl,omitempty" value:"required"`
 	MDSDEnvironment                    *string       `json:"mdsdEnvironment,omitempty" value:"required"`
+	NonZonalRegions                    []string      `json:"nonZonalRegions,omitempty"`
 	PortalAccessGroupIDs               []string      `json:"portalAccessGroupIds,omitempty" value:"required"`
 	PortalClientID                     *string       `json:"portalClientId,omitempty" value:"required"`
 	PortalElevatedGroupIDs             []string      `json:"portalElevatedGroupIds,omitempty" value:"required"`

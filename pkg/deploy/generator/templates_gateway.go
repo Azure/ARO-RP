@@ -38,6 +38,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		"keyvaultPrefix",
 		"mdmFrontendUrl",
 		"mdsdEnvironment",
+		"nonZonalRegions",
 		"rpImage",
 		"rpMdmAccount",
 		"rpMdsdAccount",
@@ -60,6 +61,13 @@ func (g *generator) gatewayTemplate() *arm.Template {
 			p.DefaultValue = 3
 		case "vmSize":
 			p.DefaultValue = "Standard_D2s_v3"
+		case "nonZonalRegions":
+			p.Type = "array"
+			p.DefaultValue = []string{
+				"eastasia",
+				"centralindia",
+				"koreacentral",
+			}
 		}
 		t.Parameters[param] = p
 	}

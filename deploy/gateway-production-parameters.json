@@ -50,6 +50,13 @@
         "mdsdEnvironment": {
             "value": ""
         },
+        "nonZonalRegions": {
+            "value": [
+                "eastasia",
+                "centralindia",
+                "koreacentral"
+            ]
+        },
         "rpImage": {
             "value": ""
         },

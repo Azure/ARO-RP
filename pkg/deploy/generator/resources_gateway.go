@@ -202,6 +202,7 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 		"dbtokenUrl",
 		"mdmFrontendUrl",
 		"mdsdEnvironment",
+		"nonZonalRegions",
 		"gatewayMdsdConfigVersion",
 		"gatewayDomains",
 		"gatewayFeatures",
