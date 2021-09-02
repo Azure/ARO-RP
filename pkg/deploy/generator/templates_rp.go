@@ -55,6 +55,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"gatewayServicePrincipalId",
 			"mdmFrontendUrl",
 			"mdsdEnvironment",
+			"nonZonalRegions",
 			"portalAccessGroupIds",
 			"portalClientId",
 			"portalElevatedGroupIds",
@@ -95,6 +96,13 @@ func (g *generator) rpTemplate() *arm.Template {
 		case "rpVmssCapacity":
 			p.Type = "int"
 			p.DefaultValue = 3
+		case "nonZonalRegions":
+			p.Type = "array"
+			p.DefaultValue = []string{
+				"eastasia",
+				"centralindia",
+				"koreacentral",
+			}
 		}
 		t.Parameters[param] = p
 	}
