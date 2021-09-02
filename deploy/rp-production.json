@@ -164,7 +164,7 @@
             "properties": {
                 "publicIPAllocationMethod": "Static"
             },
-            "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]",
+            "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'[]',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]",
             "name": "rp-pip",
             "type": "Microsoft.Network/publicIPAddresses",
             "location": "[resourceGroup().location]",
@@ -177,7 +177,7 @@
             "properties": {
                 "publicIPAllocationMethod": "Static"
             },
-            "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]",
+            "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'[]',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]",
             "name": "portal-pip",
             "type": "Microsoft.Network/publicIPAddresses",
             "location": "[resourceGroup().location]",
@@ -320,7 +320,7 @@
                             }
                         },
                         "name": "dbtoken-frontend",
-                        "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]"
+                        "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'[]',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]"
                     }
                 ],
                 "backendAddressPools": [
