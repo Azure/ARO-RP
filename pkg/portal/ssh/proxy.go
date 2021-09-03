@@ -333,7 +333,9 @@ func (s *ssh) proxyChannel(ch1, ch2 cryptossh.Channel, rs1, rs2 <-chan *cryptoss
 
 	g.Go(func() error {
 		defer recover.Panic(s.log)
-		defer ch1.CloseWrite() // ignore error
+		defer func() {
+			_ = ch1.CloseWrite()
+		}()
 		_, err := io.Copy(ch1, ch2)
 		if err != nil {
 			return err
@@ -343,8 +345,9 @@ func (s *ssh) proxyChannel(ch1, ch2 cryptossh.Channel, rs1, rs2 <-chan *cryptoss
 
 	g.Go(func() error {
 		defer recover.Panic(s.log)
-
-		defer ch2.CloseWrite()
+		defer func() {
+			_ = ch2.CloseWrite()
+		}()
 		_, err := io.Copy(ch2, ch1)
 		if err != nil {
 			return err
