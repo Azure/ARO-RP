@@ -23,6 +23,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
+const (
+	keepAliveInterval = time.Second * 30
+	keepAliveRequest  = "keep-alive"
+)
+
 // This file handles smart proxying of SSH connections between SRE->portal and
 // portal->cluster.  We don't want to give the SRE the cluster SSH key, thus
 // this has to be an application-level proxy so we can replace the validated
@@ -58,7 +63,7 @@ func (s *ssh) Run() error {
 		defer recover.Panic(s.log)
 
 		for {
-			c, err := s.l.Accept()
+			clientConn, err := s.l.Accept()
 			if err != nil {
 				return
 			}
@@ -66,7 +71,7 @@ func (s *ssh) Run() error {
 			go func() {
 				defer recover.Panic(s.log)
 
-				_ = s.newConn(context.Background(), c)
+				_ = s.newConn(context.Background(), clientConn)
 			}()
 		}
 	}()
@@ -74,8 +79,8 @@ func (s *ssh) Run() error {
 	return nil
 }
 
-func (s *ssh) newConn(ctx context.Context, c1 net.Conn) error {
-	defer c1.Close()
+func (s *ssh) newConn(ctx context.Context, clientConn net.Conn) error {
+	defer clientConn.Close()
 
 	config := &cryptossh.ServerConfig{}
 	*config = *s.baseServerConfig
@@ -112,11 +117,11 @@ func (s *ssh) newConn(ctx context.Context, c1 net.Conn) error {
 	}
 
 	// Serve the incoming (SRE->portal) connection.
-	conn1, newchannels1, requests1, err := cryptossh.NewServerConn(c1, config)
+	upstreamConn, upstreamNewChannels, upstreamRequests, err := cryptossh.NewServerConn(clientConn, config)
 	if err != nil {
 		if connmetadata != nil { // after a password attempt
 			s.baseAccessLog.WithFields(logrus.Fields{
-				"remote_addr": c1.RemoteAddr().String(),
+				"remote_addr": clientConn.RemoteAddr().String(),
 				"username":    connmetadata.User(),
 			}).Warn("authentication failed")
 		}
@@ -128,7 +133,7 @@ func (s *ssh) newConn(ctx context.Context, c1 net.Conn) error {
 	accessLog := utillog.EnrichWithPath(s.baseAccessLog, portalDoc.Portal.ID)
 	accessLog = accessLog.WithFields(logrus.Fields{
 		"hostname":    fmt.Sprintf("master-%d", portalDoc.Portal.SSH.Master),
-		"remote_addr": c1.RemoteAddr().String(),
+		"remote_addr": clientConn.RemoteAddr().String(),
 		"username":    portalDoc.Portal.Username,
 	})
 
@@ -159,7 +164,7 @@ func (s *ssh) newConn(ctx context.Context, c1 net.Conn) error {
 	}
 
 	// Connect the second connection leg (portal->cluster).
-	conn2, newchannels2, requests2, err := cryptossh.NewClientConn(c2, "", &cryptossh.ClientConfig{
+	downstreamConn, downstreamNewChannels, downstreamRequests, err := cryptossh.NewClientConn(c2, "", &cryptossh.ClientConfig{
 		User: "core",
 		Auth: []cryptossh.AuthMethod{
 			cryptossh.PublicKeys(signer),
@@ -185,12 +190,12 @@ func (s *ssh) newConn(ctx context.Context, c1 net.Conn) error {
 	}
 
 	// Proxy channels and requests between the two connections.
-	return s.proxyConn(accessLog, keyring, conn1, conn2, newchannels1, newchannels2, requests1, requests2)
+	return s.proxyConn(ctx, accessLog, keyring, upstreamConn, downstreamConn, upstreamNewChannels, downstreamNewChannels, upstreamRequests, downstreamRequests)
 }
 
 // proxyConn handles incoming new channel and administrative requests.  It calls
 // newChannel to handle new channels, each on a new goroutine.
-func (s *ssh) proxyConn(accessLog *logrus.Entry, keyring agent.Agent, conn1, conn2 cryptossh.Conn, newchannels1, newchannels2 <-chan cryptossh.NewChannel, requests1, requests2 <-chan *cryptossh.Request) error {
+func (s *ssh) proxyConn(ctx context.Context, accessLog *logrus.Entry, keyring agent.Agent, upstreamConn, downstreamConn cryptossh.Conn, upstreamNewChannels, downstreamNewChannels <-chan cryptossh.NewChannel, upstreamRequests, downstreamRequests <-chan *cryptossh.Request) error {
 	timer := time.NewTimer(sshTimeout)
 	defer timer.Stop()
 
@@ -201,7 +206,7 @@ func (s *ssh) proxyConn(accessLog *logrus.Entry, keyring agent.Agent, conn1, con
 		case <-timer.C:
 			return nil
 
-		case nc := <-newchannels1:
+		case nc := <-upstreamNewChannels:
 			if nc == nil {
 				return nil
 			}
@@ -215,10 +220,10 @@ func (s *ssh) proxyConn(accessLog *logrus.Entry, keyring agent.Agent, conn1, con
 			}
 
 			go func() {
-				_ = s.newChannel(accessLog, nc, conn1, conn2, firstSession)
+				_ = s.newChannel(ctx, accessLog, nc, upstreamConn, downstreamConn, firstSession)
 			}()
 
-		case nc := <-newchannels2:
+		case nc := <-downstreamNewChannels:
 			if nc == nil {
 				return nil
 			}
@@ -230,23 +235,23 @@ func (s *ssh) proxyConn(accessLog *logrus.Entry, keyring agent.Agent, conn1, con
 				}()
 			} else {
 				go func() {
-					_ = s.newChannel(accessLog, nc, conn2, conn1, false)
+					_ = s.newChannel(ctx, accessLog, nc, downstreamConn, upstreamConn, false)
 				}()
 			}
 
-		case request := <-requests1:
+		case request := <-upstreamRequests:
 			if request == nil {
 				return nil
 			}
 
-			_ = s.proxyGlobalRequest(request, conn2)
+			_ = s.proxyGlobalRequest(request, downstreamConn)
 
-		case request := <-requests2:
+		case request := <-downstreamRequests:
 			if request == nil {
 				return nil
 			}
 
-			_ = s.proxyGlobalRequest(request, conn1)
+			_ = s.proxyGlobalRequest(request, upstreamConn)
 		}
 	}
 }
@@ -272,10 +277,10 @@ func (s *ssh) handleAgent(accessLog *logrus.Entry, nc cryptossh.NewChannel, keyr
 // newChannel handles an incoming request to create a new channel.  If the
 // channel creation is successful, it calls proxyChannel to proxy the channel
 // between SRE and cluster.
-func (s *ssh) newChannel(accessLog *logrus.Entry, nc cryptossh.NewChannel, conn1, conn2 cryptossh.Conn, firstSession bool) error {
+func (s *ssh) newChannel(ctx context.Context, accessLog *logrus.Entry, nc cryptossh.NewChannel, upstreamConn, downstreamConn cryptossh.Conn, firstSession bool) error {
 	defer recover.Panic(s.log)
 
-	ch2, rs2, err := conn2.OpenChannel(nc.ChannelType(), nc.ExtraData())
+	ch2, rs2, err := downstreamConn.OpenChannel(nc.ChannelType(), nc.ExtraData())
 	if err, ok := err.(*cryptossh.OpenChannelError); ok {
 		return nc.Reject(err.Reason, err.Message)
 	} else if err != nil {
@@ -298,6 +303,8 @@ func (s *ssh) newChannel(accessLog *logrus.Entry, nc cryptossh.NewChannel, conn1
 		if err != nil {
 			return err
 		}
+
+		go s.keepAliveConn(ctx, ch1)
 	}
 
 	return s.proxyChannel(ch1, ch2, rs1, rs2)
@@ -373,4 +380,24 @@ func (s *ssh) proxyChannel(ch1, ch2 cryptossh.Channel, rs1, rs2 <-chan *cryptoss
 
 	wg.Wait()
 	return nil
+}
+
+func (s *ssh) keepAliveConn(ctx context.Context, channel cryptossh.Channel) {
+	ticker := time.NewTicker(keepAliveInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			_, err := channel.SendRequest(keepAliveRequest, true, nil)
+			if err != nil {
+				s.log.Debug("connection failed keep-alive check, closing it. Error: %s", err)
+				// Connection is gone
+				channel.Close()
+				return
+			}
+		}
+	}
 }
