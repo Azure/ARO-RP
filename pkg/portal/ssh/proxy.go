@@ -10,13 +10,13 @@ import (
 	"io"
 	"net"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 	cryptossh "golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -329,57 +329,54 @@ func (s *ssh) proxyRequest(r *cryptossh.Request, ch cryptossh.Channel) error {
 }
 
 func (s *ssh) proxyChannel(ch1, ch2 cryptossh.Channel, rs1, rs2 <-chan *cryptossh.Request) error {
-	var wg sync.WaitGroup
-	wg.Add(4)
+	g := errgroup.Group{}
 
-	go func() {
+	g.Go(func() error {
+		defer recover.Panic(s.log)
+		defer ch1.CloseWrite() // ignore error
+		_, err := io.Copy(ch1, ch2)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	g.Go(func() error {
 		defer recover.Panic(s.log)
 
-		defer wg.Done()
-		defer func() {
-			_ = ch1.CloseWrite()
-		}()
-		_, _ = io.Copy(ch1, ch2)
-	}()
+		defer ch2.CloseWrite()
+		_, err := io.Copy(ch2, ch1)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 
-	go func() {
+	g.Go(func() error {
 		defer recover.Panic(s.log)
 
-		defer wg.Done()
-		defer func() {
-			_ = ch2.CloseWrite()
-		}()
-		_, _ = io.Copy(ch2, ch1)
-	}()
-
-	go func() {
-		defer recover.Panic(s.log)
-
-		defer wg.Done()
 		for r := range rs1 {
 			err := s.proxyRequest(r, ch2)
 			if err != nil {
 				break
 			}
 		}
-		_ = ch2.Close()
-	}()
+		return ch2.Close()
+	})
 
-	go func() {
+	g.Go(func() error {
 		defer recover.Panic(s.log)
 
-		defer wg.Done()
 		for r := range rs2 {
 			err := s.proxyRequest(r, ch1)
 			if err != nil {
 				break
 			}
 		}
-		_ = ch1.Close()
-	}()
+		return ch1.Close()
+	})
 
-	wg.Wait()
-	return nil
+	return g.Wait()
 }
 
 func (s *ssh) keepAliveConn(ctx context.Context, channel cryptossh.Channel) {
@@ -393,7 +390,7 @@ func (s *ssh) keepAliveConn(ctx context.Context, channel cryptossh.Channel) {
 		case <-ticker.C:
 			_, err := channel.SendRequest(keepAliveRequest, true, nil)
 			if err != nil {
-				s.log.Debug("connection failed keep-alive check, closing it. Error: %s", err)
+				s.log.Debugf("connection failed keep-alive check, closing it. Error: %s", err)
 				// Connection is gone
 				channel.Close()
 				return
