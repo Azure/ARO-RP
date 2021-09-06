@@ -78,6 +78,9 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	parameters.Parameters["azureCloudName"] = &arm.ParametersParameter{
 		Value: d.env.Environment().ActualCloudName,
 	}
+	parameters.Parameters["fluentbitImage"] = &arm.ParametersParameter{
+		Value: *d.config.Configuration.FluentbitImage,
+	}
 
 	err = d.deploy(ctx, template, parameters, d.config.RPResourceGroupName, deploymentName, rpVMSSPrefix+d.version)
 	if err != nil {

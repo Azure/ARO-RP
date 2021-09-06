@@ -59,6 +59,7 @@ type Configuration struct {
 	ExtraGatewayKeyvaultAccessPolicies []interface{} `json:"extraGatewayKeyvaultAccessPolicies,omitempty" value:"required"`
 	ExtraPortalKeyvaultAccessPolicies  []interface{} `json:"extraPortalKeyvaultAccessPolicies,omitempty" value:"required"`
 	ExtraServiceKeyvaultAccessPolicies []interface{} `json:"extraServiceKeyvaultAccessPolicies,omitempty" value:"required"`
+	FluentbitImage                     *string       `json:"fluentbitImage,omitempty" value:"required"`
 	FPClientID                         *string       `json:"fpClientId,omitempty" value:"required"`
 	FPServerCertCommonName             *string       `json:"fpServerCertCommonName,omitempty"`
 	FPServicePrincipalID               *string       `json:"fpServicePrincipalId,omitempty" value:"required"`
