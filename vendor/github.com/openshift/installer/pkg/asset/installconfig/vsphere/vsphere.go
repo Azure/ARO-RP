@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/vapi/rest"
 	"github.com/vmware/govmomi/vim25"
-	"gopkg.in/AlecAivazis/survey.v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/openshift/installer/pkg/types/vsphere"
@@ -102,9 +102,11 @@ func getClients() (*vCenterClient, error) {
 		{
 			Prompt: &survey.Input{
 				Message: "vCenter",
-				Help:    "The hostname of the vCenter to be used for installation.",
+				Help:    "The domain name or IP address of the vCenter to be used for installation.",
 			},
-			Validate: survey.Required,
+			Validate: survey.ComposeValidators(survey.Required, func(ans interface{}) error {
+				return validate.Host(ans.(string))
+			}),
 		},
 	}, &vcenter); err != nil {
 		return nil, errors.Wrap(err, "failed UserInput")

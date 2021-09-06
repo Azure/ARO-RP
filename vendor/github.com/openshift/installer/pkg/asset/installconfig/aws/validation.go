@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -61,11 +62,15 @@ func Validate(ctx context.Context, meta *Metadata, config *types.InstallConfig) 
 func validatePlatform(ctx context.Context, meta *Metadata, fldPath *field.Path, platform *awstypes.Platform, networking *types.Networking, publish types.PublishingStrategy) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	allErrs = append(allErrs, validateServiceEndpoints(fldPath.Child("serviceEndpoints"), platform.Region, platform.ServiceEndpoints)...)
+
+	// Fail fast when service endpoints are invalid to avoid long timeouts.
+	if len(allErrs) > 0 {
+		return allErrs
+	}
+
 	if len(platform.Subnets) > 0 {
 		allErrs = append(allErrs, validateSubnets(ctx, meta, fldPath.Child("subnets"), platform.Subnets, networking, publish)...)
-	}
-	if err := validateServiceEndpoints(fldPath.Child("serviceEndpoints"), platform.Region, platform.ServiceEndpoints); err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("serviceEndpoints"), platform.ServiceEndpoints, err.Error()))
 	}
 	if platform.DefaultMachinePlatform != nil {
 		allErrs = append(allErrs, validateMachinePool(ctx, meta, fldPath.Child("defaultMachinePlatform"), platform, platform.DefaultMachinePlatform, controlPlaneReq)...)
@@ -259,9 +264,32 @@ func validateDuplicateSubnetZones(fldPath *field.Path, subnets map[string]Subnet
 	return allErrs
 }
 
-func validateServiceEndpoints(fldPath *field.Path, region string, services []awstypes.ServiceEndpoint) error {
+func validateServiceEndpoints(fldPath *field.Path, region string, services []awstypes.ServiceEndpoint) field.ErrorList {
+	allErrs := field.ErrorList{}
+	// For each provided service endpoint, verify we can resolve and connect with net.Dial.
+	for id, service := range services {
+		// Ignore e2e.local from unit tests.
+		if service.URL == "e2e.local" {
+			continue
+		}
+		URL, err := url.Parse(service.URL)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(id).Child("url"), service.URL, err.Error()))
+			continue
+		}
+		port := URL.Port()
+		if port == "" {
+			port = "https"
+		}
+		conn, err := net.Dial("tcp", net.JoinHostPort(URL.Hostname(), port))
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(id).Child("url"), service.URL, err.Error()))
+			continue
+		}
+		conn.Close()
+	}
 	if _, partitionFound := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region); partitionFound {
-		return nil
+		return allErrs
 	}
 
 	resolver := newAWSResolver(region, services)
@@ -272,7 +300,11 @@ func validateServiceEndpoints(fldPath *field.Path, region string, services []aws
 			errs = append(errs, errors.Wrapf(err, "failed to find endpoint for service %q", service))
 		}
 	}
-	return utilerrors.NewAggregate(errs)
+	if err := utilerrors.NewAggregate(errs); err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, services, err.Error()))
+	}
+
+	return allErrs
 }
 
 var requiredServices = []string{
@@ -319,8 +351,15 @@ func validateExistingHostedZone(session *session.Session, ic *types.InstallConfi
 		allErrs = append(allErrs, field.Invalid(hostedZonePath, ic.AWS.HostedZone, "no VPC found"))
 	}
 
-	// validate that the hosted zone does not already have any record sets for the cluster domain
 	dottedClusterDomain := ic.ClusterDomain() + "."
+
+	// validate that the domain of the hosted zone is the cluster domain or a parent of the cluster domain
+	if !isHostedZoneDomainParentOfClusterDomain(zone.HostedZone, dottedClusterDomain) {
+		allErrs = append(allErrs, field.Invalid(hostedZonePath, ic.AWS.HostedZone,
+			fmt.Sprintf("hosted zone domain %q is not a parent of the cluster domain %q", *zone.HostedZone.Name, dottedClusterDomain)))
+	}
+
+	// validate that the hosted zone does not already have any record sets for the cluster domain
 	var problematicRecords []string
 	if err := client.ListResourceRecordSetsPages(
 		&route53.ListResourceRecordSetsInput{HostedZoneId: zone.HostedZone.Id},
@@ -367,4 +406,11 @@ func isHostedZoneAssociatedWithVPC(hostedZone *route53.GetHostedZoneOutput, vpcI
 		}
 	}
 	return false
+}
+
+func isHostedZoneDomainParentOfClusterDomain(hostedZone *route53.HostedZone, dottedClusterDomain string) bool {
+	if *hostedZone.Name == dottedClusterDomain {
+		return true
+	}
+	return strings.HasSuffix(dottedClusterDomain, "."+*hostedZone.Name)
 }

@@ -17,10 +17,11 @@ import (
 )
 
 type config struct {
-	LibvirtURI              string              `json:"libvirt_uri,omitempty"`
-	BootstrapProvisioningIP string              `json:"bootstrap_provisioning_ip,omitempty"`
-	BootstrapOSImage        string              `json:"bootstrap_os_image,omitempty"`
-	Bridges                 []map[string]string `json:"bridges"`
+	LibvirtURI       string              `json:"libvirt_uri,omitempty"`
+	IronicURI        string              `json:"ironic_uri,omitempty"`
+	InspectorURI     string              `json:"inspector_uri,omitempty"`
+	BootstrapOSImage string              `json:"bootstrap_os_image,omitempty"`
+	Bridges          []map[string]string `json:"bridges"`
 
 	IronicUsername string `json:"ironic_username"`
 	IronicPassword string `json:"ironic_password"`
@@ -34,7 +35,7 @@ type config struct {
 }
 
 // TFVars generates bare metal specific Terraform variables.
-func TFVars(libvirtURI, bootstrapProvisioningIP, bootstrapOSImage, externalBridge, externalMAC, provisioningBridge, provisioningMAC string, platformHosts []*baremetal.Host, image, ironicUsername, ironicPassword, ignition string) ([]byte, error) {
+func TFVars(libvirtURI, apiVIP, imageCacheIP, bootstrapOSImage, externalBridge, externalMAC, provisioningBridge, provisioningMAC string, platformHosts []*baremetal.Host, image, ironicUsername, ironicPassword, ignition string) ([]byte, error) {
 	bootstrapOSImage, err := cache.DownloadImageFile(bootstrapOSImage)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to use cached bootstrap libvirt image")
@@ -63,8 +64,8 @@ func TFVars(libvirtURI, bootstrapProvisioningIP, bootstrapOSImage, externalBridg
 			Password: host.BMC.Password,
 		}
 		driverInfo := accessDetails.DriverInfo(credentials)
-		driverInfo["deploy_kernel"] = fmt.Sprintf("http://%s/images/ironic-python-agent.kernel", net.JoinHostPort(bootstrapProvisioningIP, "80"))
-		driverInfo["deploy_ramdisk"] = fmt.Sprintf("http://%s/images/ironic-python-agent.initramfs", net.JoinHostPort(bootstrapProvisioningIP, "80"))
+		driverInfo["deploy_kernel"] = fmt.Sprintf("http://%s/images/ironic-python-agent.kernel", net.JoinHostPort(imageCacheIP, "80"))
+		driverInfo["deploy_ramdisk"] = fmt.Sprintf("http://%s/images/ironic-python-agent.initramfs", net.JoinHostPort(imageCacheIP, "80"))
 
 		// Host Details
 		hostMap := map[string]interface{}{
@@ -82,9 +83,14 @@ func TFVars(libvirtURI, bootstrapProvisioningIP, bootstrapOSImage, externalBridg
 		// it is not set. We use the capabilities field instead of
 		// instance_info to ensure the host is in the right mode for
 		// virtualmedia-based introspection.
-		bootMode := "boot_mode:uefi"
-		if host.BootMode == baremetal.Legacy {
+		var bootMode string
+		switch host.BootMode {
+		case baremetal.Legacy:
 			bootMode = "boot_mode:bios"
+		case baremetal.UEFISecureBoot:
+			bootMode = "boot_mode:uefi,secure_boot:true"
+		default:
+			bootMode = "boot_mode:uefi"
 		}
 
 		// Properties
@@ -124,12 +130,19 @@ func TFVars(libvirtURI, bootstrapProvisioningIP, bootstrapOSImage, externalBridg
 		// ref https://github.com/openshift/ironic-rhcos-downloader/pull/12
 		imageFilename := path.Base(strings.TrimSuffix(imageURL.String(), ".gz"))
 		imageFilename = strings.TrimSuffix(imageFilename, ".xz")
-		compressedImageFilename := strings.Replace(imageFilename, "openstack", "compressed", 1)
-		cacheImageURL := fmt.Sprintf("http://%s/images/%s/%s", net.JoinHostPort(bootstrapProvisioningIP, "80"), imageFilename, compressedImageFilename)
+		cachedImageFilename := "cached-" + imageFilename
+		cacheImageURL := fmt.Sprintf("http://%s/images/%s/%s", net.JoinHostPort(imageCacheIP, "80"), imageFilename, cachedImageFilename)
 		cacheChecksumURL := fmt.Sprintf("%s.md5sum", cacheImageURL)
 		instanceInfo := map[string]interface{}{
 			"image_source":   cacheImageURL,
 			"image_checksum": cacheChecksumURL,
+		}
+
+		// This is the only place where we need to set instance_info capabilities,
+		// if we need to add another capabilitie we need merge the values
+		// and ensure they are in the `key1:value1,key2:value2` format
+		if host.BootMode == baremetal.UEFISecureBoot {
+			instanceInfo["capabilities"] = "secure_boot:true"
 		}
 
 		hosts = append(hosts, hostMap)
@@ -157,17 +170,18 @@ func TFVars(libvirtURI, bootstrapProvisioningIP, bootstrapOSImage, externalBridg
 	}
 
 	cfg := &config{
-		LibvirtURI:              libvirtURI,
-		BootstrapProvisioningIP: bootstrapProvisioningIP,
-		BootstrapOSImage:        bootstrapOSImage,
-		IronicUsername:          ironicUsername,
-		IronicPassword:          ironicPassword,
-		Hosts:                   hosts,
-		Bridges:                 bridges,
-		Properties:              properties,
-		DriverInfos:             driverInfos,
-		RootDevices:             rootDevices,
-		InstanceInfos:           instanceInfos,
+		LibvirtURI:       libvirtURI,
+		IronicURI:        fmt.Sprintf("http://%s/v1", net.JoinHostPort(apiVIP, "6385")),
+		InspectorURI:     fmt.Sprintf("http://%s/v1", net.JoinHostPort(apiVIP, "5050")),
+		BootstrapOSImage: bootstrapOSImage,
+		IronicUsername:   ironicUsername,
+		IronicPassword:   ironicPassword,
+		Hosts:            hosts,
+		Bridges:          bridges,
+		Properties:       properties,
+		DriverInfos:      driverInfos,
+		RootDevices:      rootDevices,
+		InstanceInfos:    instanceInfos,
 	}
 
 	return json.MarshalIndent(cfg, "", "  ")

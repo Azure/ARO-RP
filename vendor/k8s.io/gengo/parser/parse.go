@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/build"
+	"go/constant"
 	"go/parser"
 	"go/token"
 	tc "go/types"
@@ -492,6 +493,19 @@ func (b *Builder) FindTypes() (types.Universe, error) {
 	return u, nil
 }
 
+// addCommentsToType takes any accumulated comment lines prior to obj and
+// attaches them to the type t.
+func (b *Builder) addCommentsToType(obj tc.Object, t *types.Type) {
+	c1 := b.priorCommentLines(obj.Pos(), 1)
+	// c1.Text() is safe if c1 is nil
+	t.CommentLines = splitLines(c1.Text())
+	if c1 == nil {
+		t.SecondClosestCommentLines = splitLines(b.priorCommentLines(obj.Pos(), 2).Text())
+	} else {
+		t.SecondClosestCommentLines = splitLines(b.priorCommentLines(c1.List[0].Slash, 2).Text())
+	}
+}
+
 // findTypesIn finalizes the package import and searches through the package
 // for types.
 func (b *Builder) findTypesIn(pkgPath importPathString, u *types.Universe) error {
@@ -535,35 +549,23 @@ func (b *Builder) findTypesIn(pkgPath importPathString, u *types.Universe) error
 		tn, ok := obj.(*tc.TypeName)
 		if ok {
 			t := b.walkType(*u, nil, tn.Type())
-			c1 := b.priorCommentLines(obj.Pos(), 1)
-			// c1.Text() is safe if c1 is nil
-			t.CommentLines = splitLines(c1.Text())
-			if c1 == nil {
-				t.SecondClosestCommentLines = splitLines(b.priorCommentLines(obj.Pos(), 2).Text())
-			} else {
-				t.SecondClosestCommentLines = splitLines(b.priorCommentLines(c1.List[0].Slash, 2).Text())
-			}
+			b.addCommentsToType(obj, t)
 		}
 		tf, ok := obj.(*tc.Func)
 		// We only care about functions, not concrete/abstract methods.
 		if ok && tf.Type() != nil && tf.Type().(*tc.Signature).Recv() == nil {
 			t := b.addFunction(*u, nil, tf)
-			c1 := b.priorCommentLines(obj.Pos(), 1)
-			// c1.Text() is safe if c1 is nil
-			t.CommentLines = splitLines(c1.Text())
-			if c1 == nil {
-				t.SecondClosestCommentLines = splitLines(b.priorCommentLines(obj.Pos(), 2).Text())
-			} else {
-				t.SecondClosestCommentLines = splitLines(b.priorCommentLines(c1.List[0].Slash, 2).Text())
-			}
+			b.addCommentsToType(obj, t)
 		}
 		tv, ok := obj.(*tc.Var)
 		if ok && !tv.IsField() {
-			b.addVariable(*u, nil, tv)
+			t := b.addVariable(*u, nil, tv)
+			b.addCommentsToType(obj, t)
 		}
 		tconst, ok := obj.(*tc.Const)
 		if ok {
-			b.addConstant(*u, nil, tconst)
+			t := b.addConstant(*u, nil, tconst)
+			b.addCommentsToType(obj, t)
 		}
 	}
 
@@ -848,6 +850,22 @@ func (b *Builder) addConstant(u types.Universe, useName *types.Name, in *tc.Cons
 	out := u.Constant(name)
 	out.Kind = types.DeclarationOf
 	out.Underlying = b.walkType(u, nil, in.Type())
+
+	var constval string
+
+	// For strings, we use `StringVal()` to get the un-truncated,
+	// un-quoted string. For other values, `.String()` is preferable to
+	// get something relatively human readable (especially since for
+	// floating point types, `ExactString()` will generate numeric
+	// expressions using `big.(*Float).Text()`.
+	switch in.Val().Kind() {
+	case constant.String:
+		constval = constant.StringVal(in.Val())
+	default:
+		constval = in.Val().String()
+	}
+
+	out.ConstValue = &constval
 	return out
 }
 

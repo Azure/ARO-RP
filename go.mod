@@ -28,7 +28,7 @@ require (
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/coreos/ignition/v2 v2.12.0
-	github.com/coreos/stream-metadata-go v0.1.1 // indirect
+	github.com/coreos/stream-metadata-go v0.1.1
 	github.com/coreos/vcontext v0.0.0-20210903173952-c22998be8e20 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/emicklei/go-restful v2.15.0+incompatible // indirect
@@ -51,7 +51,6 @@ require (
 	github.com/golangci/golangci-lint v1.32.2
 	github.com/google/btree v1.0.1 // indirect
 	github.com/google/go-cmp v0.5.6
-	github.com/google/renameio v1.0.1 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/gnostic v0.5.5
 	github.com/gophercloud/utils v0.0.0-20210823151123-bfd010397530 // indirect
@@ -249,6 +248,7 @@ replace (
 	github.com/Azure/go-autorest/autorest/adal => github.com/Azure/go-autorest/autorest/adal v0.9.14
 	github.com/BurntSushi/toml => github.com/BurntSushi/toml v0.3.1
 	github.com/containers/image => github.com/containers/image v3.0.2+incompatible
+	github.com/coreos/stream-metadata-go => github.com/coreos/stream-metadata-go v0.0.0-20210225230131-70edb9eb47b3
 	github.com/go-logr/logr => github.com/go-logr/logr v0.4.0
 	github.com/kubevirt/terraform-provider-kubevirt => github.com/nirarg/terraform-provider-kubevirt v0.0.0-20201222125919-101cee051ed3
 	github.com/metal3-io/baremetal-operator => github.com/openshift/baremetal-operator v0.0.0-20210706141527-5240e42f012a // Use OpenShift fork
