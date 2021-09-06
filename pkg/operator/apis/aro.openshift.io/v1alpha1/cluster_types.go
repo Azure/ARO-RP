@@ -52,6 +52,7 @@ type InternetCheckerSpec struct {
 type ClusterSpec struct {
 	// ResourceID is the Azure resourceId of the cluster
 	ResourceID               string              `json:"resourceId,omitempty"`
+	ClusterResourceGroupID   string              `json:"clusterResourceGroupId,omitempty"`
 	Domain                   string              `json:"domain,omitempty"`
 	ACRDomain                string              `json:"acrDomain,omitempty"`
 	AZEnvironment            string              `json:"azEnvironment,omitempty"`
@@ -72,7 +73,7 @@ type ClusterSpec struct {
 
 // FeaturesSpec defines ARO operator feature gates
 type FeaturesSpec struct {
-	ReconcileNSGs                  bool `json:"reconcileNSGs,omitempty"`
+	ReconcileSubnets               bool `json:"reconcileSubnets,omitempty"`
 	ReconcileAlertWebhook          bool `json:"reconcileAlertWebhook,omitempty"`
 	ReconcileDNSMasq               bool `json:"reconcileDNSMasq,omitempty"`
 	ReconcileGenevaLogging         bool `json:"reconcileGenevaLogging,omitempty"`

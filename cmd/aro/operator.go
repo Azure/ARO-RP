@@ -24,7 +24,6 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/alertwebhook"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/azurensg"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/banner"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
@@ -37,6 +36,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/rbac"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/routefix"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/workaround"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -166,10 +166,10 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			arocli, kubernetescli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller Node: %v", err)
 		}
-		if err = (azurensg.NewReconciler(
-			log.WithField("controller", controllers.AzureNSGControllerName),
+		if err = (subnets.NewReconciler(
+			log.WithField("controller", controllers.AzureSubnetsControllerName),
 			arocli, kubernetescli, maocli)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller AzureNSG: %v", err)
+			return fmt.Errorf("unable to create controller Subnets: %v", err)
 		}
 		if err = (machine.NewReconciler(
 			log.WithField("controller", controllers.MachineControllerName),

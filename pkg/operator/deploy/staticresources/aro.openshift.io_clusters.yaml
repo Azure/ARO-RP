@@ -50,6 +50,8 @@ spec:
                   content:
                     type: string
                 type: object
+              clusterResourceGroupId:
+                type: string
               domain:
                 type: string
               features:
@@ -67,13 +69,13 @@ spec:
                     type: boolean
                   reconcileMonitoringConfig:
                     type: boolean
-                  reconcileNSGs:
-                    type: boolean
                   reconcileNodeDrainer:
                     type: boolean
                   reconcilePullSecret:
                     type: boolean
                   reconcileRouteFix:
+                    type: boolean
+                  reconcileSubnets:
                     type: boolean
                   reconcileWorkaroundsController:
                     type: boolean
