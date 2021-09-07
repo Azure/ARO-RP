@@ -58,8 +58,7 @@
             "defaultValue": [
                 "eastasia",
                 "centralindia",
-                "koreacentral",
-                "southcentralus"
+                "koreacentral"
             ]
         },
         "rpImage": {
