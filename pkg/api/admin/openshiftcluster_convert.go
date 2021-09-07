@@ -29,9 +29,10 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 			CreatedBy:               oc.Properties.CreatedBy,
 			ProvisionedBy:           oc.Properties.ProvisionedBy,
 			ClusterProfile: ClusterProfile{
-				Domain:          oc.Properties.ClusterProfile.Domain,
-				Version:         oc.Properties.ClusterProfile.Version,
-				ResourceGroupID: oc.Properties.ClusterProfile.ResourceGroupID,
+				Domain:               oc.Properties.ClusterProfile.Domain,
+				Version:              oc.Properties.ClusterProfile.Version,
+				ResourceGroupID:      oc.Properties.ClusterProfile.ResourceGroupID,
+				FipsValidatedModules: FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules),
 			},
 			FeatureProfile: FeatureProfile{
 				GatewayEnabled: oc.Properties.FeatureProfile.GatewayEnabled,
@@ -171,6 +172,7 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.CreatedBy = oc.Properties.CreatedBy
 	out.Properties.ProvisionedBy = oc.Properties.ProvisionedBy
 	out.Properties.ClusterProfile.Domain = oc.Properties.ClusterProfile.Domain
+	out.Properties.ClusterProfile.FipsValidatedModules = api.FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules)
 	out.Properties.ClusterProfile.Version = oc.Properties.ClusterProfile.Version
 	out.Properties.ClusterProfile.ResourceGroupID = oc.Properties.ClusterProfile.ResourceGroupID
 	out.Properties.FeatureProfile.GatewayEnabled = oc.Properties.FeatureProfile.GatewayEnabled
