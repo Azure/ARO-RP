@@ -90,7 +90,14 @@
             "value": [
                 "eastasia",
                 "centralindia",
-                "koreacentral"
+                "koreacentral",
+                "southcentralus",
+                "canadacentral",
+                "germanywestcentral",
+                "norwayeast",
+                "switzerlandnorth",
+                "brazilsouth",
+                "southafricanorth"
             ]
         },
         "portalAccessGroupIds": {
