@@ -101,7 +101,8 @@
             "defaultValue": [
                 "eastasia",
                 "centralindia",
-                "koreacentral"
+                "koreacentral",
+                "southcentralus"
             ]
         },
         "portalAccessGroupIds": {
