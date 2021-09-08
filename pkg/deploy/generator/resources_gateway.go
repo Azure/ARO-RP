@@ -319,9 +319,11 @@ EOF
 export AZURE_CLOUD_NAME=$AZURECLOUDNAME
 az login -i --allow-no-subscriptions
 
-# Running "az account set" is not working in the pipeline.
-# we are running VM ScaleSet in a named ResourceGroup, it should
-# be OK to to remove this set subscription
+# The managed identity that the VM runs as only has a single roleassignment.
+# This role assignment is ACRPull which is not necessarily present in the
+# subscription we're deploying into.  If the identity does not have any
+# role assignments scoped on the subscription we're deploying into, it will
+# not show on az login -i, which is why the below line is commented.
 # az account set -s "$SUBSCRIPTIONID"
 
 systemctl start docker.service
