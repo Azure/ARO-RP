@@ -1,13 +1,13 @@
 {
     "kind": "APIResourceList",
     "apiVersion": "v1",
-    "groupVersion": "apiregistration.k8s.io/v1beta1",
+    "groupVersion": "apiserver.openshift.io/v1",
     "resources": [
         {
-            "name": "apiservices",
-            "singularName": "",
+            "name": "apirequestcounts",
+            "singularName": "apirequestcount",
             "namespaced": false,
-            "kind": "APIService",
+            "kind": "APIRequestCount",
             "verbs": [
                 "create",
                 "delete",
@@ -18,16 +18,13 @@
                 "update",
                 "watch"
             ],
-            "categories": [
-                "api-extensions"
-            ],
-            "storageVersionHash": "InPBPD7+PqM="
+            "storageVersionHash": "S/jlubifV1Y="
         },
         {
-            "name": "apiservices/status",
+            "name": "apirequestcounts/status",
             "singularName": "",
             "namespaced": false,
-            "kind": "APIService",
+            "kind": "APIRequestCount",
             "verbs": [
                 "get",
                 "patch",

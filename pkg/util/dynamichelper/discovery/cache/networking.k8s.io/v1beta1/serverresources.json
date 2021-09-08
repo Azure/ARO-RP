@@ -18,7 +18,7 @@
                 "update",
                 "watch"
             ],
-            "storageVersionHash": "6upRfBq0FOI="
+            "storageVersionHash": "l/iqIbDgFyQ="
         },
         {
             "name": "ingresses",
@@ -38,7 +38,7 @@
             "shortNames": [
                 "ing"
             ],
-            "storageVersionHash": "ZOAfGflaKd0="
+            "storageVersionHash": "39NQlfNR+bo="
         },
         {
             "name": "ingresses/status",
