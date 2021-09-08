@@ -18,7 +18,13 @@
                 "update",
                 "watch"
             ],
-            "storageVersionHash": "FTUxZd413Oo="
+            "shortNames": [
+                "condition"
+            ],
+            "categories": [
+                "olm"
+            ],
+            "storageVersionHash": "Cil3d/t/Kpc="
         },
         {
             "name": "operatorconditions/status",

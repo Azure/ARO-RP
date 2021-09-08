@@ -1,13 +1,13 @@
 {
     "kind": "APIResourceList",
     "apiVersion": "v1",
-    "groupVersion": "apiregistration.k8s.io/v1beta1",
+    "groupVersion": "policy/v1",
     "resources": [
         {
-            "name": "apiservices",
+            "name": "poddisruptionbudgets",
             "singularName": "",
-            "namespaced": false,
-            "kind": "APIService",
+            "namespaced": true,
+            "kind": "PodDisruptionBudget",
             "verbs": [
                 "create",
                 "delete",
@@ -18,16 +18,16 @@
                 "update",
                 "watch"
             ],
-            "categories": [
-                "api-extensions"
+            "shortNames": [
+                "pdb"
             ],
-            "storageVersionHash": "InPBPD7+PqM="
+            "storageVersionHash": "6BGBu0kpHtk="
         },
         {
-            "name": "apiservices/status",
+            "name": "poddisruptionbudgets/status",
             "singularName": "",
-            "namespaced": false,
-            "kind": "APIService",
+            "namespaced": true,
+            "kind": "PodDisruptionBudget",
             "verbs": [
                 "get",
                 "patch",

@@ -72,6 +72,17 @@
             "storageVersionHash": "8NZGiGeCmFo="
         },
         {
+            "name": "tokenreviews",
+            "singularName": "",
+            "namespaced": false,
+            "group": "authentication.k8s.io",
+            "version": "v1",
+            "kind": "TokenReview",
+            "verbs": [
+                "create"
+            ]
+        },
+        {
             "name": "useroauthaccesstokens",
             "singularName": "",
             "namespaced": false,

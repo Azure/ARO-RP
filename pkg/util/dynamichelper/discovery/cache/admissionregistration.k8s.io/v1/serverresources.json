@@ -21,7 +21,7 @@
             "categories": [
                 "api-extensions"
             ],
-            "storageVersionHash": "yxW1cpLtfp8="
+            "storageVersionHash": "Sqi0GUgDaX0="
         },
         {
             "name": "validatingwebhookconfigurations",
@@ -41,7 +41,7 @@
             "categories": [
                 "api-extensions"
             ],
-            "storageVersionHash": "P9NhrezfnWE="
+            "storageVersionHash": "B0wHjQmsGNk="
         }
     ]
 }
