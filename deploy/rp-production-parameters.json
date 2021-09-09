@@ -94,7 +94,13 @@
                 "eastasia",
                 "centralindia",
                 "koreacentral",
-                "southcentralus"
+                "southcentralus",
+                "canadacentral",
+                "germanywestcentral",
+                "norwayeast",
+                "switzerlandnorth",
+                "brazilsouth",
+                "southafricanorth"
             ]
         },
         "portalAccessGroupIds": {
