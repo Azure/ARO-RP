@@ -50,10 +50,10 @@ generate:
 
 image-aro: aro e2e.test
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
+	docker build --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
 
 image-aro-multistage:
-	docker build --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) .
+	docker build --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) .
 
 image-autorest:
 	docker build --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" \

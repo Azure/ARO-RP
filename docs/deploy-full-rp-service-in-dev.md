@@ -42,6 +42,7 @@
 
 1. Run `make deploy`
     > __NOTE:__ This will fail on the first attempt to run due to certificate and container mirroring requirements.
+    > __NOTE:__ If you re-using old name, you might run into soft-delete of the keyvaults. `az keyvault recover --name` to fix this.
 
 <!-- TODO: this is almost duplicated elsewhere.  Would be nice to move to common area -->
 1. Update the certificates in keyvault
@@ -99,7 +100,7 @@
     1. Setup mirroring environment variables
         ```bash
         export DST_ACR_NAME=${USER}aro
-        export SRC_AUTH_QUAY=FILL_IN # Get quay auth https://cloud.redhat.com/openshift/create/local -> Download Pull Secret
+        export SRC_AUTH_QUAY=FILL_IN # Get quay auth https://cloud.redhat.com/openshift/create/local -> Download Pull Secret. Use base64 value from quay.io part
         export SRC_AUTH_REDHAT=$(echo $USER_PULL_SECRET | jq -r '.auths."registry.redhat.io".auth')
         export DST_AUTH=$(echo -n '00000000-0000-0000-0000-000000000000:'$(az acr login -n ${DST_ACR_NAME} --expose-token | jq -r .accessToken) | base64 -w0)
 
