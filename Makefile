@@ -4,6 +4,7 @@ ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
 FLUENTBIT_VERSION = 1.7.8-1
+FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)
 AUTOREST_VERSION = 3.3.2
 AUTOREST_IMAGE = "quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}"
 
@@ -56,12 +57,12 @@ image-aro-multistage:
 	docker build --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) .
 
 image-autorest:
-	docker build --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" \
+	docker build --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" \
 	  -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
 
 image-fluentbit:
-	docker build --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) \
-	  -f Dockerfile.fluentbit -t ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION) .
+	docker build --network=host --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) \
+	  -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
 
 image-proxy: proxy
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
@@ -85,7 +86,7 @@ publish-image-autorest: image-autorest
 	docker push ${AUTOREST_IMAGE}
 
 publish-image-fluentbit: image-fluentbit
-	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)
+	docker push $(FLUENTBIT_IMAGE)
 
 publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest

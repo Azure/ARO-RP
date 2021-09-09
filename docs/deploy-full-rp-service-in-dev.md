@@ -34,6 +34,7 @@
     export DATABASE_NAME=ARO
     export KEYVAULT_PREFIX=$USER-aro-$LOCATION
     export ARO_IMAGE=${USER}aro.azurecr.io/aro:$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty)
+    export FLUENTBIT_IMAGE=${USER}aro.azurecr.io/fluentbit:latest
     ```
 
     ```bash
