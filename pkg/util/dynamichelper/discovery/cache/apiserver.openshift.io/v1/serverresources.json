@@ -1,0 +1,35 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "apiserver.openshift.io/v1",
+    "resources": [
+        {
+            "name": "apirequestcounts",
+            "singularName": "apirequestcount",
+            "namespaced": false,
+            "kind": "APIRequestCount",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "S/jlubifV1Y="
+        },
+        {
+            "name": "apirequestcounts/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "APIRequestCount",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

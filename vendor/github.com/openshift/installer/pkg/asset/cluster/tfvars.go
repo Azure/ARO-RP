@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	igntypes "github.com/coreos/ignition/v2/config/v3_2/types"
+	coreosarch "github.com/coreos/stream-metadata-go/arch"
 	gcpprovider "github.com/openshift/cluster-api-provider-gcp/pkg/apis/gcpprovider/v1beta1"
 	kubevirtprovider "github.com/openshift/cluster-api-provider-kubevirt/pkg/apis/kubevirtprovider/v1alpha1"
 	kubevirtutils "github.com/openshift/cluster-api-provider-kubevirt/pkg/utils"
@@ -345,6 +346,9 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			masterConfigs[i] = m.Spec.ProviderSpec.Value.Object.(*gcpprovider.GCPMachineProviderSpec)
 		}
 		workers, err := workersAsset.MachineSets()
+		if err != nil {
+			return err
+		}
 		workerConfigs := make([]*gcpprovider.GCPMachineProviderSpec, len(workers))
 		for i, w := range workers {
 			workerConfigs[i] = w.Spec.Template.Spec.ProviderSpec.Value.Object.(*gcpprovider.GCPMachineProviderSpec)
@@ -358,16 +362,30 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 		}
 		preexistingnetwork := installConfig.Config.GCP.Network != ""
 
-		imageRaw, err := rhcospkg.GCPRaw(ctx, installConfig.Config.ControlPlane.Architecture)
+		archName := coreosarch.RpmArch(string(installConfig.Config.ControlPlane.Architecture))
+		st, err := rhcospkg.FetchCoreOSBuild(ctx)
 		if err != nil {
-			return errors.Wrap(err, "failed to find Raw GCP image URL")
+			return err
 		}
+		streamArch, err := st.GetArchitecture(archName)
+		if err != nil {
+			return err
+		}
+
+		img := streamArch.Images.Gcp
+		if img == nil {
+			return fmt.Errorf("%s: No GCP build found", st.FormatPrefix(archName))
+		}
+		// For backwards compatibility, we generate this URL to the image (only applies to RHCOS, not FCOS/OKD)
+		// right now.  It will only be used if nested virt or other licenses are enabled, which we
+		// really should deprecate and remove - xref https://github.com/openshift/installer/pull/4696
+		imageURL := fmt.Sprintf("https://storage.googleapis.com/rhcos/rhcos/%s.tar.gz", img.Name)
 		data, err := gcptfvars.TFVars(
 			gcptfvars.TFVarsSources{
 				Auth:               auth,
 				MasterConfigs:      masterConfigs,
 				WorkerConfigs:      workerConfigs,
-				ImageURI:           imageRaw,
+				ImageURI:           imageURL,
 				ImageLicenses:      installConfig.Config.GCP.Licenses,
 				PublicZoneName:     publicZoneName,
 				PublishStrategy:    installConfig.Config.Publish,
@@ -386,13 +404,25 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 		if err != nil {
 			return err
 		}
+		// convert options list to a list of mappings which can be consumed by terraform
+		var dnsmasqoptions []map[string]string
+		for _, option := range installConfig.Config.Platform.Libvirt.Network.DnsmasqOptions {
+			dnsmasqoptions = append(dnsmasqoptions,
+				map[string]string{
+					"option_name":  option.Name,
+					"option_value": option.Value})
+		}
+
 		data, err = libvirttfvars.TFVars(
-			masters[0].Spec.ProviderSpec.Value.Object.(*libvirtprovider.LibvirtMachineProviderConfig),
-			string(*rhcosImage),
-			&installConfig.Config.Networking.MachineNetwork[0].CIDR.IPNet,
-			installConfig.Config.Platform.Libvirt.Network.IfName,
-			masterCount,
-			installConfig.Config.ControlPlane.Architecture,
+			libvirttfvars.TFVarsSources{
+				MasterConfig:   masters[0].Spec.ProviderSpec.Value.Object.(*libvirtprovider.LibvirtMachineProviderConfig),
+				OsImage:        string(*rhcosImage),
+				MachineCIDR:    &installConfig.Config.Networking.MachineNetwork[0].CIDR.IPNet,
+				Bridge:         installConfig.Config.Platform.Libvirt.Network.IfName,
+				MasterCount:    masterCount,
+				Architecture:   installConfig.Config.ControlPlane.Architecture,
+				DnsmasqOptions: dnsmasqoptions,
+			},
 		)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
@@ -440,6 +470,7 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			caCert,
 			bootstrapIgn,
 			installConfig.Config.ControlPlane.Platform.OpenStack,
+			installConfig.Config.OpenStack.DefaultMachinePlatform,
 			installConfig.Config.Platform.OpenStack.MachinesSubnet,
 			installConfig.Config.Proxy,
 		)
@@ -451,14 +482,17 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			Data:     data,
 		})
 	case baremetal.Name:
-		provisioningIP := installConfig.Config.Platform.BareMetal.BootstrapProvisioningIP
-		if installConfig.Config.Platform.BareMetal.ProvisioningNetwork == baremetal.DisabledProvisioningNetwork && provisioningIP == "" {
-			provisioningIP = installConfig.Config.Platform.BareMetal.APIVIP
+		var imageCacheIP string
+		if installConfig.Config.Platform.BareMetal.ProvisioningNetwork == baremetal.DisabledProvisioningNetwork {
+			imageCacheIP = installConfig.Config.Platform.BareMetal.APIVIP
+		} else {
+			imageCacheIP = installConfig.Config.Platform.BareMetal.BootstrapProvisioningIP
 		}
 
 		data, err = baremetaltfvars.TFVars(
 			installConfig.Config.Platform.BareMetal.LibvirtURI,
-			provisioningIP,
+			installConfig.Config.Platform.BareMetal.APIVIP,
+			imageCacheIP,
 			string(*rhcosBootstrapImage),
 			installConfig.Config.Platform.BareMetal.ExternalBridge,
 			installConfig.Config.Platform.BareMetal.ExternalMACAddress,
@@ -513,6 +547,8 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 				Username: config.Username,
 				Password: config.Password,
 				Cafile:   config.CAFile,
+				Cabundle: config.CABundle,
+				Insecure: config.Insecure,
 			},
 			installConfig.Config.Platform.Ovirt.ClusterID,
 			installConfig.Config.Platform.Ovirt.StorageDomainID,
@@ -521,6 +557,7 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			string(*rhcosImage),
 			clusterID.InfraID,
 			masters[0].Spec.ProviderSpec.Value.Object.(*ovirtprovider.OvirtMachineProviderSpec),
+			installConfig.Config.Platform.Ovirt.AffinityGroups,
 		)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)

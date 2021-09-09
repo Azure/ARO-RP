@@ -4,6 +4,7 @@ package k8s
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"net/url"
 	"time"
 
@@ -31,14 +32,14 @@ func NewResult(m metrics.Interface) kmetrics.ResultMetric {
 	}
 }
 
-func (t *tracer) Observe(verb string, url url.URL, latency time.Duration) {
+func (t *tracer) Observe(ctx context.Context, verb string, url url.URL, latency time.Duration) {
 	t.m.EmitGauge("client.k8s.duration", latency.Milliseconds(), map[string]string{
 		"path": url.Path,
 		"verb": verb,
 	})
 }
 
-func (t *tracer) Increment(code string, verb string, host string) {
+func (t *tracer) Increment(ctx context.Context, code string, verb string, host string) {
 	t.m.EmitGauge("client.k8s.count", 1, map[string]string{
 		"verb": verb,
 		"code": code,

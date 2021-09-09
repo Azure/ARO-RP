@@ -18,6 +18,9 @@
                 "update",
                 "watch"
             ],
+            "categories": [
+                "prometheus-operator"
+            ],
             "storageVersionHash": "95DNJ6wsUCg="
         }
     ]

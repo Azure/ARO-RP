@@ -115,6 +115,17 @@ func ClusterName1035(v string) error {
 	return ClusterName(v)
 }
 
+// GCPClusterName checks if the provided cluster name has words similar to the word 'google'
+// since resources with that name are not allowed in GCP.
+func GCPClusterName(v string) error {
+	reStartsWith := regexp.MustCompile("^goog")
+	reContains := regexp.MustCompile(".*g[o0]{2}gle.*")
+	if reStartsWith.MatchString(v) || reContains.MatchString(v) {
+		return errors.New("cluster name must not start with \"goog\" or contain variations of \"google\"")
+	}
+	return nil
+}
+
 // ClusterNameMaxLength validates if the string provided length is
 // greater than maxlen argument.
 func ClusterNameMaxLength(v string, maxlen int) error {
@@ -237,4 +248,17 @@ func MAC(addr string) error {
 func UUID(val string) error {
 	_, err := uuid.Parse(val)
 	return err
+}
+
+// Host validates that a given string is a valid URI host.
+func Host(v string) error {
+	proxyIP := net.ParseIP(v)
+	if proxyIP != nil {
+		return nil
+	}
+	re := regexp.MustCompile("^[a-z]")
+	if !re.MatchString(v) {
+		return errors.New("domain name must begin with a lower-case letter")
+	}
+	return validateSubdomain(v)
 }

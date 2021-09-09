@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/metrics"
@@ -34,11 +35,11 @@ func NewMetrics(log *logrus.Entry, m metrics.Interface) (Runnable, error) {
 		r:   prometheus.NewRegistry(),
 	}
 
-	if err := g.r.Register(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{})); err != nil {
+	if err := g.r.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{})); err != nil {
 		return nil, err
 	}
 
-	if err := g.r.Register(prometheus.NewGoCollector()); err != nil {
+	if err := g.r.Register(collectors.NewGoCollector()); err != nil {
 		return nil, err
 	}
 

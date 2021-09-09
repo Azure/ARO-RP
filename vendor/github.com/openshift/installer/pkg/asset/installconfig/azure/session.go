@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/Azure/go-autorest/autorest"
 	azureenv "github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/AlecAivazis/survey.v1"
 
 	"github.com/openshift/installer/pkg/types/azure"
 )
@@ -224,6 +224,10 @@ func askForCredentials() (*Credentials, error) {
 
 func saveCredentials(credentials Credentials, filePath string) error {
 	jsonCreds, err := json.Marshal(credentials)
+	if err != nil {
+		return err
+	}
+
 	err = os.MkdirAll(filepath.Dir(filePath), 0700)
 	if err != nil {
 		return err

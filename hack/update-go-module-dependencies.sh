@@ -35,7 +35,7 @@ for x in vendor/github.com/openshift/*; do
 
 		# Inconsistent imports: some of our dependencies import it as github.com/metal3-io/cluster-api-provider-baremetal
 		# but in some places directly from the openshift fork.
-		# Replace github.com/metal3-io/cluster-api-provider-baremetal with an openshift fork below in this script.
+		# Replace github.com/metal3-io/cluster-api-provider-baremetal with an openshift fork in go.mod
 		vendor/github.com/openshift/cluster-api-provider-baremetal)
 			;;
 
@@ -51,20 +51,16 @@ for x in vendor/github.com/openshift/*; do
 			;;
 
 		*)
-			go mod edit -replace ${x##vendor/}=$(go list -mod=mod -m ${x##vendor/}@release-4.7 | sed -e 's/ /@/')
+			go mod edit -replace ${x##vendor/}=$(go list -mod=mod -m ${x##vendor/}@release-4.8 | sed -e 's/ /@/')
 			;;
 	esac
 done
 
 for x in aws azure openstack; do
-	go mod edit -replace sigs.k8s.io/cluster-api-provider-$x=$(go list -mod=mod -m github.com/openshift/cluster-api-provider-$x@release-4.7 | sed -e 's/ /@/')
+	go mod edit -replace sigs.k8s.io/cluster-api-provider-$x=$(go list -mod=mod -m github.com/openshift/cluster-api-provider-$x@release-4.8 | sed -e 's/ /@/')
 done
 
-go mod edit -replace github.com/metal3-io/cluster-api-provider-baremetal=$(go list -mod=mod -m github.com/openshift/cluster-api-provider-baremetal@release-4.7 | sed -e 's/ /@/')
-# We use release-4.8 here so we can use new version of sigs.k8s.io/controller-runtime sooner.
-go mod edit -replace github.com/metal3-io/baremetal-operator=$(go list -mod=mod -m github.com/openshift/baremetal-operator@release-4.8 | sed -e 's/ /@/')
-
-go mod edit -replace github.com/openshift/installer=$(go list -mod=mod -m github.com/mjudeikis/installer@release-4.7-azure | sed -e 's/ /@/')
+go mod edit -replace github.com/openshift/installer=$(go list -mod=mod -m github.com/mjudeikis/installer@release-4.8-azure | sed -e 's/ /@/')
 
 go get -u ./...
 

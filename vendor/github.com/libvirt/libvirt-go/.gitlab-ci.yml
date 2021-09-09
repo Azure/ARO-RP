@@ -80,21 +80,15 @@ go-fmt:
     expire_in: 1 week
     when: on_failure
 
-centos-7-container:
-  <<: *container_job_definition
-  variables:
-    NAME: centos-7
-
 centos-8-container:
   <<: *container_job_definition
   variables:
     NAME: centos-8
 
-centos-stream-container:
+centos-stream-8-container:
   <<: *container_job_definition
   variables:
-    NAME: centos-stream
-    GO111MODULES: auto
+    NAME: centos-stream-8
 
 debian-10-container:
   <<: *container_job_definition
@@ -106,26 +100,30 @@ debian-sid-container:
   variables:
     NAME: debian-sid
 
-fedora-32-container:
-  <<: *container_job_definition
-  variables:
-    NAME: fedora-32
-
 fedora-33-container:
   <<: *container_job_definition
   variables:
     NAME: fedora-33
 
+fedora-34-container:
+  <<: *container_job_definition
+  variables:
+    NAME: fedora-34
+
 fedora-rawhide-container:
   <<: *container_job_definition
   variables:
     NAME: fedora-rawhide
-    GO111MODULES: auto
 
-opensuse-151-container:
+opensuse-leap-152-container:
   <<: *container_job_definition
   variables:
-    NAME: opensuse-151
+    NAME: opensuse-leap-152
+
+opensuse-tumbleweed-container:
+  <<: *container_job_definition
+  variables:
+    NAME: opensuse-tumbleweed
 
 ubuntu-1804-container:
   <<: *container_job_definition
@@ -149,20 +147,15 @@ centos-8-git-build:
       - build
 
 
-centos-7-dist-build:
-  <<: *dist_build_job_definition
-  variables:
-    NAME: centos-7
-
 centos-8-dist-build:
   <<: *dist_build_job_definition
   variables:
     NAME: centos-8
 
-centos-stream-dist-build:
+centos-stream-8-dist-build:
   <<: *dist_build_job_definition
   variables:
-    NAME: centos-stream
+    NAME: centos-stream-8
     GO111MODULE: auto
 
 debian-10-dist-build:
@@ -175,15 +168,16 @@ debian-sid-dist-build:
   variables:
     NAME: debian-sid
 
-fedora-32-dist-build:
-  <<: *dist_build_job_definition
-  variables:
-    NAME: fedora-32
-
 fedora-33-dist-build:
   <<: *dist_build_job_definition
   variables:
     NAME: fedora-33
+
+fedora-34-dist-build:
+  <<: *dist_build_job_definition
+  variables:
+    NAME: fedora-34
+    GO111MODULE: auto
 
 fedora-rawhide-dist-build:
   <<: *dist_build_job_definition
@@ -191,10 +185,17 @@ fedora-rawhide-dist-build:
     NAME: fedora-rawhide
     GO111MODULE: auto
 
-opensuse-151-dist-build:
+opensuse-leap-152-dist-build:
   <<: *dist_build_job_definition
   variables:
-    NAME: opensuse-151
+    NAME: opensuse-leap-152
+    GO111MODULE: auto
+
+opensuse-tumbleweed-dist-build:
+  <<: *dist_build_job_definition
+  variables:
+    NAME: opensuse-tumbleweed
+    GO111MODULE: auto
 
 ubuntu-1804-dist-build:
   <<: *dist_build_job_definition

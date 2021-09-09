@@ -142,6 +142,10 @@ type InstallConfig struct {
 	// GCP: "Mint", "Passthrough", "Manual"
 	// +optional
 	CredentialsMode CredentialsMode `json:"credentialsMode,omitempty"`
+
+	// BootstrapInPlace is the configuration for installing a single node
+	// with bootstrap in place installation.
+	BootstrapInPlace *BootstrapInPlace `json:"bootstrapInPlace,omitempty"`
 }
 
 // ClusterDomain returns the DNS domain that all records for a cluster must belong to.
@@ -342,6 +346,12 @@ const (
 	// cloud credentials for each CredentialsRequest.
 	PassthroughCredentialsMode CredentialsMode = "Passthrough"
 )
+
+// BootstrapInPlace defines the configuration for bootstrap-in-place installation
+type BootstrapInPlace struct {
+	// InstallationDisk is the target disk drive for coreos-installer
+	InstallationDisk string `json:"installationDisk"`
+}
 
 // WorkerMachinePool retrieves the worker MachinePool from InstallConfig.Compute
 func (c *InstallConfig) WorkerMachinePool() *MachinePool {

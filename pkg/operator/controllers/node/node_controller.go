@@ -107,7 +107,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		GracePeriodSeconds:  -1,
 		IgnoreAllDaemonSets: true,
 		Timeout:             60 * time.Second,
-		DeleteLocalData:     true,
+		DeleteEmptyDirData:  true,
 		DisableEviction:     true,
 		OnPodDeletedOrEvicted: func(pod *corev1.Pod, usingEviction bool) {
 			r.log.Printf("deleted pod %s/%s", pod.Namespace, pod.Name)
