@@ -1,4 +1,4 @@
-package subnets
+package storageaccounts
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
@@ -24,23 +25,21 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
+	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
-)
-
-const (
-	CONFIG_NAMESPACE string = "aro.azuresubnets"
-	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
 )
 
 // Reconciler is the controller struct
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli        aroclient.Interface
-	kubernetescli kubernetes.Interface
-	maocli        maoclient.Interface
+	arocli              aroclient.Interface
+	kubernetescli       kubernetes.Interface
+	maocli              maoclient.Interface
+	imageregistryclient imageregistryclient.Interface
 }
 
 // reconcileManager is instance of manager instanciated per request
@@ -50,29 +49,31 @@ type reconcileManager struct {
 	instance       *arov1alpha1.Cluster
 	subscriptionID string
 
-	subnets     subnet.Manager
-	kubeSubnets subnet.KubeManager
+	imageregistryclient imageregistryclient.Interface
+	kubeSubnets         subnet.KubeManager
+	storage             storage.AccountsClient
 }
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli maoclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, maocli maoclient.Interface, kubernetescli kubernetes.Interface, imageregistryclient imageregistryclient.Interface) *Reconciler {
 	return &Reconciler{
-		log:           log,
-		arocli:        arocli,
-		kubernetescli: kubernetescli,
-		maocli:        maocli,
+		log:                 log,
+		arocli:              arocli,
+		kubernetescli:       kubernetescli,
+		imageregistryclient: imageregistryclient,
+		maocli:              maocli,
 	}
 }
 
-//Reconcile fixes the Network Security Groups
+// Reconcile makes sure firewalling is set on storage accounts as per user subnets
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
-		// controller is disabled
+	if !instance.Spec.Features.ReconcileStorageAccounts {
+		// reconciling storageaccounts is disabled
 		return reconcile.Result{}, nil
 	}
 
@@ -81,14 +82,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-
+	// Grab azure-credentials from secret
+	credentials, err := clusterauthorizer.AzCredentials(ctx, r.kubernetescli)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 	resource, err := azure.ParseResourceID(instance.Spec.ResourceID)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-
+	// create service principal token from azure-credentials
+	token, err := aad.GetToken(ctx, r.log, string(credentials.ClientID), string(credentials.ClientSecret), string(credentials.TenantID), azEnv.ActiveDirectoryEndpoint, azEnv.ResourceManagerEndpoint)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 	// create refreshable authorizer from token
-	authorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(ctx, r.log, &azEnv, r.kubernetescli)
+	authorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(token)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -97,33 +106,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		log:            r.log,
 		instance:       instance,
 		subscriptionID: resource.SubscriptionID,
-		kubeSubnets:    subnet.NewKubeManager(r.maocli, resource.SubscriptionID),
-		subnets:        subnet.NewManager(&azEnv, resource.SubscriptionID, authorizer),
+
+		imageregistryclient: r.imageregistryclient,
+		kubeSubnets:         subnet.NewKubeManager(r.maocli, resource.SubscriptionID),
+		storage:             storage.NewAccountsClient(&azEnv, resource.SubscriptionID, authorizer),
 	}
 
-	return reconcile.Result{}, manager.reconcileSubnets(ctx)
-}
-
-func (r *reconcileManager) reconcileSubnets(ctx context.Context) error {
-	subnets, err := r.kubeSubnets.List(ctx)
-	if err != nil {
-		return err
-	}
-
-	// This calls potentially calls update 2x for same loop, but this is price
-	// to pay to keep logic split, separate and simple
-	for _, s := range subnets {
-		err = r.ensureSubnetNSG(ctx, s)
-		if err != nil {
-			return err
-		}
-
-		err = r.ensureSubnetServiceEndpoints(ctx, s)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return reconcile.Result{}, manager.reconcileAccounts(ctx)
 }
 
 // SetupWithManager creates the controller
@@ -136,6 +125,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		Watches(&source.Kind{Type: &machinev1beta1.Machine{}}, &handler.EnqueueRequestForObject{}). // to reconcile on machine replacement
 		Watches(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForObject{}).            // to reconcile on node status change
-		Named(controllers.AzureSubnetsControllerName).
+		Named(controllers.StorageAccountsControllerName).
 		Complete(r)
 }

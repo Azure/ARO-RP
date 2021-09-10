@@ -14,21 +14,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func (r *reconcileManager) reconcileSubnets(ctx context.Context) error {
-	subnets, err := r.kubeSubnets.List(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, s := range subnets {
-		err = r.ensureSubnetNSG(ctx, s)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet) error {
 	architectureVersion := api.ArchitectureVersion(r.instance.Spec.ArchitectureVersion)
 
