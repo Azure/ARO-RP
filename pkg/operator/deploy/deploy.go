@@ -152,6 +152,7 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 			InfraID:                o.oc.Properties.InfraID,
 			ArchitectureVersion:    int(o.oc.Properties.ArchitectureVersion),
 			VnetID:                 vnetID,
+			StorageSuffix:          o.oc.Properties.StorageSuffix,
 			GenevaLogging: arov1alpha1.GenevaLoggingSpec{
 				ConfigVersion:            o.env.ClusterGenevaLoggingConfigVersion(),
 				MonitoringGCSAccount:     o.env.ClusterGenevaLoggingAccount(),

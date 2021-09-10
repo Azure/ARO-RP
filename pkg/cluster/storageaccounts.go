@@ -5,18 +5,103 @@ package cluster
 
 import (
 	"context"
+	"strings"
 
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/openshift/installer/pkg/asset/installconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
+
+// enableServiceEndpoints should enable service endpoints on
+// subnets for storage account access
+func (m *manager) enableServiceEndpoints(ctx context.Context) error {
+	subnets := []string{
+		m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
+	}
+
+	for _, wp := range m.doc.OpenShiftCluster.Properties.WorkerProfiles {
+		subnets = append(subnets, wp.SubnetID)
+	}
+
+	for _, subnetId := range subnets {
+		subnet, err := m.subnet.Get(ctx, subnetId)
+		if err != nil {
+			return err
+		}
+
+		var changed bool
+		for _, endpoint := range api.SubnetsEndpoints {
+			var found bool
+			if subnet != nil && subnet.ServiceEndpoints != nil {
+				for _, se := range *subnet.ServiceEndpoints {
+					if strings.EqualFold(*se.Service, endpoint) &&
+						se.ProvisioningState == mgmtnetwork.Succeeded {
+						found = true
+					}
+				}
+			}
+			if !found {
+				if subnet.ServiceEndpoints == nil {
+					subnet.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{}
+				}
+				*subnet.ServiceEndpoints = append(*subnet.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
+					Service:   to.StringPtr(endpoint),
+					Locations: &[]string{"*"},
+				})
+				changed = true
+			}
+		}
+		if changed {
+			err := m.subnet.CreateOrUpdate(ctx, subnetId, subnet)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// migrateStorageAccounts should re-deploy storage account with encryption,
+// KindV2 and firewalls rules preventing external access.
+func (m *manager) migrateStorageAccounts(ctx context.Context) error {
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+	registryStorageAccountName := m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName
+
+	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, clusterStorageAccountName)
+	if err != nil {
+		return err
+	}
+
+	var installConfig *installconfig.InstallConfig
+	err = pg.Get(&installConfig)
+	if err != nil {
+		return err
+	}
+
+	t := &arm.Template{
+		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+		ContentVersion: "1.0.0.0",
+		Resources: []*arm.Resource{
+			m.storageAccount(clusterStorageAccountName, installConfig.Config.Azure.Region, false),
+			m.storageAccount(registryStorageAccountName, installConfig.Config.Azure.Region, false),
+		},
+	}
+
+	return m.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
+}
 
 func (m *manager) populateRegistryStorageAccountName(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName != "" {
 		return nil
 	}
 
-	rc, err := m.registryclient.ImageregistryV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
+	rc, err := m.imageregistryclient.ImageregistryV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
