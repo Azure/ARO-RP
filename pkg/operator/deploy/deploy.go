@@ -149,6 +149,7 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 			AZEnvironment:       o.env.Environment().Name,
 			Location:            o.env.Location(),
 			InfraID:             o.oc.Properties.InfraID,
+			StorageSuffix:       o.oc.Properties.StorageSuffix,
 			ArchitectureVersion: int(o.oc.Properties.ArchitectureVersion),
 			VnetID:              vnetID,
 			GenevaLogging: arov1alpha1.GenevaLoggingSpec{

@@ -74,19 +74,75 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 	)
 }
 
-func (m *manager) storageAccount(name, region string) *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtstorage.Account{
-			Sku: &mgmtstorage.Sku{
-				Name: "Standard_LRS",
-			},
-			AccountProperties: &mgmtstorage.AccountProperties{
-				MinimumTLSVersion: mgmtstorage.TLS12,
-			},
-			Name:     &name,
-			Location: &region,
-			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+// storageAccount will return storage account resource.
+// Old accounts are not encrypted and can't be retrofitted.
+// flag is to controll this behaviour in update/create
+func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resource {
+	sa := &mgmtstorage.Account{
+		Kind: mgmtstorage.StorageV2,
+		Sku: &mgmtstorage.Sku{
+			Name: "Standard_LRS",
 		},
+		AccountProperties: &mgmtstorage.AccountProperties{
+			AllowBlobPublicAccess:  to.BoolPtr(false),
+			EnableHTTPSTrafficOnly: to.BoolPtr(true),
+			MinimumTLSVersion:      mgmtstorage.TLS12,
+			NetworkRuleSet: &mgmtstorage.NetworkRuleSet{
+				Bypass: mgmtstorage.AzureServices,
+				VirtualNetworkRules: &[]mgmtstorage.VirtualNetworkRule{
+					{
+						VirtualNetworkResourceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+						Action:                   mgmtstorage.Allow,
+					},
+					{
+						VirtualNetworkResourceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID),
+						Action:                   mgmtstorage.Allow,
+					},
+					{
+						VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
+						Action:                   mgmtstorage.Allow,
+					},
+					{
+						VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-subnet"),
+						Action:                   mgmtstorage.Allow,
+					},
+				},
+				DefaultAction: "Deny",
+			},
+		},
+		Name:     &name,
+		Location: &region,
+		Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+	}
+
+	// In development API calls originates from user laptop so we allow all.
+	// TODO(mjudeikis): Move to development on VPN so we can make this IPRule
+	if m.env.IsLocalDevelopmentMode() {
+		sa.NetworkRuleSet.DefaultAction = mgmtstorage.DefaultActionAllow
+	}
+	if encrypted {
+		sa.AccountProperties.Encryption = &mgmtstorage.Encryption{
+			RequireInfrastructureEncryption: to.BoolPtr(true),
+			Services: &mgmtstorage.EncryptionServices{
+				Blob: &mgmtstorage.EncryptionService{
+					KeyType: mgmtstorage.KeyTypeAccount,
+				},
+				File: &mgmtstorage.EncryptionService{
+					KeyType: mgmtstorage.KeyTypeAccount,
+				},
+				Table: &mgmtstorage.EncryptionService{
+					KeyType: mgmtstorage.KeyTypeAccount,
+				},
+				Queue: &mgmtstorage.EncryptionService{
+					KeyType: mgmtstorage.KeyTypeAccount,
+				},
+			},
+			KeySource: mgmtstorage.KeySourceMicrosoftStorage,
+		}
+	}
+
+	return &arm.Resource{
+		Resource:   sa,
 		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 	}
 }

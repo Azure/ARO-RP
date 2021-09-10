@@ -102,6 +102,7 @@ func (m *manager) Install(ctx context.Context) error {
 				return m.ensureInfraID(ctx, installConfig)
 			}),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
 				return m.deployStorageTemplate(ctx, installConfig)
@@ -248,7 +249,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
-	m.registryclient, err = imageregistryclient.NewForConfig(restConfig)
+	m.imageregistryclient, err = imageregistryclient.NewForConfig(restConfig)
 	return err
 }
 
