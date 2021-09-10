@@ -12,6 +12,7 @@ import (
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	consoleclient "github.com/openshift/client-go/console/clientset/versioned"
+	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
@@ -36,6 +37,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/rbac"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/routefix"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/storageaccounts"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/workaround"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
@@ -95,6 +97,10 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 	securitycli, err := securityclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+	imageregistryclient, err := imageregistryclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
@@ -185,6 +191,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", controllers.MachineSetControllerName),
 			arocli, maocli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller MachineSet: %v", err)
+		}
+		if err = (storageaccounts.NewReconciler(
+			log.WithField("controller", controllers.StorageAccountsControllerName),
+			arocli, maocli, kubernetescli, imageregistryclient)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", controllers.StorageAccountsControllerName, err)
 		}
 	}
 
