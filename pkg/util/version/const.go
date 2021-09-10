@@ -25,6 +25,8 @@ const (
 
 var GitCommit = "unknown"
 
+// TODO: set value for MustGather field for all streams below
+
 // InstallStream describes stream we are defaulting to for all new clusters
 var InstallStream = &Stream{
 	Version:  NewVersion(4, 8, 10),

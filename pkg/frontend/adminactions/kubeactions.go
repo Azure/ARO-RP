@@ -13,6 +13,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -27,6 +29,7 @@ type KubeActions interface {
 	KubeCreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
 	KubeDelete(ctx context.Context, groupKind, namespace, name string) error
 	Upgrade(ctx context.Context, upgradeY bool) error
+	MustGather(ctx context.Context, w http.ResponseWriter) error
 }
 
 type kubeActions struct {
@@ -37,6 +40,9 @@ type kubeActions struct {
 
 	dyn       dynamic.Interface
 	configcli configclient.Interface
+	kubecli   kubernetes.Interface
+
+	restConfig *rest.Config
 }
 
 // NewKubeActions returns a kubeActions
@@ -61,6 +67,11 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 		return nil, err
 	}
 
+	kubecli, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	return &kubeActions{
 		log: log,
 		oc:  oc,
@@ -69,6 +80,9 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 
 		dyn:       dyn,
 		configcli: configcli,
+		kubecli:   kubecli,
+
+		restConfig: restConfig,
 	}, nil
 }
 
