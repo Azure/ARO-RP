@@ -181,6 +181,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 				},
 			},
 			PullSecret: pullSecret,
+			FIPS:       m.doc.OpenShiftCluster.Properties.ClusterProfile.FipsValidatedModules == api.FipsValidatedModulesEnabled,
 			ImageContentSources: []types.ImageContentSource{
 				{
 					Source: "quay.io/openshift-release-dev/ocp-release",
