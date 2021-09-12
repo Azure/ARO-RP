@@ -104,6 +104,9 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState:     api.ProvisioningStateAdminUpdating,
 							LastProvisioningState: api.ProvisioningStateSucceeded,
+							ClusterProfile: api.ClusterProfile{
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
+							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
@@ -123,6 +126,9 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				Properties: admin.OpenShiftClusterProperties{
 					ProvisioningState:     admin.ProvisioningStateAdminUpdating,
 					LastProvisioningState: admin.ProvisioningStateSucceeded,
+					ClusterProfile: admin.ClusterProfile{
+						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+					},
 					NetworkProfile: admin.NetworkProfile{
 						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
 					},
@@ -187,7 +193,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							ProvisioningState:     api.ProvisioningStateAdminUpdating,
 							LastProvisioningState: api.ProvisioningStateSucceeded,
 							ClusterProfile: api.ClusterProfile{
-								Domain: "changed",
+								Domain:               "changed",
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
@@ -210,7 +217,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					ProvisioningState:     admin.ProvisioningStateAdminUpdating,
 					LastProvisioningState: admin.ProvisioningStateSucceeded,
 					ClusterProfile: admin.ClusterProfile{
-						Domain: "changed",
+						Domain:               "changed",
+						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
 					},
 					NetworkProfile: admin.NetworkProfile{
 						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
@@ -378,7 +386,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							CreatedAt:           mockCurrentTime,
 							CreatedBy:           version.GitCommit,
 							ClusterProfile: api.ClusterProfile{
-								Version: "4.3.0",
+								Version:              "4.3.0",
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
@@ -430,7 +439,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateSucceeded,
 							ClusterProfile: api.ClusterProfile{
-								PullSecret: `{"will":"be-kept"}`,
+								PullSecret:           `{"will":"be-kept"}`,
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							IngressProfiles: []api.IngressProfile{{Name: "will-be-removed"}},
 							WorkerProfiles:  []api.WorkerProfile{{Name: "will-be-removed"}},
@@ -467,8 +477,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ProvisioningState:     api.ProvisioningStateUpdating,
 							LastProvisioningState: api.ProvisioningStateSucceeded,
 							ClusterProfile: api.ClusterProfile{
-								PullSecret: `{"will":"be-kept"}`,
-								Domain:     "changed",
+								PullSecret:           `{"will":"be-kept"}`,
+								Domain:               "changed",
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							ServicePrincipalProfile: api.ServicePrincipalProfile{
 								ClientSecret: "will-be-kept",
@@ -549,7 +560,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							LastProvisioningState:   api.ProvisioningStateFailed,
 							FailedProvisioningState: api.ProvisioningStateUpdating,
 							ClusterProfile: api.ClusterProfile{
-								Domain: "changed",
+								Domain:               "changed",
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
@@ -714,7 +726,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ProvisioningState:     api.ProvisioningStateUpdating,
 							LastProvisioningState: api.ProvisioningStateSucceeded,
 							ClusterProfile: api.ClusterProfile{
-								Domain: "changed",
+								Domain:               "changed",
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							IngressProfiles: []api.IngressProfile{{Name: "changed"}},
 							WorkerProfiles: []api.WorkerProfile{
@@ -784,6 +797,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 									EncryptionAtHost: api.EncryptionAtHostDisabled,
 								},
 							},
+							ClusterProfile: api.ClusterProfile{
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
+							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
@@ -815,7 +831,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							LastProvisioningState:   api.ProvisioningStateFailed,
 							FailedProvisioningState: api.ProvisioningStateUpdating,
 							ClusterProfile: api.ClusterProfile{
-								Domain: "changed",
+								Domain:               "changed",
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							IngressProfiles: []api.IngressProfile{{Name: "will-be-kept"}},
 							WorkerProfiles: []api.WorkerProfile{
@@ -877,6 +894,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState:       api.ProvisioningStateFailed,
 							FailedProvisioningState: api.ProvisioningStateCreating,
+							ClusterProfile: api.ClusterProfile{
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
+							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
@@ -915,6 +935,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState:       api.ProvisioningStateFailed,
 							FailedProvisioningState: api.ProvisioningStateDeleting,
+							ClusterProfile: api.ClusterProfile{
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
+							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
@@ -954,8 +977,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
-								Version:         "4.3.0",
-								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID),
+								Version:              "4.3.0",
+								ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID),
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
@@ -997,7 +1021,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
-								Version: "4.3.0",
+								Version:              "4.3.0",
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
