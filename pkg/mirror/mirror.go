@@ -18,13 +18,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// These are versions that need to be skipped because they are unable
-//  to be mirrored
-var doNotMirrorTags = map[string]bool{
-	"4.7.27": true,
-	"4.8.8":  true,
-}
-
 func Copy(ctx context.Context, dstreference, srcreference string, dstauth, srcauth *types.DockerAuthConfig) error {
 	policyctx, err := signature.NewPolicyContext(&signature.Policy{
 		Default: signature.PolicyRequirements{
@@ -99,12 +92,6 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 		wg.Add(1)
 		go func() {
 			for w := range ch {
-				// skip the mirror for the tag if found in doNotMirrorTags map
-				if doNotMirrorTags[w.tag] {
-					log.Printf("Skipping %s", w.tag)
-					break
-				}
-
 				log.Printf("mirroring %s", w.tag)
 				var err error
 				for retry := 0; retry < 6; retry++ {
