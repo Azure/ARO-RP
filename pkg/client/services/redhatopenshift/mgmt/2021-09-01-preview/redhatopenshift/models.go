@@ -88,6 +88,8 @@ type ClusterProfile struct {
 	Version *string `json:"version,omitempty"`
 	// ResourceGroupID - The ID of the cluster resource group.
 	ResourceGroupID *string `json:"resourceGroupId,omitempty"`
+	// FipsValidatedModules - If FIPS validated crypto modules are used. Possible values include: 'FipsValidatedModulesDisabled', 'FipsValidatedModulesEnabled'
+	FipsValidatedModules FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
 }
 
 // ConsoleProfile consoleProfile represents a console profile.
