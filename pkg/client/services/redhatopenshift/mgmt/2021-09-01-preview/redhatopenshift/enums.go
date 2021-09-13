@@ -51,6 +51,21 @@ func PossibleEncryptionAtHostValues() []EncryptionAtHost {
 	return []EncryptionAtHost{Disabled, Enabled}
 }
 
+// FipsValidatedModules enumerates the values for fips validated modules.
+type FipsValidatedModules string
+
+const (
+	// FipsValidatedModulesDisabled ...
+	FipsValidatedModulesDisabled FipsValidatedModules = "Disabled"
+	// FipsValidatedModulesEnabled ...
+	FipsValidatedModulesEnabled FipsValidatedModules = "Enabled"
+)
+
+// PossibleFipsValidatedModulesValues returns an array of possible values for the FipsValidatedModules const type.
+func PossibleFipsValidatedModulesValues() []FipsValidatedModules {
+	return []FipsValidatedModules{FipsValidatedModulesDisabled, FipsValidatedModulesEnabled}
+}
+
 // ProvisioningState enumerates the values for provisioning state.
 type ProvisioningState string
 
