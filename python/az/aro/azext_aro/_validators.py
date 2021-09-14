@@ -64,6 +64,21 @@ def validate_cluster_resource_group(cmd, namespace):
                 namespace.cluster_resource_group)
 
 
+def validate_disk_encryption_set(cmd, namespace):
+    if namespace.disk_encryption_set is not None:
+        if not is_valid_resource_id(namespace.disk_encryption_set):
+            raise InvalidArgumentValueError(
+                "Invalid --disk-encryption-set '%s', has to be a resource ID." %
+                namespace.disk_encryption_set)
+
+        desid = parse_resource_id(namespace.disk_encryption_set)
+        compute_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_COMPUTE)
+        try:
+            compute_client.disk_encryption_sets.get(resource_group_name=desid['resource_group'], disk_encryption_set_name=desid['name'])
+        except CloudError as err:
+            raise CLIInternalError(err.message) from err
+
+
 def validate_domain(namespace):
     if namespace.domain is not None:
         if not re.match(r'^' +
@@ -72,6 +87,18 @@ def validate_domain(namespace):
                         r'$', namespace.domain):
             raise InvalidArgumentValueError("Invalid --domain '%s'." %
                                             namespace.domain)
+
+
+def validate_encryption_at_host(key):
+    def _validate_encryption_at_host(namespace):
+        eah = getattr(namespace, key)
+        if eah is not None:
+            eah = eah.capitalize()
+            if eah not in ['Enabled', 'Disabled']:
+                raise InvalidArgumentValueError("Invalid --%s '%s'." %
+                                                (key.replace('_', '-'), eah))
+
+    return _validate_encryption_at_host
 
 
 def validate_pull_secret(namespace):
@@ -88,6 +115,13 @@ def validate_pull_secret(namespace):
                 raise Exception()
         except Exception as e:
             raise InvalidArgumentValueError("Invalid --pull-secret.") from e
+
+
+def validate_sdn(namespace):
+    if namespace.software_defined_network is not None:
+        if namespace.software_defined_network not in ['OVNKubernetes', 'OpenshiftSDN']:
+            raise InvalidArgumentValueError("Invalid --software-defined-network '%s'." %
+                                            namespace.software_defined_network)
 
 
 def validate_subnet(key):
