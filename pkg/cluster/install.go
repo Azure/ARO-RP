@@ -125,7 +125,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.removeBootstrap),
 			steps.Action(m.removeBootstrapIgnition),
 			steps.Action(m.configureAPIServerCertificate),
-			steps.Condition(m.apiServersReady, 30*time.Minute, true),
+			steps.Condition(m.apiServersReady, 60*time.Minute, true),
 			steps.Condition(m.minimumWorkerNodesReady, 30*time.Minute, true),
 			steps.Condition(m.operatorConsoleExists, 30*time.Minute, true),
 			steps.Action(m.updateConsoleBranding),
