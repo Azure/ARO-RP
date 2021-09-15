@@ -34,6 +34,13 @@ var _ = Describe("Scale nodes", func() {
 
 		expectedNodeCount := 3 // for masters
 		for _, wp := range *oc.WorkerProfiles {
+			// hack: if the machineset is scaled down to 0 replicas, since wp.Count is
+			// omitempty, it will set the value to nil and cause a nil pointer dereference
+			// panic so we work around this case
+			if wp.Count == nil {
+				continue
+
+			}
 			expectedNodeCount += int(*wp.Count)
 		}
 
