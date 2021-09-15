@@ -43,7 +43,7 @@
 
 1. Run `make deploy`
     > __NOTE:__ This will fail on the first attempt to run due to certificate and container mirroring requirements.
-    > __NOTE:__ If you re-using old name, you might run into soft-delete of the keyvaults. `az keyvault recover --name` to fix this.
+    > __NOTE:__ If you reuse an old name, you might run into soft-delete of the keyvaults. `az keyvault recover --name` to fix this.
 
 <!-- TODO: this is almost duplicated elsewhere.  Would be nice to move to common area -->
 1. Update the certificates in keyvault
