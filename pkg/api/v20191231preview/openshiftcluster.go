@@ -170,7 +170,7 @@ type WorkerProfile struct {
 	SubnetID string `json:"subnetId,omitempty"`
 
 	// The number of worker VMs.
-	Count int `json:"count,omitempty"`
+	Count int `json:"count"`
 }
 
 // APIServerProfile represents an API server profile.

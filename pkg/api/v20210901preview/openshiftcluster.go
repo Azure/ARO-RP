@@ -208,7 +208,7 @@ type WorkerProfile struct {
 	SubnetID string `json:"subnetId,omitempty"`
 
 	// The number of worker VMs.
-	Count int `json:"count,omitempty"`
+	Count int `json:"count"`
 
 	// Whether master virtual machines are encrypted at host.
 	EncryptionAtHost EncryptionAtHost `json:"encryptionAtHost,omitempty"`

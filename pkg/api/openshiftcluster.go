@@ -286,7 +286,7 @@ type WorkerProfile struct {
 	VMSize              VMSize           `json:"vmSize,omitempty"`
 	DiskSizeGB          int              `json:"diskSizeGB,omitempty"`
 	SubnetID            string           `json:"subnetId,omitempty"`
-	Count               int              `json:"count,omitempty"`
+	Count               int              `json:"count"`
 	EncryptionAtHost    EncryptionAtHost `json:"encryptionAtHost,omitempty"`
 	DiskEncryptionSetID string           `json:"diskEncryptionSetId,omitempty"`
 }
