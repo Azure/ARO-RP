@@ -32,6 +32,10 @@
         {
             "file": "doc.go",
             "_justification": "examples in comments"
+        },
+        {
+            "file": "verify_test_dsa.go",
+            "_justification": "sample login for testing"
         }
     ]
 }
