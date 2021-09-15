@@ -24,6 +24,8 @@ steps:
     customCommand: run
     arguments: . ${{ parameters.generationType }}
     workingDirectory: $(Build.SourcesDirectory)/ARO.Pipelines/ev2/generator/
+  env:
+    RP_CONFIG_PATH: $(Build.SourcesDirectory)/RP-Config/deploy
   displayName: ⚙️ Generate Ev2 Deployment Manifests
 - task: Bash@3
   displayName: ⚙️ Copy to ob_outputDirectory
