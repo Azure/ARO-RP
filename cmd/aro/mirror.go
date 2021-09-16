@@ -7,10 +7,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"flag"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
@@ -66,11 +64,6 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	dstAcr := os.Getenv("DST_ACR_NAME")
 	srcAcrGenevaOverride := os.Getenv("SRC_ACR_NAME_GENEVA_OVERRIDE") // Optional
 
-	srcAuthQuay, err := getAuth("SRC_AUTH_QUAY")
-	if err != nil {
-		return err
-	}
-
 	srcAuthRedhat, err := getAuth("SRC_AUTH_REDHAT")
 	if err != nil {
 		return err
@@ -84,43 +77,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	var releases []pkgmirror.Node
-	if len(flag.Args()) == 1 {
-		log.Print("reading release graph")
-		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 3))
-		if err != nil {
-			return err
-		}
-	} else {
-		for _, arg := range flag.Args()[1:] {
-			if strings.EqualFold(arg, "latest") {
-				releases = append(releases, pkgmirror.Node{
-					Version: version.InstallStream.Version.String(),
-					Payload: version.InstallStream.PullSpec,
-				})
-			} else {
-				releases = append(releases, pkgmirror.Node{
-					Version: arg,
-					Payload: arg,
-				})
-			}
-		}
-	}
-
 	var errorOccurred bool
-	for _, release := range releases {
-		if _, ok := doNotMirrorTags[release.Version]; ok {
-			log.Printf("skipping mirror of release %s", release.Version)
-			continue
-		}
-		log.Printf("mirroring release %s", release.Version)
-		err = pkgmirror.Mirror(ctx, log, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
-		if err != nil {
-			log.Errorf("%s: %s\n", release, err)
-			errorOccurred = true
-		}
-	}
-
 	srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 
 	if srcAcrGenevaOverride != "" {
