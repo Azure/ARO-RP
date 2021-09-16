@@ -241,6 +241,7 @@ replace (
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.21.4
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.9.1
 	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.5.0
+
 )
 
 // Installer dependencies. Some of them are being used directly in the RP.

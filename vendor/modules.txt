@@ -770,6 +770,7 @@ github.com/openshift/api/console/v1alpha1
 github.com/openshift/api/image/docker10
 github.com/openshift/api/image/dockerpre012
 github.com/openshift/api/image/v1
+github.com/openshift/api/imageregistry/v1
 github.com/openshift/api/operator/v1
 github.com/openshift/api/operator/v1alpha1
 github.com/openshift/api/project/v1
@@ -789,6 +790,9 @@ github.com/openshift/client-go/console/clientset/versioned/typed/console/v1
 github.com/openshift/client-go/console/clientset/versioned/typed/console/v1/fake
 github.com/openshift/client-go/console/clientset/versioned/typed/console/v1alpha1
 github.com/openshift/client-go/console/clientset/versioned/typed/console/v1alpha1/fake
+github.com/openshift/client-go/imageregistry/clientset/versioned
+github.com/openshift/client-go/imageregistry/clientset/versioned/scheme
+github.com/openshift/client-go/imageregistry/clientset/versioned/typed/imageregistry/v1
 github.com/openshift/client-go/operator/clientset/versioned
 github.com/openshift/client-go/operator/clientset/versioned/fake
 github.com/openshift/client-go/operator/clientset/versioned/scheme
