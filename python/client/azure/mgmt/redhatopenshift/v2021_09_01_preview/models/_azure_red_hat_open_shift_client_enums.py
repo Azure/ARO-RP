@@ -101,4 +101,8 @@ class VMSize(with_metaclass(_CaseInsensitiveEnumMeta, str, Enum)):
     STANDARD_F8_S_V2 = "Standard_F8s_v2"
     STANDARD_G5 = "Standard_G5"
     STANDARD_GS5 = "Standard_GS5"
+    STANDARD_L16_S = "Standard_L16s"
+    STANDARD_L32_S = "Standard_L32s"
+    STANDARD_L4_S = "Standard_L4s"
+    STANDARD_L8_S = "Standard_L8s"
     STANDARD_M128_MS = "Standard_M128ms"

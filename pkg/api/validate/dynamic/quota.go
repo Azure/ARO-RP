@@ -88,6 +88,33 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 	case api.VMSizeStandardGS5:
 		requiredResources["standardGSFamily"] += (count * 32)
 		requiredResources["cores"] += (count * 32)
+	case api.VMSizeStandardL4s:
+		requiredResources["standardLsFamily"] += (count * 4)
+		requiredResources["cores"] += (count * 4)
+	case api.VMSizeStandardL8s:
+		requiredResources["standardLsFamily"] += (count * 8)
+		requiredResources["cores"] += (count * 8)
+	case api.VMSizeStandardL16s:
+		requiredResources["standardLsFamily"] += (count * 16)
+		requiredResources["cores"] += (count * 16)
+	case api.VMSizeStandardL32s:
+		requiredResources["standardLsFamily"] += (count * 32)
+		requiredResources["cores"] += (count * 32)
+	case api.VMSizeStandardL8sV2:
+		requiredResources["standardLsv2Family"] += (count * 8)
+		requiredResources["cores"] += (count * 8)
+	case api.VMSizeStandardL16sV2:
+		requiredResources["standardLsv2Family"] += (count * 16)
+		requiredResources["cores"] += (count * 16)
+	case api.VMSizeStandardL32sV2:
+		requiredResources["standardLsv2Family"] += (count * 32)
+		requiredResources["cores"] += (count * 32)
+	case api.VMSizeStandardL48sV2:
+		requiredResources["standardLsv2Family"] += (count * 48)
+		requiredResources["cores"] += (count * 48)
+	case api.VMSizeStandardL64sV2:
+		requiredResources["standardLsv2Family"] += (count * 64)
+		requiredResources["cores"] += (count * 64)
 	default:
 		//will only happen if pkg/api verification allows new VMSizes
 		return fmt.Errorf("unexpected node VMSize %s", vmSize)
