@@ -20,7 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-var _ = Describe("[Admin API] VM redeploy action", func() {
+var _ = XDescribe("[Admin API] VM redeploy action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("should trigger a selected VM to redeploy", func() {
