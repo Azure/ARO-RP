@@ -58,19 +58,22 @@ def load_arguments(self, _):
                    help='CIDR of service network. Must be a minimum of /18 or larger.',
                    validator=validate_cidr('service_cidr'))
         c.argument('software_defined_network', arg_type=get_enum_type(['OVNKubernetes', 'OpenShiftSDN']),
-                   help='SDN type either "OVNKubernetes" (default) or "OpenShiftSDN"',
+                   options_list=['--sdn-type'],
+                   help='SDN type either "OVNKubernetes" or "OpenShiftSDN (default)"',
                    validator=validate_sdn)
 
         c.argument('disk_encryption_set',
                    help='ResourceID of the DiskEncryptionSet to be used for master and worker VMs.',
                    validator=validate_disk_encryption_set)
         c.argument('master_encryption_at_host', arg_type=get_enum_type(['Enabled', 'Disabled']),
+                   options_list=['--master-enc-at-host'],
                    help='Encryption at host flag for master VMs. Correct values are "Enabled" or "Disabled" (default)',
                    validator=validate_encryption_at_host('master_encryption_at_host'))
         c.argument('master_vm_size',
                    help='Size of master VMs.')
 
         c.argument('worker_encryption_at_host', arg_type=get_enum_type(['Enabled', 'Disabled']),
+                   options_list=['--worker-enc-at-host'],
                    help='Encryption at host flag for worker VMs. Correct values are "Enabled" or "Disabled" (default)',
                    validator=validate_encryption_at_host('worker_encryption_at_host'))
         c.argument('worker_vm_size',

@@ -74,7 +74,8 @@ def validate_disk_encryption_set(cmd, namespace):
         desid = parse_resource_id(namespace.disk_encryption_set)
         compute_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_COMPUTE)
         try:
-            compute_client.disk_encryption_sets.get(resource_group_name=desid['resource_group'], disk_encryption_set_name=desid['name'])
+            compute_client.disk_encryption_sets.get(resource_group_name=desid['resource_group'],
+                                                    disk_encryption_set_name=desid['name'])
         except CloudError as err:
             raise CLIInternalError(err.message) from err
 

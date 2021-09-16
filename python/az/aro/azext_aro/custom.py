@@ -18,7 +18,8 @@ from knack.log import get_logger
 import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2021_09_01_preview.models as openshiftcluster
 
 from azext_aro._aad import AADManager
-from azext_aro._rbac import assign_role_to_resource, has_role_assignment_on_resource, ROLE_NETWORK_CONTRIBUTOR, ROLE_READER
+from azext_aro._rbac import assign_role_to_resource, has_role_assignment_on_resource
+from azext_aro._rbac import ROLE_NETWORK_CONTRIBUTOR, ROLE_READER
 from azext_aro._validators import validate_subnets
 
 logger = get_logger(__name__)
@@ -108,7 +109,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         network_profile=openshiftcluster.NetworkProfile(
             pod_cidr=pod_cidr or '10.128.0.0/14',
             service_cidr=service_cidr or '172.30.0.0/16',
-            software_defined_network=software_defined_network or 'OVNKubernetes'
+            software_defined_network=software_defined_network or 'OpenShiftSDN'
         ),
         master_profile=openshiftcluster.MasterProfile(
             vm_size=master_vm_size or 'Standard_D8s_v3',
@@ -287,11 +288,13 @@ def get_network_resources(cli_ctx, subnets, vnet):
 
     return resources
 
-def get_disk_encryption_resources(cli_ctx, oc):
+
+def get_disk_encryption_resources(oc):
     disk_encryption_set = oc.master_profile.disk_encryption_set_id
     resources = set()
     resources.add(disk_encryption_set)
     return resources
+
 
 # cluster_application_update manages cluster application & service principal update
 # If called without parameters it should be best-effort
@@ -379,7 +382,7 @@ def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
     try:
         # Get cluster resources we need to assign permissions on, sort to ensure the same order of operations
         resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cli_ctx, oc)),
-                    ROLE_READER: sorted(get_disk_encryption_resources(cli_ctx, oc))}
+                     ROLE_READER: sorted(get_disk_encryption_resources(oc))}
     except (CloudError, HttpOperationError) as e:
         if fail:
             logger.error(e.message)
