@@ -1,5 +1,6 @@
 parameters:
   rpImageACR: ''
+  buildCommand: ''
 steps:
 - script: |
     set -e
@@ -10,5 +11,5 @@ steps:
     az acr login --name "$RP_IMAGE_ACR"
     # azure checkouts commit, so removing master reference when publishing image
     export BRANCH=$(Build.SourceBranchName)
-    make publish-image-aro
+    make ${{ parameters.buildCommand }}
   displayName: ⚙️ Build and push images to ACR
