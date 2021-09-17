@@ -11,4 +11,4 @@ steps:
     # azure checkouts commit, so removing master reference when publishing image
     export BRANCH=$(Build.SourceBranchName)
     make publish-image-aro
-  displayName: ⚙️ Build and push images to ACR
+  displayName: ⚙️ Build and push ARO images to ACR

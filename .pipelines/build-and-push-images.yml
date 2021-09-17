@@ -15,7 +15,10 @@ jobs:
   - template: ./templates/template-az-cli-login.yml
     parameters:
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-  - template: ./templates/template-push-images-to-acr.yml
+  - template: ./templates/template-push-aro-images-to-acr.yml
+    parameters:
+      rpImageACR: $(RP_IMAGE_ACR)
+  - template: ./templates/template-push-fluentbit-images-to-acr.yml
     parameters:
       rpImageACR: $(RP_IMAGE_ACR)
   - template: ./templates/template-az-cli-logout.yml

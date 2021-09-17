@@ -1,0 +1,15 @@
+parameters:
+  rpImageACR: ''
+steps:
+- script: |
+    set -e
+    trap 'set +e; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af ; rm -rf ~/.docker/config.json' EXIT
+
+    export RP_IMAGE_ACR=${{ parameters.rpImageACR }}
+
+    az acr login --name "$RP_IMAGE_ACR"
+    # azure checkouts commit, so removing master reference when publishing image
+    export BRANCH=$(Build.SourceBranchName)
+    make publish-image-fluentbit
+    echo 'This will fail if the fluentbit version is not the latest (official fluentbit repository only has 1 version published)'
+  displayName: ⚙️ Build and push Fluentbit images to ACR
