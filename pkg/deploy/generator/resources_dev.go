@@ -210,7 +210,7 @@ func (g *generator) devVPNPip() *arm.Resource {
 }
 
 func (g *generator) devVnet() *arm.Resource {
-	return g.virtualNetwork("dev-vnet", "10.0.0.0/23", &[]mgmtnetwork.Subnet{
+	return g.virtualNetwork("dev-vnet", "10.0.0.0/9", &[]mgmtnetwork.Subnet{
 		{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 				AddressPrefix: to.StringPtr("10.0.0.0/24"),
