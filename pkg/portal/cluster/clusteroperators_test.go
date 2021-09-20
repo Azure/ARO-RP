@@ -12,7 +12,7 @@ import (
 	"github.com/go-test/deep"
 	configv1 "github.com/openshift/api/config/v1"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -29,7 +29,7 @@ func TestClusterOperators(t *testing.T) {
 	}
 
 	// lol golang
-	converted := make([]runtime.Object, len(operators.Items))
+	converted := make([]kruntime.Object, len(operators.Items))
 	for i := range operators.Items {
 		converted[i] = &operators.Items[i]
 	}
