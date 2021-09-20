@@ -59,6 +59,8 @@ spec:
                 properties:
                   reconcileAlertWebhook:
                     type: boolean
+                  reconcileAutoSizedNodes:
+                    type: boolean
                   reconcileBanner:
                     type: boolean
                   reconcileDNSMasq:

@@ -84,6 +84,7 @@ type FeaturesSpec struct {
 	ReconcileRouteFix              bool `json:"reconcileRouteFix,omitempty"`
 	ReconcileWorkaroundsController bool `json:"reconcileWorkaroundsController,omitempty"`
 	ReconcileBanner                bool `json:"reconcileBanner,omitempty"`
+	ReconcileAutoSizedNodes        bool `json:"reconcileAutoSizedNodes,omitempty"`
 }
 
 // Banner defines if a Banner should be shown to the customer
