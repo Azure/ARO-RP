@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+
+	// "reflect"
 	"testing"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_workaround "github.com/Azure/ARO-RP/pkg/util/mocks/operator/controllers/workaround"
@@ -43,40 +46,50 @@ func clusterVersion(ver string) *configv1.ClusterVersion {
 }
 
 func TestWorkaroundReconciler(t *testing.T) {
-	var (
-		arocli = arofake.NewSimpleClientset(&arov1alpha1.Cluster{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: arov1alpha1.SingletonClusterName,
+
+	arocli := arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: arov1alpha1.SingletonClusterName,
+		},
+		Spec: arov1alpha1.ClusterSpec{
+			Features: arov1alpha1.FeaturesSpec{
+				ReconcileWorkaroundsController: true,
 			},
-			Spec: arov1alpha1.ClusterSpec{
-				Features: arov1alpha1.FeaturesSpec{
-					ReconcileWorkaroundsController: true,
-				},
-			},
-		})
-	)
+		},
+	})
 
 	tests := []struct {
 		name    string
 		want    ctrl.Result
 		mocker  func(mw *mock_workaround.MockWorkaround)
+		arocli  aroclient.Interface
 		wantErr bool
 	}{
 		{
 			name: "is required",
 			mocker: func(mw *mock_workaround.MockWorkaround) {
-				c := mw.EXPECT().IsRequired(gomock.Any()).Return(true)
-				mw.EXPECT().Ensure(gomock.Any()).After(c).Return(nil)
+				gomock.InOrder(
+					mw.EXPECT().IsRequired(gomock.Any()).Return(true),
+					mw.EXPECT().Ensure(gomock.Any()).Return(nil),
+					mw.EXPECT().IsRequired(gomock.Any()).Return(true),
+					mw.EXPECT().Ensure(gomock.Any()).Return(nil),
+				)
 			},
-			want: ctrl.Result{Requeue: true, RequeueAfter: time.Hour},
+			arocli: arocli,
+			want:   ctrl.Result{Requeue: true, RequeueAfter: time.Hour},
 		},
 		{
 			name: "is not required",
 			mocker: func(mw *mock_workaround.MockWorkaround) {
-				c := mw.EXPECT().IsRequired(gomock.Any()).Return(false)
-				mw.EXPECT().Remove(gomock.Any()).After(c).Return(nil)
+				gomock.InOrder(
+					mw.EXPECT().IsRequired(gomock.Any()).Return(false),
+					mw.EXPECT().Remove(gomock.Any()).Return(nil),
+					mw.EXPECT().IsRequired(gomock.Any()).Return(false),
+					mw.EXPECT().Remove(gomock.Any()).Return(nil),
+				)
 			},
-			want: ctrl.Result{Requeue: true, RequeueAfter: time.Hour},
+			arocli: arocli,
+			want:   ctrl.Result{Requeue: true, RequeueAfter: time.Hour},
 		},
 		{
 			name: "has error",
@@ -86,7 +99,29 @@ func TestWorkaroundReconciler(t *testing.T) {
 				mw.EXPECT().Ensure(gomock.Any()).Return(fmt.Errorf("oops"))
 			},
 			want:    ctrl.Result{},
+			arocli:  arocli,
 			wantErr: true,
+		},
+		{
+			name: "systemReserved is not required because autoNodeSizing is enabled",
+			mocker: func(mw *mock_workaround.MockWorkaround) {
+				gomock.InOrder(
+					mw.EXPECT().IsRequired(gomock.Any()).Return(true),
+					mw.EXPECT().Ensure(gomock.Any()).Return(nil),
+				)
+			},
+			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					Features: arov1alpha1.FeaturesSpec{
+						ReconcileWorkaroundsController: true,
+						ReconcileAutoSizedNodes:        true,
+					},
+				},
+			}),
+			want: ctrl.Result{Requeue: true, RequeueAfter: time.Hour},
 		},
 	}
 	for _, tt := range tests {
@@ -95,11 +130,16 @@ func TestWorkaroundReconciler(t *testing.T) {
 			defer controller.Finish()
 
 			mwa := mock_workaround.NewMockWorkaround(controller)
+			workarounds := map[string]Workaround{
+				"test":           mwa,
+				"systemReserved": mwa,
+			}
 			r := &Reconciler{
-				arocli:      arocli,
-				configcli:   configfake.NewSimpleClientset(clusterVersion("4.4.10")),
-				workarounds: []Workaround{mwa},
-				log:         utillog.GetLogger(),
+				arocli:             tt.arocli,
+				configcli:          configfake.NewSimpleClientset(clusterVersion("4.4.10")),
+				workarounds:        workarounds,
+				enabledWorkarounds: workarounds,
+				log:                utillog.GetLogger(),
 			}
 			tt.mocker(mwa)
 			got, err := r.Reconcile(context.Background(), reconcile.Request{})
