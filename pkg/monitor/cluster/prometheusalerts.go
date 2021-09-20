@@ -17,8 +17,16 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/portforward"
 )
 
-var ignoredAlerts = map[string]struct{}{
-	"ImagePruningDisabled": {},
+var ignoredAlerts = map[string]struct{ namespaces map[string]struct{} }{
+	"ImagePruningDisabled": {nil},
+	"KubeJobFailed": {map[string]struct{}{
+		"openshift-azure-logging":  {},
+		"openshift-image-registry": {},
+	}},
+	"KubeJobCompletion": {map[string]struct{}{
+		"openshift-azure-logging":  {},
+		"openshift-image-registry": {},
+	}},
 }
 
 func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
@@ -84,7 +92,7 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 			continue
 		}
 
-		if alertIsIgnored(alert.Name()) {
+		if alertIsIgnored(alert) {
 			continue
 		}
 
@@ -106,14 +114,21 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 	return nil
 }
 
-func alertIsIgnored(alertName string) bool {
-	if strings.HasPrefix(alertName, "UsingDeprecatedAPI") {
+func alertIsIgnored(alert model.Alert) bool {
+	if strings.HasPrefix(alert.Name(), "UsingDeprecatedAPI") {
 		return true
 	}
 
-	if _, ok := ignoredAlerts[alertName]; ok {
-		return true
-	}
+	if options, ok := ignoredAlerts[alert.Name()]; ok {
+		if options.namespaces == nil {
+			// alert suppression rule is not namespace bound
+			return true
+		}
 
+		if _, ok := options.namespaces[string(alert.Labels["namespace"])]; ok {
+			// alert suppression rule is namespace-bound, namespace is correct
+			return true
+		}
+	}
 	return false
 }
