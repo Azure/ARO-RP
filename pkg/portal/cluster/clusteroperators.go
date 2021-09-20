@@ -19,7 +19,7 @@ type ClusterOperatorsInformation struct {
 	Operators []OperatorInformation `json:"operators"`
 }
 
-func ClusterOperatorsInformationFromClusterDoc(operators *configv1.ClusterOperatorList) *ClusterOperatorsInformation {
+func clusterOperatorsInformationFromOperatorList(operators *configv1.ClusterOperatorList) *ClusterOperatorsInformation {
 	final := &ClusterOperatorsInformation{
 		Operators: make([]OperatorInformation, 0, len(operators.Items)),
 	}
@@ -48,7 +48,7 @@ func (f *realFetcher) ClusterOperators(ctx context.Context) (*ClusterOperatorsIn
 		return nil, err
 	}
 
-	return ClusterOperatorsInformationFromClusterDoc(r), nil
+	return clusterOperatorsInformationFromOperatorList(r), nil
 }
 
 func (c *client) ClusterOperators(ctx context.Context) (*ClusterOperatorsInformation, error) {

@@ -34,7 +34,8 @@ import (
 )
 
 var (
-	elevatedGroupIDs = []string{"00000000-0000-0000-0000-000000000000"}
+	nonElevatedGroupIDs = []string{"00000000-1111-1111-1111-000000000000"}
+	elevatedGroupIDs    = []string{"00000000-0000-0000-0000-000000000000"}
 )
 
 func TestSecurity(t *testing.T) {
