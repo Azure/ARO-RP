@@ -98,7 +98,7 @@ func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config,
 
 // Monitor checks the API server health of a cluster
 func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
-	mon.log.Debug("monitoring")
+	mon.log.Debugf("monitoring %s", mon.oc.ID)
 
 	if mon.hourlyRun {
 		mon.emitGauge("cluster.provisioning", 1, map[string]string{
@@ -135,6 +135,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitStatefulsetStatuses,
 		mon.emitJobConditions,
 		mon.emitSummary,
+		mon.emitEtcdMetrics,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 	} {
 		err = f(ctx)

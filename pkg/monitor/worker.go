@@ -13,6 +13,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -192,7 +193,17 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	ctx, cancel := context.WithTimeout(ctx, 50*time.Second)
 	defer cancel()
 
-	restConfig, err := restconfig.RestConfig(mon.dialer, doc.OpenShiftCluster)
+	// In development mode, we can have localhost "fake" APIServers which don't
+	// get proxied, so use a direct dialer for this
+	var dialer proxy.Dialer
+	if mon.env.IsLocalDevelopmentMode() && doc.OpenShiftCluster.Properties.ProvisionedBy == "SHAREDTEST" {
+		dialer, _ = proxy.NewDialer(false)
+		log.Info("Using non-proxy")
+	} else {
+		dialer = mon.dialer
+	}
+
+	restConfig, err := restconfig.RestConfig(dialer, doc.OpenShiftCluster)
 	if err != nil {
 		log.Error(err)
 		return
