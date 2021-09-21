@@ -5,172 +5,115 @@ package image
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 
+	configv1 "github.com/openshift/api/config/v1"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 )
 
-func TestReconcileMonitoringConfig(t *testing.T) {
+// fake arocli
+var (
+	imageConfigMetadata = metav1.ObjectMeta{Name: "cluster"}
+	arocli              = arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: arov1alpha1.SingletonClusterName,
+		},
+		Spec: arov1alpha1.ClusterSpec{
+			AZEnvironment: "AzurePublicCloud",
+			Features: arov1alpha1.FeaturesSpec{
+				ReconcileImageConfig: true,
+			},
+			Location: "eastus",
+		},
+	})
+)
+
+// Test reconcile function
+func TestImageConfigReconciler(t *testing.T) {
 	log := logrus.NewEntry(logrus.StandardLogger())
 	type test struct {
-		name         string
-		setConfigMap func() *Reconciler
-		wantConfig   string
+		name       string
+		arocli     aroclient.Interface
+		configcli  configclient.Interface
+		wantConfig string
 	}
 
 	for _, tt := range []*test{
 		{
-			name: "ConfigMap does not exist - enable",
-			setConfigMap: func() *Reconciler {
-				return &Reconciler{
-					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{}),
-					log:           log,
-					jsonHandle:    new(codec.JsonHandle),
-				}
-			},
-			wantConfig: `
-{}`,
+			name:   "Image config registry source is empty, no action",
+			arocli: arocli,
+			configcli: configfake.NewSimpleClientset(&configv1.Image{
+				ObjectMeta: imageConfigMetadata,
+			}),
+			wantConfig: `{"metadata":{"name":"cluster","creationTimestamp":null},"spec":{"additionalTrustedCA":{"name":""},"registrySources":{}},"status":{}}`,
 		},
 		{
-			name: "ConfigMap does not have data",
-			setConfigMap: func() *Reconciler {
-				return &Reconciler{
-					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
-						ObjectMeta: cmMetadata,
-					}),
-					log:        log,
-					jsonHandle: new(codec.JsonHandle),
-				}
-			},
-			wantConfig: ``,
-		},
-		{
-			name: "empty config.yaml",
-			setConfigMap: func() *Reconciler {
-				return &Reconciler{
-					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
-						ObjectMeta: cmMetadata,
-						Data: map[string]string{
-							"config.yaml": ``,
+			name:   "allowedRegistries exists, function should add images",
+			arocli: arocli,
+			configcli: configfake.NewSimpleClientset(&configv1.Image{
+				ObjectMeta: imageConfigMetadata,
+				Spec: configv1.ImageSpec{
+					RegistrySources: configv1.RegistrySources{
+						AllowedRegistries: []string{
+							"quay.io",
 						},
-					}),
-					log:        log,
-					jsonHandle: new(codec.JsonHandle),
-				}
-			},
-			wantConfig: ``,
+					},
+				},
+			}),
+			wantConfig: `{"metadata":{"name":"cluster","creationTimestamp":null},"spec":{"additionalTrustedCA":{"name":""},"registrySources":{"allowedRegistries":["quay.io","arosvc.azurecr.io","arosvc.eastus.data.azurecr.io"]}},"status":{}}`,
 		},
 		{
-			name: "settings restored to default and extra fields are preserved",
-			setConfigMap: func() *Reconciler {
-				return &Reconciler{
-					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
-						ObjectMeta: cmMetadata,
-						Data: map[string]string{
-							"config.yaml": `
-prometheusK8s:
-  retention: 1d
-  volumeClaimTemplate:
-    metadata:
-      name: meh
-    spec:
-      resources:
-        requests:
-          storage: 50Gi
-      storageClassName: fast
-      volumeMode: Filesystem
-`,
+			name:   "blockedRegistries exists, function should delete images",
+			arocli: arocli,
+			configcli: configfake.NewSimpleClientset(&configv1.Image{
+				ObjectMeta: imageConfigMetadata,
+				Spec: configv1.ImageSpec{
+					RegistrySources: configv1.RegistrySources{
+						BlockedRegistries: []string{
+							"quay.io", "arosvc.azurecr.io", "arosvc.eastus.data.azurecr.io",
 						},
-					}),
-					log:        log,
-					jsonHandle: new(codec.JsonHandle),
-				}
-			},
-			wantConfig: `
-{}`,
-		},
-		{
-			name: "other monitoring components are configured",
-			setConfigMap: func() *Reconciler {
-				return &Reconciler{
-					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
-						ObjectMeta: cmMetadata,
-						Data: map[string]string{
-							"config.yaml": `
-alertmanagerMain:
-  nodeSelector:
-    foo: bar
-`,
-						},
-					}),
-					log:        log,
-					jsonHandle: new(codec.JsonHandle),
-				}
-			},
-			wantConfig: `
-alertmanagerMain:
-  nodeSelector:
-    foo: bar
-`,
-		},
-		{
-			name: "enabled and we want to disable",
-			setConfigMap: func() *Reconciler {
-				return &Reconciler{
-					kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
-						ObjectMeta: cmMetadata,
-						Data: map[string]string{
-							"config.yaml": `
-alertmanagerMain:
-  nodeSelector:
-    foo: bar
-prometheusK8s:
-    retention: 15d
-    volumeClaimTemplate:
-      spec:
-        resources:
-          requests:
-            storage: 100Gi
-`,
-						},
-					}),
-					log:        log,
-					jsonHandle: new(codec.JsonHandle),
-				}
-			},
-			wantConfig: `
-alertmanagerMain:
-  nodeSelector:
-    foo: bar
-`,
+					},
+				},
+			}),
+			wantConfig: `{"metadata":{"name":"cluster","creationTimestamp":null},"spec":{"additionalTrustedCA":{"name":""},"registrySources":{"blockedRegistries":["quay.io"]}},"status":{}}`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			r := tt.setConfigMap()
+			r := &Reconciler{
+				arocli:     arocli,
+				log:        log,
+				jsonHandle: new(codec.JsonHandle),
+				configcli:  tt.configcli,
+			}
 			request := ctrl.Request{}
-			request.Name = "cluster-monitoring-config"
-			request.Namespace = "openshift-monitoring"
+			request.Name = "cluster"
 
-			_, err := r.Reconcile(request)
+			_, err := r.Reconcile(ctx, request)
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			cm, err := r.kubernetescli.CoreV1().ConfigMaps("openshift-monitoring").Get(ctx, "cluster-monitoring-config", metav1.GetOptions{})
+			imgcfg, err := r.configcli.ConfigV1().Images().Get(ctx, request.Name, metav1.GetOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
+			imgcfgjson, _ := json.Marshal(imgcfg)
 
-			if strings.TrimSpace(cm.Data["config.yaml"]) != strings.TrimSpace(tt.wantConfig) {
-				t.Error(cm.Data["config.yaml"])
+			if string(imgcfgjson) != strings.TrimSpace(tt.wantConfig) {
+				t.Error(string(imgcfgjson))
 			}
+
 		})
 	}
 }

@@ -8,7 +8,6 @@ import (
 
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	// arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/go-autorest/autorest/azure"
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -20,6 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
 const imageConfigResource = "cluster"
@@ -51,13 +52,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// ! Feature flag code
-	// if !instance.Spec.Features.ReconcileImageConfig {
-	// 	return reconcile.Result{}, nil
-	// }
-
-	if instance.Spec.AZEnvironment == "AzurePublicCloud" {
-		allowedRegistries = []string{"arosvc.azurecr.io", "arosvc." + instance.Spec.Location + ".data." + azure.PublicCloud.ContainerRegistryDNSSuffix}
+	if !instance.Spec.Features.ReconcileImageConfig {
+		return reconcile.Result{}, nil
 	}
+
+	allowedRegistries = []string{instance.Spec.ACRDomain, "arosvc." + instance.Spec.Location + ".data." + azure.PublicCloud.ContainerRegistryDNSSuffix}
 
 	// * 1. Get image.config yaml
 	imageconfig, err := r.configcli.ConfigV1().Images().Get(ctx, request.Name, metav1.GetOptions{})
@@ -67,12 +66,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// * 2. get allowedRegistryMap, one of them has to be nil as they are mutually exlusive
 	allowedRegistryMap := imageconfig.Spec.RegistrySources.AllowedRegistries
-	// blockedRegistryMap := imageconfig.Spec.RegistrySources.BlockedRegistries
+	blockedRegistryMap := imageconfig.Spec.RegistrySources.BlockedRegistries
 
 	var regMap = make(map[string]bool)
 	// * 3. case allowedRegistry map is not nil
 	if allowedRegistryMap != nil {
-		// * 4. Set all registries to false by default
+		// * 4. Add to map + Set all registries to false by default
 		for _, registry := range allowedRegistries {
 			regMap[registry] = false
 		}
@@ -86,14 +85,41 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		for registryName := range regMap {
 			if !regMap[registryName] {
 				imageconfig.Spec.RegistrySources.AllowedRegistries = append(imageconfig.Spec.RegistrySources.AllowedRegistries, registryName)
-				_, err := r.configcli.ConfigV1().Images().Update(ctx, imageconfig, metav1.UpdateOptions{})
-				if err != nil {
-					return reconcile.Result{}, err
-				}
 			}
 		}
+		_, err := r.configcli.ConfigV1().Images().Update(ctx, imageconfig, metav1.UpdateOptions{})
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{}, nil
 	}
 
+	if blockedRegistryMap != nil {
+		var newblockedRegistryMap = []string{}
+		for _, registry := range allowedRegistries {
+			regMap[registry] = true
+		}
+
+		for _, blockedRegistry := range blockedRegistryMap {
+			if _, ok := regMap[blockedRegistry]; ok {
+				regMap[blockedRegistry] = false
+			} else {
+				regMap[blockedRegistry] = true
+			}
+		}
+
+		for _, registryName := range blockedRegistryMap {
+			if regMap[registryName] {
+				newblockedRegistryMap = append(newblockedRegistryMap, registryName)
+				imageconfig.Spec.RegistrySources.BlockedRegistries = newblockedRegistryMap
+			}
+		}
+		_, err := r.configcli.ConfigV1().Images().Update(ctx, imageconfig, metav1.UpdateOptions{})
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{}, nil
+	}
 	return reconcile.Result{}, nil
 }
 
