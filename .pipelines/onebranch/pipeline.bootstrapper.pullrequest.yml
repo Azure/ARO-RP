@@ -17,22 +17,22 @@ variables:
   Debian_Frontend: noninteractive
 
 parameters:
-  - name: buildFluentBit
-    displayName: Build Fluent Bit?
-    type: boolean
+- name: buildFluentBit
+  displayName: Build Fluent Bit
+  type: boolean
 
 resources:
   repositories:
-    - repository: templates
-      type: git
-      name: OneBranch.Pipelines/GovernedTemplates
-      ref: refs/heads/main
-    - repository: rhado
-      type: git
-      name: ARO.Pipelines
-    - repository: rpconfig
-      type: git
-      name: RP-Config
+  - repository: templates
+    type: git
+    name: OneBranch.Pipelines/GovernedTemplates
+    ref: refs/heads/main
+  - repository: rhado
+    type: git
+    name: ARO.Pipelines
+  - repository: rpconfig
+    type: git
+    name: RP-Config
 
 extends:
   template: v2/OneBranch.NonOfficial.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
@@ -49,20 +49,20 @@ extends:
         suppressionSet: default
 
     stages:
-      - stage: Bootstrapper
-        jobs:
-          - template: .pipelines/onebranch/templates/template-bootstrapper.yml@self
+    - stage: Bootstrapper
+      jobs:
+        - template: .pipelines/onebranch/templates/template-bootstrapper.yml@self
 
-      - stage: Build_Fluentbit
-        condition: eq(${{ parameters.buildFluentBit}}, 'true')
-        jobs:
-          - job: Build_Fluentbit
-            pool:
-              type: docker
-              os: linux
+    - stage: Build_Fluentbit
+      condition: eq(${{ parameters.buildFluentBit}}, 'true')
+      jobs:
+      - job: Build_Fluentbit
+        pool:
+          type: docker
+          os: linux
 
-            variables:
-              ob_git_checkout: true
+        variables:
+          ob_git_checkout: true
 
-            steps:
-              - template: .pipelines/onebranch/templates/template-bootstrapper-fluentbit.yml@self
+        steps:
+          - template: .pipelines/onebranch/templates/template-bootstrapper-fluentbit.yml@self
