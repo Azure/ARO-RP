@@ -23,16 +23,16 @@ variables:
 
 resources:
   repositories:
-    - repository: templates
-      type: git
-      name: OneBranch.Pipelines/GovernedTemplates
-      ref: refs/heads/main
-    - repository: rhado
-      type: git
-      name: ARO.Pipelines
-    - repository: rpconfig
-      type: git
-      name: RP-Config
+  - repository: templates
+    type: git
+    name: OneBranch.Pipelines/GovernedTemplates
+    ref: refs/heads/main
+  - repository: rhado
+    type: git
+    name: ARO.Pipelines
+  - repository: rpconfig
+    type: git
+    name: RP-Config
 
 extends:
   template: v2/OneBranch.NonOfficial.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
@@ -49,6 +49,6 @@ extends:
         suppressionSet: default
 
     stages:
-      - stage: Mirror_Images
-        jobs:
-          - template: .pipelines/onebranch/templates/template-image-mirror.yml@self
+    - stage: Mirror_Images
+      jobs:
+        - template: .pipelines/onebranch/templates/template-image-mirror.yml@self
