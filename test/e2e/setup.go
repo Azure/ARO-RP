@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/clientcmd/api/latest"
 
+	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/env"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -186,6 +187,16 @@ func done(ctx context.Context) error {
 	if os.Getenv("CI") != "" && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
 		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
 		if err != nil {
+			return err
+		}
+
+		ocCluster, err := cluster.Get(ctx, vnetResourceGroup, clusterName)
+		if err != nil {
+			return err
+		}
+
+		// Don't delete the cluster if in failed provisioning state
+		if ocCluster.OpenShiftClusterProperties.ProvisioningState != redhatopenshift.Succeeded {
 			return err
 		}
 

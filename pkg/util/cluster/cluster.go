@@ -287,6 +287,10 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 	return
 }
 
+func (c *Cluster) Get(ctx context.Context, vnetResourceGroup, clusterName string) (result mgmtredhatopenshift20200430.OpenShiftCluster, err error) {
+	return c.openshiftclustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
+}
+
 func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName string) error {
 	var errs errors
 
@@ -372,7 +376,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			NetworkProfile: api.NetworkProfile{
 				PodCIDR:                "10.128.0.0/14",
 				ServiceCIDR:            "172.30.0.0/16",
-				SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+				SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOVNKubernetes,
 			},
 			MasterProfile: api.MasterProfile{
 				VMSize:           api.VMSizeStandardD8sV3,
