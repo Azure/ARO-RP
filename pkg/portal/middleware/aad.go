@@ -20,7 +20,6 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/microsoft"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
@@ -92,6 +91,11 @@ func NewAAD(log *logrus.Entry,
 		return nil, errors.New("invalid sessionKey")
 	}
 
+	endpoint := oauth2.Endpoint{
+		AuthURL:  env.Environment().ActiveDirectoryEndpoint + env.TenantID() + "/oauth2/v2.0/authorize",
+		TokenURL: env.Environment().ActiveDirectoryEndpoint + env.TenantID() + "/oauth2/v2.0/token",
+	}
+
 	a := &aad{
 		log: log,
 		env: env,
@@ -105,7 +109,7 @@ func NewAAD(log *logrus.Entry,
 		store:       sessions.NewCookieStore(sessionKey),
 		oauther: &oauth2.Config{
 			ClientID:    clientID,
-			Endpoint:    microsoft.AzureADEndpoint(env.TenantID()),
+			Endpoint:    endpoint,
 			RedirectURL: "https://" + hostname + "/callback",
 			Scopes: []string{
 				"openid",
