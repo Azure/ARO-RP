@@ -30,6 +30,7 @@ var (
 			Name: arov1alpha1.SingletonClusterName,
 		},
 		Spec: arov1alpha1.ClusterSpec{
+			ACRDomain:     "arointsvc.azurecr.io",
 			AZEnvironment: "AzurePublicCloud",
 			Features: arov1alpha1.FeaturesSpec{
 				ReconcileImageConfig: true,
@@ -71,7 +72,7 @@ func TestImageConfigReconciler(t *testing.T) {
 					},
 				},
 			}),
-			wantConfig: `{"metadata":{"name":"cluster","creationTimestamp":null},"spec":{"additionalTrustedCA":{"name":""},"registrySources":{"allowedRegistries":["quay.io","arosvc.azurecr.io","arosvc.eastus.data.azurecr.io"]}},"status":{}}`,
+			wantConfig: `{"metadata":{"name":"cluster","creationTimestamp":null},"spec":{"additionalTrustedCA":{"name":""},"registrySources":{"allowedRegistries":["quay.io","arointsvc.azurecr.io","arosvc.eastus.data.azurecr.io"]}},"status":{}}`,
 		},
 		{
 			name:   "blockedRegistries exists, function should delete images",
@@ -81,7 +82,7 @@ func TestImageConfigReconciler(t *testing.T) {
 				Spec: configv1.ImageSpec{
 					RegistrySources: configv1.RegistrySources{
 						BlockedRegistries: []string{
-							"quay.io", "arosvc.azurecr.io", "arosvc.eastus.data.azurecr.io",
+							"quay.io", "arointsvc.azurecr.io", "arosvc.eastus.data.azurecr.io",
 						},
 					},
 				},
@@ -112,6 +113,8 @@ func TestImageConfigReconciler(t *testing.T) {
 
 			if string(imgcfgjson) != strings.TrimSpace(tt.wantConfig) {
 				t.Error(string(imgcfgjson))
+				t.Error("----------------------")
+				t.Error(tt.wantConfig)
 			}
 
 		})
