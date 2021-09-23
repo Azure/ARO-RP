@@ -11,6 +11,7 @@ jobs:
 
   steps:
   - checkout: rhado
+  - checkout: rpconfig
   - task: DownloadPipelineArtifact@2
     displayName: Download Deployer
     inputs:

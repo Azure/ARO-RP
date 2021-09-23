@@ -30,6 +30,9 @@ resources:
   - repository: rhado
     type: git
     name: ARO.Pipelines
+  - repository: rpconfig
+    type: git
+    name: RP-Config
 
 extends:
   template: v2/OneBranch.NonOfficial.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
