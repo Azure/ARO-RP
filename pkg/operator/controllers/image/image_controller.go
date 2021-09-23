@@ -25,7 +25,6 @@ import (
 
 const imageConfigResource = "cluster"
 
-// var allowedRegistries = []string{"arosvc.azurecr.io", "quay.io"}
 var allowedRegistries = []string{}
 
 type Reconciler struct {
@@ -45,18 +44,22 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli conf
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, request.Name, metav1.GetOptions{})
 
+	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// ! Feature flag code
+	// Feature flag
 	if !instance.Spec.Features.ReconcileImageConfig {
 		return reconcile.Result{}, nil
 	}
 
-	allowedRegistries = []string{instance.Spec.ACRDomain, "arosvc." + instance.Spec.Location + ".data." + azure.PublicCloud.ContainerRegistryDNSSuffix}
+	if instance.Spec.AZEnvironment == "AzurePublicCloud" {
+		allowedRegistries = []string{instance.Spec.ACRDomain, "arosvc." + instance.Spec.Location + ".data." + azure.PublicCloud.ContainerRegistryDNSSuffix}
+	} else if instance.Spec.AZEnvironment == "AzureUSGovernment" {
+		allowedRegistries = []string{instance.Spec.ACRDomain, "arosvc." + instance.Spec.Location + ".data." + azure.USGovernmentCloud.ContainerRegistryDNSSuffix}
+	}
 
 	// * 1. Get image.config yaml
 	imageconfig, err := r.configcli.ConfigV1().Images().Get(ctx, request.Name, metav1.GetOptions{})

@@ -52,6 +52,33 @@ func TestImageConfigReconciler(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
+			name: "Feature Flag disabled, no action",
+			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					ACRDomain:     "arointsvc.azurecr.io",
+					AZEnvironment: "AzurePublicCloud",
+					Features: arov1alpha1.FeaturesSpec{
+						ReconcileImageConfig: false,
+					},
+					Location: "eastus",
+				},
+			}),
+			configcli: configfake.NewSimpleClientset(&configv1.Image{
+				ObjectMeta: imageConfigMetadata,
+				Spec: configv1.ImageSpec{
+					RegistrySources: configv1.RegistrySources{
+						AllowedRegistries: []string{
+							"quay.io",
+						},
+					},
+				},
+			}),
+			wantConfig: `{"metadata":{"name":"cluster","creationTimestamp":null},"spec":{"additionalTrustedCA":{"name":""},"registrySources":{"allowedRegistries":["quay.io"]}},"status":{}}`,
+		},
+		{
 			name:   "Image config registry source is empty, no action",
 			arocli: arocli,
 			configcli: configfake.NewSimpleClientset(&configv1.Image{
@@ -89,11 +116,38 @@ func TestImageConfigReconciler(t *testing.T) {
 			}),
 			wantConfig: `{"metadata":{"name":"cluster","creationTimestamp":null},"spec":{"additionalTrustedCA":{"name":""},"registrySources":{"blockedRegistries":["quay.io"]}},"status":{}}`,
 		},
+		{
+			name: "Gov Cloud, function should add appropriate images",
+			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					ACRDomain:     "arointsvc.azurecr.us",
+					AZEnvironment: "AzureUSGovernment",
+					Features: arov1alpha1.FeaturesSpec{
+						ReconcileImageConfig: true,
+					},
+					Location: "eastus",
+				},
+			}),
+			configcli: configfake.NewSimpleClientset(&configv1.Image{
+				ObjectMeta: imageConfigMetadata,
+				Spec: configv1.ImageSpec{
+					RegistrySources: configv1.RegistrySources{
+						AllowedRegistries: []string{
+							"quay.io",
+						},
+					},
+				},
+			}),
+			wantConfig: `{"metadata":{"name":"cluster","creationTimestamp":null},"spec":{"additionalTrustedCA":{"name":""},"registrySources":{"allowedRegistries":["quay.io","arointsvc.azurecr.us","arosvc.eastus.data.azurecr.us"]}},"status":{}}`,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			r := &Reconciler{
-				arocli:     arocli,
+				arocli:     tt.arocli,
 				log:        log,
 				jsonHandle: new(codec.JsonHandle),
 				configcli:  tt.configcli,
