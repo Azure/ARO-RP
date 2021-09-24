@@ -50,6 +50,14 @@ func getBaseLogger() *logrus.Logger {
 	return logger
 }
 
+// Important: Logger hooks loading order is important as they are executed in
+// such order (https://github.com/sirupsen/logrus/blob/master/hooks.go#L26-L34).
+//  This means we need to load all populating hooks (logrHook, auditHook)
+// first, and emitting hooks (journald) last. Otherwise enriched data is lost.
+// In addition to that we need to understand that in situations like this log output
+// in CMD might be not the same as in journald, because we emit directly to journald.
+// If to remove this, we would need additional layer for log parsing.
+
 // GetAuditEntry returns a consistently configured audit log entry
 func GetAuditEntry() *logrus.Entry {
 	auditLogger := getBaseLogger()
