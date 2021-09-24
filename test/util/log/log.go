@@ -29,7 +29,9 @@ func New() (*test.Hook, *logrus.Entry) {
 // feature.
 func NewAudit() (*test.Hook, *logrus.Entry) {
 	logger, h := test.NewNullLogger()
-	audit.AddHook(logger)
+	logger.AddHook(&audit.PayloadHook{
+		Payload: &audit.Payload{},
+	})
 	return h, logrus.NewEntry(logger)
 }
 

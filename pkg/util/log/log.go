@@ -45,9 +45,7 @@ func getBaseLogger() *logrus.Logger {
 		FullTimestamp: true,
 	})
 
-	if journal.Enabled() {
-		logger.AddHook(&journaldHook{})
-	}
+	logger.AddHook(&logrHook{})
 
 	return logger
 }
@@ -55,7 +53,15 @@ func getBaseLogger() *logrus.Logger {
 // GetAuditEntry returns a consistently configured audit log entry
 func GetAuditEntry() *logrus.Entry {
 	auditLogger := getBaseLogger()
-	audit.AddHook(auditLogger)
+
+	auditLogger.AddHook(&audit.PayloadHook{
+		Payload: &audit.Payload{},
+	})
+
+	if journal.Enabled() {
+		auditLogger.AddHook(&journaldHook{})
+	}
+
 	return logrus.NewEntry(auditLogger)
 }
 
@@ -69,7 +75,9 @@ func GetLogger() *logrus.Entry {
 		CallerPrettyfier: relativeFilePathPrettier,
 	})
 
-	logger.AddHook(&logrHook{})
+	if journal.Enabled() {
+		logger.AddHook(&journaldHook{})
+	}
 
 	log := logrus.NewEntry(logger)
 
