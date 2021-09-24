@@ -141,7 +141,7 @@ func TestImageConfigReconciler(t *testing.T) {
 					},
 				},
 			}),
-			wantConfig: `{"metadata":{"name":"cluster","creationTimestamp":null},"spec":{"additionalTrustedCA":{"name":""},"registrySources":{"allowedRegistries":["quay.io","arointsvc.azurecr.us","arosvc.eastus.data.azurecr.us"]}},"status":{}}`,
+			wantConfig: `{"metadata":{"name":"cluster","creationTimestamp":null},"spec":{"additionalTrustedCA":{"name":""},"registrySources":{"allowedRegistries":["quay.io","arointsvc.azurecr.us","arosvc.eastus.data.azurecr.io"]}},"status":{}}`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
