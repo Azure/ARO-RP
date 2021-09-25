@@ -108,6 +108,8 @@ questions or comments.
       `openshift-azure-logging` namespace matches the pre-defined specification
       found in `pkg/operator/controllers/genevalogging/genevalogging.go`.
 
+    * imageconfig: Ensures that required registries are not blocked in `image.config`
+
     * machine: validate machine objects have the correct provider spec,
       vm type, vm image, disk size, three master nodes exist, and the number of worker nodes
       match the desired worker replicas

@@ -61,6 +61,8 @@ var DefaultOperatorFlags OperatorFlags = OperatorFlags{
 
 	"aro.genevalogging.enabled": FLAG_TRUE,
 
+	"aro.imageconfig.enabled": FLAG_TRUE,
+
 	"aro.machine.enabled": FLAG_TRUE,
 
 	"aro.machineset.enabled": FLAG_TRUE,
