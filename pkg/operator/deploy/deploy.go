@@ -180,6 +180,7 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 				ReconcilePullSecret:            true,
 				ReconcileRouteFix:              true,
 				ReconcileWorkaroundsController: true,
+				ReconcileImageConfig:           true,
 			},
 		},
 	}
