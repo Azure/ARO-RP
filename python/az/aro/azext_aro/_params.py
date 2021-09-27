@@ -110,6 +110,10 @@ def load_arguments(self, _):
         c.argument('worker_subnet',
                    help='Name or ID of worker vnet subnet.  If name is supplied, `--vnet` must be supplied.',
                    validator=validate_subnet('worker_subnet'))
+        c.argument('fips_validated_modules', arg_type=get_enum_type(['Enabled', 'Disabled']),
+                    options_list=['--fips'],
+                    help='FIPS mode for VMs. Correct values are "Enabled" or "Disabled" (default)',
+                    validator=validate_fips_validated_modules('fips_validated_modules'))
     with self.argument_context('aro update') as c:
         c.argument('client_secret',
                    help='Client secret of cluster service principal.',
@@ -119,7 +123,5 @@ def load_arguments(self, _):
                    help='Refresh cluster application credentials.',
                    options_list=['--refresh-credentials'],
                    validator=validate_refresh_cluster_credentials)
-        c.argument('fips_validated_modules', arg_type=get_enum_type(['Enabled', 'Disabled']),
-            options_list=['--fips'],
-            help='FIPS mode for VMs. Correct values are "Enabled" or "Disabled" (default)',
-            validator=validate_fips_validated_modules('fips_validated_modules'))
+
+
