@@ -106,6 +106,10 @@ func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resou
 						VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-subnet"),
 						Action:                   mgmtstorage.Allow,
 					},
+					{
+						VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.GatewayResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/gateway-vnet/subnets/gateway-subnet"),
+						Action:                   mgmtstorage.Allow,
+					},
 				},
 				DefaultAction: "Deny",
 			},
@@ -120,6 +124,9 @@ func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resou
 	if m.env.IsLocalDevelopmentMode() {
 		sa.NetworkRuleSet.DefaultAction = mgmtstorage.DefaultActionAllow
 	}
+	// When migrating storage accounts for old cluster we are not able to change
+	// encryption. For this we have this encryption flag. We not gonna add this
+	// retrospectively to old clusters
 	if encrypted {
 		sa.AccountProperties.Encryption = &mgmtstorage.Encryption{
 			RequireInfrastructureEncryption: to.BoolPtr(true),
