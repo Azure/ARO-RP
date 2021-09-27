@@ -241,3 +241,15 @@ def validate_refresh_cluster_credentials(namespace):
     if namespace.refresh_cluster_credentials:
         if namespace.client_secret is not None or namespace.client_id is not None:
             raise RequiredArgumentMissingError('--client-id and --client-secret must be not set with --refresh-credentials.')  # pylint: disable=line-too-long
+
+
+def validate_fips_validated_modules(key):
+    def _validate_fips_validated_modules(namespace):
+        eah = getattr(namespace, key)
+        if eah is not None:
+            eah = eah.capitalize()
+            if eah not in ['Enabled', 'Disabled']:
+                raise InvalidArgumentValueError("Invalid --%s '%s'." %
+                                                (key.replace('_', '-'), eah))
+
+    return _validate_fips_validated_modules
