@@ -9,7 +9,6 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/openshift/installer/pkg/asset/installconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -73,23 +72,12 @@ func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 	registryStorageAccountName := m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName
 
-	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, clusterStorageAccountName)
-	if err != nil {
-		return err
-	}
-
-	var installConfig *installconfig.InstallConfig
-	err = pg.Get(&installConfig)
-	if err != nil {
-		return err
-	}
-
 	t := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
 		Resources: []*arm.Resource{
-			m.storageAccount(clusterStorageAccountName, installConfig.Config.Azure.Region, false),
-			m.storageAccount(registryStorageAccountName, installConfig.Config.Azure.Region, false),
+			m.storageAccount(clusterStorageAccountName, m.doc.OpenShiftCluster.Location, false),
+			m.storageAccount(registryStorageAccountName, m.doc.OpenShiftCluster.Location, false),
 		},
 	}
 
