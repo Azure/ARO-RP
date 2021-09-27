@@ -66,11 +66,21 @@ const (
 	ProvisioningStateFailed        ProvisioningState = "Failed"
 )
 
+// FipsValidatedModules determines if FIPS is used.
+type FipsValidatedModules string
+
+// FipsValidatedModules constants.
+const (
+	FipsValidatedModulesEnabled  FipsValidatedModules = "Enabled"
+	FipsValidatedModulesDisabled FipsValidatedModules = "Disabled"
+)
+
 // ClusterProfile represents a cluster profile.
 type ClusterProfile struct {
-	Domain          string `json:"domain,omitempty"`
-	Version         string `json:"version,omitempty"`
-	ResourceGroupID string `json:"resourceGroupId,omitempty"`
+	Domain               string               `json:"domain,omitempty"`
+	Version              string               `json:"version,omitempty"`
+	ResourceGroupID      string               `json:"resourceGroupId,omitempty"`
+	FipsValidatedModules FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
 }
 
 // FeatureProfile represents a feature profile.
