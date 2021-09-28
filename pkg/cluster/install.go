@@ -35,9 +35,9 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 		steps.Action(m.ensureDefaults),
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)), // re-create RP RBAC if needed after tenant migration
 		steps.Action(m.createOrUpdateDenyAssignment),
-		steps.Action(m.populateRegistryStorageAccountName),
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute, false),
+		steps.Action(m.populateRegistryStorageAccountName),
 		steps.Action(m.ensureBillingRecord), // belt and braces
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
