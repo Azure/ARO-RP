@@ -12,6 +12,7 @@ import (
 	"net"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
@@ -62,6 +63,54 @@ func fakeClient(c net.Conn, serverKey *rsa.PublicKey, user string, password stri
 	return conn.Close()
 }
 
+func fakeTimeoutClient(c bufferedpipe.LosableConnection, serverKey *rsa.PublicKey, user string, password string) error {
+	publicKey, err := cryptossh.NewPublicKey(serverKey)
+	if err != nil {
+		return err
+	}
+
+	conn, channels, _, err := cryptossh.NewClientConn(c, "", &cryptossh.ClientConfig{
+		HostKeyCallback: cryptossh.FixedHostKey(publicKey),
+		User:            user,
+		Auth: []cryptossh.AuthMethod{
+			cryptossh.Password(password),
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for channel := range channels {
+			if channel.ChannelType() == "session" {
+				_, requests, err := channel.Accept()
+				if err != nil {
+					break
+				}
+				cryptossh.DiscardRequests(requests)
+			}
+		}
+	}()
+
+	_, req, _ := conn.OpenChannel("session", []byte(""))
+	pings := 0
+
+	go func() {
+		for request := range req {
+			_ = request.Reply(true, nil)
+
+			pings += 1
+			if pings > 2 {
+				c.LoseConnection()
+			}
+			continue
+		}
+	}()
+
+	return conn.Wait()
+
+}
+
 // fakeServer returns a test listener for an SSH server which validates the
 // client key, reads ping request(s) and writes pong replies
 func fakeServer(clientKey *rsa.PublicKey) (*listener.Listener, error) {
@@ -104,10 +153,20 @@ func fakeServer(clientKey *rsa.PublicKey) (*listener.Listener, error) {
 			}
 
 			go func() {
-				conn, _, requests, err := cryptossh.NewServerConn(c, config)
+				conn, channels, requests, err := cryptossh.NewServerConn(c, config)
 				if err != nil {
 					return
 				}
+
+				go func() {
+					for channel := range channels {
+						_, requests, err := channel.Accept()
+						if err != nil {
+							break
+						}
+						cryptossh.DiscardRequests(requests)
+					}
+				}()
 
 				go func() {
 					for request := range requests {
@@ -412,7 +471,7 @@ func TestProxy(t *testing.T) {
 
 			hook, log := testlog.New()
 
-			s, err := New(nil, nil, log, nil, hostKey, nil, dbOpenShiftClusters, dbPortal, dialer, &mux.Router{})
+			s, err := New(nil, nil, log, nil, hostKey, nil, dbOpenShiftClusters, dbPortal, dialer, &mux.Router{}, 30*time.Second)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -425,6 +484,224 @@ func TestProxy(t *testing.T) {
 			}()
 
 			err = fakeClient(client, &hostKey.PublicKey, tt.username, tt.password)
+			if err != nil && !strings.HasPrefix(err.Error(), tt.wantErrPrefix) ||
+				err == nil && tt.wantErrPrefix != "" {
+				t.Error(err)
+			}
+
+			<-done
+
+			openShiftClustersClient.SetError(nil)
+			portalClient.SetError(nil)
+
+			for _, err = range checker.CheckOpenShiftClusters(openShiftClustersClient) {
+				t.Error(err)
+			}
+
+			for _, err = range checker.CheckPortals(portalClient) {
+				t.Error(err)
+			}
+
+			err = testlog.AssertLoggingOutput(hook, tt.wantLogs)
+			if err != nil {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestProxyTimeout(t *testing.T) {
+	ctx := context.Background()
+	username := "test"
+	password := "00000000-0000-0000-0000-000000000000"
+	subscriptionID := "10000000-0000-0000-0000-000000000000"
+	resourceGroup := "rg"
+	resourceName := "cluster"
+	resourceID := "/subscriptions/" + subscriptionID + "/resourcegroups/" + resourceGroup + "/providers/microsoft.redhatopenshift/openshiftclusters/" + resourceName
+	apiServerPrivateEndpointIP := "1.2.3.4"
+
+	hostKey, _, err := utiltls.GenerateKeyAndCertificate("proxy", nil, nil, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	clusterKey, _, err := utiltls.GenerateKeyAndCertificate("cluster", nil, nil, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	l, err := fakeServer(&clusterKey.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Close()
+
+	goodOpenShiftClusterDocument := func() *api.OpenShiftClusterDocument {
+		return &api.OpenShiftClusterDocument{
+			ID:  resourceID,
+			Key: resourceID,
+			OpenShiftCluster: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					NetworkProfile: api.NetworkProfile{
+						APIServerPrivateEndpointIP: apiServerPrivateEndpointIP,
+					},
+					SSHKey: api.SecureBytes(x509.MarshalPKCS1PrivateKey(clusterKey)),
+				},
+			},
+		}
+	}
+
+	goodPortalDocument := func(id string) *api.PortalDocument {
+		return &api.PortalDocument{
+			ID: id,
+			Portal: &api.Portal{
+				ID:       resourceID,
+				Username: username,
+				SSH: &api.SSH{
+					Master: 1,
+				},
+			},
+		}
+	}
+
+	type test struct {
+		name           string
+		username       string
+		password       string
+		fixtureChecker func(*test, *testdatabase.Fixture, *testdatabase.Checker, *cosmosdb.FakeOpenShiftClusterDocumentClient, *cosmosdb.FakePortalDocumentClient)
+		mocks          func(*mock_proxy.MockDialer)
+		wantErrPrefix  string
+		wantLogs       []map[string]types.GomegaMatcher
+	}
+
+	for _, tt := range []*test{
+		{
+			name:     "timeout",
+			username: username,
+			password: password,
+			fixtureChecker: func(tt *test, fixture *testdatabase.Fixture, checker *testdatabase.Checker, openShiftClustersClient *cosmosdb.FakeOpenShiftClusterDocumentClient, portalClient *cosmosdb.FakePortalDocumentClient) {
+				portalDocument := goodPortalDocument(tt.password)
+				fixture.AddPortalDocuments(portalDocument)
+				openShiftClusterDocument := goodOpenShiftClusterDocument()
+				fixture.AddOpenShiftClusterDocuments(openShiftClusterDocument)
+				portalDocument = goodPortalDocument(tt.password)
+				portalDocument.Portal.SSH.Authenticated = true
+				checker.AddPortalDocuments(portalDocument)
+				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
+			},
+			mocks: func(dialer *mock_proxy.MockDialer) {
+				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":2201").Return(l.DialContext(ctx, "", ""))
+			},
+			wantErrPrefix: "EOF",
+			wantLogs: []map[string]types.GomegaMatcher{
+				{
+					"level":       gomega.Equal(logrus.InfoLevel),
+					"msg":         gomega.Equal("authentication succeeded"),
+					"remote_addr": gomega.Not(gomega.BeEmpty()),
+					"username":    gomega.Equal(username),
+				},
+				{
+					"level":           gomega.Equal(logrus.InfoLevel),
+					"msg":             gomega.Equal("connected"),
+					"hostname":        gomega.Equal("master-1"),
+					"resource_group":  gomega.Equal(resourceGroup),
+					"resource_id":     gomega.Equal(resourceID),
+					"resource_name":   gomega.Equal(resourceName),
+					"subscription_id": gomega.Equal(subscriptionID),
+					"username":        gomega.Equal(username),
+				},
+				{
+					"level":           gomega.Equal(logrus.InfoLevel),
+					"msg":             gomega.Equal("opened"),
+					"channel":         gomega.Equal("session"),
+					"hostname":        gomega.Equal("master-1"),
+					"resource_group":  gomega.Equal(resourceGroup),
+					"resource_id":     gomega.Equal(resourceID),
+					"resource_name":   gomega.Equal(resourceName),
+					"subscription_id": gomega.Equal(subscriptionID),
+					"username":        gomega.Equal(username),
+				},
+				{
+					"level":           gomega.Equal(logrus.InfoLevel),
+					"msg":             gomega.Equal("disconnected"),
+					"duration":        gomega.BeNumerically(">", 0),
+					"hostname":        gomega.Equal("master-1"),
+					"resource_group":  gomega.Equal(resourceGroup),
+					"resource_id":     gomega.Equal(resourceID),
+					"resource_name":   gomega.Equal(resourceName),
+					"subscription_id": gomega.Equal(subscriptionID),
+					"username":        gomega.Equal(username),
+				},
+				{
+					"level":           gomega.Equal(logrus.WarnLevel),
+					"msg":             gomega.Equal("connection failed keep-alive check, closing it. Error: EOF"),
+					"channel":         gomega.Equal("session"),
+					"hostname":        gomega.Equal("master-1"),
+					"resource_group":  gomega.Equal(resourceGroup),
+					"resource_id":     gomega.Equal(resourceID),
+					"resource_name":   gomega.Equal(resourceName),
+					"subscription_id": gomega.Equal(subscriptionID),
+					"username":        gomega.Equal(username),
+				},
+				{
+					"level":           gomega.Equal(logrus.InfoLevel),
+					"msg":             gomega.Equal("closed"),
+					"channel":         gomega.Equal("session"),
+					"hostname":        gomega.Equal("master-1"),
+					"resource_group":  gomega.Equal(resourceGroup),
+					"resource_id":     gomega.Equal(resourceID),
+					"resource_name":   gomega.Equal(resourceName),
+					"subscription_id": gomega.Equal(subscriptionID),
+					"username":        gomega.Equal(username),
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			dbPortal, portalClient := testdatabase.NewFakePortal()
+			dbOpenShiftClusters, openShiftClustersClient := testdatabase.NewFakeOpenShiftClusters()
+
+			fixture := testdatabase.NewFixture().
+				WithOpenShiftClusters(dbOpenShiftClusters).
+				WithPortal(dbPortal)
+
+			checker := testdatabase.NewChecker()
+
+			if tt.fixtureChecker != nil {
+				tt.fixtureChecker(tt, fixture, checker, openShiftClustersClient, portalClient)
+			}
+
+			err := fixture.Create()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			client, client1 := bufferedpipe.New()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			dialer := mock_proxy.NewMockDialer(ctrl)
+
+			if tt.mocks != nil {
+				tt.mocks(dialer)
+			}
+
+			hook, log := testlog.New()
+
+			s, err := New(nil, log, log, nil, hostKey, nil, dbOpenShiftClusters, dbPortal, dialer, &mux.Router{}, 50*time.Millisecond)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			done := make(chan struct{})
+
+			go func() {
+				_ = s.newConn(context.Background(), client1)
+				close(done)
+			}()
+
+			err = fakeTimeoutClient(client, &hostKey.PublicKey, tt.username, tt.password)
 			if err != nil && !strings.HasPrefix(err.Error(), tt.wantErrPrefix) ||
 				err == nil && tt.wantErrPrefix != "" {
 				t.Error(err)

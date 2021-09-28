@@ -24,8 +24,7 @@ import (
 )
 
 const (
-	keepAliveInterval = time.Second * 30
-	keepAliveRequest  = "keep-alive"
+	keepAliveRequest = "keep-alive"
 )
 
 // This file handles smart proxying of SSH connections between SRE->portal and
@@ -304,7 +303,7 @@ func (s *ssh) newChannel(ctx context.Context, accessLog *logrus.Entry, nc crypto
 			return err
 		}
 
-		go s.keepAliveConn(ctx, ch1)
+		go s.keepAliveConn(ctx, ch1, channelLog)
 	}
 
 	return s.proxyChannel(ch1, ch2, rs1, rs2)
@@ -382,8 +381,8 @@ func (s *ssh) proxyChannel(ch1, ch2 cryptossh.Channel, rs1, rs2 <-chan *cryptoss
 	return g.Wait()
 }
 
-func (s *ssh) keepAliveConn(ctx context.Context, channel cryptossh.Channel) {
-	ticker := time.NewTicker(keepAliveInterval)
+func (s *ssh) keepAliveConn(ctx context.Context, channel cryptossh.Channel, channelLog *logrus.Entry) {
+	ticker := time.NewTicker(s.keepAliveInterval)
 	defer ticker.Stop()
 
 	for {
@@ -393,7 +392,7 @@ func (s *ssh) keepAliveConn(ctx context.Context, channel cryptossh.Channel) {
 		case <-ticker.C:
 			_, err := channel.SendRequest(keepAliveRequest, true, nil)
 			if err != nil {
-				s.log.Debugf("connection failed keep-alive check, closing it. Error: %s", err)
+				channelLog.Warnf("connection failed keep-alive check, closing it. Error: %s", err)
 				// Connection is gone
 				channel.Close()
 				return

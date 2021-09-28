@@ -41,7 +41,8 @@ type ssh struct {
 	dbOpenShiftClusters database.OpenShiftClusters
 	dbPortal            database.Portal
 
-	dialer proxy.Dialer
+	dialer            proxy.Dialer
+	keepAliveInterval time.Duration
 
 	baseServerConfig *cryptossh.ServerConfig
 	newPassword      func() string
@@ -56,7 +57,8 @@ func New(env env.Core,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbPortal database.Portal,
 	dialer proxy.Dialer,
-	aadAuthenticatedRouter *mux.Router) (*ssh, error) {
+	aadAuthenticatedRouter *mux.Router,
+	keepAliveInterval time.Duration) (*ssh, error) {
 	s := &ssh{
 		env:           env,
 		log:           log,
@@ -68,7 +70,8 @@ func New(env env.Core,
 		dbOpenShiftClusters: dbOpenShiftClusters,
 		dbPortal:            dbPortal,
 
-		dialer: dialer,
+		dialer:            dialer,
+		keepAliveInterval: keepAliveInterval,
 
 		baseServerConfig: &cryptossh.ServerConfig{},
 		newPassword:      func() string { return uuid.Must(uuid.NewV4()).String() },

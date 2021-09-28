@@ -12,10 +12,15 @@ import (
 	"time"
 )
 
+type LosableConnection interface {
+	net.Conn
+	LoseConnection() error
+}
+
 // New returns two net.Conns representing either side of a buffered pipe.  It's
 // like net.Pipe() but with buffering.  Note that deadlines are currently not
 // implemented.
-func New() (net.Conn, net.Conn) {
+func New() (LosableConnection, LosableConnection) {
 	p := &p{
 		cond: sync.NewCond(&sync.Mutex{}),
 	}
@@ -79,6 +84,22 @@ func (c *conn) Close() error {
 
 	c.p.closed[c.n] = true
 	c.p.cond.Broadcast()
+	return nil
+}
+
+func (c *conn) LoseConnection() error {
+	c.p.cond.L.Lock()
+	defer c.p.cond.L.Unlock()
+
+	if c.p.closed[c.n] {
+		return errors.New("connection closed")
+	}
+
+	if c.n == 0 {
+		c.p.closed[1] = true
+	} else {
+		c.p.closed[0] = true
+	}
 	return nil
 }
 
