@@ -50,13 +50,6 @@ class EncryptionAtHost(with_metaclass(_CaseInsensitiveEnumMeta, str, Enum)):
     DISABLED = "Disabled"
     ENABLED = "Enabled"
 
-class FipsValidatedModules(with_metaclass(_CaseInsensitiveEnumMeta, str, Enum)):
-    """FipsValidatedModules determines if FIPS is used.
-    """
-
-    DISABLED = "Disabled"
-    ENABLED = "Enabled"
-
 class ProvisioningState(with_metaclass(_CaseInsensitiveEnumMeta, str, Enum)):
     """ProvisioningState represents a provisioning state.
     """

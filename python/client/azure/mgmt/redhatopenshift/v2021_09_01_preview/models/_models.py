@@ -89,10 +89,6 @@ class ClusterProfile(msrest.serialization.Model):
     :type version: str
     :param resource_group_id: The ID of the cluster resource group.
     :type resource_group_id: str
-    :param fips_validated_modules: If FIPS validated crypto modules are used. Possible values
-     include: "Disabled", "Enabled".
-    :type fips_validated_modules: str or
-     ~azure.mgmt.redhatopenshift.v2021_09_01_preview.models.FipsValidatedModules
     """
 
     _attribute_map = {
@@ -100,7 +96,6 @@ class ClusterProfile(msrest.serialization.Model):
         'domain': {'key': 'domain', 'type': 'str'},
         'version': {'key': 'version', 'type': 'str'},
         'resource_group_id': {'key': 'resourceGroupId', 'type': 'str'},
-        'fips_validated_modules': {'key': 'fipsValidatedModules', 'type': 'str'},
     }
 
     def __init__(
@@ -112,7 +107,6 @@ class ClusterProfile(msrest.serialization.Model):
         self.domain = kwargs.get('domain', None)
         self.version = kwargs.get('version', None)
         self.resource_group_id = kwargs.get('resource_group_id', None)
-        self.fips_validated_modules = kwargs.get('fips_validated_modules', None)
 
 
 class ConsoleProfile(msrest.serialization.Model):

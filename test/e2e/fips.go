@@ -20,16 +20,6 @@ const (
 
 var _ = Describe("Validate FIPS Mode", func() {
 	ctx := context.Background()
-	It("should be possible to retrieve FipsValidatedModules from cluster document", func() {
-		oc, err := clients.OpenshiftClustersv20210901preview.Get(ctx, vnetResourceGroup, clusterName)
-		Expect(err).NotTo(HaveOccurred())
-
-		// Check we retrieve FipsValidatedModules
-		clusterProfile := oc.ClusterProfile
-		Expect(clusterProfile).NotTo(BeNil())
-		Expect(string(clusterProfile.FipsValidatedModules)).To(Equal("Enabled"))
-
-	})
 	It("should be possible to validate fips master and worker machineconfigs exist", func() {
 		mcp, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
