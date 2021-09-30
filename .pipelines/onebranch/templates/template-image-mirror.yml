@@ -4,8 +4,8 @@ jobs:
   pool:
     type: linux
 
-  variables:  # More settings at https://aka.ms/obpipelines/yaml/jobs
-    ob_outputDirectory: $(Build.SourcesDirectory)/out   # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
+  variables:   # More settings at https://aka.ms/obpipelines/yaml/jobs
+    ob_outputDirectory: $(Build.SourcesDirectory)/out     # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
     vso-deployer-pipeline-id: 206753
     vso-project-id: 5d69ab04-7ded-49dc-84d5-bbbcac4add8d
 
