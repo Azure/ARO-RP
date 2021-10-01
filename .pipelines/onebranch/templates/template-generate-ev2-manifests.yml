@@ -12,8 +12,7 @@ parameters:
 
 steps:
 - checkout: rhado
-- ${{ if eq(parameters.generationType, 'deployment') }}:
-  - checkout: rpconfig
+- checkout: rpconfig
 - task: GoTool@0
   displayName: Use Go 1.16.2
   inputs:
