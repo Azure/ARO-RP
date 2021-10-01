@@ -23,6 +23,7 @@ jobs:
     - template: ../vars.yml
     pool:
       name: ARO-CI
+      demands: rhel8
     environment: ${{ parameters.environment }}
     strategy:
       runOnce:
@@ -70,6 +71,7 @@ jobs:
     timeoutInMinutes: 120
     pool:
       name: ARO-CI
+      demands: rhel8
     steps:
     - template: ./template-prod-e2e-steps.yml
       parameters:

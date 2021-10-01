@@ -9,7 +9,7 @@ jobs:
 - job: Build_and_push_images
   pool:
     name: ARO-CI
-
+    demands: rhel8
   steps:
   - template: ./templates/template-checkout.yml
   - template: ./templates/template-az-cli-login.yml

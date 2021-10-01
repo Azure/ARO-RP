@@ -13,6 +13,7 @@ jobs:
 - job: Clean_subscription
   pool:
     name: ARO-CI
+    demands: rhel8
 
   steps:
   - template: ./templates/template-checkout.yml
