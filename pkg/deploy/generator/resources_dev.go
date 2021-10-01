@@ -305,10 +305,10 @@ xfs_growfs /var
 lvextend -l +100%FREE /dev/rootvg/homelv
 xfs_growfs /home
 
-rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
 rpm --import https://packages.microsoft.com/keys/microsoft.asc
 
-yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
 cat >/etc/yum.repos.d/azure.repo <<'EOF'
 [azure-cli]
@@ -318,11 +318,11 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install azure-cli docker jq gcc rh-git29 rh-python36 tmpwatch
+yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch go-toolset-1.14.12-1.module+el8.3.0+8784+380394dc
 
-GO_VERSION=1.14.9
-curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz | tar -C /usr/local -xz
-ln -s /usr/local/go/bin/* /usr/local/bin
+# Suppress emulation output for podman instead of docker for az acr compatability
+mkdir -p /etc/containers/
+touch /etc/containers/nodocker
 
 VSTS_AGENT_VERSION=2.188.3
 mkdir /home/cloud-user/agent
@@ -335,22 +335,13 @@ sudo -u cloud-user ./config.sh --unattended --url https://dev.azure.com/msazure 
 ./svc.sh install cloud-user
 popd
 
-# merge in /opt/rh/rh-*/enable
 cat >/home/cloud-user/agent/.path <<'EOF'
-/opt/rh/rh-python36/root/usr/bin:/opt/rh/rh-git29/root/usr/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/cloud-user/.local/bin:/home/cloud-user/bin
+/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/cloud-user/.local/bin:/home/cloud-user/bin
 EOF
 
 cat >/home/cloud-user/agent/.env <<'EOF'
-LD_LIBRARY_PATH=/opt/rh/rh-python36/root/usr/lib64:/opt/rh/httpd24/root/usr/lib64
-MANPATH=/opt/rh/rh-python36/root/usr/share/man:/opt/rh/rh-git29/root/usr/share/man
-PERL5LIB=/opt/rh/rh-git29/root/usr/share/perl5/vendor_perl
-PKG_CONFIG_PATH=/opt/rh/rh-python36/root/usr/lib64/pkgconfig
-XDG_DATA_DIRS=/opt/rh/rh-python36/root/usr/share:/usr/local/share:/usr/share
+GOLANG_FIPS=1
 EOF
-
-sed -i -e 's/^OPTIONS='\''/OPTIONS='\''-G cloud-user /' /etc/sysconfig/docker
-
-systemctl enable docker
 
 cat >/etc/cron.hourly/tmpwatch <<'EOF'
 #!/bin/bash
@@ -397,7 +388,7 @@ chmod +x /etc/cron.hourly/tmpwatch
 						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("7-LVM"),
+							Sku:       to.StringPtr("8-LVM"),
 							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
