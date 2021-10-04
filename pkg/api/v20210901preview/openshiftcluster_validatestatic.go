@@ -267,10 +267,10 @@ func (sv *openShiftClusterStaticValidator) validateWorkerProfile(path string, wp
 	if !validate.RxSubnetID.MatchString(wp.SubnetID) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", "The provided worker VM subnet '%s' is invalid.", wp.SubnetID)
 	}
-	switch mp.EncryptionAtHost {
+	switch wp.EncryptionAtHost {
 	case EncryptionAtHostDisabled, EncryptionAtHostEnabled:
 	default:
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".encryptionAtHost", "The provided value '%s' is invalid.", mp.EncryptionAtHost)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".encryptionAtHost", "The provided value '%s' is invalid.", wp.EncryptionAtHost)
 	}
 	workerVnetID, _, err := subnet.Split(wp.SubnetID)
 	if err != nil {

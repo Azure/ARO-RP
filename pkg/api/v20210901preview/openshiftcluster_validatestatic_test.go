@@ -646,6 +646,20 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker disk encryption set '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1' is invalid: must be the same as master disk encryption set '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Compute/diskEncryptionSets/test-disk-encryption-set'.",
 		},
+		{
+			name: "encryption at host invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles[0].EncryptionAtHost = "Banana"
+			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].encryptionAtHost: The provided value 'Banana' is invalid.",
+		},
+		{
+			name: "encryption at host empty",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles[0].EncryptionAtHost = ""
+			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].encryptionAtHost: The provided value '' is invalid.",
+		},
 	}
 
 	// We do not perform this validation on update
