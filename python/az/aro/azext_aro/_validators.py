@@ -77,7 +77,8 @@ def validate_disk_encryption_set(cmd, namespace):
             compute_client.disk_encryption_sets.get(resource_group_name=desid['resource_group'],
                                                     disk_encryption_set_name=desid['name'])
         except CloudError as err:
-            raise InvalidArgumentValueError(err.message) from err
+            raise InvalidArgumentValueError("Invald --disc-encryption-set, error when getting '%s': %s" %
+                                            (namespace.disk_encryption_set, err.message)) from err
 
 
 def validate_domain(namespace):
@@ -159,7 +160,8 @@ def validate_subnet(key):
             client.subnets.get(parts['resource_group'],
                                parts['name'], parts['child_name_1'])
         except CloudError as err:
-            raise InvalidArgumentValueError(err.message) from err
+            raise InvalidArgumentValueError("Invald --%s, error when getting '%s': %s" %
+                                            (key.replace('_', '-'), subnet, err.message)) from err
 
     return _validate_subnet
 

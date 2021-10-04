@@ -58,7 +58,7 @@ def load_arguments(self, _):
                    validator=validate_cidr('service_cidr'))
         c.argument('software_defined_network', arg_type=get_enum_type(['OVNKubernetes', 'OpenShiftSDN']),
                    options_list=['--software-defined-network-type', '--sdn-type'],
-                   help='SDN type either "OpenShiftSDN (default)" or "OVNKubernetes"',
+                   help='SDN type either "OpenShiftSDN" (default) or "OVNKubernetes"',
                    validator=validate_sdn)
 
         c.argument('disk_encryption_set',
