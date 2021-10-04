@@ -4,6 +4,7 @@ steps:
   inputs:
     targetType: inline
     script: |
+      export GOPATH=$(Agent.TempDirectory)
       mkdir -p $(Agent.TempDirectory)/src/github.com/Azure/
       cp -rd $(Build.SourcesDirectory) $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
       cd $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
