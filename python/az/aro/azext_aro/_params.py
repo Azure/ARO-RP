@@ -6,7 +6,6 @@ from azext_aro._validators import validate_client_id
 from azext_aro._validators import validate_cluster_resource_group
 from azext_aro._validators import validate_disk_encryption_set
 from azext_aro._validators import validate_domain
-from azext_aro._validators import validate_encryption_at_host
 from azext_aro._validators import validate_pull_secret
 from azext_aro._validators import validate_sdn
 from azext_aro._validators import validate_subnet
@@ -58,24 +57,22 @@ def load_arguments(self, _):
                    help='CIDR of service network. Must be a minimum of /18 or larger.',
                    validator=validate_cidr('service_cidr'))
         c.argument('software_defined_network', arg_type=get_enum_type(['OVNKubernetes', 'OpenShiftSDN']),
-                   options_list=['--sdn-type'],
-                   help='SDN type either "OVNKubernetes" or "OpenShiftSDN (default)"',
+                   options_list=['--software-defined-network-type', '--sdn-type'],
+                   help='SDN type either "OpenShiftSDN (default)" or "OVNKubernetes"',
                    validator=validate_sdn)
 
         c.argument('disk_encryption_set',
                    help='ResourceID of the DiskEncryptionSet to be used for master and worker VMs.',
                    validator=validate_disk_encryption_set)
-        c.argument('master_encryption_at_host', arg_type=get_enum_type(['Enabled', 'Disabled']),
-                   options_list=['--master-enc-at-host'],
-                   help='Encryption at host flag for master VMs. Correct values are "Enabled" or "Disabled" (default)',
-                   validator=validate_encryption_at_host('master_encryption_at_host'))
+        c.argument('master_encryption_at_host', arg_type=get_three_state_flag(),
+                   options_list=['--master-encryption-at-host', '--master-enc-host'],
+                   help='Encryption at host flag for master VMs.')
         c.argument('master_vm_size',
                    help='Size of master VMs.')
 
-        c.argument('worker_encryption_at_host', arg_type=get_enum_type(['Enabled', 'Disabled']),
-                   options_list=['--worker-enc-at-host'],
-                   help='Encryption at host flag for worker VMs. Correct values are "Enabled" or "Disabled" (default)',
-                   validator=validate_encryption_at_host('worker_encryption_at_host'))
+        c.argument('worker_encryption_at_host', arg_type=get_three_state_flag(),
+                   options_list=['--worker-encryption-at-host', '--worker-enc-host'],
+                   help='Encryption at host flag for worker VMs.')
         c.argument('worker_vm_size',
                    help='Size of worker VMs.')
         c.argument('worker_vm_disk_size_gb',

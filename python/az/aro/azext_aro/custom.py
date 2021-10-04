@@ -45,9 +45,9 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                service_cidr=None,
                software_defined_network=None,
                disk_encryption_set=None,
-               master_encryption_at_host=None,
+               master_encryption_at_host=False,
                master_vm_size=None,
-               worker_encryption_at_host=None,
+               worker_encryption_at_host=False,
                worker_vm_size=None,
                worker_vm_disk_size_gb=None,
                worker_count=None,
@@ -114,7 +114,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         master_profile=openshiftcluster.MasterProfile(
             vm_size=master_vm_size or 'Standard_D8s_v3',
             subnet_id=master_subnet,
-            encryption_at_host=master_encryption_at_host or 'Disabled',
+            encryption_at_host='Enabled' if master_encryption_at_host else 'Disabled',
             disk_encryption_set_id=disk_encryption_set,
         ),
         worker_profiles=[
@@ -124,7 +124,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                 disk_size_gb=worker_vm_disk_size_gb or 128,
                 subnet_id=worker_subnet,
                 count=worker_count or 3,
-                encryption_at_host=worker_encryption_at_host or 'Disabled',
+                encryption_at_host='Enabled' if worker_encryption_at_host else 'Disabled',
                 disk_encryption_set_id=disk_encryption_set,
             )
         ],
@@ -391,7 +391,7 @@ def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
         return
 
     for sp_id in sp_obj_ids:
-        for role in resources:
+        for role in sorted(resources):
             for resource in resources[role]:
                 # Create the role assignment if it doesn't exist
                 # Assume that the role assignment exists if we fail to look it up

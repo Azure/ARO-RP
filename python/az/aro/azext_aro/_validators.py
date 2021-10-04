@@ -9,7 +9,7 @@ import uuid
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
-from azure.cli.core.azclierror import CLIInternalError, InvalidArgumentValueError, \
+from azure.cli.core.azclierror import InvalidArgumentValueError, \
     RequiredArgumentMissingError
 from knack.log import get_logger
 from msrestazure.azure_exceptions import CloudError
@@ -77,7 +77,7 @@ def validate_disk_encryption_set(cmd, namespace):
             compute_client.disk_encryption_sets.get(resource_group_name=desid['resource_group'],
                                                     disk_encryption_set_name=desid['name'])
         except CloudError as err:
-            raise CLIInternalError(err.message) from err
+            raise InvalidArgumentValueError(err.message) from err
 
 
 def validate_domain(namespace):
@@ -88,18 +88,6 @@ def validate_domain(namespace):
                         r'$', namespace.domain):
             raise InvalidArgumentValueError("Invalid --domain '%s'." %
                                             namespace.domain)
-
-
-def validate_encryption_at_host(key):
-    def _validate_encryption_at_host(namespace):
-        eah = getattr(namespace, key)
-        if eah is not None:
-            eah = eah.capitalize()
-            if eah not in ['Enabled', 'Disabled']:
-                raise InvalidArgumentValueError("Invalid --%s '%s'." %
-                                                (key.replace('_', '-'), eah))
-
-    return _validate_encryption_at_host
 
 
 def validate_pull_secret(namespace):
@@ -171,7 +159,7 @@ def validate_subnet(key):
             client.subnets.get(parts['resource_group'],
                                parts['name'], parts['child_name_1'])
         except CloudError as err:
-            raise CLIInternalError(err.message) from err
+            raise InvalidArgumentValueError(err.message) from err
 
     return _validate_subnet
 
