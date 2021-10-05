@@ -6,7 +6,7 @@ variables:
 - template: vars.yml
 
 jobs:
-- job: Build_and_push_images
+- job: Build_and_push_image_fluentbit
   pool:
     name: ARO-CI
 
@@ -18,11 +18,5 @@ jobs:
   - template: ./templates/template-push-images-to-acr.yml
     parameters:
       rpImageACR: $(RP_IMAGE_ACR)
-      buildCommand: publish-image-aro
+      buildCommand: publish-image-fluentbit
   - template: ./templates/template-az-cli-logout.yml
-  - script: |
-      cp -a --parents aro "$(Build.ArtifactStagingDirectory)"
-    displayName: Copy artifacts
-  - task: PublishBuildArtifacts@1
-    displayName: Publish Artifacts
-    name: aro_deployer
