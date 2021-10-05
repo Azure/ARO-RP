@@ -4,7 +4,7 @@
 import urllib3
 
 from azext_aro.custom import rp_mode_development
-from azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2020_04_30 import AzureRedHatOpenShiftClient
+from azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2021_09_01_preview import AzureRedHatOpenShiftClient
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
 
 

@@ -25,3 +25,7 @@ Release History
 1.0.0
 ++++++
 * Remove preview flag.
+
+1.0.1
+++++++
+* Switch to new preview API

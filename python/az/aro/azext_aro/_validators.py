@@ -9,7 +9,7 @@ import uuid
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
-from azure.cli.core.azclierror import CLIInternalError, InvalidArgumentValueError, \
+from azure.cli.core.azclierror import InvalidArgumentValueError, \
     RequiredArgumentMissingError
 from knack.log import get_logger
 from msrestazure.azure_exceptions import CloudError
@@ -64,6 +64,23 @@ def validate_cluster_resource_group(cmd, namespace):
                 namespace.cluster_resource_group)
 
 
+def validate_disk_encryption_set(cmd, namespace):
+    if namespace.disk_encryption_set is not None:
+        if not is_valid_resource_id(namespace.disk_encryption_set):
+            raise InvalidArgumentValueError(
+                "Invalid --disk-encryption-set '%s', has to be a resource ID." %
+                namespace.disk_encryption_set)
+
+        desid = parse_resource_id(namespace.disk_encryption_set)
+        compute_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_COMPUTE)
+        try:
+            compute_client.disk_encryption_sets.get(resource_group_name=desid['resource_group'],
+                                                    disk_encryption_set_name=desid['name'])
+        except CloudError as err:
+            raise InvalidArgumentValueError("Invald --disc-encryption-set, error when getting '%s': %s" %
+                                            (namespace.disk_encryption_set, err.message)) from err
+
+
 def validate_domain(namespace):
     if namespace.domain is not None:
         if not re.match(r'^' +
@@ -88,6 +105,13 @@ def validate_pull_secret(namespace):
                 raise Exception()
         except Exception as e:
             raise InvalidArgumentValueError("Invalid --pull-secret.") from e
+
+
+def validate_sdn(namespace):
+    if namespace.software_defined_network is not None:
+        if namespace.software_defined_network not in ['OVNKubernetes', 'OpenshiftSDN']:
+            raise InvalidArgumentValueError("Invalid --software-defined-network '%s'." %
+                                            namespace.software_defined_network)
 
 
 def validate_subnet(key):
@@ -136,7 +160,8 @@ def validate_subnet(key):
             client.subnets.get(parts['resource_group'],
                                parts['name'], parts['child_name_1'])
         except CloudError as err:
-            raise CLIInternalError(err.message) from err
+            raise InvalidArgumentValueError("Invald --%s, error when getting '%s': %s" %
+                                            (key.replace('_', '-'), subnet, err.message)) from err
 
     return _validate_subnet
 

@@ -15,10 +15,11 @@ from msrestazure.tools import resource_id, parse_resource_id
 from msrest.exceptions import HttpOperationError
 from knack.log import get_logger
 
-import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2020_04_30.models as openshiftcluster
+import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2021_09_01_preview.models as openshiftcluster
 
 from azext_aro._aad import AADManager
-from azext_aro._rbac import assign_network_contributor_to_resource, has_network_contributor_on_resource
+from azext_aro._rbac import assign_role_to_resource, has_role_assignment_on_resource
+from azext_aro._rbac import ROLE_NETWORK_CONTRIBUTOR, ROLE_READER
 from azext_aro._validators import validate_subnets
 
 logger = get_logger(__name__)
@@ -42,7 +43,11 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                client_secret=None,
                pod_cidr=None,
                service_cidr=None,
+               software_defined_network=None,
+               disk_encryption_set=None,
+               master_encryption_at_host=False,
                master_vm_size=None,
+               worker_encryption_at_host=False,
                worker_vm_size=None,
                worker_vm_disk_size_gb=None,
                worker_count=None,
@@ -104,10 +109,13 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         network_profile=openshiftcluster.NetworkProfile(
             pod_cidr=pod_cidr or '10.128.0.0/14',
             service_cidr=service_cidr or '172.30.0.0/16',
+            software_defined_network=software_defined_network or 'OpenShiftSDN'
         ),
         master_profile=openshiftcluster.MasterProfile(
             vm_size=master_vm_size or 'Standard_D8s_v3',
             subnet_id=master_subnet,
+            encryption_at_host='Enabled' if master_encryption_at_host else 'Disabled',
+            disk_encryption_set_id=disk_encryption_set,
         ),
         worker_profiles=[
             openshiftcluster.WorkerProfile(
@@ -116,6 +124,8 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                 disk_size_gb=worker_vm_disk_size_gb or 128,
                 subnet_id=worker_subnet,
                 count=worker_count or 3,
+                encryption_at_host='Enabled' if worker_encryption_at_host else 'Disabled',
+                disk_encryption_set_id=disk_encryption_set,
             )
         ],
         apiserver_profile=openshiftcluster.APIServerProfile(
@@ -279,6 +289,13 @@ def get_network_resources(cli_ctx, subnets, vnet):
     return resources
 
 
+def get_disk_encryption_resources(oc):
+    disk_encryption_set = oc.master_profile.disk_encryption_set_id
+    resources = set()
+    resources.add(disk_encryption_set)
+    return resources
+
+
 # cluster_application_update manages cluster application & service principal update
 # If called without parameters it should be best-effort
 # If called with parameters it fails if something is not possible
@@ -363,8 +380,9 @@ def resolve_rp_client_id():
 
 def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
     try:
-        # Get cluster resources we need to assign network contributor on
-        resources = get_cluster_network_resources(cli_ctx, oc)
+        # Get cluster resources we need to assign permissions on, sort to ensure the same order of operations
+        resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cli_ctx, oc)),
+                     ROLE_READER: sorted(get_disk_encryption_resources(oc))}
     except (CloudError, HttpOperationError) as e:
         if fail:
             logger.error(e.message)
@@ -373,18 +391,19 @@ def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
         return
 
     for sp_id in sp_obj_ids:
-        for resource in sorted(resources):
-            # Create the role assignment if it doesn't exist
-            # Assume that the role assignment exists if we fail to look it up
-            resource_contributor_exists = True
+        for role in sorted(resources):
+            for resource in resources[role]:
+                # Create the role assignment if it doesn't exist
+                # Assume that the role assignment exists if we fail to look it up
+                resource_contributor_exists = True
 
-            try:
-                resource_contributor_exists = has_network_contributor_on_resource(cli_ctx, resource, sp_id)
-            except CloudError as e:
-                if fail:
-                    logger.error(e.message)
-                    raise
-                logger.info(e.message)
+                try:
+                    resource_contributor_exists = has_role_assignment_on_resource(cli_ctx, resource, sp_id, role)
+                except CloudError as e:
+                    if fail:
+                        logger.error(e.message)
+                        raise
+                    logger.info(e.message)
 
-            if not resource_contributor_exists:
-                assign_network_contributor_to_resource(cli_ctx, resource, sp_id)
+                if not resource_contributor_exists:
+                    assign_role_to_resource(cli_ctx, resource, sp_id, role)
