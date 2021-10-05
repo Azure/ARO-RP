@@ -30,7 +30,7 @@ func TestResourcesList(t *testing.T) {
 
 	type test struct {
 		name         string
-		mocks        func(*test, *mock_features.MockResourcesClient, *mock_compute.MockVirtualMachinesClient, *mock_network.MockVirtualNetworksClient, *mock_network.MockRouteTablesClient)
+		mocks        func(*test, *mock_features.MockResourcesClient, *mock_compute.MockVirtualMachinesClient, *mock_network.MockVirtualNetworksClient, *mock_network.MockRouteTablesClient, *mock_compute.MockDiskEncryptionSetsClient)
 		wantResponse []byte
 		wantError    string
 	}
@@ -38,7 +38,7 @@ func TestResourcesList(t *testing.T) {
 	for _, tt := range []*test{
 		{
 			name: "basic coverage",
-			mocks: func(tt *test, resources *mock_features.MockResourcesClient, virtualMachines *mock_compute.MockVirtualMachinesClient, virtualNetworks *mock_network.MockVirtualNetworksClient, routeTables *mock_network.MockRouteTablesClient) {
+			mocks: func(tt *test, resources *mock_features.MockResourcesClient, virtualMachines *mock_compute.MockVirtualMachinesClient, virtualNetworks *mock_network.MockVirtualNetworksClient, routeTables *mock_network.MockRouteTablesClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient) {
 				resources.EXPECT().ListByResourceGroup(gomock.Any(), "test-cluster", "", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
 					{
 						Name: to.StringPtr("vm-1"),
@@ -91,12 +91,17 @@ func TestResourcesList(t *testing.T) {
 						ProvisioningState: to.StringPtr("Succeeded"),
 					},
 				}, nil)
+
+				diskEncryptionSets.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(mgmtcompute.DiskEncryptionSet{
+					ID:   to.StringPtr("/subscriptions/id"),
+					Type: to.StringPtr("Microsoft.Compute/diskEncryptionSets"),
+				}, nil)
 			},
-			wantResponse: []byte(`[{"properties":{"dhcpOptions":{"dnsServers":[]},"subnets":[{"properties":{"routeTable":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","tags":null}},"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"}]},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","name":"routetable1"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
+			wantResponse: []byte(`[{"properties":{"dhcpOptions":{"dnsServers":[]},"subnets":[{"properties":{"routeTable":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","tags":null}},"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"}]},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","name":"routetable1"},{"id":"/subscriptions/id","type":"Microsoft.Compute/diskEncryptionSets"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
 		},
 		{
 			name: "vnet get error", //Get resources should continue on error from virtualNetworks.Get()
-			mocks: func(tt *test, resources *mock_features.MockResourcesClient, virtualMachines *mock_compute.MockVirtualMachinesClient, virtualNetworks *mock_network.MockVirtualNetworksClient, routeTablesClient *mock_network.MockRouteTablesClient) {
+			mocks: func(tt *test, resources *mock_features.MockResourcesClient, virtualMachines *mock_compute.MockVirtualMachinesClient, virtualNetworks *mock_network.MockVirtualNetworksClient, routeTablesClient *mock_network.MockRouteTablesClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient) {
 				resources.EXPECT().ListByResourceGroup(gomock.Any(), "test-cluster", "", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
 					{
 						Name: to.StringPtr("vm-1"),
@@ -126,8 +131,13 @@ func TestResourcesList(t *testing.T) {
 						ProvisioningState: to.StringPtr("Succeeded"),
 					},
 				}, nil)
+
+				diskEncryptionSets.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(mgmtcompute.DiskEncryptionSet{
+					ID:   to.StringPtr("/subscriptions/id"),
+					Type: to.StringPtr("Microsoft.Compute/diskEncryptionSet"),
+				}, nil)
 			},
-			wantResponse: []byte(`[{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
+			wantResponse: []byte(`[{"id":"/subscriptions/id","type":"Microsoft.Compute/diskEncryptionSet"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -141,7 +151,8 @@ func TestResourcesList(t *testing.T) {
 			virtualMachines := mock_compute.NewMockVirtualMachinesClient(controller)
 			virtualNetworks := mock_network.NewMockVirtualNetworksClient(controller)
 			routeTables := mock_network.NewMockRouteTablesClient(controller)
-			tt.mocks(tt, resources, virtualMachines, virtualNetworks, routeTables)
+			diskEncryptionSets := mock_compute.NewMockDiskEncryptionSetsClient(controller)
+			tt.mocks(tt, resources, virtualMachines, virtualNetworks, routeTables, diskEncryptionSets)
 
 			a := azureActions{
 				log: logrus.NewEntry(logrus.StandardLogger()),
@@ -152,15 +163,17 @@ func TestResourcesList(t *testing.T) {
 							ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
 						},
 						MasterProfile: api.MasterProfile{
-							SubnetID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", mockSubID),
+							SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", mockSubID),
+							DiskEncryptionSetID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", mockSubID),
 						},
 					},
 				},
 
-				resources:       resources,
-				virtualMachines: virtualMachines,
-				virtualNetworks: virtualNetworks,
-				routeTables:     routeTables,
+				resources:         resources,
+				virtualMachines:   virtualMachines,
+				virtualNetworks:   virtualNetworks,
+				routeTables:       routeTables,
+				diskEncryptionSet: diskEncryptionSets,
 			}
 
 			b, err := a.ResourcesList(ctx)
