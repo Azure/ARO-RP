@@ -30,6 +30,10 @@ func (a *azureActions) ResourcesList(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		a.log.Warnf("error when getting network resources: %s", err)
 	}
+	armResources, err = a.appendAzureDiskEncryptionSetResources(ctx, armResources)
+	if err != nil {
+		a.log.Warnf("error when getting DiskEncryptionSet resources: %s", err)
+	}
 
 	for _, res := range resources {
 		apiVersion := azureclient.APIVersion(*res.Type)
@@ -113,6 +117,29 @@ func (a *azureActions) appendAzureNetworkResources(ctx context.Context, armResou
 			}
 		}
 	}
+
+	return armResources, nil
+}
+
+func (a *azureActions) appendAzureDiskEncryptionSetResources(ctx context.Context, armResources []arm.Resource) ([]arm.Resource, error) {
+	// possible for there to be no DiskEncryptionSet, if so, ignore
+	if a.oc.Properties.MasterProfile.DiskEncryptionSetID == "" {
+		return armResources, nil
+	}
+
+	r, err := azure.ParseResourceID(a.oc.Properties.MasterProfile.DiskEncryptionSetID)
+	if err != nil {
+		return armResources, err
+	}
+
+	diskEncryptionSet, err := a.diskEncryptionSet.Get(ctx, r.ResourceGroup, r.ResourceName)
+	if err != nil {
+		return armResources, err
+	}
+
+	armResources = append(armResources, arm.Resource{
+		Resource: diskEncryptionSet,
+	})
 
 	return armResources, nil
 }
