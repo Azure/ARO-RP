@@ -21,6 +21,10 @@ func (d *deployer) UpgradeRP(ctx context.Context) error {
 	defer cancel()
 	err := d.rpWaitForReadiness(timeoutCtx, rpVMSSPrefix+d.version)
 	if err != nil {
+		// delete VMSS since VMSS instances are not healthy
+		if *d.config.Configuration.VMSSCleanupEnabled {
+			d.vmssCleaner.RemoveFailedNewScaleset(ctx, d.config.RPResourceGroupName, rpVMSSPrefix+d.version)
+		}
 		return err
 	}
 

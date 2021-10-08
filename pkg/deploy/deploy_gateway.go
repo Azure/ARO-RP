@@ -7,12 +7,13 @@ import (
 	"context"
 	"encoding/json"
 
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
 
 func (d *deployer) DeployGateway(ctx context.Context) error {
-	// TODO: there is a lot of duplication with DeployRP()
 	rpMSI, err := d.userassignedidentities.Get(ctx, d.config.RPResourceGroupName, "aro-rp-"+d.config.Location)
 	if err != nil {
 		return err
@@ -59,5 +60,13 @@ func (d *deployer) DeployGateway(ctx context.Context) error {
 		Value: d.env.Environment().ActualCloudName,
 	}
 
-	return d.deploy(ctx, template, parameters, d.config.GatewayResourceGroupName, deploymentName, gatewayVMSSPrefix+d.version)
+	return d.deploy(ctx, d.config.GatewayResourceGroupName, deploymentName, gatewayVMSSPrefix+d.version,
+		mgmtfeatures.Deployment{
+			Properties: &mgmtfeatures.DeploymentProperties{
+				Template:   template,
+				Mode:       mgmtfeatures.Incremental,
+				Parameters: parameters.Parameters,
+			},
+		},
+	)
 }

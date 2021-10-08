@@ -47,6 +47,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		"rpServicePrincipalId",
 		"sshPublicKey",
 		"vmSize",
+		"vmssCleanupEnabled",
 		"vmssName",
 	}
 
@@ -61,6 +62,9 @@ func (g *generator) gatewayTemplate() *arm.Template {
 			p.DefaultValue = 3
 		case "vmSize":
 			p.DefaultValue = "Standard_D2s_v3"
+		case "vmssCleanupEnabled":
+			p.Type = "bool"
+			p.DefaultValue = true
 		case "nonZonalRegions":
 			p.Type = "array"
 			p.DefaultValue = []string{

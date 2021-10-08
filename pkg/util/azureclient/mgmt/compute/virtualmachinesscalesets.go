@@ -4,8 +4,6 @@ package compute
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
-
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest"
 
@@ -14,7 +12,6 @@ import (
 
 type VirtualMachineScaleSetsClient interface {
 	VirtualMachineScaleSetsClientAddons
-	Get(ctx context.Context, resourceGroupName, vmScaleSetName string) (mgmtcompute.VirtualMachineScaleSet, error)
 }
 
 type virtualMachineScaleSetsClient struct {
