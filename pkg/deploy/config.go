@@ -67,6 +67,7 @@ type Configuration struct {
 	GatewayFeatures                    []string      `json:"gatewayFeatures,omitempty"`
 	GatewayMDSDConfigVersion           *string       `json:"gatewayMdsdConfigVersion,omitempty" value:"required"`
 	GatewayStorageAccountDomain        *string       `json:"gatewayStorageAccountDomain,omitempty" value:"required"`
+	GatewayVMSize                      *string       `json:"gatewayVmSize,omitempty"`
 	GatewayVMSSCapacity                *int          `json:"gatewayVmssCapacity,omitempty"`
 	GlobalResourceGroupName            *string       `json:"globalResourceGroupName,omitempty" value:"required"`
 	GlobalResourceGroupLocation        *string       `json:"globalResourceGroupLocation,omitempty" value:"required"`

@@ -37,6 +37,10 @@
         "gatewayStorageAccountDomain": {
             "type": "string"
         },
+        "gatewayVmSize": {
+            "type": "string",
+            "defaultValue": "Standard_D4s_v3"
+        },
         "gatewayVmssCapacity": {
             "type": "int",
             "defaultValue": 3
@@ -82,10 +86,6 @@
         },
         "sshPublicKey": {
             "type": "string"
-        },
-        "vmSize": {
-            "type": "string",
-            "defaultValue": "Standard_D2s_v3"
         },
         "vmssCleanupEnabled": {
             "type": "bool",
@@ -210,7 +210,7 @@
         },
         {
             "sku": {
-                "name": "[parameters('vmSize')]",
+                "name": "[parameters('gatewayVmSize')]",
                 "tier": "Standard",
                 "capacity": "[parameters('gatewayVmssCapacity')]"
             },
@@ -257,6 +257,7 @@
                                 "name": "gateway-vmss-nic",
                                 "properties": {
                                     "primary": true,
+                                    "enableAcceleratedNetworking": true,
                                     "ipConfigurations": [
                                         {
                                             "name": "gateway-vmss-ipconfig",
