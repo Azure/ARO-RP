@@ -302,6 +302,13 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.resourceGroupId: The provided resource group '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourcegroups/test-cluster' is invalid: must be in same subscription as cluster.",
 		},
+		{
+			name: "cluster resourceGroup and external resourceGroup equal",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.ResourceGroupID = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.resourceGroupId: The provided resource group '/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup' is invalid: must be different from resourceGroup of the OpenShift cluster object.",
+		},
 	}
 
 	createTests := []*validateTest{
