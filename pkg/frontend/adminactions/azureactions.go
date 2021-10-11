@@ -30,12 +30,12 @@ type azureActions struct {
 	env env.Interface
 	oc  *api.OpenShiftCluster
 
-	resources         features.ResourcesClient
-	virtualMachines   compute.VirtualMachinesClient
-	virtualNetworks   network.VirtualNetworksClient
-	diskEncryptionSet compute.DiskEncryptionSetsClient
-	routeTables       network.RouteTablesClient
-	storageAccounts   storage.AccountsClient
+	resources          features.ResourcesClient
+	virtualMachines    compute.VirtualMachinesClient
+	virtualNetworks    network.VirtualNetworksClient
+	diskEncryptionSets compute.DiskEncryptionSetsClient
+	routeTables        network.RouteTablesClient
+	storageAccounts    storage.AccountsClient
 }
 
 // NewAzureActions returns an azureActions
@@ -53,12 +53,12 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		env: env,
 		oc:  oc,
 
-		resources:         features.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		virtualMachines:   compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		virtualNetworks:   network.NewVirtualNetworksClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		diskEncryptionSet: compute.NewDiskEncryptionSetsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		routeTables:       network.NewRouteTablesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		storageAccounts:   storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		resources:          features.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		virtualMachines:    compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		virtualNetworks:    network.NewVirtualNetworksClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		routeTables:        network.NewRouteTablesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 	}, nil
 }
 

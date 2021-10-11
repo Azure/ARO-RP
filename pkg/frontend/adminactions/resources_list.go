@@ -132,13 +132,13 @@ func (a *azureActions) appendAzureDiskEncryptionSetResources(ctx context.Context
 		return armResources, err
 	}
 
-	diskEncryptionSet, err := a.diskEncryptionSet.Get(ctx, r.ResourceGroup, r.ResourceName)
+	diskEncryptionSets, err := a.diskEncryptionSets.Get(ctx, r.ResourceGroup, r.ResourceName)
 	if err != nil {
 		return armResources, err
 	}
 
 	armResources = append(armResources, arm.Resource{
-		Resource: diskEncryptionSet,
+		Resource: diskEncryptionSets,
 	})
 
 	return armResources, nil
