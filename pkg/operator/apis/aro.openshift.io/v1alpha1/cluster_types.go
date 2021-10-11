@@ -20,6 +20,9 @@ const (
 	InternetReachableFromWorker = "InternetReachableFromWorker"
 	MachineValid                = "MachineValid"
 	ServicePrincipalValid       = "ServicePrincipalValid"
+
+	// advisor checks
+	DefaultIngressCertificate = "DefaultIngressCertificate"
 )
 
 // AllConditionTypes is a operator conditions currently in use, any condition not in this list is not
@@ -96,6 +99,7 @@ type ClusterStatus struct {
 	OperatorVersion   string                         `json:"operatorVersion,omitempty"`
 	Conditions        []operatorv1.OperatorCondition `json:"conditions,omitempty"`
 	RedHatKeysPresent []string                       `json:"redHatKeysPresent,omitempty"`
+	AdvisorConditions []operatorv1.OperatorCondition `json:"advisorConditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true

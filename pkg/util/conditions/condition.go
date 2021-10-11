@@ -47,6 +47,32 @@ func SetCondition(ctx context.Context, arocli aroclient.Interface, cond *operato
 	})
 }
 
+func SetAdvisorCondition(ctx context.Context, arocli aroclient.Interface, cond *operatorv1.OperatorCondition, role string) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if cond == nil {
+			return nil
+		}
+		cluster, err := arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		var changed bool
+		cluster.Status.AdvisorConditions, changed = setCondition(cluster.Status.AdvisorConditions, *cond)
+
+		if cleanStaleConditions(cluster, role) {
+			changed = true
+		}
+
+		if !changed {
+			return nil
+		}
+
+		_, err = arocli.AroV1alpha1().Clusters().UpdateStatus(ctx, cluster, metav1.UpdateOptions{})
+		return err
+	})
+}
+
 func IsTrue(conditions []operatorv1.OperatorCondition, t string) bool {
 	return isCondition(conditions, t, operatorv1.ConditionTrue)
 }
