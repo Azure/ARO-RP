@@ -98,13 +98,14 @@ type ClusterStatus struct {
 	RedHatKeysPresent []string                       `json:"redHatKeysPresent,omitempty"`
 }
 
-// Cluster is the Schema for the clusters API
 // +kubebuilder:object:root=true
 // +genclient
 // +genclient:nonNamespaced
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// Cluster is the Schema for the clusters API
 type Cluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
