@@ -13,31 +13,23 @@ import (
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
-	previewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/preview.aro.openshift.io/v1alpha1"
 )
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	AroV1alpha1() arov1alpha1.AroV1alpha1Interface
-	PreviewV1alpha1() previewv1alpha1.PreviewV1alpha1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	aroV1alpha1     *arov1alpha1.AroV1alpha1Client
-	previewV1alpha1 *previewv1alpha1.PreviewV1alpha1Client
+	aroV1alpha1 *arov1alpha1.AroV1alpha1Client
 }
 
 // AroV1alpha1 retrieves the AroV1alpha1Client
 func (c *Clientset) AroV1alpha1() arov1alpha1.AroV1alpha1Interface {
 	return c.aroV1alpha1
-}
-
-// PreviewV1alpha1 retrieves the PreviewV1alpha1Client
-func (c *Clientset) PreviewV1alpha1() previewv1alpha1.PreviewV1alpha1Interface {
-	return c.previewV1alpha1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -65,10 +57,6 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs.previewV1alpha1, err = previewv1alpha1.NewForConfig(&configShallowCopy)
-	if err != nil {
-		return nil, err
-	}
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfig(&configShallowCopy)
 	if err != nil {
@@ -82,7 +70,6 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
 	cs.aroV1alpha1 = arov1alpha1.NewForConfigOrDie(c)
-	cs.previewV1alpha1 = previewv1alpha1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -92,7 +79,6 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.aroV1alpha1 = arov1alpha1.New(c)
-	cs.previewV1alpha1 = previewv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs
