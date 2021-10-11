@@ -4,6 +4,7 @@ package v20200430
 // Licensed under the Apache License 2.0.
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -155,6 +156,9 @@ func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, c
 	}
 	if strings.Split(cp.ResourceGroupID, "/")[2] != sv.r.SubscriptionID {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".resourceGroupId", "The provided resource group '%s' is invalid: must be in same subscription as cluster.", cp.ResourceGroupID)
+	}
+	if strings.EqualFold(cp.ResourceGroupID, fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", sv.r.SubscriptionID, sv.r.ResourceGroup)) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".resourceGroupId", "The provided resource group '%s' is invalid: must be different from resourceGroup of the OpenShift cluster object.", cp.ResourceGroupID)
 	}
 
 	return nil
