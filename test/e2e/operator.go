@@ -274,7 +274,7 @@ var _ = Describe("ARO Operator - Conditions", func() {
 	})
 })
 
-var _ = Describe("ARO Operator - MachineSet Controller", func() {
+var _ = XDescribe("ARO Operator - MachineSet Controller", func() {
 	Specify("operator should maintain at least two worker replicas", func() {
 		ctx := context.Background()
 
