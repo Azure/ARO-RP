@@ -60,7 +60,6 @@ except (SyntaxError, ImportError):
 from ._azure_red_hat_open_shift_client_enums import (
     CreatedByType,
     EncryptionAtHost,
-    FipsValidatedModules,
     ProvisioningState,
     SoftwareDefinedNetwork,
     VMSize,
@@ -90,7 +89,6 @@ __all__ = [
     'WorkerProfile',
     'CreatedByType',
     'EncryptionAtHost',
-    'FipsValidatedModules',
     'ProvisioningState',
     'SoftwareDefinedNetwork',
     'VMSize',

@@ -1,9 +1,4 @@
 steps:
-- task: GoTool@0
-  displayName: Use Go 1.14
-  inputs:
-    version: '1.14'
-    GOPATH: $(Agent.TempDirectory)
 - task: Bash@3
   displayName: ⚙️ Make ARO
   inputs:

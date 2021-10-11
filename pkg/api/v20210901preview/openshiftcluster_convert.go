@@ -22,11 +22,10 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 		Properties: OpenShiftClusterProperties{
 			ProvisioningState: ProvisioningState(oc.Properties.ProvisioningState),
 			ClusterProfile: ClusterProfile{
-				PullSecret:           string(oc.Properties.ClusterProfile.PullSecret),
-				Domain:               oc.Properties.ClusterProfile.Domain,
-				Version:              oc.Properties.ClusterProfile.Version,
-				ResourceGroupID:      oc.Properties.ClusterProfile.ResourceGroupID,
-				FipsValidatedModules: FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules),
+				PullSecret:      string(oc.Properties.ClusterProfile.PullSecret),
+				Domain:          oc.Properties.ClusterProfile.Domain,
+				Version:         oc.Properties.ClusterProfile.Version,
+				ResourceGroupID: oc.Properties.ClusterProfile.ResourceGroupID,
 			},
 			ConsoleProfile: ConsoleProfile{
 				URL: oc.Properties.ConsoleProfile.URL,
@@ -136,7 +135,6 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.ClusterProfile.PullSecret = api.SecureString(oc.Properties.ClusterProfile.PullSecret)
 	out.Properties.ClusterProfile.Domain = oc.Properties.ClusterProfile.Domain
 	out.Properties.ClusterProfile.Version = oc.Properties.ClusterProfile.Version
-	out.Properties.ClusterProfile.FipsValidatedModules = api.FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules)
 	out.Properties.ClusterProfile.ResourceGroupID = oc.Properties.ClusterProfile.ResourceGroupID
 	out.Properties.ConsoleProfile.URL = oc.Properties.ConsoleProfile.URL
 	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID

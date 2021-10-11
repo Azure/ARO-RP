@@ -146,11 +146,6 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		visibility = api.VisibilityPrivate
 	}
 
-	fipsValidatedModules := api.FipsValidatedModulesEnabled
-	if os.Getenv("ARO_FIPS_DISABLED") != "" {
-		fipsValidatedModules = api.FipsValidatedModulesDisabled
-	}
-
 	if c.ci {
 		c.log.Infof("creating resource group")
 		_, err = c.groups.CreateOrUpdate(ctx, vnetResourceGroup, mgmtfeatures.ResourceGroup{
@@ -261,7 +256,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	c.log.Info("creating cluster")
-	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appID, appSecret, visibility, fipsValidatedModules)
+	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appID, appSecret, visibility)
 	if err != nil {
 		return err
 	}
@@ -362,14 +357,13 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 // createCluster created new clusters, based on where it is running.
 // development - using preview api
 // production - using stable GA api
-func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret string, visibility api.Visibility, fipsValidatedModules api.FipsValidatedModules) error {
+func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret string, visibility api.Visibility) error {
 	// using internal representation for "singe source" of options
 	oc := api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
 			ClusterProfile: api.ClusterProfile{
-				Domain:               strings.ToLower(clusterName),
-				FipsValidatedModules: fipsValidatedModules,
-				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.env.SubscriptionID(), "aro-"+clusterName),
+				Domain:          strings.ToLower(clusterName),
+				ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.env.SubscriptionID(), "aro-"+clusterName),
 			},
 			ServicePrincipalProfile: api.ServicePrincipalProfile{
 				ClientID:     clientID,
@@ -454,6 +448,10 @@ func (c *Cluster) registerSubscription(ctx context.Context) error {
 			RegisteredFeatures: []api.RegisteredFeatureProfile{
 				{
 					Name:  "Microsoft.RedHatOpenShift/RedHatEngineering",
+					State: "Registered",
+				},
+				{
+					Name:  "Microsoft.RedHatOpenShift/FIPS",
 					State: "Registered",
 				},
 			},
