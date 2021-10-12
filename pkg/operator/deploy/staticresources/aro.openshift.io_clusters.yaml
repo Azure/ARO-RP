@@ -132,6 +132,23 @@ spec:
           status:
             description: ClusterStatus defines the observed state of Cluster
             properties:
+              advisorConditions:
+                items:
+                  description: OperatorCondition is just the standard condition fields.
+                  properties:
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  type: object
+                type: array
               conditions:
                 items:
                   description: OperatorCondition is just the standard condition fields.
