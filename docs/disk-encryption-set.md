@@ -65,10 +65,13 @@ DES_IDENTITY=$(az disk-encryption-set show -n $DISK_ENCRYPTION_SET_NAME \
                                            --query "[identity.principalId]" \
                                            -o tsv)
 
+DES_ID=$(az disk-encryption-set show -n $DISK_ENCRYPTION_SET_NAME -g $RESOURCEGROUP --query 'id' -o tsv)                                    
+
 az keyvault set-policy -n $KEYVAULT_NAME \
                        -g $RESOURCEGROUP \
                        --object-id $DES_IDENTITY \
                        --key-permissions wrapkey unwrapkey get
+
 ```
   - run the az aro create command
 ```bash
