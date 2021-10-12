@@ -24,7 +24,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 )
 
-func validListByResourceGroup(resources *mock_features.MockResourcesClient) {
+func validListByResourceGroupMock(resources *mock_features.MockResourcesClient) {
 	resources.EXPECT().ListByResourceGroup(gomock.Any(), "test-cluster", "", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
 		{
 			Name: to.StringPtr("vm-1"),
@@ -46,7 +46,7 @@ func validListByResourceGroup(resources *mock_features.MockResourcesClient) {
 	}, nil)
 }
 
-func validVirtualMachines(virtualMachines *mock_compute.MockVirtualMachinesClient) {
+func validVirtualMachinesMock(virtualMachines *mock_compute.MockVirtualMachinesClient) {
 	virtualMachines.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mgmtcompute.VirtualMachine{
 		ID:   to.StringPtr("/subscriptions/id"),
 		Type: to.StringPtr("Microsoft.Compute/virtualMachines"),
@@ -56,7 +56,7 @@ func validVirtualMachines(virtualMachines *mock_compute.MockVirtualMachinesClien
 	}, nil)
 }
 
-func validVirtualNetworks(virtualNetworks *mock_network.MockVirtualNetworksClient, routeTables *mock_network.MockRouteTablesClient, mockSubID string) {
+func validVirtualNetworksMock(virtualNetworks *mock_network.MockVirtualNetworksClient, routeTables *mock_network.MockRouteTablesClient, mockSubID string) {
 	virtualNetworks.EXPECT().Get(gomock.Any(), "test-cluster", "test-vnet", "").Return(mgmtnetwork.VirtualNetwork{
 		ID:   to.StringPtr("/subscriptions/id"),
 		Type: to.StringPtr("Microsoft.Network/virtualNetworks"),
@@ -83,7 +83,7 @@ func validVirtualNetworks(virtualNetworks *mock_network.MockVirtualNetworksClien
 	}, nil)
 }
 
-func validDiskEncryptionSets(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient) {
+func validDiskEncryptionSetsMock(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient) {
 	diskEncryptionSets.EXPECT().Get(gomock.Any(), "test-cluster", "test-cluster-des").Return(mgmtcompute.DiskEncryptionSet{
 		ID:   to.StringPtr("/subscriptions/id"),
 		Type: to.StringPtr("Microsoft.Compute/diskEncryptionSets"),
@@ -106,18 +106,13 @@ func TestResourcesList(t *testing.T) {
 		{
 			name: "basic coverage",
 			mocks: func(tt *test, resources *mock_features.MockResourcesClient, virtualMachines *mock_compute.MockVirtualMachinesClient, virtualNetworks *mock_network.MockVirtualNetworksClient, routeTables *mock_network.MockRouteTablesClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient) {
-				validListByResourceGroup(resources)
-				validVirtualMachines(virtualMachines)
-				validVirtualNetworks(virtualNetworks, routeTables, mockSubID)
+				validVirtualNetworksMock(virtualNetworks, routeTables, mockSubID)
 			},
 			wantResponse: []byte(`[{"properties":{"dhcpOptions":{"dnsServers":[]},"subnets":[{"properties":{"routeTable":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","tags":null}},"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"}]},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","name":"routetable1"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
 		},
 		{
 			name: "vnet get error", //Get resources should continue on error from virtualNetworks.Get()
 			mocks: func(tt *test, resources *mock_features.MockResourcesClient, virtualMachines *mock_compute.MockVirtualMachinesClient, virtualNetworks *mock_network.MockVirtualNetworksClient, routeTables *mock_network.MockRouteTablesClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient) {
-				validListByResourceGroup(resources)
-				validVirtualMachines(virtualMachines)
-
 				// Fail virtualNetworks with a GET error
 				virtualNetworks.EXPECT().Get(gomock.Any(), "test-cluster", "test-vnet", "").Return(mgmtnetwork.VirtualNetwork{}, fmt.Errorf("Any error during Get, expecting a permissions error"))
 			},
@@ -126,10 +121,8 @@ func TestResourcesList(t *testing.T) {
 		{
 			name: "enabled diskencryptionsets",
 			mocks: func(tt *test, resources *mock_features.MockResourcesClient, virtualMachines *mock_compute.MockVirtualMachinesClient, virtualNetworks *mock_network.MockVirtualNetworksClient, routeTables *mock_network.MockRouteTablesClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient) {
-				validListByResourceGroup(resources)
-				validVirtualMachines(virtualMachines)
-				validVirtualNetworks(virtualNetworks, routeTables, mockSubID)
-				validDiskEncryptionSets(diskEncryptionSets)
+				validVirtualNetworksMock(virtualNetworks, routeTables, mockSubID)
+				validDiskEncryptionSetsMock(diskEncryptionSets)
 			},
 			diskEncryptionSetId: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Compute/diskEncryptionSets/test-cluster-des", mockSubID),
 			wantResponse:        []byte(`[{"properties":{"dhcpOptions":{"dnsServers":[]},"subnets":[{"properties":{"routeTable":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","tags":null}},"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"}]},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","name":"routetable1"},{"id":"/subscriptions/id","type":"Microsoft.Compute/diskEncryptionSets"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
@@ -137,9 +130,7 @@ func TestResourcesList(t *testing.T) {
 		{
 			name: "error from diskencryptionsets",
 			mocks: func(tt *test, resources *mock_features.MockResourcesClient, virtualMachines *mock_compute.MockVirtualMachinesClient, virtualNetworks *mock_network.MockVirtualNetworksClient, routeTables *mock_network.MockRouteTablesClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient) {
-				validListByResourceGroup(resources)
-				validVirtualMachines(virtualMachines)
-				validVirtualNetworks(virtualNetworks, routeTables, mockSubID)
+				validVirtualNetworksMock(virtualNetworks, routeTables, mockSubID)
 
 				// Fail diskEncryptionSets with a GET error
 				diskEncryptionSets.EXPECT().Get(gomock.Any(), "test-cluster", "test-cluster-des").Return(mgmtcompute.DiskEncryptionSet{}, fmt.Errorf("Any error during Get, expecting a permissions error"))
@@ -160,6 +151,10 @@ func TestResourcesList(t *testing.T) {
 			virtualNetworks := mock_network.NewMockVirtualNetworksClient(controller)
 			routeTables := mock_network.NewMockRouteTablesClient(controller)
 			diskEncryptionSets := mock_compute.NewMockDiskEncryptionSetsClient(controller)
+
+			validListByResourceGroupMock(resources)
+			validVirtualMachinesMock(virtualMachines)
+
 			tt.mocks(tt, resources, virtualMachines, virtualNetworks, routeTables, diskEncryptionSets)
 
 			a := azureActions{
