@@ -4,7 +4,7 @@ pr: none
 
 schedules:
 - cron: 0 23 * * *
-  displayName: Run daily at 23:00 UTC except Saturday
+  displayName: Run daily at 23:00 UTC
   branches:
     include:
     - master
