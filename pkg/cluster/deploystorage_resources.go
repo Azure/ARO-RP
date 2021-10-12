@@ -75,9 +75,37 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 }
 
 // storageAccount will return storage account resource.
-// Old accounts are not encrypted and can't be retrofitted.
-// flag is to controll this behaviour in update/create
+// Legacy storage accounts (public) are not encrypted and cannot be retrofitted.
+// The flag controls this behavior in update/create.
 func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resource {
+
+	virtualNetworkRules := []mgmtstorage.VirtualNetworkRule{
+		{
+			VirtualNetworkResourceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+			Action:                   mgmtstorage.Allow,
+		},
+		{
+			VirtualNetworkResourceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID),
+			Action:                   mgmtstorage.Allow,
+		},
+		{
+			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
+			Action:                   mgmtstorage.Allow,
+		},
+		{
+			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-subnet"),
+			Action:                   mgmtstorage.Allow,
+		},
+	}
+
+	// Prod includes a gateway rule as well
+	if !m.env.IsLocalDevelopmentMode() {
+		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
+			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.GatewayResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/gateway-vnet/subnets/gateway-subnet"),
+			Action:                   mgmtstorage.Allow,
+		})
+	}
+
 	sa := &mgmtstorage.Account{
 		Kind: mgmtstorage.StorageV2,
 		Sku: &mgmtstorage.Sku{
@@ -88,30 +116,9 @@ func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resou
 			EnableHTTPSTrafficOnly: to.BoolPtr(true),
 			MinimumTLSVersion:      mgmtstorage.TLS12,
 			NetworkRuleSet: &mgmtstorage.NetworkRuleSet{
-				Bypass: mgmtstorage.AzureServices,
-				VirtualNetworkRules: &[]mgmtstorage.VirtualNetworkRule{
-					{
-						VirtualNetworkResourceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
-						Action:                   mgmtstorage.Allow,
-					},
-					{
-						VirtualNetworkResourceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID),
-						Action:                   mgmtstorage.Allow,
-					},
-					{
-						VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
-						Action:                   mgmtstorage.Allow,
-					},
-					{
-						VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-subnet"),
-						Action:                   mgmtstorage.Allow,
-					},
-					{
-						VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.GatewayResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/gateway-vnet/subnets/gateway-subnet"),
-						Action:                   mgmtstorage.Allow,
-					},
-				},
-				DefaultAction: "Deny",
+				Bypass:              mgmtstorage.AzureServices,
+				VirtualNetworkRules: &virtualNetworkRules,
+				DefaultAction:       "Deny",
 			},
 		},
 		Name:     &name,
