@@ -25,7 +25,8 @@ func (a *azureActions) ResourcesList(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 
-	armResources := make([]arm.Resource, 0, len(resources)+3)
+	// +4 because we expect +2 subnet and +1 vnets and optional +1 diskEncryptionSet
+	armResources := make([]arm.Resource, 0, len(resources)+4)
 	armResources, err = a.appendAzureNetworkResources(ctx, armResources)
 	if err != nil {
 		a.log.Warnf("error when getting network resources: %s", err)
