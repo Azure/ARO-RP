@@ -3,8 +3,8 @@ trigger: none
 pr: none
 
 schedules:
-- cron: 0 23 * * 1-5,7
-  displayName: Run daily at 23:00 UTC except Saturday
+- cron: 0 23 * * *
+  displayName: Run daily at 23:00 UTC
   branches:
     include:
     - master
