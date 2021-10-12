@@ -128,7 +128,7 @@ func TestResourcesList(t *testing.T) {
 			wantResponse:        []byte(`[{"properties":{"dhcpOptions":{"dnsServers":[]},"subnets":[{"properties":{"routeTable":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","tags":null}},"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"}]},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","name":"routetable1"},{"id":"/subscriptions/id","type":"Microsoft.Compute/diskEncryptionSets"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
 		},
 		{
-			name: "error from diskencryptionsets",
+			name: "error getting diskencryptionsets",
 			mocks: func(tt *test, resources *mock_features.MockResourcesClient, virtualMachines *mock_compute.MockVirtualMachinesClient, virtualNetworks *mock_network.MockVirtualNetworksClient, routeTables *mock_network.MockRouteTablesClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient) {
 				validVirtualNetworksMock(virtualNetworks, routeTables, mockSubID)
 
