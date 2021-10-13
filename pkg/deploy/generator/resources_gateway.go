@@ -572,7 +572,7 @@ done
 	return &arm.Resource{
 		Resource: &mgmtcompute.VirtualMachineScaleSet{
 			Sku: &mgmtcompute.Sku{
-				Name:     to.StringPtr("[parameters('vmSize')]"),
+				Name:     to.StringPtr("[parameters('gatewayVmSize')]"),
 				Tier:     to.StringPtr("Standard"),
 				Capacity: to.Int64Ptr(1339),
 			},
@@ -618,9 +618,8 @@ done
 							{
 								Name: to.StringPtr("gateway-vmss-nic"),
 								VirtualMachineScaleSetNetworkConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetNetworkConfigurationProperties{
-									Primary: to.BoolPtr(true),
-									// TODO: enable this (requires >= Standard_D4s_v3)
-									// EnableAcceleratedNetworking: to.BoolPtr(true),
+									Primary:                     to.BoolPtr(true),
+									EnableAcceleratedNetworking: to.BoolPtr(true),
 									IPConfigurations: &[]mgmtcompute.VirtualMachineScaleSetIPConfiguration{
 										{
 											Name: to.StringPtr("gateway-vmss-ipconfig"),
