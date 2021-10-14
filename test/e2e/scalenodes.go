@@ -73,6 +73,13 @@ var _ = Describe("Scale nodes", func() {
 	Specify("nodes should scale up and down", func() {
 		ctx := context.Background()
 
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		if instance.Spec.Features.ReconcileMachineSet {
+			Skip("MachineSet Controller is enabled, skipping this test")
+		}
+
 		mss, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(mss.Items).NotTo(BeEmpty())

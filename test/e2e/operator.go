@@ -274,7 +274,7 @@ var _ = Describe("ARO Operator - Conditions", func() {
 	})
 })
 
-var _ = XDescribe("ARO Operator - MachineSet Controller", func() {
+var _ = Describe("ARO Operator - MachineSet Controller", func() {
 	Specify("operator should maintain at least two worker replicas", func() {
 		ctx := context.Background()
 
@@ -293,13 +293,12 @@ var _ = XDescribe("ARO Operator - MachineSet Controller", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(mss.Items).NotTo(BeEmpty())
 
-		// Zero all machinesets (avoid availability zone confusion)
+		// Zero all machinesets, wait a few seconds for operator
 		for _, object := range mss.Items {
 			err = scale(object.Name, 0)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = waitForScale(object.Name)
-			Expect(err).NotTo(HaveOccurred())
+			time.Sleep(5 * time.Second)
 		}
 
 		// Re-count and assert that operator added back replicas
@@ -316,7 +315,10 @@ var _ = XDescribe("ARO Operator - MachineSet Controller", func() {
 
 		// Restore previous state
 		for _, ms := range mss.Items {
-			err := scale(ms.Name, *ms.Spec.Replicas)
+			err = scale(ms.Name, *ms.Spec.Replicas)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = waitForScale(ms.Name)
 			Expect(err).NotTo(HaveOccurred())
 		}
 	})
