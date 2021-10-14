@@ -63,12 +63,12 @@ helps['aro list-credentials'] = """
     text: az aro list-credentials --name MyCluster --resource-group MyResourceGroup
 """
 
-helps['aro list-admin-credentials'] = """
+helps['aro get-admin-kubeconfig'] = """
   type: command
   short-summary: List admin kubeconfig of a cluster.
   examples:
-  - name: List admin kubeconfig of a cluster.
-    text: az aro list-admin-credentials --name MyCluster --resource-group MyResourceGroup
+  - name: List admin kubeconfig of a cluster. Usually the output would be redirected to a kubeconfig file.
+    text: az aro get-admin-kubeconfig --name MyCluster --resource-group MyResourceGroup
 """
 
 helps['aro wait'] = """

@@ -22,4 +22,4 @@ def load_command_table(self, _):
         g.wait_command('wait')
 
         g.custom_command('list-credentials', 'aro_list_credentials')
-        g.custom_command('list-admin-credentials', 'aro_list_admin_credentials')
+        g.custom_command('get-admin-kubeconfig', 'aro_list_admin_credentials')
