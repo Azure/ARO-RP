@@ -151,7 +151,7 @@ unit-test-go:
 lint-go:
 	go run ./vendor/github.com/golangci/golangci-lint/cmd/golangci-lint run
 
-test-python: generate pyenv az
+test-python: pyenv az
 	. pyenv/bin/activate && \
 		azdev linter && \
 		azdev style && \
