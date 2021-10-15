@@ -29,3 +29,7 @@ Release History
 1.0.1
 ++++++
 * Switch to new preview API
+
+1.0.2
+++++++
+* Add support for list admin credentials (getting kubeconfig)
