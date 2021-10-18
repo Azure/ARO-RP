@@ -119,17 +119,36 @@ func scale(name string, replicas int32) error {
 
 func waitForScale(name string) error {
 	return wait.PollImmediate(10*time.Second, 30*time.Minute, func() (bool, error) {
-		ms, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).Get(context.Background(), name, metav1.GetOptions{})
+		machineset, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			log.Warn(err)
 			return false, nil // swallow error
 		}
 
-		if ms.Spec.Replicas == nil {
+		if machineset.Spec.Replicas == nil {
 			return false, nil
 		}
 
-		return ms.Status.ObservedGeneration == ms.Generation &&
-			ms.Status.AvailableReplicas == *ms.Spec.Replicas, nil
+		return machineset.Status.ObservedGeneration == machineset.Generation &&
+			machineset.Status.AvailableReplicas == *machineset.Spec.Replicas, nil
+	})
+}
+
+func waitForMachines() error {
+	return wait.PollImmediate(1*time.Second, 30*time.Minute, func() (bool, error) {
+		machines, err := clients.MachineAPI.MachineV1beta1().Machines(machineSetsNamespace).List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			log.Warn(err)
+			return false, nil
+		}
+
+		// Wait for all machines to be in Running phase before continuing
+		for _, m := range machines.Items {
+			if *m.Status.Phase != "Running" {
+				return false, nil
+			}
+		}
+
+		return true, nil
 	})
 }

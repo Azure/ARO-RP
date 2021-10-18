@@ -293,12 +293,15 @@ var _ = Describe("ARO Operator - MachineSet Controller", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(mss.Items).NotTo(BeEmpty())
 
-		// Zero all machinesets, wait a few seconds for operator
+		// Zero all machinesets, wait for reconcile
 		for _, object := range mss.Items {
 			err = scale(object.Name, 0)
 			Expect(err).NotTo(HaveOccurred())
+		}
 
-			time.Sleep(5 * time.Second)
+		for _, object := range mss.Items {
+			err = waitForScale(object.Name)
+			Expect(err).NotTo(HaveOccurred())
 		}
 
 		// Re-count and assert that operator added back replicas
@@ -313,13 +316,19 @@ var _ = Describe("ARO Operator - MachineSet Controller", func() {
 		}
 		Expect(replicaCount).To(BeEquivalentTo(minSupportedReplicas))
 
-		// Restore previous state
+		// Scale back to previous state
 		for _, ms := range mss.Items {
 			err = scale(ms.Name, *ms.Spec.Replicas)
 			Expect(err).NotTo(HaveOccurred())
+		}
 
+		for _, ms := range mss.Items {
 			err = waitForScale(ms.Name)
 			Expect(err).NotTo(HaveOccurred())
 		}
+
+		// Wait for old machine objects to delete
+		err = waitForMachines()
+		Expect(err).NotTo(HaveOccurred())
 	})
 })
