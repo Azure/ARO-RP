@@ -201,8 +201,8 @@ def aro_list_admin_credentials(cmd, client, resource_group_name, resource_name):
     feature_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_RESOURCE_FEATURES)
     feature = feature_client.features.get(resource_provider_namespace="Microsoft.RedHatOpenShift",
                                           feature_name="AdminKubeconfig")
-    accepted_states = [feature_client.features.models.SubscriptionFeatureRegistrationState.REGISTERED,
-                       feature_client.features.models.SubscriptionFeatureRegistrationState.REGISTERING]
+    accepted_states = ["Registered",
+                       "Registering"]
     if feature.properties.state not in accepted_states:
         logger.warning("This operation requires the Microsoft.RedHatOpenShift/AdminKubeconfig feature to be registered")
         logger.warning("To register run: az feature register --namespace Microsoft.RedHatOpenShift -n AdminKubeconfig")
