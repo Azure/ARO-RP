@@ -60,6 +60,7 @@ require (
 	github.com/gorilla/sessions v1.2.1
 	github.com/h2non/filetype v1.1.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/jewzaam/go-cosmosdb v0.0.0-20211018134417-8d1494e7862f
 	github.com/jstemmer/go-junit-report v0.9.1
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.1.0 // indirect
 	github.com/klauspost/compress v1.13.5 // indirect
@@ -70,7 +71,6 @@ require (
 	github.com/metal3-io/cluster-api-provider-baremetal v0.2.2 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
-	github.com/mjudeikis/go-cosmosdb v0.0.0-20210518104404-b205b3cefd36
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.16.0
@@ -263,7 +263,7 @@ replace (
 	github.com/openshift/cluster-api-provider-libvirt => github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20210812060947-9542e5ac08b7
 	github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20210811191557-cbf023408f4e
 	github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20210729235954-696f4645f37d
-	github.com/openshift/installer => github.com/mjudeikis/installer v0.9.0-master.0.20210906140350-e0dddfe94b1d
+	github.com/openshift/installer => github.com/jewzaam/installer-aro v0.9.0-master.0.20210906140350-e0dddfe94b1d
 	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20210825122301-7f0bf922c345
 	github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20210811215339-a6349c0280cc
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20210826190144-a537783ea4a0
