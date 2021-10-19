@@ -19,6 +19,8 @@ const (
 )
 
 var _ = Describe("Validate FIPS Mode", func() {
+	BeforeEach(skipIfNotInDevelopmentEnv)
+
 	ctx := context.Background()
 	It("should be possible to validate fips master and worker machineconfigs exist", func() {
 		mcp, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{})
