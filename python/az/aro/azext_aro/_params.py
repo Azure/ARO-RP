@@ -115,3 +115,13 @@ def load_arguments(self, _):
                    help='Refresh cluster application credentials.',
                    options_list=['--refresh-credentials'],
                    validator=validate_refresh_cluster_credentials)
+    with self.argument_context('aro get-admin-kubeconfig') as c:
+        c.argument('internal', arg_type=get_three_state_flag(),
+                   options_list=['--internal', '-i'],
+                   help='Kubeconfig for accessing the api-int endpoint directly')
+        c.argument('overwrite', arg_type=get_three_state_flag(),
+                   options_list=['--overwrite'],
+                   help='Overwrite existing kubeconfig.')
+        c.argument('file',
+                   help='Path to the file where kubeconfig should be saved. Default: kubeconfig in local directory',
+                   options_list=['--file', '-f'])

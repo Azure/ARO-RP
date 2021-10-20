@@ -41,4 +41,4 @@ Release History
 1.0.4
 ++++++
 * Fixed get-admin-kubeconfig Enums for Feature state no longer available in AzureCLI
-
+* Added saving kubeconfig to file
