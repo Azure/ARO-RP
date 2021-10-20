@@ -38,10 +38,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 
 	apis := map[string]*api.Version{
 		"admin": {
-			OpenShiftClusterConverter: api.APIs["admin"].OpenShiftClusterConverter,
-			OpenShiftClusterStaticValidator: func(string, string, bool, string) api.OpenShiftClusterStaticValidator {
-				return &dummyOpenShiftClusterValidator{}
-			},
+			OpenShiftClusterConverter:            api.APIs["admin"].OpenShiftClusterConverter,
+			OpenShiftClusterStaticValidator:      api.APIs["admin"].OpenShiftClusterStaticValidator,
 			OpenShiftClusterCredentialsConverter: api.APIs["admin"].OpenShiftClusterCredentialsConverter,
 		},
 	}
@@ -49,16 +47,17 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 
 	type test struct {
-		name           string
-		request        func(*admin.OpenShiftCluster)
-		isPatch        bool
-		fixture        func(*testdatabase.Fixture)
-		wantStatusCode int
-		wantEnriched   []string
-		wantDocuments  func(*testdatabase.Checker)
-		wantResponse   *admin.OpenShiftCluster
-		wantAsync      bool
-		wantError      string
+		name                   string
+		request                func(*admin.OpenShiftCluster)
+		isPatch                bool
+		fixture                func(*testdatabase.Fixture)
+		wantStatusCode         int
+		wantEnriched           []string
+		wantDocuments          func(*testdatabase.Checker)
+		wantResponse           *admin.OpenShiftCluster
+		wantAsync              bool
+		wantError              string
+		wantSystemDataEnriched bool
 	}
 
 	for _, tt := range []*test{
@@ -86,7 +85,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					},
 				})
 			},
-			wantEnriched: []string{testdatabase.GetResourcePath(mockSubID, "resourceName")},
+			wantSystemDataEnriched: true,
+			wantEnriched:           []string{testdatabase.GetResourcePath(mockSubID, "resourceName")},
 			wantDocuments: func(c *testdatabase.Checker) {
 				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
@@ -139,10 +139,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 		},
 		{
-			name: "patch a cluster with registry profile should ignore registry profile",
+			name: "patch a cluster with registry profile should fail",
 			request: func(oc *admin.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
-				oc.Name = "resourceName"
 				oc.Properties.RegistryProfiles = []admin.RegistryProfile{
 					{
 						Name:     "TestUser",
@@ -170,18 +168,20 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						Tags: map[string]string{"tag": "will-be-kept"},
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateSucceeded,
+							ClusterProfile: api.ClusterProfile{
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
+							},
+							NetworkProfile: api.NetworkProfile{
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+							},
+							MasterProfile: api.MasterProfile{
+								EncryptionAtHost: api.EncryptionAtHostDisabled,
+							},
 						},
 					},
 				})
 			},
 			wantDocuments: func(c *testdatabase.Checker) {
-				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
-					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					AsyncOperation: &api.AsyncOperation{
-						InitialProvisioningState: api.ProvisioningStateAdminUpdating,
-						ProvisioningState:        api.ProvisioningStateAdminUpdating,
-					},
-				})
 				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -190,10 +190,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						Tags: map[string]string{"tag": "will-be-kept"},
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:     api.ProvisioningStateAdminUpdating,
-							LastProvisioningState: api.ProvisioningStateSucceeded,
+							ProvisioningState: api.ProvisioningStateSucceeded,
 							ClusterProfile: api.ClusterProfile{
-								Domain:               "changed",
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
@@ -205,29 +203,11 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						},
 					}})
 			},
-			wantEnriched:   []string{testdatabase.GetResourcePath(mockSubID, "resourceName")},
-			wantAsync:      true,
-			wantStatusCode: http.StatusOK,
-			wantResponse: &admin.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Name: "resourceName",
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateAdminUpdating,
-					LastProvisioningState: admin.ProvisioningStateSucceeded,
-					ClusterProfile: admin.ClusterProfile{
-						Domain:               "changed",
-						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
-					},
-					NetworkProfile: admin.NetworkProfile{
-						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
-					},
-					MasterProfile: admin.MasterProfile{
-						EncryptionAtHost: admin.EncryptionAtHostDisabled,
-					},
-				},
-			},
+			wantSystemDataEnriched: false,
+			wantEnriched:           []string{testdatabase.GetResourcePath(mockSubID, "resourceName")},
+			wantAsync:              false,
+			wantStatusCode:         http.StatusBadRequest,
+			wantError:              `400: PropertyChangeNotAllowed: properties.registryProfiles: Changing property 'properties.registryProfiles' is not allowed.`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -308,7 +288,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				t.Error(err)
 			}
 
-			if !systemDataEnricherCalled {
+			if tt.wantSystemDataEnriched != systemDataEnricherCalled {
 				t.Error(systemDataEnricherCalled)
 			}
 		})
