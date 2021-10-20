@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strings"
@@ -55,7 +56,7 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState:   api.ProvisioningStateSucceeded,
-							UserAdminKubeconfig: api.SecureBytes("{kubeconfig}"),
+							UserAdminKubeconfig: api.SecureBytes("Y2x1c3RlcnM6Ci0gY2x1c3RlcjoKICAgIGNlcnRpZmljYXRlLWF1dGhvcml0eS1kYXRhOiBDZXJ0RGF0YVRvQmVSZW1vdmVkCiAgICBzZXJ2ZXI6IGh0dHBzOi8vYXBpLWludC5yYW5kb21pZC5yZWdpb24uYXJvYXBwLmlvOjY0NDMKICBuYW1lOiByYW5kb21pZApjb250ZXh0czoKLSBjb250ZXh0OgogICAgY2x1c3RlcjogcmFuZG9taWQKICAgIHVzZXI6IHN5c3RlbTphZG1pbgogIG5hbWU6IHN5c3RlbTphZG1pbgpjdXJyZW50LWNvbnRleHQ6IHN5c3RlbTphZG1pbgpwcmVmZXJlbmNlczoge30KdXNlcnM6Ci0gbmFtZTogc3lzdGVtOmFkbWluCiAgdXNlcjoKICAgIGNsaWVudC1jZXJ0aWZpY2F0ZS1kYXRhOiBDbGllbnRDZXJ0CiAgICBjbGllbnQta2V5LWRhdGE6IENsaWVudEtleQo="),
 						},
 					},
 				})
@@ -77,8 +78,12 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func(tt *test) *v20210901preview.OpenShiftClusterAdminKubeconfig {
+				kubeconfig, err := base64.StdEncoding.DecodeString("Y2x1c3RlcnM6Ci0gY2x1c3RlcjoKICAgIHNlcnZlcjogaHR0cHM6Ly9hcGkucmFuZG9taWQucmVnaW9uLmFyb2FwcC5pbzo2NDQzCiAgbmFtZTogcmFuZG9taWQKY29udGV4dHM6Ci0gY29udGV4dDoKICAgIGNsdXN0ZXI6IHJhbmRvbWlkCiAgICB1c2VyOiBzeXN0ZW06YWRtaW4KICBuYW1lOiBzeXN0ZW06YWRtaW4KY3VycmVudC1jb250ZXh0OiBzeXN0ZW06YWRtaW4KcHJlZmVyZW5jZXM6IHt9CnVzZXJzOgotIG5hbWU6IHN5c3RlbTphZG1pbgogIHVzZXI6CiAgICBjbGllbnQtY2VydGlmaWNhdGUtZGF0YTogQ2xpZW50Q2VydAogICAgY2xpZW50LWtleS1kYXRhOiBDbGllbnRLZXkK")
+				if err != nil {
+					panic(err)
+				}
 				return &v20210901preview.OpenShiftClusterAdminKubeconfig{
-					Kubeconfig: []byte("{kubeconfig}"),
+					Kubeconfig: kubeconfig,
 				}
 			},
 		},
