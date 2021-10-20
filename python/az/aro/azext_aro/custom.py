@@ -3,7 +3,6 @@
 
 import random
 import os
-import yaml
 from base64 import b64decode
 
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
@@ -198,7 +197,7 @@ def aro_list_credentials(client, resource_group_name, resource_name):
 
 
 def aro_list_admin_credentials(cmd, client, resource_group_name, resource_name,
-                               overwrite=False, file="kubeconfig", internal=False):
+                               overwrite=False, file="kubeconfig"):
     # check for the presence of the feature flag and warn
     # the check shouldn't block the API call - ARM can cache a feature state for several minutes
     feature_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_RESOURCE_FEATURES)
@@ -214,26 +213,12 @@ def aro_list_admin_credentials(cmd, client, resource_group_name, resource_name,
     if overwrite:
         file_mode = "w"
     yaml_data = b64decode(query_result.kubeconfig).decode('UTF-8')
-    if not internal:
-        yaml_data = _external_kubeconfig(yaml_data)
     try:
         with open(file, file_mode) as f:
-            f.write("apiVersion: v1\n")
             f.write(yaml_data)
     except FileExistsError:
         logger.error("File %s already exists, use the --overwrite parameter to overwrite file.", file)
     logger.info("Kubeconfig written to file: %s", file)
-
-
-def _external_kubeconfig(yaml_data):
-    kubeconfig = yaml.safe_load(yaml_data)
-    try:
-        for cluster in kubeconfig["clusters"]:
-            cluster["cluster"].pop("certificate-authority-data")  # no custom CA required for external API
-            cluster["cluster"]["server"] = cluster["cluster"]["server"].replace("https://api-int.", "https://api.")
-    except KeyError:
-        logger.error("Unexpected Kubeconfig format. Please contact Azure Red Hat OpenShift support.")
-    return yaml.dump(kubeconfig)
 
 
 def aro_update(cmd,
@@ -438,7 +423,6 @@ def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
                 # Create the role assignment if it doesn't exist
                 # Assume that the role assignment exists if we fail to look it up
                 resource_contributor_exists = True
-
                 try:
                     resource_contributor_exists = has_role_assignment_on_resource(cli_ctx, resource, sp_id, role)
                 except CloudError as e:
