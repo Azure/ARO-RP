@@ -17,7 +17,7 @@ type actionFunction func(context.Context) error
 
 // Action returns a Step which will execute the action function `f`. Errors from
 // `f` are returned directly.
-func Action(f actionFunction) actionStep {
+func Action(f actionFunction) Step {
 	return actionStep{f}
 }
 

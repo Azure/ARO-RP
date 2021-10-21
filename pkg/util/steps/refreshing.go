@@ -22,7 +22,7 @@ var ErrWantRefresh = errors.New("want refresh")
 // `authorizer` if the step returns an Azure AuthenticationError and rerun it.
 // The step will be retried until `retryTimeout` is hit. Any other error will be
 // returned directly.
-func AuthorizationRefreshingAction(authorizer refreshable.Authorizer, step Step) authorizationRefreshingActionStep {
+func AuthorizationRefreshingAction(authorizer refreshable.Authorizer, step Step) Step {
 	return authorizationRefreshingActionStep{
 		step:       step,
 		authorizer: authorizer,
