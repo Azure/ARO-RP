@@ -29,11 +29,16 @@ import (
 
 // AdminUpdate performs an admin update of an ARO cluster
 func (m *manager) AdminUpdate(ctx context.Context) error {
-	steps := []steps.Step{
+	toRun := m.adminUpdate(ctx)
+	return m.runSteps(ctx, toRun)
+}
+
+func (m *manager) adminUpdate(ctx context.Context) []steps.Step {
+	toRun := []steps.Step{
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.fixupClusterSPObjectID),
 		steps.Action(m.ensureDefaults),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)), // re-create RP RBAC if needed after tenant migration
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, 10*time.Minute, steps.Action(m.ensureResourceGroup)), // re-create RP RBAC if needed after tenant migration
 		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute, false),
@@ -57,12 +62,12 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 		steps.Action(m.updateProvisionedBy), // Run this last so we capture the resource provider only once the upgrade has been fully performed
 	}
 
-	return m.runSteps(ctx, steps)
+	return toRun
 }
 
 func (m *manager) Update(ctx context.Context) error {
 	steps := []steps.Step{
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, 10*time.Minute, steps.Action(m.validateResources)),
 		steps.Action(m.initializeKubernetesClients), // All init steps are first
 		steps.Action(m.initializeClusterSPClients),
 		steps.Action(m.clusterSPObjectID),
@@ -86,7 +91,7 @@ func (m *manager) Install(ctx context.Context) error {
 
 	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: {
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, 10*time.Minute, steps.Action(m.validateResources)),
 			steps.Action(m.ensureACRToken),
 			steps.Action(m.generateSSHKey),
 			steps.Action(m.generateFIPSMode),
@@ -101,21 +106,21 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(func(ctx context.Context) error {
 				return m.ensureInfraID(ctx, installConfig)
 			}),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies)),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, 10*time.Minute, steps.Action(m.ensureResourceGroup)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, 10*time.Minute, steps.Action(m.setMasterSubnetPolicies)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, 10*time.Minute, steps.Action(func(ctx context.Context) error {
 				return m.deployStorageTemplate(ctx, installConfig)
 			})),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.updateAPIIPEarly)),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.createOrUpdateRouterIPEarly)),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureGatewayCreate)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, 10*time.Minute, steps.Action(m.updateAPIIPEarly)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, 10*time.Minute, steps.Action(m.createOrUpdateRouterIPEarly)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, 10*time.Minute, steps.Action(m.ensureGatewayCreate)),
 			steps.Action(func(ctx context.Context) error {
 				return m.ensureGraph(ctx, installConfig, image)
 			}),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGs)),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, 10*time.Minute, steps.Action(m.attachNSGs)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, 10*time.Minute, steps.Action(m.generateKubeconfigs)),
 			steps.Action(m.ensureBillingRecord),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.deployResourceTemplate)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, 10*time.Minute, steps.Action(m.deployResourceTemplate)),
 			steps.Action(m.createAPIServerPrivateEndpoint),
 			steps.Action(m.createCertificates),
 			steps.Action(m.initializeKubernetesClients),
@@ -159,7 +164,7 @@ func (m *manager) Install(ctx context.Context) error {
 }
 
 func (m *manager) runSteps(ctx context.Context, s []steps.Step) error {
-	err := steps.Run(ctx, m.log, 10*time.Second, s)
+	err := steps.Run(ctx, m.log, 10*time.Second, 0, s, steps.NewNilStageHook())
 	if err != nil {
 		m.gatherFailureLogs(ctx)
 	}

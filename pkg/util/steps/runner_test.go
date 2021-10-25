@@ -95,7 +95,7 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: `oh no!`,
+			wantErr: `step [Action github.com/Azure/ARO-RP/pkg/util/steps.failingFunc] encountered error: oh no!`,
 		},
 		{
 			name: "An AuthorizationRefreshingAction that fails but is retried successfully will allow a successful run",
@@ -123,16 +123,9 @@ func TestStepRunner(t *testing.T) {
 					return nil
 				})
 
-				errorsOnce := &authorizationRefreshingActionStep{
-					step:         action,
-					authorizer:   refreshable,
-					retryTimeout: 50 * time.Millisecond,
-					pollInterval: 25 * time.Millisecond,
-				}
-
 				return []Step{
 					Action(successfulFunc),
-					errorsOnce,
+					AuthorizationRefreshingAction(refreshable, 50*time.Millisecond, action),
 					Action(successfulFunc),
 				}
 			},
@@ -214,11 +207,7 @@ func TestStepRunner(t *testing.T) {
 				refreshable := mock_refreshable.NewMockAuthorizer(controller)
 				return []Step{
 					Action(successfulFunc),
-					&authorizationRefreshingActionStep{
-						step:         Action(failsWithAzureError),
-						authorizer:   refreshable,
-						retryTimeout: 1 * time.Nanosecond,
-					},
+					AuthorizationRefreshingAction(refreshable, 1*time.Nanosecond, Action(failsWithAzureError)),
 					Action(successfulFunc),
 				}
 			},
@@ -236,7 +225,7 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: `TEST#GET: oops: StatusCode=403 -- Original Error: Code="AuthorizationFailed" Message="failed"`,
+			wantErr: `step [AuthorizationRefreshingAction [Action github.com/Azure/ARO-RP/pkg/util/steps.failsWithAzureError]] encountered error: TEST#GET: oops: StatusCode=403 -- Original Error: Code="AuthorizationFailed" Message="failed"`,
 		},
 		{
 			name: "AuthorizationRefreshingAction will not refresh on a real failure",
@@ -244,7 +233,7 @@ func TestStepRunner(t *testing.T) {
 				refreshable := mock_refreshable.NewMockAuthorizer(controller)
 				return []Step{
 					Action(successfulFunc),
-					AuthorizationRefreshingAction(refreshable, Action(failingFunc)),
+					AuthorizationRefreshingAction(refreshable, 50*time.Millisecond, Action(failingFunc)),
 					Action(successfulFunc),
 				}
 			},
@@ -262,19 +251,14 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: `oh no!`,
+			wantErr: `step [AuthorizationRefreshingAction [Action github.com/Azure/ARO-RP/pkg/util/steps.failingFunc]] encountered error: oh no!`,
 		},
 		{
 			name: "A timed out Condition causes a failure",
 			steps: func(controller *gomock.Controller) []Step {
 				return []Step{
 					Action(successfulFunc),
-					&conditionStep{
-						f:            timingOutCondition,
-						fail:         true,
-						pollInterval: 20 * time.Millisecond,
-						timeout:      50 * time.Millisecond,
-					},
+					Condition(timingOutCondition, 50*time.Millisecond, true),
 					Action(successfulFunc),
 				}
 			},
@@ -292,7 +276,7 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "timed out waiting for the condition",
+			wantErr: "step [Condition github.com/Azure/ARO-RP/pkg/util/steps.timingOutCondition, timeout 50ms] encountered error: timed out waiting for the condition",
 		},
 		{
 			name: "A Condition that does not return true in the timeout time causes a failure",
@@ -317,7 +301,7 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "timed out waiting for the condition",
+			wantErr: "step [Condition github.com/Azure/ARO-RP/pkg/util/steps.alwaysFalseCondition, timeout 50ms] encountered error: timed out waiting for the condition",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -328,7 +312,7 @@ func TestStepRunner(t *testing.T) {
 			h, log := testlog.New()
 			steps := tt.steps(controller)
 
-			err := Run(ctx, log, 25*time.Millisecond, steps)
+			err := Run(ctx, log, 25*time.Millisecond, 0, steps, NewNilStageHook())
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
