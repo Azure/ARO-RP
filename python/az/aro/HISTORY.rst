@@ -33,3 +33,7 @@ Release History
 1.0.2
 ++++++
 * Add support for list admin credentials (getting kubeconfig)
+
+1.0.3
+++++++
+* Fix role assignment bug

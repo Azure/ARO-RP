@@ -306,7 +306,8 @@ def get_network_resources(cli_ctx, subnets, vnet):
 def get_disk_encryption_resources(oc):
     disk_encryption_set = oc.master_profile.disk_encryption_set_id
     resources = set()
-    resources.add(disk_encryption_set)
+    if disk_encryption_set:
+        resources.add(disk_encryption_set)
     return resources
 
 
