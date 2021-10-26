@@ -88,6 +88,41 @@ func TestAdminUpdateSteps(t *testing.T) {
 				"[Action updateProvisionedBy-fm]",
 			},
 		},
+		{
+			name: "Blank (should perform everything)",
+			fixture: func() *api.OpenShiftClusterDocument {
+				doc := baseClusterDoc()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskEverything
+				return doc
+			},
+			shouldRunSteps: []string{
+				"[Action initializeKubernetesClients-fm]",
+				"[Action ensureBillingRecord-fm]",
+				"[Action ensureDefaults-fm]",
+				"[Action fixupClusterSPObjectID-fm]",
+				"[Action fixInfraID-fm]",
+				"[AuthorizationRefreshingAction [Action ensureResourceGroup-fm]]",
+				"[Action createOrUpdateDenyAssignment-fm]",
+				"[Action fixSSH-fm]",
+				"[Action populateDatabaseIntIP-fm]",
+				"[Action startVMs-fm]",
+				"[Condition apiServersReady-fm, timeout 30m0s]",
+				"[Action fixSREKubeconfig-fm]",
+				"[Action fixUserAdminKubeconfig-fm]",
+				"[Action createOrUpdateRouterIPFromCluster-fm]",
+				"[Action fixMCSCert-fm]",
+				"[Action fixMCSUserData-fm]",
+				"[Action ensureGatewayUpgrade-fm]",
+				"[Action configureAPIServerCertificate-fm]",
+				"[Action configureIngressCertificate-fm]",
+				"[Action populateRegistryStorageAccountName-fm]",
+				"[Action populateCreatedAt-fm]",
+				"[Action ensureAROOperator-fm]",
+				"[Condition aroDeploymentReady-fm, timeout 20m0s]",
+				"[Action updateProvisionedBy-fm]",
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &manager{

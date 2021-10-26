@@ -34,8 +34,9 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 }
 
 func (m *manager) adminUpdate(ctx context.Context) []steps.Step {
-	isEverything := m.doc.OpenShiftCluster.Properties.MaintenanceTask == api.MaintenanceTaskEverything
-	isOperator := m.doc.OpenShiftCluster.Properties.MaintenanceTask == api.MaintenanceTaskOperator
+	task := m.doc.OpenShiftCluster.Properties.MaintenanceTask
+	isEverything := task == api.MaintenanceTaskEverything || task == ""
+	isOperator := task == api.MaintenanceTaskOperator
 
 	// Generic fix-up or setup actions that are fairly safe to always take, and
 	// don't require a running cluster
