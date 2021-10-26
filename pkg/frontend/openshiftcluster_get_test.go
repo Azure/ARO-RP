@@ -118,12 +118,12 @@ func TestGetOpenShiftCluster(t *testing.T) {
 				wantResponse = tt.wantResponse(tt)
 			}
 
-			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, wantResponse)
-			if err != nil {
+			errs := validateResponse(resp, b, tt.wantStatusCode, tt.wantError, wantResponse)
+			for _, err := range errs {
 				t.Error(err)
 			}
 
-			errs := ti.enricher.Check(tt.wantEnriched)
+			errs = ti.enricher.Check(tt.wantEnriched)
 			for _, err := range errs {
 				t.Error(err)
 			}

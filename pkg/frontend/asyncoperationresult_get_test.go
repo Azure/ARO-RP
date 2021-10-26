@@ -152,8 +152,8 @@ func TestGetAsyncOperationResult(t *testing.T) {
 				}
 			}
 
-			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
-			if err != nil {
+			errs := validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
+			for _, err := range errs {
 				t.Error(err)
 			}
 		})

@@ -207,48 +207,50 @@ func (ti *testInfra) request(method, url string, header http.Header, in interfac
 	return resp, b, nil
 }
 
-func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantError string, wantResponse interface{}) error {
+func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantError string, wantResponse interface{}) []error {
+	var errs []error
 	if resp.StatusCode != wantStatusCode {
-		return fmt.Errorf("unexpected status code %d, wanted %d", resp.StatusCode, wantStatusCode)
+		errs = append(errs, fmt.Errorf("unexpected status code %d, wanted %d", resp.StatusCode, wantStatusCode))
 	}
 
 	if wantError != "" {
 		cloudErr := &api.CloudError{StatusCode: resp.StatusCode}
 		err := json.Unmarshal(b, &cloudErr)
 		if err != nil {
-			return err
+			errs = append(errs, err)
+			return errs
 		}
 
 		if cloudErr.Error() != wantError {
-			return fmt.Errorf("unexpected error %s, wanted %s", cloudErr.Error(), wantError)
+			errs = append(errs, fmt.Errorf("unexpected error %s, wanted %s", cloudErr.Error(), wantError))
 		}
-
-		return nil
+		return errs
 	}
 
 	if wantResponse == nil || reflect.ValueOf(wantResponse).IsZero() {
 		if len(b) != 0 {
-			return fmt.Errorf("unexpected response %s, wanted no content", string(b))
+			errs = append(errs, fmt.Errorf("unexpected response %s, wanted no content", string(b)))
 		}
-		return nil
+		return errs
 	}
 
 	if wantResponse, ok := wantResponse.([]byte); ok {
 		if !bytes.Equal(b, wantResponse) {
-			return fmt.Errorf("unexpected response %s, wanted %s", string(b), string(wantResponse))
+			errs = append(errs, fmt.Errorf("unexpected response %s, wanted %s", string(b), string(wantResponse)))
 		}
-		return nil
+		return errs
 	}
 
 	v := reflect.New(reflect.TypeOf(wantResponse).Elem()).Interface()
 	err := json.Unmarshal(b, &v)
 	if err != nil {
-		return err
+		errs = append(errs, err)
+		return errs
 	}
 
 	if diff := deep.Equal(v, wantResponse); diff != nil {
-		return fmt.Errorf("unexpected response %s, wanted to match %#v (%s)", string(b), wantResponse, diff)
+		errs = append(errs, fmt.Errorf("unexpected response %s, wanted to match %#v (%s)", string(b), wantResponse, diff))
 	}
 
-	return nil
+	return errs
 }

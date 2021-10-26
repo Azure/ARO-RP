@@ -146,8 +146,8 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 				}
 			}
 
-			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, nil)
-			if err != nil {
+			errs := validateResponse(resp, b, tt.wantStatusCode, tt.wantError, nil)
+			for _, err := range errs {
 				t.Error(err)
 			}
 
@@ -157,7 +157,7 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 			if tt.wantDocuments != nil {
 				tt.wantDocuments(ti.checker)
 			}
-			errs := ti.checker.CheckOpenShiftClusters(ti.openShiftClustersClient)
+			errs = ti.checker.CheckOpenShiftClusters(ti.openShiftClustersClient)
 			for _, i := range errs {
 				t.Error(i)
 			}

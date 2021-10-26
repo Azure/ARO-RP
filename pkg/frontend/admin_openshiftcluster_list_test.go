@@ -141,8 +141,8 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
-			if err != nil {
+			errs := validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
+			for _, err := range errs {
 				t.Error(err)
 			}
 
@@ -170,7 +170,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 				}
 			}
 
-			errs := ti.enricher.Check(tt.wantEnriched)
+			errs = ti.enricher.Check(tt.wantEnriched)
 			for _, err := range errs {
 				t.Error(err)
 			}
