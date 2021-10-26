@@ -167,7 +167,7 @@ func TestBackendTry(t *testing.T) {
 			},
 		},
 		{
-			name: "StateAdminUpdating success sets the last ProvisioningState and clears LastAdminUpdateError",
+			name: "StateAdminUpdating success sets the last ProvisioningState and clears LastAdminUpdateError and MaintenanceTask",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
@@ -180,6 +180,7 @@ func TestBackendTry(t *testing.T) {
 							ProvisioningState:     api.ProvisioningStateAdminUpdating,
 							LastProvisioningState: api.ProvisioningStateSucceeded,
 							LastAdminUpdateError:  "oh no",
+							MaintenanceTask:       api.MaintenanceTaskEverything,
 						},
 					},
 				})
@@ -219,6 +220,7 @@ func TestBackendTry(t *testing.T) {
 							ProvisioningState:       api.ProvisioningStateAdminUpdating,
 							LastProvisioningState:   api.ProvisioningStateSucceeded,
 							FailedProvisioningState: api.ProvisioningStateUpdating,
+							MaintenanceTask:         api.MaintenanceTaskEverything,
 						},
 					},
 				})
