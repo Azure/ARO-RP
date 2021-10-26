@@ -8,8 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/go-test/deep"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 func TestAdminUpdateSteps(t *testing.T) {
