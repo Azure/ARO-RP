@@ -27,6 +27,9 @@ import (
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
+var mockSubID = "00000000-0000-0000-0000-000000000000"
+var mockCurrentTime = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+
 type dummyOpenShiftClusterValidator struct{}
 
 func (*dummyOpenShiftClusterValidator) Static(interface{}, *api.OpenShiftCluster) error {
@@ -286,15 +289,15 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					t.Error(azureAsyncOperation)
 				}
 			}
-			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
-			if err != nil {
+			errs := validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
+			for _, err := range errs {
 				t.Error(err)
 			}
 
 			if tt.wantDocuments != nil {
 				tt.wantDocuments(ti.checker)
 			}
-			errs := ti.checker.CheckAsyncOperations(ti.asyncOperationsClient)
+			errs = ti.checker.CheckAsyncOperations(ti.asyncOperationsClient)
 			for _, i := range errs {
 				t.Error(i)
 			}
@@ -316,21 +319,119 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 
 }
 
+func baseDocument() *api.OpenShiftClusterDocument {
+	return &api.OpenShiftClusterDocument{
+		Key:    strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+		Bucket: 1,
+		OpenShiftCluster: &api.OpenShiftCluster{
+			ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			Name:     "resourceName",
+			Location: "eastus",
+			Type:     "Microsoft.RedHatOpenShift/openShiftClusters",
+			Properties: api.OpenShiftClusterProperties{
+				ArchitectureVersion: version.InstallArchitectureVersion,
+				ProvisioningState:   api.ProvisioningStateSucceeded,
+				ProvisionedBy:       version.GitCommit,
+				CreatedAt:           mockCurrentTime,
+				CreatedBy:           version.GitCommit,
+				ClusterProfile: api.ClusterProfile{
+					Version:              version.InstallStream.Version.String(),
+					FipsValidatedModules: api.FipsValidatedModulesDisabled,
+					Domain:               "example.eastus.aroapp.io",
+					ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID),
+				},
+				ServicePrincipalProfile: api.ServicePrincipalProfile{
+					ClientID:     mockSubID,
+					ClientSecret: "a",
+				},
+				NetworkProfile: api.NetworkProfile{
+					PodCIDR:                "10.128.0.0/14",
+					ServiceCIDR:            "172.30.0.0/16",
+					SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+				},
+				MasterProfile: api.MasterProfile{
+					EncryptionAtHost: api.EncryptionAtHostDisabled,
+					VMSize:           api.VMSizeStandardD8sV3,
+					SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master", mockSubID),
+				},
+				FeatureProfile: api.FeatureProfile{
+					GatewayEnabled: true,
+				},
+				WorkerProfiles: []api.WorkerProfile{
+					{
+						Name:             "worker",
+						VMSize:           api.VMSizeStandardD16sV3,
+						DiskSizeGB:       128,
+						SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker", mockSubID),
+						Count:            3,
+						EncryptionAtHost: api.EncryptionAtHostDisabled,
+					},
+				},
+				APIServerProfile: api.APIServerProfile{
+					Visibility: api.VisibilityPublic,
+				},
+				IngressProfiles: []api.IngressProfile{
+					{
+						Name:       "default",
+						Visibility: api.VisibilityPublic,
+					},
+				},
+			},
+		},
+	}
+}
+
+func baseResponse() *v20200430.OpenShiftCluster {
+	return &v20200430.OpenShiftCluster{
+		ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
+		Name:     "resourceName",
+		Type:     "Microsoft.RedHatOpenShift/openShiftClusters",
+		Location: "eastus",
+		Properties: v20200430.OpenShiftClusterProperties{
+			ClusterProfile: v20200430.ClusterProfile{
+				Domain:          "example.eastus.aroapp.io",
+				Version:         version.InstallStream.Version.String(),
+				ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID),
+			},
+			ServicePrincipalProfile: v20200430.ServicePrincipalProfile{
+				ClientID: mockSubID,
+			},
+			NetworkProfile: v20200430.NetworkProfile{
+				PodCIDR:     "10.128.0.0/14",
+				ServiceCIDR: "172.30.0.0/16",
+			},
+			MasterProfile: v20200430.MasterProfile{
+				VMSize:   v20200430.VMSizeStandardD8sV3,
+				SubnetID: fmt.Sprintf("/subscriptions/%s/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master", mockSubID),
+			},
+			WorkerProfiles: []v20200430.WorkerProfile{
+				{
+					Name:       "worker",
+					VMSize:     v20200430.VMSizeStandardD16sV3,
+					DiskSizeGB: 128,
+					SubnetID:   fmt.Sprintf("/subscriptions/%s/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker", mockSubID),
+					Count:      3,
+				},
+			},
+			APIServerProfile: v20200430.APIServerProfile{
+				Visibility: v20200430.VisibilityPublic,
+			},
+			IngressProfiles: []v20200430.IngressProfile{
+				{
+					Name:       "default",
+					Visibility: v20200430.VisibilityPublic,
+				},
+			},
+		},
+	}
+}
+
 func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 	ctx := context.Background()
 
 	apis := map[string]*api.Version{
-		"2020-04-30": {
-			OpenShiftClusterConverter: api.APIs["2020-04-30"].OpenShiftClusterConverter,
-			OpenShiftClusterStaticValidator: func(string, string, bool, string) api.OpenShiftClusterStaticValidator {
-				return &dummyOpenShiftClusterValidator{}
-			},
-			OpenShiftClusterCredentialsConverter: api.APIs["2020-04-30"].OpenShiftClusterCredentialsConverter,
-		},
+		"2020-04-30": api.APIs["2020-04-30"],
 	}
-
-	mockSubID := "00000000-0000-0000-0000-000000000000"
-	mockCurrentTime := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	type test struct {
 		name                   string
@@ -341,7 +442,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		wantSystemDataEnriched bool
 		wantDocuments          func(*testdatabase.Checker)
 		wantStatusCode         int
-		wantResponse           *v20200430.OpenShiftCluster
+		wantResponse           func() *v20200430.OpenShiftCluster
 		wantAsync              bool
 		wantError              string
 	}
@@ -349,9 +450,6 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 	for _, tt := range []*test{
 		{
 			name: "create a new cluster",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.3.0"
-			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
@@ -372,56 +470,21 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						ProvisioningState:        api.ProvisioningStateCreating,
 					},
 				})
-				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key:    strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					Bucket: 1,
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						Properties: api.OpenShiftClusterProperties{
-							ArchitectureVersion: version.InstallArchitectureVersion,
-							ProvisioningState:   api.ProvisioningStateCreating,
-							ProvisionedBy:       version.GitCommit,
-							CreatedAt:           mockCurrentTime,
-							CreatedBy:           version.GitCommit,
-							ClusterProfile: api.ClusterProfile{
-								Version:              "4.3.0",
-								FipsValidatedModules: api.FipsValidatedModulesDisabled,
-							},
-							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-							},
-							MasterProfile: api.MasterProfile{
-								EncryptionAtHost: api.EncryptionAtHostDisabled,
-							},
-							FeatureProfile: api.FeatureProfile{
-								GatewayEnabled: true,
-							},
-						},
-					},
-				})
+				doc := baseDocument()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateCreating
+				c.AddOpenShiftClusterDocuments(doc)
 			},
 			wantEnriched:   []string{},
 			wantAsync:      true,
 			wantStatusCode: http.StatusCreated,
-			wantResponse: &v20200430.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Name: "resourceName",
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Properties: v20200430.OpenShiftClusterProperties{
-					ProvisioningState: v20200430.ProvisioningStateCreating,
-					ClusterProfile: v20200430.ClusterProfile{
-						Version: "4.3.0",
-					},
-				},
+			wantResponse: func() *v20200430.OpenShiftCluster {
+				r := baseResponse()
+				r.Properties.ProvisioningState = v20200430.ProvisioningStateCreating
+				return r
 			},
 		},
 		{
 			name: "update a cluster from succeeded",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
-			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
@@ -432,34 +495,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						Tags: map[string]string{"tag": "will-be-removed"},
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateSucceeded,
-							ClusterProfile: api.ClusterProfile{
-								PullSecret:           `{"will":"be-kept"}`,
-								FipsValidatedModules: api.FipsValidatedModulesDisabled,
-							},
-							IngressProfiles: []api.IngressProfile{{Name: "will-be-removed"}},
-							WorkerProfiles:  []api.WorkerProfile{{Name: "will-be-removed"}},
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								ClientSecret: "will-be-kept",
-							},
-							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-							},
-							MasterProfile: api.MasterProfile{
-								EncryptionAtHost: api.EncryptionAtHostDisabled,
-							},
-						},
-					},
-				})
-
+				doc := baseDocument()
+				f.AddOpenShiftClusterDocuments(doc)
 			},
 			wantSystemDataEnriched: true,
 			wantDocuments: func(c *testdatabase.Checker) {
@@ -470,53 +507,22 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						ProvisioningState:        api.ProvisioningStateUpdating,
 					},
 				})
-				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:     api.ProvisioningStateUpdating,
-							LastProvisioningState: api.ProvisioningStateSucceeded,
-							ClusterProfile: api.ClusterProfile{
-								PullSecret:           `{"will":"be-kept"}`,
-								Domain:               "changed",
-								FipsValidatedModules: api.FipsValidatedModulesDisabled,
-							},
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								ClientSecret: "will-be-kept",
-							},
-							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-							},
-							MasterProfile: api.MasterProfile{
-								EncryptionAtHost: api.EncryptionAtHostDisabled,
-							},
-						},
-					},
-				})
+				doc := baseDocument()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
+				doc.OpenShiftCluster.Properties.LastProvisioningState = api.ProvisioningStateSucceeded
+				c.AddOpenShiftClusterDocuments(doc)
 			},
 			wantEnriched:   []string{testdatabase.GetResourcePath(mockSubID, "resourceName")},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &v20200430.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Name: "resourceName",
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Properties: v20200430.OpenShiftClusterProperties{
-					ProvisioningState: v20200430.ProvisioningStateUpdating,
-					ClusterProfile: v20200430.ClusterProfile{
-						Domain: "changed",
-					},
-				},
+			wantResponse: func() *v20200430.OpenShiftCluster {
+				r := baseResponse()
+				r.Properties.ProvisioningState = v20200430.ProvisioningStateUpdating
+				return r
 			},
 		},
 		{
 			name: "update a cluster from failed during update",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
-			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
@@ -527,21 +533,10 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						Tags: map[string]string{"tag": "will-be-removed"},
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:       api.ProvisioningStateFailed,
-							FailedProvisioningState: api.ProvisioningStateUpdating,
-							IngressProfiles:         []api.IngressProfile{{Name: "will-be-removed"}},
-							WorkerProfiles:          []api.WorkerProfile{{Name: "will-be-removed"}},
-						},
-					},
-				})
+				doc := baseDocument()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateFailed
+				doc.OpenShiftCluster.Properties.FailedProvisioningState = api.ProvisioningStateUpdating
+				f.AddOpenShiftClusterDocuments(doc)
 			},
 			wantSystemDataEnriched: true,
 			wantDocuments: func(c *testdatabase.Checker) {
@@ -552,50 +547,23 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						ProvisioningState:        api.ProvisioningStateUpdating,
 					},
 				})
-				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:       api.ProvisioningStateUpdating,
-							LastProvisioningState:   api.ProvisioningStateFailed,
-							FailedProvisioningState: api.ProvisioningStateUpdating,
-							ClusterProfile: api.ClusterProfile{
-								Domain:               "changed",
-								FipsValidatedModules: api.FipsValidatedModulesDisabled,
-							},
-							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-							},
-							MasterProfile: api.MasterProfile{
-								EncryptionAtHost: api.EncryptionAtHostDisabled,
-							},
-						},
-					},
-				})
+				doc := baseDocument()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
+				doc.OpenShiftCluster.Properties.LastProvisioningState = api.ProvisioningStateFailed
+				doc.OpenShiftCluster.Properties.FailedProvisioningState = api.ProvisioningStateUpdating
+				c.AddOpenShiftClusterDocuments(doc)
 			},
 			wantEnriched:   []string{testdatabase.GetResourcePath(mockSubID, "resourceName")},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &v20200430.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Name: "resourceName",
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Properties: v20200430.OpenShiftClusterProperties{
-					ProvisioningState: v20200430.ProvisioningStateUpdating,
-					ClusterProfile: v20200430.ClusterProfile{
-						Domain: "changed",
-					},
-				},
+			wantResponse: func() *v20200430.OpenShiftCluster {
+				r := baseResponse()
+				r.Properties.ProvisioningState = v20200430.ProvisioningStateUpdating
+				return r
 			},
 		},
 		{
 			name: "update a cluster from failed during creation",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
-			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
@@ -606,33 +574,16 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:       api.ProvisioningStateFailed,
-							FailedProvisioningState: api.ProvisioningStateCreating,
-							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-							},
-							MasterProfile: api.MasterProfile{
-								EncryptionAtHost: api.EncryptionAtHostDisabled,
-							},
-						},
-					},
-				})
+				doc := baseDocument()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateFailed
+				doc.OpenShiftCluster.Properties.FailedProvisioningState = api.ProvisioningStateCreating
+				f.AddOpenShiftClusterDocuments(doc)
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: RequestNotAllowed: : Request is not allowed on cluster whose creation failed. Delete the cluster.",
 		},
 		{
 			name: "update a cluster from failed during deletion",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
-			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
@@ -643,35 +594,16 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:       api.ProvisioningStateFailed,
-							FailedProvisioningState: api.ProvisioningStateDeleting,
-							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-							},
-							MasterProfile: api.MasterProfile{
-								EncryptionAtHost: api.EncryptionAtHostDisabled,
-							},
-						},
-					},
-				})
+				doc := baseDocument()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateFailed
+				doc.OpenShiftCluster.Properties.FailedProvisioningState = api.ProvisioningStateDeleting
+				f.AddOpenShiftClusterDocuments(doc)
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: RequestNotAllowed: : Request is not allowed on cluster whose deletion failed. Delete the cluster.",
 		},
 		{
-			name: "patch a cluster from succeeded",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
-				oc.Properties.IngressProfiles = []v20200430.IngressProfile{{Name: "changed"}}
-				oc.Properties.WorkerProfiles = []v20200430.WorkerProfile{{Name: "changed"}}
-			},
+			name:    "patch a cluster from succeeded",
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -683,31 +615,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						Tags: map[string]string{"tag": "will-be-kept"},
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateSucceeded,
-							IngressProfiles:   []api.IngressProfile{{Name: "default"}},
-							WorkerProfiles: []api.WorkerProfile{
-								{
-									Name:             "default",
-									EncryptionAtHost: api.EncryptionAtHostDisabled,
-								},
-							},
-							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-							},
-							MasterProfile: api.MasterProfile{
-								EncryptionAtHost: api.EncryptionAtHostDisabled,
-							},
-						},
-					},
-				})
+				doc := baseDocument()
+				doc.OpenShiftCluster.Tags = map[string]string{"tag": "will-be-kept"}
+				f.AddOpenShiftClusterDocuments(doc)
 			},
 			wantSystemDataEnriched: true,
 			wantDocuments: func(c *testdatabase.Checker) {
@@ -718,60 +628,25 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						ProvisioningState:        api.ProvisioningStateUpdating,
 					},
 				})
-				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						Tags: map[string]string{"tag": "will-be-kept"},
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:     api.ProvisioningStateUpdating,
-							LastProvisioningState: api.ProvisioningStateSucceeded,
-							ClusterProfile: api.ClusterProfile{
-								Domain:               "changed",
-								FipsValidatedModules: api.FipsValidatedModulesDisabled,
-							},
-							IngressProfiles: []api.IngressProfile{{Name: "changed"}},
-							WorkerProfiles: []api.WorkerProfile{
-								{
-									Name:             "changed",
-									EncryptionAtHost: api.EncryptionAtHostDisabled,
-								},
-							},
-							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-							},
-							MasterProfile: api.MasterProfile{
-								EncryptionAtHost: api.EncryptionAtHostDisabled,
-							},
-						},
-					},
-				})
+
+				doc := baseDocument()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
+				doc.OpenShiftCluster.Properties.LastProvisioningState = api.ProvisioningStateSucceeded
+				doc.OpenShiftCluster.Tags = map[string]string{"tag": "will-be-kept"}
+				c.AddOpenShiftClusterDocuments(doc)
 			},
 			wantEnriched:   []string{testdatabase.GetResourcePath(mockSubID, "resourceName")},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &v20200430.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Name: "resourceName",
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: v20200430.OpenShiftClusterProperties{
-					ProvisioningState: v20200430.ProvisioningStateUpdating,
-					ClusterProfile: v20200430.ClusterProfile{
-						Domain: "changed",
-					},
-					IngressProfiles: []v20200430.IngressProfile{{Name: "changed"}},
-					WorkerProfiles:  []v20200430.WorkerProfile{{Name: "changed"}},
-				},
+			wantResponse: func() *v20200430.OpenShiftCluster {
+				r := baseResponse()
+				r.Tags = map[string]string{"tag": "will-be-kept"}
+				r.Properties.ProvisioningState = v20200430.ProvisioningStateUpdating
+				return r
 			},
 		},
 		{
-			name: "patch a cluster from failed during update",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
-			},
+			name:    "patch a cluster from failed during update",
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -783,35 +658,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						Tags: map[string]string{"tag": "will-be-kept"},
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:       api.ProvisioningStateFailed,
-							FailedProvisioningState: api.ProvisioningStateUpdating,
-							IngressProfiles:         []api.IngressProfile{{Name: "will-be-kept"}},
-							WorkerProfiles: []api.WorkerProfile{
-								{
-									Name:             "will-be-kept",
-									EncryptionAtHost: api.EncryptionAtHostDisabled,
-								},
-							},
-							ClusterProfile: api.ClusterProfile{
-								FipsValidatedModules: api.FipsValidatedModulesDisabled,
-							},
-							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-							},
-							MasterProfile: api.MasterProfile{
-								EncryptionAtHost: api.EncryptionAtHostDisabled,
-							},
-						},
-					},
-				})
+				doc := baseDocument()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateFailed
+				doc.OpenShiftCluster.Properties.FailedProvisioningState = api.ProvisioningStateUpdating
+				doc.OpenShiftCluster.Tags = map[string]string{"tag": "will-be-kept"}
+				f.AddOpenShiftClusterDocuments(doc)
 			},
 			wantSystemDataEnriched: true,
 			wantDocuments: func(c *testdatabase.Checker) {
@@ -822,61 +673,25 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						ProvisioningState:        api.ProvisioningStateUpdating,
 					},
 				})
-				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						Tags: map[string]string{"tag": "will-be-kept"},
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:       api.ProvisioningStateUpdating,
-							LastProvisioningState:   api.ProvisioningStateFailed,
-							FailedProvisioningState: api.ProvisioningStateUpdating,
-							ClusterProfile: api.ClusterProfile{
-								Domain:               "changed",
-								FipsValidatedModules: api.FipsValidatedModulesDisabled,
-							},
-							IngressProfiles: []api.IngressProfile{{Name: "will-be-kept"}},
-							WorkerProfiles: []api.WorkerProfile{
-								{
-									Name:             "will-be-kept",
-									EncryptionAtHost: api.EncryptionAtHostDisabled,
-								},
-							},
-							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-							},
-							MasterProfile: api.MasterProfile{
-								EncryptionAtHost: api.EncryptionAtHostDisabled,
-							},
-						},
-					},
-				})
+				doc := baseDocument()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
+				doc.OpenShiftCluster.Properties.LastProvisioningState = api.ProvisioningStateFailed
+				doc.OpenShiftCluster.Properties.FailedProvisioningState = api.ProvisioningStateUpdating
+				doc.OpenShiftCluster.Tags = map[string]string{"tag": "will-be-kept"}
+				c.AddOpenShiftClusterDocuments(doc)
 			},
 			wantEnriched:   []string{testdatabase.GetResourcePath(mockSubID, "resourceName")},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: &v20200430.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Name: "resourceName",
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Tags: map[string]string{"tag": "will-be-kept"},
-				Properties: v20200430.OpenShiftClusterProperties{
-					ProvisioningState: v20200430.ProvisioningStateUpdating,
-					ClusterProfile: v20200430.ClusterProfile{
-						Domain: "changed",
-					},
-					IngressProfiles: []v20200430.IngressProfile{{Name: "will-be-kept"}},
-					WorkerProfiles:  []v20200430.WorkerProfile{{Name: "will-be-kept"}},
-				},
+			wantResponse: func() *v20200430.OpenShiftCluster {
+				r := baseResponse()
+				r.Tags = map[string]string{"tag": "will-be-kept"}
+				r.Properties.ProvisioningState = v20200430.ProvisioningStateUpdating
+				return r
 			},
 		},
 		{
-			name: "patch a cluster from failed during creation",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
-			},
+			name:    "patch a cluster from failed during creation",
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -888,36 +703,16 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:       api.ProvisioningStateFailed,
-							FailedProvisioningState: api.ProvisioningStateCreating,
-							ClusterProfile: api.ClusterProfile{
-								FipsValidatedModules: api.FipsValidatedModulesDisabled,
-							},
-							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-							},
-							MasterProfile: api.MasterProfile{
-								EncryptionAtHost: api.EncryptionAtHostDisabled,
-							},
-						},
-					},
-				})
+				doc := baseDocument()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateFailed
+				doc.OpenShiftCluster.Properties.FailedProvisioningState = api.ProvisioningStateCreating
+				f.AddOpenShiftClusterDocuments(doc)
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: RequestNotAllowed: : Request is not allowed on cluster whose creation failed. Delete the cluster.",
 		},
 		{
-			name: "patch a cluster from failed during deletion",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
-			},
+			name:    "patch a cluster from failed during deletion",
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -929,37 +724,16 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:       api.ProvisioningStateFailed,
-							FailedProvisioningState: api.ProvisioningStateDeleting,
-							ClusterProfile: api.ClusterProfile{
-								FipsValidatedModules: api.FipsValidatedModulesDisabled,
-							},
-							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-							},
-							MasterProfile: api.MasterProfile{
-								EncryptionAtHost: api.EncryptionAtHostDisabled,
-							},
-						},
-					},
-				})
+				doc := baseDocument()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateFailed
+				doc.OpenShiftCluster.Properties.FailedProvisioningState = api.ProvisioningStateDeleting
+				f.AddOpenShiftClusterDocuments(doc)
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: RequestNotAllowed: : Request is not allowed on cluster whose deletion failed. Delete the cluster.",
 		},
 		{
 			name: "creating cluster failing when provided cluster resource group already contains a cluster",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ServicePrincipalProfile.ClientID = mockSubID
-				oc.Properties.ClusterProfile.ResourceGroupID = fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)
-			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
@@ -974,12 +748,14 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "otherResourceName")),
 					ClusterResourceGroupIDKey: strings.ToLower(fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)),
 					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "otherResourceName"),
-						Name: "otherResourceName",
-						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+						ID:       testdatabase.GetResourcePath(mockSubID, "otherResourceName"),
+						Name:     "otherResourceName",
+						Location: "eastus",
+						Type:     "Microsoft.RedHatOpenShift/openShiftClusters",
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
+								Domain:               "example.eastus.aroapp.io",
 								Version:              "4.3.0",
 								ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID),
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
@@ -1018,9 +794,10 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Key:         strings.ToLower(testdatabase.GetResourcePath(mockSubID, "otherResourceName")),
 					ClientIDKey: mockSubID,
 					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "otherResourceName"),
-						Name: "otherResourceName",
-						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+						ID:       testdatabase.GetResourcePath(mockSubID, "otherResourceName"),
+						Name:     "otherResourceName",
+						Location: "eastus",
+						Type:     "Microsoft.RedHatOpenShift/openShiftClusters",
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
@@ -1071,7 +848,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			oc := &v20200430.OpenShiftCluster{}
+			oc := &v20200430.OpenShiftCluster{
+				Location: "eastus",
+			}
 			if tt.request != nil {
 				tt.request(oc)
 			}
@@ -1079,6 +858,10 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			method := http.MethodPut
 			if tt.isPatch {
 				method = http.MethodPatch
+			} else {
+				// if it's a put, fill in the rest of the properties
+				oc.Properties = baseResponse().Properties
+				oc.Properties.ServicePrincipalProfile.ClientSecret = "a"
 			}
 
 			resp, b, err := ti.request(method,
@@ -1101,12 +884,17 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				}
 			}
 
-			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
-			if err != nil {
+			var clusterResp *v20200430.OpenShiftCluster
+			if tt.wantResponse != nil {
+				clusterResp = tt.wantResponse()
+			}
+
+			errs := validateResponse(resp, b, tt.wantStatusCode, tt.wantError, clusterResp)
+			for _, err := range errs {
 				t.Error(err)
 			}
 
-			errs := ti.enricher.Check(tt.wantEnriched)
+			errs = ti.enricher.Check(tt.wantEnriched)
 			for _, err := range errs {
 				t.Error(err)
 			}
@@ -1128,7 +916,6 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 }
 
 func TestEnrichSystemData(t *testing.T) {
-
 	accountID1 := "00000000-0000-0000-0000-000000000001"
 	accountID2 := "00000000-0000-0000-0000-000000000002"
 	timestampString := "2021-01-23T12:34:54.0000000Z"
