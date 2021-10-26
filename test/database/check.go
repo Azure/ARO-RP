@@ -103,6 +103,12 @@ func (f *Checker) CheckOpenShiftClusters(openShiftClusters *cosmosdb.FakeOpenShi
 		return []error{err}
 	}
 
+	// don't check look-up keys
+	for _, i := range all.OpenShiftClusterDocuments {
+		i.ClientIDKey = ""
+		i.ClusterResourceGroupIDKey = ""
+	}
+
 	if len(f.openshiftClusterDocuments) != 0 && len(all.OpenShiftClusterDocuments) == len(f.openshiftClusterDocuments) {
 		diff := deep.Equal(all.OpenShiftClusterDocuments, f.openshiftClusterDocuments)
 		for _, i := range diff {
