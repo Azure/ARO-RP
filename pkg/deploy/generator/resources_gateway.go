@@ -285,7 +285,7 @@ gpgcheck=yes
 EOF
 
 for attempt in {1..5}; do
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security docker openssl-perl td-agent-bit && break
+yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security docker openssl-perl td-agent-bit && break
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
