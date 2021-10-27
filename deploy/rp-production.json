@@ -108,7 +108,8 @@
                 "norwayeast",
                 "switzerlandnorth",
                 "brazilsouth",
-                "southafricanorth"
+                "southafricanorth",
+                "northcentralus"
             ]
         },
         "portalAccessGroupIds": {
