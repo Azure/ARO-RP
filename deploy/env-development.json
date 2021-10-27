@@ -2,6 +2,9 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "azureServicePrincipalId": {
+            "type": "string"
+        },
         "ciAzpToken": {
             "type": "string",
             "defaultValue": ""
@@ -235,9 +238,71 @@
             "type": "Microsoft.Compute/virtualMachineScaleSets",
             "location": "[resourceGroup().location]",
             "condition": "[greater(parameters('ciCapacity'), 0)]",
-            "apiVersion": "2020-06-01",
+            "apiVersion": "2020-12-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"
+            ]
+        },
+        {
+            "name": "[concat(resourceGroup().name, '-e2eKV')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": [
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[parameters('azureServicePrincipalId')]",
+                        "permissions": {
+                            "keys": [
+                                "create",
+                                "get",
+                                "delete",
+                                "recover"
+                            ]
+                        }
+                    }
+                ],
+                "enabledForDiskEncryption": true,
+                "enablePurgeProtection": true
+            },
+            "apiVersion": "2019-09-01"
+        },
+        {
+            "properties": {
+                "kty": "RSA",
+                "keySize": 4096
+            },
+            "name": "[concat(resourceGroup().name, '-e2eKV', '/', resourceGroup().name, '-', 'disk-encryption-key')]",
+            "type": "Microsoft.KeyVault/vaults/keys",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-09-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', concat(resourceGroup().name, '-e2eKV'))]"
+            ]
+        },
+        {
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "activeKey": {
+                    "sourceVault": {
+                        "id": "[resourceId('Microsoft.KeyVault/vaults', concat(resourceGroup().name, '-e2eKV'))]"
+                    },
+                    "keyUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/keys', concat(resourceGroup().name, '-e2eKV'), concat(resourceGroup().name, '-', 'disk-encryption-key')), '2019-09-01', 'Full').properties.keyUriWithVersion]"
+                }
+            },
+            "name": "[concat(resourceGroup().name, '-disk-encryption-set')]",
+            "type": "Microsoft.Compute/diskEncryptionSets",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2020-12-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults/keys', concat(resourceGroup().name, '-e2eKV'), concat(resourceGroup().name, '-', 'disk-encryption-key'))]"
             ]
         },
         {
@@ -332,7 +397,7 @@
             "name": "dev-proxy-vmss",
             "type": "Microsoft.Compute/virtualMachineScaleSets",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2020-06-01"
+            "apiVersion": "2020-12-01"
         }
     ]
 }

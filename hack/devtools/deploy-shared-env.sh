@@ -48,6 +48,7 @@ deploy_env_dev_ci() {
             "proxyImage=arointsvc.azurecr.io/proxy:latest" \
             "proxyImageAuth=$(jq -r '.auths["arointsvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
             "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
+            "azureServicePrincipalId=$AZURE_SERVICE_PRINCIPAL_ID" \
             "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" >/dev/null
 }
 
@@ -65,6 +66,7 @@ deploy_env_dev() {
             "proxyImageAuth=$(jq -r '.auths["arointsvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
             "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
             "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
+            "azureServicePrincipalId=$AZURE_SERVICE_PRINCIPAL_ID" \
             "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
 }
 
@@ -84,6 +86,7 @@ deploy_env_dev_override() {
             "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
             "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" \
             "publicIPAddressSkuName=Basic" \
+            "azureServicePrincipalId=$AZURE_SERVICE_PRINCIPAL_ID" \
             "publicIPAddressAllocationMethod=Dynamic" >/dev/null
 }
 

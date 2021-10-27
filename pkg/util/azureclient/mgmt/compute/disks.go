@@ -4,6 +4,8 @@ package compute
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest"
 
@@ -12,6 +14,7 @@ import (
 
 // DisksClient is a minimal interface for azure DisksClient
 type DisksClient interface {
+	Get(ctx context.Context, resourceGroupName string, diskName string) (result mgmtcompute.Disk, err error)
 	DisksClientAddons
 }
 

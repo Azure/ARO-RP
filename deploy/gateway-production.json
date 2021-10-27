@@ -317,7 +317,7 @@
             "name": "[concat('gateway-vmss-', parameters('vmssName'))]",
             "type": "Microsoft.Compute/virtualMachineScaleSets",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2020-06-01",
+            "apiVersion": "2020-12-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/loadBalancers', 'gateway-lb-internal')]",
                 "[resourceId('Microsoft.Storage/storageAccounts', substring(parameters('gatewayStorageAccountDomain'), 0, indexOf(parameters('gatewayStorageAccountDomain'), '.')))]"

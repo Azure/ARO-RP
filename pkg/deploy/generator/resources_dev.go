@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 
@@ -456,5 +457,65 @@ chmod +x /etc/cron.hourly/tmpwatch
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
 		},
+	}
+}
+
+// shared keyvault for keys used for disk encryption sets when creating clusters locally
+func (g *generator) devDiskEncryptionKeyvault() *arm.Resource {
+	vaultResource := g.keyVault("[concat(resourceGroup().name, '-e2eKV')]", &[]mgmtkeyvault.AccessPolicyEntry{
+		{
+			ObjectID: to.StringPtr("[parameters('azureServicePrincipalId')]"),
+			Permissions: &mgmtkeyvault.Permissions{
+				Keys: &[]mgmtkeyvault.KeyPermissions{mgmtkeyvault.KeyPermissionsCreate, mgmtkeyvault.KeyPermissionsGet, mgmtkeyvault.KeyPermissionsDelete, mgmtkeyvault.KeyPermissionsRecover},
+			},
+			// is later replaced by "[subscription().tenantId]"
+			TenantID: &tenantUUIDHack,
+		},
+	})
+
+	vaultResource.APIVersion = azureclient.APIVersion("Microsoft.KeyVault")
+	return vaultResource
+}
+
+func (g *generator) devDiskEncryptionKey() *arm.Resource {
+	key := &mgmtkeyvault.Key{
+		KeyProperties: &mgmtkeyvault.KeyProperties{
+			Kty:     mgmtkeyvault.RSA,
+			KeySize: to.Int32Ptr(4096),
+		},
+
+		Name:     to.StringPtr("[concat(resourceGroup().name, '-e2eKV', '/', resourceGroup().name, '-', 'disk-encryption-key')]"),
+		Type:     to.StringPtr("Microsoft.KeyVault/vaults/keys"),
+		Location: to.StringPtr("[resourceGroup().location]"),
+	}
+
+	return &arm.Resource{
+		Resource:   key,
+		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
+		DependsOn:  []string{"[resourceId('Microsoft.KeyVault/vaults', concat(resourceGroup().name, '-e2eKV'))]"},
+	}
+}
+
+func (g *generator) devDiskEncryptionSet() *arm.Resource {
+	diskEncryptionSet := &mgmtcompute.DiskEncryptionSet{
+		EncryptionSetProperties: &mgmtcompute.EncryptionSetProperties{
+			ActiveKey: &mgmtcompute.KeyVaultAndKeyReference{
+				KeyURL: to.StringPtr("[reference(resourceId('Microsoft.KeyVault/vaults/keys', concat(resourceGroup().name, '-e2eKV'), concat(resourceGroup().name, '-', 'disk-encryption-key')), '2019-09-01', 'Full').properties.keyUriWithVersion]"),
+				SourceVault: &mgmtcompute.SourceVault{
+					ID: to.StringPtr("[resourceId('Microsoft.KeyVault/vaults', concat(resourceGroup().name, '-e2eKV'))]"),
+				},
+			},
+		},
+
+		Name:     to.StringPtr("[concat(resourceGroup().name, '-disk-encryption-set')]"),
+		Type:     to.StringPtr("Microsoft.Compute/diskEncryptionSets"),
+		Location: to.StringPtr("[resourceGroup().location]"),
+		Identity: &mgmtcompute.EncryptionSetIdentity{Type: mgmtcompute.SystemAssigned},
+	}
+
+	return &arm.Resource{
+		Resource:   diskEncryptionSet,
+		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
+		DependsOn:  []string{"[resourceId('Microsoft.KeyVault/vaults/keys', concat(resourceGroup().name, '-e2eKV'), concat(resourceGroup().name, '-', 'disk-encryption-key'))]"},
 	}
 }
