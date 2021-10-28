@@ -11,10 +11,8 @@ import (
 )
 
 // fixUserAdminKubeconfig adds shorter kubeconfig for user to return
-// TODO(mjudeikis): This will one 1 year kubeconfig. We should add check for -90 days
-// and rotate it.
 func (m *manager) fixUserAdminKubeconfig(ctx context.Context) error {
-	if len(m.doc.OpenShiftCluster.Properties.UserAdminKubeconfig) > 0 {
+	if m.checkUserAdminKubeconfigUpdated(ctx) {
 		return nil
 	}
 
