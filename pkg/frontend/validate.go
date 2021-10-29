@@ -76,6 +76,19 @@ func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.Open
 // prevent mischief
 var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9.]{0,255}$`)
 
+func validateNamespace(method, namespace string) error {
+	if namespace == "" ||
+		!rxKubernetesString.MatchString(namespace) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided namespace '%s' is invalid.", namespace)
+	}
+
+	if !utilnamespace.IsOpenShift(namespace) {
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to the provided namespace '%s' is forbidden.", namespace)
+	}
+
+	return nil
+}
+
 func validateAdminKubernetesObjectsNonCustomer(method, groupKind, namespace, name string) error {
 	if !utilnamespace.IsOpenShift(namespace) {
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to the provided namespace '%s' is forbidden.", namespace)
