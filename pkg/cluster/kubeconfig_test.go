@@ -15,6 +15,7 @@ import (
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 )
@@ -46,7 +47,7 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 				Name: clusterName,
 				Cluster: clientcmdv1.Cluster{
 					Server:                   apiserverURL,
-					CertificateAuthorityData: nil,
+					CertificateAuthorityData: []byte("internal API Cert"),
 				},
 			},
 		},
@@ -127,11 +128,11 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	want := adminInternalClient.Config
 
 	if !reflect.DeepEqual(got, want) {
-		t.Fatal("invalid internal client.")
+		t.Fatal(cmp.Diff(got, want))
 	}
 }
 
-func TestGenerateAROUserKubeconfig(t *testing.T) {
+func TestGenerateUserAdminKubeconfig(t *testing.T) {
 	validCaKey, validCaCerts, err := utiltls.GenerateKeyAndCertificate("validca", nil, nil, true, false)
 	if err != nil {
 		t.Fatal(err)
@@ -158,7 +159,7 @@ func TestGenerateAROUserKubeconfig(t *testing.T) {
 				Name: clusterName,
 				Cluster: clientcmdv1.Cluster{
 					Server:                   apiserverURL,
-					CertificateAuthorityData: nil,
+					CertificateAuthorityData: []byte("internal API Cert"),
 				},
 			},
 		},
@@ -241,6 +242,6 @@ func TestGenerateAROUserKubeconfig(t *testing.T) {
 	want.Clusters[0].Cluster.Server = "https://api.hash.rg.mydomain:6443"
 
 	if !reflect.DeepEqual(got, want) {
-		t.Fatal("invalid internal client.")
+		t.Fatal(cmp.Diff(got, want))
 	}
 }

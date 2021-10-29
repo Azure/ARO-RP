@@ -42,22 +42,24 @@ func (m *manager) checkUserAdminKubeconfigUpdated(ctx context.Context) bool {
 		// field empty, not updated
 		return false
 	}
-	var aic kubeconfig.AdminInternalClient
-	err := yaml.Unmarshal([]byte(m.doc.OpenShiftCluster.Properties.UserAdminKubeconfig), &aic.Config)
+	var userAdminKubeconfig clientcmdv1.Config
+	err := yaml.Unmarshal([]byte(m.doc.OpenShiftCluster.Properties.UserAdminKubeconfig), &userAdminKubeconfig)
 	if err != nil {
 		// yaml invalid, not updated
 		return false
 	}
-	for i := range aic.Config.Clusters {
-		if strings.HasPrefix(aic.Config.Clusters[i].Cluster.Server, "https://api-int.") {
+	for i := range userAdminKubeconfig.Clusters {
+		if strings.HasPrefix(userAdminKubeconfig.Clusters[i].Cluster.Server, "https://api-int.") {
 			// URL pointing to api-int, not updated
 			// TODO remove this after PUCM has been run on all clusters.
 			return false
 		}
 	}
-	for i := range aic.Config.AuthInfos {
-		innerpem := string(aic.Config.AuthInfos[i].AuthInfo.ClientCertificateData) + string(aic.Config.AuthInfos[i].AuthInfo.ClientKeyData)
-		innerkey, innercert, err := utilpem.Parse([]byte(innerpem))
+	for i := range userAdminKubeconfig.AuthInfos {
+		var b []byte
+		b = append(b, userAdminKubeconfig.AuthInfos[i].AuthInfo.ClientCertificateData...)
+		b = append(b, userAdminKubeconfig.AuthInfos[i].AuthInfo.ClientKeyData...)
+		innerkey, innercert, err := utilpem.Parse(b)
 		if err != nil {
 			// error while parsing cert or key, not updated
 			return false
