@@ -33,6 +33,10 @@ func (g *generator) devSharedTemplate() *arm.Template {
 		g.devVnet(),
 		g.devVPN(),
 		g.devCIPool(),
+		g.devDiskEncryptionKeyvault(),
+		g.devDiskEncryptionKey(),
+		g.devDiskEncryptionKeyVaultAccessPolicy(),
+		g.devDiskEncryptionSet(),
 		g.devProxyVMSS())
 
 	for _, param := range []string{
