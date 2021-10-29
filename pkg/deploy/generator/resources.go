@@ -5,6 +5,7 @@ package generator
 
 import (
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
+	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtinsights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
@@ -129,5 +130,27 @@ func (g *generator) virtualNetworkPeering(name, vnetB string) *arm.Resource {
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		Type:       "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
 		Location:   "[resourceGroup().location]",
+	}
+}
+
+func (g *generator) keyVault(name string, accessPolicies *[]mgmtkeyvault.AccessPolicyEntry) *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtkeyvault.Vault{
+			Properties: &mgmtkeyvault.VaultProperties{
+				EnablePurgeProtection:    to.BoolPtr(true),
+				EnabledForDiskEncryption: to.BoolPtr(true),
+				Sku: &mgmtkeyvault.Sku{
+					Name:   mgmtkeyvault.Standard,
+					Family: to.StringPtr("A"),
+				},
+				// is later replaced by "[subscription().tenantId]"
+				TenantID:       &tenantUUIDHack,
+				AccessPolicies: accessPolicies,
+			},
+			Name:     to.StringPtr(name),
+			Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
 	}
 }
