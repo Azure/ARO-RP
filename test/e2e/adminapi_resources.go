@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -57,6 +58,10 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 
 		vnet, err := clients.VirtualNetworks.Get(ctx, r.ResourceGroup, r.ResourceName, "")
 		Expect(err).NotTo(HaveOccurred())
+
+		diskEncryptionSet, err := clients.DiskEncryptionSets.Get(ctx, vnetResourceGroup, fmt.Sprintf("%s-disk-encryption-set", vnetResourceGroup))
+		Expect(err).NotTo(HaveOccurred())
+		expectedResourceIDs = append(expectedResourceIDs, strings.ToLower(*diskEncryptionSet.ID))
 
 		for _, subnet := range *vnet.Subnets {
 			if _, ok := subnets[strings.ToLower(*subnet.ID)]; !ok {
