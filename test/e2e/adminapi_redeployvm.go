@@ -39,12 +39,14 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		vm := vms[0]
 
 		By("triggering the redeploy action")
+		clockDrift := -1 * time.Minute
+		startTime := time.Now().Add(clockDrift)
 		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+resourceID+"/redeployvm", url.Values{"vmName": []string{*vm.Name}}, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 		By("verifying through cluster events that the redeployment happened")
-		err = wait.PollImmediate(10*time.Second, 5*time.Minute, func() (bool, error) {
+		err = wait.PollImmediate(10*time.Second, 10*time.Minute, func() (bool, error) {
 			events, err := clients.Kubernetes.EventsV1().Events("default").List(ctx, metav1.ListOptions{})
 
 			if err != nil {
@@ -57,7 +59,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 			for _, event := range events.Items {
 				if nodeKillTime.IsZero() &&
 					event.Reason == "TerminationStart" &&
-					!event.CreationTimestamp.IsZero() {
+					!event.CreationTimestamp.After(startTime) {
 					nodeKillTime = metav1.MicroTime(event.CreationTimestamp)
 					break
 				}
