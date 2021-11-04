@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -54,7 +53,6 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 			}
 
 			var nodeKillTime metav1.MicroTime
-			eventsAfterNodeKill := []eventsv1.Event{}
 
 			for _, event := range events.Items {
 				if nodeKillTime.IsZero() &&
@@ -66,28 +64,24 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 
 			}
 
-			for _, event := range events.Items {
-				if event.CreationTimestamp.After(nodeKillTime.Time) {
-					eventsAfterNodeKill = append(eventsAfterNodeKill, event)
-				}
-			}
-
 			var nodeNotReady, rebooted, nodeReady bool
 
-			for _, event := range eventsAfterNodeKill {
-				if !nodeNotReady &&
-					event.Reason == "NodeNotReady" &&
-					event.Regarding.Name == *vm.Name {
-					nodeNotReady = true
-				} else if !rebooted &&
-					event.Reason == "Rebooted" &&
-					event.Regarding.Name == *vm.Name {
-					rebooted = true
-				} else if !nodeReady &&
-					event.Reason == "NodeReady" &&
-					event.Regarding.Name == *vm.Name {
-					nodeReady = true
-					break
+			for _, event := range events.Items {
+				if event.CreationTimestamp.After(nodeKillTime.Time) {
+					if !nodeNotReady &&
+						event.Reason == "NodeNotReady" &&
+						event.Regarding.Name == *vm.Name {
+						nodeNotReady = true
+					} else if !rebooted &&
+						event.Reason == "Rebooted" &&
+						event.Regarding.Name == *vm.Name {
+						rebooted = true
+					} else if !nodeReady &&
+						event.Reason == "NodeReady" &&
+						event.Regarding.Name == *vm.Name {
+						nodeReady = true
+						break
+					}
 				}
 			}
 
