@@ -26,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/banner"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/configs"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machine"
@@ -185,6 +186,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", controllers.MachineSetControllerName),
 			arocli, maocli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller MachineSet: %v", err)
+		}
+		if err = (configs.NewReconciler(
+			log.WithField("controller", controllers.ConfigsControllerName),
+			arocli, mgr)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller Configs: %v", err)
 		}
 	}
 
