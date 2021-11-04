@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	v1 "k8s.io/api/events/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -54,7 +54,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 			}
 
 			var nodeKillTime metav1.MicroTime
-			eventsAfterNodeKill := []v1.Event{}
+			eventsAfterNodeKill := []eventsv1.Event{}
 
 			for _, event := range events.Items {
 				if nodeKillTime.IsZero() &&
