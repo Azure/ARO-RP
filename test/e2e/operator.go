@@ -278,10 +278,6 @@ var _ = Describe("ARO Operator - MachineSet Controller", func() {
 	Specify("operator should maintain at least two worker replicas", func() {
 		ctx := context.Background()
 
-		// TODO: MSFT Billing expects that we only scale a single node (4 VMs).
-		// Need to work with billing pipeline to ensure we can run operator tests
-		skipIfNotInDevelopmentEnv()
-
 		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
