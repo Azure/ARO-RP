@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +21,8 @@ var podConditionsExpected = map[corev1.PodConditionType]corev1.ConditionStatus{
 	corev1.PodReady:        corev1.ConditionTrue,
 }
 
+var restartCounterThreadshold int32 = 10
+
 func (mon *Monitor) emitPodConditions(ctx context.Context) error {
 	// to list pods once
 	var cont string
@@ -34,6 +37,7 @@ func (mon *Monitor) emitPodConditions(ctx context.Context) error {
 
 		mon._emitPodConditions(ps)
 		mon._emitPodContainerStatuses(ps)
+		mon._emitPodContainerRestartCounter(ps)
 
 		cont = ps.Continue
 		if cont == "" {
@@ -115,6 +119,36 @@ func (mon *Monitor) _emitPodContainerStatuses(ps *corev1.PodList) {
 					"containername": cs.Name,
 					"reason":        cs.State.Waiting.Reason,
 					"message":       cs.State.Waiting.Message,
+				}).Print()
+			}
+		}
+	}
+}
+
+func (mon *Monitor) _emitPodContainerRestartCounter(ps *corev1.PodList) {
+	for _, p := range ps.Items {
+		if !namespace.IsOpenShiftSystemNamespace(p.Namespace) {
+			continue
+		}
+
+		for _, cs := range p.Status.ContainerStatuses {
+			if cs.RestartCount < restartCounterThreadshold {
+				continue
+			}
+
+			mon.emitGauge("pod.restartcounter", int64(cs.RestartCount), map[string]string{
+				"name":          p.Name,
+				"namespace":     p.Namespace,
+				"nodeName":      p.Spec.NodeName,
+				"containername": cs.Name,
+			})
+
+			if mon.hourlyRun {
+				mon.log.WithFields(logrus.Fields{
+					"metric":        "pod.restartcounter",
+					"name":          p.Name,
+					"namespace":     p.Namespace,
+					"containername": cs.Name,
 				}).Print()
 			}
 		}
