@@ -84,9 +84,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 				},
 			},
 		}
-		if !f.env.IsLocalDevelopmentMode() /* not local dev or CI */ {
-			doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled = true
-		}
+		doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled = false
 	}
 
 	doc.CorrelationData = correlationData
