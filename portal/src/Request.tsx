@@ -1,4 +1,5 @@
-import axios, {AxiosResponse} from "axios"
+import axios, { AxiosResponse } from "axios"
+import { ICluster } from "./App"
 
 const OnError = (err: AxiosResponse): AxiosResponse | null => {
   if (err.status === 403) {
@@ -19,14 +20,10 @@ export const FetchClusters = async (): Promise<AxiosResponse | null> => {
   }
 }
 
-export const FetchClusterInfo = async (
-  subscription: string,
-  resourceGroup: string,
-  name: string
-): Promise<AxiosResponse | null> => {
+export const FetchClusterInfo = async (cluster: ICluster): Promise<AxiosResponse | null> => {
   try {
     const result = await axios(
-      "/api/" + subscription + "/" + resourceGroup + "/" + name + "/clusterinfo"
+      "/api/" + cluster.subscription + "/" + cluster.resourceGroup + "/" + cluster.name
     )
     return result
   } catch (e: any) {
@@ -47,7 +44,7 @@ export const FetchInfo = async (): Promise<AxiosResponse | null> => {
 
 export const ProcessLogOut = async (): Promise<any> => {
   try {
-    const result = await axios({method: "POST", url: "/api/logout"})
+    const result = await axios({ method: "POST", url: "/api/logout" })
     return result
   } catch (e: any) {
     let err = e.response as AxiosResponse
@@ -58,12 +55,12 @@ export const ProcessLogOut = async (): Promise<any> => {
 
 export const RequestKubeconfig = async (
   csrfToken: string,
-  clusterID: string
+  resourceID: string
 ): Promise<AxiosResponse | null> => {
   try {
     const result = await axios({
       method: "POST",
-      url: clusterID + "/kubeconfig/new",
+      url: resourceID + "/kubeconfig/new",
       headers: {
         "X-CSRF-Token": csrfToken,
       },
