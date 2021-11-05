@@ -13,17 +13,23 @@ export const FetchClusters = async (): Promise<AxiosResponse | null> => {
   try {
     const result = await axios("/api/clusters")
     return result
-  } catch (e) {
+  } catch (e: any) {
     let err = e.response as AxiosResponse
     return OnError(err)
   }
 }
 
-export const FetchClusterInfo = async (subscription: string, resourceGroup: string, name: string): Promise<AxiosResponse | null> => {
+export const FetchClusterInfo = async (
+  subscription: string,
+  resourceGroup: string,
+  name: string
+): Promise<AxiosResponse | null> => {
   try {
-    const result = await axios("/api/" + subscription + "/" + resourceGroup +  "/" + name + "/clusterinfo")
+    const result = await axios(
+      "/api/" + subscription + "/" + resourceGroup + "/" + name + "/clusterinfo"
+    )
     return result
-  } catch (e) {
+  } catch (e: any) {
     let err = e.response as AxiosResponse
     return OnError(err)
   }
@@ -33,7 +39,7 @@ export const FetchInfo = async (): Promise<AxiosResponse | null> => {
   try {
     const result = await axios("/api/info")
     return result
-  } catch (e) {
+  } catch (e: any) {
     let err = e.response as AxiosResponse
     return OnError(err)
   }
@@ -43,7 +49,7 @@ export const ProcessLogOut = async (): Promise<any> => {
   try {
     const result = await axios({method: "POST", url: "/api/logout"})
     return result
-  } catch (e) {
+  } catch (e: any) {
     let err = e.response as AxiosResponse
     console.log(err)
   }
@@ -63,7 +69,7 @@ export const RequestKubeconfig = async (
       },
     })
     return result
-  } catch (e) {
+  } catch (e: any) {
     let err = e.response as AxiosResponse
     return OnError(err)
   }
