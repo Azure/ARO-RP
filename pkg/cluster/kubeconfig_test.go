@@ -4,8 +4,10 @@ package cluster
 // Licensed under the Apache License 2.0.
 import (
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/tls"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
@@ -243,5 +246,132 @@ func TestGenerateUserAdminKubeconfig(t *testing.T) {
 
 	if !reflect.DeepEqual(got, want) {
 		t.Fatal(cmp.Diff(got, want))
+	}
+}
+
+func TestCheckUserAdminKubeconfigUpdated(t *testing.T) {
+	validCaKey, validCaCerts, err := utiltls.GenerateKeyAndCertificate("validca", nil, nil, true, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := x509.MarshalPKCS1PrivateKey(validCaKey)
+
+	ca := &tls.AdminKubeConfigSignerCertKey{
+		SelfSignedCertKey: tls.SelfSignedCertKey{
+			CertKey: tls.CertKey{
+				CertRaw: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCaCerts[0].Raw}),
+				KeyRaw:  pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: b}),
+			},
+		},
+	}
+
+	for _, tt := range []struct {
+		name           string
+		validity       time.Duration
+		mutateConfig   func(*clientcmdv1.Config) *clientcmdv1.Config
+		expectedResult bool
+	}{
+		{
+			name:           "valid and updated",
+			validity:       tls.ValidityOneYear,
+			expectedResult: true,
+		},
+		{
+			name:           "clientauth cert expires soon",
+			validity:       89 * tls.ValidityOneDay,
+			expectedResult: false,
+		},
+		{
+			name:     "url needs updating and cacert populated",
+			validity: tls.ValidityOneYear,
+			mutateConfig: func(c *clientcmdv1.Config) *clientcmdv1.Config {
+				c.Clusters[0].Cluster.Server = "https://api-int.hash.rg.mydomain:6443"
+				c.Clusters[0].Cluster.CertificateAuthorityData = []byte("unexpected content")
+				return c
+			},
+			expectedResult: false,
+		},
+		{
+			name:     "empty client key",
+			validity: tls.ValidityOneYear,
+			mutateConfig: func(c *clientcmdv1.Config) *clientcmdv1.Config {
+				c.AuthInfos[0].AuthInfo.ClientKeyData = nil
+				return c
+			},
+			expectedResult: false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			clusterName := "api-hash-rg-mydomain:6443"
+			serviceName := "system:admin"
+
+			cfg := &tls.CertCfg{
+				Subject:      pkix.Name{CommonName: serviceName, Organization: nil},
+				KeyUsages:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+				ExtKeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+				Validity:     tt.validity,
+			}
+
+			var clientCertKey tls.AdminKubeConfigClientCertKey
+
+			err = clientCertKey.SignedCertKey.Generate(cfg, ca, strings.ReplaceAll(serviceName, ":", "-"), tls.DoNotAppendParent)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			userAdminKubeconfig := &clientcmdv1.Config{
+				Clusters: []clientcmdv1.NamedCluster{
+					{
+						Name: clusterName,
+						Cluster: clientcmdv1.Cluster{
+							Server: "https://api.hash.rg.mydomain:6443",
+						},
+					},
+				},
+				AuthInfos: []clientcmdv1.NamedAuthInfo{
+					{
+						Name: serviceName,
+						AuthInfo: clientcmdv1.AuthInfo{
+							ClientCertificateData: clientCertKey.CertRaw,
+							ClientKeyData:         clientCertKey.KeyRaw,
+						},
+					},
+				},
+				Contexts: []clientcmdv1.NamedContext{
+					{
+						Name: serviceName,
+						Context: clientcmdv1.Context{
+							Cluster:  clusterName,
+							AuthInfo: serviceName,
+						},
+					},
+				},
+				CurrentContext: serviceName,
+			}
+
+			if tt.mutateConfig != nil {
+				userAdminKubeconfig = tt.mutateConfig(userAdminKubeconfig)
+			}
+
+			data, err := yaml.Marshal(userAdminKubeconfig)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			m := &manager{}
+
+			m.doc = &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						UserAdminKubeconfig: data,
+					},
+				},
+			}
+
+			got := m.checkUserAdminKubeconfigUpdated()
+			if tt.expectedResult != got {
+				t.Errorf("Expected %t, got %t", tt.expectedResult, got)
+			}
+		})
 	}
 }
