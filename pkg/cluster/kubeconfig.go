@@ -37,7 +37,7 @@ func (m *manager) generateAROSREKubeconfig(pg graph.PersistedGraph) (*kubeconfig
 
 // checkUserAdminKubeconfigUpdated checks if the user kubeconfig is
 // present, has >90days until expiry, has the right settings
-func (m *manager) checkUserAdminKubeconfigUpdated(ctx context.Context) bool {
+func (m *manager) checkUserAdminKubeconfigUpdated() bool {
 	if len(m.doc.OpenShiftCluster.Properties.UserAdminKubeconfig) == 0 {
 		// field empty, not updated
 		return false

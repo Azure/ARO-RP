@@ -12,7 +12,7 @@ import (
 
 // fixUserAdminKubeconfig adds shorter kubeconfig for user to return
 func (m *manager) fixUserAdminKubeconfig(ctx context.Context) error {
-	if m.checkUserAdminKubeconfigUpdated(ctx) {
+	if m.checkUserAdminKubeconfigUpdated() {
 		return nil
 	}
 
