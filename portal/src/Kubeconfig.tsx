@@ -1,15 +1,15 @@
-import {IconButton, TooltipHost} from "@fluentui/react"
-import {AxiosResponse} from "axios"
-import {RequestKubeconfig} from "./Request"
-import {MutableRefObject, useEffect, useLayoutEffect} from "react"
-import {useState} from "react"
-import {useRef} from "react"
-import {forwardRef} from "react"
-import {parse as parseContentDisposition} from "content-disposition"
+import { IconButton, TooltipHost } from "@fluentui/react"
+import { AxiosResponse } from "axios"
+import { RequestKubeconfig } from "./Request"
+import { MutableRefObject, useEffect, useLayoutEffect } from "react"
+import { useState } from "react"
+import { useRef } from "react"
+import { forwardRef } from "react"
+import { parse as parseContentDisposition } from "content-disposition"
 
 type KubeconfigButtonProps = {
   csrfToken: MutableRefObject<string>
-  clusterID: string
+  resourceId: string
 }
 
 type FileDownload = {
@@ -18,8 +18,8 @@ type FileDownload = {
 }
 
 export const KubeconfigButton = forwardRef<any, KubeconfigButtonProps>(
-  ({csrfToken, clusterID}, ref) => {
-    const [data, setData] = useState<FileDownload>({name: "", content: ""})
+  ({ csrfToken, resourceId }, ref) => {
+    const [data, setData] = useState<FileDownload>({ name: "", content: "" })
     const [error, setError] = useState<AxiosResponse | null>(null)
     const [fetching, setFetching] = useState("DONE")
     const buttonRef = useRef<HTMLAnchorElement | null>(null)
@@ -31,7 +31,7 @@ export const KubeconfigButton = forwardRef<any, KubeconfigButtonProps>(
           const fileDownloadUrl = URL.createObjectURL(blob)
           const filename = parseContentDisposition(result.headers["content-disposition"]).parameters
             .filename
-          setData({content: fileDownloadUrl, name: filename})
+          setData({ content: fileDownloadUrl, name: filename })
         } else {
           setError(result)
         }
@@ -40,9 +40,9 @@ export const KubeconfigButton = forwardRef<any, KubeconfigButtonProps>(
 
       if (fetching === "") {
         setFetching("FETCHING")
-        RequestKubeconfig(csrfToken.current, clusterID).then(onData)
+        RequestKubeconfig(csrfToken.current, resourceId).then(onData)
       }
-    }, [fetching, error, data, clusterID, csrfToken])
+    }, [fetching, error, data, resourceId, csrfToken])
 
     useLayoutEffect(() => {
       if (data.content && buttonRef && buttonRef.current) {
@@ -58,12 +58,12 @@ export const KubeconfigButton = forwardRef<any, KubeconfigButtonProps>(
       <>
         <TooltipHost content={`Download Kubeconfig`}>
           <IconButton
-            iconProps={{iconName: "HardDriveGroup"}}
+            iconProps={{ iconName: "HardDriveGroup" }}
             disabled={fetching === "FETCHING"}
             aria-label="Download Kubeconfig"
             onClick={(_) => setFetching("")}
           />
-          <a style={{display: "none"}} ref={buttonRef} href={"#"}>
+          <a style={{ display: "none" }} ref={buttonRef} href={"#"}>
             dl
           </a>
         </TooltipHost>

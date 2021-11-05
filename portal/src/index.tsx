@@ -1,8 +1,8 @@
 import ReactDOM from "react-dom"
 import App from "./App"
-import {mergeStyles} from "@fluentui/react"
+import { mergeStyles } from "@fluentui/react"
 
-import {initializeIcons} from "@fluentui/font-icons-mdl2"
+import { initializeIcons } from "@fluentui/font-icons-mdl2"
 initializeIcons()
 
 // Inject some global styles

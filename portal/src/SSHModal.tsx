@@ -1,4 +1,4 @@
-import {useId, useBoolean} from "@fluentui/react-hooks"
+import { useId, useBoolean } from "@fluentui/react-hooks"
 import {
   Modal,
   getTheme,
@@ -13,17 +13,23 @@ import {
   Stack,
   FontSizes,
 } from "@fluentui/react"
-import {PrimaryButton, IconButton} from "@fluentui/react/lib/Button"
-import axios, {AxiosResponse} from "axios"
-import React, {useState, useImperativeHandle, useEffect, forwardRef, MutableRefObject} from "react"
+import { PrimaryButton, IconButton } from "@fluentui/react/lib/Button"
+import axios, { AxiosResponse } from "axios"
+import React, {
+  useState,
+  useImperativeHandle,
+  useEffect,
+  forwardRef,
+  MutableRefObject,
+} from "react"
 
-const cancelIcon: IIconProps = {iconName: "Cancel"}
-const copyIcon: IIconProps = {iconName: "Copy"}
+const cancelIcon: IIconProps = { iconName: "Cancel" }
+const copyIcon: IIconProps = { iconName: "Copy" }
 
 const machineOptions = [
-  {key: 1, text: "master-1"},
-  {key: 2, text: "master-2"},
-  {key: 3, text: "master-3"},
+  { key: 1, text: "master-1" },
+  { key: 2, text: "master-2" },
+  { key: 3, text: "master-3" },
 ]
 
 type SSHModalProps = {
@@ -54,9 +60,9 @@ const contentStyles = mergeStyleSets({
     padding: "0 24px 24px 24px",
     overflowY: "hidden",
     selectors: {
-      "p": {margin: "14px 0"},
-      "p:first-child": {marginTop: 0},
-      "p:last-child": {marginBottom: 0},
+      "p": { margin: "14px 0" },
+      "p:first-child": { marginTop: 0 },
+      "p:last-child": { marginBottom: 0 },
     },
   },
 })
@@ -76,15 +82,15 @@ const iconButtonStyles = {
 const sshDocs: string =
   "https://msazure.visualstudio.com/AzureRedHatOpenShift/_wiki/wikis/ARO.wiki/136823/ARO-SRE-portal?anchor=ssh-(elevated)"
 
-export const SSHModal = forwardRef<any, SSHModalProps>(({csrfToken}, ref) => {
-  const [isModalOpen, {setTrue: showModal, setFalse: hideModal}] = useBoolean(false)
+export const SSHModal = forwardRef<any, SSHModalProps>(({ csrfToken }, ref) => {
+  const [isModalOpen, { setTrue: showModal, setFalse: hideModal }] = useBoolean(false)
 
   const titleId = useId("title")
-  const [update, {setTrue: requestSSH, setFalse: sshRequested}] = useBoolean(false)
+  const [update, { setTrue: requestSSH, setFalse: sshRequested }] = useBoolean(false)
   const [resourceID, setResourceID] = useState("")
   const [machineName, setMachineName] = useState<IDropdownOption>()
-  const [requestable, {setTrue: setRequestable, setFalse: setUnrequestable}] = useBoolean(false)
-  const [data, setData] = useState<{command: string; password: string} | null>()
+  const [requestable, { setTrue: setRequestable, setFalse: setUnrequestable }] = useBoolean(false)
+  const [data, setData] = useState<{ command: string; password: string } | null>()
   const [error, setError] = useState<AxiosResponse | null>(null)
 
   useImperativeHandle(ref, () => ({
@@ -107,11 +113,11 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({csrfToken}, ref) => {
           data: {
             master: machineName?.key,
           },
-          headers: {"X-CSRF-Token": csrfToken.current},
+          headers: { "X-CSRF-Token": csrfToken.current },
         })
         setData(result.data)
         setRequestable()
-      } catch (error) {
+      } catch (error: any) {
         setRequestable()
         setError(error.response)
       }
@@ -137,8 +143,7 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({csrfToken}, ref) => {
         messageBarType={MessageBarType.error}
         isMultiline={false}
         onDismiss={() => setError(null)}
-        dismissButtonAriaLabel="Close"
-      >
+        dismissButtonAriaLabel="Close">
         {error?.statusText}
       </MessageBar>
     )
@@ -146,7 +151,7 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({csrfToken}, ref) => {
 
   const selectionField = (): any => {
     return (
-      <Stack tokens={{childrenGap: 15}}>
+      <Stack tokens={{ childrenGap: 15 }}>
         <Dropdown label={`Machine Selection`} onChange={onChange} options={machineOptions} />
         <PrimaryButton onClick={requestSSH} text="Request" disabled={!requestable} />
       </Stack>
@@ -207,8 +212,7 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({csrfToken}, ref) => {
         isOpen={isModalOpen}
         onDismiss={hideModal}
         isModeless={true}
-        containerClassName={contentStyles.container}
-      >
+        containerClassName={contentStyles.container}>
         <div className={contentStyles.header}>
           <span id={titleId}>SSH Access</span>
           <IconButton
