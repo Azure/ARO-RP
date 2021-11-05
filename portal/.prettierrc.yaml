@@ -6,5 +6,4 @@ semi: false
 singleQuote: false
 printWidth: 100
 bracketSpacing: false
-jsxBracketSameLine: false
 quoteProps: "consistent"
