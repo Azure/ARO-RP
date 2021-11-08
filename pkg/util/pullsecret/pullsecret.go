@@ -37,7 +37,9 @@ func UnmarshalSecretData(ps *corev1.Secret) (map[string]string, error) {
 
 	secretData := map[string]string{}
 	for k, v := range pullSecretData.Auths {
-		secretData[k] = v["auth"].(string)
+		if v["auth"] != nil {
+			secretData[k] = v["auth"].(string)
+		}
 	}
 
 	return secretData, nil
