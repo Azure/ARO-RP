@@ -45,11 +45,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
 
-const (
-	sharedKeyVaultNameSuffix          string = "-e2eKV"
-	sharedDiskEncryptionSetNameSuffix string = "-disk-encryption-set"
-)
-
 type Cluster struct {
 	log *logrus.Entry
 	env env.Core
@@ -181,10 +176,14 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return err
 	}
 
-	// use the shared one by default and overwrite, if we need to generate one because we are in CI
-	kvName := fmt.Sprintf("%s%s", vnetResourceGroup, sharedKeyVaultNameSuffix)
-
-	diskEncryptionSetName := fmt.Sprintf("%s%s", vnetResourceGroup, sharedDiskEncryptionSetNameSuffix)
+	var kvName string
+	if len(vnetResourceGroup) > 15 {
+		// keyvault names need to have a maximum length of 24,
+		// so we need to cut off some chars if the resource group name is too long
+		kvName = vnetResourceGroup[:14] + generator.SharedKeyVaultNameSuffix
+	} else {
+		kvName = vnetResourceGroup + generator.SharedKeyVaultNameSuffix
+	}
 
 	if c.ci {
 		// name is limited to 24 characters, but must be globally unique, so we generate one and try if it is available
@@ -197,8 +196,6 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		if result.NameAvailable != nil && !*result.NameAvailable {
 			return fmt.Errorf("Could not generate unique key vault name: %v", result.Reason)
 		}
-
-		diskEncryptionSetName = clusterName + "-disk-encryption-set"
 	}
 
 	parameters := map[string]*arm.ParametersParameter{
@@ -210,7 +207,6 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		"masterAddressPrefix":       {Value: masterSubnet},
 		"workerAddressPrefix":       {Value: workerSubnet},
 		"kvName":                    {Value: kvName},
-		"diskEncryptionSetName":     {Value: diskEncryptionSetName},
 	}
 
 	// TODO: ick
@@ -243,7 +239,13 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return err
 	}
 
-	diskEncryptionSetID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/diskEncryptionSets/%s", c.env.SubscriptionID(), vnetResourceGroup, diskEncryptionSetName)
+	diskEncryptionSetID := fmt.Sprintf(
+		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/diskEncryptionSets/%s%s",
+		c.env.SubscriptionID(),
+		vnetResourceGroup,
+		vnetResourceGroup,
+		generator.SharedDiskEncryptionSetNameSuffix,
+	)
 
 	c.log.Info("creating role assignments")
 	for _, scope := range []struct{ resource, role string }{

@@ -19,7 +19,6 @@ func (g *generator) clusterPredeploy() *arm.Template {
 		"vnetAddressPrefix",
 		"masterAddressPrefix",
 		"workerAddressPrefix",
-		"diskEncryptionSetName",
 		"kvName",
 	}
 

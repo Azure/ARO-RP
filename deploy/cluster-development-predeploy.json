@@ -12,9 +12,6 @@
         "clusterServicePrincipalId": {
             "type": "string"
         },
-        "diskEncryptionSetName": {
-            "type": "string"
-        },
         "fpServicePrincipalId": {
             "type": "string"
         },
@@ -103,19 +100,7 @@
                     "family": "A",
                     "name": "standard"
                 },
-                "accessPolicies": [
-                    {
-                        "tenantId": "[subscription().tenantId]",
-                        "objectId": "[parameters('clusterServicePrincipalId')]",
-                        "permissions": {
-                            "keys": [
-                                "create",
-                                "get",
-                                "delete"
-                            ]
-                        }
-                    }
-                ],
+                "accessPolicies": [],
                 "enabledForDiskEncryption": true,
                 "enablePurgeProtection": true
             },
@@ -127,7 +112,7 @@
                 "kty": "RSA",
                 "keySize": 4096
             },
-            "name": "[concat(parameters('kvName'), '/', concat(resourceGroup().name, '-', 'disk-encryption-key'))]",
+            "name": "[concat(parameters('kvName'), '/', concat(resourceGroup().name, '-disk-encryption-key'))]",
             "type": "Microsoft.KeyVault/vaults/keys",
             "location": "[resourceGroup().location]",
             "condition": "[parameters('ci')]",
@@ -145,16 +130,16 @@
                     "sourceVault": {
                         "id": "[resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))]"
                     },
-                    "keyUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/keys', parameters('kvName'), concat(resourceGroup().name, '-', 'disk-encryption-key')), '2019-09-01', 'Full').properties.keyUriWithVersion]"
+                    "keyUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/keys', parameters('kvName'), concat(resourceGroup().name, '-disk-encryption-key')), '2019-09-01', 'Full').properties.keyUriWithVersion]"
                 }
             },
-            "name": "[parameters('diskEncryptionSetName')]",
+            "name": "[concat(resourceGroup().name, '-disk-encryption-set')]",
             "type": "Microsoft.Compute/diskEncryptionSets",
             "location": "[resourceGroup().location]",
             "condition": "[parameters('ci')]",
             "apiVersion": "2020-12-01",
             "dependsOn": [
-                "[resourceId('Microsoft.KeyVault/vaults/keys', parameters('kvName'), concat(resourceGroup().name, '-', 'disk-encryption-key'))]"
+                "[resourceId('Microsoft.KeyVault/vaults/keys', parameters('kvName'), concat(resourceGroup().name, '-disk-encryption-key'))]"
             ]
         },
         {
@@ -165,7 +150,7 @@
                 "accessPolicies": [
                     {
                         "tenantId": "[subscription().tenantId]",
-                        "objectId": "[reference(resourceId('Microsoft.Compute/diskEncryptionSets', parameters('diskEncryptionSetName')), '2021-04-01', 'Full').identity.PrincipalId]",
+                        "objectId": "[reference(resourceId('Microsoft.Compute/diskEncryptionSets', concat(resourceGroup().name, '-disk-encryption-set')), '2021-04-01', 'Full').identity.PrincipalId]",
                         "permissions": {
                             "keys": [
                                 "get",
@@ -176,9 +161,10 @@
                     }
                 ]
             },
+            "condition": "[parameters('ci')]",
             "apiVersion": "2019-09-01",
             "dependsOn": [
-                "[resourceId('Microsoft.Compute/diskEncryptionSets', parameters('diskEncryptionSetName'))]"
+                "[resourceId('Microsoft.Compute/diskEncryptionSets', concat(resourceGroup().name, '-disk-encryption-set'))]"
             ]
         }
     ]
