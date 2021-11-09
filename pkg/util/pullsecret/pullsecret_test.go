@@ -339,6 +339,17 @@ func TestUnmarshalSecretData(t *testing.T) {
 			},
 		},
 		{
+			name: "bad secret",
+			ps: &corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{}, "registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				},
+			},
+			wantAuth: map[string]string{
+				"registry.redhat.io": "ZnJlZDplbnRlcg==",
+			},
+		},
+		{
 			name: "broken secret",
 			ps: &corev1.Secret{
 				Data: map[string][]byte{

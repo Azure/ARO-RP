@@ -99,8 +99,8 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         cluster_profile=openshiftcluster.ClusterProfile(
             pull_secret=pull_secret or "",
             domain=domain or random_id,
-            resource_group_id='/subscriptions/%s/resourceGroups/%s' %
-            (subscription_id, cluster_resource_group or "aro-" + random_id),
+            resource_group_id=(f"/subscriptions/{subscription_id}"
+                               f"/resourceGroups/{cluster_resource_group or 'aro-' + random_id}"),
         ),
         service_principal_profile=openshiftcluster.ServicePrincipalProfile(
             client_id=client_id,
