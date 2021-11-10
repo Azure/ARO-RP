@@ -5,6 +5,7 @@ package audit
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 
 	"github.com/gofrs/uuid"
@@ -69,125 +70,118 @@ var (
 	seqNumMutex sync.Mutex
 )
 
-// AddHook modifies logger by adding the payload hook to its list of hooks.
-func AddHook(logger *logrus.Logger) {
-	logger.AddHook(&payloadHook{
-		payload: &Payload{},
-	})
-}
-
-// payloadHook, when fires, hydrates an IFxAudit log payload using data in a log
+// PayloadHook, when fires, hydrates an IFxAudit log payload using data in a log
 // entry.
-type payloadHook struct {
-	payload *Payload
+type PayloadHook struct {
+	Payload *Payload
 }
 
-func (payloadHook) Levels() []logrus.Level {
+func (PayloadHook) Levels() []logrus.Level {
 	return logrus.AllLevels
 }
 
-func (h *payloadHook) Fire(entry *logrus.Entry) error {
-	h.payload = &Payload{}
+func (h *PayloadHook) Fire(entry *logrus.Entry) error {
+	h.Payload = &Payload{}
 
 	// Part-A
-	h.payload.EnvVer = IFXAuditVersion
-	h.payload.EnvName = IFXAuditName
+	h.Payload.EnvVer = IFXAuditVersion
+	h.Payload.EnvName = IFXAuditName
 
 	if v, ok := entry.Data[MetadataCreatedTime].(string); ok {
-		h.payload.EnvTime = v
+		h.Payload.EnvTime = v
 	}
 
-	h.payload.EnvEpoch = epoch
-	h.payload.EnvSeqNum = nextSeqNum()
+	h.Payload.EnvEpoch = epoch
+	h.Payload.EnvSeqNum = nextSeqNum()
 
-	if v, ok := entry.Data[EnvKeyIKey].(string); ok {
-		h.payload.EnvIKey = v
+	if v, ok := entry.Data[EnvKeyIKey]; ok {
+		h.Payload.EnvIKey = fmt.Sprint(v)
 		delete(entry.Data, EnvKeyIKey)
 	}
 
-	h.payload.EnvFlags = ifxAuditFlags
+	h.Payload.EnvFlags = ifxAuditFlags
 
-	if v, ok := entry.Data[EnvKeyAppID].(string); ok {
-		h.payload.EnvAppID = v
+	if v, ok := entry.Data[EnvKeyAppID]; ok {
+		h.Payload.EnvAppID = fmt.Sprint(v)
 		delete(entry.Data, EnvKeyAppID)
 	}
 
-	if v, ok := entry.Data[EnvKeyAppVer].(string); ok {
-		h.payload.EnvAppVer = v
+	if v, ok := entry.Data[EnvKeyAppVer]; ok {
+		h.Payload.EnvAppVer = fmt.Sprint(v)
 		delete(entry.Data, EnvKeyAppVer)
 	}
 
-	if v, ok := entry.Data[EnvKeyCorrelationID].(string); ok {
-		h.payload.EnvCV = v
+	if v, ok := entry.Data[EnvKeyCorrelationID]; ok {
+		h.Payload.EnvCV = fmt.Sprint(v)
 		delete(entry.Data, EnvKeyCorrelationID)
 	}
 
-	if v, ok := entry.Data[EnvKeyEnvironment].(string); ok {
-		h.payload.EnvCloudName = v
-		h.payload.EnvCloudEnvironment = v
+	if v, ok := entry.Data[EnvKeyEnvironment]; ok {
+		h.Payload.EnvCloudName = fmt.Sprint(v)
+		h.Payload.EnvCloudEnvironment = fmt.Sprint(v)
 		delete(entry.Data, EnvKeyEnvironment)
 	}
 
-	if v, ok := entry.Data[EnvKeyCloudRole].(string); ok {
-		h.payload.EnvCloudRole = v
+	if v, ok := entry.Data[EnvKeyCloudRole]; ok {
+		h.Payload.EnvCloudRole = fmt.Sprint(v)
 		delete(entry.Data, EnvKeyCloudRole)
 	}
 
-	if v, ok := entry.Data[EnvKeyCloudRoleVer].(string); ok {
-		h.payload.EnvCloudRoleVer = v
+	if v, ok := entry.Data[EnvKeyCloudRoleVer]; ok {
+		h.Payload.EnvCloudRoleVer = fmt.Sprint(v)
 		delete(entry.Data, EnvKeyCloudRoleVer)
 	}
 
-	if v, ok := entry.Data[EnvKeyHostname].(string); ok {
-		h.payload.EnvCloudRoleInstance = v
+	if v, ok := entry.Data[EnvKeyHostname]; ok {
+		h.Payload.EnvCloudRoleInstance = fmt.Sprint(v)
 		delete(entry.Data, EnvKeyHostname)
 	}
 
-	if v, ok := entry.Data[EnvKeyLocation].(string); ok {
-		h.payload.EnvCloudLocation = v
+	if v, ok := entry.Data[EnvKeyLocation]; ok {
+		h.Payload.EnvCloudLocation = fmt.Sprint(v)
 		delete(entry.Data, EnvKeyLocation)
 	}
 
-	if v, ok := entry.Data[EnvKeyCloudDeploymentUnit].(string); ok {
-		h.payload.EnvCloudDeploymentUnit = v
+	if v, ok := entry.Data[EnvKeyCloudDeploymentUnit]; ok {
+		h.Payload.EnvCloudDeploymentUnit = fmt.Sprint(v)
 		delete(entry.Data, EnvKeyCloudDeploymentUnit)
 	}
 
-	h.payload.EnvCloudVer = IFXAuditCloudVer
+	h.Payload.EnvCloudVer = IFXAuditCloudVer
 
 	// Part-B
 	if ids, ok := entry.Data[PayloadKeyCallerIdentities].([]CallerIdentity); ok {
-		h.payload.CallerIdentities = append(h.payload.CallerIdentities, ids...)
+		h.Payload.CallerIdentities = append(h.Payload.CallerIdentities, ids...)
 		delete(entry.Data, PayloadKeyCallerIdentities)
 	}
 
-	if v, ok := entry.Data[PayloadKeyCategory].(string); ok {
-		h.payload.Category = v
+	if v, ok := entry.Data[PayloadKeyCategory]; ok {
+		h.Payload.Category = fmt.Sprint(v)
 		delete(entry.Data, PayloadKeyCategory)
 	}
 
-	if v, ok := entry.Data[PayloadKeyOperationName].(string); ok {
-		h.payload.OperationName = v
+	if v, ok := entry.Data[PayloadKeyOperationName]; ok {
+		h.Payload.OperationName = fmt.Sprint(v)
 		delete(entry.Data, PayloadKeyOperationName)
 	}
 
 	if v, ok := entry.Data[PayloadKeyResult].(Result); ok {
-		h.payload.Result = v
+		h.Payload.Result = v
 		delete(entry.Data, PayloadKeyResult)
 	}
 
-	if v, ok := entry.Data[PayloadKeyRequestID].(string); ok {
-		h.payload.RequestID = v
+	if v, ok := entry.Data[PayloadKeyRequestID]; ok {
+		h.Payload.RequestID = fmt.Sprint(v)
 		delete(entry.Data, PayloadKeyRequestID)
 	}
 
 	if rs, ok := entry.Data[PayloadKeyTargetResources].([]TargetResource); ok {
-		h.payload.TargetResources = append(h.payload.TargetResources, rs...)
+		h.Payload.TargetResources = append(h.Payload.TargetResources, rs...)
 		delete(entry.Data, PayloadKeyTargetResources)
 	}
 
 	// add the audit payload
-	b, err := json.Marshal(h.payload)
+	b, err := json.Marshal(h.Payload)
 	if err != nil {
 		return err
 	}

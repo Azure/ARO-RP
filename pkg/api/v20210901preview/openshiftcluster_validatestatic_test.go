@@ -319,6 +319,13 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.resourceGroupId: The provided resource group '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourcegroups/test-cluster' is invalid: must be in same subscription as cluster.",
 		},
+		{
+			name: "cluster resourceGroup and external resourceGroup equal",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.ResourceGroupID = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.resourceGroupId: The provided resource group '/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup' is invalid: must be different from resourceGroup of the OpenShift cluster object.",
+		},
 	}
 
 	createTests := []*validateTest{
@@ -645,6 +652,20 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 				oc.Properties.WorkerProfiles[0].DiskEncryptionSetID = "/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1"
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker disk encryption set '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourceGroups/fakeRG/providers/Microsoft.Compute/diskEncryptionSets/fakeDES1' is invalid: must be the same as master disk encryption set '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Compute/diskEncryptionSets/test-disk-encryption-set'.",
+		},
+		{
+			name: "encryption at host invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles[0].EncryptionAtHost = "Banana"
+			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].encryptionAtHost: The provided value 'Banana' is invalid.",
+		},
+		{
+			name: "encryption at host empty",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles[0].EncryptionAtHost = ""
+			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].encryptionAtHost: The provided value '' is invalid.",
 		},
 	}
 

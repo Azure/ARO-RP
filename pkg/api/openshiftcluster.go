@@ -169,14 +169,24 @@ func (t ProvisioningState) String() string {
 	return string(t)
 }
 
+// FipsValidatedModules determines if FIPS is used.
+type FipsValidatedModules string
+
+// FipsValidatedModules constants.
+const (
+	FipsValidatedModulesEnabled  FipsValidatedModules = "Enabled"
+	FipsValidatedModulesDisabled FipsValidatedModules = "Disabled"
+)
+
 // ClusterProfile represents a cluster profile.
 type ClusterProfile struct {
 	MissingFields
 
-	PullSecret      SecureString `json:"pullSecret,omitempty"`
-	Domain          string       `json:"domain,omitempty"`
-	Version         string       `json:"version,omitempty"`
-	ResourceGroupID string       `json:"resourceGroupId,omitempty"`
+	PullSecret           SecureString         `json:"pullSecret,omitempty"`
+	Domain               string               `json:"domain,omitempty"`
+	Version              string               `json:"version,omitempty"`
+	ResourceGroupID      string               `json:"resourceGroupId,omitempty"`
+	FipsValidatedModules FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
 }
 
 // FeatureProfile represents a feature profile.

@@ -12,18 +12,13 @@ parameters:
 
 steps:
 - checkout: rhado
-- ${{ if eq(parameters.generationType, 'deployment') }}:
-  - checkout: rpconfig
-- task: GoTool@0
-  displayName: Use Go 1.16.2
+- checkout: rpconfig
+- task: Bash@3
   inputs:
-    version: 1.16.2
-- task: Go@0
-  inputs:
-    command: custom
-    customCommand: run
-    arguments: . ${{ parameters.generationType }}
-    workingDirectory: $(Build.SourcesDirectory)/ARO.Pipelines/ev2/generator/
+    targetType: inline
+    script: |
+      cd $(Build.SourcesDirectory)/ARO.Pipelines/ev2/generator/
+      go run . ${{ parameters.generationType }}
   env:
     RP_CONFIG_PATH: $(Build.SourcesDirectory)/RP-Config/deploy
   displayName: ⚙️ Generate Ev2 Deployment Manifests

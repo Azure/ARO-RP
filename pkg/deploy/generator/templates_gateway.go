@@ -33,6 +33,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		"gatewayMdsdConfigVersion",
 		"gatewayServicePrincipalId",
 		"gatewayStorageAccountDomain",
+		"gatewayVmSize",
 		"gatewayVmssCapacity",
 		"keyvaultDNSSuffix",
 		"keyvaultPrefix",
@@ -46,7 +47,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		"rpResourceGroupName",
 		"rpServicePrincipalId",
 		"sshPublicKey",
-		"vmSize",
+		"vmssCleanupEnabled",
 		"vmssName",
 	}
 
@@ -56,11 +57,14 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		case "gatewayDomains",
 			"gatewayFeatures":
 			p.DefaultValue = ""
+		case "gatewayVmSize":
+			p.DefaultValue = "Standard_D4s_v3"
 		case "gatewayVmssCapacity":
 			p.Type = "int"
 			p.DefaultValue = 3
-		case "vmSize":
-			p.DefaultValue = "Standard_D2s_v3"
+		case "vmssCleanupEnabled":
+			p.Type = "bool"
+			p.DefaultValue = true
 		case "nonZonalRegions":
 			p.Type = "array"
 			p.DefaultValue = []string{
@@ -68,6 +72,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 				"centralindia",
 				"koreacentral",
 				"switzerlandnorth",
+				"northcentralus",
 			}
 		}
 		t.Parameters[param] = p

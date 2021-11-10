@@ -71,8 +71,9 @@ func (g *generator) rpTemplate() *arm.Template {
 			"sshPublicKey",
 			"storageAccountDomain",
 			"subscriptionResourceGroupName",
-			"vmssName",
 			"vmSize",
+			"vmssCleanupEnabled",
+			"vmssName",
 		)
 	}
 
@@ -94,6 +95,9 @@ func (g *generator) rpTemplate() *arm.Template {
 			p.DefaultValue = ""
 		case "vmSize":
 			p.DefaultValue = "Standard_D2s_v3"
+		case "vmssCleanupEnabled":
+			p.Type = "bool"
+			p.DefaultValue = true
 		case "rpVmssCapacity":
 			p.Type = "int"
 			p.DefaultValue = 3
@@ -110,6 +114,7 @@ func (g *generator) rpTemplate() *arm.Template {
 				"switzerlandnorth",
 				"brazilsouth",
 				"southafricanorth",
+				"northcentralus",
 			}
 		}
 		t.Parameters[param] = p

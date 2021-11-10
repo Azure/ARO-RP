@@ -48,7 +48,7 @@ var _ = Describe("Scale nodes", func() {
 		// be ready, it could be that the workaround operator is busy rotating
 		// them, which we don't currently wait for on create
 		err = wait.PollImmediate(10*time.Second, 30*time.Minute, func() (bool, error) {
-			nodes, err := clients.Kubernetes.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+			nodes, err := clients.Kubernetes.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 			if err != nil {
 				log.Warn(err)
 				return false, nil // swallow error
@@ -71,17 +71,19 @@ var _ = Describe("Scale nodes", func() {
 	})
 
 	Specify("nodes should scale up and down", func() {
-		mss, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).List(context.Background(), metav1.ListOptions{})
+		ctx := context.Background()
+
+		mss, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(mss.Items).NotTo(BeEmpty())
 
-		err = scale(mss.Items[0].Name, 1)
+		err = scale(mss.Items[0].Name, *mss.Items[0].Spec.Replicas+1)
 		Expect(err).NotTo(HaveOccurred())
 
 		err = waitForScale(mss.Items[0].Name)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = scale(mss.Items[0].Name, -1)
+		err = scale(mss.Items[0].Name, *mss.Items[0].Spec.Replicas-1)
 		Expect(err).NotTo(HaveOccurred())
 
 		err = waitForScale(mss.Items[0].Name)
@@ -89,9 +91,11 @@ var _ = Describe("Scale nodes", func() {
 	})
 })
 
-func scale(name string, delta int32) error {
+func scale(name string, replicas int32) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ms, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).Get(context.Background(), name, metav1.GetOptions{})
+		ctx := context.Background()
+
+		ms, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -99,9 +103,9 @@ func scale(name string, delta int32) error {
 		if ms.Spec.Replicas == nil {
 			ms.Spec.Replicas = to.Int32Ptr(0)
 		}
-		*ms.Spec.Replicas += delta
+		*ms.Spec.Replicas = replicas
 
-		_, err = clients.MachineAPI.MachineV1beta1().MachineSets(ms.Namespace).Update(context.Background(), ms, metav1.UpdateOptions{})
+		_, err = clients.MachineAPI.MachineV1beta1().MachineSets(ms.Namespace).Update(ctx, ms, metav1.UpdateOptions{})
 		return err
 	})
 }

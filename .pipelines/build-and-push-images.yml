@@ -18,6 +18,7 @@ jobs:
   - template: ./templates/template-push-images-to-acr.yml
     parameters:
       rpImageACR: $(RP_IMAGE_ACR)
+      buildCommand: publish-image-aro
   - template: ./templates/template-az-cli-logout.yml
   - script: |
       cp -a --parents aro "$(Build.ArtifactStagingDirectory)"

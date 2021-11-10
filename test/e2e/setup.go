@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
+	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -45,11 +46,12 @@ type clientSet struct {
 	ActivityLogs    insights.ActivityLogsClient
 	VirtualNetworks network.VirtualNetworksClient
 
-	RestConfig  *rest.Config
-	Kubernetes  kubernetes.Interface
-	MachineAPI  maoclient.Interface
-	AROClusters aroclient.Interface
-	Project     projectclient.Interface
+	RestConfig    *rest.Config
+	Kubernetes    kubernetes.Interface
+	MachineAPI    maoclient.Interface
+	MachineConfig mcoclient.Interface
+	AROClusters   aroclient.Interface
+	Project       projectclient.Interface
 }
 
 var (
@@ -106,6 +108,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	mcocli, err := mcoclient.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
 	projectcli, err := projectclient.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
@@ -127,11 +134,12 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		ActivityLogs:    insights.NewActivityLogsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		VirtualNetworks: network.NewVirtualNetworksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
-		RestConfig:  restconfig,
-		Kubernetes:  cli,
-		MachineAPI:  machineapicli,
-		AROClusters: arocli,
-		Project:     projectcli,
+		RestConfig:    restconfig,
+		Kubernetes:    cli,
+		MachineAPI:    machineapicli,
+		MachineConfig: mcocli,
+		AROClusters:   arocli,
+		Project:       projectcli,
 	}, nil
 }
 

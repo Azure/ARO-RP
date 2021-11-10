@@ -35,6 +35,9 @@
         "gatewayStorageAccountDomain": {
             "value": ""
         },
+        "gatewayVmSize": {
+            "value": "Standard_D4s_v3"
+        },
         "gatewayVmssCapacity": {
             "value": 3
         },
@@ -55,7 +58,8 @@
                 "eastasia",
                 "centralindia",
                 "koreacentral",
-                "switzerlandnorth"
+                "switzerlandnorth",
+                "northcentralus"
             ]
         },
         "rpImage": {
@@ -79,8 +83,8 @@
         "sshPublicKey": {
             "value": ""
         },
-        "vmSize": {
-            "value": "Standard_D2s_v3"
+        "vmssCleanupEnabled": {
+            "value": true
         },
         "vmssName": {
             "value": ""

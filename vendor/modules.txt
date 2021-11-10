@@ -585,6 +585,10 @@ github.com/hashicorp/hcl/json/token
 github.com/imdario/mergo
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
+# github.com/jewzaam/go-cosmosdb v0.0.0-20211018134417-8d1494e7862f
+## explicit
+github.com/jewzaam/go-cosmosdb/cmd/gencosmosdb
+github.com/jewzaam/go-cosmosdb/pkg/gencosmosdb
 # github.com/jingyugao/rowserrcheck v0.0.0-20191204022205-72ab7603b68a
 github.com/jingyugao/rowserrcheck/passes/rowserr
 # github.com/jirfag/go-printf-func-name v0.0.0-20200119135958-7558a9eaa5af
@@ -675,10 +679,6 @@ github.com/mitchellh/go-homedir
 github.com/mitchellh/go-wordwrap
 # github.com/mitchellh/mapstructure v1.3.3
 github.com/mitchellh/mapstructure
-# github.com/mjudeikis/go-cosmosdb v0.0.0-20210518104404-b205b3cefd36
-## explicit
-github.com/mjudeikis/go-cosmosdb/cmd/gencosmosdb
-github.com/mjudeikis/go-cosmosdb/pkg/gencosmosdb
 # github.com/moby/spdystream v0.2.0
 github.com/moby/spdystream
 github.com/moby/spdystream/spdy
@@ -837,7 +837,7 @@ github.com/openshift/console-operator/pkg/api
 # github.com/openshift/custom-resource-status v1.1.0
 ## explicit
 github.com/openshift/custom-resource-status/conditions/v1
-# github.com/openshift/installer v0.16.1 => github.com/mjudeikis/installer v0.9.0-master.0.20210906140350-e0dddfe94b1d
+# github.com/openshift/installer v0.16.1 => github.com/jewzaam/installer-aro v0.9.0-master.0.20210906140350-e0dddfe94b1d
 ## explicit
 github.com/openshift/installer/data
 github.com/openshift/installer/pkg/aro/dnsmasq
@@ -2092,7 +2092,7 @@ sigs.k8s.io/yaml
 # github.com/openshift/cluster-api-provider-libvirt => github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20210812060947-9542e5ac08b7
 # github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20210811191557-cbf023408f4e
 # github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20210729235954-696f4645f37d
-# github.com/openshift/installer => github.com/mjudeikis/installer v0.9.0-master.0.20210906140350-e0dddfe94b1d
+# github.com/openshift/installer => github.com/jewzaam/installer-aro v0.9.0-master.0.20210906140350-e0dddfe94b1d
 # github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20210825122301-7f0bf922c345
 # github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20210811215339-a6349c0280cc
 # github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20210826190144-a537783ea4a0

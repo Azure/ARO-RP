@@ -24,6 +24,9 @@ func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
 						EncryptionAtHost: EncryptionAtHostDisabled,
 					},
 				},
+				ClusterProfile: ClusterProfile{
+					FipsValidatedModules: FipsValidatedModulesDisabled,
+				},
 			},
 		},
 	}
@@ -80,6 +83,26 @@ func TestSetDefaults(t *testing.T) {
 			},
 			input: func(base *OpenShiftClusterDocument) {
 				base.OpenShiftCluster.Properties.MasterProfile.EncryptionAtHost = EncryptionAtHostEnabled
+			},
+		},
+		{
+			name: "default fips validated modules",
+			want: func() *OpenShiftClusterDocument {
+				return validOpenShiftClusterDocument()
+			},
+			input: func(base *OpenShiftClusterDocument) {
+				base.OpenShiftCluster.Properties.ClusterProfile.FipsValidatedModules = ""
+			},
+		},
+		{
+			name: "preserve fips validated modules",
+			want: func() *OpenShiftClusterDocument {
+				doc := validOpenShiftClusterDocument()
+				doc.OpenShiftCluster.Properties.ClusterProfile.FipsValidatedModules = FipsValidatedModulesEnabled
+				return doc
+			},
+			input: func(base *OpenShiftClusterDocument) {
+				base.OpenShiftCluster.Properties.ClusterProfile.FipsValidatedModules = FipsValidatedModulesEnabled
 			},
 		},
 	} {

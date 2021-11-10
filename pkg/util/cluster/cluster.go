@@ -450,6 +450,10 @@ func (c *Cluster) registerSubscription(ctx context.Context) error {
 					Name:  "Microsoft.RedHatOpenShift/RedHatEngineering",
 					State: "Registered",
 				},
+				{
+					Name:  "Microsoft.RedHatOpenShift/FIPS",
+					State: "Registered",
+				},
 			},
 		},
 	})

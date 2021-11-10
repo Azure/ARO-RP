@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 
@@ -210,7 +211,7 @@ func (g *generator) devVPNPip() *arm.Resource {
 }
 
 func (g *generator) devVnet() *arm.Resource {
-	return g.virtualNetwork("dev-vnet", "10.0.0.0/23", &[]mgmtnetwork.Subnet{
+	return g.virtualNetwork("dev-vnet", "10.0.0.0/9", &[]mgmtnetwork.Subnet{
 		{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 				AddressPrefix: to.StringPtr("10.0.0.0/24"),
@@ -305,10 +306,10 @@ xfs_growfs /var
 lvextend -l +100%FREE /dev/rootvg/homelv
 xfs_growfs /home
 
-rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
 rpm --import https://packages.microsoft.com/keys/microsoft.asc
 
-yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
 cat >/etc/yum.repos.d/azure.repo <<'EOF'
 [azure-cli]
@@ -318,11 +319,11 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install azure-cli docker jq gcc rh-git29 rh-python36 tmpwatch
+yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch go-toolset-1.14.12-1.module+el8.3.0+8784+380394dc
 
-GO_VERSION=1.14.9
-curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz | tar -C /usr/local -xz
-ln -s /usr/local/go/bin/* /usr/local/bin
+# Suppress emulation output for podman instead of docker for az acr compatability
+mkdir -p /etc/containers/
+touch /etc/containers/nodocker
 
 VSTS_AGENT_VERSION=2.188.3
 mkdir /home/cloud-user/agent
@@ -335,22 +336,13 @@ sudo -u cloud-user ./config.sh --unattended --url https://dev.azure.com/msazure 
 ./svc.sh install cloud-user
 popd
 
-# merge in /opt/rh/rh-*/enable
 cat >/home/cloud-user/agent/.path <<'EOF'
-/opt/rh/rh-python36/root/usr/bin:/opt/rh/rh-git29/root/usr/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/cloud-user/.local/bin:/home/cloud-user/bin
+/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/cloud-user/.local/bin:/home/cloud-user/bin
 EOF
 
 cat >/home/cloud-user/agent/.env <<'EOF'
-LD_LIBRARY_PATH=/opt/rh/rh-python36/root/usr/lib64:/opt/rh/httpd24/root/usr/lib64
-MANPATH=/opt/rh/rh-python36/root/usr/share/man:/opt/rh/rh-git29/root/usr/share/man
-PERL5LIB=/opt/rh/rh-git29/root/usr/share/perl5/vendor_perl
-PKG_CONFIG_PATH=/opt/rh/rh-python36/root/usr/lib64/pkgconfig
-XDG_DATA_DIRS=/opt/rh/rh-python36/root/usr/share:/usr/local/share:/usr/share
+GOLANG_FIPS=1
 EOF
-
-sed -i -e 's/^OPTIONS='\''/OPTIONS='\''-G cloud-user /' /etc/sysconfig/docker
-
-systemctl enable docker
 
 cat >/etc/cron.hourly/tmpwatch <<'EOF'
 #!/bin/bash
@@ -397,7 +389,7 @@ chmod +x /etc/cron.hourly/tmpwatch
 						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("7-LVM"),
+							Sku:       to.StringPtr("8-LVM"),
 							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
@@ -465,5 +457,91 @@ chmod +x /etc/cron.hourly/tmpwatch
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
 		},
+	}
+}
+
+const (
+	sharedKeyVaultName          = "concat(take(resourceGroup().name,15), '-sharedKV')"
+	sharedDiskEncryptionSetName = "concat(resourceGroup().name, '-disk-encryption-set')"
+	sharedDiskEncryptionKeyName = "concat(resourceGroup().name, '-disk-encryption-key')"
+)
+
+// shared keyvault for keys used for disk encryption sets when creating clusters locally
+func (g *generator) devDiskEncryptionKeyvault() *arm.Resource {
+	return g.keyVault(fmt.Sprintf("[%s]", sharedKeyVaultName), &[]mgmtkeyvault.AccessPolicyEntry{})
+}
+
+func (g *generator) devDiskEncryptionKey() *arm.Resource {
+	key := &mgmtkeyvault.Key{
+		KeyProperties: &mgmtkeyvault.KeyProperties{
+			Kty:     mgmtkeyvault.RSA,
+			KeySize: to.Int32Ptr(4096),
+		},
+
+		Name:     to.StringPtr(fmt.Sprintf("[concat(%s, '/', %s)]", sharedKeyVaultName, sharedDiskEncryptionKeyName)),
+		Type:     to.StringPtr("Microsoft.KeyVault/vaults/keys"),
+		Location: to.StringPtr("[resourceGroup().location]"),
+	}
+
+	return &arm.Resource{
+		Resource:   key,
+		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
+		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults', %s)]", sharedKeyVaultName)},
+	}
+}
+
+func (g *generator) devDiskEncryptionSet() *arm.Resource {
+	diskEncryptionSet := &mgmtcompute.DiskEncryptionSet{
+		EncryptionSetProperties: &mgmtcompute.EncryptionSetProperties{
+			ActiveKey: &mgmtcompute.KeyVaultAndKeyReference{
+				KeyURL: to.StringPtr(fmt.Sprintf("[reference(resourceId('Microsoft.KeyVault/vaults/keys', %s, %s), '%s', 'Full').properties.keyUriWithVersion]", sharedKeyVaultName, sharedDiskEncryptionKeyName, azureclient.APIVersion("Microsoft.KeyVault"))),
+				SourceVault: &mgmtcompute.SourceVault{
+					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults', %s)]", sharedKeyVaultName)),
+				},
+			},
+		},
+
+		Name:     to.StringPtr(fmt.Sprintf("[%s]", sharedDiskEncryptionSetName)),
+		Type:     to.StringPtr("Microsoft.Compute/diskEncryptionSets"),
+		Location: to.StringPtr("[resourceGroup().location]"),
+		Identity: &mgmtcompute.EncryptionSetIdentity{Type: mgmtcompute.SystemAssigned},
+	}
+
+	return &arm.Resource{
+		Resource:   diskEncryptionSet,
+		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
+		DependsOn: []string{
+			fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults/keys', %s, %s)]", sharedKeyVaultName, sharedDiskEncryptionKeyName),
+		},
+	}
+}
+
+func (g *generator) devDiskEncryptionKeyVaultAccessPolicy() *arm.Resource {
+	accessPolicy := &mgmtkeyvault.VaultAccessPolicyParameters{
+		Properties: &mgmtkeyvault.VaultAccessPolicyProperties{
+			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
+				{
+					TenantID: &tenantUUIDHack,
+					ObjectID: to.StringPtr(fmt.Sprintf("[reference(resourceId('Microsoft.Compute/diskEncryptionSets', %s), '%s', 'Full').identity.PrincipalId]", sharedDiskEncryptionSetName, azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets"))),
+					Permissions: &mgmtkeyvault.Permissions{
+						Keys: &[]mgmtkeyvault.KeyPermissions{
+							mgmtkeyvault.KeyPermissionsGet,
+							mgmtkeyvault.KeyPermissionsWrapKey,
+							mgmtkeyvault.KeyPermissionsUnwrapKey,
+						},
+					},
+				},
+			},
+		},
+
+		Name:     to.StringPtr(fmt.Sprintf("[concat(%s, '/add')]", sharedKeyVaultName)),
+		Type:     to.StringPtr("Microsoft.KeyVault/vaults/accessPolicies"),
+		Location: to.StringPtr("[resourceGroup().location]"),
+	}
+
+	return &arm.Resource{
+		Resource:   accessPolicy,
+		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
+		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.Compute/diskEncryptionSets', %s)]", sharedDiskEncryptionSetName)},
 	}
 }

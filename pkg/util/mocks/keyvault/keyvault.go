@@ -68,18 +68,33 @@ func (mr *MockManagerMockRecorder) EnsureCertificateDeleted(arg0, arg1 interface
 }
 
 // GetBase64Secret mocks base method.
-func (m *MockManager) GetBase64Secret(arg0 context.Context, arg1 string) ([]byte, error) {
+func (m *MockManager) GetBase64Secret(arg0 context.Context, arg1, arg2 string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBase64Secret", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetBase64Secret", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetBase64Secret indicates an expected call of GetBase64Secret.
-func (mr *MockManagerMockRecorder) GetBase64Secret(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockManagerMockRecorder) GetBase64Secret(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBase64Secret", reflect.TypeOf((*MockManager)(nil).GetBase64Secret), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBase64Secret", reflect.TypeOf((*MockManager)(nil).GetBase64Secret), arg0, arg1, arg2)
+}
+
+// GetBase64Secrets mocks base method.
+func (m *MockManager) GetBase64Secrets(arg0 context.Context, arg1 string) ([][]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBase64Secrets", arg0, arg1)
+	ret0, _ := ret[0].([][]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBase64Secrets indicates an expected call of GetBase64Secrets.
+func (mr *MockManagerMockRecorder) GetBase64Secrets(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBase64Secrets", reflect.TypeOf((*MockManager)(nil).GetBase64Secrets), arg0, arg1)
 }
 
 // GetCertificateSecret mocks base method.
