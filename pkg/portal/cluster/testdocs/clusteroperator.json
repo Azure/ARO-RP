@@ -1,0 +1,588 @@
+{
+  "apiVersion": "config.openshift.io/v1",
+  "items": [
+    {
+      "apiVersion": "config.openshift.io/v1",
+      "kind": "ClusterOperator",
+      "metadata": {
+        "creationTimestamp": "2021-02-03T08:26:02Z",
+        "generation": 1,
+        "name": "aro",
+        "ownerReferences": [
+          {
+            "apiVersion": "aro.openshift.io/v1alpha1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "Cluster",
+            "name": "cluster",
+            "uid": "4a5f1cd4-d1a1-457a-8869-aa503b063907"
+          }
+        ],
+        "resourceVersion": "149177061",
+        "selfLink": "/apis/config.openshift.io/v1/clusteroperators/aro",
+        "uid": "54ffe267-a06f-4a97-949b-7333856e7aea"
+      },
+      "spec": {},
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2021-05-04T09:53:11Z",
+            "reason": "AsExpected",
+            "status": "True",
+            "type": "Available"
+          },
+          {
+            "lastTransitionTime": "2021-05-04T09:53:11Z",
+            "reason": "AsExpected",
+            "status": "False",
+            "type": "Progressing"
+          },
+          {
+            "lastTransitionTime": "2021-05-04T09:53:11Z",
+            "reason": "AsExpected",
+            "status": "False",
+            "type": "Degraded"
+          },
+          {
+            "lastTransitionTime": "2021-05-04T09:53:11Z",
+            "reason": "AsExpected",
+            "status": "True",
+            "type": "Upgradeable"
+          }
+        ],
+        "extension": null
+      }
+    },
+    {
+      "apiVersion": "config.openshift.io/v1",
+      "kind": "ClusterOperator",
+      "metadata": {
+        "creationTimestamp": "2020-05-05T22:51:18Z",
+        "generation": 1,
+        "name": "authentication",
+        "resourceVersion": "176785383",
+        "selfLink": "/apis/config.openshift.io/v1/clusteroperators/authentication",
+        "uid": "cbf1bec8-82be-4b66-9926-866c1752b22a"
+      },
+      "spec": {},
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2021-05-21T08:10:25Z",
+            "reason": "AsExpected",
+            "status": "False",
+            "type": "Degraded"
+          },
+          {
+            "lastTransitionTime": "2021-06-04T22:48:41Z",
+            "reason": "AsExpected",
+            "status": "False",
+            "type": "Progressing"
+          },
+          {
+            "lastTransitionTime": "2021-07-11T21:29:57Z",
+            "message": "OAuthServerDeploymentAvailable: availableReplicas==2",
+            "reason": "AsExpected",
+            "status": "True",
+            "type": "Available"
+          },
+          {
+            "lastTransitionTime": "2020-05-05T22:51:18Z",
+            "reason": "AsExpected",
+            "status": "True",
+            "type": "Upgradeable"
+          }
+        ],
+        "extension": null,
+        "relatedObjects": [
+          {
+            "group": "operator.openshift.io",
+            "name": "cluster",
+            "resource": "authentications"
+          },
+          {
+            "group": "config.openshift.io",
+            "name": "cluster",
+            "resource": "authentications"
+          },
+          {
+            "group": "config.openshift.io",
+            "name": "cluster",
+            "resource": "infrastructures"
+          },
+          {
+            "group": "config.openshift.io",
+            "name": "cluster",
+            "resource": "oauths"
+          },
+          {
+            "group": "route.openshift.io",
+            "name": "oauth-openshift",
+            "namespace": "openshift-authentication",
+            "resource": "routes"
+          },
+          {
+            "group": "",
+            "name": "oauth-openshift",
+            "namespace": "openshift-authentication",
+            "resource": "services"
+          },
+          {
+            "group": "",
+            "name": "openshift-config",
+            "resource": "namespaces"
+          },
+          {
+            "group": "",
+            "name": "openshift-config-managed",
+            "resource": "namespaces"
+          },
+          {
+            "group": "",
+            "name": "openshift-authentication",
+            "resource": "namespaces"
+          },
+          {
+            "group": "",
+            "name": "openshift-authentication-operator",
+            "resource": "namespaces"
+          },
+          {
+            "group": "",
+            "name": "openshift-ingress",
+            "resource": "namespaces"
+          },
+          {
+            "group": "",
+            "name": "openshift-oauth-apiserver",
+            "resource": "namespaces"
+          }
+        ],
+        "versions": [
+          {
+            "name": "operator",
+            "version": "4.6.26"
+          },
+          {
+            "name": "oauth-openshift",
+            "version": "4.6.26_openshift"
+          },
+          {
+            "name": "oauth-apiserver",
+            "version": "4.6.26"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "config.openshift.io/v1",
+      "kind": "ClusterOperator",
+      "metadata": {
+        "creationTimestamp": "2020-05-05T22:42:34Z",
+        "generation": 1,
+        "name": "cloud-credential",
+        "resourceVersion": "176927593",
+        "selfLink": "/apis/config.openshift.io/v1/clusteroperators/cloud-credential",
+        "uid": "9af60ead-7186-4bb2-a6b0-e89630303f87"
+      },
+      "spec": {},
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2020-05-05T22:42:34Z",
+            "status": "True",
+            "type": "Available"
+          },
+          {
+            "lastTransitionTime": "2020-12-23T13:51:46Z",
+            "status": "False",
+            "type": "Degraded"
+          },
+          {
+            "lastTransitionTime": "2021-05-21T07:44:15Z",
+            "status": "False",
+            "type": "Progressing"
+          },
+          {
+            "lastTransitionTime": "2020-05-05T22:42:34Z",
+            "status": "True",
+            "type": "Upgradeable"
+          }
+        ],
+        "extension": null,
+        "relatedObjects": [
+          {
+            "group": "operator.openshift.io",
+            "name": "cluster",
+            "resource": "cloudcredentials"
+          },
+          {
+            "group": "",
+            "name": "cloud-credential-operator-config",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "configmap"
+          },
+          {
+            "group": "",
+            "name": "openshift-cloud-credential-operator",
+            "resource": "namespaces"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "openshift-machine-api-vsphere",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "openshift-machine-api-gcp",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "cloud-credential-operator-s3",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "openshift-image-registry-azure",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "aws-ebs-csi-driver-operator",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "manila-csi-driver-operator",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "openshift-image-registry-openstack",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "openshift-ingress-gcp",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "openshift-machine-api-aws",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "openshift-machine-api-azure",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "ovirt-csi-driver-operator",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "openshift-ingress",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "openshift-ingress-azure",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "openshift-machine-api-openstack",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "openshift-image-registry",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "openshift-machine-api-ovirt",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "cloud-credential-operator-iam-ro",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "openshift-image-registry-gcs",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          },
+          {
+            "group": "cloudcredential.openshift.io",
+            "name": "openshift-network",
+            "namespace": "openshift-cloud-credential-operator",
+            "resource": "credentialsrequests"
+          }
+        ],
+        "versions": [
+          {
+            "name": "operator",
+            "version": "4.6.26"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "config.openshift.io/v1",
+      "kind": "ClusterOperator",
+      "metadata": {
+        "creationTimestamp": "2020-05-05T22:52:21Z",
+        "generation": 1,
+        "name": "cluster-autoscaler",
+        "resourceVersion": "155972237",
+        "selfLink": "/apis/config.openshift.io/v1/clusteroperators/cluster-autoscaler",
+        "uid": "ee778127-c545-4e15-a158-9b3a397e39fd"
+      },
+      "spec": {},
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2020-05-05T22:52:21Z",
+            "message": "at version 4.6.26",
+            "reason": "AsExpected",
+            "status": "True",
+            "type": "Available"
+          },
+          {
+            "lastTransitionTime": "2021-05-21T07:44:20Z",
+            "status": "False",
+            "type": "Progressing"
+          },
+          {
+            "lastTransitionTime": "2020-05-05T22:52:21Z",
+            "status": "False",
+            "type": "Degraded"
+          },
+          {
+            "lastTransitionTime": "2020-05-05T22:52:21Z",
+            "status": "True",
+            "type": "Upgradeable"
+          }
+        ],
+        "extension": null,
+        "relatedObjects": [
+          {
+            "group": "autoscaling.openshift.io",
+            "name": "",
+            "namespace": "openshift-machine-api",
+            "resource": "machineautoscalers"
+          },
+          {
+            "group": "autoscaling.openshift.io",
+            "name": "",
+            "namespace": "openshift-machine-api",
+            "resource": "clusterautoscalers"
+          },
+          {
+            "group": "",
+            "name": "openshift-machine-api",
+            "resource": "namespaces"
+          }
+        ],
+        "versions": [
+          {
+            "name": "operator",
+            "version": "4.6.26"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "config.openshift.io/v1",
+      "kind": "ClusterOperator",
+      "metadata": {
+        "annotations": {
+          "exclude.release.openshift.io/internal-openshift-hosted": "true"
+        },
+        "creationTimestamp": "2020-12-23T12:02:28Z",
+        "generation": 1,
+        "name": "config-operator",
+        "resourceVersion": "155965236",
+        "selfLink": "/apis/config.openshift.io/v1/clusteroperators/config-operator",
+        "uid": "6dd52f64-6cf8-4d34-9936-da2707af884d"
+      },
+      "spec": {},
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2020-12-23T12:20:07Z",
+            "reason": "AsExpected",
+            "status": "False",
+            "type": "Degraded"
+          },
+          {
+            "lastTransitionTime": "2020-12-23T12:20:07Z",
+            "reason": "AsExpected",
+            "status": "False",
+            "type": "Progressing"
+          },
+          {
+            "lastTransitionTime": "2020-12-23T12:20:07Z",
+            "reason": "AsExpected",
+            "status": "True",
+            "type": "Available"
+          },
+          {
+            "lastTransitionTime": "2020-12-23T12:20:07Z",
+            "reason": "AsExpected",
+            "status": "True",
+            "type": "Upgradeable"
+          }
+        ],
+        "extension": null,
+        "relatedObjects": [
+          {
+            "group": "operator.openshift.io",
+            "name": "cluster",
+            "resource": "configs"
+          },
+          {
+            "group": "",
+            "name": "openshift-config",
+            "resource": "namespaces"
+          },
+          {
+            "group": "",
+            "name": "openshift-config-operator",
+            "resource": "namespaces"
+          }
+        ],
+        "versions": [
+          {
+            "name": "operator",
+            "version": "4.6.26"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "config.openshift.io/v1",
+      "kind": "ClusterOperator",
+      "metadata": {
+        "creationTimestamp": "2020-05-05T22:51:32Z",
+        "generation": 1,
+        "name": "console",
+        "resourceVersion": "161855030",
+        "selfLink": "/apis/config.openshift.io/v1/clusteroperators/console",
+        "uid": "cafd409d-d30d-4f4d-b1b9-72966bf981d9"
+      },
+      "spec": {},
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2021-04-01T22:35:31Z",
+            "reason": "AsExpected",
+            "status": "False",
+            "type": "Degraded"
+          },
+          {
+            "lastTransitionTime": "2021-06-04T22:48:32Z",
+            "reason": "AsExpected",
+            "status": "False",
+            "type": "Progressing"
+          },
+          {
+            "lastTransitionTime": "2021-06-04T22:48:32Z",
+            "reason": "AsExpected",
+            "status": "True",
+            "type": "Available"
+          },
+          {
+            "lastTransitionTime": "2020-05-05T22:51:32Z",
+            "reason": "AsExpected",
+            "status": "True",
+            "type": "Upgradeable"
+          }
+        ],
+        "extension": null,
+        "relatedObjects": [
+          {
+            "group": "operator.openshift.io",
+            "name": "cluster",
+            "resource": "consoles"
+          },
+          {
+            "group": "config.openshift.io",
+            "name": "cluster",
+            "resource": "consoles"
+          },
+          {
+            "group": "config.openshift.io",
+            "name": "cluster",
+            "resource": "infrastructures"
+          },
+          {
+            "group": "config.openshift.io",
+            "name": "cluster",
+            "resource": "proxies"
+          },
+          {
+            "group": "config.openshift.io",
+            "name": "cluster",
+            "resource": "oauths"
+          },
+          {
+            "group": "oauth.openshift.io",
+            "name": "console",
+            "resource": "oauthclients"
+          },
+          {
+            "group": "",
+            "name": "openshift-console-operator",
+            "resource": "namespaces"
+          },
+          {
+            "group": "",
+            "name": "openshift-console",
+            "resource": "namespaces"
+          },
+          {
+            "group": "",
+            "name": "console-public",
+            "namespace": "openshift-config-managed",
+            "resource": "configmaps"
+          }
+        ],
+        "versions": [
+          {
+            "name": "operator",
+            "version": "4.6.26"
+          }
+        ]
+      }
+    }
+  ],
+  "kind": "ClusterOperatorList",
+  "metadata": {
+    "resourceVersion": "",
+    "selfLink": ""
+  }
+}
