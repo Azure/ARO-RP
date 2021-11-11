@@ -84,9 +84,10 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 				},
 			},
 		}
-		if !f.env.IsLocalDevelopmentMode() /* not local dev or CI */ {
-			doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled = true
-		}
+		// TODO (BV): reenable gateway on create once we fix bugs
+		// if !f.env.IsLocalDevelopmentMode() /* not local dev or CI */ {
+		// 	doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled = true
+		// }
 	}
 
 	doc.CorrelationData = correlationData
