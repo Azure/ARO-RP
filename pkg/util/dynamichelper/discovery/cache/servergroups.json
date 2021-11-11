@@ -821,6 +821,19 @@
             ]
         },
         {
+            "name": "preview.aro.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "preview.aro.openshift.io/v1alpha1",
+                "version": "v1alpha1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "preview.aro.openshift.io/v1alpha1",
+                    "version": "v1alpha1"
+                }
+            ]
+        },
+        {
             "name": "whereabouts.cni.cncf.io",
             "preferredVersion": {
                 "groupVersion": "whereabouts.cni.cncf.io/v1alpha1",
