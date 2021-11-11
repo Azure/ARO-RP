@@ -65,9 +65,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
+	// Fail fast if both are not nil
+	if imageconfig.Spec.RegistrySources.AllowedRegistries != nil && imageconfig.Spec.RegistrySources.BlockedRegistries != nil {
+		err := fmt.Errorf("both AllowedRegistries and BlockedRegistries are present")
+		return reconcile.Result{}, err
+	}
+
 	// Append to allowed registries
 	if imageconfig.Spec.RegistrySources.AllowedRegistries != nil {
 		imageconfig.Spec.RegistrySources.AllowedRegistries = append(imageconfig.Spec.RegistrySources.AllowedRegistries, requiredRegistries...)
+		imageconfig.Spec.RegistrySources.AllowedRegistries = removeDuplicateRegistries(imageconfig.Spec.RegistrySources.AllowedRegistries)
 	}
 
 	// Remove from blocked registries
@@ -128,4 +135,16 @@ func filterRegistriesInPlace(input []string, keep func(string) bool) []string {
 		}
 	}
 	return input[:n]
+}
+
+func removeDuplicateRegistries(strSlice []string) []string {
+	allKeys := make(map[string]bool)
+	list := []string{}
+	for _, item := range strSlice {
+		if _, value := allKeys[item]; !value {
+			allKeys[item] = true
+			list = append(list, item)
+		}
+	}
+	return list
 }
