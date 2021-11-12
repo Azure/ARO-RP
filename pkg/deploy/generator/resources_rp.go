@@ -1003,6 +1003,16 @@ cat >/etc/default/vsa-nodescan-agent.config <<EOF
   }
 EOF
 
+# we start a cron job to run every hour to ensure the said directory is accessible 
+# by the correct user as it gets created by root and may cause a race condition 
+# where root owns the dir instead of syslog
+# TODO: https://msazure.visualstudio.com/AzureRedHatOpenShift/_workitems/edit/12591207
+cat >/etc/cron.d/mdsd-chown-workaround <<EOF
+SHELL=/bin/bash
+PATH=/bin
+0 * * * * root chown syslog:syslog /var/opt/microsoft/linuxmonagent/eh/EventNotice/arorplogs*
+EOF
+
 for service in aro-dbtoken aro-monitor aro-portal aro-rp auoms azsecd azsecmond mdsd mdm chronyd fluentbit; do
   systemctl enable $service.service
 done
