@@ -12,7 +12,7 @@
       "signature": "f78e4b715af3386df99bd3e9bf347f752b3c561325e290eaf0b64bd6e6792783",
       "target": "deploy/cluster-development-predeploy.json",
       "memberOf": [
-        "history.run.202111161527"
+        "default"
       ],
       "tool": "armory",
       "ruleId": "ARM1005",
