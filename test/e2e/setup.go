@@ -27,7 +27,6 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/insights"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
 	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
@@ -43,7 +42,6 @@ type clientSet struct {
 
 	VirtualMachines    compute.VirtualMachinesClient
 	Resources          features.ResourcesClient
-	ActivityLogs       insights.ActivityLogsClient
 	VirtualNetworks    network.VirtualNetworksClient
 	DiskEncryptionSets compute.DiskEncryptionSetsClient
 	Disks              compute.DisksClient
@@ -133,7 +131,6 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 
 		VirtualMachines:    compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Resources:          features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		ActivityLogs:       insights.NewActivityLogsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		VirtualNetworks:    network.NewVirtualNetworksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Disks:              compute.NewDisksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		DiskEncryptionSets: compute.NewDiskEncryptionSetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
