@@ -67,9 +67,9 @@ func TestWorkaroundReconciler(t *testing.T) {
 			name: "is required",
 			mocker: func(mw *mock_workaround.MockWorkaround) {
 				gomock.InOrder(
-					mw.EXPECT().IsRequired(gomock.Any()).Return(true),
+					mw.EXPECT().IsRequired(gomock.Any(), gomock.Any()).Return(true),
 					mw.EXPECT().Ensure(gomock.Any()).Return(nil),
-					mw.EXPECT().IsRequired(gomock.Any()).Return(true),
+					mw.EXPECT().IsRequired(gomock.Any(), gomock.Any()).Return(true),
 					mw.EXPECT().Ensure(gomock.Any()).Return(nil),
 				)
 			},
@@ -80,9 +80,9 @@ func TestWorkaroundReconciler(t *testing.T) {
 			name: "is not required",
 			mocker: func(mw *mock_workaround.MockWorkaround) {
 				gomock.InOrder(
-					mw.EXPECT().IsRequired(gomock.Any()).Return(false),
+					mw.EXPECT().IsRequired(gomock.Any(), gomock.Any()).Return(false),
 					mw.EXPECT().Remove(gomock.Any()).Return(nil),
-					mw.EXPECT().IsRequired(gomock.Any()).Return(false),
+					mw.EXPECT().IsRequired(gomock.Any(), gomock.Any()).Return(false),
 					mw.EXPECT().Remove(gomock.Any()).Return(nil),
 				)
 			},
@@ -92,7 +92,7 @@ func TestWorkaroundReconciler(t *testing.T) {
 		{
 			name: "has error",
 			mocker: func(mw *mock_workaround.MockWorkaround) {
-				mw.EXPECT().IsRequired(gomock.Any()).Return(true)
+				mw.EXPECT().IsRequired(gomock.Any(), gomock.Any()).Return(true)
 				mw.EXPECT().Name().Return("test").AnyTimes()
 				mw.EXPECT().Ensure(gomock.Any()).Return(fmt.Errorf("oops"))
 			},
@@ -104,7 +104,9 @@ func TestWorkaroundReconciler(t *testing.T) {
 			name: "systemReserved is not required because autoNodeSizing is enabled",
 			mocker: func(mw *mock_workaround.MockWorkaround) {
 				gomock.InOrder(
-					mw.EXPECT().IsRequired(gomock.Any()).Return(true),
+					mw.EXPECT().IsRequired(gomock.Any(), gomock.Any()).Return(false),
+					mw.EXPECT().Remove(gomock.Any()).Return(nil),
+					mw.EXPECT().IsRequired(gomock.Any(), gomock.Any()).Return(true),
 					mw.EXPECT().Ensure(gomock.Any()).Return(nil),
 				)
 			},
@@ -133,11 +135,10 @@ func TestWorkaroundReconciler(t *testing.T) {
 				"systemReserved": mwa,
 			}
 			r := &Reconciler{
-				arocli:             tt.arocli,
-				configcli:          configfake.NewSimpleClientset(clusterVersion("4.4.10")),
-				workarounds:        workarounds,
-				enabledWorkarounds: workarounds,
-				log:                utillog.GetLogger(),
+				arocli:      tt.arocli,
+				configcli:   configfake.NewSimpleClientset(clusterVersion("4.4.10")),
+				workarounds: workarounds,
+				log:         utillog.GetLogger(),
 			}
 			tt.mocker(mwa)
 			got, err := r.Reconcile(context.Background(), reconcile.Request{})

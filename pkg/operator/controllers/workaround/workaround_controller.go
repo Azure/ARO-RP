@@ -32,9 +32,8 @@ type Reconciler struct {
 	configcli     configclient.Interface
 	kubernetescli kubernetes.Interface
 
-	restConfig         *rest.Config
-	workarounds        map[string]Workaround
-	enabledWorkarounds map[string]Workaround
+	restConfig  *rest.Config
+	workarounds map[string]Workaround
 }
 
 func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli configclient.Interface, kubernetescli kubernetes.Interface, mcocli mcoclient.Interface, restConfig *rest.Config) *Reconciler {
@@ -43,21 +42,15 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli conf
 		panic(err)
 	}
 
-	workarounds := map[string]Workaround{
-		"systemReserved": NewSystemReserved(log, mcocli, dh),
-		"ifReload":       NewIfReload(log, kubernetescli),
-	}
-
 	return &Reconciler{
 		log:           log,
 		arocli:        arocli,
 		configcli:     configcli,
 		kubernetescli: kubernetescli,
 		restConfig:    restConfig,
-		workarounds:   workarounds,
-		enabledWorkarounds: map[string]Workaround{
-			"systemReserved": workarounds["systemReserved"],
-			"ifReload":       workarounds["ifReload"],
+		workarounds: map[string]Workaround{
+			"systemReserved": NewSystemReserved(log, mcocli, dh),
+			"ifReload":       NewIfReload(log, kubernetescli),
 		},
 	}
 }
@@ -73,21 +66,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
-	if instance.Spec.Features.ReconcileAutoSizedNodes && _, ok := r.enabledWorkarounds["systemReserved"]; !ok {
-		// remove System reserved workaround, it has been replaced by autosizing
-		delete(r.enabledWorkarounds, "systemReserved")
-	} else if _, ok := r.enabledWorkarounds["systemReserved"]; !ok {
-		r.enabledWorkarounds["systemReserved"] = r.workarounds["systemReserved"]
-	}
-
 	clusterVersion, err := version.GetClusterVersion(ctx, r.configcli)
 	if err != nil {
 		r.log.Errorf("error getting the OpenShift version: %v", err)
 		return reconcile.Result{}, err
 	}
 
-	for _, wa := range r.enabledWorkarounds {
-		if wa.IsRequired(clusterVersion) {
+	for _, wa := range r.workarounds {
+		if wa.IsRequired(clusterVersion, instance) {
 			err = wa.Ensure(ctx)
 		} else {
 			err = wa.Remove(ctx)
