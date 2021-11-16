@@ -38,7 +38,7 @@ client: generate
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 deploy:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
+	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 dev-config.yaml:
 	go run ./hack/gendevconfig >dev-config.yaml
@@ -97,7 +97,7 @@ proxy:
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./hack/proxy
 
 run-portal:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro portal
+	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro portal
 
 build-portal:
 	cd portal && npm install && npm run build
