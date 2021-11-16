@@ -22,7 +22,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
-	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -85,18 +84,10 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 				},
 			},
 		}
-
-		subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
-		if err != nil {
-			return nil, err
-		}
-
-		if !f.env.IsLocalDevelopmentMode() /* not local dev or CI */ &&
-			(feature.IsRegisteredForFeature(subscriptionDoc.Subscription.Properties, "Microsoft.RedHatOpenShift/RedHatEngineering") /* dev otherwise */ ||
-				feature.IsRegisteredForFeature(subscriptionDoc.Subscription.Properties, "Microsoft.RedHatOpenShift/InProgress") /* RP health */ ||
-				feature.IsRegisteredForFeature(subscriptionDoc.Subscription.Properties, "Microsoft.RedHatOpenShift/INT-APPROVED") /* INT */) {
-			doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled = true
-		}
+		// TODO (BV): reenable gateway on create once we fix bugs
+		// if !f.env.IsLocalDevelopmentMode() /* not local dev or CI */ {
+		// 	doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled = true
+		// }
 	}
 
 	doc.CorrelationData = correlationData

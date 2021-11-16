@@ -3,8 +3,10 @@ package validation
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	dockerref "github.com/containers/image/docker/reference"
@@ -105,13 +107,21 @@ func ValidateInstallConfig(c *types.InstallConfig) field.ErrorList {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("pullSecret"), c.PullSecret, err.Error()))
 	}
 	if c.Proxy != nil {
-		allErrs = append(allErrs, validateProxy(c.Proxy, field.NewPath("proxy"))...)
+		allErrs = append(allErrs, validateProxy(c.Proxy, c, field.NewPath("proxy"))...)
 	}
 	allErrs = append(allErrs, validateImageContentSources(c.ImageContentSources, field.NewPath("imageContentSources"))...)
 	if _, ok := validPublishingStrategies[c.Publish]; !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("publish"), c.Publish, validPublishingStrategyValues))
 	}
 	allErrs = append(allErrs, validateCloudCredentialsMode(c.CredentialsMode, field.NewPath("credentialsMode"), c.Platform.Name())...)
+
+	if c.Publish == types.InternalPublishingStrategy {
+		switch platformName := c.Platform.Name(); platformName {
+		case aws.Name, azure.Name, gcp.Name:
+		default:
+			allErrs = append(allErrs, field.Invalid(field.NewPath("publish"), c.Publish, fmt.Sprintf("Internal publish strategy is not supported on %q platform", platformName)))
+		}
+	}
 
 	return allErrs
 }
@@ -194,8 +204,10 @@ func validateNetworkingIPVersion(n *types.Networking, p *types.Platform) field.E
 			allErrs = append(allErrs, field.Invalid(field.NewPath("networking", "serviceNetwork"), strings.Join(ipnetworksToStrings(n.ServiceNetwork), ", "), "when installing dual-stack IPv4/IPv6 you must provide two service networks, one for each IP address type"))
 		}
 
+		experimentalDualStackEnabled, _ := strconv.ParseBool(os.Getenv("OPENSHIFT_INSTALL_EXPERIMENTAL_DUAL_STACK"))
 		switch {
-		case p.Azure != nil:
+		case p.Azure != nil && experimentalDualStackEnabled:
+			logrus.Warnf("Using experimental Azure dual-stack support")
 		case p.BareMetal != nil:
 		case p.None != nil:
 		default:
@@ -220,12 +232,6 @@ func validateNetworkingIPVersion(n *types.Networking, p *types.Platform) field.E
 		switch {
 		case p.BareMetal != nil:
 		case p.None != nil:
-
-		case p.Azure != nil && os.Getenv("OPENSHIFT_INSTALL_AZURE_EMULATE_SINGLESTACK_IPV6") == "true":
-			if !presence["machineNetwork"].IPv4 || !presence["machineNetwork"].IPv6 {
-				allErrs = append(allErrs, field.Invalid(field.NewPath("networking"), "IPv6", "OPENSHIFT_INSTALL_AZURE_EMULATE_SINGLESTACK_IPV6 requires both IPv4 and IPv6 machineNetwork values"))
-			}
-
 		default:
 			allErrs = append(allErrs, field.Invalid(field.NewPath("networking"), "IPv6", "single-stack IPv6 is not supported for this platform"))
 		}
@@ -455,29 +461,35 @@ func validatePlatform(platform *types.Platform, fldPath *field.Path, network *ty
 	return allErrs
 }
 
-func validateProxy(p *types.Proxy, fldPath *field.Path) field.ErrorList {
+func validateProxy(p *types.Proxy, c *types.InstallConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if p.HTTPProxy == "" && p.HTTPSProxy == "" {
 		allErrs = append(allErrs, field.Required(fldPath, "must include httpProxy or httpsProxy"))
 	}
 	if p.HTTPProxy != "" {
-		if err := validate.URI(p.HTTPProxy); err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("httpProxy"), p.HTTPProxy, err.Error()))
+		allErrs = append(allErrs, validateURI(p.HTTPProxy, fldPath.Child("httpProxy"), []string{"http"})...)
+		if c.Networking != nil {
+			allErrs = append(allErrs, validateIPProxy(p.HTTPProxy, c.Networking, fldPath.Child("httpProxy"))...)
 		}
 	}
 	if p.HTTPSProxy != "" {
-		if err := validate.URI(p.HTTPSProxy); err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("httpsProxy"), p.HTTPSProxy, err.Error()))
+		allErrs = append(allErrs, validateURI(p.HTTPSProxy, fldPath.Child("httpsProxy"), []string{"http", "https"})...)
+		if c.Networking != nil {
+			allErrs = append(allErrs, validateIPProxy(p.HTTPSProxy, c.Networking, fldPath.Child("httpsProxy"))...)
 		}
 	}
 	if p.NoProxy != "" && p.NoProxy != "*" {
+		if strings.Contains(p.NoProxy, " ") {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("noProxy"), p.NoProxy, fmt.Sprintf("noProxy must not have spaces")))
+		}
 		for idx, v := range strings.Split(p.NoProxy, ",") {
 			v = strings.TrimSpace(v)
 			errDomain := validate.NoProxyDomainName(v)
 			_, _, errCIDR := net.ParseCIDR(v)
 			if errDomain != nil && errCIDR != nil {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("noProxy").Index(idx), v, "must be a CIDR or domain, without wildcard characters"))
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("noProxy"), p.NoProxy, fmt.Sprintf(
+					"each element of noProxy must be a CIDR or domain without wildcard characters, which is violated by element %d %q", idx, v)))
 			}
 		}
 	}
@@ -552,6 +564,53 @@ func validateCloudCredentialsMode(mode types.CredentialsMode, fldPath *field.Pat
 		}
 	} else {
 		allErrs = append(allErrs, field.Invalid(fldPath, mode, fmt.Sprintf("cannot be set when using the %q platform", platform)))
+	}
+	return allErrs
+}
+
+// validateURI checks if the given url is of the right format. It also checks if the scheme of the uri
+// provided is within the list of accepted schema provided as part of the input.
+func validateURI(uri string, fldPath *field.Path, schemes []string) field.ErrorList {
+	parsed, err := url.ParseRequestURI(uri)
+	if err != nil {
+		return field.ErrorList{field.Invalid(fldPath, uri, err.Error())}
+	}
+	for _, scheme := range schemes {
+		if scheme == parsed.Scheme {
+			return nil
+		}
+	}
+	return field.ErrorList{field.NotSupported(fldPath, parsed.Scheme, schemes)}
+}
+
+// validateIPProxy checks if the given proxy string is an IP and if so checks the service and
+// cluster networks and returns error if the IP belongs in them. Returns nil if the proxy is
+// not an IP address.
+func validateIPProxy(proxy string, n *types.Networking, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	parsed, err := url.ParseRequestURI(proxy)
+	if err != nil {
+		return allErrs
+	}
+
+	proxyIP := net.ParseIP(parsed.Hostname())
+	if proxyIP == nil {
+		return nil
+	}
+
+	for _, network := range n.ClusterNetwork {
+		if network.CIDR.Contains(proxyIP) {
+			allErrs = append(allErrs, field.Invalid(fldPath, proxy, "proxy value is part of the cluster networks"))
+			break
+		}
+	}
+
+	for _, network := range n.ServiceNetwork {
+		if network.Contains(proxyIP) {
+			allErrs = append(allErrs, field.Invalid(fldPath, proxy, "proxy value is part of the service networks"))
+			break
+		}
 	}
 	return allErrs
 }

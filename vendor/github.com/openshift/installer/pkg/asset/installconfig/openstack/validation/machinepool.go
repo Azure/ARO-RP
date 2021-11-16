@@ -38,12 +38,16 @@ func ValidateMachinePool(p *openstack.MachinePool, ci *CloudInfo, controlPlane b
 	var checkStorageFlavor bool
 	// Validate Root Volumes
 	if p.RootVolume != nil {
-		if p.RootVolume.Type == "" {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("rootVolume").Child("type"), p.RootVolume.Type, "Volume type must be specified to use root volumes"))
-		}
+		allErrs = append(allErrs, validateVolumeTypes(p.RootVolume.Type, ci.VolumeTypes, fldPath.Child("rootVolume").Child("type"))...)
 		if p.RootVolume.Size < minimumStorage {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("rootVolume").Child("size"), p.RootVolume.Size, fmt.Sprintf("Volume size must be greater than %d to use root volumes, had %d", minimumStorage, p.RootVolume.Size)))
 		}
+
+		allErrs = append(allErrs, validateZones(p.RootVolume.Zones, ci.VolumeZones, fldPath.Child("rootVolume").Child("zones"))...)
+		if len(p.RootVolume.Zones) != 1 && len(p.RootVolume.Zones) != len(p.Zones) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("rootVolume", "zones"), p.RootVolume.Zones, "there must be either just one volume availability zone common to all nodes or the number of compute and volume availability zones must be equal"))
+		}
+
 	} else {
 		// Not using root volume, so must check flavor
 		checkStorageFlavor = true
@@ -55,7 +59,7 @@ func ValidateMachinePool(p *openstack.MachinePool, ci *CloudInfo, controlPlane b
 		allErrs = append(allErrs, validateFlavor(p.FlavorName, ci, computeFlavorMinimums, fldPath.Child("type"), checkStorageFlavor)...)
 	}
 
-	allErrs = append(allErrs, validateZones(p.Zones, ci.Zones, fldPath.Child("zones"))...)
+	allErrs = append(allErrs, validateZones(p.Zones, ci.ComputeZones, fldPath.Child("zones"))...)
 	allErrs = append(allErrs, validateUUIDV4s(p.AdditionalNetworkIDs, fldPath.Child("additionalNetworkIDs"))...)
 	allErrs = append(allErrs, validateUUIDV4s(p.AdditionalSecurityGroupIDs, fldPath.Child("additionalSecurityGroupIDs"))...)
 
@@ -74,6 +78,20 @@ func validateZones(input []string, available []string, fldPath *field.Path) fiel
 		if !availableZones.Has(zone) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("zone").Index(idx), zone, "Zone either does not exist in this cloud, or is not available"))
 		}
+	}
+
+	return allErrs
+}
+
+func validateVolumeTypes(input string, available []string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if input == "" {
+		allErrs = append(allErrs, field.Invalid(fldPath, input, "Volume type must be specified to use root volumes"))
+		return allErrs
+	}
+	volumeTypes := sets.NewString(available...)
+	if !volumeTypes.Has(input) {
+		allErrs = append(allErrs, field.Invalid(fldPath, input, "Volume Type either does not exist in this cloud, or is not available"))
 	}
 
 	return allErrs

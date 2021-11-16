@@ -184,18 +184,10 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 		},
 	}
 
-	if o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
-		cluster.Spec.GatewayDomains = append(o.env.GatewayDomains(), o.oc.Properties.ImageRegistryStorageAccountName+".blob."+o.env.Environment().StorageEndpointSuffix)
-	} else {
-		cluster.Spec.InternetChecker = arov1alpha1.InternetCheckerSpec{
-			URLs: []string{
-				fmt.Sprintf("https://%s/", o.env.ACRDomain()),
-				o.env.Environment().ActiveDirectoryEndpoint,
-				o.env.Environment().ResourceManagerEndpoint,
-				o.env.Environment().GenevaMonitoringEndpoint,
-			},
-		}
-	}
+	// TODO (BV): reenable gateway once we fix bugs
+	// if o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
+	// 	cluster.Spec.GatewayDomains = append(o.env.GatewayDomains(), o.oc.Properties.ImageRegistryStorageAccountName+".blob."+o.env.Environment().StorageEndpointSuffix)
+	// }
 
 	// create a secret here for genevalogging, later we will copy it to
 	// the genevalogging namespace.

@@ -15,6 +15,8 @@ import (
 	clientset "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	fakearov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1/fake"
+	previewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/preview.aro.openshift.io/v1alpha1"
+	fakepreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/preview.aro.openshift.io/v1alpha1/fake"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.
@@ -67,4 +69,9 @@ var _ clientset.Interface = &Clientset{}
 // AroV1alpha1 retrieves the AroV1alpha1Client
 func (c *Clientset) AroV1alpha1() arov1alpha1.AroV1alpha1Interface {
 	return &fakearov1alpha1.FakeAroV1alpha1{Fake: &c.Fake}
+}
+
+// PreviewV1alpha1 retrieves the PreviewV1alpha1Client
+func (c *Clientset) PreviewV1alpha1() previewv1alpha1.PreviewV1alpha1Interface {
+	return &fakepreviewv1alpha1.FakePreviewV1alpha1{Fake: &c.Fake}
 }

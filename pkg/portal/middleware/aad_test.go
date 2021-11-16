@@ -144,8 +144,9 @@ func TestAAD(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
-			env.EXPECT().TenantID().AnyTimes().Return("")
+			env.EXPECT().TenantID().AnyTimes().Return("common")
 
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
@@ -243,8 +244,9 @@ func TestCheckAuthentication(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
-			env.EXPECT().TenantID().AnyTimes().Return("")
+			env.EXPECT().TenantID().AnyTimes().Return("common")
 
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
@@ -323,7 +325,8 @@ func TestLogin(t *testing.T) {
 			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
-			env.EXPECT().TenantID().AnyTimes().Return("")
+			env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+			env.EXPECT().TenantID().AnyTimes().Return("common")
 
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
@@ -413,7 +416,8 @@ func TestLogout(t *testing.T) {
 			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
-			env.EXPECT().TenantID().AnyTimes().Return("")
+			env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+			env.EXPECT().TenantID().AnyTimes().Return("common")
 
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
@@ -739,7 +743,8 @@ func TestCallback(t *testing.T) {
 			defer controller.Finish()
 			env := mock_env.NewMockInterface(controller)
 			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
-			env.EXPECT().TenantID().AnyTimes().Return("")
+			env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+			env.EXPECT().TenantID().AnyTimes().Return("common")
 
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
@@ -830,7 +835,7 @@ func TestClientAssertion(t *testing.T) {
 	env := mock_env.NewMockInterface(controller)
 	env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 	env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
-	env.EXPECT().TenantID().AnyTimes().Return("")
+	env.EXPECT().TenantID().AnyTimes().Return("common")
 
 	clientID := "00000000-0000-0000-0000-000000000000"
 	_, audit := testlog.NewAudit()

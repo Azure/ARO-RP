@@ -4,6 +4,7 @@ package k8s
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -29,5 +30,5 @@ func TestTracer(t *testing.T) {
 	tr := &tracer{
 		m: m,
 	}
-	tr.Increment("<error>", "GET", "host")
+	tr.Increment(context.Background(), "<error>", "GET", "host")
 }

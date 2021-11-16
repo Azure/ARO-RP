@@ -65,6 +65,14 @@ rules:
   - list
   - watch
 - apiGroups:
+  - apiserver.openshift.io
+  resources:
+  - apirequestcounts
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - apps
   resources:
   - controllerrevisions
@@ -414,6 +422,7 @@ rules:
 - apiGroups:
   - network.operator.openshift.io
   resources:
+  - egressrouters
   - operatorpkis
   verbs:
   - get
@@ -489,6 +498,14 @@ rules:
   resources:
   - poddisruptionbudgets
   - podsecuritypolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - preview.aro.openshift.io
+  resources:
+  - previewfeatures
   verbs:
   - get
   - list
@@ -589,6 +606,7 @@ rules:
   resources:
   - csidrivers
   - csinodes
+  - csistoragecapacities
   - storageclasses
   - volumeattachments
   verbs:

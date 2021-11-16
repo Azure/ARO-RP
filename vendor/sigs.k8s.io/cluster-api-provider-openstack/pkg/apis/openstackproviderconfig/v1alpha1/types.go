@@ -54,8 +54,10 @@ type OpenstackProviderSpec struct {
 	// A networks object. Required parameter when there are multiple networks defined for the tenant.
 	// When you do not specify the networks parameter, the server attaches to the only network created for the current tenant.
 	Networks []NetworkParam `json:"networks,omitempty"`
-	// The floatingIP which will be associated to the machine, only used for master.
-	// The floatingIP should have been created and haven't been associated.
+
+	// Create and assign additional ports to instances
+	Ports []PortOpts `json:"ports,omitempty"`
+
 	FloatingIP string `json:"floatingIP,omitempty"`
 
 	// The availability zone from which to launch the server.
@@ -132,6 +134,11 @@ type NetworkParam struct {
 	Subnets []SubnetParam `json:"subnets,omitempty"`
 	// NoAllowedAddressPairs disables creation of allowed address pairs for the network ports
 	NoAllowedAddressPairs bool `json:"noAllowedAddressPairs,omitempty"`
+	// PortTags allows users to specify a list of tags to add to ports created in a given network
+	PortTags []string `json:"portTags,omitempty"`
+	VNICType string   `json:"vnicType,omitempty"`
+	// PortSecurity optionally enables or disables security on ports managed by OpenStack
+	PortSecurity *bool `json:"portSecurity,omitempty"`
 }
 
 type Filter struct {
@@ -159,6 +166,12 @@ type SubnetParam struct {
 
 	// Filters for optional network query
 	Filter SubnetFilter `json:"filter,omitempty"`
+
+	// PortTags are tags that are added to ports created on this subnet
+	PortTags []string `json:"portTags,omitempty"`
+
+	// PortSecurity optionally enables or disables security on ports managed by OpenStack
+	PortSecurity *bool `json:"portSecurity,omitempty"`
 }
 
 type SubnetFilter struct {
@@ -185,12 +198,48 @@ type SubnetFilter struct {
 	NotTagsAny      string `json:"notTagsAny,omitempty"`
 }
 
+type PortOpts struct {
+	NetworkID           string        `json:"networkID" required:"true"`
+	NameSuffix          string        `json:"nameSuffix" required:"true"`
+	Description         string        `json:"description,omitempty"`
+	AdminStateUp        *bool         `json:"adminStateUp,omitempty"`
+	MACAddress          string        `json:"macAddress,omitempty"`
+	FixedIPs            []FixedIPs    `json:"fixedIPs,omitempty"`
+	TenantID            string        `json:"tenantID,omitempty"`
+	ProjectID           string        `json:"projectID,omitempty"`
+	SecurityGroups      *[]string     `json:"securityGroups,omitempty"`
+	AllowedAddressPairs []AddressPair `json:"allowedAddressPairs,omitempty"`
+	Tags                []string      `json:"tags,omitempty"`
+
+	// The ID of the host where the port is allocated
+	HostID string `json:"hostID,omitempty"`
+
+	// The virtual network interface card (vNIC) type that is bound to the
+	// neutron port.
+	VNICType string `json:"vnicType,omitempty"`
+
+	// enable or disable security on a given port
+	// incompatible with securityGroups and allowedAddressPairs
+	PortSecurity *bool `json:"portSecurity,omitempty"`
+}
+
+type AddressPair struct {
+	IPAddress  string `json:"ipAddress,omitempty"`
+	MACAddress string `json:"macAddress,omitempty"`
+}
+
+type FixedIPs struct {
+	SubnetID  string `json:"subnetID"`
+	IPAddress string `json:"ipAddress,omitempty"`
+}
+
 type RootVolume struct {
 	SourceType string `json:"sourceType,omitempty"`
 	SourceUUID string `json:"sourceUUID,omitempty"`
 	DeviceType string `json:"deviceType"`
 	VolumeType string `json:"volumeType,omitempty"`
 	Size       int    `json:"diskSize,omitempty"`
+	Zone       string `json:"availabilityZone,omitempty"`
 }
 
 // +genclient

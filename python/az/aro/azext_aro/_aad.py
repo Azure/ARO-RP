@@ -6,9 +6,8 @@ import time
 import uuid
 
 from azure.cli.core._profile import Profile
-from azure.cli.core.cloud import get_active_cloud_name
 from azure.cli.core.commands.client_factory import configure_common_settings
-from azure.cli.core.azclierror import BadRequestError, InvalidArgumentValueError
+from azure.cli.core.azclierror import BadRequestError
 from azure.graphrbac import GraphRbacManagementClient
 from azure.graphrbac.models import ApplicationCreateParameters
 from azure.graphrbac.models import GraphErrorException
@@ -20,8 +19,6 @@ logger = get_logger(__name__)
 
 
 class AADManager:
-    MANAGED_APP = {'AzureUSGovernment': 'https://az.aro.azure.us/', 'AzureCloud': 'https://az.aro.azure.com/'}
-
     def __init__(self, cli_ctx):
         profile = Profile(cli_ctx=cli_ctx)
         self.cli_ctx = cli_ctx
@@ -38,9 +35,7 @@ class AADManager:
 
         app = self.client.applications.create(ApplicationCreateParameters(
             display_name=display_name,
-            identifier_uris=[
-                self.get_managed_app_url()
-            ],
+            identifier_uris=[],
             password_credentials=[
                 PasswordCredential(
                     custom_key_identifier=str(start_date).encode(),
@@ -53,22 +48,16 @@ class AADManager:
 
         return app, password
 
-    def get_managed_app_url(self):
-        cloud_name = get_active_cloud_name(self.cli_ctx)
-        if cloud_name not in self.MANAGED_APP.keys():
-            raise InvalidArgumentValueError("ARO not supported in: " + cloud_name)
-        return self.MANAGED_APP[cloud_name] + str(uuid.uuid4())
-
     def get_service_principal(self, app_id):
         sps = list(self.client.service_principals.list(
-            filter="appId eq '%s'" % app_id))
+            filter=f"appId eq '{app_id}'"))
         if sps:
             return sps[0]
         return None
 
     def get_application_by_client_id(self, client_id):
         apps = list(self.client.applications.list(
-            filter="appId eq '%s'" % client_id))
+            filter=f"appId eq '{client_id}'"))
         if apps:
             return apps[0]
         return None

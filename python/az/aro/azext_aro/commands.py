@@ -10,7 +10,7 @@ from azext_aro._help import helps  # pylint: disable=unused-import
 
 def load_command_table(self, _):
     aro_sdk = CliCommandType(
-        operations_tmpl='azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2020_04_30.operations#OpenShiftClustersOperations.{}',  # pylint: disable=line-too-long
+        operations_tmpl='azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2021_09_01_preview.operations#OpenShiftClustersOperations.{}',  # pylint: disable=line-too-long
         client_factory=cf_aro)
 
     with self.command_group('aro', aro_sdk, client_factory=cf_aro) as g:
@@ -22,3 +22,4 @@ def load_command_table(self, _):
         g.wait_command('wait')
 
         g.custom_command('list-credentials', 'aro_list_credentials')
+        g.custom_command('get-admin-kubeconfig', 'aro_list_admin_credentials')

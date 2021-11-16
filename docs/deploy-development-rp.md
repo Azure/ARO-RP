@@ -88,7 +88,7 @@
 1. Run the RP
 
    ```bash
-   go run ./cmd/aro rp
+   make runlocal-rp
    ```
 
 1. To create a cluster, EITHER follow the instructions in [Create, access, and
@@ -140,6 +140,7 @@
 ```bash
 export CLUSTER=cluster
 curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
+```
 
 ## Debugging
 

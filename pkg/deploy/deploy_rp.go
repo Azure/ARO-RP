@@ -10,6 +10,7 @@ import (
 
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
@@ -17,7 +18,6 @@ import (
 )
 
 func (d *deployer) DeployRP(ctx context.Context) error {
-	// TODO: there is a lot of duplication with DeployGateway()
 	rpMSI, err := d.userassignedidentities.Get(ctx, d.config.RPResourceGroupName, "aro-rp-"+d.config.Location)
 	if err != nil {
 		return err
@@ -72,9 +72,6 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	parameters.Parameters["keyvaultDNSSuffix"] = &arm.ParametersParameter{
 		Value: d.env.Environment().KeyVaultDNSSuffix,
 	}
-	parameters.Parameters["fpServicePrincipalId"] = &arm.ParametersParameter{
-		Value: *d.config.Configuration.FPServicePrincipalID,
-	}
 	parameters.Parameters["azureCloudName"] = &arm.ParametersParameter{
 		Value: d.env.Environment().ActualCloudName,
 	}
@@ -82,7 +79,15 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		Value: *d.config.Configuration.FluentbitImage,
 	}
 
-	err = d.deploy(ctx, template, parameters, d.config.RPResourceGroupName, deploymentName, rpVMSSPrefix+d.version)
+	err = d.deploy(ctx, d.config.RPResourceGroupName, deploymentName, rpVMSSPrefix+d.version,
+		mgmtfeatures.Deployment{
+			Properties: &mgmtfeatures.DeploymentProperties{
+				Template:   template,
+				Mode:       mgmtfeatures.Incremental,
+				Parameters: parameters.Parameters,
+			},
+		},
+	)
 	if err != nil {
 		return err
 	}

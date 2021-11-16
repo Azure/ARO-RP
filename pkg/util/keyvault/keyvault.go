@@ -10,6 +10,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -33,7 +34,8 @@ const (
 type Manager interface {
 	CreateSignedCertificate(context.Context, string, string, string, Eku) error
 	EnsureCertificateDeleted(context.Context, string) error
-	GetBase64Secret(context.Context, string) ([]byte, error)
+	GetBase64Secret(context.Context, string, string) ([]byte, error)
+	GetBase64Secrets(context.Context, string) ([][]byte, error)
 	GetCertificateSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
 	GetSecret(context.Context, string) (azkeyvault.SecretBundle, error)
 	GetSecrets(context.Context) ([]azkeyvault.SecretItem, error)
@@ -141,13 +143,35 @@ func (m *manager) EnsureCertificateDeleted(ctx context.Context, certificateName 
 	return err
 }
 
-func (m *manager) GetBase64Secret(ctx context.Context, secretName string) ([]byte, error) {
-	bundle, err := m.kv.GetSecret(ctx, m.keyvaultURI, secretName, "")
+func (m *manager) GetBase64Secret(ctx context.Context, secretName string, secretVersion string) ([]byte, error) {
+	bundle, err := m.kv.GetSecret(ctx, m.keyvaultURI, secretName, secretVersion)
 	if err != nil {
 		return nil, err
 	}
 
 	return base64.StdEncoding.DecodeString(*bundle.Value)
+}
+
+func (m *manager) GetBase64Secrets(ctx context.Context, secretName string) (bs [][]byte, err error) {
+	versions, err := m.kv.GetSecretVersions(ctx, m.keyvaultURI, secretName, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, version := range versions {
+		if !*version.Attributes.Enabled {
+			continue
+		}
+
+		b, err := m.GetBase64Secret(ctx, secretName, filepath.Base(*version.ID))
+		if err != nil {
+			return nil, err
+		}
+
+		bs = append(bs, b)
+	}
+
+	return bs, nil
 }
 
 func (m *manager) GetCertificateSecret(ctx context.Context, secretName string) (*rsa.PrivateKey, []*x509.Certificate, error) {

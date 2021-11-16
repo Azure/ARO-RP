@@ -66,7 +66,7 @@
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
-                        "10.0.0.0/23"
+                        "10.0.0.0/9"
                     ]
                 },
                 "subnets": [
@@ -172,7 +172,7 @@
                         "imageReference": {
                             "publisher": "RedHat",
                             "offer": "RHEL",
-                            "sku": "7-LVM",
+                            "sku": "8-LVM",
                             "version": "latest"
                         },
                         "osDisk": {
@@ -222,7 +222,7 @@
                                     "autoUpgradeMinorVersion": true,
                                     "settings": {},
                                     "protectedSettings": {
-                                        "script": "[base64(concat(base64ToString('c2V0IC1lCgo='),'CIAZPTOKEN=''',parameters('ciAzpToken'),'''\n','CIPOOLNAME=''',parameters('ciPoolName'),'''\n','\n',base64ToString('Cnl1bSAteSB1cGRhdGUgLXggV0FMaW51eEFnZW50CgpsdmV4dGVuZCAtbCArNTAlRlJFRSAvZGV2L3Jvb3R2Zy92YXJsdgp4ZnNfZ3Jvd2ZzIC92YXIKCmx2ZXh0ZW5kIC1sICsxMDAlRlJFRSAvZGV2L3Jvb3R2Zy9ob21lbHYKeGZzX2dyb3dmcyAvaG9tZQoKcnBtIC0taW1wb3J0IGh0dHBzOi8vZGwuZmVkb3JhcHJvamVjdC5vcmcvcHViL2VwZWwvUlBNLUdQRy1LRVktRVBFTC03CnJwbSAtLWltcG9ydCBodHRwczovL3BhY2thZ2VzLm1pY3Jvc29mdC5jb20va2V5cy9taWNyb3NvZnQuYXNjCgp5dW0gLXkgaW5zdGFsbCBodHRwczovL2RsLmZlZG9yYXByb2plY3Qub3JnL3B1Yi9lcGVsL2VwZWwtcmVsZWFzZS1sYXRlc3QtNy5ub2FyY2gucnBtCgpjYXQgPi9ldGMveXVtLnJlcG9zLmQvYXp1cmUucmVwbyA8PCdFT0YnClthenVyZS1jbGldCm5hbWU9YXp1cmUtY2xpCmJhc2V1cmw9aHR0cHM6Ly9wYWNrYWdlcy5taWNyb3NvZnQuY29tL3l1bXJlcG9zL2F6dXJlLWNsaQplbmFibGVkPXllcwpncGdjaGVjaz15ZXMKRU9GCgp5dW0gLS1lbmFibGVyZXBvPXJodWktcmhlbC03LXNlcnZlci1yaHVpLW9wdGlvbmFsLXJwbXMgLXkgaW5zdGFsbCBhenVyZS1jbGkgZG9ja2VyIGpxIGdjYyByaC1naXQyOSByaC1weXRob24zNiB0bXB3YXRjaAoKR09fVkVSU0lPTj0xLjE0LjkKY3VybCBodHRwczovL2RsLmdvb2dsZS5jb20vZ28vZ28ke0dPX1ZFUlNJT059LmxpbnV4LWFtZDY0LnRhci5neiB8IHRhciAtQyAvdXNyL2xvY2FsIC14egpsbiAtcyAvdXNyL2xvY2FsL2dvL2Jpbi8qIC91c3IvbG9jYWwvYmluCgpWU1RTX0FHRU5UX1ZFUlNJT049Mi4xODguMwpta2RpciAvaG9tZS9jbG91ZC11c2VyL2FnZW50CnB1c2hkIC9ob21lL2Nsb3VkLXVzZXIvYWdlbnQKY3VybCBodHRwczovL3ZzdHNhZ2VudHBhY2thZ2UuYXp1cmVlZGdlLm5ldC9hZ2VudC8ke1ZTVFNfQUdFTlRfVkVSU0lPTn0vdnN0cy1hZ2VudC1saW51eC14NjQtJHtWU1RTX0FHRU5UX1ZFUlNJT059LnRhci5neiB8IHRhciAteHoKY2hvd24gLVIgY2xvdWQtdXNlcjpjbG91ZC11c2VyIC4KCi4vYmluL2luc3RhbGxkZXBlbmRlbmNpZXMuc2gKc3VkbyAtdSBjbG91ZC11c2VyIC4vY29uZmlnLnNoIC0tdW5hdHRlbmRlZCAtLXVybCBodHRwczovL2Rldi5henVyZS5jb20vbXNhenVyZSAtLWF1dGggcGF0IC0tdG9rZW4gIiRDSUFaUFRPS0VOIiAtLXBvb2wgIiRDSVBPT0xOQU1FIiAtLWFnZW50ICJBUk8tUkhFTC0kSE9TVE5BTUUiIC0tcmVwbGFjZQouL3N2Yy5zaCBpbnN0YWxsIGNsb3VkLXVzZXIKcG9wZAoKIyBtZXJnZSBpbiAvb3B0L3JoL3JoLSovZW5hYmxlCmNhdCA+L2hvbWUvY2xvdWQtdXNlci9hZ2VudC8ucGF0aCA8PCdFT0YnCi9vcHQvcmgvcmgtcHl0aG9uMzYvcm9vdC91c3IvYmluOi9vcHQvcmgvcmgtZ2l0Mjkvcm9vdC91c3IvYmluOi91c3IvbG9jYWwvYmluOi91c3IvYmluOi91c3IvbG9jYWwvc2JpbjovdXNyL3NiaW46L2hvbWUvY2xvdWQtdXNlci8ubG9jYWwvYmluOi9ob21lL2Nsb3VkLXVzZXIvYmluCkVPRgoKY2F0ID4vaG9tZS9jbG91ZC11c2VyL2FnZW50Ly5lbnYgPDwnRU9GJwpMRF9MSUJSQVJZX1BBVEg9L29wdC9yaC9yaC1weXRob24zNi9yb290L3Vzci9saWI2NDovb3B0L3JoL2h0dHBkMjQvcm9vdC91c3IvbGliNjQKTUFOUEFUSD0vb3B0L3JoL3JoLXB5dGhvbjM2L3Jvb3QvdXNyL3NoYXJlL21hbjovb3B0L3JoL3JoLWdpdDI5L3Jvb3QvdXNyL3NoYXJlL21hbgpQRVJMNUxJQj0vb3B0L3JoL3JoLWdpdDI5L3Jvb3QvdXNyL3NoYXJlL3Blcmw1L3ZlbmRvcl9wZXJsClBLR19DT05GSUdfUEFUSD0vb3B0L3JoL3JoLXB5dGhvbjM2L3Jvb3QvdXNyL2xpYjY0L3BrZ2NvbmZpZwpYREdfREFUQV9ESVJTPS9vcHQvcmgvcmgtcHl0aG9uMzYvcm9vdC91c3Ivc2hhcmU6L3Vzci9sb2NhbC9zaGFyZTovdXNyL3NoYXJlCkVPRgoKc2VkIC1pIC1lICdzL15PUFRJT05TPSdcJycvT1BUSU9OUz0nXCcnLUcgY2xvdWQtdXNlciAvJyAvZXRjL3N5c2NvbmZpZy9kb2NrZXIKCnN5c3RlbWN0bCBlbmFibGUgZG9ja2VyCgpjYXQgPi9ldGMvY3Jvbi5ob3VybHkvdG1wd2F0Y2ggPDwnRU9GJwojIS9iaW4vYmFzaAoKZXhlYyAvc2Jpbi90bXB3YXRjaCAyNGggL3RtcApFT0YKY2htb2QgK3ggL2V0Yy9jcm9uLmhvdXJseS90bXB3YXRjaAoKKHNsZWVwIDMwOyByZWJvb3QpICYK')))]"
+                                        "script": "[base64(concat(base64ToString('c2V0IC1lCgo='),'CIAZPTOKEN=''',parameters('ciAzpToken'),'''\n','CIPOOLNAME=''',parameters('ciPoolName'),'''\n','\n',base64ToString('Cnl1bSAteSB1cGRhdGUgLXggV0FMaW51eEFnZW50CgpsdmV4dGVuZCAtbCArNTAlRlJFRSAvZGV2L3Jvb3R2Zy92YXJsdgp4ZnNfZ3Jvd2ZzIC92YXIKCmx2ZXh0ZW5kIC1sICsxMDAlRlJFRSAvZGV2L3Jvb3R2Zy9ob21lbHYKeGZzX2dyb3dmcyAvaG9tZQoKcnBtIC0taW1wb3J0IGh0dHBzOi8vZGwuZmVkb3JhcHJvamVjdC5vcmcvcHViL2VwZWwvUlBNLUdQRy1LRVktRVBFTC04CnJwbSAtLWltcG9ydCBodHRwczovL3BhY2thZ2VzLm1pY3Jvc29mdC5jb20va2V5cy9taWNyb3NvZnQuYXNjCgp5dW0gLXkgaW5zdGFsbCBodHRwczovL2RsLmZlZG9yYXByb2plY3Qub3JnL3B1Yi9lcGVsL2VwZWwtcmVsZWFzZS1sYXRlc3QtOC5ub2FyY2gucnBtCgpjYXQgPi9ldGMveXVtLnJlcG9zLmQvYXp1cmUucmVwbyA8PCdFT0YnClthenVyZS1jbGldCm5hbWU9YXp1cmUtY2xpCmJhc2V1cmw9aHR0cHM6Ly9wYWNrYWdlcy5taWNyb3NvZnQuY29tL3l1bXJlcG9zL2F6dXJlLWNsaQplbmFibGVkPXllcwpncGdjaGVjaz15ZXMKRU9GCgp5dW0gLXkgaW5zdGFsbCBhenVyZS1jbGkgcG9kbWFuIHBvZG1hbi1kb2NrZXIganEgZ2NjIGdwZ21lLWRldmVsIGxpYmFzc3Vhbi1kZXZlbCBnaXQgbWFrZSB0bXB3YXRjaCBnby10b29sc2V0LTEuMTQuMTItMS5tb2R1bGUrZWw4LjMuMCs4Nzg0KzM4MDM5NGRjCgojIFN1cHByZXNzIGVtdWxhdGlvbiBvdXRwdXQgZm9yIHBvZG1hbiBpbnN0ZWFkIG9mIGRvY2tlciBmb3IgYXogYWNyIGNvbXBhdGFiaWxpdHkKbWtkaXIgLXAgL2V0Yy9jb250YWluZXJzLwp0b3VjaCAvZXRjL2NvbnRhaW5lcnMvbm9kb2NrZXIKClZTVFNfQUdFTlRfVkVSU0lPTj0yLjE4OC4zCm1rZGlyIC9ob21lL2Nsb3VkLXVzZXIvYWdlbnQKcHVzaGQgL2hvbWUvY2xvdWQtdXNlci9hZ2VudApjdXJsIGh0dHBzOi8vdnN0c2FnZW50cGFja2FnZS5henVyZWVkZ2UubmV0L2FnZW50LyR7VlNUU19BR0VOVF9WRVJTSU9OfS92c3RzLWFnZW50LWxpbnV4LXg2NC0ke1ZTVFNfQUdFTlRfVkVSU0lPTn0udGFyLmd6IHwgdGFyIC14egpjaG93biAtUiBjbG91ZC11c2VyOmNsb3VkLXVzZXIgLgoKLi9iaW4vaW5zdGFsbGRlcGVuZGVuY2llcy5zaApzdWRvIC11IGNsb3VkLXVzZXIgLi9jb25maWcuc2ggLS11bmF0dGVuZGVkIC0tdXJsIGh0dHBzOi8vZGV2LmF6dXJlLmNvbS9tc2F6dXJlIC0tYXV0aCBwYXQgLS10b2tlbiAiJENJQVpQVE9LRU4iIC0tcG9vbCAiJENJUE9PTE5BTUUiIC0tYWdlbnQgIkFSTy1SSEVMLSRIT1NUTkFNRSIgLS1yZXBsYWNlCi4vc3ZjLnNoIGluc3RhbGwgY2xvdWQtdXNlcgpwb3BkCgpjYXQgPi9ob21lL2Nsb3VkLXVzZXIvYWdlbnQvLnBhdGggPDwnRU9GJwovdXNyL2xvY2FsL2JpbjovdXNyL2JpbjovdXNyL2xvY2FsL3NiaW46L3Vzci9zYmluOi9ob21lL2Nsb3VkLXVzZXIvLmxvY2FsL2JpbjovaG9tZS9jbG91ZC11c2VyL2JpbgpFT0YKCmNhdCA+L2hvbWUvY2xvdWQtdXNlci9hZ2VudC8uZW52IDw8J0VPRicKR09MQU5HX0ZJUFM9MQpFT0YKCmNhdCA+L2V0Yy9jcm9uLmhvdXJseS90bXB3YXRjaCA8PCdFT0YnCiMhL2Jpbi9iYXNoCgpleGVjIC9zYmluL3RtcHdhdGNoIDI0aCAvdG1wCkVPRgpjaG1vZCAreCAvZXRjL2Nyb24uaG91cmx5L3RtcHdhdGNoCgooc2xlZXAgMzA7IHJlYm9vdCkgJgo=')))]"
                                     }
                                 }
                             }
@@ -235,9 +235,82 @@
             "type": "Microsoft.Compute/virtualMachineScaleSets",
             "location": "[resourceGroup().location]",
             "condition": "[greater(parameters('ciCapacity'), 0)]",
-            "apiVersion": "2020-06-01",
+            "apiVersion": "2020-12-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"
+            ]
+        },
+        {
+            "name": "[concat(take(resourceGroup().name,15), '-sharedKV')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": [],
+                "enabledForDiskEncryption": true,
+                "enablePurgeProtection": true
+            },
+            "apiVersion": "2019-09-01"
+        },
+        {
+            "properties": {
+                "kty": "RSA",
+                "keySize": 4096
+            },
+            "name": "[concat(concat(take(resourceGroup().name,15), '-sharedKV'), '/', concat(resourceGroup().name, '-disk-encryption-key'))]",
+            "type": "Microsoft.KeyVault/vaults/keys",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-09-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,15), '-sharedKV'))]"
+            ]
+        },
+        {
+            "name": "[concat(concat(take(resourceGroup().name,15), '-sharedKV'), '/add')]",
+            "type": "Microsoft.KeyVault/vaults/accessPolicies",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "accessPolicies": [
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[reference(resourceId('Microsoft.Compute/diskEncryptionSets', concat(resourceGroup().name, '-disk-encryption-set')), '2021-04-01', 'Full').identity.PrincipalId]",
+                        "permissions": {
+                            "keys": [
+                                "get",
+                                "wrapKey",
+                                "unwrapKey"
+                            ]
+                        }
+                    }
+                ]
+            },
+            "apiVersion": "2019-09-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/diskEncryptionSets', concat(resourceGroup().name, '-disk-encryption-set'))]"
+            ]
+        },
+        {
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "activeKey": {
+                    "sourceVault": {
+                        "id": "[resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,15), '-sharedKV'))]"
+                    },
+                    "keyUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/keys', concat(take(resourceGroup().name,15), '-sharedKV'), concat(resourceGroup().name, '-disk-encryption-key')), '2019-09-01', 'Full').properties.keyUriWithVersion]"
+                }
+            },
+            "name": "[concat(resourceGroup().name, '-disk-encryption-set')]",
+            "type": "Microsoft.Compute/diskEncryptionSets",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2020-12-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults/keys', concat(take(resourceGroup().name,15), '-sharedKV'), concat(resourceGroup().name, '-disk-encryption-key'))]"
             ]
         },
         {
@@ -332,7 +405,7 @@
             "name": "dev-proxy-vmss",
             "type": "Microsoft.Compute/virtualMachineScaleSets",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2020-06-01"
+            "apiVersion": "2020-12-01"
         }
     ]
 }

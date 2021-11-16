@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -39,35 +38,54 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		vm := vms[0]
 
 		By("triggering the redeploy action")
-		startTime := time.Now()
+		clockDrift := -1 * time.Minute
+		startTime := time.Now().Add(clockDrift)
 		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+resourceID+"/redeployvm", url.Values{"vmName": []string{*vm.Name}}, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-		By("verifying through Azure activity logs that the redeployment happened")
-		// Can be material delays in shipping activity logs, hence healthy 15 min wait.
-		// https://docs.microsoft.com/en-us/azure/azure-monitor/logs/data-ingestion-time#azure-activity-logs-resource-logs-and-metrics
-		err = wait.PollImmediate(10*time.Second, 20*time.Minute, func() (bool, error) {
-			filter := fmt.Sprintf(
-				"eventTimestamp ge '%s' and resourceId eq '%s'",
-				startTime.Format(time.RFC3339),
-				*vm.ID,
-			)
+		By("verifying through cluster events that the redeployment happened")
+		err = wait.PollImmediate(10*time.Second, 10*time.Minute, func() (bool, error) {
+			events, err := clients.Kubernetes.EventsV1().Events("default").List(ctx, metav1.ListOptions{})
 
-			activityLogs, err := clients.ActivityLogs.List(ctx, filter, "status,operationName")
 			if err != nil {
 				return false, err
 			}
 
-			var count int
-			for _, activityLog := range activityLogs {
-				if *activityLog.OperationName.Value == "Microsoft.Compute/virtualMachines/redeploy/action" &&
-					*activityLog.Status.Value == "Succeeded" {
-					count++
+			var nodeKillTime metav1.MicroTime
+
+			for _, event := range events.Items {
+				if nodeKillTime.IsZero() &&
+					event.Reason == "TerminationStart" &&
+					!event.CreationTimestamp.After(startTime) {
+					nodeKillTime = metav1.MicroTime(event.CreationTimestamp)
+					break
+				}
+
+			}
+
+			var nodeNotReady, rebooted, nodeReady bool
+
+			for _, event := range events.Items {
+				if event.CreationTimestamp.After(nodeKillTime.Time) {
+					if !nodeNotReady &&
+						event.Reason == "NodeNotReady" &&
+						event.Regarding.Name == *vm.Name {
+						nodeNotReady = true
+					} else if !rebooted &&
+						event.Reason == "Rebooted" &&
+						event.Regarding.Name == *vm.Name {
+						rebooted = true
+					} else if !nodeReady &&
+						event.Reason == "NodeReady" &&
+						event.Regarding.Name == *vm.Name {
+						nodeReady = true
+						break
+					}
 				}
 			}
 
-			return count == 1, nil
+			return nodeNotReady && rebooted && nodeReady, nil
 		})
 		Expect(err).NotTo(HaveOccurred())
 

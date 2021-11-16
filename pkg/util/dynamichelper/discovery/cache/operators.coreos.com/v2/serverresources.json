@@ -1,0 +1,41 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "operators.coreos.com/v2",
+    "resources": [
+        {
+            "name": "operatorconditions",
+            "singularName": "operatorcondition",
+            "namespaced": true,
+            "kind": "OperatorCondition",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "condition"
+            ],
+            "categories": [
+                "olm"
+            ],
+            "storageVersionHash": "Cil3d/t/Kpc="
+        },
+        {
+            "name": "operatorconditions/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "OperatorCondition",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

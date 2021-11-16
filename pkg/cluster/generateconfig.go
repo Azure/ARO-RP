@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -17,7 +16,6 @@ import (
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/openshift/installer/pkg/ipnet"
-	"github.com/openshift/installer/pkg/rhcos"
 	"github.com/openshift/installer/pkg/types"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	"github.com/openshift/installer/pkg/types/validation"
@@ -27,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
+	"github.com/Azure/ARO-RP/pkg/util/rhcos"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -142,6 +141,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 						EncryptionAtHost: m.doc.OpenShiftCluster.Properties.MasterProfile.EncryptionAtHost == api.EncryptionAtHostEnabled,
 						OSDisk: azuretypes.OSDisk{
 							DiskEncryptionSetID: m.doc.OpenShiftCluster.Properties.MasterProfile.DiskEncryptionSetID,
+							DiskSizeGB:          1024,
 						},
 					},
 				},
@@ -181,6 +181,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 				},
 			},
 			PullSecret: pullSecret,
+			FIPS:       m.doc.OpenShiftCluster.Properties.ClusterProfile.FipsValidatedModules == api.FipsValidatedModulesEnabled,
 			ImageContentSources: []types.ImageContentSource{
 				{
 					Source: "quay.io/openshift-release-dev/ocp-release",
@@ -215,7 +216,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 		installConfig.Config.Publish = types.InternalPublishingStrategy
 	}
 
-	installConfig.Config.Azure.Image, err = getRHCOSImage(ctx)
+	installConfig.Config.Azure.Image, err = rhcos.Image(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -233,25 +234,4 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 	}
 
 	return installConfig, image, err
-}
-
-var rxRHCOS = regexp.MustCompile(`rhcos-((\d+)\.\d+\.\d{8})\d{4}\-\d+-azure\.x86_64\.vhd`)
-
-func getRHCOSImage(ctx context.Context) (*azuretypes.Image, error) {
-	osImage, err := rhcos.VHD(ctx, types.ArchitectureAMD64)
-	if err != nil {
-		return nil, err
-	}
-
-	m := rxRHCOS.FindStringSubmatch(osImage)
-	if m == nil {
-		return nil, fmt.Errorf("couldn't match osImage %q", osImage)
-	}
-
-	return &azuretypes.Image{
-		Publisher: "azureopenshift",
-		Offer:     "aro4",
-		SKU:       "aro_" + m[2], // "aro_4x"
-		Version:   m[1],          // "4x.yy.2020zzzz"
-	}, nil
 }

@@ -20,6 +20,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
+// These are versions that need to be skipped because they are unable
+// to be mirrored
+var doNotMirrorTags = map[string]struct{}{
+	"4.8.8":  {}, // release points to unreachable link
+	"4.7.27": {}, // release points to unreachable link
+}
+
 func getAuth(key string) (*types.DockerAuthConfig, error) {
 	b, err := base64.StdEncoding.DecodeString(os.Getenv(key))
 	if err != nil {
@@ -102,6 +109,10 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 	var errorOccurred bool
 	for _, release := range releases {
+		if _, ok := doNotMirrorTags[release.Version]; ok {
+			log.Printf("skipping mirror of release %s", release.Version)
+			continue
+		}
 		log.Printf("mirroring release %s", release.Version)
 		err = pkgmirror.Mirror(ctx, log, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
 		if err != nil {

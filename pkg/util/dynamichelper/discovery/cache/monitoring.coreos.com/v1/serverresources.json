@@ -18,6 +18,9 @@
                 "update",
                 "watch"
             ],
+            "categories": [
+                "prometheus-operator"
+            ],
             "storageVersionHash": "NshW3zg1K7o="
         },
         {
@@ -34,6 +37,9 @@
                 "patch",
                 "update",
                 "watch"
+            ],
+            "categories": [
+                "prometheus-operator"
             ],
             "storageVersionHash": "t6BHpUAzPig="
         },
@@ -52,6 +58,9 @@
                 "update",
                 "watch"
             ],
+            "categories": [
+                "prometheus-operator"
+            ],
             "storageVersionHash": "x4d99qNb5YI="
         },
         {
@@ -68,6 +77,9 @@
                 "patch",
                 "update",
                 "watch"
+            ],
+            "categories": [
+                "prometheus-operator"
             ],
             "storageVersionHash": "C8naPY4eojU="
         },
@@ -103,6 +115,9 @@
                 "update",
                 "watch"
             ],
+            "categories": [
+                "prometheus-operator"
+            ],
             "storageVersionHash": "JLhPcfa+5xE="
         },
         {
@@ -119,6 +134,9 @@
                 "patch",
                 "update",
                 "watch"
+            ],
+            "categories": [
+                "prometheus-operator"
             ],
             "storageVersionHash": "YBxpg/kA6UI="
         }

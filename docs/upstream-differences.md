@@ -5,7 +5,7 @@ upstream OCP.
 
 ## Installer carry patches
 
-See https://github.com/openshift/installer/compare/release-4.7...mjudeikis:release-4.7-azure.
+See https://github.com/openshift/installer/compare/release-4.8...jewzaam:release-4.8-azure.
 
 ## Installation differences
 
@@ -84,6 +84,7 @@ Once installer fork is ready:
 1. `make generate`.
 1. Update `pkg/util/version/const.go` to point to the new release.
     * You should be able to find latest published release and image hash [on quay.io](https://quay.io/repository/openshift-release-dev/ocp-release?tab=tags).
-    * After this point, you should be able to create a dev cluster using the RP and it should use the new release.
+1. Publish RHCOS image. See [this document](./publish-rhcos-image.md).
+1. After this point, you should be able to create a dev cluster using the RP and it should use the new release.
 1. `make discoverycache`.
     * This command requires a running cluster with the new version.

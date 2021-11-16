@@ -94,7 +94,14 @@
                 "eastasia",
                 "centralindia",
                 "koreacentral",
-                "southcentralus"
+                "southcentralus",
+                "canadacentral",
+                "germanywestcentral",
+                "norwayeast",
+                "switzerlandnorth",
+                "brazilsouth",
+                "southafricanorth",
+                "northcentralus"
             ]
         },
         "portalAccessGroupIds": {
@@ -144,6 +151,9 @@
         },
         "vmSize": {
             "value": "Standard_D2s_v3"
+        },
+        "vmssCleanupEnabled": {
+            "value": true
         },
         "vmssName": {
             "value": ""

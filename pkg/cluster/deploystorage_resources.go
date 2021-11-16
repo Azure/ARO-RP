@@ -80,6 +80,9 @@ func (m *manager) storageAccount(name, region string) *arm.Resource {
 			Sku: &mgmtstorage.Sku{
 				Name: "Standard_LRS",
 			},
+			AccountProperties: &mgmtstorage.AccountProperties{
+				MinimumTLSVersion: mgmtstorage.TLS12,
+			},
 			Name:     &name,
 			Location: &region,
 			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),

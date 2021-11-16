@@ -114,6 +114,8 @@ func acceptableNames(path string) []string {
 		return []string{"dbmetrics"}
 	case "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1":
 		return []string{"arov1alpha1"}
+	case "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1":
+		return []string{"aropreviewv1alpha1"}
 	case "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned":
 		return []string{"aroclient"}
 	case "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake":
@@ -124,6 +126,8 @@ func acceptableNames(path string) []string {
 		return []string{"", "utilnamespace"}
 	case "github.com/Azure/ARO-RP/pkg/util/recover":
 		return []string{"", "utilrecover"}
+	case "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault":
+		return []string{"", "keyvaultclient"}
 	case "github.com/Azure/ARO-RP/test/database":
 		return []string{"testdatabase"}
 	case "github.com/Azure/ARO-RP/test/util/dynamichelper":
@@ -160,6 +164,10 @@ func acceptableNames(path string) []string {
 		return []string{"icazure"}
 	case "github.com/openshift/installer/pkg/types/azure":
 		return []string{"azuretypes"}
+	case "github.com/coreos/stream-metadata-go/arch":
+		return []string{"coreosarch"}
+	case "github.com/openshift/installer/pkg/rhcos":
+		return []string{"rhcospkg"}
 	case "golang.org/x/crypto/ssh":
 		return []string{"", "cryptossh"}
 	case "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1":

@@ -49,6 +49,21 @@ func (mr *MockDisksClientMockRecorder) DeleteAndWait(arg0, arg1, arg2 interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockDisksClient)(nil).DeleteAndWait), arg0, arg1, arg2)
 }
 
+// Get mocks base method.
+func (m *MockDisksClient) Get(arg0 context.Context, arg1, arg2 string) (compute.Disk, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
+	ret0, _ := ret[0].(compute.Disk)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockDisksClientMockRecorder) Get(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDisksClient)(nil).Get), arg0, arg1, arg2)
+}
+
 // MockResourceSkusClient is a mock of ResourceSkusClient interface.
 type MockResourceSkusClient struct {
 	ctrl     *gomock.Controller
@@ -336,21 +351,6 @@ func (m *MockVirtualMachineScaleSetsClient) DeleteAndWait(arg0 context.Context, 
 func (mr *MockVirtualMachineScaleSetsClientMockRecorder) DeleteAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockVirtualMachineScaleSetsClient)(nil).DeleteAndWait), arg0, arg1, arg2)
-}
-
-// Get mocks base method.
-func (m *MockVirtualMachineScaleSetsClient) Get(arg0 context.Context, arg1, arg2 string) (compute.VirtualMachineScaleSet, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
-	ret0, _ := ret[0].(compute.VirtualMachineScaleSet)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Get indicates an expected call of Get.
-func (mr *MockVirtualMachineScaleSetsClientMockRecorder) Get(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockVirtualMachineScaleSetsClient)(nil).Get), arg0, arg1, arg2)
 }
 
 // List mocks base method.

@@ -6,6 +6,7 @@ package gateway
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -35,7 +36,7 @@ func (g *gateway) isAllowed(conn *proxyproto.Conn, host string) (string, bool, e
 	g.mu.RUnlock()
 
 	if gateway == nil || gateway.Deleting {
-		return "", false, errors.New("gateway record not found")
+		return "", false, fmt.Errorf("gateway record not found for linkID %s", linkID)
 	}
 
 	if _, found := g.allowList[strings.ToLower(host)]; found {

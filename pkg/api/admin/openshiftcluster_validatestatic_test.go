@@ -619,6 +619,20 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.provisionedBy: Changing property 'properties.provisionedBy' is not allowed.",
 		},
+		{
+			name: "registryProfiles change is not allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						RegistryProfiles: []RegistryProfile{{Name: "test", Username: "testuser"}},
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.RegistryProfiles[0].Username = "someothertestuser"
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.registryProfiles: Changing property 'properties.registryProfiles' is not allowed.",
+		},
 	}
 
 	for _, tt := range tests {

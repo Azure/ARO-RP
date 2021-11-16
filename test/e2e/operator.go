@@ -273,3 +273,51 @@ var _ = Describe("ARO Operator - Conditions", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 })
+
+var _ = XDescribe("ARO Operator - MachineSet Controller", func() {
+	Specify("operator should maintain at least two worker replicas", func() {
+		ctx := context.Background()
+
+		// TODO: MSFT Billing expects that we only scale a single node (4 VMs).
+		// Need to work with billing pipeline to ensure we can run operator tests
+		skipIfNotInDevelopmentEnv()
+
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		if !instance.Spec.Features.ReconcileMachineSet {
+			Skip("MachineSet Controller is not enabled, skipping this test")
+		}
+
+		mss, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(mss.Items).NotTo(BeEmpty())
+
+		// Zero all machinesets (avoid availability zone confusion)
+		for _, object := range mss.Items {
+			err = scale(object.Name, 0)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = waitForScale(object.Name)
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		// Re-count and assert that operator added back replicas
+		modifiedMachineSets, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		replicaCount := 0
+		for _, machineset := range modifiedMachineSets.Items {
+			if machineset.Spec.Replicas != nil {
+				replicaCount += int(*machineset.Spec.Replicas)
+			}
+		}
+		Expect(replicaCount).To(BeEquivalentTo(minSupportedReplicas))
+
+		// Restore previous state
+		for _, ms := range mss.Items {
+			err := scale(ms.Name, *ms.Spec.Replicas)
+			Expect(err).NotTo(HaveOccurred())
+		}
+	})
+})

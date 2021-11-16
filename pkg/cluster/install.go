@@ -9,6 +9,7 @@ import (
 	"time"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
@@ -36,6 +37,7 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute, false),
+		steps.Action(m.populateRegistryStorageAccountName),
 		steps.Action(m.ensureBillingRecord), // belt and braces
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
@@ -87,6 +89,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
 			steps.Action(m.ensureACRToken),
 			steps.Action(m.generateSSHKey),
+			steps.Action(m.generateFIPSMode),
 			steps.Action(func(ctx context.Context) error {
 				var err error
 				installConfig, image, err = m.generateInstallConfig(ctx)
@@ -241,6 +244,11 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	m.configcli, err = configclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	m.registryclient, err = imageregistryclient.NewForConfig(restConfig)
 	return err
 }
 
