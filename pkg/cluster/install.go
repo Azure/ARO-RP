@@ -29,11 +29,11 @@ import (
 
 // AdminUpdate performs an admin update of an ARO cluster
 func (m *manager) AdminUpdate(ctx context.Context) error {
-	toRun := m.adminUpdate(ctx)
+	toRun := m.adminUpdate()
 	return m.runSteps(ctx, toRun)
 }
 
-func (m *manager) adminUpdate(ctx context.Context) []steps.Step {
+func (m *manager) adminUpdate() []steps.Step {
 	task := m.doc.OpenShiftCluster.Properties.MaintenanceTask
 	isEverything := task == api.MaintenanceTaskEverything || task == ""
 	isOperator := task == api.MaintenanceTaskOperator

@@ -4,7 +4,6 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -14,8 +13,6 @@ import (
 )
 
 func TestAdminUpdateSteps(t *testing.T) {
-	ctx := context.Background()
-
 	const (
 		key = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
 	)
@@ -129,7 +126,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 			m := &manager{
 				doc: tt.fixture(),
 			}
-			toRun := m.adminUpdate(ctx)
+			toRun := m.adminUpdate()
 
 			var stepsToRun []string
 			for _, s := range toRun {
