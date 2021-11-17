@@ -6,6 +6,7 @@ package node
 import (
 	"context"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -360,8 +361,10 @@ func TestReconciler(t *testing.T) {
 			baseCluster := arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: arov1alpha1.ClusterSpec{
-					InfraID:  "aro-fake",
-					Features: arov1alpha1.FeaturesSpec{ReconcileNodeDrainer: tt.featureFlag},
+					InfraID: "aro-fake",
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						ENABLED: strconv.FormatBool(tt.featureFlag),
+					},
 				},
 			}
 

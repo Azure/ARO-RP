@@ -22,6 +22,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
+const (
+	CONFIG_NAMESPACE string = "aro.nodedrainer"
+	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+)
+
 // Reconciler spots nodes that look like they're stuck upgrading.  When this
 // happens, it tries to drain them disabling eviction (so PDBs don't count).
 type Reconciler struct {
@@ -45,7 +50,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.Features.ReconcileNodeDrainer {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+		// controller is disabled
 		return reconcile.Result{}, nil
 	}
 

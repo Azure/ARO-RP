@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/machineset"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
@@ -76,7 +77,7 @@ var _ = Describe("Scale nodes", func() {
 		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		if instance.Spec.Features.ReconcileMachineSet {
+		if instance.Spec.OperatorFlags.GetSimpleBoolean(machineset.ENABLED) {
 			Skip("MachineSet Controller is enabled, skipping this test")
 		}
 

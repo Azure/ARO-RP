@@ -25,7 +25,9 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/machineset"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -285,7 +287,7 @@ var _ = Describe("ARO Operator - MachineSet Controller", func() {
 		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		if !instance.Spec.Features.ReconcileMachineSet {
+		if !instance.Spec.OperatorFlags.GetSimpleBoolean(machineset.ENABLED) {
 			Skip("MachineSet Controller is not enabled, skipping this test")
 		}
 
@@ -345,8 +347,9 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 	enableReconcileSubnet := func() {
 		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		if !instance.Spec.Features.ReconcileSubnets {
-			instance.Spec.Features.ReconcileSubnets = true
+
+		if !instance.Spec.OperatorFlags.GetSimpleBoolean(subnets.ENABLED) {
+			instance.Spec.OperatorFlags[subnets.ENABLED] = "true"
 			_, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, instance, metav1.UpdateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 		}

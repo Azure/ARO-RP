@@ -29,6 +29,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
+const (
+	CONFIG_NAMESPACE string = "aro.routefix"
+	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+	MANAGED          string = CONFIG_NAMESPACE + ".managed"
+)
+
 // Reconciler is the controller struct
 type Reconciler struct {
 	log *logrus.Entry
@@ -64,13 +70,13 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli conf
 
 // Reconcile fixes the daemonset Routefix
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, request.Name, metav1.GetOptions{})
+	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
-		r.log.Error(err)
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.Features.ReconcileRouteFix {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+		// controller is disabled
 		return reconcile.Result{}, nil
 	}
 
