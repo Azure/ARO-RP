@@ -107,6 +107,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							ClusterProfile: api.ClusterProfile{
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
+							MaintenanceTask: api.MaintenanceTaskEverything,
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 							},
@@ -129,6 +130,168 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					ClusterProfile: admin.ClusterProfile{
 						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
 					},
+					MaintenanceTask: admin.MaintenanceTaskEverything,
+					NetworkProfile: admin.NetworkProfile{
+						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+					},
+					MasterProfile: admin.MasterProfile{
+						EncryptionAtHost: admin.EncryptionAtHostDisabled,
+					},
+				},
+			},
+		},
+		{
+			name: "patch with operator update request",
+			request: func(oc *admin.OpenShiftCluster) {
+				oc.Properties.MaintenanceTask = admin.MaintenanceTaskOperator
+			},
+			isPatch: true,
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+					},
+				})
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+						Tags: map[string]string{"tag": "will-be-kept"},
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateSucceeded,
+						},
+					},
+				})
+			},
+			wantSystemDataEnriched: true,
+			wantEnriched:           []string{testdatabase.GetResourcePath(mockSubID, "resourceName")},
+			wantDocuments: func(c *testdatabase.Checker) {
+				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
+					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					AsyncOperation: &api.AsyncOperation{
+						InitialProvisioningState: api.ProvisioningStateAdminUpdating,
+						ProvisioningState:        api.ProvisioningStateAdminUpdating,
+					},
+				})
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+						Tags: map[string]string{"tag": "will-be-kept"},
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:     api.ProvisioningStateAdminUpdating,
+							LastProvisioningState: api.ProvisioningStateSucceeded,
+							ClusterProfile: api.ClusterProfile{
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
+							},
+							MaintenanceTask: api.MaintenanceTaskOperator,
+							NetworkProfile: api.NetworkProfile{
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+							},
+							MasterProfile: api.MasterProfile{
+								EncryptionAtHost: api.EncryptionAtHostDisabled,
+							},
+						},
+					},
+				})
+			},
+			wantAsync:      true,
+			wantStatusCode: http.StatusOK,
+			wantResponse: &admin.OpenShiftCluster{
+				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+				Tags: map[string]string{"tag": "will-be-kept"},
+				Properties: admin.OpenShiftClusterProperties{
+					ProvisioningState:     admin.ProvisioningStateAdminUpdating,
+					LastProvisioningState: admin.ProvisioningStateSucceeded,
+					ClusterProfile: admin.ClusterProfile{
+						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+					},
+					MaintenanceTask: admin.MaintenanceTaskOperator,
+					NetworkProfile: admin.NetworkProfile{
+						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+					},
+					MasterProfile: admin.MasterProfile{
+						EncryptionAtHost: admin.EncryptionAtHostDisabled,
+					},
+				},
+			},
+		},
+		{
+			name: "patch with operator update request -- existing maintenance task",
+			request: func(oc *admin.OpenShiftCluster) {
+				oc.Properties.MaintenanceTask = admin.MaintenanceTaskOperator
+			},
+			isPatch: true,
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+					},
+				})
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+						Tags: map[string]string{"tag": "will-be-kept"},
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateSucceeded,
+							MaintenanceTask:   api.MaintenanceTaskEverything,
+						},
+					},
+				})
+			},
+			wantSystemDataEnriched: true,
+			wantEnriched:           []string{testdatabase.GetResourcePath(mockSubID, "resourceName")},
+			wantDocuments: func(c *testdatabase.Checker) {
+				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
+					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					AsyncOperation: &api.AsyncOperation{
+						InitialProvisioningState: api.ProvisioningStateAdminUpdating,
+						ProvisioningState:        api.ProvisioningStateAdminUpdating,
+					},
+				})
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+						Tags: map[string]string{"tag": "will-be-kept"},
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:     api.ProvisioningStateAdminUpdating,
+							LastProvisioningState: api.ProvisioningStateSucceeded,
+							ClusterProfile: api.ClusterProfile{
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
+							},
+							MaintenanceTask: api.MaintenanceTaskOperator,
+							NetworkProfile: api.NetworkProfile{
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+							},
+							MasterProfile: api.MasterProfile{
+								EncryptionAtHost: api.EncryptionAtHostDisabled,
+							},
+						},
+					},
+				})
+			},
+			wantAsync:      true,
+			wantStatusCode: http.StatusOK,
+			wantResponse: &admin.OpenShiftCluster{
+				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+				Tags: map[string]string{"tag": "will-be-kept"},
+				Properties: admin.OpenShiftClusterProperties{
+					ProvisioningState:     admin.ProvisioningStateAdminUpdating,
+					LastProvisioningState: admin.ProvisioningStateSucceeded,
+					ClusterProfile: admin.ClusterProfile{
+						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+					},
+					MaintenanceTask: admin.MaintenanceTaskOperator,
 					NetworkProfile: admin.NetworkProfile{
 						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
 					},

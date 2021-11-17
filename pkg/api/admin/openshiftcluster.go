@@ -34,6 +34,7 @@ type OpenShiftClusterProperties struct {
 	LastProvisioningState           ProvisioningState       `json:"lastProvisioningState,omitempty"`
 	FailedProvisioningState         ProvisioningState       `json:"failedProvisioningState,omitempty"`
 	LastAdminUpdateError            string                  `json:"lastAdminUpdateError,omitempty"`
+	MaintenanceTask                 MaintenanceTask         `json:"maintenanceTask,omitempty" mutable:"true"`
 	CreatedAt                       time.Time               `json:"createdAt,omitempty"`
 	CreatedBy                       string                  `json:"createdBy,omitempty"`
 	ProvisionedBy                   string                  `json:"provisionedBy,omitempty"`
@@ -73,6 +74,13 @@ type FipsValidatedModules string
 const (
 	FipsValidatedModulesEnabled  FipsValidatedModules = "Enabled"
 	FipsValidatedModulesDisabled FipsValidatedModules = "Disabled"
+)
+
+type MaintenanceTask string
+
+const (
+	MaintenanceTaskEverything MaintenanceTask = "Everything"
+	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
 )
 
 // ClusterProfile represents a cluster profile.

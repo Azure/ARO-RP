@@ -29,6 +29,10 @@ func (sv *openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftC
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, err.Message)
 	}
 
+	if !(oc.Properties.MaintenanceTask == "" || oc.Properties.MaintenanceTask == MaintenanceTaskEverything || oc.Properties.MaintenanceTask == MaintenanceTaskOperator) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.maintenanceTask", "Invalid enum parameter.")
+	}
+
 	if current.Properties.FeatureProfile.GatewayEnabled && !oc.Properties.FeatureProfile.GatewayEnabled {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "properties.featureProfile.gatewayEnabled", "Changing property 'properties.featureProfile.gatewayEnabled' is not allowed.")
 	}
