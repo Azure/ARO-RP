@@ -5,6 +5,7 @@ package adminactions
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	"github.com/sirupsen/logrus"
@@ -22,6 +23,7 @@ import (
 type AzureActions interface {
 	ResourcesList(ctx context.Context) ([]byte, error)
 	VMRedeployAndWait(ctx context.Context, vmName string) error
+	VMSizeList(ctx context.Context, vmName string) ([]byte, error)
 	VMSerialConsole(ctx context.Context, w http.ResponseWriter, log *logrus.Entry, vmName string) error
 }
 
@@ -65,4 +67,12 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 func (a *azureActions) VMRedeployAndWait(ctx context.Context, vmName string) error {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 	return a.virtualMachines.RedeployAndWait(ctx, clusterRGName, vmName)
+}
+func (a *azureActions) VMSizeList(ctx context.Context, vmName string) ([]byte, error) {
+	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
+	vmSizes, err := a.virtualMachines.ListVMSizes(ctx, clusterRGName, vmName)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(*vmSizes)
 }

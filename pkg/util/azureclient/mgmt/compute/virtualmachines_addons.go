@@ -16,6 +16,7 @@ type VirtualMachinesClientAddons interface {
 	RedeployAndWait(ctx context.Context, resourceGroupName string, VMName string) error
 	StartAndWait(ctx context.Context, resourceGroupName string, VMName string) error
 	List(ctx context.Context, resourceGroupName string) (result []mgmtcompute.VirtualMachine, err error)
+	ListVMSizes(ctx context.Context, resourceGroupName string, VMName string) (result *[]mgmtcompute.VirtualMachineSize, err error)
 }
 
 func (c *virtualMachinesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, VMName string, parameters mgmtcompute.VirtualMachine) error {
@@ -70,4 +71,11 @@ func (c *virtualMachinesClient) List(ctx context.Context, resourceGroupName stri
 	}
 
 	return result, nil
+}
+func (c *virtualMachinesClient) ListVMSizes(ctx context.Context, resourceGroupName string, VMName string) (result *[]mgmtcompute.VirtualMachineSize, err error) {
+	future, err := c.VirtualMachinesClient.ListAvailableSizes(ctx, resourceGroupName, VMName)
+	if err != nil {
+		return nil, err
+	}
+	return future.Value, err
 }
