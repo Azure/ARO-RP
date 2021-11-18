@@ -33,6 +33,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machine"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machineset"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/node"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/rbac"
@@ -201,6 +202,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", controllers.StorageAccountsControllerName),
 			arocli, maocli, kubernetescli, imageregistrycli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", controllers.StorageAccountsControllerName, err)
+		}
+		if err = (muo.NewReconciler(
+			log.WithField("controller", controllers.ManagedUpgradeOperatorControllerName),
+			arocli, kubernetescli, dh)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", controllers.ManagedUpgradeOperatorControllerName, err)
 		}
 	}
 
