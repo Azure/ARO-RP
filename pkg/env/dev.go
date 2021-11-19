@@ -68,13 +68,13 @@ func (d *dev) InitializeAuthorizers() error {
 	return nil
 }
 
-func (d *dev) AROOperatorImage() string {
+func (d *dev) AROOperatorImage(commit string) string {
 	override := os.Getenv("ARO_IMAGE")
 	if override != "" {
 		return override
 	}
 
-	return fmt.Sprintf("%s/aro:%s", d.ACRDomain(), version.GitCommit)
+	return fmt.Sprintf("%s/aro:%s", d.ACRDomain(), commit)
 }
 
 func (d *dev) Listen() (net.Listener, error) {

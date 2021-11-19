@@ -86,7 +86,7 @@ type Interface interface {
 	ServiceKeyvault() keyvault.Manager
 	ACRResourceID() string
 	ACRDomain() string
-	AROOperatorImage() string
+	AROOperatorImage(string) string
 
 	// VMSku returns SKU for a given vm size. Note that this
 	// returns a pointer to partly populated object.

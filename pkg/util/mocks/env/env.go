@@ -210,17 +210,17 @@ func (mr *MockInterfaceMockRecorder) ACRResourceID() *gomock.Call {
 }
 
 // AROOperatorImage mocks base method.
-func (m *MockInterface) AROOperatorImage() string {
+func (m *MockInterface) AROOperatorImage(arg0 string) string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AROOperatorImage")
+	ret := m.ctrl.Call(m, "AROOperatorImage", arg0)
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
 // AROOperatorImage indicates an expected call of AROOperatorImage.
-func (mr *MockInterfaceMockRecorder) AROOperatorImage() *gomock.Call {
+func (mr *MockInterfaceMockRecorder) AROOperatorImage(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AROOperatorImage", reflect.TypeOf((*MockInterface)(nil).AROOperatorImage))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AROOperatorImage", reflect.TypeOf((*MockInterface)(nil).AROOperatorImage), arg0)
 }
 
 // AdminClientAuthorizer mocks base method.

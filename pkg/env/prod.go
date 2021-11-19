@@ -24,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type prod struct {
@@ -258,8 +257,8 @@ func (p *prod) ACRDomain() string {
 	return p.acrDomain
 }
 
-func (p *prod) AROOperatorImage() string {
-	return fmt.Sprintf("%s/aro:%s", p.acrDomain, version.GitCommit)
+func (p *prod) AROOperatorImage(commit string) string {
+	return fmt.Sprintf("%s/aro:%s", p.acrDomain, commit)
 }
 
 func (p *prod) populateVMSkus(ctx context.Context, resourceSkusClient compute.ResourceSkusClient) error {
