@@ -174,6 +174,11 @@ const (
 // Cluster-scoped flags
 type OperatorFlags map[string]string
 
+func (f OperatorFlags) Get(key string) (val string, exists bool) {
+	v, ext := f[key]
+	return v, ext
+}
+
 // IsTerminal returns true if state is Terminal
 func (t ProvisioningState) IsTerminal() bool {
 	return ProvisioningStateFailed == t || ProvisioningStateSucceeded == t

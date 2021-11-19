@@ -98,7 +98,14 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 			}
 			d.Labels["version"] = version.GitCommit
 			for i := range d.Spec.Template.Spec.Containers {
-				d.Spec.Template.Spec.Containers[i].Image = o.env.AROOperatorImage()
+				// If a specific version has been defined in the operator flags
+				// to deploy, use that instead
+				hash, ext := o.oc.Properties.OperatorFlags.Get("aro.operator.version")
+				if !ext {
+					hash = version.GitCommit
+				}
+
+				d.Spec.Template.Spec.Containers[i].Image = o.env.AROOperatorImage(hash)
 
 				if o.env.IsLocalDevelopmentMode() {
 					d.Spec.Template.Spec.Containers[i].Env = append(d.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
