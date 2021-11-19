@@ -70,7 +70,7 @@ func (a *azureActions) VMRedeployAndWait(ctx context.Context, vmName string) err
 }
 func (a *azureActions) VMSizeList(ctx context.Context, vmName string) ([]byte, error) {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
-	vmSizes, err := a.virtualMachines.ListVMSizes(ctx, clusterRGName, vmName)
+	vmSizes, err := a.virtualMachines.ListResizeOptions(ctx, clusterRGName, vmName)
 	if err != nil {
 		return nil, err
 	}

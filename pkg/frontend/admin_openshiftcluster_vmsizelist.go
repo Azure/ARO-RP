@@ -17,17 +17,17 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
-func (f *frontend) getAdminOpenShiftClusterListVMSize(w http.ResponseWriter, r *http.Request) {
+func (f *frontend) getAdminOpenShiftClusterVMResizeOptions(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	b, err := f._getAdminOpenShiftClusterListVMSize(ctx, r, log)
+	b, err := f._getAdminOpenShiftClusterVMResizeOptions(ctx, r, log)
 
 	adminReply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getAdminOpenShiftClusterListVMSize(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
+func (f *frontend) _getAdminOpenShiftClusterVMResizeOptions(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
 	vars := mux.Vars(r)
 
 	vmName := r.URL.Query().Get("vmName")
