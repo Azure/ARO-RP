@@ -18,9 +18,11 @@ const (
 	DevClusterGenevaMetricsAccount       = "AzureRedHatOpenShiftCluster"
 	DevGenevaLoggingEnvironment          = "Test"
 	DevRPGenevaLoggingAccount            = "ARORPLogs"
-	DevRPGenevaLoggingConfigVersion      = "3.7"
+	DevRPGenevaLoggingConfigVersion      = "4.3"
 	DevRPGenevaLoggingNamespace          = "ARORPLogs"
 	DevRPGenevaMetricsAccount            = "AzureRedHatOpenShiftRP"
+
+	DevGatewayGenevaLoggingConfigVersion = "4.3"
 )
 
 var GitCommit = "unknown"
