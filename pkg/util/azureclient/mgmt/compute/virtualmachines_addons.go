@@ -73,9 +73,9 @@ func (c *virtualMachinesClient) List(ctx context.Context, resourceGroupName stri
 	return result, nil
 }
 func (c *virtualMachinesClient) ListResizeOptions(ctx context.Context, resourceGroupName string, VMName string) (result *[]mgmtcompute.VirtualMachineSize, err error) {
-	future, err := c.VirtualMachinesClient.ListAvailableSizes(ctx, resourceGroupName, VMName)
+	vmResizeOptions, err := c.VirtualMachinesClient.ListAvailableSizes(ctx, resourceGroupName, VMName)
 	if err != nil {
 		return nil, err
 	}
-	return future.Value, err
+	return vmResizeOptions.Value, err
 }
