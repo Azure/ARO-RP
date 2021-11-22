@@ -18,6 +18,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
+	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -25,19 +26,64 @@ import (
 // kubeconfig for the ARO service, based on the admin kubeconfig found in the
 // graph.
 func (m *manager) generateAROServiceKubeconfig(pg graph.PersistedGraph) (*kubeconfig.AdminInternalClient, error) {
-	return generateKubeconfig(pg, "system:aro-service", []string{"system:masters"}, tls.ValidityTenYears)
+	return generateKubeconfig(pg, "system:aro-service", []string{"system:masters"}, tls.ValidityTenYears, true)
 }
 
 // generateAROSREKubeconfig generates additional admin credentials and a
 // kubeconfig for ARO SREs, based on the admin kubeconfig found in the graph.
 func (m *manager) generateAROSREKubeconfig(pg graph.PersistedGraph) (*kubeconfig.AdminInternalClient, error) {
-	return generateKubeconfig(pg, "system:aro-sre", nil, tls.ValidityTenYears)
+	return generateKubeconfig(pg, "system:aro-sre", nil, tls.ValidityTenYears, true)
+}
+
+// checkUserAdminKubeconfigUpdated checks if the user kubeconfig is
+// present, has >90days until expiry, has the right settings
+func (m *manager) checkUserAdminKubeconfigUpdated() bool {
+	if len(m.doc.OpenShiftCluster.Properties.UserAdminKubeconfig) == 0 {
+		// field empty, not updated
+		return false
+	}
+	var userAdminKubeconfig clientcmdv1.Config
+	err := yaml.Unmarshal([]byte(m.doc.OpenShiftCluster.Properties.UserAdminKubeconfig), &userAdminKubeconfig)
+	if err != nil {
+		// yaml invalid, not updated
+		return false
+	}
+	for i := range userAdminKubeconfig.Clusters {
+		if strings.HasPrefix(userAdminKubeconfig.Clusters[i].Cluster.Server, "https://api-int.") {
+			// URL pointing to api-int, not updated
+			// TODO remove this after PUCM has been run on all clusters.
+			return false
+		}
+	}
+	for i := range userAdminKubeconfig.AuthInfos {
+		var b []byte
+		b = append(b, userAdminKubeconfig.AuthInfos[i].AuthInfo.ClientCertificateData...)
+		b = append(b, userAdminKubeconfig.AuthInfos[i].AuthInfo.ClientKeyData...)
+		innerkey, innercert, err := utilpem.Parse(b)
+		if err != nil {
+			// error while parsing cert or key, not updated
+			return false
+		}
+		if innerkey == nil {
+			// no client key, not updated
+			return false
+		}
+		for j := range innercert {
+			if !innercert[j].NotAfter.After(time.Now().AddDate(0, 0, 90)) {
+				// Not After field in certificate closer than 90 days, not updated
+				return false
+			}
+		}
+	}
+
+	// passed all checks, it's up to date
+	return true
 }
 
 // generateUserAdminKubeconfig generates additional admin credentials and a
 // kubeconfig for ARO User, based on the admin kubeconfig found in the graph.
 func (m *manager) generateUserAdminKubeconfig(pg graph.PersistedGraph) (*kubeconfig.AdminInternalClient, error) {
-	return generateKubeconfig(pg, "system:admin", nil, tls.ValidityOneYear)
+	return generateKubeconfig(pg, "system:admin", nil, tls.ValidityOneYear, false)
 }
 
 func (m *manager) generateKubeconfigs(ctx context.Context) error {
@@ -88,7 +134,7 @@ func (m *manager) generateKubeconfigs(ctx context.Context) error {
 	return err
 }
 
-func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization []string, validity time.Duration) (*kubeconfig.AdminInternalClient, error) {
+func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization []string, validity time.Duration, internal bool) (*kubeconfig.AdminInternalClient, error) {
 	var ca *tls.AdminKubeConfigSignerCertKey
 	var adminInternalClient *kubeconfig.AdminInternalClient
 	err := pg.Get(&ca, &adminInternalClient)
@@ -133,6 +179,14 @@ func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization
 			},
 		},
 		CurrentContext: commonName,
+	}
+
+	if !internal {
+		for i := range aroInternalClient.Config.Clusters {
+			// user kubeconfig should point to external URL not api-int, which has a properly signed cert
+			aroInternalClient.Config.Clusters[i].Cluster.Server = strings.Replace(aroInternalClient.Config.Clusters[i].Cluster.Server, "https://api-int.", "https://api.", 1)
+			aroInternalClient.Config.Clusters[i].Cluster.CertificateAuthorityData = nil
+		}
 	}
 
 	data, err := yaml.Marshal(aroInternalClient.Config)

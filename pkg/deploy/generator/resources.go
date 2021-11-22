@@ -133,7 +133,7 @@ func (g *generator) virtualNetworkPeering(name, vnetB string) *arm.Resource {
 	}
 }
 
-func (g *generator) keyVault(name string, accessPolicies *[]mgmtkeyvault.AccessPolicyEntry) *arm.Resource {
+func (g *generator) keyVault(name string, accessPolicies *[]mgmtkeyvault.AccessPolicyEntry, condition interface{}, dependsOn []string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtkeyvault.Vault{
 			Properties: &mgmtkeyvault.VaultProperties{
@@ -152,5 +152,7 @@ func (g *generator) keyVault(name string, accessPolicies *[]mgmtkeyvault.AccessP
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
+		Condition:  condition,
+		DependsOn:  dependsOn,
 	}
 }

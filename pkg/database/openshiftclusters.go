@@ -306,6 +306,7 @@ func (c *openShiftClusters) EndLease(ctx context.Context, key string, provisioni
 	return c.patchWithLease(ctx, key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.ProvisioningState = provisioningState
 		doc.OpenShiftCluster.Properties.FailedProvisioningState = failedProvisioningState
+		doc.OpenShiftCluster.Properties.MaintenanceTask = ""
 
 		doc.LeaseOwner = ""
 		doc.LeaseExpires = 0

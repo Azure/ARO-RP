@@ -95,6 +95,7 @@ type OpenShiftClusterProperties struct {
 	LastProvisioningState   ProvisioningState   `json:"lastProvisioningState,omitempty"`
 	FailedProvisioningState ProvisioningState   `json:"failedProvisioningState,omitempty"`
 	LastAdminUpdateError    string              `json:"lastAdminUpdateError,omitempty"`
+	MaintenanceTask         MaintenanceTask     `json:"maintenanceTask,omitempty"`
 
 	CreatedAt time.Time `json:"createdAt,omitempty"`
 
@@ -158,6 +159,13 @@ const (
 	ProvisioningStateDeleting      ProvisioningState = "Deleting"
 	ProvisioningStateSucceeded     ProvisioningState = "Succeeded"
 	ProvisioningStateFailed        ProvisioningState = "Failed"
+)
+
+type MaintenanceTask string
+
+const (
+	MaintenanceTaskEverything MaintenanceTask = "Everything"
+	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
 )
 
 // IsTerminal returns true if state is Terminal

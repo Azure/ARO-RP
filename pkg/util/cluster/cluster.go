@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -37,6 +38,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
+	keyvaultclient "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
 	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
@@ -59,6 +61,7 @@ type Cluster struct {
 	routetables                       network.RouteTablesClient
 	roleassignments                   authorization.RoleAssignmentsClient
 	peerings                          network.VirtualNetworkPeeringsClient
+	vaultsClient                      keyvaultclient.VaultsClient
 }
 
 type errors []error
@@ -74,7 +77,7 @@ func (errs errors) Error() string {
 	return sb.String()
 }
 
-func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
+func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	if env.IsLocalDevelopmentMode() {
 		for _, key := range []string{
 			"AZURE_FP_CLIENT_ID",
@@ -90,27 +93,28 @@ func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
 		return nil, err
 	}
 
-	graphAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(env.Environment().GraphEndpoint)
+	graphAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(environment.Environment().GraphEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
 	c := &Cluster{
 		log: log,
-		env: env,
+		env: environment,
 		ci:  ci,
 
-		deployments:                       features.NewDeploymentsClient(env.Environment(), env.SubscriptionID(), authorizer),
-		groups:                            features.NewResourceGroupsClient(env.Environment(), env.SubscriptionID(), authorizer),
-		openshiftclustersv20200430:        redhatopenshift20200430.NewOpenShiftClustersClient(env.Environment(), env.SubscriptionID(), authorizer),
-		openshiftclustersv20210901preview: redhatopenshift20210901preview.NewOpenShiftClustersClient(env.Environment(), env.SubscriptionID(), authorizer),
-		applications:                      graphrbac.NewApplicationsClient(env.Environment(), env.TenantID(), graphAuthorizer),
-		serviceprincipals:                 graphrbac.NewServicePrincipalClient(env.Environment(), env.TenantID(), graphAuthorizer),
-		securitygroups:                    network.NewSecurityGroupsClient(env.Environment(), env.SubscriptionID(), authorizer),
-		subnets:                           network.NewSubnetsClient(env.Environment(), env.SubscriptionID(), authorizer),
-		routetables:                       network.NewRouteTablesClient(env.Environment(), env.SubscriptionID(), authorizer),
-		roleassignments:                   authorization.NewRoleAssignmentsClient(env.Environment(), env.SubscriptionID(), authorizer),
-		peerings:                          network.NewVirtualNetworkPeeringsClient(env.Environment(), env.SubscriptionID(), authorizer),
+		deployments:                       features.NewDeploymentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		groups:                            features.NewResourceGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		openshiftclustersv20200430:        redhatopenshift20200430.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		openshiftclustersv20210901preview: redhatopenshift20210901preview.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		applications:                      graphrbac.NewApplicationsClient(environment.Environment(), environment.TenantID(), graphAuthorizer),
+		serviceprincipals:                 graphrbac.NewServicePrincipalClient(environment.Environment(), environment.TenantID(), graphAuthorizer),
+		securitygroups:                    network.NewSecurityGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		subnets:                           network.NewSubnetsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		routetables:                       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		roleassignments:                   authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		peerings:                          network.NewVirtualNetworkPeeringsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		vaultsClient:                      keyvaultclient.NewVaultsClient(environment.SubscriptionID(), authorizer),
 	}
 
 	return c, nil
@@ -126,7 +130,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	fpSPID := os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")
 
 	if fpSPID == "" {
-		return fmt.Errorf("service principal id is not found")
+		return fmt.Errorf("fp service principal id is not found")
 	}
 
 	c.log.Infof("creating AAD application")
@@ -172,6 +176,28 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return err
 	}
 
+	var kvName string
+	if len(vnetResourceGroup) > 15 {
+		// keyvault names need to have a maximum length of 24,
+		// so we need to cut off some chars if the resource group name is too long
+		kvName = vnetResourceGroup[:14] + generator.SharedKeyVaultNameSuffix
+	} else {
+		kvName = vnetResourceGroup + generator.SharedKeyVaultNameSuffix
+	}
+
+	if c.ci {
+		// name is limited to 24 characters, but must be globally unique, so we generate one and try if it is available
+		kvName = "kv-" + uuid.Must(uuid.NewV4()).String()[:21]
+		result, err := c.vaultsClient.CheckNameAvailability(ctx, mgmtkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: to.StringPtr("Microsoft.KeyVault/vaults")})
+		if err != nil {
+			return err
+		}
+
+		if result.NameAvailable != nil && !*result.NameAvailable {
+			return fmt.Errorf("Could not generate unique key vault name: %v", result.Reason)
+		}
+	}
+
 	parameters := map[string]*arm.ParametersParameter{
 		"clusterName":               {Value: clusterName},
 		"ci":                        {Value: c.ci},
@@ -180,6 +206,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		"vnetAddressPrefix":         {Value: addressPrefix},
 		"masterAddressPrefix":       {Value: masterSubnet},
 		"workerAddressPrefix":       {Value: workerSubnet},
+		"kvName":                    {Value: kvName},
 	}
 
 	// TODO: ick
@@ -212,20 +239,29 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return err
 	}
 
+	diskEncryptionSetID := fmt.Sprintf(
+		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/diskEncryptionSets/%s%s",
+		c.env.SubscriptionID(),
+		vnetResourceGroup,
+		vnetResourceGroup,
+		generator.SharedDiskEncryptionSetNameSuffix,
+	)
+
 	c.log.Info("creating role assignments")
-	for _, scope := range []string{
-		"/subscriptions/" + c.env.SubscriptionID() + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/dev-vnet",
-		"/subscriptions/" + c.env.SubscriptionID() + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/routeTables/" + clusterName + "-rt",
+	for _, scope := range []struct{ resource, role string }{
+		{"/subscriptions/" + c.env.SubscriptionID() + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/dev-vnet", rbac.RoleNetworkContributor},
+		{"/subscriptions/" + c.env.SubscriptionID() + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/routeTables/" + clusterName + "-rt", rbac.RoleNetworkContributor},
+		{diskEncryptionSetID, rbac.RoleReader},
 	} {
 		for _, principalID := range []string{spID, fpSPID} {
 			for i := 0; i < 5; i++ {
 				_, err = c.roleassignments.Create(
 					ctx,
-					scope,
+					scope.resource,
 					uuid.Must(uuid.NewV4()).String(),
 					mgmtauthorization.RoleAssignmentCreateParameters{
 						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-							RoleDefinitionID: to.StringPtr("/subscriptions/" + c.env.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleNetworkContributor),
+							RoleDefinitionID: to.StringPtr("/subscriptions/" + c.env.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/" + scope.role),
 							PrincipalID:      &principalID,
 							PrincipalType:    mgmtauthorization.ServicePrincipal,
 						},
@@ -256,7 +292,8 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	c.log.Info("creating cluster")
-	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appID, appSecret, visibility)
+	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appID, appSecret, diskEncryptionSetID, visibility)
+
 	if err != nil {
 		return err
 	}
@@ -357,7 +394,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 // createCluster created new clusters, based on where it is running.
 // development - using preview api
 // production - using stable GA api
-func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret string, visibility api.Visibility) error {
+func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret, diskEncryptionSetID string, visibility api.Visibility) error {
 	// using internal representation for "singe source" of options
 	oc := api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
@@ -375,18 +412,20 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 			},
 			MasterProfile: api.MasterProfile{
-				VMSize:           api.VMSizeStandardD8sV3,
-				EncryptionAtHost: api.EncryptionAtHostDisabled,
-				SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
+				VMSize:              api.VMSizeStandardD8sV3,
+				SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
+				EncryptionAtHost:    api.EncryptionAtHostEnabled,
+				DiskEncryptionSetID: diskEncryptionSetID,
 			},
 			WorkerProfiles: []api.WorkerProfile{
 				{
-					Name:             "worker",
-					VMSize:           api.VMSizeStandardD4sV3,
-					EncryptionAtHost: api.EncryptionAtHostDisabled,
-					DiskSizeGB:       128,
-					SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
-					Count:            3,
+					Name:                "worker",
+					VMSize:              api.VMSizeStandardD4sV3,
+					DiskSizeGB:          128,
+					SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
+					Count:               3,
+					EncryptionAtHost:    api.EncryptionAtHostEnabled,
+					DiskEncryptionSetID: diskEncryptionSetID,
 				},
 			},
 			APIServerProfile: api.APIServerProfile{

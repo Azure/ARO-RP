@@ -10,11 +10,13 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/davecgh/go-spew/spew"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -260,6 +262,29 @@ func (m *manager) deleteRoleDefinition(ctx context.Context) error {
 	return nil
 }
 
+func (m *manager) deleteGatewayAndWait(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateLinkID == "" {
+		return nil
+	}
+
+	err := m.deleteGateway(ctx)
+	if err != nil {
+		return err
+	}
+
+	m.log.Info("waiting for gateway record deletion")
+	return wait.PollImmediateUntil(15*time.Second, func() (bool, error) {
+		_, err := m.dbGateway.Get(ctx, m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateLinkID)
+		if err != nil && cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) /* already gone */ {
+			return true, nil
+		}
+		return false, nil
+	}, timeoutCtx.Done())
+}
+
 func (m *manager) deleteGateway(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateLinkID == "" {
 		return nil
@@ -268,7 +293,7 @@ func (m *manager) deleteGateway(ctx context.Context) error {
 	// https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
 	_, err := m.dbGateway.Patch(ctx, m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateLinkID, func(doc *api.GatewayDocument) error {
 		doc.Gateway.Deleting = true
-		doc.TTL = 600
+		doc.TTL = 60
 		return nil
 	})
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) /* already gone */ {
@@ -349,13 +374,17 @@ func (m *manager) Delete(ctx context.Context) error {
 		return err
 	}
 
-	err = m.deleteResourcesAndResourceGroup(ctx)
+	// private endpoint LinkIDs are reused so we wait for the deletion of the
+	// gateway LinkID record before deleting the private endpoint
+	// this ensures that we don't delete a LinkID record that was previously in use
+	// on a newly created cluster
+	m.log.Printf("deleting gateway record")
+	err = m.deleteGatewayAndWait(ctx)
 	if err != nil {
 		return err
 	}
 
-	m.log.Printf("deleting gateway record")
-	err = m.deleteGateway(ctx)
+	err = m.deleteResourcesAndResourceGroup(ctx)
 	if err != nil {
 		return err
 	}

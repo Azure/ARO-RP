@@ -633,6 +633,59 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.registryProfiles: Changing property 'properties.registryProfiles' is not allowed.",
 		},
+		{
+			name: "maintenanceTask change to Everything is allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						MaintenanceTask: "",
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MaintenanceTask = MaintenanceTaskEverything
+			},
+		},
+		{
+			name: "maintenanceTask change to Operator is allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						MaintenanceTask: "",
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MaintenanceTask = MaintenanceTaskOperator
+			},
+		},
+		{
+			name: "maintenanceTask change to blank allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						MaintenanceTask: MaintenanceTaskEverything,
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MaintenanceTask = ""
+			},
+		},
+		{
+			name: "maintenanceTask change to other values is disallowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						MaintenanceTask: "",
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MaintenanceTask = "abababa"
+			},
+			wantErr: "400: InvalidParameter: properties.maintenanceTask: Invalid enum parameter.",
+		},
 	}
 
 	for _, tt := range tests {

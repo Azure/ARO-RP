@@ -461,14 +461,17 @@ chmod +x /etc/cron.hourly/tmpwatch
 }
 
 const (
-	sharedKeyVaultName          = "concat(take(resourceGroup().name,15), '-sharedKV')"
-	sharedDiskEncryptionSetName = "concat(resourceGroup().name, '-disk-encryption-set')"
+	sharedKeyVaultName          = "concat(take(resourceGroup().name,15), '" + SharedKeyVaultNameSuffix + "')"
+	sharedDiskEncryptionSetName = "concat(resourceGroup().name, '" + SharedDiskEncryptionSetNameSuffix + "')"
 	sharedDiskEncryptionKeyName = "concat(resourceGroup().name, '-disk-encryption-key')"
+
+	SharedKeyVaultNameSuffix          = "-sharedKV"
+	SharedDiskEncryptionSetNameSuffix = "-disk-encryption-set"
 )
 
 // shared keyvault for keys used for disk encryption sets when creating clusters locally
 func (g *generator) devDiskEncryptionKeyvault() *arm.Resource {
-	return g.keyVault(fmt.Sprintf("[%s]", sharedKeyVaultName), &[]mgmtkeyvault.AccessPolicyEntry{})
+	return g.keyVault(fmt.Sprintf("[%s]", sharedKeyVaultName), &[]mgmtkeyvault.AccessPolicyEntry{}, nil, nil)
 }
 
 func (g *generator) devDiskEncryptionKey() *arm.Resource {

@@ -9,24 +9,24 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
 	"net"
 	"net/http"
-	"sort"
+	"strings"
 	"time"
 
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	frontendmiddleware "github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/portal/cluster"
 	"github.com/Azure/ARO-RP/pkg/portal/kubeconfig"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/portal/prometheus"
@@ -161,7 +161,7 @@ func (p *portal) setupRouter() error {
 	aadAuthenticatedRouter.Use(p.aad.AAD)
 	aadAuthenticatedRouter.Use(middleware.Log(p.env, p.audit, p.baseAccessLog))
 	aadAuthenticatedRouter.Use(p.aad.CheckAuthentication)
-	aadAuthenticatedRouter.Use(csrf.Protect(p.sessionKey, csrf.SameSite(csrf.SameSiteStrictMode), csrf.MaxAge(0)))
+	aadAuthenticatedRouter.Use(csrf.Protect(p.sessionKey, csrf.SameSite(csrf.SameSiteStrictMode), csrf.MaxAge(0), csrf.Path("/")))
 
 	p.aadAuthenticatedRoutes(aadAuthenticatedRouter)
 
@@ -252,15 +252,46 @@ func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 	for _, name := range AssetNames() {
 		if name == "index.html" {
+			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.serve(name))
 			continue
 		}
 
 		r.NewRoute().Methods(http.MethodGet).Path("/" + name).HandlerFunc(p.serve(name))
 	}
 
-	r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.index)
-
 	r.NewRoute().Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
+	r.NewRoute().Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
+
+	// Cluster-specific routes
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{name}/clusteroperators").HandlerFunc(p.clusterOperators)
+	r.NewRoute().Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{name}").HandlerFunc(p.clusterInfo)
+}
+
+// makeFetcher creates a cluster.FetchClient suitable for use by the Portal REST API
+func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.FetchClient, error) {
+	resourceID := strings.Join(strings.Split(r.URL.Path, "/")[:9], "/")
+	if !validate.RxClusterID.MatchString(resourceID) {
+		return nil, fmt.Errorf("invalid resource ID")
+	}
+
+	doc, err := p.dbOpenShiftClusters.Get(ctx, resourceID)
+	if err != nil {
+		return nil, err
+	}
+
+	// In development mode, we can have localhost "fake" APIServers which don't
+	// get proxied, so use a direct dialer for this
+	var dialer proxy.Dialer
+	if p.env.IsLocalDevelopmentMode() && doc.OpenShiftCluster.Properties.APIServerProfile.IP == "127.0.0.1" {
+		dialer, err = proxy.NewDialer(false)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		dialer = p.dialer
+	}
+
+	return cluster.NewFetchClient(p.log, dialer, doc)
 }
 
 func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request) {
@@ -273,58 +304,6 @@ func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request)
 
 		http.ServeContent(w, r, path, time.Time{}, bytes.NewReader(b))
 	}
-}
-
-func (p *portal) index(w http.ResponseWriter, r *http.Request) {
-	buf := &bytes.Buffer{}
-
-	err := p.t.ExecuteTemplate(buf, "index.html", map[string]interface{}{
-		"location":       p.env.Location(),
-		csrf.TemplateTag: csrf.TemplateField(r),
-	})
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
-
-	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(buf.Bytes()))
-}
-
-func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	docs, err := p.dbOpenShiftClusters.ListAll(ctx)
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
-
-	clusters := make([]string, 0, len(docs.OpenShiftClusterDocuments))
-	for _, doc := range docs.OpenShiftClusterDocuments {
-		ps := doc.OpenShiftCluster.Properties.ProvisioningState
-		fps := doc.OpenShiftCluster.Properties.FailedProvisioningState
-
-		switch {
-		case ps == api.ProvisioningStateCreating,
-			ps == api.ProvisioningStateDeleting,
-			ps == api.ProvisioningStateFailed &&
-				(fps == api.ProvisioningStateCreating ||
-					fps == api.ProvisioningStateDeleting):
-		default:
-			clusters = append(clusters, doc.OpenShiftCluster.ID)
-		}
-	}
-
-	sort.Strings(clusters)
-
-	b, err := json.MarshalIndent(clusters, "", "    ")
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(b)
 }
 
 func (p *portal) internalServerError(w http.ResponseWriter, err error) {

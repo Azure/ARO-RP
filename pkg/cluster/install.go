@@ -29,35 +29,75 @@ import (
 
 // AdminUpdate performs an admin update of an ARO cluster
 func (m *manager) AdminUpdate(ctx context.Context) error {
-	steps := []steps.Step{
+	toRun := m.adminUpdate()
+	return m.runSteps(ctx, toRun)
+}
+
+func (m *manager) adminUpdate() []steps.Step {
+	task := m.doc.OpenShiftCluster.Properties.MaintenanceTask
+	isEverything := task == api.MaintenanceTaskEverything || task == ""
+	isOperator := task == api.MaintenanceTaskOperator
+
+	// Generic fix-up or setup actions that are fairly safe to always take, and
+	// don't require a running cluster
+	toRun := []steps.Step{
 		steps.Action(m.initializeKubernetesClients), // must be first
-		steps.Action(m.fixupClusterSPObjectID),
+		steps.Action(m.ensureBillingRecord),         // belt and braces
 		steps.Action(m.ensureDefaults),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)), // re-create RP RBAC if needed after tenant migration
-		steps.Action(m.createOrUpdateDenyAssignment),
-		steps.Action(m.startVMs),
-		steps.Condition(m.apiServersReady, 30*time.Minute, false),
-		steps.Action(m.populateRegistryStorageAccountName),
-		steps.Action(m.ensureBillingRecord), // belt and braces
-		steps.Action(m.configureAPIServerCertificate),
-		steps.Action(m.configureIngressCertificate),
-		steps.Action(m.fixSSH),
-		steps.Action(m.fixInfraID),        // Old clusters lacks infraID in the database. Which makes code prone to errors.
-		steps.Action(m.populateCreatedAt), // TODO(mikalai): Remove after a round of admin updates
-		steps.Action(m.fixSREKubeconfig),
-		steps.Action(m.fixUserAdminKubeconfig),
-		steps.Action(m.createOrUpdateRouterIPFromCluster),
-		steps.Action(m.populateDatabaseIntIP),
-		steps.Action(m.fixMCSCert),
-		steps.Action(m.fixMCSUserData),
-		steps.Action(m.ensureGatewayUpgrade),
-		steps.Action(m.ensureAROOperator),
-		steps.Condition(m.aroDeploymentReady, 20*time.Minute, false),
-		//steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communiate this out
-		steps.Action(m.updateProvisionedBy), // Run this last so we capture the resource provider only once the upgrade has been fully performed
+		steps.Action(m.fixupClusterSPObjectID),
+		steps.Action(m.fixInfraID), // Old clusters lacks infraID in the database. Which makes code prone to errors.
 	}
 
-	return m.runSteps(ctx, steps)
+	if isEverything {
+		toRun = append(toRun,
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)), // re-create RP RBAC if needed after tenant migration
+			steps.Action(m.createOrUpdateDenyAssignment),
+			steps.Action(m.fixSSH),
+			steps.Action(m.populateDatabaseIntIP),
+			//steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
+		)
+	}
+
+	// Make sure the VMs are switched on and we have an APIServer
+	toRun = append(toRun,
+		steps.Action(m.startVMs),
+		steps.Condition(m.apiServersReady, 30*time.Minute, true),
+	)
+
+	// Requires Kubernetes clients
+	if isEverything {
+		toRun = append(toRun,
+			steps.Action(m.fixSREKubeconfig),
+			steps.Action(m.fixUserAdminKubeconfig),
+			steps.Action(m.createOrUpdateRouterIPFromCluster),
+			steps.Action(m.fixMCSCert),
+			steps.Action(m.fixMCSUserData),
+			steps.Action(m.ensureGatewayUpgrade),
+			steps.Action(m.configureAPIServerCertificate),
+			steps.Action(m.configureIngressCertificate),
+			steps.Action(m.populateRegistryStorageAccountName),
+			steps.Action(m.populateCreatedAt), // TODO(mikalai): Remove after a round of admin updates
+
+		)
+	}
+
+	// Update the ARO Operator
+	if isEverything || isOperator {
+		toRun = append(toRun,
+			steps.Action(m.ensureAROOperator),
+			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
+		)
+	}
+
+	// We don't run this on an operator-only deploy as PUCM scripts then cannot
+	// determine if the cluster has been fully admin-updated
+	if isEverything {
+		toRun = append(toRun,
+			steps.Action(m.updateProvisionedBy), // Run this last so we capture the resource provider only once the upgrade has been fully performed
+		)
+	}
+
+	return toRun
 }
 
 func (m *manager) Update(ctx context.Context) error {
