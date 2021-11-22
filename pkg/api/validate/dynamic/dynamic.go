@@ -287,11 +287,22 @@ func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, add
 			return err
 		}
 
-		_, net, err := net.ParseCIDR(*s.AddressPrefix)
-		if err != nil {
-			return err
+		// Validate the CIDR of AddressPrefix or AddressPrefixes, whichever is defined
+		if s.AddressPrefix == nil {
+			for _, address := range *s.AddressPrefixes {
+				_, net, err := net.ParseCIDR(address)
+				if err != nil {
+					return err
+				}
+				CIDRArray = append(CIDRArray, net)
+			}
+		} else {
+			_, net, err := net.ParseCIDR(*s.AddressPrefix)
+			if err != nil {
+				return err
+			}
+			CIDRArray = append(CIDRArray, net)
 		}
-		CIDRArray = append(CIDRArray, net)
 	}
 
 	for _, c := range additionalCIDRs {
