@@ -147,7 +147,7 @@ func (mon *Monitor) _emitPodContainerRestartCounter(ps *corev1.PodList) {
 					"metric":        "pod.restartcounter",
 					"name":          p.Name,
 					"namespace":     p.Namespace,
-					"containername": cs.Name,
+					"containerName": cs.Name,
 				}).Print()
 			}
 		}
