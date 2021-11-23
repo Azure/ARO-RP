@@ -67,7 +67,7 @@ helps['aro get-admin-kubeconfig'] = """
   type: command
   short-summary: List admin kubeconfig of a cluster.
   examples:
-  - name: List admin kubeconfig of a cluster. Usually the output would be redirected to a kubeconfig file.
+  - name: List admin kubeconfig of a cluster. The default is to save it in a file named "kubeconfig".
     text: az aro get-admin-kubeconfig --name MyCluster --resource-group MyResourceGroup
 """
 

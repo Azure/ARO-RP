@@ -37,3 +37,12 @@ Release History
 1.0.3
 ++++++
 * Fix role assignment bug
+
+1.0.4
+++++++
+* Remove unused code (identifier URLs)
+
+1.0.5
+++++++
+* Fixed get-admin-kubeconfig Enums for Feature state no longer available in AzureCLI
+* Added saving kubeconfig to file
