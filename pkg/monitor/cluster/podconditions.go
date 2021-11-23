@@ -139,7 +139,7 @@ func (mon *Monitor) _emitPodContainerRestartCounter(ps *corev1.PodList) {
 				"name":          p.Name,
 				"namespace":     p.Namespace,
 				"nodeName":      p.Spec.NodeName,
-				"containername": cs.Name,
+				"containerName": cs.Name,
 			})
 
 			if mon.hourlyRun {
