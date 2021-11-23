@@ -20,7 +20,7 @@ var podConditionsExpected = map[corev1.PodConditionType]corev1.ConditionStatus{
 	corev1.PodReady:        corev1.ConditionTrue,
 }
 
-var restartCounterThreadshold int32 = 10
+var restartCounterThreshold int32 = 10
 
 func (mon *Monitor) emitPodConditions(ctx context.Context) error {
 	// to list pods once
