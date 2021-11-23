@@ -9,7 +9,7 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
-from azure.cli.core.azclierror import ResourceNotFoundError, UnauthorizedError
+from azure.cli.core.azclierror import FileOperationError, ResourceNotFoundError, UnauthorizedError
 from azure.graphrbac.models import GraphErrorException
 from msrestazure.azure_exceptions import CloudError
 from msrestazure.tools import resource_id, parse_resource_id
@@ -196,8 +196,7 @@ def aro_list_credentials(client, resource_group_name, resource_name):
     return client.list_credentials(resource_group_name, resource_name)
 
 
-def aro_list_admin_credentials(cmd, client, resource_group_name, resource_name,
-                               overwrite=False, file="kubeconfig"):
+def aro_list_admin_credentials(cmd, client, resource_group_name, resource_name, file="kubeconfig"):
     # check for the presence of the feature flag and warn
     # the check shouldn't block the API call - ARM can cache a feature state for several minutes
     feature_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_RESOURCE_FEATURES)
@@ -210,14 +209,12 @@ def aro_list_admin_credentials(cmd, client, resource_group_name, resource_name,
         logger.warning("To register run: az feature register --namespace Microsoft.RedHatOpenShift -n AdminKubeconfig")
     query_result = client.list_admin_credentials(resource_group_name, resource_name)
     file_mode = "x"
-    if overwrite:
-        file_mode = "w"
     yaml_data = b64decode(query_result.kubeconfig).decode('UTF-8')
     try:
-        with open(file, file_mode) as f:
+        with open(file, file_mode, encoding="locale") as f:
             f.write(yaml_data)
-    except FileExistsError:
-        logger.error("File %s already exists, use the --overwrite parameter to overwrite file.", file)
+    except FileExistsError as e:
+        raise FileOperationError(f"File {file} already exists.") from e
     logger.info("Kubeconfig written to file: %s", file)
 
 
