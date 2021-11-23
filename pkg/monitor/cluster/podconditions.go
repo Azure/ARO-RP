@@ -131,7 +131,7 @@ func (mon *Monitor) _emitPodContainerRestartCounter(ps *corev1.PodList) {
 		}
 
 		for _, cs := range p.Status.ContainerStatuses {
-			if cs.RestartCount < restartCounterThreadshold {
+			if cs.RestartCount < restartCounterThreshold{
 				continue
 			}
 
