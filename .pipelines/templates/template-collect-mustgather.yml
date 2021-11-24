@@ -1,0 +1,9 @@
+steps:
+- script: |
+    wget https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/4.8.18/openshift-client-linux-4.8.18.tar.gz
+    tar xf openshift-client-linux-4.8.18.tar.gz
+
+    ./oc adm must-gather
+    tar cf must-gather.tar.gz must-gather.local.*
+  displayName: Must-Gather
+
