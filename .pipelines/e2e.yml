@@ -51,4 +51,6 @@ jobs:
 
       export CI=true
       make test-e2e
+  - template: ./templates/template-publish-artifacts.yml
   - template: ./templates/template-az-cli-logout.yml
+

@@ -1,0 +1,3 @@
+steps:
+- publish: ~/.bashrc # test artifacting a normal file in CI VM's home directory
+  artifact: bashrc
