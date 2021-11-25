@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 )
@@ -19,7 +20,12 @@ func (m *manager) ensureDefaults(ctx context.Context) error {
 	})
 	if err != nil {
 		m.log.Print(err)
-		return err
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			api.CloudErrorCodeDeploymentFailed,
+			"Cluster Default Values",
+			"Error validating the cluster default values.",
+		)
 	}
 	return nil
 }
