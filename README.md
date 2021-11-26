@@ -133,6 +133,8 @@ questions or comments.
 
     * workaround: Applies a set of temporay workarounds to the ARO cluster.
 
+    * previewfeature: Allows toggling certain features that are not yet enabled by default.
+
   * pkg/portal: Portal for running promql queries against a cluster or requesting a kubeconfig for a cluster.
 
   * pkg/proxy: Proxy service for portal kubeconfig cluster access.

@@ -36,9 +36,6 @@ spec:
           spec:
             description: PreviewFeatureSpec defines the preview feature for ARO
             properties:
-              azEnvironment:
-                description: AZEnvironment is Azure cloud environment name. READ ONLY.
-                type: string
               nsgFlowLogs:
                 description: NSGFlowLogs contains configuration for NSG flow logs.
                   Omit the configuration if you don't want the controller to reconcile
@@ -49,13 +46,20 @@ spec:
                       when true the controller will try to reach the desired configuration,
                       when false it will try to disable the flow logs.'
                     type: boolean
-                  retention:
-                    default: 2160h
-                    description: Retention period for data.
+                  networkWatcherID:
+                    description: NetworkWatcherID specifies the ID of the network
+                      watcher.
                     type: string
+                  retentionDays:
+                    default: 90
+                    description: RetentionDays specifies how many days the flowlogs
+                      should be retained.
+                    format: int32
+                    type: integer
                   storageAccountResourceId:
-                    description: StorageAccountResourceID should be defined if BYO-Storage
-                      account is used. Must be in the same region of flow log.
+                    description: StorageAccountResourceID of the storage account used
+                      for collecting the flow logs. Must be in the same region of
+                      flow log.
                     type: string
                   trafficAnalyticsInterval:
                     default: 60m
@@ -79,12 +83,6 @@ spec:
                 required:
                 - enabled
                 type: object
-              resourceId:
-                description: ResourceID is a cluster resource id. READ ONLY.
-                type: string
-            required:
-            - azEnvironment
-            - resourceId
             type: object
           status:
             description: PreviewFeatureStatus defines the observed state of PreviewFeature
