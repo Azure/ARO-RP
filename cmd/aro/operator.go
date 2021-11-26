@@ -198,9 +198,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		if err = (imageconfig.NewReconciler(
 			arocli, configcli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller ImageConfig: %v", err)
+		}
 		if err = (previewfeature.NewReconciler(
 			log.WithField("controller", controllers.PreviewFeatureControllerName),
-			arocli, kubernetescli)).SetupWithManager(mgr); err != nil {
+			arocli, kubernetescli, maocli)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller PreviewFeature: %v", err)
 		}
 		if err = (storageaccounts.NewReconciler(
 			log.WithField("controller", controllers.StorageAccountsControllerName),

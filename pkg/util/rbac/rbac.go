@@ -38,7 +38,6 @@ func ResourceRoleAssignment(roleID, spID, resourceType, resourceName string, con
 // deployed, to preserve the name and avoid a RoleAssignmentExists error.
 func ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, name string, condition ...interface{}) *arm.Resource {
 	resourceID := "resourceId('" + resourceType + "', " + resourceName + ")"
-
 	r := &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
 			Name: to.StringPtr("[" + name + "]"),

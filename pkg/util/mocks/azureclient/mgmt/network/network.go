@@ -679,3 +679,32 @@ func (mr *MockFlowLogsClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockFlowLogsClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3, arg4)
 }
+
+// DeleteAndWait mocks base method.
+func (m *MockFlowLogsClient) DeleteAndWait(arg0 context.Context, arg1, arg2, arg3 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAndWait indicates an expected call of DeleteAndWait.
+func (mr *MockFlowLogsClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockFlowLogsClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3)
+}
+
+// Get mocks base method.
+func (m *MockFlowLogsClient) Get(arg0 context.Context, arg1, arg2, arg3 string) (network.FlowLog, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(network.FlowLog)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockFlowLogsClientMockRecorder) Get(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockFlowLogsClient)(nil).Get), arg0, arg1, arg2, arg3)
+}

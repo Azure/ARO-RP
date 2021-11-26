@@ -6,6 +6,8 @@ package previewfeature
 import (
 	"context"
 
+	"github.com/Azure/go-autorest/autorest/azure"
+	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -15,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
@@ -22,7 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
-	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 type feature interface {
@@ -35,13 +38,15 @@ type Reconciler struct {
 
 	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
+	maocli        maoclient.Interface
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli maoclient.Interface) *Reconciler {
 	return &Reconciler{
 		log:           log,
 		arocli:        arocli,
 		kubernetescli: kubernetescli,
+		maocli:        maocli,
 	}
 }
 
@@ -52,13 +57,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	// Get endpoints from operator
-	azEnv, err := azureclient.EnvironmentFromName(instance.Spec.AZEnvironment)
+	clusterInstance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	resource, err := azure.ParseResourceID(instance.Spec.ResourceID)
+	// Get endpoints from operator
+	azEnv, err := azureclient.EnvironmentFromName(clusterInstance.Spec.AZEnvironment)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	resource, err := azure.ParseResourceID(clusterInstance.Spec.ResourceID)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -70,9 +80,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	flowLogsClient := network.NewFlowLogsClient(&azEnv, resource.SubscriptionID, authorizer)
+	kubeSubnets := subnet.NewKubeManager(r.maocli, resource.SubscriptionID)
+	subnets := subnet.NewManager(&azEnv, resource.SubscriptionID, authorizer)
 
 	features := []feature{
-		nsgflowlogs.NewFeature(flowLogsClient),
+		nsgflowlogs.NewFeature(flowLogsClient, kubeSubnets, subnets, clusterInstance.Spec.Location),
 	}
 
 	err = nil

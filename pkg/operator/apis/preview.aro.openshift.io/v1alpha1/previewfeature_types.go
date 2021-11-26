@@ -24,13 +24,16 @@ type NSGFlowLogs struct {
 	// +kubebuilder:validation:Enum=1;2
 	Version int `json:"version,omitempty"`
 
-	// StorageAccountResourceID should be defined if BYO-Storage account is used.
+	// NetworkWatcherID specifies the ID of the network watcher.
+	NetworkWatcherID string `json:"networkWatcherID,omitempty"`
+
+	// StorageAccountResourceID of the storage account used for collecting the flow logs.
 	// Must be in the same region of flow log.
 	StorageAccountResourceID string `json:"storageAccountResourceId,omitempty"`
 
-	// Retention period for data.
-	// +kubebuilder:default:="2160h"
-	Retention metav1.Duration `json:"retention,omitempty"`
+	// RetentionDays specifies how many days the flowlogs should be retained.
+	// +kubebuilder:default:=90
+	RetentionDays int32 `json:"retentionDays,omitempty"`
 
 	// Required for TrafficAnalytics.
 	// Must be in the same region of flow log.
@@ -44,12 +47,6 @@ type NSGFlowLogs struct {
 
 // PreviewFeatureSpec defines the preview feature for ARO
 type PreviewFeatureSpec struct {
-	// AZEnvironment is Azure cloud environment name. READ ONLY.
-	AZEnvironment string `json:"azEnvironment"`
-
-	// ResourceID is a cluster resource id. READ ONLY.
-	ResourceID string `json:"resourceId"`
-
 	// NSGFlowLogs contains configuration for NSG flow logs.
 	// Omit the configuration if you don't want the controller
 	// to reconcile NSG flow logs.
