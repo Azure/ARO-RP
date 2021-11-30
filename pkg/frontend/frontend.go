@@ -256,6 +256,13 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getAdminOpenShiftClusters).Name("getAdminOpenShiftClusters")
 
+	//For OVSFlows
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/ovsflows").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.getOVSFlows).Name("getOVSFlows")
+
 	// Operations
 	s = r.
 		Path("/providers/{resourceProviderNamespace}/operations").
@@ -270,6 +277,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Subrouter()
 
 	s.Methods(http.MethodPut).HandlerFunc(f.putSubscription).Name("putSubscription")
+
 }
 
 func (f *frontend) setupRouter() *mux.Router {
