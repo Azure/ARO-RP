@@ -300,6 +300,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Subrouter()
 
 	s.Methods(http.MethodPut).HandlerFunc(f.putSubscription).Name("putSubscription")
+
 }
 
 func (f *frontend) setupRouter() *mux.Router {
