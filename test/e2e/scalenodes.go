@@ -29,9 +29,8 @@ var _ = Describe("Scale nodes", func() {
 	Specify("node count should match the cluster resource and nodes should be ready", func() {
 		ctx := context.Background()
 		machinesets, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			log.Warn(err)
-		}
+		Expect(err).NotTo(HaveOccurred())
+		
 		expectedNodeCount := 3 // for masters
 		for _, machineset := range machinesets.Items {
 			expectedNodeCount += int(*machineset.Spec.Replicas)
