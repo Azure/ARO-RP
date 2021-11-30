@@ -76,5 +76,6 @@ func DefaultOperatorFlags() OperatorFlags {
 		"aro.routefix.enabled":                     flagTrue,
 		"aro.storageaccounts.enabled":              flagTrue,
 		"aro.workaround.enabled":                   flagTrue,
+		"aro.autosizednodes.enable":                flagFalse,
 	}
 }
