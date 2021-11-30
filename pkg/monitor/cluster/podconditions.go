@@ -131,23 +131,19 @@ func (mon *Monitor) _emitPodContainerRestartCounter(ps *corev1.PodList) {
 		}
 
 		for _, cs := range p.Status.ContainerStatuses {
-			if cs.RestartCount < restartCounterThreshold{
+			if cs.RestartCount < restartCounterThreshold {
 				continue
 			}
 
 			mon.emitGauge("pod.restartcounter", int64(cs.RestartCount), map[string]string{
-				"name":          p.Name,
-				"namespace":     p.Namespace,
-				"nodeName":      p.Spec.NodeName,
-				"containerName": cs.Name,
+				"name":      p.Name,
+				"namespace": p.Namespace,
 			})
 
 			if mon.hourlyRun {
 				mon.log.WithFields(logrus.Fields{
-					"metric":        "pod.restartcounter",
-					"name":          p.Name,
-					"namespace":     p.Namespace,
-					"containerName": cs.Name,
+					"metric": "pod.restartcounter",
+					"name":   p.Name,
 				}).Print()
 			}
 		}
