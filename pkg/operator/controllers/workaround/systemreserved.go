@@ -14,6 +14,7 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -45,7 +46,7 @@ func (sr *systemreserved) Name() string {
 	return "SystemReserved fix for bz-1857446"
 }
 
-func (sr *systemreserved) IsRequired(clusterVersion *version.Version) bool {
+func (sr *systemreserved) IsRequired(clusterVersion *version.Version, cluster *arov1alpha1.Cluster) bool {
 	return clusterVersion.Lt(sr.versionFixed)
 }
 
