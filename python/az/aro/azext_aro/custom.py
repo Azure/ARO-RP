@@ -211,7 +211,7 @@ def aro_list_admin_credentials(cmd, client, resource_group_name, resource_name, 
     file_mode = "x"
     yaml_data = b64decode(query_result.kubeconfig).decode('UTF-8')
     try:
-        with open(file, file_mode, encoding="locale") as f:
+        with open(file, file_mode, encoding="utf-8") as f:
             f.write(yaml_data)
     except FileExistsError as e:
         raise FileOperationError(f"File {file} already exists.") from e

@@ -48,6 +48,7 @@ func deployKeyvaultAccessPolicy(_env env.Core) map[string]interface{} {
 		"objectId": os.Getenv("AZURE_SERVICE_PRINCIPAL_ID"),
 		"permissions": map[string]interface{}{
 			"secrets": []interface{}{
+				"Get",
 				"List",
 				"Set",
 			},

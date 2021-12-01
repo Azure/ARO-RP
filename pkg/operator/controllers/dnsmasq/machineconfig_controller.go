@@ -15,6 +15,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
@@ -42,13 +43,22 @@ func NewMachineConfigReconciler(log *logrus.Entry, arocli aroclient.Interface, m
 // Reconcile watches ARO DNS MachineConfig objects, and if any changes,
 // reconciles it
 func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if !instance.Spec.Features.ReconcileDNSMasq {
+		return reconcile.Result{}, nil
+	}
+
 	m := rxARODNS.FindStringSubmatch(request.Name)
 	if m == nil {
 		return reconcile.Result{}, nil
 	}
 	role := m[1]
 
-	_, err := r.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, role, metav1.GetOptions{})
+	_, err = r.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, role, metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
 		return reconcile.Result{}, nil
 	}
