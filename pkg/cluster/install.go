@@ -215,7 +215,16 @@ func (m *manager) startInstallation(ctx context.Context) error {
 		}
 		return nil
 	})
-	return err
+	if err != nil {
+		m.log.Error(err)
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeDeploymentFailed,
+			"Cluster Install",
+			"Failed to initiate the installation",
+		)
+	}
+	return nil
 }
 
 func (m *manager) incrInstallPhase(ctx context.Context) error {
@@ -224,7 +233,16 @@ func (m *manager) incrInstallPhase(ctx context.Context) error {
 		doc.OpenShiftCluster.Properties.Install.Phase++
 		return nil
 	})
-	return err
+	if err != nil {
+		m.log.Error(err)
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeDeploymentFailed,
+			"Cluster Install Lease Increment",
+			"Failed to increment the installation phase",
+		)
+	}
+	return nil
 }
 
 func (m *manager) finishInstallation(ctx context.Context) error {
@@ -233,7 +251,16 @@ func (m *manager) finishInstallation(ctx context.Context) error {
 		doc.OpenShiftCluster.Properties.Install = nil
 		return nil
 	})
-	return err
+	if err != nil {
+		m.log.Error(err)
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeDeploymentFailed,
+			"Cluster Install",
+			"Failed to finish installation",
+		)
+	}
+	return nil
 }
 
 // initializeKubernetesClients initializes clients which are used
@@ -369,5 +396,13 @@ func (m *manager) updateProvisionedBy(ctx context.Context) error {
 		doc.OpenShiftCluster.Properties.ProvisionedBy = version.GitCommit
 		return nil
 	})
-	return err
+	if err != nil {
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeDeploymentFailed,
+			"Cluster Object",
+			"Failed to update the ProvisionedBy field",
+		)
+	}
+	return nil
 }
