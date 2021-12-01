@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -240,56 +241,124 @@ func (m *manager) finishInstallation(ctx context.Context) error {
 func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	restConfig, err := restconfig.RestConfig(m.env, m.doc.OpenShiftCluster)
 	if err != nil {
-		return err
+		m.log.Error(err)
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeDeploymentFailed,
+			"Kubernetes Clients",
+			"Failed to initialize the Kubernetes rest config",
+		)
 	}
 
 	m.kubernetescli, err = kubernetes.NewForConfig(restConfig)
 	if err != nil {
-		return err
+		m.log.Error(err)
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeDeploymentFailed,
+			"Kubernetes Clients",
+			"Failed to initialize the Kubernetes CLI",
+		)
 	}
 
 	m.extensionscli, err = extensionsclient.NewForConfig(restConfig)
 	if err != nil {
-		return err
+		m.log.Error(err)
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeDeploymentFailed,
+			"Kubernetes Clients",
+			"Failed to initialize the Kubernetes extensions CLI",
+		)
 	}
 
 	m.maocli, err = maoclient.NewForConfig(restConfig)
 	if err != nil {
-		return err
+		m.log.Error(err)
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeDeploymentFailed,
+			"Kubernetes Clients",
+			"Failed to initialize the Kubernetes MAO CLI",
+		)
 	}
 
 	m.mcocli, err = mcoclient.NewForConfig(restConfig)
 	if err != nil {
-		return err
+		m.log.Error(err)
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeDeploymentFailed,
+			"Kubernetes Clients",
+			"Failed to initialize the Kubernetes MCO CLI",
+		)
 	}
 
 	m.operatorcli, err = operatorclient.NewForConfig(restConfig)
 	if err != nil {
-		return err
+		m.log.Error(err)
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeDeploymentFailed,
+			"Kubernetes Clients",
+			"Failed to initialize the Kubernetes operator CLI",
+		)
 	}
 
 	m.securitycli, err = securityclient.NewForConfig(restConfig)
 	if err != nil {
-		return err
+		m.log.Error(err)
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeDeploymentFailed,
+			"Kubernetes Clients",
+			"Failed to initialize the Kubernetes security CLI",
+		)
 	}
 
 	m.samplescli, err = samplesclient.NewForConfig(restConfig)
 	if err != nil {
-		return err
+		m.log.Error(err)
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeDeploymentFailed,
+			"Kubernetes Clients",
+			"Failed to initialize the Kubernetes samples CLI",
+		)
 	}
 
 	m.arocli, err = aroclient.NewForConfig(restConfig)
 	if err != nil {
-		return err
+		m.log.Error(err)
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeDeploymentFailed,
+			"Kubernetes Clients",
+			"Failed to initialize the ARO cli",
+		)
 	}
 
 	m.configcli, err = configclient.NewForConfig(restConfig)
 	if err != nil {
-		return err
+		m.log.Error(err)
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeDeploymentFailed,
+			"Kubernetes Clients",
+			"Failed to initialize the Kubernetes config CLI",
+		)
 	}
 
 	m.registryclient, err = imageregistryclient.NewForConfig(restConfig)
-	return err
+	if err != nil {
+		return api.NewCloudError(
+			http.StatusInternalServerError,
+			api.CloudErrorCodeDeploymentFailed,
+			"Kubernetes Clients",
+			"Failed to initialize image-registry client",
+		)
+	}
+	return nil
 }
 
 // updateProvisionedBy sets the deploying resource provider version in
