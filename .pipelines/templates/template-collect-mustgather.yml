@@ -6,4 +6,7 @@ steps:
     ./oc adm must-gather
     tar cf must-gather.tar.gz must-gather.local.*
   displayName: Must-Gather
+- publish: /home/cloud-user/must-gather.tar.gz
+  artifact: must-gather
+
 

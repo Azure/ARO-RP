@@ -1,5 +1,3 @@
 steps:
-- publish: /home/cloud-user/.bashrc # test artifacting a random file in CI VM's home directory
-  artifact: bashrc
-- publish: /home/cloud-user/must-gather.tar.gz # test artifacting a real must-gather
-  artifact: must-gather
+- publish: /home/cloud-user/dummy.txt # test artifacting a random file in CI VM's home directory
+  artifact: dummy_400MB_file

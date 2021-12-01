@@ -31,27 +31,9 @@ jobs:
     parameters:
       rpImageACR: $(RP_IMAGE_ACR)
       buildCommand: publish-image-aro
-  - script: |
-      set -e
-      set -o pipefail
-
-      . secrets/env
-
-      az account set -s $AZURE_SUBSCRIPTION_ID
-
-      set -x
-      . ./hack/e2e/run-rp-and-e2e.sh
-      trap 'set +e; kill_rp; clean_e2e_db' EXIT
-
-      deploy_e2e_db
-
-      run_rp
-      validate_rp_running
-      register_sub
-
-      export CI=true
-      make test-e2e
-  - template: ./templates/template-collect-mustgather.yml
+  - script: | # instead of running e2e, just make a big file to make sure we don't have artifact size limits
+      touch dummy.txt
+      fallocate -l 400M dummy.txt
   - template: ./templates/template-publish-artifacts.yml
   - template: ./templates/template-az-cli-logout.yml
 
