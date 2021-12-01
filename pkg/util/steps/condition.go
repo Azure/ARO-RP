@@ -6,8 +6,11 @@ package steps
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -66,9 +69,47 @@ func (c conditionStep) run(ctx context.Context, log *logrus.Entry) error {
 		log.Warnf("step %s failed but has configured 'fail=%t'. Continuing. Error: %s", c, c.fail, err.Error())
 		return nil
 	}
+	if err == wait.ErrWaitTimeout {
+		return c.enrichConditionTimeoutError()
+	}
 	return err
 }
 
 func (c conditionStep) String() string {
 	return fmt.Sprintf("[Condition %s, timeout %s]", friendlyName(c.f), c.timeout)
+}
+
+func (c conditionStep) enrichConditionTimeoutError() error {
+	funcNameParts := strings.Split(friendlyName(c.f), ".")
+	funcName := strings.Replace(funcNameParts[len(funcNameParts)-1], "-fm", "", 1)
+
+	message := "timed out polling for a prerequisite cluster condition to resolve"
+
+	// All functions passed as a `conditionFunction`: https://github.com/Azure/ARO-RP/blob/master/pkg/cluster/condition.go
+	// should have a case block below with a generic error message for the condition when it doesn't resolve
+	switch funcName {
+	case "apiServersReady":
+		message = "Kube API has not initialised successfully and is unavailable"
+	case "aroDeploymentReady":
+		message = "ARO Cluster Operator has failed to initialise successfully"
+	case "bootstrapConfigMapReady":
+		message = "bootstrap configuration required to create new cluster nodes is unavailable"
+	case "clusterVersionReady":
+		message = "Cluster Version Operator has not started successfully"
+	case "ingressControllerReady":
+		message = "Ingress Controller has not initialised successfully"
+	case "minimumWorkerNodesReady":
+		message = "minimum number of worker nodes have not been successfully created"
+	case "operatorConsoleExists":
+		message = "Console Cluster Operator has failed to initialise successfully"
+	case "operatorConsoleReady":
+		message = "Console Cluster Operator has not started successfully"
+	}
+
+	return api.NewCloudError(
+		http.StatusFailedDependency,
+		api.CloudErrorCodeDeploymentFailed,
+		"Cluster Install Condition",
+		message,
+	)
 }
