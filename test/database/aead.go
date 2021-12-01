@@ -12,10 +12,7 @@ func (fakeAEAD) Open(in []byte) ([]byte, error) {
 }
 
 func (fakeAEAD) Seal(in []byte) ([]byte, error) {
-	out := make([]byte, 4+len(in))
-	copy(out, fakeCode)
-	copy(out[4:], in)
-	return out, nil
+	return append(fakeCode, in...), nil
 }
 
 func NewFakeAEAD() *fakeAEAD {
