@@ -158,7 +158,9 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	hostname := "localhost:8444"
+	// In development the portal API is proxied by the frontend dev server which is
+	// hosted at localhost:3000, so the hostname needs to be set to that
+	hostname := "localhost:3000"
 	address := "localhost:8444"
 	sshAddress := "localhost:2222"
 	if !_env.IsLocalDevelopmentMode() {
@@ -177,7 +179,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	log.Print("listening")
+	log.Printf("listening %s", address)
 
 	p := pkgportal.NewPortal(_env, audit, log.WithField("component", "portal"), log.WithField("component", "portal-access"), l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbOpenShiftClusters, dbPortal, dialer, m)
 

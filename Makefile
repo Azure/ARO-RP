@@ -3,7 +3,8 @@ COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcela
 ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
-FLUENTBIT_VERSION = 1.7.8-1
+FLUENTBIT_VERSION = 1.8.9-1
+FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)
 AUTOREST_VERSION = 3.3.2
 AUTOREST_IMAGE = "quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}"
 
@@ -38,7 +39,7 @@ client: generate
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 deploy:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
+	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 dev-config.yaml:
 	go run ./hack/gendevconfig >dev-config.yaml
@@ -53,18 +54,18 @@ generate:
 
 image-aro: aro e2e.test
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
+	docker build --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
 
 image-aro-multistage:
-	docker build --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) .
+	docker build --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) .
 
 image-autorest:
-	docker build --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" \
+	docker build --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" \
 	  -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
 
 image-fluentbit:
-	docker build --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) \
-	  -f Dockerfile.fluentbit -t ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION) .
+	docker build --network=host --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) \
+	  -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
 
 image-proxy: proxy
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
@@ -88,7 +89,7 @@ publish-image-autorest: image-autorest
 	docker push ${AUTOREST_IMAGE}
 
 publish-image-fluentbit: image-fluentbit
-	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)
+	docker push $(FLUENTBIT_IMAGE)
 
 publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
@@ -97,7 +98,7 @@ proxy:
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./hack/proxy
 
 run-portal:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro portal
+	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro portal
 
 build-portal:
 	cd portal && npm install && npm run build
@@ -106,7 +107,7 @@ pyenv:
 	python3 -m venv pyenv
 	. pyenv/bin/activate && \
 		pip install -U pip && \
-		pip install autopep8 azdev azure-mgmt-loganalytics==0.2.0 ruamel.yaml wheel && \
+		pip install autopep8 azdev azure-mgmt-loganalytics==0.2.0 colorama ruamel.yaml wheel && \
 		azdev setup -r . && \
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
 

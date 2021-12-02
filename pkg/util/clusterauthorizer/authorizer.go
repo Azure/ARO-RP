@@ -7,12 +7,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/form3tech-oss/jwt-go"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
@@ -22,11 +24,23 @@ type Credentials struct {
 	TenantID     []byte
 }
 
-// NewAzRefreshableAuthorizer returns a new refreshable authorizer based on an auth token (see GetToken in /pkg/util/aad)
-func NewAzRefreshableAuthorizer(token *adal.ServicePrincipalToken) (refreshable.Authorizer, error) {
+// NewAzRefreshableAuthorizer returns a new refreshable authorizer
+// using Cluster Service Principal.
+func NewAzRefreshableAuthorizer(ctx context.Context, log *logrus.Entry, azEnv *azureclient.AROEnvironment, kubernetescli kubernetes.Interface) (refreshable.Authorizer, error) {
+	// Grab azure-credentials from secret
+	credentials, err := AzCredentials(ctx, kubernetescli)
+	if err != nil {
+		return nil, err
+	}
+	// create service principal token from azure-credentials
+	token, err := aad.GetToken(ctx, log, string(credentials.ClientID), string(credentials.ClientSecret), string(credentials.TenantID), azEnv.ActiveDirectoryEndpoint, azEnv.ResourceManagerEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
 	p := &jwt.Parser{}
 	c := &azureclaim.AzureClaim{}
-	_, _, err := p.ParseUnverified(token.OAuthToken(), c)
+	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
 	if err != nil {
 		return nil, err
 	}

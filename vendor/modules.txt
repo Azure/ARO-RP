@@ -945,6 +945,8 @@ github.com/openshift/installer/pkg/types/vsphere/defaults
 github.com/openshift/installer/pkg/types/vsphere/validation
 github.com/openshift/installer/pkg/validate
 github.com/openshift/installer/pkg/version
+# github.com/openshift/kubernetes-metrics v0.2.0
+## explicit
 # github.com/openshift/library-go v0.0.0-20210906100234-6754cfd64cb5 => github.com/openshift/library-go v0.0.0-20210825122301-7f0bf922c345
 ## explicit
 github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers
@@ -1217,7 +1219,6 @@ golang.org/x/oauth2/google/internal/externalaccount
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-golang.org/x/oauth2/microsoft
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/errgroup
@@ -1858,6 +1859,15 @@ k8s.io/kubernetes/pkg/apis/rbac
 k8s.io/kubernetes/pkg/apis/rbac/v1
 k8s.io/kubernetes/pkg/features
 k8s.io/kubernetes/pkg/util/parsers
+# k8s.io/metrics v0.22.4 => k8s.io/metrics v0.21.4
+## explicit
+k8s.io/metrics/pkg/apis/metrics
+k8s.io/metrics/pkg/apis/metrics/v1alpha1
+k8s.io/metrics/pkg/apis/metrics/v1beta1
+k8s.io/metrics/pkg/client/clientset/versioned
+k8s.io/metrics/pkg/client/clientset/versioned/scheme
+k8s.io/metrics/pkg/client/clientset/versioned/typed/metrics/v1alpha1
+k8s.io/metrics/pkg/client/clientset/versioned/typed/metrics/v1beta1
 # k8s.io/utils v0.0.0-20210820185131-d34e5cb4466e
 ## explicit
 k8s.io/utils/buffer

@@ -50,14 +50,14 @@ class AADManager:
 
     def get_service_principal(self, app_id):
         sps = list(self.client.service_principals.list(
-            filter="appId eq '%s'" % app_id))
+            filter=f"appId eq '{app_id}'"))
         if sps:
             return sps[0]
         return None
 
     def get_application_by_client_id(self, client_id):
         apps = list(self.client.applications.list(
-            filter="appId eq '%s'" % client_id))
+            filter=f"appId eq '{client_id}'"))
         if apps:
             return apps[0]
         return None

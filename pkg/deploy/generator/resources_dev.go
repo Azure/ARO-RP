@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 
@@ -456,5 +457,94 @@ chmod +x /etc/cron.hourly/tmpwatch
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
 		},
+	}
+}
+
+const (
+	sharedKeyVaultName          = "concat(take(resourceGroup().name,15), '" + SharedKeyVaultNameSuffix + "')"
+	sharedDiskEncryptionSetName = "concat(resourceGroup().name, '" + SharedDiskEncryptionSetNameSuffix + "')"
+	sharedDiskEncryptionKeyName = "concat(resourceGroup().name, '-disk-encryption-key')"
+
+	SharedKeyVaultNameSuffix          = "-sharedKV"
+	SharedDiskEncryptionSetNameSuffix = "-disk-encryption-set"
+)
+
+// shared keyvault for keys used for disk encryption sets when creating clusters locally
+func (g *generator) devDiskEncryptionKeyvault() *arm.Resource {
+	return g.keyVault(fmt.Sprintf("[%s]", sharedKeyVaultName), &[]mgmtkeyvault.AccessPolicyEntry{}, nil, nil)
+}
+
+func (g *generator) devDiskEncryptionKey() *arm.Resource {
+	key := &mgmtkeyvault.Key{
+		KeyProperties: &mgmtkeyvault.KeyProperties{
+			Kty:     mgmtkeyvault.RSA,
+			KeySize: to.Int32Ptr(4096),
+		},
+
+		Name:     to.StringPtr(fmt.Sprintf("[concat(%s, '/', %s)]", sharedKeyVaultName, sharedDiskEncryptionKeyName)),
+		Type:     to.StringPtr("Microsoft.KeyVault/vaults/keys"),
+		Location: to.StringPtr("[resourceGroup().location]"),
+	}
+
+	return &arm.Resource{
+		Resource:   key,
+		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
+		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults', %s)]", sharedKeyVaultName)},
+	}
+}
+
+func (g *generator) devDiskEncryptionSet() *arm.Resource {
+	diskEncryptionSet := &mgmtcompute.DiskEncryptionSet{
+		EncryptionSetProperties: &mgmtcompute.EncryptionSetProperties{
+			ActiveKey: &mgmtcompute.KeyVaultAndKeyReference{
+				KeyURL: to.StringPtr(fmt.Sprintf("[reference(resourceId('Microsoft.KeyVault/vaults/keys', %s, %s), '%s', 'Full').properties.keyUriWithVersion]", sharedKeyVaultName, sharedDiskEncryptionKeyName, azureclient.APIVersion("Microsoft.KeyVault"))),
+				SourceVault: &mgmtcompute.SourceVault{
+					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults', %s)]", sharedKeyVaultName)),
+				},
+			},
+		},
+
+		Name:     to.StringPtr(fmt.Sprintf("[%s]", sharedDiskEncryptionSetName)),
+		Type:     to.StringPtr("Microsoft.Compute/diskEncryptionSets"),
+		Location: to.StringPtr("[resourceGroup().location]"),
+		Identity: &mgmtcompute.EncryptionSetIdentity{Type: mgmtcompute.SystemAssigned},
+	}
+
+	return &arm.Resource{
+		Resource:   diskEncryptionSet,
+		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
+		DependsOn: []string{
+			fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults/keys', %s, %s)]", sharedKeyVaultName, sharedDiskEncryptionKeyName),
+		},
+	}
+}
+
+func (g *generator) devDiskEncryptionKeyVaultAccessPolicy() *arm.Resource {
+	accessPolicy := &mgmtkeyvault.VaultAccessPolicyParameters{
+		Properties: &mgmtkeyvault.VaultAccessPolicyProperties{
+			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
+				{
+					TenantID: &tenantUUIDHack,
+					ObjectID: to.StringPtr(fmt.Sprintf("[reference(resourceId('Microsoft.Compute/diskEncryptionSets', %s), '%s', 'Full').identity.PrincipalId]", sharedDiskEncryptionSetName, azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets"))),
+					Permissions: &mgmtkeyvault.Permissions{
+						Keys: &[]mgmtkeyvault.KeyPermissions{
+							mgmtkeyvault.KeyPermissionsGet,
+							mgmtkeyvault.KeyPermissionsWrapKey,
+							mgmtkeyvault.KeyPermissionsUnwrapKey,
+						},
+					},
+				},
+			},
+		},
+
+		Name:     to.StringPtr(fmt.Sprintf("[concat(%s, '/add')]", sharedKeyVaultName)),
+		Type:     to.StringPtr("Microsoft.KeyVault/vaults/accessPolicies"),
+		Location: to.StringPtr("[resourceGroup().location]"),
+	}
+
+	return &arm.Resource{
+		Resource:   accessPolicy,
+		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
+		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.Compute/diskEncryptionSets', %s)]", sharedDiskEncryptionSetName)},
 	}
 }

@@ -84,9 +84,10 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 				},
 			},
 		}
-		if !f.env.IsLocalDevelopmentMode() /* not local dev or CI */ {
-			doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled = true
-		}
+		// TODO (BV): reenable gateway on create once we fix bugs
+		// if !f.env.IsLocalDevelopmentMode() /* not local dev or CI */ {
+		// 	doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled = true
+		// }
 	}
 
 	doc.CorrelationData = correlationData
@@ -171,9 +172,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// is not provided in the header must be preserved
 	f.systemDataEnricher(doc, systemData)
 
-	// SetDefaults will set defaults on cluster document
-	api.SetDefaults(doc)
-
 	if isCreate {
 		// on create, make the cluster resourcegroup ID lower case to work
 		// around LB/PLS bug
@@ -201,6 +199,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		}
 		doc.Dequeues = 0
 	}
+
+	// SetDefaults will set defaults on cluster document
+	api.SetDefaults(doc)
 
 	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, r, doc)
 	if err != nil {

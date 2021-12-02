@@ -82,6 +82,7 @@ require (
 	github.com/openshift/console-operator v0.0.0-20210905022429-b8058325fabe
 	github.com/openshift/custom-resource-status v1.1.0 // indirect
 	github.com/openshift/installer v0.16.1
+	github.com/openshift/kubernetes-metrics v0.2.0 // indirect
 	github.com/openshift/library-go v0.0.0-20210906100234-6754cfd64cb5
 	github.com/openshift/machine-api-operator v0.2.1-0.20210820103535-d50698c302f5
 	github.com/openshift/machine-config-operator v4.2.0-alpha.0.0.20190917115525-033375cbe820+incompatible
@@ -126,6 +127,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20210817084001-7fbd8d59e5b8 // indirect
 	k8s.io/kubectl v0.22.1
 	k8s.io/kubernetes v1.21.4
+	k8s.io/metrics v0.22.4
 	k8s.io/utils v0.0.0-20210820185131-d34e5cb4466e // indirect
 	kubevirt.io/client-go v0.44.1 // indirect
 	kubevirt.io/containerized-data-importer v1.39.0 // indirect

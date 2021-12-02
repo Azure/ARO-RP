@@ -8,16 +8,16 @@
     }
   },
   "results": {
-    "f02a038e5366a1cd9fa0387dab25be4965a56ada4fafb0c467bb3c9b7e7e442f": {
-      "signature": "f02a038e5366a1cd9fa0387dab25be4965a56ada4fafb0c467bb3c9b7e7e442f",
-      "target": "deploy/cluster-predeploy.json",
+    "f78e4b715af3386df99bd3e9bf347f752b3c561325e290eaf0b64bd6e6792783": {
+      "signature": "f78e4b715af3386df99bd3e9bf347f752b3c561325e290eaf0b64bd6e6792783",
+      "target": "deploy/cluster-development-predeploy.json",
       "memberOf": [
         "default"
       ],
-      "tool": "ARMory",
+      "tool": "armory",
       "ruleId": "ARM1005",
       "justification": null,
-      "createdDate": "2021-04-19 17:58:41Z",
+      "createdDate": "2021-11-16 23:28:02Z",
       "expirationDate": null,
       "type": null
     },

@@ -7,8 +7,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net"
-	"net/http"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	consoleclient "github.com/openshift/client-go/console/clientset/versioned"
@@ -18,6 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
@@ -63,8 +62,9 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
-		MetricsBindAddress: "0", // disabled
-		Port:               8443,
+		HealthProbeBindAddress: ":8080",
+		MetricsBindAddress:     "0", // disabled
+		Port:                   8443,
 	})
 	if err != nil {
 		return err
@@ -198,14 +198,14 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 
 	log.Info("starting manager")
 
-	l, err := net.Listen("tcp", ":8080")
-	if err != nil {
+	if err := mgr.AddHealthzCheck("ready", healthz.Ping); err != nil {
+		log.Error(err, "unable to set up health check")
 		return err
 	}
-
-	go func() {
-		_ = http.Serve(l, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
-	}()
+	if err := mgr.AddReadyzCheck("ready", healthz.Ping); err != nil {
+		log.Error(err, "unable to set up ready check")
+		return err
+	}
 
 	return mgr.Start(ctrl.SetupSignalHandler())
 }

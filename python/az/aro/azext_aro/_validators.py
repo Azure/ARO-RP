@@ -27,8 +27,7 @@ def validate_cidr(key):
             try:
                 ipaddress.IPv4Network(cidr)
             except ValueError as e:
-                raise InvalidArgumentValueError("Invalid --%s '%s'." %
-                                                (key.replace('_', '-'), cidr)) from e
+                raise InvalidArgumentValueError(f"Invalid --{key.replace('_', '-')} '{cidr}'.") from e
 
     return _validate_cidr
 
@@ -38,7 +37,7 @@ def validate_client_id(namespace):
         try:
             uuid.UUID(namespace.client_id)
         except ValueError as e:
-            raise InvalidArgumentValueError("Invalid --client-id '%s'." % namespace.client_id) from e
+            raise InvalidArgumentValueError(f"Invalid --client-id '{namespace.client_id}'.") from e
 
         if namespace.client_secret is None or not str(namespace.client_secret):
             raise RequiredArgumentMissingError('Must specify --client-secret with --client-id.')
@@ -60,16 +59,15 @@ def validate_cluster_resource_group(cmd, namespace):
 
         if client.resource_groups.check_existence(namespace.cluster_resource_group):
             raise InvalidArgumentValueError(
-                "Invalid --cluster-resource-group '%s': resource group must not exist." %
-                namespace.cluster_resource_group)
+                f"Invalid --cluster-resource-group '{namespace.cluster_resource_group}':"
+                " resource group must not exist.")
 
 
 def validate_disk_encryption_set(cmd, namespace):
     if namespace.disk_encryption_set is not None:
         if not is_valid_resource_id(namespace.disk_encryption_set):
             raise InvalidArgumentValueError(
-                "Invalid --disk-encryption-set '%s', has to be a resource ID." %
-                namespace.disk_encryption_set)
+                f"Invalid --disk-encryption-set '{namespace.disk_encryption_set}', has to be a resource ID.")
 
         desid = parse_resource_id(namespace.disk_encryption_set)
         compute_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_COMPUTE)
@@ -77,8 +75,9 @@ def validate_disk_encryption_set(cmd, namespace):
             compute_client.disk_encryption_sets.get(resource_group_name=desid['resource_group'],
                                                     disk_encryption_set_name=desid['name'])
         except CloudError as err:
-            raise InvalidArgumentValueError("Invald --disc-encryption-set, error when getting '%s': %s" %
-                                            (namespace.disk_encryption_set, err.message)) from err
+            raise InvalidArgumentValueError(
+                f"Invald --disk-encryption-set, error when getting '{namespace.disk_encryption_set}':"
+                f" {err.message}") from err
 
 
 def validate_domain(namespace):
@@ -87,8 +86,7 @@ def validate_domain(namespace):
                         r'([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9])' +
                         r'(\.([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9]))*' +
                         r'$', namespace.domain):
-            raise InvalidArgumentValueError("Invalid --domain '%s'." %
-                                            namespace.domain)
+            raise InvalidArgumentValueError(f"Invalid --domain '{namespace.domain}'.")
 
 
 def validate_pull_secret(namespace):
@@ -110,8 +108,8 @@ def validate_pull_secret(namespace):
 def validate_sdn(namespace):
     if namespace.software_defined_network is not None:
         if namespace.software_defined_network not in ['OVNKubernetes', 'OpenshiftSDN']:
-            raise InvalidArgumentValueError("Invalid --software-defined-network '%s'." %
-                                            namespace.software_defined_network)
+            raise InvalidArgumentValueError(
+                f"Invalid --software-defined-network '{namespace.software_defined_network}'.")
 
 
 def validate_subnet(key):
@@ -120,8 +118,7 @@ def validate_subnet(key):
 
         if not is_valid_resource_id(subnet):
             if not namespace.vnet:
-                raise RequiredArgumentMissingError('Must specify --vnet if --%s is not an id.' %
-                                                   key.replace('_', '-'))
+                raise RequiredArgumentMissingError(f"Must specify --vnet if --{key.replace('_', '-')} is not an id.")
 
             validate_vnet(cmd, namespace)
 
@@ -131,28 +128,25 @@ def validate_subnet(key):
         parts = parse_resource_id(subnet)
 
         if parts['subscription'] != get_subscription_id(cmd.cli_ctx):
-            raise InvalidArgumentValueError("--%s subscription '%s' must equal cluster subscription." %
-                                            (key.replace('_', '-'), parts["subscription"]))
+            raise InvalidArgumentValueError(
+                f"--{key.replace('_', '-')} subscription '{parts['subscription']}' must equal cluster subscription.")
 
         if parts['namespace'].lower() != 'microsoft.network':
-            raise InvalidArgumentValueError("--%s namespace '%s' must equal Microsoft.Network." %
-                                            (key.replace('_', '-'), parts["namespace"]))
+            raise InvalidArgumentValueError(
+                f"--{key.replace('_', '-')} namespace '{parts['namespace']}' must equal Microsoft.Network.")
 
         if parts['type'].lower() != 'virtualnetworks':
-            raise InvalidArgumentValueError("--%s type '%s' must equal virtualNetworks." %
-                                            (key.replace('_', '-'), parts["type"]))
+            raise InvalidArgumentValueError(
+                f"--{key.replace('_', '-')} type '{parts['type']}' must equal virtualNetworks.")
 
         if parts['last_child_num'] != 1:
-            raise InvalidArgumentValueError("--%s '%s' must have one child." %
-                                            (key.replace('_', '-'), subnet))
+            raise InvalidArgumentValueError(f"--{key.replace('_', '-')} '{subnet}' must have one child.")
 
         if 'child_namespace_1' in parts:
-            raise InvalidArgumentValueError("--%s '%s' must not have child namespace." %
-                                            (key.replace('_', '-'), subnet))
+            raise InvalidArgumentValueError(f"--{key.replace('_', '-')} '{subnet}' must not have child namespace.")
 
         if parts['child_type_1'].lower() != 'subnets':
-            raise InvalidArgumentValueError("--%s child type '%s' must equal subnets." %
-                                            (key.replace('_', '-'), subnet))
+            raise InvalidArgumentValueError(f"--{key.replace('_', '-')} child type '{subnet}' must equal subnets.")
 
         client = get_mgmt_service_client(
             cmd.cli_ctx, ResourceType.MGMT_NETWORK)
@@ -160,8 +154,8 @@ def validate_subnet(key):
             client.subnets.get(parts['resource_group'],
                                parts['name'], parts['child_name_1'])
         except CloudError as err:
-            raise InvalidArgumentValueError("Invald --%s, error when getting '%s': %s" %
-                                            (key.replace('_', '-'), subnet, err.message)) from err
+            raise InvalidArgumentValueError(
+                f"Invald --{key.replace('_', '-')}, error when getting '{subnet}': {err.message}") from err
 
     return _validate_subnet
 
@@ -171,17 +165,18 @@ def validate_subnets(master_subnet, worker_subnet):
     worker_parts = parse_resource_id(worker_subnet)
 
     if master_parts['resource_group'].lower() != worker_parts['resource_group'].lower():
-        raise InvalidArgumentValueError("--master-subnet resource group '%s' must equal "
-                                        "--worker-subnet resource group '%s'." %
-                                        (master_parts['resource_group'], worker_parts['resource_group']))
+        raise InvalidArgumentValueError(f"--master-subnet resource group '{master_parts['resource_group']}' must equal "
+                                        f"--worker-subnet resource group '{worker_parts['resource_group']}'.")
 
     if master_parts['name'].lower() != worker_parts['name'].lower():
-        raise InvalidArgumentValueError("--master-subnet vnet name '%s' must equal --worker-subnet vnet name '%s'." %
-                                        (master_parts['name'], worker_parts['name']))
+        raise InvalidArgumentValueError(
+            f"--master-subnet vnet name '{master_parts['name']}'"
+            f" must equal --worker-subnet vnet name '{worker_parts['name']}'.")
 
     if master_parts['child_name_1'].lower() == worker_parts['child_name_1'].lower():
-        raise InvalidArgumentValueError("--master-subnet name '%s' must not equal --worker-subnet name '%s'." %
-                                        (master_parts['child_name_1'], worker_parts['child_name_1']))
+        raise InvalidArgumentValueError(
+            f"--master-subnet name '{master_parts['child_name_1']}'"
+            f" must not equal --worker-subnet name '{worker_parts['child_name_1']}'.")
 
 
 def validate_visibility(key):
@@ -190,8 +185,7 @@ def validate_visibility(key):
         if visibility is not None:
             visibility = visibility.capitalize()
             if visibility not in ['Private', 'Public']:
-                raise InvalidArgumentValueError("Invalid --%s '%s'." %
-                                                (key.replace('_', '-'), visibility))
+                raise InvalidArgumentValueError(f"Invalid --{key.replace('_', '-')} '{visibility}'.")
 
     return _validate_visibility
 

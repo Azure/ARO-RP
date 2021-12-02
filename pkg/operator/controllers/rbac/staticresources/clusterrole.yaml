@@ -503,6 +503,14 @@ rules:
   - list
   - watch
 - apiGroups:
+  - preview.aro.openshift.io
+  resources:
+  - previewfeatures
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - project.openshift.io
   resources:
   - projectrequests

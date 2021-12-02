@@ -29,5 +29,12 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 		if doc.OpenShiftCluster.Properties.ClusterProfile.FipsValidatedModules == "" {
 			doc.OpenShiftCluster.Properties.ClusterProfile.FipsValidatedModules = FipsValidatedModulesDisabled
 		}
+
+		// When ProvisioningStateAdminUpdating is set, it needs a MaintenanceTask
+		if doc.OpenShiftCluster.Properties.ProvisioningState == ProvisioningStateAdminUpdating {
+			if doc.OpenShiftCluster.Properties.MaintenanceTask == "" {
+				doc.OpenShiftCluster.Properties.MaintenanceTask = MaintenanceTaskEverything
+			}
+		}
 	}
 }

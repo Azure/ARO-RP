@@ -34,6 +34,7 @@
     export DATABASE_NAME=ARO
     export KEYVAULT_PREFIX=$USER-aro-$LOCATION
     export ARO_IMAGE=${USER}aro.azurecr.io/aro:$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty)
+    export FLUENTBIT_IMAGE=${USER}aro.azurecr.io/fluentbit:latest
     ```
 
     ```bash
@@ -42,6 +43,7 @@
 
 1. Run `make deploy`
     > __NOTE:__ This will fail on the first attempt to run due to certificate and container mirroring requirements.
+    > __NOTE:__ If you reuse an old name, you might run into soft-delete of the keyvaults. `az keyvault recover --name` to fix this.
 
 <!-- TODO: this is almost duplicated elsewhere.  Would be nice to move to common area -->
 1. Update the certificates in keyvault
@@ -99,7 +101,7 @@
     1. Setup mirroring environment variables
         ```bash
         export DST_ACR_NAME=${USER}aro
-        export SRC_AUTH_QUAY=FILL_IN # Get quay auth https://cloud.redhat.com/openshift/create/local -> Download Pull Secret
+        export SRC_AUTH_QUAY=FILL_IN # Get quay auth https://cloud.redhat.com/openshift/create/local -> Download Pull Secret. Use base64 value from quay.io part
         export SRC_AUTH_REDHAT=$(echo $USER_PULL_SECRET | jq -r '.auths."registry.redhat.io".auth')
         export DST_AUTH=$(echo -n '00000000-0000-0000-0000-000000000000:'$(az acr login -n ${DST_ACR_NAME} --expose-token | jq -r .accessToken) | base64 -w0)
 
@@ -111,7 +113,7 @@
     1. Run the mirroring
         > The `latest` argument will take the InstallStream from `pkg/util/version/const.go` and mirror that version
         ```bash
-        go run ./cmd/aro mirror latest
+        go run -tags aro ./cmd/aro mirror latest
         ```
 
     1. Push the ARO image to your ACR
@@ -164,7 +166,7 @@
 
 1. Deploy your cluster
     ```bash
-    RESOURCEGROUP=v4-$LOCATION CLUSTER=bvesel go run ./hack/cluster create
+    RESOURCEGROUP=v4-$LOCATION CLUSTER=$USER-cluster go run ./hack/cluster create
     ```
 
     > __NOTE:__ The cluster will not be accessible via DNS unless you update the parent domain of the cluster.

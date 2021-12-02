@@ -255,8 +255,23 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 			ImageRegistryStorageAccountName: m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName,
 		},
 	})
-	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) /* already exists */ {
+
+	recordExists := err != nil && cosmosdb.IsErrorStatusCode(err, http.StatusConflict)
+	if err != nil && !recordExists /* already exists */ {
 		return err
+	}
+
+	// ensure the record is this clusters if it exists
+	if recordExists {
+		gwyDoc, err := m.dbGateway.Get(ctx, linkIdentifier)
+		if err != nil {
+			return err
+		}
+		if !strings.EqualFold(gwyDoc.ID, m.doc.OpenShiftCluster.ID) ||
+			!strings.EqualFold(gwyDoc.Gateway.ImageRegistryStorageAccountName, m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName) ||
+			!strings.EqualFold(gwyDoc.Gateway.StorageSuffix, m.doc.OpenShiftCluster.Properties.StorageSuffix) {
+			return errors.New("gateway record already exists for a different cluster")
+		}
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
