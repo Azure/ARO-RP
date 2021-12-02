@@ -27,9 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/api/v20210901preview"
-	mgmtredhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
 	mgmtredhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2021-09-01-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
@@ -448,35 +446,22 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		}
 
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
-		ext := api.APIs[v20210901preview.APIVersion].OpenShiftClusterConverter().ToExternal(&oc)
-		data, err := json.Marshal(ext)
-		if err != nil {
-			return err
-		}
-
-		ocExt := mgmtredhatopenshift20210901preview.OpenShiftCluster{}
-		err = json.Unmarshal(data, &ocExt)
-		if err != nil {
-			return err
-		}
-
-		return c.openshiftclustersv20210901preview.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
-
-	} else {
-		ext := api.APIs[v20200430.APIVersion].OpenShiftClusterConverter().ToExternal(&oc)
-		data, err := json.Marshal(ext)
-		if err != nil {
-			return err
-		}
-
-		ocExt := mgmtredhatopenshift20200430.OpenShiftCluster{}
-		err = json.Unmarshal(data, &ocExt)
-		if err != nil {
-			return err
-		}
-
-		return c.openshiftclustersv20200430.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
 	}
+
+	ext := api.APIs[v20210901preview.APIVersion].OpenShiftClusterConverter().ToExternal(&oc)
+	data, err := json.Marshal(ext)
+	if err != nil {
+		return err
+	}
+
+	ocExt := mgmtredhatopenshift20210901preview.OpenShiftCluster{}
+	err = json.Unmarshal(data, &ocExt)
+	if err != nil {
+		return err
+	}
+
+	return c.openshiftclustersv20210901preview.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
+
 }
 
 func (c *Cluster) registerSubscription(ctx context.Context) error {
