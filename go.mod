@@ -204,6 +204,8 @@ replace (
 	bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d // 404 on bitbucket.org/ww/goautoneg
 	github.com/docker/spdystream => github.com/docker/spdystream v0.1.0
 	github.com/go-openapi/spec => github.com/go-openapi/spec v0.19.8
+	// Replace old GoGo Protobuf versions https://nvd.nist.gov/vuln/detail/CVE-2021-3121
+	github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
 	github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.19.4
 	// https://www.whitesourcesoftware.com/vulnerability-database/WS-2018-0594
 	github.com/satori/go.uuid => github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
@@ -241,7 +243,6 @@ replace (
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.21.4
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.9.1
 	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.5.0
-
 )
 
 // Installer dependencies. Some of them are being used directly in the RP.
