@@ -132,6 +132,21 @@ func (m *MockMetricActions) EXPECT() *MockMetricActionsMockRecorder {
 	return m.recorder
 }
 
+// TopNodes mocks base method.
+func (m *MockMetricActions) TopNodes(arg0 context.Context) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TopNodes", arg0)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TopNodes indicates an expected call of TopNodes.
+func (mr *MockMetricActionsMockRecorder) TopNodes(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TopNodes", reflect.TypeOf((*MockMetricActions)(nil).TopNodes), arg0)
+}
+
 // TopPods mocks base method.
 func (m *MockMetricActions) TopPods(arg0 context.Context, arg1 string) ([]byte, error) {
 	m.ctrl.T.Helper()

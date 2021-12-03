@@ -18,6 +18,7 @@ import (
 // MetricActions are those that involve k8s objects, and thus depend upon k8s clients being createable
 type MetricActions interface {
 	TopPods(ctx context.Context, namespace string) ([]byte, error)
+	TopNodes(ctx context.Context) ([]byte, error)
 }
 
 type metricActions struct {
@@ -50,6 +51,16 @@ func NewMetricActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClu
 func (m *metricActions) TopPods(ctx context.Context, namespace string) ([]byte, error) {
 
 	un, err := m.configcli.MetricsV1beta1().PodMetricses(namespace).List(ctx, metav1.ListOptions{Limit: 1000})
+	if err != nil {
+		return nil, err
+	}
+
+	return un.Marshal()
+}
+
+func (m *metricActions) TopNodes(ctx context.Context) ([]byte, error) {
+
+	un, err := m.configcli.MetricsV1beta1().NodeMetricses().List(ctx, metav1.ListOptions{Limit: 1000})
 	if err != nil {
 		return nil, err
 	}

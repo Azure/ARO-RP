@@ -202,6 +202,13 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodGet).HandlerFunc(f.topOpenShiftPods).Name("topOpenShiftPods")
 
 	s = r.
+		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/topnodes").
+		Queries("api-version", "{api-version}").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.topOpenShiftNodes).Name("topOpenShiftNodes")
+
+	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationsstatus/{operationId}").
 		Queries("api-version", "{api-version}").
 		Subrouter()
