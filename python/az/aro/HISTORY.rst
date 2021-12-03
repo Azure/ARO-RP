@@ -46,3 +46,7 @@ Release History
 ++++++
 * Fixed get-admin-kubeconfig Enums for Feature state no longer available in AzureCLI
 * Added saving kubeconfig to file
+
+1.0.6
+++++++
+* Fixed backwards compatibility with Python3.6

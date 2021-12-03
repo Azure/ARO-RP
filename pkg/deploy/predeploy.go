@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"strings"
+	"time"
 
 	azkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -23,6 +24,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
+
+// Rotate the secret on every deploy of the RP iff the most recent
+// secret is less than 3 days old
+const rotateSecretAfter = time.Hour * 72
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
@@ -390,11 +395,24 @@ func (d *deployer) configureServiceSecrets(ctx context.Context) error {
 		secretName string
 		len        int
 	}{
-		{d.serviceKeyvault, env.EncryptionSecretName, 32},
 		{d.serviceKeyvault, env.EncryptionSecretV2Name, 64},
-		{d.serviceKeyvault, env.FrontendEncryptionSecretName, 32},
 		{d.serviceKeyvault, env.FrontendEncryptionSecretV2Name, 64},
 		{d.portalKeyvault, env.PortalServerSessionKeySecretName, 32},
+	} {
+		err := d.ensureAndRotateSecret(ctx, s.kv, s.secretName, s.len)
+		if err != nil {
+			return err
+		}
+	}
+
+	// don't rotate legacy secrets
+	for _, s := range []struct {
+		kv         keyvault.Manager
+		secretName string
+		len        int
+	}{
+		{d.serviceKeyvault, env.EncryptionSecretName, 32},
+		{d.serviceKeyvault, env.FrontendEncryptionSecretName, 32},
 	} {
 		err := d.ensureSecret(ctx, s.kv, s.secretName, s.len)
 		if err != nil {
@@ -403,6 +421,32 @@ func (d *deployer) configureServiceSecrets(ctx context.Context) error {
 	}
 
 	return d.ensureSecretKey(ctx, d.portalKeyvault, env.PortalServerSSHKeySecretName)
+}
+
+func (d *deployer) ensureAndRotateSecret(ctx context.Context, kv keyvault.Manager, secretName string, len int) error {
+	existingSecrets, err := kv.GetSecrets(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, secret := range existingSecrets {
+		if filepath.Base(*secret.ID) == secretName {
+			latestVersion, err := kv.GetSecret(ctx, secretName)
+			if err != nil {
+				return err
+			}
+
+			updatedTime := time.Unix(0, latestVersion.Attributes.Created.Duration().Nanoseconds()).Add(rotateSecretAfter)
+
+			// do not create a secret if rotateSecretAfter time has
+			// not elapsed since the secret version's creation timestamp
+			if time.Now().Before(updatedTime) {
+				return nil
+			}
+		}
+	}
+
+	return d.createSecret(ctx, kv, secretName, len)
 }
 
 func (d *deployer) ensureSecret(ctx context.Context, kv keyvault.Manager, secretName string, len int) error {
@@ -417,8 +461,12 @@ func (d *deployer) ensureSecret(ctx context.Context, kv keyvault.Manager, secret
 		}
 	}
 
+	return d.createSecret(ctx, kv, secretName, len)
+}
+
+func (d *deployer) createSecret(ctx context.Context, kv keyvault.Manager, secretName string, len int) error {
 	key := make([]byte, len)
-	_, err = rand.Read(key)
+	_, err := rand.Read(key)
 	if err != nil {
 		return err
 	}

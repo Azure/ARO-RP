@@ -13,6 +13,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/ghodss/yaml"
 	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
@@ -25,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 func updatedObjects(ctx context.Context, nsfilter string) ([]string, error) {
@@ -317,6 +321,101 @@ var _ = XDescribe("ARO Operator - MachineSet Controller", func() {
 		// Restore previous state
 		for _, ms := range mss.Items {
 			err := scale(ms.Name, *ms.Spec.Replicas)
+			Expect(err).NotTo(HaveOccurred())
+		}
+	})
+})
+
+var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
+	var vnetName, location, resourceGroup string
+	var subnetsToReconcile map[string]*string
+	var testnsg mgmtnetwork.SecurityGroup
+	ctx := context.Background()
+
+	const nsg = "e2e-nsg"
+
+	// TODO (robryan) rm this func once default to on https://github.com/Azure/ARO-RP/issues/1735
+	enableReconcileSubnet := func() {
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		if !instance.Spec.Features.ReconcileSubnets {
+			instance.Spec.Features.ReconcileSubnets = true
+			_, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, instance, metav1.UpdateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		}
+	}
+	// Gathers vnet name, resource group, location, and adds master/worker subnets to list to reconcile.
+	gatherNetworkInfo := func() {
+		oc, err := clients.OpenshiftClustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
+		Expect(err).NotTo(HaveOccurred())
+		location = *oc.Location
+
+		vnet, masterSubnet, err := subnet.Split(*oc.OpenShiftClusterProperties.MasterProfile.SubnetID)
+		Expect(err).NotTo(HaveOccurred())
+		_, workerSubnet, err := subnet.Split((*(*oc.OpenShiftClusterProperties.WorkerProfiles)[0].SubnetID))
+		Expect(err).NotTo(HaveOccurred())
+
+		subnetsToReconcile = map[string]*string{
+			masterSubnet: to.StringPtr(""),
+			workerSubnet: to.StringPtr(""),
+		}
+
+		r, err := azure.ParseResourceID(vnet)
+		Expect(err).NotTo(HaveOccurred())
+		resourceGroup = r.ResourceGroup
+		vnetName = r.ResourceName
+	}
+
+	// Creates an empty NSG that gets assigned to master/worker subnets.
+	createE2ENSG := func() {
+		testnsg = mgmtnetwork.SecurityGroup{
+			Location:                      to.StringPtr(location),
+			Name:                          to.StringPtr(nsg),
+			Type:                          to.StringPtr("Microsoft.Network/networkSecurityGroups"),
+			SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{},
+		}
+		err := clients.NetworkSecurityGroups.CreateOrUpdateAndWait(ctx, resourceGroup, nsg, testnsg)
+		Expect(err).NotTo(HaveOccurred())
+		testnsg, err = clients.NetworkSecurityGroups.Get(ctx, resourceGroup, nsg, "")
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	BeforeEach(func() {
+		enableReconcileSubnet()
+		gatherNetworkInfo()
+		createE2ENSG()
+	})
+	AfterEach(func() {
+		err := clients.NetworkSecurityGroups.DeleteAndWait(context.Background(), resourceGroup, nsg)
+		if err != nil {
+			log.Warn(err)
+		}
+	})
+	It("must reconcile list of subnets when NSG is changed", func() {
+		for subnet := range subnetsToReconcile {
+			// Gets current subnet NSG and then updates it to testnsg.
+			subnetObject, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
+			Expect(err).NotTo(HaveOccurred())
+			// Updates the value to the original NSG in our subnetsToReconcile map
+			subnetsToReconcile[subnet] = subnetObject.NetworkSecurityGroup.ID
+			subnetObject.NetworkSecurityGroup = &testnsg
+			err = clients.Subnet.CreateOrUpdateAndWait(ctx, resourceGroup, vnetName, subnet, subnetObject)
+			Expect(err).NotTo(HaveOccurred())
+		}
+		for subnet, correctNSG := range subnetsToReconcile {
+			// Validate subnet reconciles to original NSG.
+			err := wait.PollImmediate(30*time.Second, 10*time.Minute, func() (bool, error) {
+				s, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
+				if err != nil {
+					return false, err
+				}
+				if *s.NetworkSecurityGroup.ID == *correctNSG {
+					log.Infof("%s subnet's nsg matched expected value", subnet)
+					return true, nil
+				}
+				log.Errorf("%s nsg: %s did not match expected value: %s", subnet, *s.NetworkSecurityGroup.ID, *correctNSG)
+				return false, nil
+			})
 			Expect(err).NotTo(HaveOccurred())
 		}
 	})

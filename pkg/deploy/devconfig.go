@@ -48,6 +48,7 @@ func deployKeyvaultAccessPolicy(_env env.Core) map[string]interface{} {
 		"objectId": os.Getenv("AZURE_SERVICE_PRINCIPAL_ID"),
 		"permissions": map[string]interface{}{
 			"secrets": []interface{}{
+				"Get",
 				"List",
 				"Set",
 			},
@@ -155,7 +156,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			GatewayFeatures: []string{
 				"InsecureSkipVerifyDBTokenCertificate",
 			},
-			GatewayMDSDConfigVersion:    to.StringPtr("3.3"),
+			GatewayMDSDConfigVersion:    to.StringPtr(version.DevGatewayGenevaLoggingConfigVersion),
 			GatewayVMSSCapacity:         to.IntPtr(1),
 			GlobalResourceGroupLocation: to.StringPtr(_env.Location()),
 			GlobalResourceGroupName:     to.StringPtr(os.Getenv("USER") + "-global"),

@@ -27,3 +27,4 @@ gomock_reflect_*
 /deploy/config.yaml
 **/*.swp
 /portal/node_modules/
+.idea*

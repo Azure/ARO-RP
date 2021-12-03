@@ -113,7 +113,7 @@
     1. Run the mirroring
         > The `latest` argument will take the InstallStream from `pkg/util/version/const.go` and mirror that version
         ```bash
-        go run ./cmd/aro mirror latest
+        go run -tags aro ./cmd/aro mirror latest
         ```
 
     1. Push the ARO image to your ACR
@@ -166,7 +166,7 @@
 
 1. Deploy your cluster
     ```bash
-    RESOURCEGROUP=v4-$LOCATION CLUSTER=bvesel go run ./hack/cluster create
+    RESOURCEGROUP=v4-$LOCATION CLUSTER=$USER-cluster go run ./hack/cluster create
     ```
 
     > __NOTE:__ The cluster will not be accessible via DNS unless you update the parent domain of the cluster.
