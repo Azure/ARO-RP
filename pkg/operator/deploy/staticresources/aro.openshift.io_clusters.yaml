@@ -54,6 +54,34 @@ spec:
                 type: string
               domain:
                 type: string
+              features:
+                description: FeaturesSpec defines ARO operator feature gates
+                properties:
+                  reconcileAlertWebhook:
+                    type: boolean
+                  reconcileBanner:
+                    type: boolean
+                  reconcileDNSMasq:
+                    type: boolean
+                  reconcileGenevaLogging:
+                    type: boolean
+                  reconcileMachineSet:
+                    type: boolean
+                  reconcileMonitoringConfig:
+                    type: boolean
+                  reconcileNodeDrainer:
+                    type: boolean
+                  reconcilePullSecret:
+                    type: boolean
+                  reconcileRouteFix:
+                    type: boolean
+                  reconcileStorageAccounts:
+                    type: boolean
+                  reconcileSubnets:
+                    type: boolean
+                  reconcileWorkaroundsController:
+                    type: boolean
+                type: object
               gatewayDomains:
                 items:
                   type: string
