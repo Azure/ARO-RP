@@ -142,8 +142,9 @@ func (mon *Monitor) _emitPodContainerRestartCounter(ps *corev1.PodList) {
 
 			if mon.hourlyRun {
 				mon.log.WithFields(logrus.Fields{
-					"metric": "pod.restartcounter",
-					"name":   p.Name,
+					"metric":    "pod.restartcounter",
+					"name":      p.Name,
+					"namespace": p.Namespace,
 				}).Print()
 			}
 		}

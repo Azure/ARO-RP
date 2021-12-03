@@ -141,3 +141,43 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 	ps, _ := cli.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
 	mon._emitPodContainerStatuses(ps)
 }
+
+func TestEmitPodRestartCounts(t *testing.T) {
+	cli := fake.NewSimpleClientset(
+		&corev1.Pod{ // metrics expected
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "name",
+				Namespace: "openshift",
+			},
+			Status: corev1.PodStatus{
+				ContainerStatuses: []corev1.ContainerStatus{
+					{
+						Name:         "containername",
+						RestartCount: 43,
+					},
+				},
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+		},
+	)
+
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	m := mock_metrics.NewMockInterface(controller)
+
+	mon := &Monitor{
+		cli: cli,
+		m:   m,
+	}
+
+	m.EXPECT().EmitGauge("pod.restartcounter", int64(43), map[string]string{
+		"name":      "name",
+		"namespace": "openshift",
+	})
+
+	ps, _ := cli.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
+	mon._emitPodContainerRestartCounter(ps)
+}
