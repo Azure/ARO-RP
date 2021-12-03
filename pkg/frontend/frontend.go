@@ -40,6 +40,8 @@ func (err statusCodeError) Error() string {
 
 type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
 
+type metricActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.MetricActions, error)
+
 type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error)
 
 type ocEnricherFactory func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Interface) clusterdata.OpenShiftClusterEnricher
@@ -57,9 +59,10 @@ type frontend struct {
 	m    metrics.Interface
 	aead encryption.AEAD
 
-	kubeActionsFactory  kubeActionsFactory
-	azureActionsFactory azureActionsFactory
-	ocEnricherFactory   ocEnricherFactory
+	kubeActionsFactory   kubeActionsFactory
+	metricActionsFactory metricActionsFactory
+	azureActionsFactory  azureActionsFactory
+	ocEnricherFactory    ocEnricherFactory
 
 	l net.Listener
 	s *http.Server
@@ -91,21 +94,23 @@ func NewFrontend(ctx context.Context,
 	m metrics.Interface,
 	aead encryption.AEAD,
 	kubeActionsFactory kubeActionsFactory,
+	metricActionsFactory metricActionsFactory,
 	azureActionsFactory azureActionsFactory,
 	ocEnricherFactory ocEnricherFactory) (Runnable, error) {
 	f := &frontend{
-		auditLog:            auditLog,
-		baseLog:             baseLog,
-		env:                 _env,
-		dbAsyncOperations:   dbAsyncOperations,
-		dbOpenShiftClusters: dbOpenShiftClusters,
-		dbSubscriptions:     dbSubscriptions,
-		apis:                apis,
-		m:                   m,
-		aead:                aead,
-		kubeActionsFactory:  kubeActionsFactory,
-		azureActionsFactory: azureActionsFactory,
-		ocEnricherFactory:   ocEnricherFactory,
+		auditLog:             auditLog,
+		baseLog:              baseLog,
+		env:                  _env,
+		dbAsyncOperations:    dbAsyncOperations,
+		dbOpenShiftClusters:  dbOpenShiftClusters,
+		dbSubscriptions:      dbSubscriptions,
+		apis:                 apis,
+		m:                    m,
+		aead:                 aead,
+		kubeActionsFactory:   kubeActionsFactory,
+		metricActionsFactory: metricActionsFactory,
+		azureActionsFactory:  azureActionsFactory,
+		ocEnricherFactory:    ocEnricherFactory,
 
 		bucketAllocator: &bucket.Random{},
 
@@ -188,6 +193,13 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters).Name("getOpenShiftClusters")
+
+	s = r.
+		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/toppods").
+		Queries("api-version", "{api-version}").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.topOpenShiftPods).Name("topOpenShiftPods")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationsstatus/{operationId}").

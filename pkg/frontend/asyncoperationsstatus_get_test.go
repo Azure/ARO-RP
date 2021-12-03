@@ -160,7 +160,7 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 				ti.asyncOperationsClient.SetError(tt.dbError)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

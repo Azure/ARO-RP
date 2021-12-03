@@ -194,6 +194,8 @@ func acceptableNames(path string) []string {
 		return []string{"clientcmdv1"}
 	case "k8s.io/client-go/tools/metrics":
 		return []string{"kmetrics"}
+	case "k8s.io/metrics/pkg/client/clientset/versioned":
+		return []string{"metricsclient"}
 	case "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1":
 		return []string{"azureproviderv1beta1"}
 	case "sigs.k8s.io/controller-runtime":
