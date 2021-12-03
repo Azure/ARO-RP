@@ -1983,6 +1983,8 @@ github.com/openshift/custom-resource-status v0.0.0-20190822192428-e62f2f3b79f3/g
 github.com/openshift/custom-resource-status v0.0.0-20200602122900-c002fd1547ca/go.mod h1:GDjWl0tX6FNIj82vIxeudWeSx2Ff6nDZ8uJn0ohUFvo=
 github.com/openshift/custom-resource-status v1.1.0 h1:EjSh0f3vF6eaS3zAToVHUXcS7N2jVEosUFJ0sRKvmZ0=
 github.com/openshift/custom-resource-status v1.1.0/go.mod h1:GDjWl0tX6FNIj82vIxeudWeSx2Ff6nDZ8uJn0ohUFvo=
+github.com/openshift/kubernetes-metrics v0.2.0 h1:daEWgX6PN41iiShdLcv1B1HrK0XO2QrFb3AhkHXtmVU=
+github.com/openshift/kubernetes-metrics v0.2.0/go.mod h1:7Ig/X3CQhQY4FKrAA2WYA2bu9uwKVQCzSksbUFVKnrE=
 github.com/openshift/library-go v0.0.0-20210825122301-7f0bf922c345 h1:L8XeTZSonLKMLZVUo71LXVhBGE6yu1yeZ0BkpNgLPEw=
 github.com/openshift/library-go v0.0.0-20210825122301-7f0bf922c345/go.mod h1:C5DDOSPucn3EVA0T05fODKtAweTObMBrTYm/G3uUBI8=
 github.com/openshift/machine-api-operator v0.2.1-0.20210811215339-a6349c0280cc h1:Uw11A78u0pvxSWn4sjCdVKugBAQAoGHIDeF0vBNok3k=
@@ -3327,6 +3329,7 @@ k8s.io/kubelet v0.21.4/go.mod h1:kgXUz8upYNIngMSEZP1rpg2kp4gfUrsB7ir5u9Cm4HE=
 k8s.io/kubernetes v1.21.4 h1:uKnn+MDBG4Bsed/iD3L6gMkq/szAnMqeHuSjkc3WOzQ=
 k8s.io/kubernetes v1.21.4/go.mod h1:yNRsD2sfx76jpLKTgr0lJdVnILFWRo7b+HCo94tD48c=
 k8s.io/legacy-cloud-providers v0.21.4/go.mod h1:WzvDvkWfD7lKQSaSqqaYsoY3VQeAjhXYN2telpMx8co=
+k8s.io/metrics v0.21.4 h1:4QzwCM7O87PHHnPF+NF7A9I4M+UPstUwkQ66EArhrjU=
 k8s.io/metrics v0.21.4/go.mod h1:uhWoVuVumUMSeCa1B1p2tm4Y4XuZIg0n24QEtB54wuA=
 k8s.io/mount-utils v0.21.4/go.mod h1:dwXbIPxKtTjrBEaX1aK/CMEf1KZ8GzMHpe3NEBfdFXI=
 k8s.io/sample-apiserver v0.21.4/go.mod h1:rpVLxky91DoN2OehmyZf/IE+sgop/BBoZl78VJrrs0I=
