@@ -20,7 +20,7 @@ import (
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 )
 
-func TestOpenShiftPodsTop(t *testing.T) {
+func TestAdminOpenShiftNodesTop(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	mockTenantID := "00000000-0000-0000-0000-000000000000"
 	ctx := context.Background()
@@ -29,7 +29,6 @@ func TestOpenShiftPodsTop(t *testing.T) {
 		name               string
 		resourceID         string
 		resourceIDOverride string
-		objNamespace       string
 		mocks              func(*test, *mock_adminactions.MockMetricActions)
 		method             string
 		wantStatusCode     int
@@ -39,13 +38,12 @@ func TestOpenShiftPodsTop(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			method:       http.MethodGet,
-			name:         "cluster exists - namespace exists",
-			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			objNamespace: "openshift-project",
+			method:     http.MethodGet,
+			name:       "cluster exists",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			mocks: func(tt *test, m *mock_adminactions.MockMetricActions) {
 				m.EXPECT().
-					TopPods(gomock.Any(), tt.objNamespace).
+					TopNodes(gomock.Any()).
 					Return([]byte(`{"Kind": "test"}`), nil)
 			},
 			wantStatusCode: http.StatusOK,
@@ -56,20 +54,10 @@ func TestOpenShiftPodsTop(t *testing.T) {
 			name:               "cluster does not exist",
 			resourceID:         fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			resourceIDOverride: "/subscriptions/11100000-0000-0000-0000-000000000111/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
-			objNamespace:       "openshift-project",
 			mocks: func(tt *test, m *mock_adminactions.MockMetricActions) {
 			},
 			wantStatusCode: http.StatusNotFound,
 			wantError:      `404: ResourceNotFound: : The Resource 'openshiftclusters/resourcename' under resource group 'resourcegroup' was not found.`,
-		},
-		{
-			method:     http.MethodGet,
-			name:       "no namespace provided",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, m *mock_adminactions.MockMetricActions) {
-			},
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      "400: InvalidParameter: : The provided namespace '' is invalid.",
 		},
 	} {
 		t.Run(fmt.Sprintf("%s: %s", tt.method, tt.name), func(t *testing.T) {
@@ -117,7 +105,7 @@ func TestOpenShiftPodsTop(t *testing.T) {
 			}
 
 			resp, b, err := ti.request(tt.method,
-				fmt.Sprintf("https://server%s/toppods?api-version=2020-04-30&namespace=%s", resourceID, tt.objNamespace),
+				fmt.Sprintf("https://server/admin%s/topnodes", resourceID),
 				nil, nil)
 			if err != nil {
 				t.Fatal(err)

@@ -195,20 +195,6 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters).Name("getOpenShiftClusters")
 
 	s = r.
-		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/toppods").
-		Queries("api-version", "{api-version}").
-		Subrouter()
-
-	s.Methods(http.MethodGet).HandlerFunc(f.topOpenShiftPods).Name("topOpenShiftPods")
-
-	s = r.
-		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/topnodes").
-		Queries("api-version", "{api-version}").
-		Subrouter()
-
-	s.Methods(http.MethodGet).HandlerFunc(f.topOpenShiftNodes).Name("topOpenShiftNodes")
-
-	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationsstatus/{operationId}").
 		Queries("api-version", "{api-version}").
 		Subrouter()
@@ -274,6 +260,18 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getAdminOpenShiftClusters).Name("getAdminOpenShiftClusters")
+
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/toppods").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.topAdminOpenShiftPods).Name("topAdminOpenShiftPods")
+
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/topnodes").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.topAdminOpenShiftNodes).Name("topAdminOpenShiftNodes")
 
 	// Operations
 	s = r.
