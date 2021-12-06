@@ -30,7 +30,6 @@ var _ = Describe("Scale nodes", func() {
 		ctx := context.Background()
 		machinesets, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		
 		expectedNodeCount := 3 // for masters
 		for _, machineset := range machinesets.Items {
 			expectedNodeCount += int(*machineset.Spec.Replicas)
