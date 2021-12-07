@@ -8,6 +8,9 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -142,18 +145,87 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 	mon._emitPodContainerStatuses(ps)
 }
 
-func TestEmitPodRestartCounts(t *testing.T) {
+func TestEmitPodContainerRestartCounter(t *testing.T) {
+
 	cli := fake.NewSimpleClientset(
-		&corev1.Pod{ // metrics expected
+		&corev1.Pod{ // metrics and log entry expected
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "name",
+				Name:      "podname1",
 				Namespace: "openshift",
 			},
 			Status: corev1.PodStatus{
 				ContainerStatuses: []corev1.ContainerStatus{
 					{
 						Name:         "containername",
-						RestartCount: 43,
+						RestartCount: 42,
+					},
+				},
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+		},
+		&corev1.Pod{ // no metrics expected
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "podname2",
+				Namespace: "openshift",
+			},
+			Status: corev1.PodStatus{
+				ContainerStatuses: []corev1.ContainerStatus{
+					{
+						Name:         "containername",
+						RestartCount: restartCounterThreshold - 1,
+					},
+				},
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+		},
+		&corev1.Pod{ // metrics and log entry expected
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "podname3",
+				Namespace: "openshift",
+			},
+			Status: corev1.PodStatus{
+				ContainerStatuses: []corev1.ContainerStatus{
+					{
+						Name:         "containername",
+						RestartCount: restartCounterThreshold,
+					},
+				},
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+		},
+		&corev1.Pod{ // no metrics expected
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "podname4",
+				Namespace: "openshift",
+			},
+			Status: corev1.PodStatus{
+				ContainerStatuses: []corev1.ContainerStatus{
+					{
+						Name:         "containername",
+						RestartCount: 0,
+					},
+				},
+			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
+		},
+		&corev1.Pod{ // no metrics expected
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "not-system-namespace",
+				Namespace: "default",
+			},
+			Status: corev1.PodStatus{
+				ContainerStatuses: []corev1.ContainerStatus{
+					{
+						Name:         "containername",
+						RestartCount: 42,
 					},
 				},
 			},
@@ -169,15 +241,38 @@ func TestEmitPodRestartCounts(t *testing.T) {
 	m := mock_metrics.NewMockInterface(controller)
 
 	mon := &Monitor{
-		cli: cli,
-		m:   m,
+		cli:       cli,
+		m:         m,
+		hourlyRun: true,
 	}
+	logger, hook := test.NewNullLogger()
+	log := logrus.NewEntry(logger)
+	mon.log = log
 
-	m.EXPECT().EmitGauge("pod.restartcounter", int64(43), map[string]string{
-		"name":      "name",
+	m.EXPECT().EmitGauge("pod.restartcounter", int64(42), map[string]string{
+		"name":      "podname1",
 		"namespace": "openshift",
 	})
 
+	// Expecting data for 'podname2' to be dropped
+
+	m.EXPECT().EmitGauge("pod.restartcounter", int64(restartCounterThreshold), map[string]string{
+		"name":      "podname3",
+		"namespace": "openshift",
+	})
+
+	// Expecting data for 'podname4' to be dropped
+
 	ps, _ := cli.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
 	mon._emitPodContainerRestartCounter(ps)
+
+	assert.Equal(t, 2, len(hook.Entries))
+
+	// the order of the log entries does not seem to be stable, so testing one entry only
+	// and no test for specific values, except for the metric
+
+	x := hook.LastEntry()
+	assert.NotEmpty(t, x.Data["name"])
+	assert.NotEmpty(t, x.Data["namespace"])
+	assert.Equal(t, "pod.restartcounter", x.Data["metric"])
 }
