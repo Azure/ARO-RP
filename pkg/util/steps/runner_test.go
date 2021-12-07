@@ -288,11 +288,11 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition github.com/Azure/ARO-RP/pkg/util/steps.timingOutCondition, timeout 50ms] encountered error: 424: DeploymentFailed: Cluster Install Condition: timed out polling for a prerequisite cluster condition to resolve"),
+					"msg":   gomega.Equal("step [Condition github.com/Azure/ARO-RP/pkg/util/steps.timingOutCondition, timeout 50ms] encountered error: 424: DeploymentFailed: : timed out polling for a prerequisite cluster condition to resolve"),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "424: DeploymentFailed: Cluster Install Condition: timed out polling for a prerequisite cluster condition to resolve",
+			wantErr: "424: DeploymentFailed: : timed out polling for a prerequisite cluster condition to resolve",
 		},
 		{
 			name: "A Condition that does not return true in the timeout time causes a failure",
@@ -313,11 +313,11 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition github.com/Azure/ARO-RP/pkg/util/steps.alwaysFalseCondition, timeout 50ms] encountered error: 424: DeploymentFailed: Cluster Install Condition: timed out polling for a prerequisite cluster condition to resolve"),
+					"msg":   gomega.Equal("step [Condition github.com/Azure/ARO-RP/pkg/util/steps.alwaysFalseCondition, timeout 50ms] encountered error: 424: DeploymentFailed: : timed out polling for a prerequisite cluster condition to resolve"),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "424: DeploymentFailed: Cluster Install Condition: timed out polling for a prerequisite cluster condition to resolve",
+			wantErr: "424: DeploymentFailed: : timed out polling for a prerequisite cluster condition to resolve",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

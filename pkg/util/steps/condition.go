@@ -109,7 +109,6 @@ func (c conditionStep) enrichConditionTimeoutError() error {
 	return api.NewCloudError(
 		http.StatusFailedDependency,
 		api.CloudErrorCodeDeploymentFailed,
-		"Cluster Install Condition",
-		message,
+		"", message,
 	)
 }
