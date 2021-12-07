@@ -87,6 +87,10 @@ func (c conditionStep) enrichConditionTimeoutError() error {
 
 	// All functions passed as a `conditionFunction`: https://github.com/Azure/ARO-RP/blob/master/pkg/cluster/condition.go
 	// should have a case block below with a generic error message for the condition when it doesn't resolve
+
+	// TODO: Enrich the case-specific error messages below with more informative messages, as outlined in:
+	//  https://msazure.visualstudio.com/AzureRedHatOpenShift/_workitems/edit/9274010
+	//  https://msazure.visualstudio.com/AzureRedHatOpenShift/_workitems/edit/9405067
 	switch funcName {
 	case "apiServersReady":
 		message = "Kube API has not initialised successfully and is unavailable"
