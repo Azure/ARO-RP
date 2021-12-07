@@ -67,7 +67,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidParameter,
-			"", "Failed to validate the first principal",
+			"", "Failed to validate the first party principal",
 		)
 	}
 
