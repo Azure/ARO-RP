@@ -60,46 +60,54 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	// FP validation
 	fpDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, dv.fpAuthorizer, dynamic.AuthorizerFirstParty)
 	if err != nil {
+		if _, isCloudError := err.(*api.CloudError); isCloudError {
+			return err
+		}
 		dv.log.Error(err)
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidParameter,
-			"First Principal",
-			"Failed to validate the first principal",
+			"", "Failed to validate the first principal",
 		)
 	}
 
 	err = fpDynamic.ValidateVnet(ctx, dv.oc.Location, subnets, dv.oc.Properties.NetworkProfile.PodCIDR, dv.oc.Properties.NetworkProfile.ServiceCIDR)
 	if err != nil {
+		if _, isCloudError := err.(*api.CloudError); isCloudError {
+			return err
+		}
 		dv.log.Error(err)
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidLinkedVNet,
-			"Cluster Virtual Network",
-			"Invalid virtual network specified",
+			"", "Invalid virtual network specified",
 		)
 	}
 
 	err = fpDynamic.ValidateDiskEncryptionSets(ctx, dv.oc)
 	if err != nil {
+		if _, isCloudError := err.(*api.CloudError); isCloudError {
+			return err
+		}
 		dv.log.Error(err)
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidParameter,
-			"Cluster Disk Encryption Sets",
-			"Invalid disk encryption sets specified",
+			"", "Invalid disk encryption sets specified",
 		)
 	}
 
 	spp := dv.oc.Properties.ServicePrincipalProfile
 	token, err := aad.GetToken(ctx, dv.log, spp.ClientID, string(spp.ClientSecret), dv.subscriptionDoc.Subscription.Properties.TenantID, dv.env.Environment().ActiveDirectoryEndpoint, dv.env.Environment().ResourceManagerEndpoint)
 	if err != nil {
+		if _, isCloudError := err.(*api.CloudError); isCloudError {
+			return err
+		}
 		dv.log.Error(err)
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidParameter,
-			"Service Principle AAD",
-			"Failed to retrieve an AAD token for the service principal",
+			"", "Failed to retrieve an AAD token for the service principal",
 		)
 	}
 
@@ -107,90 +115,106 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 
 	spDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, spAuthorizer, dynamic.AuthorizerClusterServicePrincipal)
 	if err != nil {
+		if _, isCloudError := err.(*api.CloudError); isCloudError {
+			return err
+		}
 		dv.log.Error(err)
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidParameter,
-			"Service Principle AAD",
-			"Failed to validate the service principal token",
+			"", "Failed to validate the service principal token",
 		)
 	}
 
 	// SP validation
 	err = spDynamic.ValidateServicePrincipal(ctx, spp.ClientID, string(spp.ClientSecret), dv.subscriptionDoc.Subscription.Properties.TenantID)
 	if err != nil {
+		if _, isCloudError := err.(*api.CloudError); isCloudError {
+			return err
+		}
 		dv.log.Error(err)
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidParameter,
-			"Cluster Service Principle",
-			"Failed to validate the cluster service principal",
+			"", "Failed to validate the cluster service principal",
 		)
 	}
 
 	err = spDynamic.ValidateVnet(ctx, dv.oc.Location, subnets, dv.oc.Properties.NetworkProfile.PodCIDR, dv.oc.Properties.NetworkProfile.ServiceCIDR)
 	if err != nil {
+		if _, isCloudError := err.(*api.CloudError); isCloudError {
+			return err
+		}
 		dv.log.Error(err)
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidLinkedVNet,
-			"Cluster Virtual Network",
-			"Invalid cluster virtual network CIDRs",
+			"", "Invalid cluster virtual network CIDRs",
 		)
 	}
 
 	err = spDynamic.ValidateSubnets(ctx, dv.oc, subnets)
 	if err != nil {
+		if _, isCloudError := err.(*api.CloudError); isCloudError {
+			return err
+		}
 		dv.log.Error(err)
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidParameter,
-			"Cluster Virtual Network",
-			"Invalid cluster virtual network subnets",
+			"", "Invalid cluster virtual network subnets",
 		)
 	}
 
 	err = spDynamic.ValidateProviders(ctx)
 	if err != nil {
+		if _, isCloudError := err.(*api.CloudError); isCloudError {
+			return err
+		}
 		dv.log.Error(err)
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidParameter,
-			"Resource Providers",
-			"Failed to validate the registered resource providers",
+			"", "Failed to validate the registered resource providers",
 		)
 	}
 
 	err = spDynamic.ValidateQuota(ctx, dv.oc)
 	if err != nil {
+		if _, isCloudError := err.(*api.CloudError); isCloudError {
+			return err
+		}
 		dv.log.Error(err)
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			api.CloudErrorCodeQuotaExceeded,
-			"Resource Quotas",
-			"Current resource quotas do not permit the creation of the cluster",
+			"", "Current resource quotas do not permit the creation of the cluster",
 		)
 	}
 
 	err = spDynamic.ValidateDiskEncryptionSets(ctx, dv.oc)
 	if err != nil {
+		if _, isCloudError := err.(*api.CloudError); isCloudError {
+			return err
+		}
 		dv.log.Error(err)
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidLinkedDiskEncryptionSet,
-			"Disk Encryption Sets",
-			"Invalid disk encryption sets for the specified service principal",
+			"", "Invalid disk encryption sets for the specified service principal",
 		)
 	}
 
 	err = spDynamic.ValidateEncryptionAtHost(ctx, dv.oc)
 	if err != nil {
+		if _, isCloudError := err.(*api.CloudError); isCloudError {
+			return err
+		}
 		dv.log.Error(err)
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			api.CloudErrorCodeInvalidParameter,
-			"Disk Encryption Sets",
-			"Invalid host encryption for the specified service principal",
+			"", "Invalid host encryption for the specified service principal",
 		)
 	}
 

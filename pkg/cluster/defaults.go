@@ -19,12 +19,14 @@ func (m *manager) ensureDefaults(ctx context.Context) error {
 		return nil
 	})
 	if err != nil {
+		if _, isCloudError := err.(*api.CloudError); isCloudError {
+			return err
+		}
 		m.log.Print(err)
 		return api.NewCloudError(
 			http.StatusBadRequest,
 			api.CloudErrorCodeDeploymentFailed,
-			"Cluster Default Values",
-			"Error validating the cluster default values.",
+			"", "Error validating the cluster default values.",
 		)
 	}
 	return nil
