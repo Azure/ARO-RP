@@ -5,7 +5,6 @@ package cluster
 
 import (
 	"context"
-	"net/http"
 	"strings"
 	"time"
 
@@ -23,15 +22,7 @@ func (m *manager) initializeClusterSPClients(ctx context.Context) error {
 	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 	token, err := aad.GetToken(ctx, m.log, spp.ClientID, string(spp.ClientSecret), m.subscriptionDoc.Subscription.Properties.TenantID, m.env.Environment().ActiveDirectoryEndpoint, m.env.Environment().GraphEndpoint)
 	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		m.log.Error(err)
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Unable to initialize the cluster service principal",
-		)
+		return err
 	}
 
 	spGraphAuthorizer := autorest.NewBearerAuthorizer(token)
@@ -67,15 +58,7 @@ func (m *manager) clusterSPObjectID(ctx context.Context) error {
 		return true, nil
 	}, timeoutCtx.Done())
 	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		m.log.Error(err)
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Failed to query the service principal's cluster object ID",
-		)
+		return err
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {

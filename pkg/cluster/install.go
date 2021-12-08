@@ -6,7 +6,6 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -215,18 +214,7 @@ func (m *manager) startInstallation(ctx context.Context) error {
 		}
 		return nil
 	})
-	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		m.log.Error(err)
-		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Failed to initiate the installation",
-		)
-	}
-	return nil
+	return err
 }
 
 func (m *manager) incrInstallPhase(ctx context.Context) error {
@@ -235,18 +223,7 @@ func (m *manager) incrInstallPhase(ctx context.Context) error {
 		doc.OpenShiftCluster.Properties.Install.Phase++
 		return nil
 	})
-	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		m.log.Error(err)
-		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Failed to increment the installation phase",
-		)
-	}
-	return nil
+	return err
 }
 
 func (m *manager) finishInstallation(ctx context.Context) error {
@@ -255,18 +232,7 @@ func (m *manager) finishInstallation(ctx context.Context) error {
 		doc.OpenShiftCluster.Properties.Install = nil
 		return nil
 	})
-	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		m.log.Error(err)
-		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Failed to finish installation",
-		)
-	}
-	return nil
+	return err
 }
 
 // initializeKubernetesClients initializes clients which are used
@@ -274,146 +240,56 @@ func (m *manager) finishInstallation(ctx context.Context) error {
 func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	restConfig, err := restconfig.RestConfig(m.env, m.doc.OpenShiftCluster)
 	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		m.log.Error(err)
-		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Failed to initialize the Kubernetes rest config",
-		)
+		return err
 	}
 
 	m.kubernetescli, err = kubernetes.NewForConfig(restConfig)
 	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		m.log.Error(err)
-		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Failed to initialize the Kubernetes CLI",
-		)
+		return err
 	}
 
 	m.extensionscli, err = extensionsclient.NewForConfig(restConfig)
 	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		m.log.Error(err)
-		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Failed to initialize the Kubernetes extensions CLI",
-		)
+		return err
 	}
 
 	m.maocli, err = maoclient.NewForConfig(restConfig)
 	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		m.log.Error(err)
-		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Failed to initialize the Kubernetes MAO CLI",
-		)
+		return err
 	}
 
 	m.mcocli, err = mcoclient.NewForConfig(restConfig)
 	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		m.log.Error(err)
-		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Failed to initialize the Kubernetes MCO CLI",
-		)
+		return err
 	}
 
 	m.operatorcli, err = operatorclient.NewForConfig(restConfig)
 	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		m.log.Error(err)
-		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Failed to initialize the Kubernetes operator CLI",
-		)
+		return err
 	}
 
 	m.securitycli, err = securityclient.NewForConfig(restConfig)
 	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		m.log.Error(err)
-		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Failed to initialize the Kubernetes security CLI",
-		)
+		return err
 	}
 
 	m.samplescli, err = samplesclient.NewForConfig(restConfig)
 	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		m.log.Error(err)
-		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Failed to initialize the Kubernetes samples CLI",
-		)
+		return err
 	}
 
 	m.arocli, err = aroclient.NewForConfig(restConfig)
 	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		m.log.Error(err)
-		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Failed to initialize the ARO cli",
-		)
+		return err
 	}
 
 	m.configcli, err = configclient.NewForConfig(restConfig)
 	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		m.log.Error(err)
-		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Failed to initialize the Kubernetes config CLI",
-		)
+		return err
 	}
 
 	m.registryclient, err = imageregistryclient.NewForConfig(restConfig)
-	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Failed to initialize image-registry client",
-		)
-	}
-	return nil
+	return err
 }
 
 // updateProvisionedBy sets the deploying resource provider version in
@@ -424,15 +300,5 @@ func (m *manager) updateProvisionedBy(ctx context.Context) error {
 		doc.OpenShiftCluster.Properties.ProvisionedBy = version.GitCommit
 		return nil
 	})
-	if err != nil {
-		if _, isCloudError := err.(*api.CloudError); isCloudError {
-			return err
-		}
-		return api.NewCloudError(
-			http.StatusInternalServerError,
-			api.CloudErrorCodeDeploymentFailed,
-			"", "Failed to update the ProvisionedBy field",
-		)
-	}
-	return nil
+	return err
 }
