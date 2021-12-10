@@ -48,6 +48,7 @@ func TestImageConfigReconciler(t *testing.T) {
 		arocli     aroclient.Interface
 		configcli  configclient.Interface
 		wantConfig string
+		wantErr    string
 	}
 
 	for _, tt := range []*test{
@@ -87,7 +88,7 @@ func TestImageConfigReconciler(t *testing.T) {
 			wantConfig: `null`,
 		},
 		{
-			name:   "allowedRegistries exists, function should add images",
+			name:   "allowedRegistries exists with duplicates, function should appropriately add registries",
 			arocli: arocli,
 			configcli: configfake.NewSimpleClientset(&configv1.Image{
 				ObjectMeta: imageConfigMetadata,
@@ -95,6 +96,8 @@ func TestImageConfigReconciler(t *testing.T) {
 					RegistrySources: configv1.RegistrySources{
 						AllowedRegistries: []string{
 							"quay.io",
+							"arointsvc.azurecr.io",
+							"arointsvc.azurecr.io",
 						},
 					},
 				},
@@ -102,7 +105,7 @@ func TestImageConfigReconciler(t *testing.T) {
 			wantConfig: `["arointsvc.azurecr.io","arosvc.eastus.data.azurecr.io","quay.io"]`,
 		},
 		{
-			name:   "blockedRegistries exists, function should delete images",
+			name:   "blockedRegistries exists, function should delete registries",
 			arocli: arocli,
 			configcli: configfake.NewSimpleClientset(&configv1.Image{
 				ObjectMeta: imageConfigMetadata,
@@ -117,7 +120,7 @@ func TestImageConfigReconciler(t *testing.T) {
 			wantConfig: `["quay.io"]`,
 		},
 		{
-			name: "Gov Cloud, function should add appropriate images",
+			name: "Gov Cloud, function should add appropriate registries",
 			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
@@ -168,6 +171,24 @@ func TestImageConfigReconciler(t *testing.T) {
 			}),
 			wantConfig: `["quay.io"]`,
 		},
+		{
+			name:   "Both AllowedRegistries and BlockedRegistries are present, function should fail silently and not requeue",
+			arocli: arocli,
+			configcli: configfake.NewSimpleClientset(&configv1.Image{
+				ObjectMeta: imageConfigMetadata,
+				Spec: configv1.ImageSpec{
+					RegistrySources: configv1.RegistrySources{
+						BlockedRegistries: []string{
+							"arointsvc.azurecr.io", "arosvc.eastus.data.azurecr.io",
+						},
+						AllowedRegistries: []string{
+							"quay.io",
+						},
+					},
+				},
+			}),
+			wantErr: `both AllowedRegistries and BlockedRegistries are present`,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -180,8 +201,11 @@ func TestImageConfigReconciler(t *testing.T) {
 			request.Name = "cluster"
 
 			_, err := r.Reconcile(ctx, request)
-			if err != nil {
-				t.Fatal(err)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+				t.Error("----------------------")
+				t.Error(tt.wantErr)
 			}
 			imgcfg, err := r.configcli.ConfigV1().Images().Get(ctx, request.Name, metav1.GetOptions{})
 			if err != nil {
@@ -189,7 +213,7 @@ func TestImageConfigReconciler(t *testing.T) {
 			}
 			imgcfgjson := getRegistrySources(imgcfg)
 
-			if string(imgcfgjson) != strings.TrimSpace(tt.wantConfig) {
+			if string(imgcfgjson) != strings.TrimSpace(tt.wantConfig) && tt.wantConfig != "" {
 				t.Error(string(imgcfgjson))
 				t.Error("----------------------")
 				t.Error(tt.wantConfig)

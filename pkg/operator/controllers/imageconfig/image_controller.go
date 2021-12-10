@@ -5,6 +5,7 @@ package imageconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -41,6 +42,10 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli conf
 	}
 }
 
+// watches the ARO object for changes and reconciles image.config.openshift.io/cluster object.
+// - If blockedRegistries is not nil, makes sure required registries are not added
+// - If AllowedRegistries is not nil, makes sure required registries are added
+// - Fails fast if both are not nil, unsupported
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	// Get cluster
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, request.Name, metav1.GetOptions{})
@@ -56,7 +61,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// Check for cloud type
 	requiredRegistries, err := getCloudAwareRegistries(instance)
 	if err != nil {
-		return reconcile.Result{Requeue: false}, err
+		// Not returning error as it will requeue again
+		return reconcile.Result{Requeue: false}, nil
 	}
 
 	// Get image.config yaml
@@ -67,14 +73,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// Fail fast if both are not nil
 	if imageconfig.Spec.RegistrySources.AllowedRegistries != nil && imageconfig.Spec.RegistrySources.BlockedRegistries != nil {
-		err := fmt.Errorf("both AllowedRegistries and BlockedRegistries are present")
+		err := errors.New("both AllowedRegistries and BlockedRegistries are present")
 		return reconcile.Result{}, err
 	}
 
 	// Append to allowed registries
 	if imageconfig.Spec.RegistrySources.AllowedRegistries != nil {
+		removeDuplicateRegistries := func(item string) bool {
+			for _, v := range requiredRegistries {
+				if strings.EqualFold(item, v) {
+					return false
+				}
+			}
+			return true
+		}
+		imageconfig.Spec.RegistrySources.AllowedRegistries = filterSliceInPlace(imageconfig.Spec.RegistrySources.AllowedRegistries, removeDuplicateRegistries)
 		imageconfig.Spec.RegistrySources.AllowedRegistries = append(imageconfig.Spec.RegistrySources.AllowedRegistries, requiredRegistries...)
-		imageconfig.Spec.RegistrySources.AllowedRegistries = removeDuplicateRegistries(imageconfig.Spec.RegistrySources.AllowedRegistries)
 	}
 
 	// Remove from blocked registries
@@ -87,7 +101,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			}
 			return true
 		}
-		imageconfig.Spec.RegistrySources.BlockedRegistries = filterRegistriesInPlace(imageconfig.Spec.RegistrySources.BlockedRegistries, removeRequiredRegistries)
+		imageconfig.Spec.RegistrySources.BlockedRegistries = filterSliceInPlace(imageconfig.Spec.RegistrySources.BlockedRegistries, removeRequiredRegistries)
 	}
 
 	// Update image config registry
@@ -110,6 +124,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
+// Switch case to ensure the correct registries are added depending on the cloud environment (Gov or Public cloud)
 func getCloudAwareRegistries(instance *arov1alpha1.Cluster) ([]string, error) {
 	var requiredRegistries []string
 	switch instance.Spec.AZEnvironment {
@@ -126,7 +141,8 @@ func getCloudAwareRegistries(instance *arov1alpha1.Cluster) ([]string, error) {
 	return requiredRegistries, nil
 }
 
-func filterRegistriesInPlace(input []string, keep func(string) bool) []string {
+// Helper function that filters registries to make sure they are added in consistent order
+func filterSliceInPlace(input []string, keep func(string) bool) []string {
 	n := 0
 	for _, x := range input {
 		if keep(x) {
@@ -135,16 +151,4 @@ func filterRegistriesInPlace(input []string, keep func(string) bool) []string {
 		}
 	}
 	return input[:n]
-}
-
-func removeDuplicateRegistries(strSlice []string) []string {
-	allKeys := make(map[string]bool)
-	list := []string{}
-	for _, item := range strSlice {
-		if _, value := allKeys[item]; !value {
-			allKeys[item] = true
-			list = append(list, item)
-		}
-	}
-	return list
 }
