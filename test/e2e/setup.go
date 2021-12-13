@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
@@ -51,6 +52,7 @@ type clientSet struct {
 	MachineAPI    maoclient.Interface
 	MachineConfig mcoclient.Interface
 	AROClusters   aroclient.Interface
+	ConfigClient  configclient.Interface
 	Project       projectclient.Interface
 }
 
@@ -123,6 +125,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	configcli, err := configclient.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
 	return &clientSet{
 		OpenshiftClustersv20200430:        redhatopenshift20200430.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Operationsv20200430:               redhatopenshift20200430.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
@@ -140,6 +147,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		MachineConfig: mcocli,
 		AROClusters:   arocli,
 		Project:       projectcli,
+		ConfigClient:  configcli,
 	}, nil
 }
 

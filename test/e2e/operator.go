@@ -321,3 +321,23 @@ var _ = XDescribe("ARO Operator - MachineSet Controller", func() {
 		}
 	})
 })
+
+var _ = Describe("ARO Operator - ImageConfig Controller", func() {
+	FSpecify("Operator should add appropriate registries", func() {
+		ctx := context.Background()
+
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		if !instance.Spec.Features.ReconcileImageConfig {
+			Skip("ImageConfig Controller is not enabled, skipping this test")
+		}
+
+		imageconfig, err := clients.ConfigClient.ConfigV1().Images().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		imageconfig.Spec.RegistrySources.AllowedRegistries = append(imageconfig.Spec.RegistrySources.AllowedRegistries, "quay.io")
+		_, err = clients.ConfigClient.ConfigV1().Images().Update(ctx, imageconfig, metav1.UpdateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+	})
+})
