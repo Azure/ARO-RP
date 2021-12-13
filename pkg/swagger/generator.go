@@ -9,10 +9,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/api/v20210901preview"
+	v20220201 "github.com/Azure/ARO-RP/pkg/api/v20220201"
 )
 
 const apiv20200430Path = "github.com/Azure/ARO-RP/pkg/api/v20200430"
 const apiv20210901previewPath = "github.com/Azure/ARO-RP/pkg/api/v20210901preview"
+const apiv20220201Path = "github.com/Azure/ARO-RP/pkg/api/v20220201"
 
 type generator struct {
 	exampleOpenShiftClusterPutParameter            func() interface{}
@@ -49,6 +51,21 @@ var apis = map[string]*generator{
 		exampleOpenShiftClusterCredentialsResponse:     v20210901preview.ExampleOpenShiftClusterCredentialsResponse,
 		exampleOpenShiftClusterListResponse:            v20210901preview.ExampleOpenShiftClusterListResponse,
 		exampleOpenShiftClusterAdminKubeconfigResponse: v20210901preview.ExampleOpenShiftClusterAdminKubeconfigResponse,
+		exampleOperationListResponse:                   api.ExampleOperationListResponse,
+
+		xmsEnum:            []string{"VMSize", "SoftwareDefinedNetwork", "EncryptionAtHost", "Visibility"},
+		xmsSecretList:      []string{"kubeconfig", "kubeadminPassword"},
+		commonTypesVersion: "v2",
+		systemData:         true,
+		kubeConfig:         true,
+	},
+	apiv20220201Path: {
+		exampleOpenShiftClusterPutParameter:            v20220201.ExampleOpenShiftClusterPutParameter,
+		exampleOpenShiftClusterPatchParameter:          v20220201.ExampleOpenShiftClusterPatchParameter,
+		exampleOpenShiftClusterResponse:                v20220201.ExampleOpenShiftClusterResponse,
+		exampleOpenShiftClusterCredentialsResponse:     v20220201.ExampleOpenShiftClusterCredentialsResponse,
+		exampleOpenShiftClusterListResponse:            v20220201.ExampleOpenShiftClusterListResponse,
+		exampleOpenShiftClusterAdminKubeconfigResponse: v20220201.ExampleOpenShiftClusterAdminKubeconfigResponse,
 		exampleOperationListResponse:                   api.ExampleOperationListResponse,
 
 		xmsEnum:            []string{"VMSize", "SoftwareDefinedNetwork", "EncryptionAtHost", "Visibility"},
