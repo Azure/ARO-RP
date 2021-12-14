@@ -16,6 +16,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -324,6 +325,44 @@ var _ = XDescribe("ARO Operator - MachineSet Controller", func() {
 
 var _ = Describe("ARO Operator - ImageConfig Controller", func() {
 	FSpecify("Operator should add appropriate registries", func() {
+		dockerPodSpec := &corev1.Pod{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Pod",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "docker-alpine-pod",
+				Labels: map[string]string{"imgcfg": "e2e"},
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:  "alpine",
+						Image: "alpine",
+					},
+				},
+				RestartPolicy: "Never",
+			},
+		}
+		quayPodSpec := &corev1.Pod{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Pod",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "quay-alpine-pod",
+				Labels: map[string]string{"imgcfg": "e2e"},
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:  "alpine",
+						Image: "quay.io/kmagdani/alpine",
+					},
+				},
+				RestartPolicy: "Never",
+			},
+		}
 		ctx := context.Background()
 
 		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
@@ -332,12 +371,39 @@ var _ = Describe("ARO Operator - ImageConfig Controller", func() {
 		if !instance.Spec.Features.ReconcileImageConfig {
 			Skip("ImageConfig Controller is not enabled, skipping this test")
 		}
-
+		// ! Get Imageconfig object
 		imageconfig, err := clients.ConfigClient.ConfigV1().Images().Get(ctx, "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
+		// ! Add quay.io to allowed Registries
 		imageconfig.Spec.RegistrySources.AllowedRegistries = append(imageconfig.Spec.RegistrySources.AllowedRegistries, "quay.io")
+		// ! Update Registries
 		_, err = clients.ConfigClient.ConfigV1().Images().Update(ctx, imageconfig, metav1.UpdateOptions{})
 		Expect(err).NotTo(HaveOccurred())
+		// ! Create Alpine pod from docker.io
+		_, err = clients.Kubernetes.CoreV1().Pods("default").Create(ctx, dockerPodSpec, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		// ! Create Alpine pod from quay.io
+		_, err = clients.Kubernetes.CoreV1().Pods("default").Create(ctx, quayPodSpec, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		// time.Sleep(60 * time.Second)
+		// ! Watch pod status
+		watch, err := clients.Kubernetes.CoreV1().Pods("default").Watch(ctx, metav1.ListOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		go func() {
+			for event := range watch.ResultChan() {
+				// fmt.Printf("Type: %v\n", event.Type)
+				p, ok := event.Object.(*v1.Pod)
+				// if p ==
+				if !ok {
+					log.Fatal("unexpected type")
+				}
+				// fmt.Println(p.Status.ContainerStatuses)
+				fmt.Println(p.Name + "-" + string(p.Status.Phase))
+			}
+		}()
+		time.Sleep(60 * time.Second)
 
 	})
 })
