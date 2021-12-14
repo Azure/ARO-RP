@@ -21,6 +21,7 @@ jobs:
     parameters:
       azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
   - script: |
+      az account set -s $AZURE_SUBSCRIPTION_ID
       export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
       make secrets
       . secrets/env
