@@ -62,3 +62,17 @@ func (mr *MockOperatorMockRecorder) IsReady(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReady", reflect.TypeOf((*MockOperator)(nil).IsReady), arg0)
 }
+
+// IsRunningDesiredVersion mocks base method.
+func (m *MockOperator) IsRunningDesiredVersion(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsRunningDesiredVersion", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// IsRunningDesiredVersion indicates an expected call of IsRunningDesiredVersion.
+func (mr *MockOperatorMockRecorder) IsRunningDesiredVersion(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunningDesiredVersion", reflect.TypeOf((*MockOperator)(nil).IsRunningDesiredVersion), arg0)
+}
