@@ -123,7 +123,70 @@ A VS Code launch config that does the same would look like.
 ### Finding your data
 
 If all goes well, you should see your metric data  in the Jarvis metrics list (Geneva INT (https://jarvis-west-int.cloudapp.net/) -> Manage ->  Metrics) under the account and namespace you specified in CLUSTER_MDM_ACCOUNT and CLUSTER_MDM_NAMESPACE and also be available is the dashboard settings.
-  
 
 
+### Injecting Test Data into Geneva INT
+
+Once your monitor code is done you will want to create pre-aggregates, dashboards and alert on the Geneva side and test with a variety of data.
+Your end-2-end testing with real cluster will generate some data and cover many test scenarios, but if that's not feasible or too time-consuming you can inject data directly into the Genava mdm container via the socat/ssh network chain.
+
+An example metric script is shown below, you can connect it to 
+
+
+````
+myscript.sh | socat TCP-CONNECT:127.0.0.1:12345 - 
+````
+or 
+````
+myscript.sh | socat UNIX-CONNECT:$SOCKETFILE - 
+````
+(see above of the $SOCKETFILE )
+
+
+
+#### Sample metric script
+
+````
+#!/bin/bash
+# example metric 
+CLUSTER="< your testcluster example name>"
+SUBSCRIPTION="<  your subscription here >"
+METRIC="< your metric name>"
+ACCOUNT="< your CLUSTER_MDM_ACCOUNT >"
+NAMESPACE="< CLUSTER_MDM_NAMESPACE>"
+DIM_HOSTNAME="<your hostname >"
+DIM_LOCATION="< your region >"
+DIM_NAME="pod-$CLUSTER"
+DIM_NAMESPACE="< somenamespace> "
+DIM_RESOURCEGROUP="< your resourcegroup> "
+DIM_RESOURCEID="/subscriptions/$SUBSCRIPTION/resourceGroups/$DIM_RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER"
+DIM_RESOURCENAME=$CLUSTER
+
+### or read data from file, like: data=$( cat mydatafile )
+data="10 11 12 13 13 13 13 15 16 19 20 21 25"
+SLEEPTIME=60
+for MET in $data ;do
+OUT=$( cat << EOF 
+{"Metric":"$METRIC",
+"Account":"$ACCOUNT",
+"Namespace":"$NAMESPACE",
+"Dims":
+    {"hostname":"$DIM_HOSTNAME",
+    "location":"$DIM_LOCATION",
+    "name":"$DIM_NAME",
+    "namespace":"$DIM_NAMESPACE",
+    "resourceGroup":"$DIM_RESOURCEGROUP",
+    "resourceId":"$DIM_RESOURCEID",
+    "resourceName":"$DIM_RESOURCENAME",
+    "subscriptionId":"$SUBSCRIPTION"
+},
+"TS":"$DATESTRING"}:${MET}|g
+EOF
+)
+
+echo $OUT
+sleep $SLEEPTIME
+done
+
+````
 
