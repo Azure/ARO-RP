@@ -40,6 +40,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
 	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
+	redhatopenshift20220201 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-02-01/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
 
@@ -54,6 +55,7 @@ type Cluster struct {
 	serviceprincipals                 graphrbac.ServicePrincipalClient
 	openshiftclustersv20200430        redhatopenshift20200430.OpenShiftClustersClient
 	openshiftclustersv20210901preview redhatopenshift20210901preview.OpenShiftClustersClient
+	openshiftclustersv20220201        redhatopenshift20220201.OpenShiftClustersClient
 	securitygroups                    network.SecurityGroupsClient
 	subnets                           network.SubnetsClient
 	routetables                       network.RouteTablesClient
@@ -105,6 +107,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		groups:                            features.NewResourceGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20200430:        redhatopenshift20200430.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20210901preview: redhatopenshift20210901preview.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		openshiftclustersv20220201:        redhatopenshift20220201.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		applications:                      graphrbac.NewApplicationsClient(environment.Environment(), environment.TenantID(), graphAuthorizer),
 		serviceprincipals:                 graphrbac.NewServicePrincipalClient(environment.Environment(), environment.TenantID(), graphAuthorizer),
 		securitygroups:                    network.NewSecurityGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
