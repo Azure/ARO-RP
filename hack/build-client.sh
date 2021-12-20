@@ -53,8 +53,8 @@ function generate_python() {
     -v $PWD/python/client:/python/client:z \
     -v $PWD/swagger:/swagger:z \
     "${AUTOREST_IMAGE}" \
-    --version=3.4.5 \
-    --use=@autorest/python@5.8.4 \
+    --version=3.5.1 \
+    --use=@autorest/python@5.12.0 \
     --use=@autorest/modelerfour@~4.20.0 \
     --python \
     --azure-arm \
@@ -67,7 +67,6 @@ function generate_python() {
   rm -rf python/client/azure/mgmt/redhatopenshift/v"${API_VERSION//-/_}"/aio
   >python/client/__init__.py
 }
-
 
 rm -f .sha256sum
 
