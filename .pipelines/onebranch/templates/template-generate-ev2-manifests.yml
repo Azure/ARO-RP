@@ -4,11 +4,9 @@ parameters:
   default: deployment
   values:
   - bootstrapper
-  - deployment
   - geneva
   - geneva-bootstrapper
   - kusto
-  - mirroring
 
 steps:
 - checkout: rhado
