@@ -278,13 +278,9 @@ var _ = Describe("ARO Operator - Conditions", func() {
 	})
 })
 
-var _ = XDescribe("ARO Operator - MachineSet Controller", func() {
+var _ = Describe("ARO Operator - MachineSet Controller", func() {
 	Specify("operator should maintain at least two worker replicas", func() {
 		ctx := context.Background()
-
-		// TODO: MSFT Billing expects that we only scale a single node (4 VMs).
-		// Need to work with billing pipeline to ensure we can run operator tests
-		skipIfNotInDevelopmentEnv()
 
 		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
@@ -297,11 +293,13 @@ var _ = XDescribe("ARO Operator - MachineSet Controller", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(mss.Items).NotTo(BeEmpty())
 
-		// Zero all machinesets (avoid availability zone confusion)
+		// Zero all machinesets, wait for reconcile
 		for _, object := range mss.Items {
 			err = scale(object.Name, 0)
 			Expect(err).NotTo(HaveOccurred())
+		}
 
+		for _, object := range mss.Items {
 			err = waitForScale(object.Name)
 			Expect(err).NotTo(HaveOccurred())
 		}
@@ -318,11 +316,20 @@ var _ = XDescribe("ARO Operator - MachineSet Controller", func() {
 		}
 		Expect(replicaCount).To(BeEquivalentTo(minSupportedReplicas))
 
-		// Restore previous state
+		// Scale back to previous state
 		for _, ms := range mss.Items {
-			err := scale(ms.Name, *ms.Spec.Replicas)
+			err = scale(ms.Name, *ms.Spec.Replicas)
 			Expect(err).NotTo(HaveOccurred())
 		}
+
+		for _, ms := range mss.Items {
+			err = waitForScale(ms.Name)
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		// Wait for old machine objects to delete
+		err = waitForMachines()
+		Expect(err).NotTo(HaveOccurred())
 	})
 })
 
