@@ -112,7 +112,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		routetables:                       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		roleassignments:                   authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		peerings:                          network.NewVirtualNetworkPeeringsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		vaultsClient:                      keyvaultclient.NewVaultsClient(environment.SubscriptionID(), authorizer),
+		vaultsClient:                      keyvaultclient.NewVaultsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 	}
 
 	return c, nil
