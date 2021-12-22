@@ -20,6 +20,8 @@ var podConditionsExpected = map[corev1.PodConditionType]corev1.ConditionStatus{
 	corev1.PodReady:        corev1.ConditionTrue,
 }
 
+var restartCounterThreshold int32 = 10
+
 func (mon *Monitor) emitPodConditions(ctx context.Context) error {
 	// to list pods once
 	var cont string
@@ -34,6 +36,7 @@ func (mon *Monitor) emitPodConditions(ctx context.Context) error {
 
 		mon._emitPodConditions(ps)
 		mon._emitPodContainerStatuses(ps)
+		mon._emitPodContainerRestartCounter(ps)
 
 		cont = ps.Continue
 		if cont == "" {
@@ -117,6 +120,37 @@ func (mon *Monitor) _emitPodContainerStatuses(ps *corev1.PodList) {
 					"message":       cs.State.Waiting.Message,
 				}).Print()
 			}
+		}
+	}
+}
+
+func (mon *Monitor) _emitPodContainerRestartCounter(ps *corev1.PodList) {
+	for _, p := range ps.Items {
+		if !namespace.IsOpenShiftSystemNamespace(p.Namespace) {
+			continue
+		}
+
+		//Sum up the total number of restarts in the pod to match the number of restarts shown in the 'oc get pods' display
+		t := int32(0)
+		for _, cs := range p.Status.ContainerStatuses {
+			t += cs.RestartCount
+		}
+
+		if t < restartCounterThreshold {
+			continue
+		}
+
+		mon.emitGauge("pod.restartcounter", int64(t), map[string]string{
+			"name":      p.Name,
+			"namespace": p.Namespace,
+		})
+
+		if mon.hourlyRun {
+			mon.log.WithFields(logrus.Fields{
+				"metric":    "pod.restartcounter",
+				"name":      p.Name,
+				"namespace": p.Namespace,
+			}).Print()
 		}
 	}
 }
