@@ -19,7 +19,7 @@ aro: generate
 	go build -tags aro,containers_image_openpgp,codec.safe -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro
 
 runlocal-rp:
-	go run -tags aro ./cmd/aro rp
+	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro rp
 
 az: pyenv
 	. pyenv/bin/activate && \
