@@ -51,7 +51,7 @@ const (
 [INPUT]
 	Name tail
 	Tag audit
-	Path /var/log/kube-apiserver/audit*
+	Path /var/log/kube-apiserver/audit.log
 	Path_Key path
 	DB /var/lib/fluent/audit
 	Parser audit
