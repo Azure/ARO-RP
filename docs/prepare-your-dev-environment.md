@@ -16,6 +16,8 @@ This document goes through the development dependencies one requires in order to
 
 1. Install the relevant packages required for your OS defined below.
 
+1. Install [Docker 17.05+](https://docs.docker.com/engine/install/fedora/) or later if you haven't already, used for building container images.
+
 ### Fedora Packages
 
 1. Install the `gpgme-devel`, `libassuan-devel`, and `openssl` packages.
