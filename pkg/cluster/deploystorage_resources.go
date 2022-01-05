@@ -42,7 +42,8 @@ func (m *manager) denyAssignment() *arm.Resource {
 							"Microsoft.Compute/snapshots/write",
 							"Microsoft.Network/networkInterfaces/effectiveRouteTable/action",
 							"Microsoft.Network/networkSecurityGroups/join/action",
-							"Microsoft.Resources/tags/*", // Enable tagging for Resources RP only
+							"Microsoft.Resources/tags/*",                      // Enable tagging for Resources RP only
+							"Microsoft.Resources/deployments/validate/action", // Validates whether the specified template is syntactically correct
 						},
 					},
 				},
