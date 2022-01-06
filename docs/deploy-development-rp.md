@@ -135,7 +135,7 @@
      journalctl _COMM=aro -o json --since "15 min ago" -f | jq -r 'select (.COMPONENT != null and (.COMPONENT | contains("access"))|not) | .MESSAGE'
      ```
 
-## Make Admin-Action API call(s) to the local-rp
+## Make Admin-Action API call(s) to a running local-rp
 
   ```bash
   export CLUSTER=<cluster-name>
