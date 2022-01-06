@@ -9,10 +9,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
@@ -101,7 +103,13 @@ func (a *arm) refresh() {
 func (a *arm) refreshOnce() error {
 	now := a.now()
 
-	req, err := http.NewRequest(http.MethodGet, strings.TrimSuffix(a.im.Environment().ResourceManagerEndpoint, "/")+":24582/metadata/authentication?api-version=2015-01-01", nil)
+	// ARM <-> RP Authentication endpoint is not consistent.  Check ARM wiki for up-to-date metadata endpoints
+	endpoint := strings.TrimSuffix(a.im.Environment().ResourceManagerEndpoint, "/") + ":24582"
+	if reflect.DeepEqual(a.im.Environment().Environment, azure.PublicCloud) {
+		endpoint = "https://admin.management.azure.com"
+	}
+
+	req, err := http.NewRequest(http.MethodGet, endpoint+"/metadata/authentication?api-version=2015-01-01", nil)
 	if err != nil {
 		return err
 	}

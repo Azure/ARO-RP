@@ -101,7 +101,7 @@
     1. Setup mirroring environment variables
         ```bash
         export DST_ACR_NAME=${USER}aro
-        export SRC_AUTH_QUAY=FILL_IN # Get quay auth https://cloud.redhat.com/openshift/create/local -> Download Pull Secret. Use base64 value from quay.io part
+        export SRC_AUTH_QUAY=$(echo $USER_PULL_SECRET | jq -r '.auths."quay.io".auth')
         export SRC_AUTH_REDHAT=$(echo $USER_PULL_SECRET | jq -r '.auths."registry.redhat.io".auth')
         export DST_AUTH=$(echo -n '00000000-0000-0000-0000-000000000000:'$(az acr login -n ${DST_ACR_NAME} --expose-token | jq -r .accessToken) | base64 -w0)
 
@@ -116,9 +116,10 @@
         go run -tags aro ./cmd/aro mirror latest
         ```
 
-    1. Push the ARO image to your ACR
+    1. Push the ARO and Fluentbit images to your ACR
         ```bash
         make publish-image-aro-multistage
+        make publish-image-fluentbit
         ```
 
 1. Update the DNS Child Domains

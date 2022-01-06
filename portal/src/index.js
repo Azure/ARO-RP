@@ -30,7 +30,7 @@ jQuery(function () {
         url: "/api/clusters",
         success: function (clusters) {
             $.each(clusters, function (i, cluster) {
-                $("#selResourceId").append($("<option>").text(cluster));
+                $("#selResourceId").append($("<option>").text(cluster.resourceId));
             });
 
             $("#selResourceId").selectpicker();

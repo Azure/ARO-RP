@@ -393,7 +393,7 @@ github.com/gofrs/flock
 # github.com/gofrs/uuid v4.0.0+incompatible
 ## explicit
 github.com/gofrs/uuid
-# github.com/gogo/protobuf v1.3.2
+# github.com/gogo/protobuf v1.3.2 => github.com/gogo/protobuf v1.3.2
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
 # github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
@@ -1217,7 +1217,6 @@ golang.org/x/oauth2/google/internal/externalaccount
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-golang.org/x/oauth2/microsoft
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/errgroup
@@ -2039,6 +2038,7 @@ sigs.k8s.io/yaml
 # bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
 # github.com/docker/spdystream => github.com/docker/spdystream v0.1.0
 # github.com/go-openapi/spec => github.com/go-openapi/spec v0.19.8
+# github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
 # github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.19.4
 # github.com/satori/go.uuid => github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 # github.com/satori/uuid => github.com/satori/uuid v1.2.1-0.20181028125025-b2ce2384e17b
