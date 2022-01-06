@@ -81,6 +81,7 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Action(m.configureAPIServerCertificate),
 			steps.Action(m.configureIngressCertificate),
 			steps.Action(m.populateRegistryStorageAccountName),
+			steps.Action(m.ensureMTUSize),
 			steps.Action(m.populateCreatedAt), // TODO(mikalai): Remove after a round of admin updates
 
 		)
@@ -135,6 +136,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
 			steps.Action(m.ensureACRToken),
 			steps.Action(m.generateSSHKey),
+			steps.Action(m.populateMTUSize),
 			steps.Action(func(ctx context.Context) error {
 				var err error
 				installConfig, image, err = m.generateInstallConfig(ctx)
