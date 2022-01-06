@@ -104,8 +104,6 @@ build-portal:
 	cd portal && npm install && npm run build
 
 pyenv:
-	sudo dnf install -y python3-devel && \
-	rm -rf pyenv && \
 	python3 -m venv pyenv
 	. pyenv/bin/activate && \
 		pip install -U pip && \
