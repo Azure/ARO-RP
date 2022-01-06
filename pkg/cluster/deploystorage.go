@@ -28,7 +28,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -224,15 +223,14 @@ func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.
 	}
 
 	// Handle MTU3900 feature flag
-	subProperties := m.subscriptionDoc.Subscription.Properties
-	if feature.IsRegisteredForFeature(subProperties, api.FeatureFlagMTU3900) {
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.MTUSize == api.MTU3900 {
 		m.log.Printf("applying feature flag %s", api.FeatureFlagMTU3900)
 		if err = m.overrideEthernetMTU(g); err != nil {
 			return err
 		}
 	}
 
-	// the graph is quite big so we store it in a storage account instead of in cosmosdb
+	// the graph is quite big, so we store it in a storage account instead of in cosmosdb
 	return m.graph.Save(ctx, resourceGroup, clusterStorageAccountName, g)
 }
 
