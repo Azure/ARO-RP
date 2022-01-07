@@ -319,7 +319,7 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch go-toolset-1.14.12-1.module+el8.3.0+8784+380394dc
+yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel go-toolset-1.14.12-1.module+el8.3.0+8784+380394dc
 
 # Suppress emulation output for podman instead of docker for az acr compatability
 mkdir -p /etc/containers/
