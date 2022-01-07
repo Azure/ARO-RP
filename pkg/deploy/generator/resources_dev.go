@@ -298,7 +298,10 @@ func (g *generator) devCIPool() *arm.Resource {
 	}
 
 	trailer := base64.StdEncoding.EncodeToString([]byte(`
-yum -y update -x WALinuxAgent
+for attempt in {1..5}; do
+  yum -y update -x WALinuxAgent && break
+  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
+done
 
 lvextend -l +50%FREE /dev/rootvg/varlv
 xfs_growfs /var
@@ -350,6 +353,39 @@ cat >/etc/cron.hourly/tmpwatch <<'EOF'
 exec /sbin/tmpwatch 24h /tmp
 EOF
 chmod +x /etc/cron.hourly/tmpwatch
+
+# HACK - podman doesn't always terminate or clean up it's pause.pid file causing
+# 'cannot reexec errors' so attempt to clean it up every minute to keep pipelines running
+# smoothly
+cat >/usr/local/bin/fix-podman-pause.sh <<'EOF'
+#!/bin/bash
+
+PAUSE_FILE='/tmp/run-1000/libpod/tmp/pause.pid'
+
+if [ -f "${PAUSE_FILE}" ]; then
+	PID=$(cat ${PAUSE_FILE})
+	if ! ps -p $PID > /dev/null; then
+		rm $PAUSE_FILE
+	fi
+fi
+EOF
+chmod +x /usr/local/bin/fix-podman-pause.sh
+
+# HACK - /tmp will fill up causing build failures
+# delete anything not accessed within 2 days
+cat >/usr/local/bin/clean-tmp.sh <<'EOF'
+#!/bin/bash
+
+find /tmp -type f \( ! -user root \) -atime +2 -delete
+
+EOF
+chmod +x /usr/local/bin/clean-tmp.sh
+
+echo "0 0 */1 * * /usr/local/bin/clean-tmp.sh" >> cron
+echo "0 * * * * /usr/local/bin/fix-podman-pause.sh" >> cron
+
+crontab cron
+rm cron
 
 (sleep 30; reboot) &
 `))
