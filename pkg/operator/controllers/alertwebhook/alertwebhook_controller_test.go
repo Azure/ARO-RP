@@ -42,7 +42,7 @@ global:
 receivers:
 - name: "null"
   webhook_configs:
-  - url: http://aro-operator-master.openshift-azure-operator.svc.cluster.local:8080/healthhz/ready
+  - url: http://aro-operator-master.openshift-azure-operator.svc.cluster.local:8080/healthz/ready
 route:
   group_by:
   - namespace
