@@ -54,32 +54,6 @@ spec:
                 type: string
               domain:
                 type: string
-              features:
-                description: FeaturesSpec defines ARO operator feature gates
-                properties:
-                  reconcileAlertWebhook:
-                    type: boolean
-                  reconcileBanner:
-                    type: boolean
-                  reconcileDNSMasq:
-                    type: boolean
-                  reconcileGenevaLogging:
-                    type: boolean
-                  reconcileMachineSet:
-                    type: boolean
-                  reconcileMonitoringConfig:
-                    type: boolean
-                  reconcileNodeDrainer:
-                    type: boolean
-                  reconcilePullSecret:
-                    type: boolean
-                  reconcileRouteFix:
-                    type: boolean
-                  reconcileSubnets:
-                    type: boolean
-                  reconcileWorkaroundsController:
-                    type: boolean
-                type: object
               gatewayDomains:
                 items:
                   type: string
@@ -123,6 +97,11 @@ spec:
                 type: object
               location:
                 type: string
+              operatorflags:
+                additionalProperties:
+                  type: string
+                description: OperatorFlags defines feature gates for the ARO Operator
+                type: object
               resourceId:
                 description: ResourceID is the Azure resourceId of the cluster
                 type: string
