@@ -298,6 +298,9 @@ func (g *generator) devCIPool() *arm.Resource {
 	}
 
 	trailer := base64.StdEncoding.EncodeToString([]byte(`
+# Hack - wait on create because the WALinuxAgent sometimes conflicts with the yum update -y below
+sleep 60
+
 for attempt in {1..5}; do
   yum -y update -x WALinuxAgent && break
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
@@ -360,7 +363,7 @@ chmod +x /etc/cron.hourly/tmpwatch
 cat >/usr/local/bin/fix-podman-pause.sh <<'EOF'
 #!/bin/bash
 
-PAUSE_FILE='/tmp/run-1000/libpod/tmp/pause.pid'
+PAUSE_FILE='/tmp/podman-run-1000/libpod/tmp/pause.pid'
 
 if [ -f "${PAUSE_FILE}" ]; then
 	PID=$(cat ${PAUSE_FILE})
@@ -382,7 +385,7 @@ EOF
 chmod +x /usr/local/bin/clean-tmp.sh
 
 echo "0 0 */1 * * /usr/local/bin/clean-tmp.sh" >> cron
-echo "0 * * * * /usr/local/bin/fix-podman-pause.sh" >> cron
+echo "* * * * * /usr/local/bin/fix-podman-pause.sh" >> cron
 
 crontab cron
 rm cron
