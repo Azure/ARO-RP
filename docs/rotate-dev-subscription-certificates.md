@@ -33,7 +33,9 @@ source ./hack/devtools/deploy-shared-env.sh
 import_certs_secrets
 ```
 
-3. At this point, we are done with all the certs except those owned by FP SP. The tenant owner needs to do this manually at the moment.
+3. The OpenVPN configuration file needs to be updated to enable tunneling to the vpn. To achieve this, edit the `vpn-<region>.ovpn` file in secrets and add the `vpn-client certificate` and `vpn-client certificate private key`.
+   
+4. At this point, we are done with all the certs except those owned by FP SP. The tenant owner needs to do this manually at the moment.
 
 ```bash
 # Import firstparty.pem to keyvault 
@@ -52,4 +54,4 @@ source ./hack/devtools/deploy-shared-env.sh
 deploy_env_dev
 ``` 
 
-1. Finally, run `SECRET_SA_ACCOUNT_NAME=rharosecrets make secrets`
+5. Finally, run `SECRET_SA_ACCOUNT_NAME=rharosecrets make secrets`
