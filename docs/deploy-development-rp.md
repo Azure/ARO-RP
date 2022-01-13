@@ -134,13 +134,47 @@
      ```bash
      journalctl _COMM=aro -o json --since "15 min ago" -f | jq -r 'select (.COMPONENT != null and (.COMPONENT | contains("access"))|not) | .MESSAGE'
      ```
-     
-   * Perform AdminUpdate on a dev cluster
-   
-```bash
-export CLUSTER=cluster
-curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
-```
+
+## Make Admin-Action API call(s) to a running local-rp
+
+  ```bash
+  export CLUSTER=<cluster-name>
+  export AZURE_SUBSCRIPTION_ID=<subscription-id>
+  export RESOURCEGROUP=<resource-group-name>
+    [OR]
+  . ./env
+  ```
+
+* Perform AdminUpdate on a dev cluster
+  ```bash
+  curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
+  ```
+
+* Get Cluster detials of a dev cluster
+  ```bash
+  curl -X GET -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
+  ```
+
+* Get SerialConsole logs of a VM of dev cluster
+  ```bash
+  VMNAME="aro-cluster-qplnw-master-0"
+  curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/serialconsole?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
+  ```
+
+* List Clusters of a local-rp
+  ```bash
+  curl -X GET -k "https://localhost:8443/admin/providers/microsoft.redhatopenshift/openshiftclusters"
+  ```
+
+* List cluster Azure Resources of a dev cluster
+  ```bash
+  curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/resources"
+  ```
+
+* Perform Cluster Upgrade on a dev cluster
+  ```bash
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/upgrade"
+  ```
 
 ## Debugging
 
