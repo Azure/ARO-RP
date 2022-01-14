@@ -8,7 +8,7 @@ parameters:
   default: latest
 - name: configVersion
   type: string
-  default: int
+  default: latest
 
 stages:
 - stage: Deploy_INT
