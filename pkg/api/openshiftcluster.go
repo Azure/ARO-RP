@@ -97,6 +97,9 @@ type OpenShiftClusterProperties struct {
 	LastAdminUpdateError    string              `json:"lastAdminUpdateError,omitempty"`
 	MaintenanceTask         MaintenanceTask     `json:"maintenanceTask,omitempty"`
 
+	// Operator feature/option flags
+	OperatorFlags OperatorFlags `json:"operatorFlags,omitempty"`
+
 	CreatedAt time.Time `json:"createdAt,omitempty"`
 
 	// CreatedBy is the RP version (Git commit hash) that created this cluster
@@ -167,6 +170,9 @@ const (
 	MaintenanceTaskEverything MaintenanceTask = "Everything"
 	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
 )
+
+// Cluster-scoped flags
+type OperatorFlags map[string]string
 
 // IsTerminal returns true if state is Terminal
 func (t ProvisioningState) IsTerminal() bool {
