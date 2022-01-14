@@ -387,6 +387,9 @@ chmod +x /usr/local/bin/clean-tmp.sh
 echo "0 0 */1 * * /usr/local/bin/clean-tmp.sh" >> cron
 echo "* * * * * /usr/local/bin/fix-podman-pause.sh" >> cron
 
+# HACK - https://github.com/containers/podman/issues/9002
+echo "@reboot loginctl enable-linger cloud-user" >> cron
+
 crontab cron
 rm cron
 
