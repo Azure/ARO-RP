@@ -11,6 +11,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	ctrl "sigs.k8s.io/controller-runtime"
+
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 )
 
 var (
@@ -38,7 +42,7 @@ global:
 receivers:
 - name: "null"
   webhook_configs:
-  - url: http://aro-operator-master.openshift-azure-operator.svc.cluster.local:8080
+  - url: http://aro-operator-master.openshift-azure-operator.svc.cluster.local:8080/healthz/ready
 route:
   group_by:
   - namespace
@@ -111,7 +115,7 @@ inhibit_rules:
 receivers:
 - name: Default
   webhook_configs:
-  - url: http://aro-operator-master.openshift-azure-operator.svc.cluster.local:8080
+  - url: http://aro-operator-master.openshift-azure-operator.svc.cluster.local:8080/healthz/ready
 - name: Watchdog
 - name: Critical
 route:
@@ -140,7 +144,7 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 		want       []byte
 	}{
 		{
-			name: "old cluster",
+			name: "old cluster, enabled",
 			reconciler: &Reconciler{
 				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
@@ -151,11 +155,23 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 						"alertmanager.yaml": initialOld,
 					},
 				}),
+				arocli: arofake.NewSimpleClientset(
+					&arov1alpha1.Cluster{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: arov1alpha1.SingletonClusterName,
+						},
+						Spec: arov1alpha1.ClusterSpec{
+							OperatorFlags: arov1alpha1.OperatorFlags{
+								ENABLED: "true",
+							},
+						},
+					},
+				),
 			},
 			want: wantOld,
 		},
 		{
-			name: "new cluster",
+			name: "new cluster, enabled",
 			reconciler: &Reconciler{
 				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
@@ -166,8 +182,74 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 						"alertmanager.yaml": initialNew,
 					},
 				}),
+				arocli: arofake.NewSimpleClientset(
+					&arov1alpha1.Cluster{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: arov1alpha1.SingletonClusterName,
+						},
+						Spec: arov1alpha1.ClusterSpec{
+							OperatorFlags: arov1alpha1.OperatorFlags{
+								ENABLED: "true",
+							},
+						},
+					},
+				),
 			},
 			want: wantNew,
+		},
+		{
+			name: "old cluster, disabled",
+			reconciler: &Reconciler{
+				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "alertmanager-main",
+						Namespace: "openshift-monitoring",
+					},
+					Data: map[string][]byte{
+						"alertmanager.yaml": initialOld,
+					},
+				}),
+				arocli: arofake.NewSimpleClientset(
+					&arov1alpha1.Cluster{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: arov1alpha1.SingletonClusterName,
+						},
+						Spec: arov1alpha1.ClusterSpec{
+							OperatorFlags: arov1alpha1.OperatorFlags{
+								ENABLED: "false",
+							},
+						},
+					},
+				),
+			},
+			want: initialOld,
+		},
+		{
+			name: "new cluster, disabled",
+			reconciler: &Reconciler{
+				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "alertmanager-main",
+						Namespace: "openshift-monitoring",
+					},
+					Data: map[string][]byte{
+						"alertmanager.yaml": initialNew,
+					},
+				}),
+				arocli: arofake.NewSimpleClientset(
+					&arov1alpha1.Cluster{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: arov1alpha1.SingletonClusterName,
+						},
+						Spec: arov1alpha1.ClusterSpec{
+							OperatorFlags: arov1alpha1.OperatorFlags{
+								ENABLED: "false",
+							},
+						},
+					},
+				),
+			},
+			want: initialNew,
 		},
 	}
 
@@ -175,7 +257,7 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			i := tt.reconciler
 
-			err := i.setAlertManagerWebhook(ctx, "http://aro-operator-master.openshift-azure-operator.svc.cluster.local:8080")
+			_, err := i.Reconcile(ctx, ctrl.Request{})
 			if err != nil {
 				t.Fatal(err)
 			}

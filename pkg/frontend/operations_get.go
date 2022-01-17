@@ -73,6 +73,15 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 				Origin: "user,system",
 			},
 			{
+				Name: "Microsoft.RedHatOpenShift/openShiftClusters/listAdminCredentials/action",
+				Display: api.Display{
+					Provider:  "Azure Red Hat OpenShift",
+					Resource:  "openShiftClusters",
+					Operation: "List Admin Kubeconfig of an OpenShift cluster",
+				},
+				Origin: "user,system",
+			},
+			{
 				Name: "Microsoft.RedHatOpenShift/operations/read",
 				Display: api.Display{
 					Provider:  "Azure Red Hat OpenShift",

@@ -11,6 +11,7 @@ import (
 	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -19,6 +20,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+)
+
+const (
+	CONFIG_NAMESPACE string = "aro.machine"
+	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
 )
 
 type Reconciler struct {
@@ -42,6 +48,16 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, maocli maoclie
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+		// controller is disabled
+		return reconcile.Result{}, nil
+	}
+
 	// Update cluster object's status.
 	cond := &operatorv1.OperatorCondition{
 		Type:    arov1alpha1.MachineValid,

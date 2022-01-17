@@ -170,18 +170,8 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 			APIIntIP:                 o.oc.Properties.APIServerProfile.IntIP,
 			IngressIP:                o.oc.Properties.IngressProfiles[0].IP,
 			GatewayPrivateEndpointIP: o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP,
-			Features: arov1alpha1.FeaturesSpec{
-				ReconcileSubnets:               false,
-				ReconcileAlertWebhook:          true,
-				ReconcileDNSMasq:               true,
-				ReconcileGenevaLogging:         true,
-				ReconcileMachineSet:            true,
-				ReconcileMonitoringConfig:      true,
-				ReconcileNodeDrainer:           true,
-				ReconcilePullSecret:            true,
-				ReconcileRouteFix:              true,
-				ReconcileWorkaroundsController: true,
-			},
+			// Update the OperatorFlags from the version in the RP
+			OperatorFlags: arov1alpha1.OperatorFlags(o.oc.Properties.OperatorFlags),
 		},
 	}
 

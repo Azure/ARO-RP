@@ -23,6 +23,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
+const (
+	CONFIG_NAMESPACE string = "aro.workaround"
+	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+)
+
 // Reconciler the point of the workaround controller is to apply
 // workarounds that we have unitl upstream fixes are available.
 type Reconciler struct {
@@ -59,7 +64,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.Features.ReconcileWorkaroundsController {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+		// controller is disabled
 		return reconcile.Result{}, nil
 	}
 
