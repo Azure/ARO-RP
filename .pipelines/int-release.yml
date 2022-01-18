@@ -6,7 +6,7 @@ parameters:
 - name: vsoDeployerBuildID
   type: string
   default: latest
-- name: vsoConfigBuildID
+- name: configVersion
   type: string
   default: latest
 
@@ -23,10 +23,9 @@ stages:
       locations:
       - eastus
       configFileName: int-config.yaml
+      configVersion: ${{ parameters.configVersion }}
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
       vsoProjectID: $(vso-project-id)
-      vsoConfigPipelineID: $(vso-config-pipeline-id)
-      vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
       vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
       vsoDeployerBuildID: ${{ parameters.vsoDeployerBuildID }}
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)

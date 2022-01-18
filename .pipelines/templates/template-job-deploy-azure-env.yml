@@ -5,14 +5,13 @@ parameters:
   azureDevOpsJSONSPN: ''
   billingE2EPipelineName: ''
   billingE2EBranchName: ''
+  configVersion: ''
   configFileName: ''
   e2eSubscription: ''
   environment: ''
   locations: []
   rpMode: ''
   vsoProjectID: ''
-  vsoConfigPipelineID: ''
-  vsoConfigBuildID: ''
   vsoDeployerPipelineID: ''
   vsoDeployerBuildID: ''
 
@@ -28,20 +27,12 @@ jobs:
       runOnce:
         deploy:
           steps:
-          - task: DownloadBuildArtifacts@0
-            inputs:
-              buildType: specific
-              project: ${{ parameters.vsoProjectID }}
-              pipeline: ${{ parameters.vsoConfigPipelineID }}
-              ${{ if eq(parameters.vsoConfigBuildID, 'latest') }}:
-                buildVersionToDownload: latestFromBranch
-                branchName: refs/heads/master
-              ${{ if ne(parameters.vsoConfigBuildID, 'latest') }}:
-                buildVersionToDownload: specific
-                buildId: ${{ parameters.vsoConfigBuildID }}
-              downloadType: specific
-              downloadPath: $(System.ArtifactsDirectory)/config
-            displayName: Download Config
+          - ${{ if eq(parameters.configVersion, 'latest') }}:
+            - checkout: git://AzureRedHatOpenShift/RP-Config@refs/heads/master
+              path: $(Agent.BuildDirectory)/s/config
+          - ${{ if ne(parameters.configVersion, 'latest') }}:
+            - checkout: git://AzureRedHatOpenShift/RP-Config@refs/tags/${{parameters.configVersion}}
+              path: $(Agent.BuildDirectory)/s/config
           - task: DownloadBuildArtifacts@0
             inputs:
               buildType: specific
@@ -58,7 +49,7 @@ jobs:
             displayName: Download Deployer
           - template: ./template-deploy-azure-env.yml
             parameters:
-              configDirectory: $(System.ArtifactsDirectory)/config/drop/deploy
+              configDirectory: $(Agent.BuildDirectory)/s/config/deploy
               deployerDirectory: $(System.ArtifactsDirectory)/deployer/drop
               configFileName: ${{ parameters.configFileName }}
               location: ${{ location }}
