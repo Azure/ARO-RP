@@ -350,6 +350,11 @@ cat >/home/cloud-user/agent/.env <<'EOF'
 GOLANG_FIPS=1
 EOF
 
+# HACK: https://github.com/containers/podman/issues/427
+cat >/home/cloud-user/agent/.env <<'EOF'
+XDG_RUNTIME_DIR=/run/user/1000
+EOF
+
 cat >/etc/cron.hourly/tmpwatch <<'EOF'
 #!/bin/bash
 
