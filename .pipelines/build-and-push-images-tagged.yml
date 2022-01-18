@@ -1,0 +1,63 @@
+# Azure DevOps Pipeline building rp images and pushing to int acr
+trigger: none
+pr: none
+
+variables:
+- template: vars.yml
+- name: tag
+
+resources:
+  pipelines:
+  - pipeline: buildImages
+    source: E2E
+    trigger: true
+
+jobs:
+- job: Build_and_push_images
+  condition: startsWith(variables['build.sourceBranch'], 'refs/tags/v2')
+  displayName: Build release
+  pool:
+    name: ARO-CI
+
+  steps:
+  - template: ./templates/template-checkout.yml
+  - template: ./templates/template-az-cli-login.yml
+    parameters:
+      azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+
+  - script: |
+      # read current annotated tag that started this pipeline
+      TAG=$(git describe --exact-match)
+
+      # there is no this pipeline ends with error
+      [[ -z ${TAG} ]] && exit 1
+
+      ## set the variable
+      echo '##vso[task.setvariable variable=tag]${TAG}'
+
+  - template: ./templates/template-push-images-to-acr-tagged.yml
+    parameters:
+      rpImageACR: $(RP_IMAGE_ACR)
+      imageTag: $(TAG)
+
+  - template: ./templates/template-az-cli-logout.yml
+  - script: |
+      cp -a --parents aro "$(Build.ArtifactStagingDirectory)"
+    displayName: Copy artifacts
+  - task: PublishBuildArtifacts@1
+    displayName: Publish Artifacts
+    name: aro_deployer
+
+  - script: |
+      set -xe
+      MESSAGE="$(git for-each-ref refs/tags/${TAG} --format='%(contents)')"
+      echo "$MESSAGE" > $(System.DefaultWorkingDirectory)/release.txt
+    displayName: Extract release notes from annotated tag
+  - task: GithubRelease@0
+    displayName: Publish ARO-RP release notes
+    inputs:
+      githubConnection: AzureRedHatOpenShift
+      repositoryName: Azure/ARO-RP
+      action: create
+      releaseNotesFile: $(System.DefaultWorkingDirectory)/release.txt
+      addChangeLog: true
