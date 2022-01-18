@@ -1,0 +1,144 @@
+# No PR triggers to run it manually
+pr: none
+trigger: none
+
+parameters:
+- name: vsoConfigBuildID
+- name: aroImageTag
+- name: rpImageAcr
+  type: string
+  default: arosvc
+
+stages:
+- stage: Deploy_CanarySector
+  dependsOn: []
+  displayName: 🚀 Deploy Canary Sector
+  jobs:
+  - template: ./templates/template-job-deploy-azure-env-tag.yml
+    parameters:
+      environment: RP-Prod-CanarySector
+      rpMode: ''
+      aroVersionStorageAccount: $(aro-version-storage-account)
+      locations:
+      - westcentralus
+      - eastus2euap
+      configFileName: prod-config.yaml
+      azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+      vsoProjectID: $(vso-project-id)
+      azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+      e2eSubscription: $(e2e-subscription)
+      billingE2EPipelineName: $(billing-e2e-pipeline-name)
+      billingE2EBranchName: $(billing-e2e-branch-name)
+      imageTag: ${{ parameters.aroImageTag }}
+      rpImageAcr: ${{ parameters.rpImageAcr }}
+- stage: Deploy_LowTrafficSector
+  condition: succeededOrFailed()
+  dependsOn: [Deploy_CanarySector]
+  displayName: 🚀 Deploy Low Traffic Sector
+  jobs:
+  - template: ./templates/template-job-deploy-azure-env-tag.yml
+    parameters:
+      environment: RP-Prod-LowTrafficSector
+      rpMode: ''
+      aroVersionStorageAccount: $(aro-version-storage-account)
+      locations:
+      - australiaeast
+      - australiasoutheast
+      - centralindia
+      - eastasia
+      - southindia
+      - japaneast
+      - japanwest
+      - koreacentral
+      configFileName: prod-config.yaml
+      azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+      vsoProjectID: $(vso-project-id)
+      azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+      e2eSubscription: $(e2e-subscription)
+      billingE2EPipelineName: $(billing-e2e-pipeline-name)
+      billingE2EBranchName: $(billing-e2e-branch-name)
+      imageTag: ${{ parameters.aroImageTag }}
+      rpImageAcr: ${{ parameters.rpImageAcr }}
+- stage: Deploy_USSector
+  condition: succeededOrFailed()
+  dependsOn: [Deploy_LowTrafficSector]
+  displayName: 🚀 Deploy USSector
+  jobs:
+  - template: ./templates/template-job-deploy-azure-env-tag.yml
+    parameters:
+      environment: RP-Prod-USSector
+      rpMode: ''
+      aroVersionStorageAccount: $(aro-version-storage-account)
+      locations:
+      - centralus
+      - eastus
+      - eastus2
+      - northcentralus
+      - southcentralus
+      - westus
+      - westus2
+      configFileName: prod-config.yaml
+      azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+      vsoProjectID: $(vso-project-id)
+      azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+      e2eSubscription: $(e2e-subscription)
+      billingE2EPipelineName: $(billing-e2e-pipeline-name)
+      billingE2EBranchName: $(billing-e2e-branch-name)
+      imageTag: ${{ parameters.aroImageTag }}
+      rpImageAcr: ${{ parameters.rpImageAcr }}
+- stage: Deploy_EuropeSector
+  dependsOn: [Deploy_USSector]
+  condition: succeededOrFailed()
+  displayName: 🚀 Deploy EuropeSector
+  jobs:
+  - template: ./templates/template-job-deploy-azure-env-tag.yml
+    parameters:
+      environment: RP-Prod-EuropeSector
+      rpMode: ''
+      aroVersionStorageAccount: $(aro-version-storage-account)
+      locations:
+      - canadacentral
+      - canadaeast
+      - germanywestcentral
+      - northeurope
+      - norwayeast
+      - switzerlandnorth
+      - switzerlandwest
+      - westeurope
+      - francecentral
+      configFileName: prod-config.yaml
+      azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+      vsoProjectID: $(vso-project-id)
+      azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+      e2eSubscription: $(e2e-subscription)
+      billingE2EPipelineName: $(billing-e2e-pipeline-name)
+      billingE2EBranchName: $(billing-e2e-branch-name)
+      imageTag: ${{ parameters.aroImageTag }}
+      rpImageAcr: ${{ parameters.rpImageAcr }}
+- stage: Deploy_ROWSector
+  dependsOn: [Deploy_EuropeSector]
+  condition: succeededOrFailed()
+  displayName: 🚀 Deploy ROWSector
+  jobs:
+  - template: ./templates/template-job-deploy-azure-env-tag.yml
+    parameters:
+      environment: RP-Prod-ROWSector
+      rpMode: ''
+      aroVersionStorageAccount: $(aro-version-storage-account)
+      locations:
+      - brazilsouth
+      - brazilsoutheast
+      - southeastasia
+      - southafricanorth
+      - uaenorth
+      - uksouth
+      - ukwest
+      configFileName: prod-config.yaml
+      azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+      vsoProjectID: $(vso-project-id)
+      azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+      e2eSubscription: $(e2e-subscription)
+      billingE2EPipelineName: $(billing-e2e-pipeline-name)
+      billingE2EBranchName: $(billing-e2e-branch-name)
+      imageTag: ${{ parameters.aroImageTag }}
+      rpImageAcr: ${{ parameters.rpImageAcr }}
