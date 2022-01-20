@@ -29,10 +29,8 @@ jobs:
           steps:
           - ${{ if eq(parameters.configVersion, 'latest') }}:
             - checkout: git://AzureRedHatOpenShift/RP-Config@refs/heads/master
-              path: $(Agent.BuildDirectory)/s/config
           - ${{ if ne(parameters.configVersion, 'latest') }}:
             - checkout: git://AzureRedHatOpenShift/RP-Config@refs/tags/${{parameters.configVersion}}
-              path: $(Agent.BuildDirectory)/s/config
           - task: DownloadBuildArtifacts@0
             inputs:
               buildType: specific
@@ -49,7 +47,7 @@ jobs:
             displayName: Download Deployer
           - template: ./template-deploy-azure-env.yml
             parameters:
-              configDirectory: $(Agent.BuildDirectory)/s/config/deploy
+              configDirectory: $(Agent.BuildDirectory)/s/RP-config/deploy
               deployerDirectory: $(System.ArtifactsDirectory)/deployer/drop
               configFileName: ${{ parameters.configFileName }}
               location: ${{ location }}
