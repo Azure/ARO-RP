@@ -47,7 +47,7 @@ jobs:
             displayName: Download Deployer
           - template: ./template-deploy-azure-env.yml
             parameters:
-              configDirectory: $(Agent.BuildDirectory)/s/RP-config/deploy
+              configDirectory: $(Agent.BuildDirectory)/s/deploy
               deployerDirectory: $(System.ArtifactsDirectory)/deployer/drop
               configFileName: ${{ parameters.configFileName }}
               location: ${{ location }}
