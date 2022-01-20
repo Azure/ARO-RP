@@ -44,6 +44,9 @@ func getValidClusterInstance() *arov1alpha1.Cluster {
 		Spec: arov1alpha1.ClusterSpec{
 			ClusterResourceGroupID: clusterResourceGroupId,
 			StorageSuffix:          storageSuffix,
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				ENABLED: "true",
+			},
 		},
 	}
 }
