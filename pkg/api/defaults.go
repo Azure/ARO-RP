@@ -51,7 +51,9 @@ const FLAG_FALSE string = "false"
 var DefaultOperatorFlags OperatorFlags = OperatorFlags{
 	"aro.alertwebhook.enabled": FLAG_TRUE,
 
-	"aro.azuresubnets.enabled": FLAG_TRUE,
+	"aro.azuresubnets.enabled":                 FLAG_TRUE,
+	"aro.azuresubnets.nsg.enabled":             FLAG_TRUE,
+	"aro.azuresubnets.serviceendpoint.enabled": FLAG_TRUE,
 
 	"aro.banner.enabled": FLAG_FALSE,
 
@@ -77,6 +79,8 @@ var DefaultOperatorFlags OperatorFlags = OperatorFlags{
 	"aro.rbac.enabled": FLAG_TRUE,
 
 	"aro.routefix.enabled": FLAG_TRUE,
+
+	"aro.storageaccounts.enabled": FLAG_TRUE,
 
 	"aro.workaround.enabled": FLAG_TRUE,
 }

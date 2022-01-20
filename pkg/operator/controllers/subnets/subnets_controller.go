@@ -30,8 +30,10 @@ import (
 )
 
 const (
-	CONFIG_NAMESPACE string = "aro.azuresubnets"
-	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+	CONFIG_NAMESPACE         string = "aro.azuresubnets"
+	ENABLED                  string = CONFIG_NAMESPACE + ".enabled"
+	NSG_ENABLED              string = CONFIG_NAMESPACE + "nsg.enabled"
+	SERVICE_ENDPOINT_ENABLED string = CONFIG_NAMESPACE + "serviceendpoint.enabled"
 )
 
 // Reconciler is the controller struct
@@ -101,10 +103,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		subnets:        subnet.NewManager(&azEnv, resource.SubscriptionID, authorizer),
 	}
 
-	return reconcile.Result{}, manager.reconcileSubnets(ctx)
+	return reconcile.Result{}, manager.reconcileSubnets(ctx, instance)
 }
 
-func (r *reconcileManager) reconcileSubnets(ctx context.Context) error {
+func (r *reconcileManager) reconcileSubnets(ctx context.Context, instance *arov1alpha1.Cluster) error {
 	subnets, err := r.kubeSubnets.List(ctx)
 	if err != nil {
 		return err
@@ -113,14 +115,19 @@ func (r *reconcileManager) reconcileSubnets(ctx context.Context) error {
 	// This calls potentially calls update 2x for same loop, but this is price
 	// to pay to keep logic split, separate and simple
 	for _, s := range subnets {
-		err = r.ensureSubnetNSG(ctx, s)
-		if err != nil {
-			return err
+
+		if instance.Spec.OperatorFlags.GetSimpleBoolean(NSG_ENABLED) {
+			err = r.ensureSubnetNSG(ctx, s)
+			if err != nil {
+				return err
+			}
 		}
 
-		err = r.ensureSubnetServiceEndpoints(ctx, s)
-		if err != nil {
-			return err
+		if instance.Spec.OperatorFlags.GetSimpleBoolean(SERVICE_ENDPOINT_ENABLED) {
+			err = r.ensureSubnetServiceEndpoints(ctx, s)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

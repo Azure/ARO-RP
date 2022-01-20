@@ -96,23 +96,6 @@ type ClusterSpec struct {
 
 	// OperatorFlags defines feature gates for the ARO Operator
 	OperatorFlags OperatorFlags `json:"operatorflags,omitempty"`
-	Features      FeaturesSpec  `json:"features,omitempty"`
-}
-
-// FeaturesSpec defines ARO operator feature gates
-type FeaturesSpec struct {
-	ReconcileSubnets               bool `json:"reconcileSubnets,omitempty"`
-	ReconcileStorageAccounts       bool `json:"reconcileStorageAccounts,omitempty"`
-	ReconcileAlertWebhook          bool `json:"reconcileAlertWebhook,omitempty"`
-	ReconcileDNSMasq               bool `json:"reconcileDNSMasq,omitempty"`
-	ReconcileGenevaLogging         bool `json:"reconcileGenevaLogging,omitempty"`
-	ReconcileMachineSet            bool `json:"reconcileMachineSet,omitempty"`
-	ReconcileMonitoringConfig      bool `json:"reconcileMonitoringConfig,omitempty"`
-	ReconcileNodeDrainer           bool `json:"reconcileNodeDrainer,omitempty"`
-	ReconcilePullSecret            bool `json:"reconcilePullSecret,omitempty"`
-	ReconcileRouteFix              bool `json:"reconcileRouteFix,omitempty"`
-	ReconcileWorkaroundsController bool `json:"reconcileWorkaroundsController,omitempty"`
-	ReconcileBanner                bool `json:"reconcileBanner,omitempty"`
 }
 
 // Banner defines if a Banner should be shown to the customer

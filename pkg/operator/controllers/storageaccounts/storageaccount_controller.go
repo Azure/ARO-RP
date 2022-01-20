@@ -31,6 +31,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
+const (
+	CONFIG_NAMESPACE string = "aro.storageaccounts"
+	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+)
+
 // Reconciler is the controller struct
 type Reconciler struct {
 	log *logrus.Entry
@@ -41,7 +46,7 @@ type Reconciler struct {
 	imageregistryclient imageregistryclient.Interface
 }
 
-// reconcileManager is instance of manager instanciated per request
+// reconcileManager is instance of manager instantiated per request
 type reconcileManager struct {
 	log *logrus.Entry
 
@@ -64,15 +69,15 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, maocli maoclie
 	}
 }
 
-// Reconcile makes sure firewalling is set on storage accounts as per user subnets
+// Reconcile ensures the firewall is set on storage accounts as per user subnets
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.Features.ReconcileStorageAccounts {
-		// reconciling storageaccounts is disabled
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+		// controller is disabled
 		return reconcile.Result{}, nil
 	}
 

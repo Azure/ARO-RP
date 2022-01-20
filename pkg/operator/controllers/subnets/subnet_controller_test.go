@@ -288,7 +288,7 @@ func TestReconcileManager(t *testing.T) {
 				kubeSubnets:    kubeSubnets,
 			}
 
-			err := r.reconcileSubnets(context.Background())
+			err := r.reconcileSubnets(context.Background(), instance)
 			if err != nil {
 				if tt.wantErr == nil {
 					t.Fatal(err)
