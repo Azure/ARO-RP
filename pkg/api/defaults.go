@@ -51,7 +51,6 @@ const FLAG_FALSE string = "false"
 var DefaultOperatorFlags OperatorFlags = OperatorFlags{
 	"aro.alertwebhook.enabled": FLAG_TRUE,
 
-	"aro.azuresubnets.enabled":                 FLAG_TRUE,
 	"aro.azuresubnets.nsg.enabled":             FLAG_TRUE,
 	"aro.azuresubnets.serviceendpoint.enabled": FLAG_TRUE,
 

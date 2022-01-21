@@ -31,7 +31,6 @@ import (
 
 const (
 	CONFIG_NAMESPACE         string = "aro.azuresubnets"
-	ENABLED                  string = CONFIG_NAMESPACE + ".enabled"
 	NSG_ENABLED              string = CONFIG_NAMESPACE + "nsg.enabled"
 	SERVICE_ENDPOINT_ENABLED string = CONFIG_NAMESPACE + "serviceendpoint.enabled"
 )
@@ -73,7 +72,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(NSG_ENABLED) && !instance.Spec.OperatorFlags.GetSimpleBoolean(SERVICE_ENDPOINT_ENABLED) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
