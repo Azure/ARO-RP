@@ -495,7 +495,7 @@ if [ -f \$NEW_CERT_FILE ]; then
   else
     sed -i -ne '1,/END CERTIFICATE/ p' \$NEW_CERT_FILE
   fi
-  if ! diff $NEW_CERT_FILE $CURRENT_CERT_FILE >dev/null 2>&1; then
+  if ! diff $NEW_CERT_FILE $CURRENT_CERT_FILE >/dev/null 2>&1; then
     chmod 0600 \$NEW_CERT_FILE
     mv \$NEW_CERT_FILE \$CURRENT_CERT_FILE
   fi
