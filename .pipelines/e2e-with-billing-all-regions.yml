@@ -93,6 +93,7 @@ stages:
     - northeurope
     - norwayeast
     - norwaywest
+    - swedencentral
     - switzerlandnorth
     - switzerlandwest
     - westeurope

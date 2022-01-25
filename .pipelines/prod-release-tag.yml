@@ -102,6 +102,7 @@ stages:
       - germanywestcentral
       - northeurope
       - norwayeast
+      - swedencentral
       - switzerlandnorth
       - switzerlandwest
       - westeurope
