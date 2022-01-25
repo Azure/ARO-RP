@@ -342,16 +342,6 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 
 	const nsg = "e2e-nsg"
 
-	// TODO (robryan) rm this func once default to on https://github.com/Azure/ARO-RP/issues/1735
-	// enableReconcileSubnet := func() {
-	// 	instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
-	// 	Expect(err).NotTo(HaveOccurred())
-	// 	if !instance.Spec.Features.ReconcileSubnets {
-	// 		instance.Spec.Features.ReconcileSubnets = true
-	// 		_, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, instance, metav1.UpdateOptions{})
-	// 		Expect(err).NotTo(HaveOccurred())
-	// 	}
-	// }
 	// Gathers vnet name, resource group, location, and adds master/worker subnets to list to reconcile.
 	gatherNetworkInfo := func() {
 		oc, err := clients.OpenshiftClustersv20200430.Get(ctx, vnetResourceGroup, clusterName)

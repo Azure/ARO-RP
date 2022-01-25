@@ -5,6 +5,8 @@ package subnets
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
@@ -31,8 +33,9 @@ import (
 
 const (
 	CONFIG_NAMESPACE         string = "aro.azuresubnets"
-	NSG_ENABLED              string = CONFIG_NAMESPACE + "nsg.enabled"
-	SERVICE_ENDPOINT_ENABLED string = CONFIG_NAMESPACE + "serviceendpoint.enabled"
+	ENABLED                  string = CONFIG_NAMESPACE + ".enabled"
+	NSG_MANAGED              string = CONFIG_NAMESPACE + ".nsg.managed"
+	SERVICE_ENDPOINT_MANAGED string = CONFIG_NAMESPACE + ".serviceendpoint.managed"
 )
 
 // Reconciler is the controller struct
@@ -44,7 +47,7 @@ type Reconciler struct {
 	maocli        maoclient.Interface
 }
 
-// reconcileManager is instance of manager instanciated per request
+// reconcileManager is an instance of the manager instantiated per request
 type reconcileManager struct {
 	log *logrus.Entry
 
@@ -72,12 +75,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(NSG_ENABLED) && !instance.Spec.OperatorFlags.GetSimpleBoolean(SERVICE_ENDPOINT_ENABLED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
 
-	// Get endpoints from operator
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(NSG_MANAGED) && !instance.Spec.OperatorFlags.GetSimpleBoolean(SERVICE_ENDPOINT_MANAGED) {
+		// controller is disabled
+		return reconcile.Result{}, nil
+	}
+
+	// Get endpoints from the operator
 	azEnv, err := azureclient.EnvironmentFromName(instance.Spec.AZEnvironment)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -88,7 +96,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	// create refreshable authorizer from token
+	// create a refreshable authorizer from token
 	authorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(ctx, r.log, &azEnv, r.kubernetescli)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -106,29 +114,37 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 }
 
 func (r *reconcileManager) reconcileSubnets(ctx context.Context, instance *arov1alpha1.Cluster) error {
+
 	subnets, err := r.kubeSubnets.List(ctx)
 	if err != nil {
 		return err
 	}
 
-	// This calls potentially calls update 2x for same loop, but this is price
-	// to pay to keep logic split, separate and simple
+	var combinedErrors []string
+
+	// This potentially calls an update twice for the same loop, but this is the price
+	// to pay for keeping logic split, separate, and simple
 	for _, s := range subnets {
 
-		if instance.Spec.OperatorFlags.GetSimpleBoolean(NSG_ENABLED) {
+		if instance.Spec.OperatorFlags.GetSimpleBoolean(NSG_MANAGED) {
 			err = r.ensureSubnetNSG(ctx, s)
 			if err != nil {
-				return err
+				combinedErrors = append(combinedErrors, err.Error())
 			}
 		}
 
-		if instance.Spec.OperatorFlags.GetSimpleBoolean(SERVICE_ENDPOINT_ENABLED) {
+		if instance.Spec.OperatorFlags.GetSimpleBoolean(SERVICE_ENDPOINT_MANAGED) {
 			err = r.ensureSubnetServiceEndpoints(ctx, s)
 			if err != nil {
-				return err
+				combinedErrors = append(combinedErrors, err.Error())
 			}
 		}
 	}
+
+	if len(combinedErrors) > 0 {
+		return fmt.Errorf(strings.Join(combinedErrors, "\n"))
+	}
+
 	return nil
 }
 

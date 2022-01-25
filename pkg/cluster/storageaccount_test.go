@@ -131,7 +131,7 @@ func TestEnableServiceEndpoints(t *testing.T) {
 				},
 			}
 
-			// we don't test errors as all of them would be out of controll for us
+			// we don't test errors as all of them would be out of our control
 			_ = m.enableServiceEndpoints(ctx)
 		})
 	}

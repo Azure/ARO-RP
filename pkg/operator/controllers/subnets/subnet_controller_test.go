@@ -42,8 +42,9 @@ func getValidClusterInstance() *arov1alpha1.Cluster {
 			ClusterResourceGroupID: clusterResourceGroupId,
 			InfraID:                infraId,
 			OperatorFlags: arov1alpha1.OperatorFlags{
-				NSG_ENABLED:              "true",
-				SERVICE_ENDPOINT_ENABLED: "true",
+				ENABLED:                  "true",
+				NSG_MANAGED:              "true",
+				SERVICE_ENDPOINT_MANAGED: "true",
 			},
 		},
 	}

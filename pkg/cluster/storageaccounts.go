@@ -65,8 +65,8 @@ func (m *manager) enableServiceEndpoints(ctx context.Context) error {
 	return nil
 }
 
-// migrateStorageAccounts should re-deploy storage account with encryption,
-// KindV2 and firewalls rules preventing external access.
+// migrateStorageAccounts redeploys storage accounts with firewall rules preventing external access
+// The encryption flag is set to false/disabled for legacy storage accounts.
 func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
