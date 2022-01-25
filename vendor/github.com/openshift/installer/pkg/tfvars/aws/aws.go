@@ -3,7 +3,6 @@ package aws
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"sigs.k8s.io/cluster-api-provider-aws/pkg/apis/awsprovider/v1beta1"
@@ -11,7 +10,6 @@ import (
 	configaws "github.com/openshift/installer/pkg/asset/installconfig/aws"
 	"github.com/openshift/installer/pkg/types"
 	typesaws "github.com/openshift/installer/pkg/types/aws"
-	"github.com/openshift/installer/pkg/types/aws/defaults"
 )
 
 type config struct {
@@ -59,6 +57,8 @@ type TFVarsSources struct {
 	AdditionalTrustBundle string
 
 	MasterIAMRoleName, WorkerIAMRoleName string
+
+	Architecture types.Architecture
 }
 
 // TFVars generates AWS-specific Terraform variables launching the cluster.
@@ -112,15 +112,13 @@ func TFVars(sources TFVarsSources) ([]byte, error) {
 		return nil, errors.New("EBS IOPS must be configured for the io1 root volume")
 	}
 
-	instanceClass := defaults.InstanceClass(masterConfig.Placement.Region)
-
 	cfg := &config{
 		CustomEndpoints:         endpoints,
 		Region:                  masterConfig.Placement.Region,
 		ExtraTags:               tags,
 		MasterAvailabilityZones: masterAvailabilityZones,
 		WorkerAvailabilityZones: workerAvailabilityZones,
-		BootstrapInstanceType:   fmt.Sprintf("%s.large", instanceClass),
+		BootstrapInstanceType:   masterConfig.InstanceType,
 		MasterInstanceType:      masterConfig.InstanceType,
 		Size:                    *rootVolume.EBS.VolumeSize,
 		Type:                    *rootVolume.EBS.VolumeType,
@@ -128,7 +126,7 @@ func TFVars(sources TFVarsSources) ([]byte, error) {
 		PrivateSubnets:          sources.PrivateSubnets,
 		InternalZone:            sources.InternalZone,
 		PublishStrategy:         string(sources.Publish),
-		SkipRegionCheck:         !configaws.IsKnownRegion(masterConfig.Placement.Region),
+		SkipRegionCheck:         !configaws.IsKnownRegion(masterConfig.Placement.Region, sources.Architecture),
 		IgnitionBucket:          sources.IgnitionBucket,
 		MasterIAMRoleName:       sources.MasterIAMRoleName,
 		WorkerIAMRoleName:       sources.WorkerIAMRoleName,

@@ -16,7 +16,7 @@ import (
 	"github.com/openshift/installer/pkg/types/azure"
 	"github.com/openshift/installer/pkg/types/baremetal"
 	"github.com/openshift/installer/pkg/types/gcp"
-	"github.com/openshift/installer/pkg/types/kubevirt"
+	"github.com/openshift/installer/pkg/types/ibmcloud"
 	"github.com/openshift/installer/pkg/types/libvirt"
 	"github.com/openshift/installer/pkg/types/none"
 	"github.com/openshift/installer/pkg/types/openstack"
@@ -144,6 +144,9 @@ func (i *Infrastructure) Generate(dependencies asset.Parents) error {
 		if nrg := installConfig.Config.Platform.Azure.NetworkResourceGroupName; nrg != "" {
 			config.Status.PlatformStatus.Azure.NetworkResourceGroupName = nrg
 		}
+		if installConfig.Config.Platform.Azure.CloudName == azure.StackCloud {
+			config.Status.PlatformStatus.Azure.ARMEndpoint = installConfig.Config.Platform.Azure.ARMEndpoint
+		}
 	case baremetal.Name:
 		config.Spec.PlatformSpec.Type = configv1.BareMetalPlatformType
 		config.Status.PlatformStatus.BareMetal = &configv1.BareMetalPlatformStatus{
@@ -165,6 +168,12 @@ func (i *Infrastructure) Generate(dependencies asset.Parents) error {
 			Filename: cloudControllerUIDFilename,
 			Data:     content,
 		})
+	case ibmcloud.Name:
+		config.Spec.PlatformSpec.Type = configv1.IBMCloudPlatformType
+		config.Status.PlatformStatus.IBMCloud = &configv1.IBMCloudPlatformStatus{
+			Location:          installConfig.Config.Platform.IBMCloud.Region,
+			ResourceGroupName: installConfig.Config.Platform.IBMCloud.ClusterResourceGroupName(clusterID.InfraID),
+		}
 	case libvirt.Name:
 		config.Spec.PlatformSpec.Type = configv1.LibvirtPlatformType
 	case none.Name:
@@ -189,12 +198,6 @@ func (i *Infrastructure) Generate(dependencies asset.Parents) error {
 			APIServerInternalIP: installConfig.Config.Ovirt.APIVIP,
 			IngressIP:           installConfig.Config.Ovirt.IngressVIP,
 		}
-	case kubevirt.Name:
-		config.Spec.PlatformSpec.Type = configv1.KubevirtPlatformType
-		config.Status.PlatformStatus.Kubevirt = &configv1.KubevirtPlatformStatus{
-			APIServerInternalIP: installConfig.Config.Kubevirt.APIVIP,
-			IngressIP:           installConfig.Config.Kubevirt.IngressVIP,
-		}
 	default:
 		config.Spec.PlatformSpec.Type = configv1.NonePlatformType
 	}
@@ -204,7 +207,7 @@ func (i *Infrastructure) Generate(dependencies asset.Parents) error {
 	if cloudproviderconfig.ConfigMap != nil {
 		// set the configmap reference.
 		config.Spec.CloudConfig = configv1.ConfigMapFileReference{Name: cloudproviderconfig.ConfigMap.Name, Key: cloudProviderConfigDataKey}
-		i.FileList = append(i.FileList, cloudproviderconfig.Files()...)
+		i.FileList = append(i.FileList, cloudproviderconfig.File)
 	}
 
 	if trustbundleconfig.ConfigMap != nil {

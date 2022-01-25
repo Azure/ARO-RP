@@ -29,6 +29,7 @@ import (
 
 // BareMetalMachineProviderSpec holds data that the actuator needs to provision
 // and manage a Machine.
+// +k8s:openapi-gen=true
 type BareMetalMachineProviderSpec struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -16,7 +16,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	installconfigaws "github.com/openshift/installer/pkg/asset/installconfig/aws"
 	"github.com/openshift/installer/pkg/asset/installconfig/gcp"
-	kubeconfig "github.com/openshift/installer/pkg/asset/installconfig/kubevirt"
+	"github.com/openshift/installer/pkg/asset/installconfig/ibmcloud"
 	"github.com/openshift/installer/pkg/asset/installconfig/ovirt"
 	"github.com/openshift/installer/pkg/asset/machines"
 	osmachine "github.com/openshift/installer/pkg/asset/machines/openstack"
@@ -30,7 +30,7 @@ import (
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
 	gcptypes "github.com/openshift/installer/pkg/types/gcp"
-	kubevirttypes "github.com/openshift/installer/pkg/types/kubevirt"
+	ibmcloudtypes "github.com/openshift/installer/pkg/types/ibmcloud"
 	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
 	ovirttypes "github.com/openshift/installer/pkg/types/ovirt"
 	vspheretypes "github.com/openshift/installer/pkg/types/vsphere"
@@ -66,9 +66,9 @@ func (o *Openshift) Dependencies() []asset.Asset {
 		&openshift.CloudCredsSecret{},
 		&openshift.KubeadminPasswordSecret{},
 		&openshift.RoleCloudCredsSecretReader{},
-		&openshift.PrivateClusterOutbound{},
 		&openshift.BaremetalConfig{},
 		new(rhcos.Image),
+		&openshift.AzureCloudProviderSecret{},
 	}
 }
 
@@ -133,6 +133,16 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 		cloudCreds = cloudCredsSecretData{
 			GCP: &GCPCredsSecretData{
 				Base64encodeServiceAccount: base64.StdEncoding.EncodeToString(creds),
+			},
+		}
+	case ibmcloudtypes.Name:
+		client, err := ibmcloud.NewClient()
+		if err != nil {
+			return err
+		}
+		cloudCreds = cloudCredsSecretData{
+			IBMCloud: &IBMCloudCredsSecretData{
+				Base64encodeAPIKey: base64.StdEncoding.EncodeToString([]byte(client.Authenticator.ApiKey)),
 			},
 		}
 	case openstacktypes.Name:
@@ -202,16 +212,6 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 				Base64encodeCABundle: base64.StdEncoding.EncodeToString([]byte(conf.CABundle)),
 			},
 		}
-	case kubevirttypes.Name:
-		kubeconfigContent, err := kubeconfig.LoadKubeConfigContent()
-		if err != nil {
-			return err
-		}
-		cloudCreds = cloudCredsSecretData{
-			Kubevirt: &KubevirtCredsSecretData{
-				Base64encodedKubeconfig: base64.StdEncoding.EncodeToString(kubeconfigContent),
-			},
-		}
 	}
 
 	templateData := &openshiftTemplateData{
@@ -237,7 +237,7 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 	}
 
 	switch platform {
-	case awstypes.Name, openstacktypes.Name, vspheretypes.Name, azuretypes.Name, gcptypes.Name, ovirttypes.Name, kubevirttypes.Name:
+	case awstypes.Name, openstacktypes.Name, vspheretypes.Name, azuretypes.Name, gcptypes.Name, ibmcloudtypes.Name, ovirttypes.Name:
 		if installConfig.Config.CredentialsMode != types.ManualCredentialsMode {
 			assetData["99_cloud-creds-secret.yaml"] = applyTemplateData(cloudCredsSecret.Files()[0].Data, templateData)
 		}
@@ -250,13 +250,35 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 		assetData["99_baremetal-provisioning-config.yaml"] = applyTemplateData(baremetalConfig.Files()[0].Data, bmTemplateData)
 	}
 
-	if platform == azuretypes.Name &&
-		!installConfig.Config.Azure.ARO &&
-		installConfig.Config.Publish == types.InternalPublishingStrategy &&
-		installConfig.Config.Azure.OutboundType == azuretypes.LoadbalancerOutboundType {
-		privateClusterOutbound := &openshift.PrivateClusterOutbound{}
-		dependencies.Get(privateClusterOutbound)
-		assetData["99_private-cluster-outbound-service.yaml"] = applyTemplateData(privateClusterOutbound.Files()[0].Data, templateData)
+	if platform == azuretypes.Name && installConfig.Config.Azure.IsARO() {
+		// config is used to created compatible secret to trigger azure cloud
+		// controller config merge behaviour
+		// https://github.com/openshift/origin/blob/90c050f5afb4c52ace82b15e126efe98fa798d88/vendor/k8s.io/legacy-cloud-providers/azure/azure_config.go#L83
+		session, err := installConfig.Azure.Session()
+		if err != nil {
+			return err
+		}
+		config := struct {
+			AADClientID     string `json:"aadClientId" yaml:"aadClientId"`
+			AADClientSecret string `json:"aadClientSecret" yaml:"aadClientSecret"`
+		}{
+			AADClientID:     session.Credentials.ClientID,
+			AADClientSecret: session.Credentials.ClientSecret,
+		}
+
+		b, err := yaml.Marshal(config)
+		if err != nil {
+			return err
+		}
+
+		azureCloudProviderSecret := &openshift.AzureCloudProviderSecret{}
+		dependencies.Get(azureCloudProviderSecret)
+		for _, f := range azureCloudProviderSecret.Files() {
+			name := strings.TrimSuffix(filepath.Base(f.Filename), ".template")
+			assetData[name] = applyTemplateData(f.Data, map[string]string{
+				"CloudConfig": string(b),
+			})
+		}
 	}
 
 	o.FileList = []*asset.File{}
