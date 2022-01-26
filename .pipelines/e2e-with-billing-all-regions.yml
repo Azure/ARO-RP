@@ -68,6 +68,7 @@ stages:
     - southcentralus
     - westus
     - westus2
+    - westus3
 - stage: PhaseThree
   displayName: wait 2 hours to avoid resource threshold
   dependsOn: []
