@@ -21,6 +21,7 @@ import (
 // AzureActions contains those actions which rely solely on Azure clients, not using any k8s clients
 type AzureActions interface {
 	ResourcesList(ctx context.Context) ([]byte, error)
+	NICReconcileFailedState(ctx context.Context, nicName string) error
 	VMRedeployAndWait(ctx context.Context, vmName string) error
 	VMSerialConsole(ctx context.Context, w http.ResponseWriter, log *logrus.Entry, vmName string) error
 }
@@ -36,6 +37,7 @@ type azureActions struct {
 	diskEncryptionSets compute.DiskEncryptionSetsClient
 	routeTables        network.RouteTablesClient
 	storageAccounts    storage.AccountsClient
+	networkInterfaces  network.InterfacesClient
 }
 
 // NewAzureActions returns an azureActions
@@ -59,6 +61,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		routeTables:        network.NewRouteTablesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		networkInterfaces:  network.NewInterfacesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 	}, nil
 }
 
