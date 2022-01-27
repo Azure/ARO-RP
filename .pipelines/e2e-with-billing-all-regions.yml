@@ -36,6 +36,7 @@ stages:
     - eastus2euap
     - australiacentral
     - australiacentral2
+    - centraluseuap
     - australiaeast
     - australiasoutheast
     - centralindia
