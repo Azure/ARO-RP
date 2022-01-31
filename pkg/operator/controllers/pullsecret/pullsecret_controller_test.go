@@ -52,8 +52,8 @@ func TestPullSecretReconciler(t *testing.T) {
 		Status:     arov1alpha1.ClusterStatus{},
 		Spec: arov1alpha1.ClusterSpec{
 			OperatorFlags: arov1alpha1.OperatorFlags{
-				ENABLED: "true",
-				MANAGED: "true",
+				controllerEnabled: "true",
+				controllerManaged: "true",
 			},
 		},
 	}
@@ -175,8 +175,8 @@ func TestPullSecretReconciler(t *testing.T) {
 					Status:     arov1alpha1.ClusterStatus{},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							ENABLED: "true",
-							MANAGED: "false",
+							controllerEnabled: "true",
+							controllerManaged: "false",
 						},
 					},
 				}),
@@ -198,8 +198,8 @@ func TestPullSecretReconciler(t *testing.T) {
 					Status:     arov1alpha1.ClusterStatus{},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							ENABLED: "true",
-							MANAGED: "false",
+							controllerEnabled: "true",
+							controllerManaged: "false",
 						},
 					},
 				}),

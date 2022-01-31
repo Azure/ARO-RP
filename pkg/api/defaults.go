@@ -38,42 +38,43 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 		}
 		// If there's no operator flags, set the default ones
 		if doc.OpenShiftCluster.Properties.OperatorFlags == nil {
-			doc.OpenShiftCluster.Properties.OperatorFlags = DefaultOperatorFlags.Copy()
+			doc.OpenShiftCluster.Properties.OperatorFlags = DefaultOperatorFlags()
 		}
 	}
 }
 
 // shorthand
-const FLAG_TRUE string = "true"
-const FLAG_FALSE string = "false"
+const flagTrue string = "true"
+const flagFalse string = "false"
 
-// Default flags for new clusters & ones that have not been AdminUpdated
-var DefaultOperatorFlags OperatorFlags = OperatorFlags{
-	"aro.alertwebhook.enabled":                 FLAG_TRUE,
-	"aro.azuresubnets.enabled":                 FLAG_TRUE,
-	"aro.azuresubnets.nsg.managed":             FLAG_TRUE,
-	"aro.azuresubnets.serviceendpoint.managed": FLAG_TRUE,
-	"aro.banner.enabled":                       FLAG_FALSE,
-	"aro.checker.enabled":                      FLAG_TRUE,
-	"aro.dnsmasq.enabled":                      FLAG_TRUE,
-	"aro.genevalogging.enabled":                FLAG_TRUE,
-	"aro.imageconfig.enabled":                  FLAG_TRUE,
-	"aro.machine.enabled":                      FLAG_TRUE,
-	"aro.machineset.enabled":                   FLAG_TRUE,
-	"aro.monitoring.enabled":                   FLAG_TRUE,
-	"aro.nodedrainer.enabled":                  FLAG_TRUE,
-	"aro.pullsecret.enabled":                   FLAG_TRUE,
-	"aro.pullsecret.managed":                   FLAG_TRUE,
-	"aro.rbac.enabled":                         FLAG_TRUE,
-	"aro.routefix.enabled":                     FLAG_TRUE,
-	"aro.storageaccounts.enabled":              FLAG_TRUE,
-	"aro.workaround.enabled":                   FLAG_TRUE,
-}
-
-func (d OperatorFlags) Copy() OperatorFlags {
-	newFlags := make(OperatorFlags)
-	for k, v := range d {
-		newFlags[k] = v
+// DefaultOperatorFlags returns flags for new clusters
+// and ones that have not been AdminUpdated.
+func DefaultOperatorFlags() OperatorFlags {
+	// TODO: Get rid of magic strings.
+	// We already have constants for all of the below strings.
+	// For example `controllerEnabled` in `github.com/Azure/ARO-RP/pkg/operator/controllers/machine`.
+	// But if we import packages with constants here we will have a cyclic import issue because controllers
+	// import this package. We should probably move this somewhere else.
+	// Maybe into a subpackage like `github.com/Azure/ARO-RP/pkg/api/defaults`?
+	return OperatorFlags{
+		"aro.alertwebhook.enabled":                 flagTrue,
+		"aro.azuresubnets.enabled":                 flagTrue,
+		"aro.azuresubnets.nsg.managed":             flagTrue,
+		"aro.azuresubnets.serviceendpoint.managed": flagTrue,
+		"aro.banner.enabled":                       flagFalse,
+		"aro.checker.enabled":                      flagTrue,
+		"aro.dnsmasq.enabled":                      flagTrue,
+		"aro.genevalogging.enabled":                flagTrue,
+		"aro.imageconfig.enabled":                  flagTrue,
+		"aro.machine.enabled":                      flagTrue,
+		"aro.machineset.enabled":                   flagTrue,
+		"aro.monitoring.enabled":                   flagTrue,
+		"aro.nodedrainer.enabled":                  flagTrue,
+		"aro.pullsecret.enabled":                   flagTrue,
+		"aro.pullsecret.managed":                   flagTrue,
+		"aro.rbac.enabled":                         flagTrue,
+		"aro.routefix.enabled":                     flagTrue,
+		"aro.storageaccounts.enabled":              flagTrue,
+		"aro.workaround.enabled":                   flagTrue,
 	}
-	return newFlags
 }

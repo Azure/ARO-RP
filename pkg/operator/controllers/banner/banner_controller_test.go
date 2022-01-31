@@ -140,7 +140,7 @@ func TestBannerReconcile(t *testing.T) {
 						Content: arov1alpha1.BannerContent(tt.bannerSetting),
 					},
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						ENABLED: strconv.FormatBool(tt.featureFlag),
+						controllerEnabled: strconv.FormatBool(tt.featureFlag),
 					},
 				},
 			}

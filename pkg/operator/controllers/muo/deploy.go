@@ -64,7 +64,7 @@ func (o *deployer) Resources(pullspec string) ([]kruntime.Object, error) {
 }
 
 func (o *deployer) CreateOrUpdate(ctx context.Context, cluster *arov1alpha1.Cluster) error {
-	imagePullspec, ext := cluster.Spec.OperatorFlags[pullSpec]
+	imagePullspec, ext := cluster.Spec.OperatorFlags[controllerPullSpec]
 	if !ext {
 		return errors.New("missing pullspec")
 	}

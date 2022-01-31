@@ -20,12 +20,15 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/previewfeature/nsgflowlogs"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
+)
+
+const (
+	ControllerName = "PreviewFeature"
 )
 
 type feature interface {
@@ -109,6 +112,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&aropreviewv1alpha1.PreviewFeature{}, builder.WithPredicates(aroPreviewFeaturePredicate)).
-		Named(controllers.PreviewFeatureControllerName).
+		Named(ControllerName).
 		Complete(r)
 }

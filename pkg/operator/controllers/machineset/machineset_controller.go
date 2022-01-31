@@ -21,12 +21,12 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
 const (
-	CONFIG_NAMESPACE string = "aro.machineset"
-	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+	ControllerName = "MachineSet"
+
+	ControllerEnabled = "aro.machineset.enabled"
 )
 
 type Reconciler struct {
@@ -51,7 +51,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ControllerEnabled) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
@@ -102,6 +102,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&machinev1beta1.MachineSet{}, builder.WithPredicates(machineSetPredicate)).
-		Named(controllers.MachineSetControllerName).
+		Named(ControllerName).
 		Complete(r)
 }

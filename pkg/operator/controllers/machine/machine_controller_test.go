@@ -71,7 +71,7 @@ func TestMachineReconciler(t *testing.T) {
 		Status:     arov1alpha1.ClusterStatus{Conditions: []operatorv1.OperatorCondition{}},
 		Spec: arov1alpha1.ClusterSpec{
 			OperatorFlags: arov1alpha1.OperatorFlags{
-				ENABLED: "true",
+				controllerEnabled: "true",
 			},
 		},
 	}

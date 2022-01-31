@@ -18,14 +18,14 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
-	CONFIG_NAMESPACE string = "aro.workaround"
-	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+	ControllerName = "Workaround"
+
+	controllerEnabled = "aro.workaround.enabled"
 )
 
 // Reconciler the point of the workaround controller is to apply
@@ -64,7 +64,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
@@ -94,6 +94,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}).
-		Named(controllers.WorkaroundControllerName).
+		Named(ControllerName).
 		Complete(r)
 }

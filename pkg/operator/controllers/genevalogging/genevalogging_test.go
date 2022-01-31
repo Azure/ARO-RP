@@ -42,7 +42,7 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 		{
 			name: "no flags given",
 			operatorFlags: arov1alpha1.OperatorFlags{
-				ENABLED: "true",
+				controllerEnabled: "true",
 			},
 			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
 				if len(d.Spec.Template.Spec.Containers) != 2 {
@@ -75,8 +75,8 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 		{
 			name: "fluentbit changed",
 			operatorFlags: arov1alpha1.OperatorFlags{
-				ENABLED:            "true",
-				FLUENTBIT_PULLSPEC: "otherurl/fluentbit",
+				controllerEnabled:           "true",
+				controllerFluentbitPullSpec: "otherurl/fluentbit",
 			},
 			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
 				if len(d.Spec.Template.Spec.Containers) != 2 {
@@ -109,8 +109,8 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 		{
 			name: "mdsd changed",
 			operatorFlags: arov1alpha1.OperatorFlags{
-				ENABLED:       "true",
-				MDSD_PULLSPEC: "otherurl/mdsd",
+				controllerEnabled:      "true",
+				controllerMDSDPullSpec: "otherurl/mdsd",
 			},
 			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
 				if len(d.Spec.Template.Spec.Containers) != 2 {
