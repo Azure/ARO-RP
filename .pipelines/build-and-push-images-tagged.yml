@@ -6,12 +6,6 @@ variables:
 - template: vars.yml
 - name: tag
 
-resources:
-  pipelines:
-  - pipeline: buildImages
-    source: E2E
-    trigger: true
-
 jobs:
 - job: Build_and_push_images
   condition: startsWith(variables['build.sourceBranch'], 'refs/tags/v2')
