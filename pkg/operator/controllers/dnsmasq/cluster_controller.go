@@ -19,13 +19,13 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
 const (
-	CONFIG_NAMESPACE string = "aro.dnsmasq"
-	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+	ClusterControllerName = "DnsmasqCluster"
+
+	controllerEnabled = "aro.dnsmasq.enabled"
 )
 
 type ClusterReconciler struct {
@@ -53,7 +53,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
@@ -86,7 +86,7 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
-		Named(controllers.DnsmasqClusterControllerName).
+		Named(ClusterControllerName).
 		Complete(r)
 }
 

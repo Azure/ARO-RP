@@ -23,17 +23,17 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
 const (
-	CONFIG_NAMESPACE string = "aro.genevalogging"
-	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+	ControllerName = "GenevaLogging"
+
+	controllerEnabled = "aro.genevalogging.enabled"
 	// full pullspec of fluentbit image
-	FLUENTBIT_PULLSPEC string = CONFIG_NAMESPACE + ".fluentbit.pullSpec"
+	controllerFluentbitPullSpec = "aro.genevalogging.fluentbit.pullSpec"
 	// full pullspec of mdsd image
-	MDSD_PULLSPEC string = CONFIG_NAMESPACE + ".mdsd.pullSpec"
+	controllerMDSDPullSpec = "aro.genevalogging.mdsd.pullSpec"
 )
 
 // Reconciler reconciles a Cluster object
@@ -64,7 +64,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
@@ -124,6 +124,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&securityv1.SecurityContextConstraints{}).
-		Named(controllers.GenevaLoggingControllerName).
+		Named(ControllerName).
 		Complete(r)
 }

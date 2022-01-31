@@ -21,15 +21,16 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
-const imageConfigResource = "cluster"
-
 const (
-	CONFIG_NAMESPACE string = "aro.imageconfig"
-	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+	ControllerName = "ImageConfig"
+
+	controllerEnabled = "aro.imageconfig.enabled"
+
+	// Kubernetes object name
+	imageConfigResource = "cluster"
 )
 
 type Reconciler struct {
@@ -55,7 +56,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
@@ -90,7 +91,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// Append to allowed registries
 	if imageconfig.Spec.RegistrySources.AllowedRegistries != nil {
-
 		imageconfig.Spec.RegistrySources.AllowedRegistries = filterSliceInPlace(imageconfig.Spec.RegistrySources.AllowedRegistries, removeDuplicateRegistries)
 		imageconfig.Spec.RegistrySources.AllowedRegistries = append(imageconfig.Spec.RegistrySources.AllowedRegistries, requiredRegistries...)
 	}
@@ -113,7 +113,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&configv1.Image{}, builder.WithPredicates(imagePredicate)).
-		Named(controllers.ImageConfigControllerName).
+		Named(ControllerName).
 		Complete(r)
 }
 

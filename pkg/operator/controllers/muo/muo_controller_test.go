@@ -96,14 +96,14 @@ func TestMUOReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled:  strconv.FormatBool(tt.enabled),
-						pullSpec: "wonderfulPullspec",
+						controllerEnabled:  strconv.FormatBool(tt.enabled),
+						controllerPullSpec: "wonderfulPullspec",
 					},
 				},
 			}
 			// nil and empty string are valid values, be careful to preserve them
 			if tt.managed != "" {
-				cluster.Spec.OperatorFlags[managed] = tt.managed
+				cluster.Spec.OperatorFlags[controllerManaged] = tt.managed
 			}
 			arocli := arofake.NewSimpleClientset(cluster)
 			deployer := mock_muo.NewMockDeployer(controller)

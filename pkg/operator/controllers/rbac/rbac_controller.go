@@ -19,13 +19,13 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
 const (
-	CONFIG_NAMESPACE string = "aro.rbac"
-	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+	ControllerName = "RBAC"
+
+	controllerEnabled = "aro.rbac.enabled"
 )
 
 type Reconciler struct {
@@ -49,7 +49,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
@@ -102,6 +102,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		Owns(&rbacv1.ClusterRole{}).
 		Owns(&rbacv1.ClusterRoleBinding{}).
-		Named(controllers.RBACControllerName).
+		Named(ControllerName).
 		Complete(r)
 }

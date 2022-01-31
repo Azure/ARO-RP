@@ -41,7 +41,7 @@ func TestImageConfigReconciler(t *testing.T) {
 					ACRDomain:     "arointsvc.azurecr.io",
 					AZEnvironment: azureclient.PublicCloud.Environment.Name,
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						ENABLED: strconv.FormatBool(false),
+						controllerEnabled: strconv.FormatBool(false),
 					},
 					Location: "eastus",
 				},
@@ -117,7 +117,7 @@ func TestImageConfigReconciler(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						ENABLED: strconv.FormatBool(true),
+						controllerEnabled: strconv.FormatBool(true),
 					},
 				},
 			}),
@@ -178,7 +178,7 @@ func TestImageConfigReconciler(t *testing.T) {
 						ACRDomain:     "arointsvc.azurecr.io",
 						AZEnvironment: azureclient.PublicCloud.Environment.Name,
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							ENABLED: strconv.FormatBool(true),
+							controllerEnabled: strconv.FormatBool(true),
 						},
 						Location: "eastus",
 					},

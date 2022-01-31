@@ -24,7 +24,6 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
@@ -32,8 +31,9 @@ import (
 )
 
 const (
-	CONFIG_NAMESPACE string = "aro.storageaccounts"
-	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+	ControllerName = "StorageAccounts"
+
+	controllerEnabled = "aro.storageaccounts.enabled"
 )
 
 // Reconciler is the controller struct
@@ -76,7 +76,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
@@ -121,6 +121,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		Watches(&source.Kind{Type: &machinev1beta1.Machine{}}, &handler.EnqueueRequestForObject{}). // to reconcile on machine replacement
 		Watches(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForObject{}).            // to reconcile on node status change
-		Named(controllers.StorageAccountsControllerName).
+		Named(ControllerName).
 		Complete(r)
 }
