@@ -1,0 +1,15 @@
+parameters:
+  rpImageACR: ''
+  imageTag: ''
+steps:
+- script: |
+    set -e
+    trap 'set +e; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af ; rm -rf ~/.docker/config.json' EXIT
+
+    export RP_IMAGE_ACR=${{ parameters.rpImageACR }}
+    export TAG=${{ parameters.imageTag }}
+    az acr login --name "$RP_IMAGE_ACR"
+    # azure checkouts commit, so removing master reference when publishing image
+    export BRANCH=$(Build.SourceBranchName)
+    make publish-image-aro-tag
+  displayName: ⚙️ Build and push tagged images to ACR
