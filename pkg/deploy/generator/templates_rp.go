@@ -115,6 +115,7 @@ func (g *generator) rpTemplate() *arm.Template {
 				"brazilsouth",
 				"southafricanorth",
 				"northcentralus",
+				"uaenorth",
 			}
 		}
 		t.Parameters[param] = p
