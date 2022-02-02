@@ -13,6 +13,7 @@ gomock_reflect_*
 /e2e.test
 /env*
 !/env.example
+!/env-int.example
 /id_rsa
 /proxy
 /pyenv*
