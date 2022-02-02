@@ -76,9 +76,8 @@ func validOpenShiftCluster() *OpenShiftCluster {
 				ClientID:     "11111111-1111-1111-1111-111111111111",
 			},
 			NetworkProfile: NetworkProfile{
-				PodCIDR:                "10.128.0.0/14",
-				ServiceCIDR:            "172.30.0.0/16",
-				SoftwareDefinedNetwork: SoftwareDefinedNetworkOVNKubernetes,
+				PodCIDR:     "10.128.0.0/14",
+				ServiceCIDR: "172.30.0.0/16",
 			},
 			MasterProfile: MasterProfile{
 				VMSize:           VMSizeStandardD8sV3,
@@ -420,16 +419,7 @@ func TestOpenShiftClusterStaticValidateServicePrincipalProfile(t *testing.T) {
 }
 
 func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
-	createtests := []*validateTest{
-		{
-			name: "SoftwareDefinedNetwork create as OpenShiftSDN",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.SoftwareDefinedNetwork = SoftwareDefinedNetworkOpenShiftSDN
-			},
-		},
-	}
-
-	commontests := []*validateTest{
+	tests := []*validateTest{
 		{
 			name: "valid",
 		},
@@ -475,29 +465,14 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.serviceCidr: The provided vnet CIDR '10.0.0.0/23' is invalid: must be /22 or larger.",
 		},
-		{
-			name: "SoftwareDefinedNetwork given as empty",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.SoftwareDefinedNetwork = ""
-			},
-			wantErr: "400: InvalidParameter: properties.networkProfile.SoftwareDefinedNetwork: The provided SoftwareDefinedNetwork '' is invalid.",
-		},
-		{
-			name: "SoftwareDefinedNetwork given InvalidOption",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.SoftwareDefinedNetwork = "InvalidOption"
-			},
-			wantErr: "400: InvalidParameter: properties.networkProfile.SoftwareDefinedNetwork: The provided SoftwareDefinedNetwork 'InvalidOption' is invalid.",
-		},
 	}
 
-	runTests(t, testModeCreate, commontests)
-	runTests(t, testModeUpdate, commontests)
-	runTests(t, testModeCreate, createtests)
+	runTests(t, testModeCreate, tests)
+	runTests(t, testModeUpdate, tests)
 }
 
 func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
-	commonTests := []*validateTest{
+	tests := []*validateTest{
 		{
 			name: "valid",
 		},
@@ -565,8 +540,8 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 	}
 
 	runTests(t, testModeCreate, createTests)
-	runTests(t, testModeCreate, commonTests)
-	runTests(t, testModeUpdate, commonTests)
+	runTests(t, testModeCreate, tests)
+	runTests(t, testModeUpdate, tests)
 }
 
 func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
@@ -870,13 +845,6 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		{
 			name:   "clientSecret change",
 			modify: func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientSecret = "invalid" },
-		},
-		{
-			name: "SoftwareDefinedNetwork should fail to change from OVNKubernetes to OpenShiftSDN",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.SoftwareDefinedNetwork = SoftwareDefinedNetworkOpenShiftSDN
-			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.softwareDefinedNetwork: Changing property 'properties.networkProfile.softwareDefinedNetwork' is not allowed.",
 		},
 		{
 			name:    "podCidr change",

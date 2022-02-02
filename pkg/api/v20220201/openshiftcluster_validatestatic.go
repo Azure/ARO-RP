@@ -214,12 +214,6 @@ func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, n
 		}
 	}
 
-	switch np.SoftwareDefinedNetwork {
-	case SoftwareDefinedNetworkOVNKubernetes, SoftwareDefinedNetworkOpenShiftSDN:
-	default:
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".SoftwareDefinedNetwork", "The provided SoftwareDefinedNetwork '%s' is invalid.", np.SoftwareDefinedNetwork)
-	}
-
 	return nil
 }
 

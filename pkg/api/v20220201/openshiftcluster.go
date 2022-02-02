@@ -114,19 +114,8 @@ type ServicePrincipalProfile struct {
 	ClientSecret string `json:"clientSecret,omitempty" mutable:"true"`
 }
 
-// SoftwareDefinedNetwork constants.
-type SoftwareDefinedNetwork string
-
-const (
-	SoftwareDefinedNetworkOVNKubernetes SoftwareDefinedNetwork = "OVNKubernetes"
-	SoftwareDefinedNetworkOpenShiftSDN  SoftwareDefinedNetwork = "OpenShiftSDN"
-)
-
 // NetworkProfile represents a network profile.
 type NetworkProfile struct {
-	// The software defined network (SDN) to use when installing the cluster.
-	SoftwareDefinedNetwork SoftwareDefinedNetwork `json:"softwareDefinedNetwork,omitempty"`
-
 	// The CIDR used for OpenShift/Kubernetes Pods.
 	PodCIDR string `json:"podCidr,omitempty"`
 
