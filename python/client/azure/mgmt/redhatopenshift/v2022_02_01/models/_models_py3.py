@@ -124,6 +124,10 @@ class ClusterProfile(msrest.serialization.Model):
     :vartype version: str
     :ivar resource_group_id: The ID of the cluster resource group.
     :vartype resource_group_id: str
+    :ivar fips_validated_modules: If FIPS validated crypto modules are used. Possible values
+     include: "Disabled", "Enabled".
+    :vartype fips_validated_modules: str or
+     ~azure.mgmt.redhatopenshift.v2022_02_01.models.FipsValidatedModules
     """
 
     _attribute_map = {
@@ -131,6 +135,7 @@ class ClusterProfile(msrest.serialization.Model):
         'domain': {'key': 'domain', 'type': 'str'},
         'version': {'key': 'version', 'type': 'str'},
         'resource_group_id': {'key': 'resourceGroupId', 'type': 'str'},
+        'fips_validated_modules': {'key': 'fipsValidatedModules', 'type': 'str'},
     }
 
     def __init__(
@@ -140,6 +145,7 @@ class ClusterProfile(msrest.serialization.Model):
         domain: Optional[str] = None,
         version: Optional[str] = None,
         resource_group_id: Optional[str] = None,
+        fips_validated_modules: Optional[Union[str, "FipsValidatedModules"]] = None,
         **kwargs
     ):
         """
@@ -151,12 +157,17 @@ class ClusterProfile(msrest.serialization.Model):
         :paramtype version: str
         :keyword resource_group_id: The ID of the cluster resource group.
         :paramtype resource_group_id: str
+        :keyword fips_validated_modules: If FIPS validated crypto modules are used. Possible values
+         include: "Disabled", "Enabled".
+        :paramtype fips_validated_modules: str or
+         ~azure.mgmt.redhatopenshift.v2022_02_01.models.FipsValidatedModules
         """
         super(ClusterProfile, self).__init__(**kwargs)
         self.pull_secret = pull_secret
         self.domain = domain
         self.version = version
         self.resource_group_id = resource_group_id
+        self.fips_validated_modules = fips_validated_modules
 
 
 class ConsoleProfile(msrest.serialization.Model):
@@ -336,10 +347,6 @@ class MasterProfile(msrest.serialization.Model):
 class NetworkProfile(msrest.serialization.Model):
     """NetworkProfile represents a network profile.
 
-    :ivar software_defined_network: The software defined network (SDN) to use when installing the
-     cluster. Possible values include: "OVNKubernetes", "OpenShiftSDN".
-    :vartype software_defined_network: str or
-     ~azure.mgmt.redhatopenshift.v2022_02_01.models.SoftwareDefinedNetwork
     :ivar pod_cidr: The CIDR used for OpenShift/Kubernetes Pods.
     :vartype pod_cidr: str
     :ivar service_cidr: The CIDR used for OpenShift/Kubernetes Services.
@@ -347,7 +354,6 @@ class NetworkProfile(msrest.serialization.Model):
     """
 
     _attribute_map = {
-        'software_defined_network': {'key': 'softwareDefinedNetwork', 'type': 'str'},
         'pod_cidr': {'key': 'podCidr', 'type': 'str'},
         'service_cidr': {'key': 'serviceCidr', 'type': 'str'},
     }
@@ -355,23 +361,17 @@ class NetworkProfile(msrest.serialization.Model):
     def __init__(
         self,
         *,
-        software_defined_network: Optional[Union[str, "SoftwareDefinedNetwork"]] = None,
         pod_cidr: Optional[str] = None,
         service_cidr: Optional[str] = None,
         **kwargs
     ):
         """
-        :keyword software_defined_network: The software defined network (SDN) to use when installing
-         the cluster. Possible values include: "OVNKubernetes", "OpenShiftSDN".
-        :paramtype software_defined_network: str or
-         ~azure.mgmt.redhatopenshift.v2022_02_01.models.SoftwareDefinedNetwork
         :keyword pod_cidr: The CIDR used for OpenShift/Kubernetes Pods.
         :paramtype pod_cidr: str
         :keyword service_cidr: The CIDR used for OpenShift/Kubernetes Services.
         :paramtype service_cidr: str
         """
         super(NetworkProfile, self).__init__(**kwargs)
-        self.software_defined_network = software_defined_network
         self.pod_cidr = pod_cidr
         self.service_cidr = service_cidr
 

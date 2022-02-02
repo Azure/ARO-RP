@@ -110,6 +110,10 @@ class ClusterProfile(msrest.serialization.Model):
     :vartype version: str
     :ivar resource_group_id: The ID of the cluster resource group.
     :vartype resource_group_id: str
+    :ivar fips_validated_modules: If FIPS validated crypto modules are used. Possible values
+     include: "Disabled", "Enabled".
+    :vartype fips_validated_modules: str or
+     ~azure.mgmt.redhatopenshift.v2022_02_01.models.FipsValidatedModules
     """
 
     _attribute_map = {
@@ -117,6 +121,7 @@ class ClusterProfile(msrest.serialization.Model):
         'domain': {'key': 'domain', 'type': 'str'},
         'version': {'key': 'version', 'type': 'str'},
         'resource_group_id': {'key': 'resourceGroupId', 'type': 'str'},
+        'fips_validated_modules': {'key': 'fipsValidatedModules', 'type': 'str'},
     }
 
     def __init__(
@@ -132,12 +137,17 @@ class ClusterProfile(msrest.serialization.Model):
         :paramtype version: str
         :keyword resource_group_id: The ID of the cluster resource group.
         :paramtype resource_group_id: str
+        :keyword fips_validated_modules: If FIPS validated crypto modules are used. Possible values
+         include: "Disabled", "Enabled".
+        :paramtype fips_validated_modules: str or
+         ~azure.mgmt.redhatopenshift.v2022_02_01.models.FipsValidatedModules
         """
         super(ClusterProfile, self).__init__(**kwargs)
         self.pull_secret = kwargs.get('pull_secret', None)
         self.domain = kwargs.get('domain', None)
         self.version = kwargs.get('version', None)
         self.resource_group_id = kwargs.get('resource_group_id', None)
+        self.fips_validated_modules = kwargs.get('fips_validated_modules', None)
 
 
 class ConsoleProfile(msrest.serialization.Model):
@@ -301,10 +311,6 @@ class MasterProfile(msrest.serialization.Model):
 class NetworkProfile(msrest.serialization.Model):
     """NetworkProfile represents a network profile.
 
-    :ivar software_defined_network: The software defined network (SDN) to use when installing the
-     cluster. Possible values include: "OVNKubernetes", "OpenShiftSDN".
-    :vartype software_defined_network: str or
-     ~azure.mgmt.redhatopenshift.v2022_02_01.models.SoftwareDefinedNetwork
     :ivar pod_cidr: The CIDR used for OpenShift/Kubernetes Pods.
     :vartype pod_cidr: str
     :ivar service_cidr: The CIDR used for OpenShift/Kubernetes Services.
@@ -312,7 +318,6 @@ class NetworkProfile(msrest.serialization.Model):
     """
 
     _attribute_map = {
-        'software_defined_network': {'key': 'softwareDefinedNetwork', 'type': 'str'},
         'pod_cidr': {'key': 'podCidr', 'type': 'str'},
         'service_cidr': {'key': 'serviceCidr', 'type': 'str'},
     }
@@ -322,17 +327,12 @@ class NetworkProfile(msrest.serialization.Model):
         **kwargs
     ):
         """
-        :keyword software_defined_network: The software defined network (SDN) to use when installing
-         the cluster. Possible values include: "OVNKubernetes", "OpenShiftSDN".
-        :paramtype software_defined_network: str or
-         ~azure.mgmt.redhatopenshift.v2022_02_01.models.SoftwareDefinedNetwork
         :keyword pod_cidr: The CIDR used for OpenShift/Kubernetes Pods.
         :paramtype pod_cidr: str
         :keyword service_cidr: The CIDR used for OpenShift/Kubernetes Services.
         :paramtype service_cidr: str
         """
         super(NetworkProfile, self).__init__(**kwargs)
-        self.software_defined_network = kwargs.get('software_defined_network', None)
         self.pod_cidr = kwargs.get('pod_cidr', None)
         self.service_cidr = kwargs.get('service_cidr', None)
 

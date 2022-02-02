@@ -88,6 +88,8 @@ type ClusterProfile struct {
 	Version *string `json:"version,omitempty"`
 	// ResourceGroupID - The ID of the cluster resource group.
 	ResourceGroupID *string `json:"resourceGroupId,omitempty"`
+	// FipsValidatedModules - If FIPS validated crypto modules are used. Possible values include: 'FipsValidatedModulesDisabled', 'FipsValidatedModulesEnabled'
+	FipsValidatedModules FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
 }
 
 // ConsoleProfile consoleProfile represents a console profile.
@@ -132,8 +134,6 @@ type MasterProfile struct {
 
 // NetworkProfile networkProfile represents a network profile.
 type NetworkProfile struct {
-	// SoftwareDefinedNetwork - The software defined network (SDN) to use when installing the cluster. Possible values include: 'OVNKubernetes', 'OpenShiftSDN'
-	SoftwareDefinedNetwork SoftwareDefinedNetwork `json:"softwareDefinedNetwork,omitempty"`
 	// PodCidr - The CIDR used for OpenShift/Kubernetes Pods.
 	PodCidr *string `json:"podCidr,omitempty"`
 	// ServiceCidr - The CIDR used for OpenShift/Kubernetes Services.

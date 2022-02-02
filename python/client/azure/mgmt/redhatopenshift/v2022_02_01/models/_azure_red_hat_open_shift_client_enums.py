@@ -35,6 +35,13 @@ class EncryptionAtHost(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     DISABLED = "Disabled"
     ENABLED = "Enabled"
 
+class FipsValidatedModules(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
+    """FipsValidatedModules determines if FIPS is used.
+    """
+
+    DISABLED = "Disabled"
+    ENABLED = "Enabled"
+
 class ProvisioningState(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     """ProvisioningState represents a provisioning state.
     """
@@ -45,13 +52,6 @@ class ProvisioningState(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     FAILED = "Failed"
     SUCCEEDED = "Succeeded"
     UPDATING = "Updating"
-
-class SoftwareDefinedNetwork(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
-    """SoftwareDefinedNetwork constants.
-    """
-
-    OVN_KUBERNETES = "OVNKubernetes"
-    OPEN_SHIFT_SDN = "OpenShiftSDN"
 
 class Visibility(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     """Visibility represents visibility.
