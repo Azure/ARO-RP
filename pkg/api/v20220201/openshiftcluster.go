@@ -84,6 +84,15 @@ const (
 	ProvisioningStateFailed        ProvisioningState = "Failed"
 )
 
+// FipsValidatedModules determines if FIPS is used.
+type FipsValidatedModules string
+
+// FipsValidatedModules constants.
+const (
+	FipsValidatedModulesEnabled  FipsValidatedModules = "Enabled"
+	FipsValidatedModulesDisabled FipsValidatedModules = "Disabled"
+)
+
 // ClusterProfile represents a cluster profile.
 type ClusterProfile struct {
 	// The pull secret for the cluster.
@@ -97,6 +106,9 @@ type ClusterProfile struct {
 
 	// The ID of the cluster resource group.
 	ResourceGroupID string `json:"resourceGroupId,omitempty"`
+
+	// If FIPS validated crypto modules are used
+	FipsValidatedModules FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
 }
 
 // ConsoleProfile represents a console profile.

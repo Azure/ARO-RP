@@ -519,6 +519,10 @@
         "resourceGroupId": {
           "description": "The ID of the cluster resource group.",
           "type": "string"
+        },
+        "fipsValidatedModules": {
+          "$ref": "#/definitions/FipsValidatedModules",
+          "description": "If FIPS validated crypto modules are used"
         }
       }
     },
@@ -565,6 +569,14 @@
         "name": "EncryptionAtHost",
         "modelAsString": true
       }
+    },
+    "FipsValidatedModules": {
+      "description": "FipsValidatedModules determines if FIPS is used.",
+      "enum": [
+        "Disabled",
+        "Enabled"
+      ],
+      "type": "string"
     },
     "IngressProfile": {
       "description": "IngressProfile represents an ingress profile.",
