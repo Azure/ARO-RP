@@ -188,7 +188,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			return fmt.Errorf("unable to create controller MachineSet: %v", err)
 		}
 		if err = (imageconfig.NewReconciler(
-			log.WithField("controller", controllers.ImageConfigControllerName),
 			arocli, configcli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller ImageConfig: %v", err)
 		}

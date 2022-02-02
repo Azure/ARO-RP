@@ -6,12 +6,12 @@ package imageconfig
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -33,14 +33,12 @@ const (
 )
 
 type Reconciler struct {
-	log       *logrus.Entry
 	arocli    aroclient.Interface
 	configcli configclient.Interface
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli configclient.Interface) *Reconciler {
+func NewReconciler(arocli aroclient.Interface, configcli configclient.Interface) *Reconciler {
 	return &Reconciler{
-		log:       log,
 		arocli:    arocli,
 		configcli: configcli,
 	}
@@ -130,8 +128,7 @@ func getCloudAwareRegistries(instance *arov1alpha1.Cluster) ([]string, error) {
 		requiredRegistries = []string{instance.Spec.ACRDomain, "arosvc." + instance.Spec.Location + ".data." + azure.USGovernmentCloud.ContainerRegistryDNSSuffix}
 
 	default:
-		err := errors.New("cloud environment %s is not supported" + instance.Spec.AZEnvironment)
-		return nil, err
+		return nil, fmt.Errorf("cloud environment %s is not supported", instance.Spec.AZEnvironment)
 	}
 	return requiredRegistries, nil
 }
