@@ -170,7 +170,7 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({ csrfToken }, ref) => {
               <IconButton
                 iconProps={copyIcon}
                 ariaLabel="Copy command"
-                onClick={(_) => {
+                onClick={() => {
                   if (data) {
                     navigator.clipboard.writeText(data.command)
                   }
@@ -192,7 +192,7 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({ csrfToken }, ref) => {
               <IconButton
                 iconProps={copyIcon}
                 ariaLabel="Copy password"
-                onClick={(_) => {
+                onClick={() => {
                   if (data) {
                     navigator.clipboard.writeText(data.password)
                   }
@@ -235,3 +235,5 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({ csrfToken }, ref) => {
     </div>
   )
 })
+
+SSHModal.displayName = "sshmodal"

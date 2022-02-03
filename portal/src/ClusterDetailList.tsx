@@ -177,7 +177,6 @@ export class ClusterDetailComponent extends Component<
             )
           }
         }
-        break
       case "Nodes":
         {
           return (
@@ -193,7 +192,6 @@ export class ClusterDetailComponent extends Component<
             </Stack>
           )
         }
-        break
     }
   }
 }
