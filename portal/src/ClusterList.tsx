@@ -83,6 +83,8 @@ const clusterListDetailStyles: Partial<IDetailsListStyles> = {
   },
 }
 
+/* eslint-disable */
+
 interface ClusterListComponentProps {
   items: ICluster[]
   sshModalRef: MutableRefObject<any>
@@ -90,6 +92,7 @@ interface ClusterListComponentProps {
   csrfToken: MutableRefObject<string>
 }
 
+/* eslint-enable */
 class ClusterListComponent extends Component<ClusterListComponentProps, IClusterListState> {
   private _sshModal: MutableRefObject<any>
 
@@ -108,7 +111,7 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
         data: "string",
         isPadded: false,
         maxWidth: 24,
-        onRender: (item: ICluster) => (
+        onRender: () => (
           <Stack horizontal verticalAlign="center" className={classNames.iconContainer}>
             <img src="/favicon.ico" className={classNames.headerIcon} alt="" />
           </Stack>
@@ -129,7 +132,7 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
         onColumnClick: this._onColumnClick,
         data: "string",
         onRender: (item: ICluster) => (
-          <Link onClick={(_) => this._onClusterInfoLinkClick(item)}>{item.name}</Link>
+          <Link onClick={() => this._onClusterInfoLinkClick(item)}>{item.name}</Link>
         ),
         isPadded: true,
       },
@@ -234,7 +237,7 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
               <IconButton
                 iconProps={{ iconName: "Copy" }}
                 aria-label="Copy Resource ID"
-                onClick={(_) => this._onCopyResourceID(item)}
+                onClick={() => this._onCopyResourceID(item)}
               />
             </TooltipHost>
             <TooltipHost content={`Prometheus`}>
@@ -248,7 +251,7 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
               <IconButton
                 iconProps={{ iconName: "CommandPrompt" }}
                 aria-label="SSH"
-                onClick={(_) => this._onSSHClick(item)}
+                onClick={() => this._onSSHClick(item)}
               />
             </TooltipHost>
             <KubeconfigButton resourceId={item.resourceId} csrfToken={props.csrfToken} />
@@ -302,7 +305,7 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
     )
   }
 
-  private _getKey(item: any, index?: number): string {
+  private _getKey(item: any): string {
     return item.key
   }
 

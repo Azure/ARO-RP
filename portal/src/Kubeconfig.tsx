@@ -18,7 +18,7 @@ type FileDownload = {
 }
 
 export const KubeconfigButton = forwardRef<any, KubeconfigButtonProps>(
-  ({ csrfToken, resourceId }, ref) => {
+  ({ csrfToken, resourceId }) => {
     const [data, setData] = useState<FileDownload>({ name: "", content: "" })
     const [error, setError] = useState<AxiosResponse | null>(null)
     const [fetching, setFetching] = useState("DONE")
@@ -61,7 +61,7 @@ export const KubeconfigButton = forwardRef<any, KubeconfigButtonProps>(
             iconProps={{ iconName: "HardDriveGroup" }}
             disabled={fetching === "FETCHING"}
             aria-label="Download Kubeconfig"
-            onClick={(_) => setFetching("")}
+            onClick={() => setFetching("")}
           />
           <a style={{ display: "none" }} ref={buttonRef} href={"#"}>
             dl
@@ -71,3 +71,5 @@ export const KubeconfigButton = forwardRef<any, KubeconfigButtonProps>(
     )
   }
 )
+
+KubeconfigButton.displayName = "kubeconfigbutton"

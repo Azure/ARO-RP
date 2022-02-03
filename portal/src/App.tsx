@@ -73,15 +73,6 @@ export const contentStackStylesNormal: IStackStyles = {
   ],
 }
 
-const contentStackStylesSmall: IStackStyles = {
-  root: [
-    {
-      padding: 20,
-      width: "215px",
-    },
-  ],
-}
-
 const stackNavStyles: IStackStyles = {
   root: {
     padding: "0px 15px",
@@ -182,7 +173,7 @@ function App() {
   }, [fetching, error, data])
 
   const onRenderNavigationContent: IRenderFunction<IPanelProps> = useCallback(
-    (props, defaultRender) => (
+    () => (
       <>
         <IconButton iconProps={{ iconName: "GlobalNavButton" }} onClick={dismissPanel} />
       </>
