@@ -357,6 +357,7 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  -d net_raw \
   -m 2g \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
@@ -402,6 +403,7 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  -d net_raw \
   -e ACR_RESOURCE_ID \
   -e DATABASE_ACCOUNT_NAME \
   -e AZURE_DBTOKEN_CLIENT_ID \
