@@ -137,7 +137,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 				adminKeyvaultAccessPolicy(_env),
 				deployKeyvaultAccessPolicy(_env),
 			},
-			FluentbitImage:       to.StringPtr(version.FluentbitImage(os.Getenv("USER") + _env.Environment().ContainerRegistryDNSSuffix)),
+			FluentbitImage:       to.StringPtr(version.FluentbitImage(os.Getenv("USER") + "aro." + _env.Environment().ContainerRegistryDNSSuffix)),
 			FPClientID:           to.StringPtr(os.Getenv("AZURE_FP_CLIENT_ID")),
 			FPServicePrincipalID: to.StringPtr(os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
 			GatewayDomains: []string{
