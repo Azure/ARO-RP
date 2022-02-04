@@ -51,7 +51,7 @@ jobs:
   - task: GithubRelease@0
     displayName: Publish ARO-RP release notes
     inputs:
-      githubConnection: AzureRedHatOpenShift
+      githubConnection: github.com_petrkotas
       repositoryName: Azure/ARO-RP
       action: create
       releaseNotesFile: $(System.DefaultWorkingDirectory)/release.txt
