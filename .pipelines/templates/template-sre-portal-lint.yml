@@ -1,7 +1,5 @@
-pool:
-  vmImage: 'cytopia/eslint-latest'
-
-container: cytopia/eslint:latest
-
 steps:
+- pool:
+    vmImage: 'cytopia/eslint-latest'
+- container: cytopia/eslint:latest
 - script: . --ext .tsx --ext .js
