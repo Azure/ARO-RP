@@ -325,7 +325,7 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel go-toolset-1.14.12-1.module+el8.3.0+8784+380394dc
+yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel go-toolset-1.16.12-1.module+el8.5.0+13637+960c7771
 
 # Suppress emulation output for podman instead of docker for az acr compatability
 mkdir -p /etc/containers/
@@ -348,6 +348,7 @@ EOF
 
 # HACK for XDG_RUNTIME_DIR: https://github.com/containers/podman/issues/427
 cat >/home/cloud-user/agent/.env <<'EOF'
+go-1.16=true
 GOLANG_FIPS=1
 XDG_RUNTIME_DIR=/run/user/1000
 EOF
