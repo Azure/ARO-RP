@@ -346,12 +346,9 @@ cat >/home/cloud-user/agent/.path <<'EOF'
 /usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/cloud-user/.local/bin:/home/cloud-user/bin
 EOF
 
+# HACK for XDG_RUNTIME_DIR: https://github.com/containers/podman/issues/427
 cat >/home/cloud-user/agent/.env <<'EOF'
 GOLANG_FIPS=1
-EOF
-
-# HACK: https://github.com/containers/podman/issues/427
-cat >/home/cloud-user/agent/.env <<'EOF'
 XDG_RUNTIME_DIR=/run/user/1000
 EOF
 
