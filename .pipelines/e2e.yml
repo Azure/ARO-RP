@@ -33,6 +33,7 @@ jobs:
     parameters:
       rpImageACR: $(RP_IMAGE_ACR)
       buildCommand: publish-image-aro
+  - template: ./templates/template-sre-portal-lint.yml
   - script: |
       set -e
       set -o pipefail
