@@ -102,7 +102,7 @@ func doPackages(initial []*packages.Package, mode ssa.BuilderMode, deps bool) (*
 // The mode parameter controls diagnostics and checking during SSA construction.
 //
 // Deprecated: Use golang.org/x/tools/go/packages and the Packages
-// function instead; see ssa.ExampleLoadPackages.
+// function instead; see ssa.Example_loadPackages.
 //
 func CreateProgram(lprog *loader.Program, mode ssa.BuilderMode) *ssa.Program {
 	prog := ssa.NewProgram(lprog.Fset, mode)
@@ -129,7 +129,7 @@ func CreateProgram(lprog *loader.Program, mode ssa.BuilderMode) *ssa.Program {
 //
 // The operation fails if there were any type-checking or import errors.
 //
-// See ../ssa/example_test.go for an example.
+// See ../example_test.go for an example.
 //
 func BuildPackage(tc *types.Config, fset *token.FileSet, pkg *types.Package, files []*ast.File, mode ssa.BuilderMode) (*ssa.Package, *types.Info, error) {
 	if fset == nil {

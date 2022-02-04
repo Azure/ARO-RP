@@ -15,6 +15,7 @@ jobs:
   timeoutInMinutes: 180
   pool:
     name: ARO-CI
+    demands: go-1.16
   steps:
   - template: ./templates/template-checkout.yml
   - template: ./templates/template-az-cli-login.yml

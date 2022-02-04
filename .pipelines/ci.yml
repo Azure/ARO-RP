@@ -37,6 +37,7 @@ jobs:
 - job: Golang_Unit_Tests
   pool:
     name: ARO-CI
+    demands: go-1.16
   steps:
   - template: ./templates/template-checkout.yml
 

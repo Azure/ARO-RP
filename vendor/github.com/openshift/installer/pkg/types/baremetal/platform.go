@@ -15,7 +15,7 @@ type BMC struct {
 // BootMode puts the server in legacy (BIOS), UEFI secure boot or UEFI mode for
 // booting. Secure boot is only enabled during the final instance boot.
 // The default is UEFI.
-// +kubebuilder:validation:Enum=UEFI;UEFISecureBoot;legacy
+// +kubebuilder:validation:Enum="";UEFI;UEFISecureBoot;legacy
 type BootMode string
 
 // Allowed boot mode from metal3
@@ -117,6 +117,7 @@ type Platform struct {
 
 	// ProvisioningNetworkInterface is the name of the network interface on a control plane
 	// baremetal host that is connected to the provisioning network.
+	// +optional
 	ProvisioningNetworkInterface string `json:"provisioningNetworkInterface"`
 
 	// ProvisioningNetworkCIDR defines the network to use for provisioning.

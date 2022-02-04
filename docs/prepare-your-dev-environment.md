@@ -3,7 +3,7 @@
 This document goes through the development dependencies one requires in order to build the RP code.
 
 ## Software Required
-1. Install [Go 1.14](https://golang.org/dl) or later, if you haven't already.
+1. Install [Go 1.16](https://golang.org/dl) or later, if you haven't already.
 
 1. Install [Python 3.6+](https://www.python.org/downloads), if you haven't already.  You will also need `python-setuptools` installed, if you don't have it installed already.
 

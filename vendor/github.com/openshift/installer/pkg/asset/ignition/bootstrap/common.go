@@ -82,6 +82,7 @@ type bootstrapTemplateData struct {
 	PlatformData          platformTemplateData
 	BootstrapInPlace      *types.BootstrapInPlace
 	UseIPv6ForNodeIP      bool
+	IsOKD                 bool
 	LoggingConfig         *bootstraplogging.Config
 }
 
@@ -314,6 +315,7 @@ func (a *Common) getTemplateData(dependencies asset.Parents, bootstrapInPlace bo
 		ClusterProfile:        clusterProfile,
 		BootstrapInPlace:      bootstrapInPlaceConfig,
 		UseIPv6ForNodeIP:      APIIntVIPonIPv6,
+		IsOKD:                 installConfig.Config.IsOKD(),
 	}
 }
 
@@ -658,8 +660,6 @@ func apiVIP(p *types.Platform) string {
 		return p.VSphere.APIVIP
 	case p.Ovirt != nil:
 		return p.Ovirt.APIVIP
-	case p.Kubevirt != nil:
-		return p.Kubevirt.APIVIP
 	default:
 		return ""
 	}
