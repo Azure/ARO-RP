@@ -3,9 +3,6 @@ pr: none
 trigger: none
 
 parameters:
-- name: vsoConfigBuildID
-  type: string
-  default: latest
 - name: rpImageAcr
   type: string
   default: arosvc
