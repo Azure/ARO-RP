@@ -28,11 +28,8 @@ jobs:
           steps:
           - ${{ if eq(parameters.imageTag, 'latest') }}:
             - checkout: git://AzureRedHatOpenShift/RP-Config@refs/heads/master
-              path: $(Agent.BuildDirectory)/s/config
           - ${{ if ne(parameters.imageTag, 'latest') }}:
             - checkout: git://AzureRedHatOpenShift/RP-Config@refs/tags/${{parameters.imageTag}}
-              path: $(Agent.BuildDirectory)/s/config
-
           - template: ./templates/template-az-cli-login.yml
             parameters:
               azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
@@ -53,7 +50,7 @@ jobs:
 
           - template: ./template-deploy-azure-env.yml
             parameters:
-              configDirectory: $(Agent.BuildDirectory)/s/config/deploy
+              configDirectory: $(Agent.BuildDirectory)/s/deploy
               deployerDirectory: $(System.ArtifactsDirectory)/deployer/
               configFileName: ${{ parameters.configFileName }}
               location: ${{ location }}
