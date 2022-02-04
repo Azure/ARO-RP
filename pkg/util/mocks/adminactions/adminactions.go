@@ -132,6 +132,20 @@ func (m *MockAzureActions) EXPECT() *MockAzureActionsMockRecorder {
 	return m.recorder
 }
 
+// NICReconcileFailedState mocks base method.
+func (m *MockAzureActions) NICReconcileFailedState(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NICReconcileFailedState", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// NICReconcileFailedState indicates an expected call of NICReconcileFailedState.
+func (mr *MockAzureActionsMockRecorder) NICReconcileFailedState(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NICReconcileFailedState", reflect.TypeOf((*MockAzureActions)(nil).NICReconcileFailedState), arg0, arg1)
+}
+
 // ResourcesList mocks base method.
 func (m *MockAzureActions) ResourcesList(arg0 context.Context) ([]byte, error) {
 	m.ctrl.T.Helper()
