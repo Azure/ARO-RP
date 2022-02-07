@@ -1,0 +1,95 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: managed-upgrade-operator
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/finalizers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - upgrade.managed.openshift.io
+  resources:
+  - upgradeconfigs
+  - upgrade
+  - upgradeconfigs/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - config.openshift.io
+  resources:
+  - clusterversions
+  - clusteroperators
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - machine.openshift.io
+  resources:
+  - machines
+  - machinesets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+- apiGroups:
+  - machineconfiguration.openshift.io
+  resources:
+  - machineconfigpools
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - operators.coreos.com
+  resources:
+  - subscriptions
+  verbs:
+  - '*'
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - create
+  - update
+  - get
+  - list
+  - patch
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - get
+  - list
+  - watch

@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: managed-upgrade-operator
+  namespace: openshift-managed-upgrade-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: managed-upgrade-operator
+  template:
+    metadata:
+      labels:
+        name: managed-upgrade-operator
+    spec:
+      serviceAccountName: managed-upgrade-operator
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/master
+                operator: In
+                values:
+                - ""
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+      - effect: NoExecute
+        key: node-role.kubernetes.io/master
+      volumes:
+      - configMap:
+          defaultMode: 420
+          items:
+            - key: ca-bundle.crt
+              path: tls-ca-bundle.pem
+          name: trusted-ca-bundle
+        name: trusted-ca-bundle
+      containers:
+        - name: managed-upgrade-operator
+          # Replace this with the built image name
+          # This will get replaced on deploy by /hack/generate-operator-bundle.py
+          image: GENERATED
+          command:
+          - managed-upgrade-operator
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 20m
+              memory: 100Mi
+            limits:
+              cpu: 50m
+              memory: 200Mi
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: OPERATOR_NAME
+              value: "managed-upgrade-operator"
+          volumeMounts:
+          - mountPath: /etc/pki/ca-trust/extracted/pem
+            name: trusted-ca-bundle
+            readOnly: true
