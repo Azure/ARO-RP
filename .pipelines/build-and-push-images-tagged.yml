@@ -4,7 +4,7 @@ pr: none
 
 variables:
 - template: vars.yml
-- name: tag
+- name: TAG
 - group: PROD CI Credentials
 
 jobs:
@@ -29,7 +29,7 @@ jobs:
       [[ -z ${TAG} ]] && exit 1
 
       ## set the variable
-      echo '##vso[task.setvariable variable=tag]${TAG}'
+      echo '##vso[task.setvariable variable=TAG]${TAG}'
 
   - template: ./templates/template-push-images-to-acr-tagged.yml
     parameters:
