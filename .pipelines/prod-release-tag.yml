@@ -3,16 +3,14 @@ pr: none
 trigger: none
 
 parameters:
-- name: vsoConfigBuildID
 - name: aroImageTag
-- name: rpImageAcr
-  type: string
-  default: arosvc
 
 variables:
 - group: Prod CI Credentials
 - group: Prod E2E Non-Secret Variables
-- group: RedHat E2E Environement
+- group: RedHat E2E Environement # This utilizes a variable group, don't update the spelling
+- name: rpImageAcr
+  value: arosvc
 
 stages:
 - stage: Deploy_CanarySector

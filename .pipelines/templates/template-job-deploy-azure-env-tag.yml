@@ -31,7 +31,7 @@ jobs:
             - checkout: git://AzureRedHatOpenShift/RP-Config@refs/heads/master
           - ${{ if ne(parameters.imageTag, 'latest') }}:
             - checkout: git://AzureRedHatOpenShift/RP-Config@refs/tags/${{parameters.imageTag}}
-          - template: ./templates/template-az-cli-login.yml
+          - template: ./template-az-cli-login.yml
             parameters:
               azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
           - script: |
@@ -43,11 +43,12 @@ jobs:
 
               az acr login --name "${RP_IMAGE_ACR}"
 
+              mkdir -p $(System.ArtifactsDirectory)/deployer/
               docker pull "${RP_IMAGE_ACR}.azurecr.io/aro:${TAG}"
               CONTAINER=$(docker create "${RP_IMAGE_ACR}.azurecr.io/aro:${TAG}")
               docker cp $CONTAINER:/usr/local/bin/aro $(System.ArtifactsDirectory)/deployer/aro
             displayName: Download aro deployer from image
-          - template: ./templates/template-az-cli-logout.yml
+          - template: ./template-az-cli-logout.yml
 
           - template: ./template-deploy-azure-env.yml
             parameters:
