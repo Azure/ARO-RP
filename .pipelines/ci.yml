@@ -89,3 +89,9 @@ jobs:
       failIfCoverageEmpty: false
     condition: succeededOrFailed()
 
+- job: "Lint Admin Portal"
+  pool:
+    vmImage: 'cytopia/eslint-latest'
+  container: cytopia/eslint:latest
+  steps:
+    script: . --ext .tsx --ext .js
