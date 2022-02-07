@@ -9,6 +9,11 @@ parameters:
   type: string
   default: arosvc
 
+variables:
+- group: Prod CI Credentials
+- group: Prod E2E Non-Secret Variables
+- group: RedHat E2E Environement
+
 stages:
 - stage: Deploy_CanarySector
   dependsOn: []

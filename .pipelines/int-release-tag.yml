@@ -8,6 +8,11 @@ parameters:
   default: arosvc
 - name: aroImageTag
 
+variables:
+- group: INT CI Credentials
+- group: INT E2E Non-Secret Values
+- group: PROD-INT E2E Credentials
+
 stages:
 - stage: Deploy_INT
   dependsOn: []
