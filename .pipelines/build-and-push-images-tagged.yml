@@ -5,6 +5,7 @@ pr: none
 variables:
 - template: vars.yml
 - name: tag
+- group: PROD CI Credentials
 
 jobs:
 - job: Build_and_push_images
