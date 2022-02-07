@@ -1,5 +1,4 @@
 steps:
 - script: |
-    cd portal
-    docker run -it --rm -v $(pwd):/data:z cytopia/eslint .
+    docker run -it --rm -v $(pwd):/data:z cytopia/eslint ./portal
   displayName: Lint Admin Portal
