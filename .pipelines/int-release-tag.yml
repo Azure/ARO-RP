@@ -3,15 +3,14 @@ pr: none
 trigger: none
 
 parameters:
-- name: rpImageAcr
-  type: string
-  default: arosvc
 - name: aroImageTag
 
 variables:
 - group: INT CI Credentials
 - group: INT E2E Non-Secret Values
 - group: PROD-INT E2E Credentials
+- name: rpImageAcr
+  value: arointsvc
 
 stages:
 - stage: Deploy_INT
