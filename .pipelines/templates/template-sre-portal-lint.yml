@@ -1,5 +1,7 @@
-steps:
-- pool:
+jobs:
+- job: "Lint Admin Portal"
+  pool:
     vmImage: 'cytopia/eslint-latest'
-- container: cytopia/eslint:latest
-- script: . --ext .tsx --ext .js
+  container: cytopia/eslint:latest
+  steps:
+    script: . --ext .tsx --ext .js
