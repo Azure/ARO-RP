@@ -32,7 +32,7 @@ stages:
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
-      imageTag: ${{ parameters.aroImageTag }}
+      imageTag: ${{ variables.aroImageTag }}
       rpImageAcr: ${{ parameters.rpImageAcr }}
 - stage: Deploy_LowTrafficSector
   condition: succeededOrFailed()
@@ -60,7 +60,7 @@ stages:
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
-      imageTag: ${{ parameters.aroImageTag }}
+      imageTag: ${{ variables.aroImageTag }}
       rpImageAcr: ${{ parameters.rpImageAcr }}
 - stage: Deploy_USSector
   condition: succeededOrFailed()
@@ -87,7 +87,7 @@ stages:
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
-      imageTag: ${{ parameters.aroImageTag }}
+      imageTag: ${{ variables.aroImageTag }}
       rpImageAcr: ${{ parameters.rpImageAcr }}
 - stage: Deploy_EuropeSector
   dependsOn: [Deploy_USSector]
@@ -116,7 +116,7 @@ stages:
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
-      imageTag: ${{ parameters.aroImageTag }}
+      imageTag: ${{ variables.aroImageTag }}
       rpImageAcr: ${{ parameters.rpImageAcr }}
 - stage: Deploy_ROWSector
   dependsOn: [Deploy_EuropeSector]
@@ -143,5 +143,5 @@ stages:
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
-      imageTag: ${{ parameters.aroImageTag }}
+      imageTag: ${{ variables.aroImageTag }}
       rpImageAcr: ${{ parameters.rpImageAcr }}
