@@ -1,4 +1,8 @@
 steps:
+- task: Npm@1
+  inputs: 
+    command: install
+    workingDir: ./portal
 - script: |
-    pwd; cd portal; npm install; docker run -it --rm -v $(pwd):/data:z cytopia/eslint . --ext .tsx --ext .js
+    docker run -it --rm -v $(pwd)/portal:/data:z cytopia/eslint . --ext .tsx --ext .js
   displayName: Lint Admin Portal
