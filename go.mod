@@ -260,7 +260,6 @@ replace (
 // Installer dependencies. Some of them are being used directly in the RP.
 replace (
 	git.apache.org/thrift.git => github.com/apache/thrift v0.15.0
-	github.com/Azure/go-autorest/autorest/adal => github.com/Azure/go-autorest/autorest/adal v0.9.14
 	github.com/BurntSushi/toml => github.com/BurntSushi/toml v0.3.1
 	github.com/IBM-Cloud/terraform-provider-ibm => github.com/openshift/terraform-provider-ibm v1.26.2-openshift-2
 	github.com/c-bata/go-prompt => github.com/c-bata/go-prompt v0.2.5
