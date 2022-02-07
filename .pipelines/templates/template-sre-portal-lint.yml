@@ -1,7 +1,4 @@
-jobs:
-- job: "Lint Admin Portal"
-  pool:
-    vmImage: 'cytopia/eslint-latest'
-  container: cytopia/eslint:latest
-  steps:
-    script: . --ext .tsx --ext .js
+steps:
+- script: |
+    docker run -it --rm -v $(pwd):/data:z cytopia/eslint .
+  displayName: Lint Admin Portal
