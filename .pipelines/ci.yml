@@ -91,7 +91,7 @@ jobs:
 
 - job: Lint_Admin_Portal
   pool:
-    vmImage: 'cytopia/eslint-latest'
+    vmImage: 'cytopia/eslint'
   container: cytopia/eslint:latest
   steps:
   - script: . --ext .tsx --ext .js
