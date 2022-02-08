@@ -1639,8 +1639,8 @@ github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJS
 github.com/jessevdk/go-flags v1.5.0/go.mod h1:Fw0T6WPc1dYxT4mKEZRfG5kJhaTDP9pj1c2EWnYs/m4=
 github.com/jewzaam/go-cosmosdb v0.0.0-20211018134417-8d1494e7862f h1:G0wto7wY9OnIuwSPiLfyefcUN4FYEdtvwQMsCQdlDas=
 github.com/jewzaam/go-cosmosdb v0.0.0-20211018134417-8d1494e7862f/go.mod h1:Sxto8tJPhBRIa7jDsuTx4TZAcTYu0NH8E39iWqqMeRs=
-github.com/jewzaam/installer-aro v0.9.0-master.0.20220125150448-68650c15f5df h1:eoHOJD4uccROI0mb2BRCIq/pn3kjCvl961rDxQjZfYI=
-github.com/jewzaam/installer-aro v0.9.0-master.0.20220125150448-68650c15f5df/go.mod h1:qjvlt/LNPsGbLg2DtyY0VzxfKo+WVwcxJhektwKU+5E=
+github.com/jewzaam/installer-aro v0.9.0-master.0.20220208140934-766bcf74e25c h1:yg14zwP4cFO98qqFlbkNqcouP/J0+zdCUf11qa/J/PU=
+github.com/jewzaam/installer-aro v0.9.0-master.0.20220208140934-766bcf74e25c/go.mod h1:qjvlt/LNPsGbLg2DtyY0VzxfKo+WVwcxJhektwKU+5E=
 github.com/jhump/protoreflect v1.6.0/go.mod h1:eaTn3RZAmMBcV0fifFvlm6VHNz3wSkYyXYWUh7ymB74=
 github.com/jingyugao/rowserrcheck v0.0.0-20191204022205-72ab7603b68a h1:GmsqmapfzSJkm28dhRoHz2tLRbJmqhU86IPgBtN3mmk=
 github.com/jingyugao/rowserrcheck v0.0.0-20191204022205-72ab7603b68a/go.mod h1:xRskid8CManxVta/ALEhJha/pweKBaVG6fWgc0yH25s=
