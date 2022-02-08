@@ -51,8 +51,9 @@ func TestPullSecretReconciler(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 		Status:     arov1alpha1.ClusterStatus{},
 		Spec: arov1alpha1.ClusterSpec{
-			Features: arov1alpha1.FeaturesSpec{
-				ReconcilePullSecret: true,
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				ENABLED: "true",
+				MANAGED: "true",
 			},
 		},
 	}
@@ -160,7 +161,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			wantKeys: []string{"registry.redhat.io", "cloud.redhat.com"},
 		},
 		{
-			name: "disabled feature, valid RH key present",
+			name: "management disabled, valid RH key present",
 			fakecli: newFakecli(&corev1.Secret{
 				Data: map[string][]byte{
 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
@@ -173,8 +174,9 @@ func TestPullSecretReconciler(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 					Status:     arov1alpha1.ClusterStatus{},
 					Spec: arov1alpha1.ClusterSpec{
-						Features: arov1alpha1.FeaturesSpec{
-							ReconcilePullSecret: true,
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							ENABLED: "true",
+							MANAGED: "false",
 						},
 					},
 				}),
@@ -182,7 +184,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			wantKeys: []string{"registry.redhat.io"},
 		},
 		{
-			name: "disabled feature, valid RH key missing",
+			name: "management disabled, valid RH key missing",
 			fakecli: newFakecli(&corev1.Secret{
 				Data: map[string][]byte{
 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
@@ -195,8 +197,9 @@ func TestPullSecretReconciler(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 					Status:     arov1alpha1.ClusterStatus{},
 					Spec: arov1alpha1.ClusterSpec{
-						Features: arov1alpha1.FeaturesSpec{
-							ReconcilePullSecret: true,
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							ENABLED: "true",
+							MANAGED: "false",
 						},
 					},
 				}),

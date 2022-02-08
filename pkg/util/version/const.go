@@ -29,14 +29,18 @@ var GitCommit = "unknown"
 
 // InstallStream describes stream we are defaulting to for all new clusters
 var InstallStream = &Stream{
-	Version:  NewVersion(4, 8, 18),
-	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:321aae3d3748c589bc2011062cee9fd14e106f258807dc2d84ced3f7461160ea",
+	Version:  NewVersion(4, 9, 8),
+	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:c91c0faf7ae3c480724a935b3dab7e5f49aae19d195b12f3a4ae38f8440ea96b",
 }
 
 // UpgradeStreams describes list of streams we support for upgrades
 var (
 	UpgradeStreams = []*Stream{
 		InstallStream,
+		{
+			Version:  NewVersion(4, 8, 18),
+			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:321aae3d3748c589bc2011062cee9fd14e106f258807dc2d84ced3f7461160ea",
+		},
 		{
 			Version:  NewVersion(4, 7, 30),
 			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:aba54b293dc151f5c0fd96d4353ced6ced3e7da6620c1c10714ab32d0577486f",
@@ -68,7 +72,7 @@ func MdmImage(acrDomain string) string {
 		return os.Getenv("GENEVA_MDM_IMAGE_OVERRIDE")
 	}
 
-	return acrDomain + "/genevamdm:master_20210928.1"
+	return acrDomain + "/genevamdm:master_20220111.2"
 }
 
 // MdsdImage contains the location of the MDSD container image
@@ -78,5 +82,5 @@ func MdsdImage(acrDomain string) string {
 		return os.Getenv("GENEVA_MDSD_IMAGE_OVERRIDE")
 	}
 
-	return acrDomain + "/genevamdsd:master_20211001.1"
+	return acrDomain + "/genevamdsd:master_20211223.1"
 }

@@ -49,8 +49,8 @@ func TestWorkaroundReconciler(t *testing.T) {
 				Name: arov1alpha1.SingletonClusterName,
 			},
 			Spec: arov1alpha1.ClusterSpec{
-				Features: arov1alpha1.FeaturesSpec{
-					ReconcileWorkaroundsController: true,
+				OperatorFlags: arov1alpha1.OperatorFlags{
+					ENABLED: "true",
 				},
 			},
 		})

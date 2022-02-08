@@ -35,6 +35,7 @@ type OpenShiftClusterProperties struct {
 	FailedProvisioningState         ProvisioningState       `json:"failedProvisioningState,omitempty"`
 	LastAdminUpdateError            string                  `json:"lastAdminUpdateError,omitempty"`
 	MaintenanceTask                 MaintenanceTask         `json:"maintenanceTask,omitempty" mutable:"true"`
+	OperatorFlags                   OperatorFlags           `json:"operatorFlags,omitempty" mutable:"true"`
 	CreatedAt                       time.Time               `json:"createdAt,omitempty"`
 	CreatedBy                       string                  `json:"createdBy,omitempty"`
 	ProvisionedBy                   string                  `json:"provisionedBy,omitempty"`
@@ -82,6 +83,9 @@ const (
 	MaintenanceTaskEverything MaintenanceTask = "Everything"
 	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
 )
+
+// Operator feature flags
+type OperatorFlags map[string]string
 
 // ClusterProfile represents a cluster profile.
 type ClusterProfile struct {

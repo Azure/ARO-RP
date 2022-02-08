@@ -256,6 +256,12 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getAdminOpenShiftClusters).Name("getAdminOpenShiftClusters")
 
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/reconcilefailednic").
+		Subrouter()
+
+	s.Methods(http.MethodPost).HandlerFunc(f.postAdminReconcileFailedNIC).Name("reconcileFailedNic")
+
 	// Operations
 	s = r.
 		Path("/providers/{resourceProviderNamespace}/operations").

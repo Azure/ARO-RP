@@ -42,6 +42,9 @@ extends:
       #  enabled: true # SDL results of non-official builds aren't uploaded to TSA by default.
       # credscan:
       #   suppressionsFile: $(Build.SourcesDirectory)\.config\CredScanSuppressions.json
+      disableLegacyManifest: true
+      sbom:
+        enabled: true
       policheck:
         break: true # always break the build on policheck issues. You can disable it by setting to 'false'
       suppression:

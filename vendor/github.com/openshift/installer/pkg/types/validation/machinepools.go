@@ -14,10 +14,12 @@ import (
 	baremetalvalidation "github.com/openshift/installer/pkg/types/baremetal/validation"
 	"github.com/openshift/installer/pkg/types/gcp"
 	gcpvalidation "github.com/openshift/installer/pkg/types/gcp/validation"
-	"github.com/openshift/installer/pkg/types/kubevirt"
-	kubevirtvalidation "github.com/openshift/installer/pkg/types/kubevirt/validation"
+	"github.com/openshift/installer/pkg/types/ibmcloud"
+	ibmcloudvalidation "github.com/openshift/installer/pkg/types/ibmcloud/validation"
 	"github.com/openshift/installer/pkg/types/libvirt"
 	libvirtvalidation "github.com/openshift/installer/pkg/types/libvirt/validation"
+	"github.com/openshift/installer/pkg/types/openstack"
+	openstackvalidation "github.com/openshift/installer/pkg/types/openstack/validation"
 	"github.com/openshift/installer/pkg/types/ovirt"
 	ovirtvalidation "github.com/openshift/installer/pkg/types/ovirt/validation"
 	"github.com/openshift/installer/pkg/types/vsphere"
@@ -42,6 +44,7 @@ var (
 		types.ArchitectureAMD64:   true,
 		types.ArchitectureS390X:   true,
 		types.ArchitecturePPC64LE: true,
+		types.ArchitectureARM64:   true,
 	}
 
 	validArchitectureValues = func() []string {
@@ -68,6 +71,9 @@ func ValidateMachinePool(platform *types.Platform, p *types.MachinePool, fldPath
 	}
 	if !validArchitectures[p.Architecture] {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("architecture"), p.Architecture, validArchitectureValues))
+	}
+	if platform.AWS != nil {
+		allErrs = append(allErrs, awsvalidation.ValidateMachinePoolArchitecture(p, fldPath.Child("architecture"))...)
 	}
 	allErrs = append(allErrs, validateMachinePoolPlatform(platform, &p.Platform, p, fldPath.Child("platform"))...)
 	return allErrs
@@ -96,6 +102,9 @@ func validateMachinePoolPlatform(platform *types.Platform, p *types.MachinePoolP
 	if p.GCP != nil {
 		validate(gcp.Name, p.GCP, func(f *field.Path) field.ErrorList { return validateGCPMachinePool(platform, p, pool, f) })
 	}
+	if p.IBMCloud != nil {
+		validate(ibmcloud.Name, p.IBMCloud, func(f *field.Path) field.ErrorList { return ibmcloudvalidation.ValidateMachinePool(p.IBMCloud, f) })
+	}
 	if p.Libvirt != nil {
 		validate(libvirt.Name, p.Libvirt, func(f *field.Path) field.ErrorList { return libvirtvalidation.ValidateMachinePool(p.Libvirt, f) })
 	}
@@ -108,8 +117,10 @@ func validateMachinePoolPlatform(platform *types.Platform, p *types.MachinePoolP
 	if p.Ovirt != nil {
 		validate(ovirt.Name, p.Ovirt, func(f *field.Path) field.ErrorList { return ovirtvalidation.ValidateMachinePool(p.Ovirt, f) })
 	}
-	if p.Kubevirt != nil {
-		validate(kubevirt.Name, p.Kubevirt, func(f *field.Path) field.ErrorList { return kubevirtvalidation.ValidateMachinePool(p.Kubevirt, f) })
+	if p.OpenStack != nil {
+		validate(openstack.Name, p.OpenStack, func(f *field.Path) field.ErrorList {
+			return openstackvalidation.ValidateMachinePool(platform.OpenStack, p.OpenStack, pool.Name, f)
+		})
 	}
 	return allErrs
 }

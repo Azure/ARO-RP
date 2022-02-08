@@ -29,6 +29,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
+const (
+	CONFIG_NAMESPACE string = "aro.azuresubnets"
+	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+)
+
 // Reconciler is the controller struct
 type Reconciler struct {
 	log *logrus.Entry
@@ -66,8 +71,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.Features.ReconcileSubnets {
-		// reconciling subnets is disabled
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+		// controller is disabled
 		return reconcile.Result{}, nil
 	}
 

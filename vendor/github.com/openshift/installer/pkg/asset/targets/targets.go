@@ -37,13 +37,13 @@ var (
 		&bootkube.KubeSystemConfigmapRootCA{},
 		&bootkube.OpenshiftMachineConfigOperator{},
 		&bootkube.OpenshiftConfigSecretPullSecret{},
-		&bootkube.KubevirtInfraNamespace{},
 		&bootkube.AROWorkerRegistries{},
 		&bootkube.AROIngressService{},
 		&bootkube.AROImageRegistry{},
 		&openshift.CloudCredsSecret{},
 		&openshift.KubeadminPasswordSecret{},
 		&openshift.RoleCloudCredsSecretReader{},
+		&openshift.AzureCloudProviderSecret{},
 	}
 
 	// IgnitionConfigs are the ignition-configs targeted assets.

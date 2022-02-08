@@ -1,6 +1,8 @@
 SHELL = /bin/bash
+TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
-ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
+ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
+ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(COMMIT)
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
 FLUENTBIT_VERSION = 1.7.8-1
@@ -56,6 +58,12 @@ image-aro: aro e2e.test
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
 
+image-aro-tag: image-aro
+ifeq ($(TAG),)
+	$(error TAG undefined)
+endif
+	docker tag $(ARO_IMAGE) $(ARO_IMAGE_BASE):$(TAG)
+
 image-aro-multistage:
 	docker build --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) .
 
@@ -77,6 +85,12 @@ ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
 		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
 		docker push arointsvc.azurecr.io/aro:latest
 endif
+
+publish-image-aro-tag: image-aro-tag
+ifeq ($(TAG),)
+	$(error TAG undefined)
+endif
+	docker push $(ARO_IMAGE_BASE):$(TAG)
 
 publish-image-aro-multistage: image-aro-multistage
 	docker push $(ARO_IMAGE)

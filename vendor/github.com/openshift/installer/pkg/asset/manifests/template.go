@@ -24,6 +24,11 @@ type GCPCredsSecretData struct {
 	Base64encodeServiceAccount string
 }
 
+// IBMCloudCredsSecretData holds encoded credentials and is used to generate cloud-creds secret
+type IBMCloudCredsSecretData struct {
+	Base64encodeAPIKey string
+}
+
 // OpenStackCredsSecretData holds encoded credentials and is used to generate cloud-creds secret
 type OpenStackCredsSecretData struct {
 	Base64encodeCloudCreds    string
@@ -46,20 +51,14 @@ type OvirtCredsSecretData struct {
 	Base64encodeCABundle string
 }
 
-// KubevirtCredsSecretData holds the encoded kubeconfig for the infra cluster.
-// It is used to generated cloud-creds secret.
-type KubevirtCredsSecretData struct {
-	Base64encodedKubeconfig string
-}
-
 type cloudCredsSecretData struct {
 	AWS       *AwsCredsSecretData
 	Azure     *AzureCredsSecretData
 	GCP       *GCPCredsSecretData
+	IBMCloud  *IBMCloudCredsSecretData
 	OpenStack *OpenStackCredsSecretData
 	VSphere   *VSphereCredsSecretData
 	Ovirt     *OvirtCredsSecretData
-	Kubevirt  *KubevirtCredsSecretData
 }
 
 type bootkubeTemplateData struct {
@@ -79,6 +78,7 @@ type bootkubeTemplateData struct {
 	PullSecretBase64              string
 	RootCaCert                    string
 	WorkerIgnConfig               string
+	IsOKD                         bool
 	AROWorkerRegistries           string
 	AROIngressIP                  string
 	AROIngressInternal            bool

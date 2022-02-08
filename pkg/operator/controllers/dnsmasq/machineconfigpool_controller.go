@@ -45,7 +45,8 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.Features.ReconcileDNSMasq {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+		// controller is disabled
 		return reconcile.Result{}, nil
 	}
 

@@ -3,8 +3,8 @@ pr: none
 trigger: none
 
 parameters:
-- name: vsoConfigBuildID
 - name: vsoDeployerBuildID
+- name: configVersion
 
 stages:
 - stage: Deploy_CanarySector
@@ -20,10 +20,9 @@ stages:
       - westcentralus
       - eastus2euap
       configFileName: prod-config.yaml
+      configVersion: ${{ parameters.configVersion }}
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
       vsoProjectID: $(vso-project-id)
-      vsoConfigPipelineID: $(vso-config-pipeline-id)
-      vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
       vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
       vsoDeployerBuildID: ${{ parameters.vsoDeployerBuildID }}
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
@@ -50,10 +49,9 @@ stages:
       - japanwest
       - koreacentral
       configFileName: prod-config.yaml
+      configVersion: ${{ parameters.configVersion }}
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
       vsoProjectID: $(vso-project-id)
-      vsoConfigPipelineID: $(vso-config-pipeline-id)
-      vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
       vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
       vsoDeployerBuildID: ${{ parameters.vsoDeployerBuildID }}
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
@@ -79,10 +77,9 @@ stages:
       - westus
       - westus2
       configFileName: prod-config.yaml
+      configVersion: ${{ parameters.configVersion }}
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
       vsoProjectID: $(vso-project-id)
-      vsoConfigPipelineID: $(vso-config-pipeline-id)
-      vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
       vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
       vsoDeployerBuildID: ${{ parameters.vsoDeployerBuildID }}
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
@@ -111,10 +108,9 @@ stages:
       - westeurope
       - francecentral
       configFileName: prod-config.yaml
+      configVersion: ${{ parameters.configVersion }}
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
       vsoProjectID: $(vso-project-id)
-      vsoConfigPipelineID: $(vso-config-pipeline-id)
-      vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
       vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
       vsoDeployerBuildID: ${{ parameters.vsoDeployerBuildID }}
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
@@ -140,10 +136,9 @@ stages:
       - uksouth
       - ukwest
       configFileName: prod-config.yaml
+      configVersion: ${{ parameters.configVersion }}
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
       vsoProjectID: $(vso-project-id)
-      vsoConfigPipelineID: $(vso-config-pipeline-id)
-      vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
       vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
       vsoDeployerBuildID: ${{ parameters.vsoDeployerBuildID }}
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)

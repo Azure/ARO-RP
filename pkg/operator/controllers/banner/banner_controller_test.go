@@ -5,6 +5,7 @@ package banner
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -138,8 +139,8 @@ func TestBannerReconcile(t *testing.T) {
 					Banner: arov1alpha1.Banner{
 						Content: arov1alpha1.BannerContent(tt.bannerSetting),
 					},
-					Features: arov1alpha1.FeaturesSpec{
-						ReconcileBanner: tt.featureFlag,
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						ENABLED: strconv.FormatBool(tt.featureFlag),
 					},
 				},
 			}

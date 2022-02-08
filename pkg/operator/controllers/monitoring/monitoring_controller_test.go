@@ -30,8 +30,8 @@ var (
 			Name: arov1alpha1.SingletonClusterName,
 		},
 		Spec: arov1alpha1.ClusterSpec{
-			Features: arov1alpha1.FeaturesSpec{
-				ReconcileMonitoringConfig: true,
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				ENABLED: "true",
 			},
 		},
 	})

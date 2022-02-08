@@ -1,0 +1,29 @@
+# Azure DevOps Pipeline deploying the azure hosted environment
+trigger: none
+pr: none
+
+parameters:
+- name: location
+- name: vsoConfigBuildID
+- name: aroImageTag
+- name: rpImageAcr
+  type: string
+  default: arosvc
+
+jobs:
+- template: ./templates/template-job-deploy-azure-env-tag.yml
+  parameters:
+    environment: RP-Prod
+    rpMode: ''
+    aroVersionStorageAccount: $(aro-version-storage-account)
+    locations:
+    - ${{ parameters.location }}
+    configFileName: $(config-file-name)
+    azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+    vsoProjectID: $(vso-project-id)
+    azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+    e2eSubscription: $(e2e-subscription)
+    billingE2EPipelineName: $(billing-e2e-pipeline-name)
+    billingE2EBranchName: $(billing-e2e-branch-name)
+    imageTag: ${{ parameters.aroImageTag }}
+    rpImageAcr: ${{ parameters.rpImageAcr }}

@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/machineset"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
@@ -28,22 +29,12 @@ var _ = Describe("Scale nodes", func() {
 	// nodes to settle after scale down
 	Specify("node count should match the cluster resource and nodes should be ready", func() {
 		ctx := context.Background()
-
-		oc, err := clients.OpenshiftClustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
+		machinesets, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
-
 		expectedNodeCount := 3 // for masters
-		for _, wp := range *oc.WorkerProfiles {
-			// hack: if the machineset is scaled down to 0 replicas, since wp.Count is
-			// omitempty, it will set the value to nil and cause a nil pointer dereference
-			// panic so we work around this case
-			if wp.Count == nil {
-				continue
-
-			}
-			expectedNodeCount += int(*wp.Count)
+		for _, machineset := range machinesets.Items {
+			expectedNodeCount += int(*machineset.Spec.Replicas)
 		}
-
 		// another hack: we don't currently instantaneously expect all nodes to
 		// be ready, it could be that the workaround operator is busy rotating
 		// them, which we don't currently wait for on create
@@ -76,7 +67,7 @@ var _ = Describe("Scale nodes", func() {
 		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		if instance.Spec.Features.ReconcileMachineSet {
+		if instance.Spec.OperatorFlags.GetSimpleBoolean(machineset.ENABLED) {
 			Skip("MachineSet Controller is enabled, skipping this test")
 		}
 

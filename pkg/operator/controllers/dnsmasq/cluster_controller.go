@@ -23,6 +23,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
+const (
+	CONFIG_NAMESPACE string = "aro.dnsmasq"
+	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+)
+
 type ClusterReconciler struct {
 	log *logrus.Entry
 
@@ -48,7 +53,8 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.Features.ReconcileDNSMasq {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+		// controller is disabled
 		return reconcile.Result{}, nil
 	}
 

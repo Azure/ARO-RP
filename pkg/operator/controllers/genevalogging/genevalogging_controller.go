@@ -27,6 +27,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
+const (
+	CONFIG_NAMESPACE string = "aro.genevalogging"
+	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+	// full pullspec of fluentbit image
+	FLUENTBIT_PULLSPEC string = CONFIG_NAMESPACE + ".fluentbit.pullSpec"
+	// full pullspec of mdsd image
+	MDSD_PULLSPEC string = CONFIG_NAMESPACE + ".mdsd.pullSpec"
+)
+
 // Reconciler reconciles a Cluster object
 type Reconciler struct {
 	log *logrus.Entry
@@ -50,12 +59,13 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli 
 
 // Reconcile the genevalogging deployment.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, request.Name, metav1.GetOptions{})
+	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.Features.ReconcileGenevaLogging {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+		// controller is disabled
 		return reconcile.Result{}, nil
 	}
 

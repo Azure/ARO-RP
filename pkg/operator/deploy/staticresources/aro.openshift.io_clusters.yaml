@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.6.2
+    controller-gen.kubebuilder.io/version: v0.6.3-0.20210916130746-94401651a6c3
   creationTimestamp: null
   name: clusters.aro.openshift.io
 spec:
@@ -54,32 +54,6 @@ spec:
                 type: string
               domain:
                 type: string
-              features:
-                description: FeaturesSpec defines ARO operator feature gates
-                properties:
-                  reconcileAlertWebhook:
-                    type: boolean
-                  reconcileBanner:
-                    type: boolean
-                  reconcileDNSMasq:
-                    type: boolean
-                  reconcileGenevaLogging:
-                    type: boolean
-                  reconcileMachineSet:
-                    type: boolean
-                  reconcileMonitoringConfig:
-                    type: boolean
-                  reconcileNodeDrainer:
-                    type: boolean
-                  reconcilePullSecret:
-                    type: boolean
-                  reconcileRouteFix:
-                    type: boolean
-                  reconcileSubnets:
-                    type: boolean
-                  reconcileWorkaroundsController:
-                    type: boolean
-                type: object
               gatewayDomains:
                 items:
                   type: string
@@ -123,6 +97,11 @@ spec:
                 type: object
               location:
                 type: string
+              operatorflags:
+                additionalProperties:
+                  type: string
+                description: OperatorFlags defines feature gates for the ARO Operator
+                type: object
               resourceId:
                 description: ResourceID is the Azure resourceId of the cluster
                 type: string

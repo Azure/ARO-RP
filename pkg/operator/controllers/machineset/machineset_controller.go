@@ -24,6 +24,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
+const (
+	CONFIG_NAMESPACE string = "aro.machineset"
+	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+)
+
 type Reconciler struct {
 	log *logrus.Entry
 
@@ -46,7 +51,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.Features.ReconcileMachineSet {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+		// controller is disabled
 		return reconcile.Result{}, nil
 	}
 

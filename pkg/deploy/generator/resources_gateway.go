@@ -495,8 +495,10 @@ if [ -f \$NEW_CERT_FILE ]; then
   else
     sed -i -ne '1,/END CERTIFICATE/ p' \$NEW_CERT_FILE
   fi
-  chmod 0600 \$NEW_CERT_FILE
-  mv \$NEW_CERT_FILE \$CURRENT_CERT_FILE
+  if ! diff $NEW_CERT_FILE $CURRENT_CERT_FILE >/dev/null 2>&1; then
+    chmod 0600 \$NEW_CERT_FILE
+    mv \$NEW_CERT_FILE \$CURRENT_CERT_FILE
+  fi
 else
   echo Failed to refresh certificate for \$COMPONENT && exit 1
 fi
@@ -510,6 +512,29 @@ systemctl enable download-mdm-credentials.timer
 /usr/local/bin/download-credentials.sh mdsd
 /usr/local/bin/download-credentials.sh mdm
 MDSDCERTIFICATESAN=$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN=//')
+
+cat >/etc/systemd/system/watch-mdm-credentials.service <<EOF
+[Unit]
+Description=Watch for changes in mdm.pem and restarts the mdm service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart mdm.service
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+cat >/etc/systemd/system/watch-mdm-credentials.path <<EOF
+[Path]
+PathModified=/etc/mdm.pem
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable watch-mdm-credentials.path
+systemctl start watch-mdm-credentials.path
 
 mkdir /etc/systemd/system/mdsd.service.d
 cat >/etc/systemd/system/mdsd.service.d/override.conf <<'EOF'
@@ -554,8 +579,8 @@ cat >/etc/default/vsa-nodescan-agent.config <<EOF
   }
 EOF
 
-# we start a cron job to run every hour to ensure the said directory is accessible 
-# by the correct user as it gets created by root and may cause a race condition 
+# we start a cron job to run every hour to ensure the said directory is accessible
+# by the correct user as it gets created by root and may cause a race condition
 # where root owns the dir instead of syslog
 # TODO: https://msazure.visualstudio.com/AzureRedHatOpenShift/_workitems/edit/12591207
 cat >/etc/cron.d/mdsd-chown-workaround <<EOF

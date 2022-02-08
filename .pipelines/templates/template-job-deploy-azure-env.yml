@@ -5,14 +5,13 @@ parameters:
   azureDevOpsJSONSPN: ''
   billingE2EPipelineName: ''
   billingE2EBranchName: ''
+  configVersion: ''
   configFileName: ''
   e2eSubscription: ''
   environment: ''
   locations: []
   rpMode: ''
   vsoProjectID: ''
-  vsoConfigPipelineID: ''
-  vsoConfigBuildID: ''
   vsoDeployerPipelineID: ''
   vsoDeployerBuildID: ''
 
@@ -23,25 +22,16 @@ jobs:
     - template: ../vars.yml
     pool:
       name: ARO-CI
+      demands: go-1.16
     environment: ${{ parameters.environment }}
     strategy:
       runOnce:
         deploy:
           steps:
-          - task: DownloadBuildArtifacts@0
-            inputs:
-              buildType: specific
-              project: ${{ parameters.vsoProjectID }}
-              pipeline: ${{ parameters.vsoConfigPipelineID }}
-              ${{ if eq(parameters.vsoConfigBuildID, 'latest') }}:
-                buildVersionToDownload: latestFromBranch
-                branchName: refs/heads/master
-              ${{ if ne(parameters.vsoConfigBuildID, 'latest') }}:
-                buildVersionToDownload: specific
-                buildId: ${{ parameters.vsoConfigBuildID }}
-              downloadType: specific
-              downloadPath: $(System.ArtifactsDirectory)/config
-            displayName: Download Config
+          - ${{ if eq(parameters.configVersion, 'latest') }}:
+            - checkout: git://AzureRedHatOpenShift/RP-Config@refs/heads/master
+          - ${{ if ne(parameters.configVersion, 'latest') }}:
+            - checkout: git://AzureRedHatOpenShift/RP-Config@refs/tags/${{parameters.configVersion}}
           - task: DownloadBuildArtifacts@0
             inputs:
               buildType: specific
@@ -58,7 +48,7 @@ jobs:
             displayName: Download Deployer
           - template: ./template-deploy-azure-env.yml
             parameters:
-              configDirectory: $(System.ArtifactsDirectory)/config/drop/deploy
+              configDirectory: $(Agent.BuildDirectory)/s/deploy
               deployerDirectory: $(System.ArtifactsDirectory)/deployer/drop
               configFileName: ${{ parameters.configFileName }}
               location: ${{ location }}

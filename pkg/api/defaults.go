@@ -36,5 +36,55 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 				doc.OpenShiftCluster.Properties.MaintenanceTask = MaintenanceTaskEverything
 			}
 		}
+		// If there's no operator flags, set the default ones
+		if doc.OpenShiftCluster.Properties.OperatorFlags == nil {
+			doc.OpenShiftCluster.Properties.OperatorFlags = DefaultOperatorFlags.Copy()
+		}
 	}
+}
+
+// shorthand
+const FLAG_TRUE string = "true"
+const FLAG_FALSE string = "false"
+
+// Default flags for new clusters & ones that have not been AdminUpdated
+var DefaultOperatorFlags OperatorFlags = OperatorFlags{
+	"aro.alertwebhook.enabled": FLAG_TRUE,
+
+	"aro.azuresubnets.enabled": FLAG_TRUE,
+
+	"aro.banner.enabled": FLAG_FALSE,
+
+	"aro.checker.enabled": FLAG_TRUE,
+
+	"aro.dnsmasq.enabled": FLAG_TRUE,
+
+	"aro.genevalogging.enabled": FLAG_TRUE,
+
+	"aro.imageconfig.enabled": FLAG_TRUE,
+
+	"aro.machine.enabled": FLAG_TRUE,
+
+	"aro.machineset.enabled": FLAG_TRUE,
+
+	"aro.monitoring.enabled": FLAG_TRUE,
+
+	"aro.nodedrainer.enabled": FLAG_TRUE,
+
+	"aro.pullsecret.enabled": FLAG_TRUE,
+	"aro.pullsecret.managed": FLAG_TRUE,
+
+	"aro.rbac.enabled": FLAG_TRUE,
+
+	"aro.routefix.enabled": FLAG_TRUE,
+
+	"aro.workaround.enabled": FLAG_TRUE,
+}
+
+func (d OperatorFlags) Copy() OperatorFlags {
+	newFlags := make(OperatorFlags)
+	for k, v := range d {
+		newFlags[k] = v
+	}
+	return newFlags
 }

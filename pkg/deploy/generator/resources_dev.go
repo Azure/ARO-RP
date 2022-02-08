@@ -346,8 +346,10 @@ cat >/home/cloud-user/agent/.path <<'EOF'
 /usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/cloud-user/.local/bin:/home/cloud-user/bin
 EOF
 
+# HACK for XDG_RUNTIME_DIR: https://github.com/containers/podman/issues/427
 cat >/home/cloud-user/agent/.env <<'EOF'
 GOLANG_FIPS=1
+XDG_RUNTIME_DIR=/run/user/1000
 EOF
 
 cat >/etc/cron.hourly/tmpwatch <<'EOF'
@@ -386,6 +388,9 @@ chmod +x /usr/local/bin/clean-tmp.sh
 
 echo "0 0 */1 * * /usr/local/bin/clean-tmp.sh" >> cron
 echo "* * * * * /usr/local/bin/fix-podman-pause.sh" >> cron
+
+# HACK - https://github.com/containers/podman/issues/9002
+echo "@reboot loginctl enable-linger cloud-user" >> cron
 
 crontab cron
 rm cron

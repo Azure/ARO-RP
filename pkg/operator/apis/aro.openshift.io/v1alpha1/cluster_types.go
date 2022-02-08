@@ -4,6 +4,8 @@ package v1alpha1
 // Licensed under the Apache License 2.0.
 
 import (
+	"strings"
+
 	operatorv1 "github.com/openshift/api/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -48,6 +50,29 @@ type InternetCheckerSpec struct {
 	URLs []string `json:"urls,omitempty"`
 }
 
+type OperatorFlags map[string]string
+
+func (f OperatorFlags) GetWithDefault(key string, sentinel string) string {
+	val, ext := f[key]
+	if !ext {
+		return sentinel
+	}
+	return val
+}
+
+func (f OperatorFlags) GetSimpleBoolean(key string) bool {
+	v, ext := f[key]
+	if ext {
+		// Only accept a literal true, rather than accepting anything other than
+		// literal false as true
+		// TODO: Is this the best behaviour?
+		if strings.EqualFold(v, "true") {
+			return true
+		}
+	}
+	return false
+}
+
 // ClusterSpec defines the desired state of Cluster
 type ClusterSpec struct {
 	// ResourceID is the Azure resourceId of the cluster
@@ -68,22 +93,8 @@ type ClusterSpec struct {
 	GatewayPrivateEndpointIP string              `json:"gatewayPrivateEndpointIP,omitempty"`
 	Banner                   Banner              `json:"banner,omitempty"`
 
-	Features FeaturesSpec `json:"features,omitempty"`
-}
-
-// FeaturesSpec defines ARO operator feature gates
-type FeaturesSpec struct {
-	ReconcileSubnets               bool `json:"reconcileSubnets,omitempty"`
-	ReconcileAlertWebhook          bool `json:"reconcileAlertWebhook,omitempty"`
-	ReconcileDNSMasq               bool `json:"reconcileDNSMasq,omitempty"`
-	ReconcileGenevaLogging         bool `json:"reconcileGenevaLogging,omitempty"`
-	ReconcileMachineSet            bool `json:"reconcileMachineSet,omitempty"`
-	ReconcileMonitoringConfig      bool `json:"reconcileMonitoringConfig,omitempty"`
-	ReconcileNodeDrainer           bool `json:"reconcileNodeDrainer,omitempty"`
-	ReconcilePullSecret            bool `json:"reconcilePullSecret,omitempty"`
-	ReconcileRouteFix              bool `json:"reconcileRouteFix,omitempty"`
-	ReconcileWorkaroundsController bool `json:"reconcileWorkaroundsController,omitempty"`
-	ReconcileBanner                bool `json:"reconcileBanner,omitempty"`
+	// OperatorFlags defines feature gates for the ARO Operator
+	OperatorFlags OperatorFlags `json:"operatorflags,omitempty"`
 }
 
 // Banner defines if a Banner should be shown to the customer
