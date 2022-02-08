@@ -32,4 +32,4 @@ stages:
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
       imageTag: ${{ parameters.aroImageTag }}
-      rpImageAcr: ${{ parameters.rpImageAcr }}
+      rpImageAcr: ${{ variables.rpImageAcr }}
