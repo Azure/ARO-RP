@@ -34,6 +34,7 @@ clean:
 	rm -rf python/az/aro/{aro.egg-info,build,dist} aro
 	find python -type f -name '*.pyc' -delete
 	find python -type d -name __pycache__ -delete
+	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 client: generate
 	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview
