@@ -4,11 +4,14 @@ pr: none
 
 parameters:
 - name: location
-- name: vsoConfigBuildID
 - name: aroImageTag
+
+variables:
+- group: Prod CI Credentials
+- group: Prod E2E Non-Secret Variables
+- group: PROD-INT E2E Credentials
 - name: rpImageAcr
-  type: string
-  default: arosvc
+  value: arosvc
 
 jobs:
 - template: ./templates/template-job-deploy-azure-env-tag.yml
@@ -26,4 +29,4 @@ jobs:
     billingE2EPipelineName: $(billing-e2e-pipeline-name)
     billingE2EBranchName: $(billing-e2e-branch-name)
     imageTag: ${{ parameters.aroImageTag }}
-    rpImageAcr: ${{ parameters.rpImageAcr }}
+    rpImageAcr: ${{ variables.rpImageAcr }}
