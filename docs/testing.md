@@ -8,6 +8,14 @@ To run RP unit tests:
 make test-go
 ```
 
+To Run Go tests with coverage:
+
+```bash
+# first navigate to your directory with the code you'd like to see coverage on
+t="/tmp/go-cover.$$.tmp" 
+go test -coverprofile=$t $@ && go tool cover -html=$t && unlink $t
+```
+
 To run python client and `az aro` CLI tests:
 
 ```bash

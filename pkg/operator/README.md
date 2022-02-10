@@ -67,7 +67,7 @@ make admin.kubeconfig
 export KUBECONFIG=$(pwd)/admin.kubeconfig
 oc scale -n openshift-azure-operator deployment/aro-operator-master --replicas=0
 make generate
-go run ./cmd/aro operator master
+go run -tags aro ./cmd/aro operator master
 ```
 
 ### How to run a custom operator image

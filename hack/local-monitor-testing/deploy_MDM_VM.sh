@@ -45,7 +45,7 @@ PUBLICIP=$( az vm list-ip-addresses --name $VMName -g $RESOURCEGROUP | jq -r '.[
 echo "Found IP $PUBLICIP"
 
 scp $BASE/secrets/rp-metrics-int.pem $CLOUDUSER@$PUBLICIP:mdm.pem
-scp $BASE/hack/local-monitor-testing-MACOS/2configureRemote.sh $CLOUDUSER@$PUBLICIP:
+scp $BASE/hack/local-monitor-testing/configureRemote.sh $CLOUDUSER@$PUBLICIP:
 
 ssh $CLOUDUSER@$PUBLICIP "sudo cp mdm.pem /etc/mdm.pem"
 ssh $CLOUDUSER@$PUBLICIP "sudo ./configureRemote.sh"
