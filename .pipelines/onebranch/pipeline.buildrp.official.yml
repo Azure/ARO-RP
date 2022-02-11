@@ -33,8 +33,8 @@ extends:
   template: v2/OneBranch.Official.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
   parameters:
     globalSdl: # https://aka.ms/obpipelines/sdl
-      # tsa:
-      #  enabled: true # SDL results of non-official builds aren't uploaded to TSA by default.
+      tsa:
+        enabled: true # SDL results of non-official builds aren't uploaded to TSA by default.
       # credscan:
       #   suppressionsFile: $(Build.SourcesDirectory)\.config\CredScanSuppressions.json
       disableLegacyManifest: true
