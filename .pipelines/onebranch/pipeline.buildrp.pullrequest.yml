@@ -13,7 +13,7 @@ pr: none
 
 variables:
   Cdp_Definition_Build_Count: $[counter('', 0)] # needed for onebranch.pipeline.version task https://aka.ms/obpipelines/versioning
-  LinuxContainerImage: cdpxlinux.azurecr.io/user/aro/ubi8-gotoolset-1.14.12:2021.10.12 # Docker image which is used to build the project https://aka.ms/obpipelines/containers
+  LinuxContainerImage: cdpxlinux.azurecr.io/user/aro/ubi8-gotoolset-1.16.12-4:20220202 # Docker image which is used to build the project https://aka.ms/obpipelines/containers
   Debian_Frontend: noninteractive
 
 resources:
