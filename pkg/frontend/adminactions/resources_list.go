@@ -20,7 +20,7 @@ import (
 func (a *azureActions) ResourcesList(ctx context.Context) ([]byte, error) {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	resources, err := a.resources.ListByResourceGroup(ctx, clusterRGName, "", "", nil)
+	resources, err := a.resources.ListByResourceGroup(ctx, clusterRGName, "$filter=resourceType ne 'Microsoft.Compute/snapshots'", "", nil)
 	if err != nil {
 		return nil, err
 	}
