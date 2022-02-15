@@ -6,6 +6,7 @@ package subnets
 import (
 	"context"
 	"testing"
+	"strconv"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -35,16 +36,16 @@ var (
 	subnetResourceIdWorker = "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
 )
 
-func getValidClusterInstance() *arov1alpha1.Cluster {
+func getValidClusterInstance(operatorFlagEnabled bool, operatorFlagNSG bool, operatorFlagServiceEndpoint bool) *arov1alpha1.Cluster {
 	return &arov1alpha1.Cluster{
 		Spec: arov1alpha1.ClusterSpec{
 			ArchitectureVersion:    0,
 			ClusterResourceGroupID: clusterResourceGroupId,
 			InfraID:                infraId,
 			OperatorFlags: arov1alpha1.OperatorFlags{
-				ENABLED:                  "true",
-				NSG_MANAGED:              "true",
-				SERVICE_ENDPOINT_MANAGED: "true",
+				ENABLED:                  strconv.FormatBool(operatorFlagEnabled),
+				NSG_MANAGED:              strconv.FormatBool(operatorFlagNSG),
+				SERVICE_ENDPOINT_MANAGED: strconv.FormatBool(operatorFlagServiceEndpoint),
 			},
 		},
 	}
@@ -75,10 +76,41 @@ func TestReconcileManager(t *testing.T) {
 		name       string
 		subnetMock func(*mock_subnet.MockManager, *mock_subnet.MockKubeManager)
 		instance   func(*arov1alpha1.Cluster)
+		operatorFlagEnabled bool
+		operatorFlagNSG bool
+		operatorFlagServiceEndpoint bool
 		wantErr    error
 	}{
 		{
+			name: "Operator Disabled - no change",
+			operatorFlagEnabled: false,
+			operatorFlagNSG: false,
+			operatorFlagServiceEndpoint: false,
+			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
+				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
+					{
+						ResourceID: subnetResourceIdMaster,
+						IsMaster:   true,
+					},
+					{
+						ResourceID: subnetResourceIdWorker,
+						IsMaster:   false,
+					},
+				}, nil)
+
+				subnetObjectMaster := getValidSubnet()
+				mock.EXPECT().Get(gomock.Any(), subnetResourceIdMaster).Return(subnetObjectMaster, nil).MaxTimes(2)
+
+				subnetObjectWorker := getValidSubnet()
+				subnetObjectWorker.NetworkSecurityGroup.ID = to.StringPtr(nsgv1NodeResourceId)
+				mock.EXPECT().Get(gomock.Any(), subnetResourceIdWorker).Return(subnetObjectWorker, nil).MaxTimes(2)
+			},
+		},
+		{
 			name: "Architecture V1 - no change",
+			operatorFlagEnabled: true,
+			operatorFlagNSG: true,
+			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
@@ -101,6 +133,9 @@ func TestReconcileManager(t *testing.T) {
 		},
 		{
 			name: "Architecture V1 - all fixup",
+			operatorFlagEnabled: true,
+			operatorFlagNSG: true,
+			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
@@ -133,6 +168,9 @@ func TestReconcileManager(t *testing.T) {
 		},
 		{
 			name: "Architecture V1 - node only fixup",
+			operatorFlagEnabled: true,
+			operatorFlagNSG: true,
+			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
@@ -160,6 +198,9 @@ func TestReconcileManager(t *testing.T) {
 		},
 		{
 			name: "Architecture V2 - no fixups",
+			operatorFlagEnabled: true,
+			operatorFlagNSG: true,
+			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
@@ -187,6 +228,9 @@ func TestReconcileManager(t *testing.T) {
 		},
 		{
 			name: "Architecture V2 - all nodes fixup",
+			operatorFlagEnabled: true,
+			operatorFlagNSG: true,
+			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
@@ -222,6 +266,9 @@ func TestReconcileManager(t *testing.T) {
 		},
 		{
 			name: "Architecture V2 - endpoint fixup",
+			operatorFlagEnabled: true,
+			operatorFlagNSG: true,
+			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
@@ -280,7 +327,7 @@ func TestReconcileManager(t *testing.T) {
 				tt.subnetMock(subnets, kubeSubnets)
 			}
 
-			instance := getValidClusterInstance()
+			instance := getValidClusterInstance(tt.operatorFlagEnabled, tt.operatorFlagNSG, tt.operatorFlagServiceEndpoint)
 			if tt.instance != nil {
 				tt.instance(instance)
 			}
