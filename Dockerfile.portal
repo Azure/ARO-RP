@@ -1,0 +1,19 @@
+FROM registry.access.redhat.com/ubi8/ubi-minimal
+
+RUN set -eux \
+	&& microdnf install \
+		openssh \
+		npm
+
+WORKDIR /data
+
+COPY /portal/ /data/
+
+RUN set -eux \
+    && npm install
+
+RUN set -eux \
+	&& ln -sf /data/node_modules/eslint/bin/eslint.js /usr/bin/eslint
+
+ENTRYPOINT ["eslint"]
+CMD ["--help"]
