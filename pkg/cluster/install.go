@@ -292,7 +292,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
-	m.imageregistryclient, err = imageregistryclient.NewForConfig(restConfig)
+	m.imageregistrycli, err = imageregistryclient.NewForConfig(restConfig)
 	return err
 }
 

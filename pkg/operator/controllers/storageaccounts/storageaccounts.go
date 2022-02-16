@@ -22,7 +22,7 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 		return err
 	}
 
-	rc, err := r.imageregistryclient.ImageregistryV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
+	rc, err := r.imageregistrycli.ImageregistryV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}

@@ -5,8 +5,8 @@ package subnets
 
 import (
 	"context"
-	"testing"
 	"strconv"
+	"testing"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -73,18 +73,18 @@ func TestReconcileManager(t *testing.T) {
 	log := logrus.NewEntry(logrus.StandardLogger())
 
 	for _, tt := range []struct {
-		name       string
-		subnetMock func(*mock_subnet.MockManager, *mock_subnet.MockKubeManager)
-		instance   func(*arov1alpha1.Cluster)
-		operatorFlagEnabled bool
-		operatorFlagNSG bool
+		name                        string
+		subnetMock                  func(*mock_subnet.MockManager, *mock_subnet.MockKubeManager)
+		instance                    func(*arov1alpha1.Cluster)
+		operatorFlagEnabled         bool
+		operatorFlagNSG             bool
 		operatorFlagServiceEndpoint bool
-		wantErr    error
+		wantErr                     error
 	}{
 		{
-			name: "Operator Disabled - no change",
-			operatorFlagEnabled: false,
-			operatorFlagNSG: false,
+			name:                        "Operator Disabled - no change",
+			operatorFlagEnabled:         false,
+			operatorFlagNSG:             false,
 			operatorFlagServiceEndpoint: false,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
@@ -107,9 +107,9 @@ func TestReconcileManager(t *testing.T) {
 			},
 		},
 		{
-			name: "Architecture V1 - no change",
-			operatorFlagEnabled: true,
-			operatorFlagNSG: true,
+			name:                        "Architecture V1 - no change",
+			operatorFlagEnabled:         true,
+			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
@@ -132,9 +132,9 @@ func TestReconcileManager(t *testing.T) {
 			},
 		},
 		{
-			name: "Architecture V1 - all fixup",
-			operatorFlagEnabled: true,
-			operatorFlagNSG: true,
+			name:                        "Architecture V1 - all fixup",
+			operatorFlagEnabled:         true,
+			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
@@ -167,9 +167,9 @@ func TestReconcileManager(t *testing.T) {
 			},
 		},
 		{
-			name: "Architecture V1 - node only fixup",
-			operatorFlagEnabled: true,
-			operatorFlagNSG: true,
+			name:                        "Architecture V1 - node only fixup",
+			operatorFlagEnabled:         true,
+			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
@@ -197,9 +197,9 @@ func TestReconcileManager(t *testing.T) {
 			},
 		},
 		{
-			name: "Architecture V2 - no fixups",
-			operatorFlagEnabled: true,
-			operatorFlagNSG: true,
+			name:                        "Architecture V2 - no fixups",
+			operatorFlagEnabled:         true,
+			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
@@ -227,9 +227,9 @@ func TestReconcileManager(t *testing.T) {
 			},
 		},
 		{
-			name: "Architecture V2 - all nodes fixup",
-			operatorFlagEnabled: true,
-			operatorFlagNSG: true,
+			name:                        "Architecture V2 - all nodes fixup",
+			operatorFlagEnabled:         true,
+			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 
@@ -265,9 +265,9 @@ func TestReconcileManager(t *testing.T) {
 			},
 		},
 		{
-			name: "Architecture V2 - endpoint fixup",
-			operatorFlagEnabled: true,
-			operatorFlagNSG: true,
+			name:                        "Architecture V2 - endpoint fixup",
+			operatorFlagEnabled:         true,
+			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 

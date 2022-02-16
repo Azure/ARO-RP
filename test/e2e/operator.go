@@ -379,7 +379,6 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 	}
 
 	BeforeEach(func() {
-		//enableReconcileSubnet() // already enabled in the PR
 		gatherNetworkInfo()
 		createE2ENSG()
 	})

@@ -99,6 +99,8 @@ func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resou
 	}
 
 	// Prod includes a gateway rule as well
+	// Once we reach a PLS limit (1000) within a vnet , we may need some refactoring here
+	// https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/azure-subscription-service-limits#private-link-limits
 	if !m.env.IsLocalDevelopmentMode() {
 		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
 			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.GatewayResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/gateway-vnet/subnets/gateway-subnet"),
@@ -127,13 +129,15 @@ func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resou
 	}
 
 	// In development API calls originates from user laptop so we allow all.
-	// TODO(mjudeikis): Move to development on VPN so we can make this IPRule
+	// TODO: Move to development on VPN so we can make this IPRule.  Will be done as part of Simply secure v2 work
 	if m.env.IsLocalDevelopmentMode() {
 		sa.NetworkRuleSet.DefaultAction = mgmtstorage.DefaultActionAllow
 	}
-	// When migrating storage accounts for old cluster we are not able to change
-	// encryption. For this we have this encryption flag. We not gonna add this
+	// When migrating storage accounts for old clusters we are not able to change
+	// encryption which is why we have this encryption flag. We will not add this
 	// retrospectively to old clusters
+	// If a storage account already has encryption enabled and the encrypted
+	// bool is set to false, it will still maintain the encryption on the storage account.
 	if encrypted {
 		sa.AccountProperties.Encryption = &mgmtstorage.Encryption{
 			RequireInfrastructureEncryption: to.BoolPtr(true),

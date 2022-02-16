@@ -89,7 +89,7 @@ func (m *manager) populateRegistryStorageAccountName(ctx context.Context) error 
 		return nil
 	}
 
-	rc, err := m.imageregistryclient.ImageregistryV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
+	rc, err := m.imageregistrycli.ImageregistryV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}

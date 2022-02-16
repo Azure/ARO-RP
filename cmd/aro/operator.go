@@ -101,7 +101,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	imageregistryclient, err := imageregistryclient.NewForConfig(restConfig)
+	imageregistrycli, err := imageregistryclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (storageaccounts.NewReconciler(
 			log.WithField("controller", controllers.StorageAccountsControllerName),
-			arocli, maocli, kubernetescli, imageregistryclient)).SetupWithManager(mgr); err != nil {
+			arocli, maocli, kubernetescli, imageregistrycli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", controllers.StorageAccountsControllerName, err)
 		}
 	}

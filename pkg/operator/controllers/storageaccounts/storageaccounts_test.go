@@ -5,8 +5,8 @@ package storageaccounts
 
 import (
 	"context"
-	"testing"
 	"strconv"
+	"testing"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -74,15 +74,15 @@ func TestReconcileManager(t *testing.T) {
 	log := logrus.NewEntry(logrus.StandardLogger())
 
 	for _, tt := range []struct {
-		name                string
-		mocks               func(*mock_storage.MockAccountsClient, *mock_subnet.MockKubeManager)
-		imageregistryclient imageregistryclient.Interface
-		instance func(*arov1alpha1.Cluster)
-		operatorFlag  bool
-		wantErr  error
+		name             string
+		mocks            func(*mock_storage.MockAccountsClient, *mock_subnet.MockKubeManager)
+		imageregistrycli imageregistryclient.Interface
+		instance         func(*arov1alpha1.Cluster)
+		operatorFlag     bool
+		wantErr          error
 	}{
 		{
-			name: "Operator Flag enabled - nothing to do",
+			name:         "Operator Flag enabled - nothing to do",
 			operatorFlag: true,
 			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager) {
 				// cluster subnets
@@ -103,7 +103,7 @@ func TestReconcileManager(t *testing.T) {
 				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
 
 			},
-			imageregistryclient: imageregistryfake.NewSimpleClientset(
+			imageregistrycli: imageregistryfake.NewSimpleClientset(
 				&imageregistryv1.Config{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster",
@@ -119,7 +119,7 @@ func TestReconcileManager(t *testing.T) {
 			),
 		},
 		{
-			name: "Operator Flag disabled - nothing to do",
+			name:         "Operator Flag disabled - nothing to do",
 			operatorFlag: false,
 			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager) {
 				// cluster subnets
@@ -140,7 +140,7 @@ func TestReconcileManager(t *testing.T) {
 				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
 
 			},
-			imageregistryclient: imageregistryfake.NewSimpleClientset(
+			imageregistrycli: imageregistryfake.NewSimpleClientset(
 				&imageregistryv1.Config{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster",
@@ -156,7 +156,7 @@ func TestReconcileManager(t *testing.T) {
 			),
 		},
 		{
-			name: "Operator Flag enabled - all rules to all accounts",
+			name:         "Operator Flag enabled - all rules to all accounts",
 			operatorFlag: true,
 			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager) {
 
@@ -195,7 +195,7 @@ func TestReconcileManager(t *testing.T) {
 				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
 				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Eq(updated))
 			},
-			imageregistryclient: imageregistryfake.NewSimpleClientset(
+			imageregistrycli: imageregistryfake.NewSimpleClientset(
 				&imageregistryv1.Config{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "cluster",
@@ -228,12 +228,12 @@ func TestReconcileManager(t *testing.T) {
 			}
 
 			r := reconcileManager{
-				log:                 log,
-				instance:            instance,
-				subscriptionID:      subscriptionId,
-				storage:             storage,
-				kubeSubnets:         kubeSubnet,
-				imageregistryclient: tt.imageregistryclient,
+				log:              log,
+				instance:         instance,
+				subscriptionID:   subscriptionId,
+				storage:          storage,
+				kubeSubnets:      kubeSubnet,
+				imageregistrycli: tt.imageregistrycli,
 			}
 
 			err := r.reconcileAccounts(context.Background())
