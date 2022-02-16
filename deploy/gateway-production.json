@@ -260,7 +260,7 @@
                                 "name": "gateway-vmss-nic",
                                 "properties": {
                                     "primary": true,
-                                    "enableAcceleratedNetworking": true,
+                                    "enableAcceleratedNetworking": false,
                                     "ipConfigurations": [
                                         {
                                             "name": "gateway-vmss-ipconfig",

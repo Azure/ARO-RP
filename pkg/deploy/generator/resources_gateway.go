@@ -655,8 +655,10 @@ done
 							{
 								Name: to.StringPtr("gateway-vmss-nic"),
 								VirtualMachineScaleSetNetworkConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetNetworkConfigurationProperties{
-									Primary:                     to.BoolPtr(true),
-									EnableAcceleratedNetworking: to.BoolPtr(true),
+									Primary: to.BoolPtr(true),
+									// disabling accelerated networking due to egress issues
+									// see icm 271210960 (egress) and 274977072 (accelerated networking team)
+									EnableAcceleratedNetworking: to.BoolPtr(false),
 									IPConfigurations: &[]mgmtcompute.VirtualMachineScaleSetIPConfiguration{
 										{
 											Name: to.StringPtr("gateway-vmss-ipconfig"),
