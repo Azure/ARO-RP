@@ -8,7 +8,7 @@ parameters:
 variables:
 - group: Prod CI Credentials
 - group: Prod E2E Non-Secret Variables
-- group: PROD-INT E2E Credentials # This utilizes a variable group, don't update the spelling
+- group: PROD-INT E2E Credentials
 - name: rpImageAcr
   value: arosvc
 
