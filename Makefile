@@ -1,6 +1,8 @@
 SHELL = /bin/bash
+TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
-ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
+ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
+ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(COMMIT)
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
 FLUENTBIT_VERSION = 1.7.8-1
@@ -32,6 +34,7 @@ clean:
 	rm -rf python/az/aro/{aro.egg-info,build,dist} aro
 	find python -type f -name '*.pyc' -delete
 	find python -type d -name __pycache__ -delete
+	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 client: generate
 	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview
@@ -56,6 +59,12 @@ image-aro: aro e2e.test
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
 
+image-aro-tag: image-aro
+ifeq ($(TAG),)
+	$(error TAG undefined)
+endif
+	docker tag $(ARO_IMAGE) $(ARO_IMAGE_BASE):$(TAG)
+
 image-aro-multistage:
 	docker build --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) .
 
@@ -77,6 +86,12 @@ ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
 		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
 		docker push arointsvc.azurecr.io/aro:latest
 endif
+
+publish-image-aro-tag: image-aro-tag
+ifeq ($(TAG),)
+	$(error TAG undefined)
+endif
+	docker push $(ARO_IMAGE_BASE):$(TAG)
 
 publish-image-aro-multistage: image-aro-multistage
 	docker push $(ARO_IMAGE)
@@ -146,6 +161,9 @@ validate-go:
 	go vet ./...
 	go test -tags e2e -run ^$$ ./test/e2e/...
 
+validate-fips:
+	hack/fips/validate-fips.sh
+
 unit-test-go:
 	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro -coverprofile=cover.out ./...
 
@@ -165,4 +183,4 @@ vendor:
 	# See comments in the script for background on why we need it
 	hack/update-go-module-dependencies.sh
 
-.PHONY: admin.kubeconfig aro az clean client deploy dev-config.yaml discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy lint-go runlocal-rp proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go  unit-test-go coverage-go
+.PHONY: admin.kubeconfig aro az clean client deploy dev-config.yaml discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy lint-go runlocal-rp proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go  unit-test-go coverage-go validate-fips

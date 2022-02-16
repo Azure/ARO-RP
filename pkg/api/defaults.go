@@ -51,7 +51,7 @@ const FLAG_FALSE string = "false"
 var DefaultOperatorFlags OperatorFlags = OperatorFlags{
 	"aro.alertwebhook.enabled": FLAG_TRUE,
 
-	"aro.azuresubnets.enabled": FLAG_FALSE,
+	"aro.azuresubnets.enabled": FLAG_TRUE,
 
 	"aro.banner.enabled": FLAG_FALSE,
 
@@ -60,6 +60,8 @@ var DefaultOperatorFlags OperatorFlags = OperatorFlags{
 	"aro.dnsmasq.enabled": FLAG_TRUE,
 
 	"aro.genevalogging.enabled": FLAG_TRUE,
+
+	"aro.imageconfig.enabled": FLAG_TRUE,
 
 	"aro.machine.enabled": FLAG_TRUE,
 

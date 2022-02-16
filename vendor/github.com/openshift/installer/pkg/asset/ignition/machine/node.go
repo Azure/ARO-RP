@@ -15,7 +15,6 @@ import (
 	"github.com/openshift/installer/pkg/types"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
-	kubevirttypes "github.com/openshift/installer/pkg/types/kubevirt"
 	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
 	ovirttypes "github.com/openshift/installer/pkg/types/ovirt"
 	vspheretypes "github.com/openshift/installer/pkg/types/vsphere"
@@ -33,7 +32,7 @@ func pointerIgnitionConfig(installConfig *types.InstallConfig, aroDNSConfig *boo
 	// Update ignitionHost as necessary for platform
 	switch installConfig.Platform.Name() {
 	case azuretypes.Name:
-		if installConfig.Azure.ARO {
+		if installConfig.Azure.IsARO() {
 			ignitionHost = net.JoinHostPort(aroDNSConfig.APIIntIP, "22623")
 		}
 	case baremetaltypes.Name:
@@ -48,8 +47,6 @@ func pointerIgnitionConfig(installConfig *types.InstallConfig, aroDNSConfig *boo
 		if installConfig.VSphere.APIVIP != "" {
 			ignitionHost = net.JoinHostPort(installConfig.VSphere.APIVIP, "22623")
 		}
-	case kubevirttypes.Name:
-		ignitionHost = net.JoinHostPort(installConfig.Kubevirt.APIVIP, "22623")
 	}
 	return &igntypes.Config{
 		Ignition: igntypes.Ignition{

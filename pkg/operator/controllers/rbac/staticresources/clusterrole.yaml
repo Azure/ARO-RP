@@ -273,14 +273,6 @@ rules:
   - list
   - watch
 - apiGroups:
-  - extensions
-  resources:
-  - ingresses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
   - flowcontrol.apiserver.k8s.io
   resources:
   - flowschemas

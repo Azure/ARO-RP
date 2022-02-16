@@ -51,16 +51,16 @@ for x in vendor/github.com/openshift/*; do
 			;;
 
 		*)
-			go mod edit -replace ${x##vendor/}=$(go list -mod=mod -m ${x##vendor/}@release-4.8 | sed -e 's/ /@/')
+			go mod edit -replace ${x##vendor/}=$(go list -mod=mod -m ${x##vendor/}@release-4.9 | sed -e 's/ /@/')
 			;;
 	esac
 done
 
 for x in aws azure openstack; do
-	go mod edit -replace sigs.k8s.io/cluster-api-provider-$x=$(go list -mod=mod -m github.com/openshift/cluster-api-provider-$x@release-4.8 | sed -e 's/ /@/')
+	go mod edit -replace sigs.k8s.io/cluster-api-provider-$x=$(go list -mod=mod -m github.com/openshift/cluster-api-provider-$x@release-4.9 | sed -e 's/ /@/')
 done
 
-go mod edit -replace github.com/openshift/installer=$(go list -mod=mod -m github.com/jewzaam/installer-aro@release-4.8-azure | sed -e 's/ /@/')
+go mod edit -replace github.com/openshift/installer=$(go list -mod=mod -m github.com/jewzaam/installer-aro@release-4.9-azure | sed -e 's/ /@/')
 
 go get -u ./...
 

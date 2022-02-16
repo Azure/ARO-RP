@@ -19,12 +19,17 @@ type CloudProviderConfig struct {
 	NetworkSecurityGroupName string
 	VirtualNetworkName       string
 	SubnetName               string
+	ResourceManagerEndpoint  string
 	ARO                      bool
 }
 
 // JSON generates the cloud provider json config for the azure platform.
 // managed resource names are matching the convention defined by capz
 func (params CloudProviderConfig) JSON() (string, error) {
+
+	// Config requires type *bool for excludeMasterFromStandardLB, so define a variable here to get an address in the config.
+	excludeMasterFromStandardLB := false
+
 	config := config{
 		authConfig: authConfig{
 			Cloud:                       params.CloudName.Name(),
@@ -55,11 +60,19 @@ func (params CloudProviderConfig) JSON() (string, error) {
 		UseInstanceMetadata: true,
 		// default to standard load balancer, supports tcp resets on idle
 		// https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-tcp-reset
-		LoadBalancerSku: "standard",
+		LoadBalancerSku:             "standard",
+		ExcludeMasterFromStandardLB: &excludeMasterFromStandardLB,
 	}
 
 	if params.ARO {
 		config.authConfig.UseManagedIdentityExtension = false
+	}
+
+	if params.CloudName == azure.StackCloud {
+		config.authConfig.ResourceManagerEndpoint = params.ResourceManagerEndpoint
+		config.authConfig.UseManagedIdentityExtension = false
+		config.LoadBalancerSku = "basic"
+		config.UseInstanceMetadata = false
 	}
 
 	buff := &bytes.Buffer{}

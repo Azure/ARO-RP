@@ -30,6 +30,10 @@ import (
 const (
 	CONFIG_NAMESPACE string = "aro.genevalogging"
 	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+	// full pullspec of fluentbit image
+	FLUENTBIT_PULLSPEC string = CONFIG_NAMESPACE + ".fluentbit.pullSpec"
+	// full pullspec of mdsd image
+	MDSD_PULLSPEC string = CONFIG_NAMESPACE + ".mdsd.pullSpec"
 )
 
 // Reconciler reconciles a Cluster object

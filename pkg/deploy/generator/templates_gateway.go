@@ -70,9 +70,11 @@ func (g *generator) gatewayTemplate() *arm.Template {
 			p.DefaultValue = []string{
 				"eastasia",
 				"centralindia",
+				"centraluseuap",
 				"koreacentral",
 				"switzerlandnorth",
 				"northcentralus",
+				"uaenorth",
 			}
 		}
 		t.Parameters[param] = p

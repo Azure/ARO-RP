@@ -4,7 +4,7 @@
 # Currently the docker version on our RHEL7 VMSS uses a version which
 # does not support multi-stage builds.  This is a temporary stop-gap
 # until we get podman working without issue
-FROM registry.access.redhat.com/ubi7/go-toolset:1.14 AS builder
+FROM registry.access.redhat.com/ubi7/go-toolset:1.16.12 AS builder
 ENV GOOS=linux \
     GOPATH=/go/
 WORKDIR ${GOPATH}/src/github.com/Azure/ARO-RP

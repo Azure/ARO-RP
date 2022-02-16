@@ -52,6 +52,14 @@ type InternetCheckerSpec struct {
 
 type OperatorFlags map[string]string
 
+func (f OperatorFlags) GetWithDefault(key string, sentinel string) string {
+	val, ext := f[key]
+	if !ext {
+		return sentinel
+	}
+	return val
+}
+
 func (f OperatorFlags) GetSimpleBoolean(key string) bool {
 	v, ext := f[key]
 	if ext {

@@ -1,0 +1,11 @@
+{
+    "instanceUrl": "https://msazure.visualstudio.com/",
+    "projectName": "AzureRedHatOpenShift",
+    "areaPath": "AzureRedHatOpenShift\\MS ARO",
+    "iterationPath": "AzureRedHatOpenShift",
+    "codebaseName": "TFSMSAzureOneAgile_ARO-RP",
+    "template": "TFSMSAzureOneAgile",
+    "notificationAliases": [
+      "aromsfteng@microsoft.com"
+    ]
+}

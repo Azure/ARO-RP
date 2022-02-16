@@ -37,6 +37,7 @@ jobs:
 - job: Golang_Unit_Tests
   pool:
     name: ARO-CI
+    demands: go-1.16
   steps:
   - template: ./templates/template-checkout.yml
 
@@ -68,6 +69,11 @@ jobs:
       set -xe
       make unit-test-go
     displayName: 🧪 Run Golang unit tests
+
+  - script: |
+      set -xe
+      make validate-fips
+    displayName: 🕵️ Validate FIPS
 
   - task: PublishTestResults@2
     displayName: 📊 Publish tests results

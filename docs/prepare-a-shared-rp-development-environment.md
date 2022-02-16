@@ -45,7 +45,7 @@ locations.
    PULL_SECRET=...
    ```
 
-1. Install [Go 1.14](https://golang.org/dl) or later, if you haven't already.
+1. Install [Go 1.16](https://golang.org/dl) or later, if you haven't already.
 
 1. Install the [Azure
    CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), if you
@@ -325,6 +325,55 @@ locations.
    mv dev-client.* secrets
    ```
 
+## Certificate Rotation
+
+This section documents the steps taken to rotate certificates in dev and INT subscriptions
+
+1. Generate new certificates like we did in [AAD application](#aad-applications) and [certificate](#certificates) sections above
+
+2. Import newly generated certificates to keyvault. Note that this does not include firstparty certificates
+
+```bash
+source hack/devtools/deploy-shared-env.sh
+import_certs_secrets
+```
+
+3. Update the Azure VPN Gateway configuration. To do this, go to `Virtual Network Gateways` > `Point-to-site configuration` and the public cert data from `vpn-ca.pem`. Delete the old expired root certificate
+
+4. The OpenVPN configuration file needs to be manually updated. To achieve this, edit the `vpn-<region>.ovpn` file and add the `vpn-client` certificate and private key
+
+5. Next, we need to update certificates owned by FP Service Principal. Current configuration in DEV and INT is listed below
+
+Variable                 | Certificate Client | Subscription Type  | AAD App Name          | AAD App ID                           | Key Vault Name     |
+| ---                    | ---                | ---                | ---                   | ---                                  | ---                |
+| AZURE_FP_CLIENT_ID     | firstparty         | DEV                | aro-v4-fp-shared      | 1516efbc-0d48-4ade-a68e-a2872137fd79 | v4-eastus-svc      |
+| AZURE_ARM_CLIENT_ID    | arm                | DEV                | aro-v4-arm-shared     | 7c49e1a5-60ea-4353-9875-12bbcbf963b7 | v4-eastus-svc      |
+| AZURE_PORTAL_CLIENT_ID | portal-client      | DEV                | aro-v4-portal-shared  | f7912be2-16d3-4727-a6b7-4042ca854c98 | v4-eastus-svc      |
+| AZURE_FP_CLIENT_ID     | firstparty         | INT                | aro-int-sp            | 71cfb175-ea3a-444e-8c03-b119b2752ce4 | aro-int-eastus-svc |
+
+
+```bash
+# Import firstparty.pem to keyvault v4-eastus-svc
+az keyvault certificate import --vault-name <kv_name>  --name rp-firstparty --file firstparty.pem
+
+# Rotate certificates for SPs ARM, FP, and PORTAL (wherever applicable) 
+az ad app credential reset \
+   --id "$AZURE_ARM_CLIENT_ID" \
+   --cert "$(base64 -w0 <secrets/arm.crt)" >/dev/null
+
+az ad app credential reset \
+   --id "$AZURE_FP_CLIENT_ID" \
+   --cert "$(base64 -w0 <secrets/firstparty.crt)" >/dev/null
+
+az ad app credential reset \
+   --id "$AZURE_PORTAL_CLIENT_ID" \
+   --cert "$(base64 -w0 <secrets/portal-client.crt)" >/dev/null
+```
+
+5. The RP makes API calls to kubernetes cluster via a proxy VMSS agent. For the agent to get the updated certificates, this vm needs to be redeployed. Proxy VM is currently deployed by the `deploy_env_dev` function in `deploy-shared-env.sh`. It makes use of `env-development.json`
+
+6. Run `[rharosecrets|aroe2esecrets] make secrets-update` to upload it to your
+storage account so other people on your team can access it via `make secrets`
 
 # Environment file
 
