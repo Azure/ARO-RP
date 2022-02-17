@@ -719,7 +719,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
 							FeatureProfile: api.FeatureProfile{
-								GatewayEnabled: false,
+								GatewayEnabled: true,
 							},
 							OperatorFlags: api.DefaultOperatorFlags.Copy(),
 						},

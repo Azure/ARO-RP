@@ -83,6 +83,18 @@ var _ = Describe("Cluster smoke test", func() {
 			return ready.ServiceIsReady(svc)
 		}, 5*time.Minute, 10*time.Second).Should(BeTrue())
 	})
+
+	// mainly we want to test the gateway/egress functionality - this request for the image will travel from
+	// node > gateway > storage account of the registry.
+	Specify("Can access and use the internal container registry", func() {
+		ctx := context.Background()
+		deployName := "internal-registry-deploy"
+		err := createContainerFromInternalContainerRegistryImage(ctx, clients.Kubernetes, deployName)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = wait.PollImmediate(10*time.Second, 5*time.Minute, ready.CheckDeploymentIsReady(ctx, clients.Kubernetes.AppsV1().Deployments(testNamespace), deployName))
+		Expect(err).NotTo(HaveOccurred())
+	})
 })
 
 func createStatefulSet(ctx context.Context, cli kubernetes.Interface) error {
@@ -165,5 +177,42 @@ func createLoadBalancerService(ctx context.Context, cli kubernetes.Interface, na
 		},
 	}
 	_, err := cli.CoreV1().Services(testNamespace).Create(context.Background(), svc, metav1.CreateOptions{})
+	return err
+}
+
+func createContainerFromInternalContainerRegistryImage(ctx context.Context, cli kubernetes.Interface, name string) error {
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: testNamespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: to.Int32Ptr(1),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": name,
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"app": name},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "cli",
+							Image: "image-registry.openshift-image-registry.svc:5000/openshift/cli",
+							Command: []string{
+								"/bin/sh",
+								"-c",
+								"while true; do sleep 1; done",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	_, err := cli.AppsV1().Deployments(testNamespace).Create(context.Background(), deploy, metav1.CreateOptions{})
 	return err
 }
