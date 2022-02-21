@@ -83,7 +83,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 	}
 
-	return reconcile.Result{RequeueAfter: time.Hour, Requeue: true}, err
+	// We always requeue here:
+	// * Either immediately (with rate limiting) based on the error
+	//   when err != nil.
+	// * Or based on RequeueAfter when err == nil.
+	return reconcile.Result{RequeueAfter: time.Hour}, err
 }
 
 // SetupWithManager setup our manager
