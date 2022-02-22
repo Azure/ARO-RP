@@ -541,3 +541,9 @@ Development value: secrets/cluster-logging-int.pem
    ```bash
    vpn_configuration
    ```
+
+
+## Append Resource Group to Subscription Cleaner DenyList
+
+* We have subscription pruning that takes place routinely and need to add our resource group for the shared rp environment to the `denylist` of the cleaner:
+	* [https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29](https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29) 
