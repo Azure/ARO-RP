@@ -10,5 +10,5 @@ steps:
     az acr login --name "$RP_IMAGE_ACR"
     # azure checkouts commit, so removing master reference when publishing image
     export BRANCH=$(Build.SourceBranchName)
-    make publish-image-aro-tag
+    make publish-image-aro
   displayName: ⚙️ Build and push tagged images to ACR
