@@ -40,7 +40,7 @@ func (a *azureActions) ResourcesList(ctx context.Context) ([]byte, error) {
 		if apiVersion == "" {
 			// If custom resource types, or any we don't have listed in pkg/util/azureclient/apiversions.go,
 			// are returned, then skip over them instead of returning an error, otherwise it results in an
-			// HTTP 500 and prevents investigation into the known resource types.
+			// HTTP 500 and prevents the known resource types from being returned.
 			a.log.Warnf("API version not found for type %s", *res.Type)
 			continue
 		}
