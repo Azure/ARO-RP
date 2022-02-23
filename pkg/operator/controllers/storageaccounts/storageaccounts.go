@@ -22,6 +22,11 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 		return err
 	}
 
+	serviceSubnets := r.instance.Spec.ServiceSubnets
+	for _, subnet := range subnets {
+		serviceSubnets = append(serviceSubnets, subnet.ResourceID)
+	}
+
 	rc, err := r.imageregistrycli.ImageregistryV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -40,14 +45,13 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 			return err
 		}
 
-		for _, subnet := range subnets {
-			// if subnet.ID was found and we need to append
+		for _, subnet := range serviceSubnets {
+			// if subnet ResourceID was found and we need to append
 			found := false
 
 			if account.AccountProperties.NetworkRuleSet != nil && account.AccountProperties.NetworkRuleSet.VirtualNetworkRules != nil {
 				for _, rule := range *account.AccountProperties.NetworkRuleSet.VirtualNetworkRules {
-					// Name is confusing. In fact this is Subnet ResourceID...
-					if strings.EqualFold(to.String(rule.VirtualNetworkResourceID), subnet.ResourceID) {
+					if strings.EqualFold(to.String(rule.VirtualNetworkResourceID), subnet) {
 						found = true
 						break
 					}
@@ -57,7 +61,7 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 			// if rule was not found - we add it
 			if !found {
 				*account.AccountProperties.NetworkRuleSet.VirtualNetworkRules = append(*account.AccountProperties.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
-					VirtualNetworkResourceID: to.StringPtr(subnet.ResourceID),
+					VirtualNetworkResourceID: to.StringPtr(subnet),
 					Action:                   mgmtstorage.Allow,
 				})
 				changed = true

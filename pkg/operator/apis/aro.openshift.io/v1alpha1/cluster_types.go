@@ -93,6 +93,7 @@ type ClusterSpec struct {
 	GatewayDomains           []string            `json:"gatewayDomains,omitempty"`
 	GatewayPrivateEndpointIP string              `json:"gatewayPrivateEndpointIP,omitempty"`
 	Banner                   Banner              `json:"banner,omitempty"`
+	ServiceSubnets           []string            `json:"serviceSubnets,omitempty"`
 
 	// OperatorFlags defines feature gates for the ARO Operator
 	OperatorFlags OperatorFlags `json:"operatorflags,omitempty"`
