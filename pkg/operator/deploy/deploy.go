@@ -175,10 +175,12 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 		},
 	}
 
-	// TODO (BV): reenable gateway once we fix bugs
-	// if o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
-	// 	cluster.Spec.GatewayDomains = append(o.env.GatewayDomains(), o.oc.Properties.ImageRegistryStorageAccountName+".blob."+o.env.Environment().StorageEndpointSuffix)
-	// }
+	if o.oc.Properties.FeatureProfile.GatewayEnabled && o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
+		cluster.Spec.GatewayDomains = append(o.env.GatewayDomains(), o.oc.Properties.ImageRegistryStorageAccountName+".blob."+o.env.Environment().StorageEndpointSuffix)
+	} else {
+		// covers the case of an admin-disable, we need to update dnsmasq on each node
+		cluster.Spec.GatewayDomains = make([]string, 0)
+	}
 
 	// create a secret here for genevalogging, later we will copy it to
 	// the genevalogging namespace.
