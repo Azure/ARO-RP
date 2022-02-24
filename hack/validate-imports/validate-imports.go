@@ -72,6 +72,11 @@ func acceptableNames(path string) []string {
 		return []string{"mock_" + m[1]}
 	}
 
+	m = regexp.MustCompile(`^github\.com/Azure/ARO-RP/pkg/operator/mocks/(?:.+/)?([^/]+)$`).FindStringSubmatch(path)
+	if m != nil {
+		return []string{"mock_" + m[1]}
+	}
+
 	m = regexp.MustCompile(`^github\.com/Azure/azure-sdk-for-go/services/(?:preview/)?(?:[^/]+)/mgmt/(?:[^/]+)/([^/]+)$`).FindStringSubmatch(path)
 	if m != nil {
 		return []string{"mgmt" + m[1]}
@@ -209,6 +214,7 @@ func validateImports(path string, fset *token.FileSet, f *ast.File) (errs []erro
 		"pkg/database/cosmosdb/zz_generated_",
 		"pkg/operator/apis",
 		"pkg/operator/clientset",
+		"pkg/operator/mocks/",
 		"pkg/util/mocks/",
 	} {
 		if strings.HasPrefix(path, prefix) {
