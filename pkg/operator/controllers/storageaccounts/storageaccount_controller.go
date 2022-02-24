@@ -1,14 +1,13 @@
-package subnets
+package storageaccounts
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
@@ -27,48 +26,50 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 const (
-	CONFIG_NAMESPACE         string = "aro.azuresubnets"
-	ENABLED                  string = CONFIG_NAMESPACE + ".enabled"
-	NSG_MANAGED              string = CONFIG_NAMESPACE + ".nsg.managed"
-	SERVICE_ENDPOINT_MANAGED string = CONFIG_NAMESPACE + ".serviceendpoint.managed"
+	CONFIG_NAMESPACE string = "aro.storageaccounts"
+	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
 )
 
 // Reconciler is the controller struct
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli        aroclient.Interface
-	kubernetescli kubernetes.Interface
-	maocli        maoclient.Interface
+	arocli           aroclient.Interface
+	kubernetescli    kubernetes.Interface
+	maocli           maoclient.Interface
+	imageregistrycli imageregistryclient.Interface
 }
 
-// reconcileManager is an instance of the manager instantiated per request
+// reconcileManager is instance of manager instantiated per request
 type reconcileManager struct {
 	log *logrus.Entry
 
 	instance       *arov1alpha1.Cluster
 	subscriptionID string
 
-	subnets     subnet.Manager
-	kubeSubnets subnet.KubeManager
+	imageregistrycli imageregistryclient.Interface
+	kubeSubnets      subnet.KubeManager
+	storage          storage.AccountsClient
 }
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli maoclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, maocli maoclient.Interface, kubernetescli kubernetes.Interface, imageregistrycli imageregistryclient.Interface) *Reconciler {
 	return &Reconciler{
-		log:           log,
-		arocli:        arocli,
-		kubernetescli: kubernetescli,
-		maocli:        maocli,
+		log:              log,
+		arocli:           arocli,
+		kubernetescli:    kubernetescli,
+		imageregistrycli: imageregistrycli,
+		maocli:           maocli,
 	}
 }
 
-//Reconcile fixes the Network Security Groups
+// Reconcile ensures the firewall is set on storage accounts as per user subnets
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
@@ -80,12 +81,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(NSG_MANAGED) && !instance.Spec.OperatorFlags.GetSimpleBoolean(SERVICE_ENDPOINT_MANAGED) {
-		// controller is disabled
-		return reconcile.Result{}, nil
-	}
-
-	// Get endpoints from the operator
+	// Get endpoints from operator
 	azEnv, err := azureclient.EnvironmentFromName(instance.Spec.AZEnvironment)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -96,7 +92,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	// create a refreshable authorizer from token
+	// create refreshable authorizer from token
 	authorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(ctx, r.log, &azEnv, r.kubernetescli)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -106,46 +102,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		log:            r.log,
 		instance:       instance,
 		subscriptionID: resource.SubscriptionID,
-		kubeSubnets:    subnet.NewKubeManager(r.maocli, resource.SubscriptionID),
-		subnets:        subnet.NewManager(&azEnv, resource.SubscriptionID, authorizer),
+
+		imageregistrycli: r.imageregistrycli,
+		kubeSubnets:      subnet.NewKubeManager(r.maocli, resource.SubscriptionID),
+		storage:          storage.NewAccountsClient(&azEnv, resource.SubscriptionID, authorizer),
 	}
 
-	return reconcile.Result{}, manager.reconcileSubnets(ctx, instance)
-}
-
-func (r *reconcileManager) reconcileSubnets(ctx context.Context, instance *arov1alpha1.Cluster) error {
-
-	subnets, err := r.kubeSubnets.List(ctx)
-	if err != nil {
-		return err
-	}
-
-	var combinedErrors []string
-
-	// This potentially calls an update twice for the same loop, but this is the price
-	// to pay for keeping logic split, separate, and simple
-	for _, s := range subnets {
-
-		if instance.Spec.OperatorFlags.GetSimpleBoolean(NSG_MANAGED) {
-			err = r.ensureSubnetNSG(ctx, s)
-			if err != nil {
-				combinedErrors = append(combinedErrors, err.Error())
-			}
-		}
-
-		if instance.Spec.OperatorFlags.GetSimpleBoolean(SERVICE_ENDPOINT_MANAGED) {
-			err = r.ensureSubnetServiceEndpoints(ctx, s)
-			if err != nil {
-				combinedErrors = append(combinedErrors, err.Error())
-			}
-		}
-	}
-
-	if len(combinedErrors) > 0 {
-		return fmt.Errorf(strings.Join(combinedErrors, "\n"))
-	}
-
-	return nil
+	return reconcile.Result{}, manager.reconcileAccounts(ctx)
 }
 
 // SetupWithManager creates the controller
@@ -158,6 +121,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		Watches(&source.Kind{Type: &machinev1beta1.Machine{}}, &handler.EnqueueRequestForObject{}). // to reconcile on machine replacement
 		Watches(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForObject{}).            // to reconcile on node status change
-		Named(controllers.AzureSubnetsControllerName).
+		Named(controllers.StorageAccountsControllerName).
 		Complete(r)
 }

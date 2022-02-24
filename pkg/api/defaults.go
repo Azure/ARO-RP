@@ -49,36 +49,25 @@ const FLAG_FALSE string = "false"
 
 // Default flags for new clusters & ones that have not been AdminUpdated
 var DefaultOperatorFlags OperatorFlags = OperatorFlags{
-	"aro.alertwebhook.enabled": FLAG_TRUE,
-
-	"aro.azuresubnets.enabled": FLAG_TRUE,
-
-	"aro.banner.enabled": FLAG_FALSE,
-
-	"aro.checker.enabled": FLAG_TRUE,
-
-	"aro.dnsmasq.enabled": FLAG_TRUE,
-
-	"aro.genevalogging.enabled": FLAG_TRUE,
-
-	"aro.imageconfig.enabled": FLAG_TRUE,
-
-	"aro.machine.enabled": FLAG_TRUE,
-
-	"aro.machineset.enabled": FLAG_TRUE,
-
-	"aro.monitoring.enabled": FLAG_TRUE,
-
-	"aro.nodedrainer.enabled": FLAG_TRUE,
-
-	"aro.pullsecret.enabled": FLAG_TRUE,
-	"aro.pullsecret.managed": FLAG_TRUE,
-
-	"aro.rbac.enabled": FLAG_TRUE,
-
-	"aro.routefix.enabled": FLAG_TRUE,
-
-	"aro.workaround.enabled": FLAG_TRUE,
+	"aro.alertwebhook.enabled":                 FLAG_TRUE,
+	"aro.azuresubnets.enabled":                 FLAG_TRUE,
+	"aro.azuresubnets.nsg.managed":             FLAG_TRUE,
+	"aro.azuresubnets.serviceendpoint.managed": FLAG_TRUE,
+	"aro.banner.enabled":                       FLAG_FALSE,
+	"aro.checker.enabled":                      FLAG_TRUE,
+	"aro.dnsmasq.enabled":                      FLAG_TRUE,
+	"aro.genevalogging.enabled":                FLAG_TRUE,
+	"aro.imageconfig.enabled":                  FLAG_TRUE,
+	"aro.machine.enabled":                      FLAG_TRUE,
+	"aro.machineset.enabled":                   FLAG_TRUE,
+	"aro.monitoring.enabled":                   FLAG_TRUE,
+	"aro.nodedrainer.enabled":                  FLAG_TRUE,
+	"aro.pullsecret.enabled":                   FLAG_TRUE,
+	"aro.pullsecret.managed":                   FLAG_TRUE,
+	"aro.rbac.enabled":                         FLAG_TRUE,
+	"aro.routefix.enabled":                     FLAG_TRUE,
+	"aro.storageaccounts.enabled":              FLAG_TRUE,
+	"aro.workaround.enabled":                   FLAG_TRUE,
 }
 
 func (d OperatorFlags) Copy() OperatorFlags {

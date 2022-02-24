@@ -74,19 +74,93 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 	)
 }
 
-func (m *manager) storageAccount(name, region string) *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtstorage.Account{
-			Sku: &mgmtstorage.Sku{
-				Name: "Standard_LRS",
-			},
-			AccountProperties: &mgmtstorage.AccountProperties{
-				MinimumTLSVersion: mgmtstorage.TLS12,
-			},
-			Name:     &name,
-			Location: &region,
-			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+// storageAccount will return storage account resource.
+// Legacy storage accounts (public) are not encrypted and cannot be retrofitted.
+// The flag controls this behavior in update/create.
+func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resource {
+
+	virtualNetworkRules := []mgmtstorage.VirtualNetworkRule{
+		{
+			VirtualNetworkResourceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+			Action:                   mgmtstorage.Allow,
 		},
+		{
+			VirtualNetworkResourceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID),
+			Action:                   mgmtstorage.Allow,
+		},
+		{
+			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
+			Action:                   mgmtstorage.Allow,
+		},
+		{
+			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-subnet"),
+			Action:                   mgmtstorage.Allow,
+		},
+	}
+
+	// Prod includes a gateway rule as well
+	// Once we reach a PLS limit (1000) within a vnet , we may need some refactoring here
+	// https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/azure-subscription-service-limits#private-link-limits
+	if !m.env.IsLocalDevelopmentMode() {
+		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
+			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.GatewayResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/gateway-vnet/subnets/gateway-subnet"),
+			Action:                   mgmtstorage.Allow,
+		})
+	}
+
+	sa := &mgmtstorage.Account{
+		Kind: mgmtstorage.StorageV2,
+		Sku: &mgmtstorage.Sku{
+			Name: "Standard_LRS",
+		},
+		AccountProperties: &mgmtstorage.AccountProperties{
+			AllowBlobPublicAccess:  to.BoolPtr(false),
+			EnableHTTPSTrafficOnly: to.BoolPtr(true),
+			MinimumTLSVersion:      mgmtstorage.TLS12,
+			NetworkRuleSet: &mgmtstorage.NetworkRuleSet{
+				Bypass:              mgmtstorage.AzureServices,
+				VirtualNetworkRules: &virtualNetworkRules,
+				DefaultAction:       "Deny",
+			},
+		},
+		Name:     &name,
+		Location: &region,
+		Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+	}
+
+	// In development API calls originates from user laptop so we allow all.
+	// TODO: Move to development on VPN so we can make this IPRule.  Will be done as part of Simply secure v2 work
+	if m.env.IsLocalDevelopmentMode() {
+		sa.NetworkRuleSet.DefaultAction = mgmtstorage.DefaultActionAllow
+	}
+	// When migrating storage accounts for old clusters we are not able to change
+	// encryption which is why we have this encryption flag. We will not add this
+	// retrospectively to old clusters
+	// If a storage account already has encryption enabled and the encrypted
+	// bool is set to false, it will still maintain the encryption on the storage account.
+	if encrypted {
+		sa.AccountProperties.Encryption = &mgmtstorage.Encryption{
+			RequireInfrastructureEncryption: to.BoolPtr(true),
+			Services: &mgmtstorage.EncryptionServices{
+				Blob: &mgmtstorage.EncryptionService{
+					KeyType: mgmtstorage.KeyTypeAccount,
+				},
+				File: &mgmtstorage.EncryptionService{
+					KeyType: mgmtstorage.KeyTypeAccount,
+				},
+				Table: &mgmtstorage.EncryptionService{
+					KeyType: mgmtstorage.KeyTypeAccount,
+				},
+				Queue: &mgmtstorage.EncryptionService{
+					KeyType: mgmtstorage.KeyTypeAccount,
+				},
+			},
+			KeySource: mgmtstorage.KeySourceMicrosoftStorage,
+		}
+	}
+
+	return &arm.Resource{
+		Resource:   sa,
 		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 	}
 }

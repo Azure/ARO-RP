@@ -83,6 +83,7 @@ type ClusterSpec struct {
 	AZEnvironment            string              `json:"azEnvironment,omitempty"`
 	Location                 string              `json:"location,omitempty"`
 	InfraID                  string              `json:"infraId,omitempty"`
+	StorageSuffix            string              `json:"storageSuffix,omitempty"`
 	ArchitectureVersion      int                 `json:"architectureVersion,omitempty"`
 	GenevaLogging            GenevaLoggingSpec   `json:"genevaLogging,omitempty"`
 	InternetChecker          InternetCheckerSpec `json:"internetChecker,omitempty"`
@@ -92,6 +93,7 @@ type ClusterSpec struct {
 	GatewayDomains           []string            `json:"gatewayDomains,omitempty"`
 	GatewayPrivateEndpointIP string              `json:"gatewayPrivateEndpointIP,omitempty"`
 	Banner                   Banner              `json:"banner,omitempty"`
+	ServiceSubnets           []string            `json:"serviceSubnets,omitempty"`
 
 	// OperatorFlags defines feature gates for the ARO Operator
 	OperatorFlags OperatorFlags `json:"operatorflags,omitempty"`

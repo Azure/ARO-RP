@@ -52,6 +52,9 @@ func (m *manager) adminUpdate() []steps.Step {
 		toRun = append(toRun,
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)), // re-create RP RBAC if needed after tenant migration
 			steps.Action(m.createOrUpdateDenyAssignment),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
+			steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
+			steps.Action(m.migrateStorageAccounts),
 			steps.Action(m.fixSSH),
 			steps.Action(m.populateDatabaseIntIP),
 			//steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
@@ -142,6 +145,7 @@ func (m *manager) Install(ctx context.Context) error {
 				return m.ensureInfraID(ctx, installConfig)
 			}),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
 				return m.deployStorageTemplate(ctx, installConfig)
@@ -288,7 +292,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
-	m.registryclient, err = imageregistryclient.NewForConfig(restConfig)
+	m.imageregistrycli, err = imageregistryclient.NewForConfig(restConfig)
 	return err
 }
 

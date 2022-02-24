@@ -80,16 +80,16 @@ type manager struct {
 	subnet  subnet.Manager
 	graph   graph.Manager
 
-	kubernetescli  kubernetes.Interface
-	extensionscli  extensionsclient.Interface
-	maocli         maoclient.Interface
-	mcocli         mcoclient.Interface
-	operatorcli    operatorclient.Interface
-	configcli      configclient.Interface
-	samplescli     samplesclient.Interface
-	securitycli    securityclient.Interface
-	arocli         aroclient.Interface
-	registryclient imageregistryclient.Interface
+	kubernetescli    kubernetes.Interface
+	extensionscli    extensionsclient.Interface
+	maocli           maoclient.Interface
+	mcocli           mcoclient.Interface
+	operatorcli      operatorclient.Interface
+	configcli        configclient.Interface
+	samplescli       samplesclient.Interface
+	securitycli      securityclient.Interface
+	arocli           aroclient.Interface
+	imageregistrycli imageregistryclient.Interface
 }
 
 // New returns a cluster manager

@@ -138,6 +138,16 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 		domain += "." + o.env.Domain()
 	}
 
+	serviceSubnets := []string{
+		"/subscriptions/" + o.env.SubscriptionID() + "/resourceGroups/" + o.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet",
+		"/subscriptions/" + o.env.SubscriptionID() + "/resourceGroups/" + o.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-subnet",
+	}
+
+	// Avoiding issues with dev environment when gateway is not present
+	if o.oc.Properties.FeatureProfile.GatewayEnabled {
+		serviceSubnets = append(serviceSubnets, "/subscriptions/"+o.env.SubscriptionID()+"/resourceGroups/"+o.env.GatewayResourceGroup()+"/providers/Microsoft.Network/virtualNetworks/gateway-vnet/subnets/gateway-subnet")
+	}
+
 	cluster := &arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: arov1alpha1.SingletonClusterName,
@@ -152,12 +162,14 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 			InfraID:                o.oc.Properties.InfraID,
 			ArchitectureVersion:    int(o.oc.Properties.ArchitectureVersion),
 			VnetID:                 vnetID,
+			StorageSuffix:          o.oc.Properties.StorageSuffix,
 			GenevaLogging: arov1alpha1.GenevaLoggingSpec{
 				ConfigVersion:            o.env.ClusterGenevaLoggingConfigVersion(),
 				MonitoringGCSAccount:     o.env.ClusterGenevaLoggingAccount(),
 				MonitoringGCSEnvironment: o.env.ClusterGenevaLoggingEnvironment(),
 				MonitoringGCSNamespace:   o.env.ClusterGenevaLoggingNamespace(),
 			},
+			ServiceSubnets: serviceSubnets,
 			InternetChecker: arov1alpha1.InternetCheckerSpec{
 				URLs: []string{
 					fmt.Sprintf("https://%s/", o.env.ACRDomain()),

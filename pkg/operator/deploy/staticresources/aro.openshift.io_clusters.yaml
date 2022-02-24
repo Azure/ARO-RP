@@ -105,6 +105,12 @@ spec:
               resourceId:
                 description: ResourceID is the Azure resourceId of the cluster
                 type: string
+              serviceSubnets:
+                items:
+                  type: string
+                type: array
+              storageSuffix:
+                type: string
               vnetId:
                 type: string
             type: object
