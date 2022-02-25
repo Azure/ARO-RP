@@ -12,9 +12,3 @@ steps:
     export BRANCH=$(Build.SourceBranchName)
     make publish-image-aro
   displayName: ⚙️ Build and push tagged images to ACR
-- script: |
-    az acr login --name "arointsvc"
-    az acr import \
-      --name "arointsvc" \
-      --source "${{parameters.rpImageACR}}.azurecr.io/aro:${{parameters.imageTag}}"
-  displayName: ➜ Copy ARO image to the integration registry
