@@ -37,8 +37,8 @@ jobs:
       ## set the variable
       echo "##vso[task.setvariable variable=TAG]${TAG}"
   - script: |
-      az acr login --name "${{parameters.rpIntImageAcr}}"
+      az acr login --name "${{variables.rpIntImageAcr}}"
       az acr import \
-        --name "${{parameters.rpIntImageAcr}}" \
-        --source "${{parameters.rpProdImageAcr}}.azurecr.io/aro:${TAG}"
+        --name "${{variabels.rpIntImageAcr}}" \
+        --source "${{variables.rpProdImageAcr}}.azurecr.io/aro:${TAG}"
   - template: ./templates/template-az-cli-logout.yml
