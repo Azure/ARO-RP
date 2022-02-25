@@ -7,9 +7,6 @@ resources:
     source: Build and Push RP image tagged
     trigger: true
 
-parameters:
-- name: aroImageTag
-
 variables:
 - group: INT CI Credentials
 - name: rpIntImageAcr
