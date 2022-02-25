@@ -4,7 +4,7 @@ trigger: none
 resources:
   pipelines:
   - pipeline: mirror
-    source: CI
+    source: Build and Push RP image tagged
     trigger: true
 
 parameters:
