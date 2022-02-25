@@ -39,6 +39,6 @@ jobs:
   - script: |
       az acr login --name "${{variables.rpIntImageAcr}}"
       az acr import \
-        --name "${{variabels.rpIntImageAcr}}" \
+        --name "${{variables.rpIntImageAcr}}" \
         --source "${{variables.rpProdImageAcr}}.azurecr.io/aro:${TAG}"
   - template: ./templates/template-az-cli-logout.yml
