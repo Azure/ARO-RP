@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -39,7 +38,7 @@ type Reconciler struct {
 	readinessTimeout  time.Duration
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, dh dynamichelper.Interface) *Reconciler {
+func NewReconciler(arocli aroclient.Interface, kubernetescli kubernetes.Interface, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
 		arocli:   arocli,
 		deployer: newDeployer(kubernetescli, dh),

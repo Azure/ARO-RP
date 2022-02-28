@@ -203,9 +203,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			arocli, maocli, kubernetescli, imageregistrycli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", controllers.StorageAccountsControllerName, err)
 		}
-		if err = (muo.NewReconciler(
-			log.WithField("controller", controllers.ManagedUpgradeOperatorControllerName),
-			arocli, kubernetescli, dh)).SetupWithManager(mgr); err != nil {
+		if err = (muo.NewReconciler(arocli, kubernetescli, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", controllers.ManagedUpgradeOperatorControllerName, err)
 		}
 	}
