@@ -181,7 +181,7 @@ func TestReconcileManager(t *testing.T) {
 				}
 
 				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
-				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, gomock.Eq(updated))
+				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, updated)
 
 				// we can't reuse these from above due to fact how gomock handles objects.
 				// they are modified by the functions so they are not the same anymore
@@ -193,7 +193,7 @@ func TestReconcileManager(t *testing.T) {
 				}
 
 				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
-				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Eq(updated))
+				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, updated)
 			},
 			imageregistrycli: imageregistryfake.NewSimpleClientset(
 				&imageregistryv1.Config{

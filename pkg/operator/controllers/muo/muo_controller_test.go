@@ -39,7 +39,7 @@ func TestMUOReconciler(t *testing.T) {
 			enabled: true,
 			managed: "true",
 			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
-				md.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Eq(cluster)).Return(nil)
+				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster).Return(nil)
 				md.EXPECT().IsReady(gomock.Any()).Return(true, nil)
 			},
 		},
@@ -48,7 +48,7 @@ func TestMUOReconciler(t *testing.T) {
 			enabled: true,
 			managed: "true",
 			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
-				md.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Eq(cluster)).Return(nil)
+				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster).Return(nil)
 				md.EXPECT().IsReady(gomock.Any()).Return(false, nil)
 			},
 			wantErr: "Managed Upgrade Operator deployment timed out on Ready: timed out waiting for the condition",
@@ -58,7 +58,7 @@ func TestMUOReconciler(t *testing.T) {
 			enabled: true,
 			managed: "true",
 			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
-				md.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Eq(cluster)).Return(errors.New("failed ensure"))
+				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster).Return(errors.New("failed ensure"))
 			},
 			wantErr: "failed ensure",
 		},
