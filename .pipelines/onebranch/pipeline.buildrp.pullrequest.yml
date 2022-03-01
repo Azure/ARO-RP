@@ -50,13 +50,23 @@ extends:
     stages:
     - stage: Build_Docker_Image
       jobs:
+      - job: Checkout_ARO-RP
+        pool:
+          os: linux
+        steps:
+        - task: Bash@3
+          displayName: Checkout ARO from GitHub
+          inputs:
+            targetType: inline
+            script: |
+              git checkout $(Build_Tag) s/dst
       - job: Build_Docker_Image
         pool:
           type: docker
           os: linux
 
         variables:
-          ob_git_checkout: true
+          ob_git_checkout: false
 
         steps:
         - template: .pipelines/onebranch/templates/template-buildrp-builddocker.yml@self
