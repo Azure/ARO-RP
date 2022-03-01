@@ -4,11 +4,11 @@ trigger: none
 resources:
   pipelines:
   - pipeline: mirror
-    source: Build and Push RP image tagged
+    source: "Build and Push RP image tagged"
     trigger: true
 
 variables:
-- group: INT CI Credentials
+- group: E2E Environement # contains the right secret to mirror images
 - name: rpIntImageAcr
   value: arointsvc
 - name: rpProdImageAcr
