@@ -50,7 +50,7 @@ extends:
     stages:
     - stage: Build_Docker_Image
       jobs:
-      - job: Checkout_ARO-RP
+      - job: Checkout_ARO_RP
         pool:
           type: linux
         variables: # More settings at https://aka.ms/obpipelines/yaml/jobs
