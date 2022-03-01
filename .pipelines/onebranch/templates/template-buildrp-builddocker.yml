@@ -7,8 +7,8 @@ steps:
   displayName: Build Multi Stage Dockerfile
   inputs:
     repositoryName: aro-rp
-    dockerFileRelPath: $(Build.SourcesDirectory)/Azure/ARO-RP/Dockerfile.aro-multistage
-    dockerFileContextPath: ./
+    dockerFileRelPath: ./Azure/ARO-RP/Dockerfile.aro-multistage
+    dockerFileContextPath: ./Azure/ARO-RP
     registry: cdpxlinux.azurecr.io
     saveImageToPath: aro-rp.tar
     buildkit: 1
