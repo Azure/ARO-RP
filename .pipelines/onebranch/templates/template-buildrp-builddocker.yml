@@ -1,3 +1,7 @@
+parameters:
+- name: build_tag
+  type: string
+
 steps:
 - task: onebranch.pipeline.imagebuildinfo@1
   displayName: Build Multi Stage Dockerfile
@@ -9,4 +13,4 @@ steps:
     saveImageToPath: aro-rp.tar
     buildkit: 1
     enable_network: true
-    build_tag: $(Build_Tag)
+    build_tag: $(build_tag)

@@ -60,6 +60,8 @@ extends:
 
         steps:
         - template: .pipelines/onebranch/templates/template-buildrp-builddocker.yml@self
+          parameters:
+            build_tag: $(Build_Tag)
 
 
     - stage: Build_ARO
