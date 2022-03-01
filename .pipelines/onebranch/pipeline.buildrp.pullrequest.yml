@@ -53,6 +53,8 @@ extends:
       - job: Checkout_ARO-RP
         pool:
           type: linux
+        variables: # More settings at https://aka.ms/obpipelines/yaml/jobs
+          ob_outputDirectory: $(Build.SourcesDirectory)/out   # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
         steps:
         - task: Bash@3
           displayName: Checkout ARO from GitHub
