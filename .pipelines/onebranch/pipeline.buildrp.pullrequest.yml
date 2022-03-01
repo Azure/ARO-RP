@@ -31,6 +31,7 @@ resources:
     name: RP-Config
   - repository: arorp
     type: github
+    endpoint: Azure
     name: Azure/ARO-RP
     ref: refs/tags/v20220208.00
 
