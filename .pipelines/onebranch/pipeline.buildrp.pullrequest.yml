@@ -63,6 +63,7 @@ extends:
             script: |
               git checkout $(Build_Tag) s/dst
       - job: Build_Docker_Image
+        dependsOn: Checkout_ARO_RP
         pool:
           type: docker
           os: linux
