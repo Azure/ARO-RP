@@ -52,7 +52,7 @@ extends:
       jobs:
       - job: Checkout_ARO-RP
         pool:
-          os: linux
+          type: linux
         steps:
         - task: Bash@3
           displayName: Checkout ARO from GitHub
