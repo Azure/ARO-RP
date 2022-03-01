@@ -129,16 +129,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			wantErr: "400: PropertyChangeNotAllowed: properties.lastAdminUpdateError: Changing property 'properties.lastAdminUpdateError' is not allowed.",
 		},
 		{
-			name: "valid gatewayEnabled change",
-			oc: func() *OpenShiftCluster {
-				return &OpenShiftCluster{}
-			},
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.FeatureProfile.GatewayEnabled = true
-			},
-		},
-		{
-			name: "valid gatewayEnabled change",
+			name: "disable gatewayEnabled on enabled clusters is allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
 					Properties: OpenShiftClusterProperties{
@@ -151,7 +142,21 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.FeatureProfile.GatewayEnabled = false
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.featureProfile.gatewayEnabled: Changing property 'properties.featureProfile.gatewayEnabled' is not allowed.",
+		},
+		{
+			name: "enable gatewayEnabled on disabled clusters is allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						FeatureProfile: FeatureProfile{
+							GatewayEnabled: false,
+						},
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.FeatureProfile.GatewayEnabled = true
+			},
 		},
 		{
 			name: "console url change is not allowed",

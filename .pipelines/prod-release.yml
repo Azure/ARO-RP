@@ -76,6 +76,7 @@ stages:
       - southcentralus
       - westus
       - westus2
+      - westus3
       configFileName: prod-config.yaml
       configVersion: ${{ parameters.configVersion }}
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)

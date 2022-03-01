@@ -357,6 +357,7 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  --cap-drop net_raw \
   -m 2g \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
@@ -402,6 +403,7 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  --cap-drop net_raw \
   -e ACR_RESOURCE_ID \
   -e DATABASE_ACCOUNT_NAME \
   -e AZURE_DBTOKEN_CLIENT_ID \
@@ -653,8 +655,10 @@ done
 							{
 								Name: to.StringPtr("gateway-vmss-nic"),
 								VirtualMachineScaleSetNetworkConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetNetworkConfigurationProperties{
-									Primary:                     to.BoolPtr(true),
-									EnableAcceleratedNetworking: to.BoolPtr(true),
+									Primary: to.BoolPtr(true),
+									// disabling accelerated networking due to egress issues
+									// see icm 271210960 (egress) and 274977072 (accelerated networking team)
+									EnableAcceleratedNetworking: to.BoolPtr(false),
 									IPConfigurations: &[]mgmtcompute.VirtualMachineScaleSetIPConfiguration{
 										{
 											Name: to.StringPtr("gateway-vmss-ipconfig"),

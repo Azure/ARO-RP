@@ -156,6 +156,10 @@ func (g *generator) rpVnet() *arm.Resource {
 				Service:   to.StringPtr("Microsoft.AzureCosmosDB"),
 				Locations: &[]string{"*"},
 			},
+			{
+				Service:   to.StringPtr("Microsoft.Storage"),
+				Locations: &[]string{"*"},
+			},
 		}
 	}
 
@@ -171,6 +175,12 @@ func (g *generator) rpPEVnet() *arm.Resource {
 					ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"),
 				},
 				PrivateEndpointNetworkPolicies: to.StringPtr("Disabled"),
+				ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+					{
+						Service:   to.StringPtr("Microsoft.Storage"),
+						Locations: &[]string{"*"},
+					},
+				},
 			},
 			Name: to.StringPtr("rp-pe-subnet"),
 		},
@@ -607,6 +617,7 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  --cap-drop net_raw \
   -v /etc/fluentbit/fluentbit.conf:/etc/fluentbit/fluentbit.conf \
   -v /var/lib/fluent:/var/lib/fluent:z \
   -v /var/log/journal:/var/log/journal:ro \
@@ -653,6 +664,7 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  --cap-drop net_raw \
   -m 2g \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
@@ -709,6 +721,7 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  --cap-drop net_raw \
   -e ACR_RESOURCE_ID \
   -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
   -e ARM_API_CLIENT_CERT_COMMON_NAME \
@@ -766,6 +779,7 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  --cap-drop net_raw \
   -e AZURE_GATEWAY_SERVICE_PRINCIPAL_ID \
   -e DATABASE_ACCOUNT_NAME \
   -e AZURE_DBTOKEN_CLIENT_ID \
@@ -810,6 +824,7 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  --cap-drop net_raw \
   -e CLUSTER_MDM_ACCOUNT \
   -e CLUSTER_MDM_NAMESPACE \
   -e DATABASE_ACCOUNT_NAME \
@@ -854,6 +869,7 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  --cap-drop net_raw \
   -e AZURE_PORTAL_ACCESS_GROUP_IDS \
   -e AZURE_PORTAL_CLIENT_ID \
   -e AZURE_PORTAL_ELEVATED_GROUP_IDS \

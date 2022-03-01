@@ -68,7 +68,7 @@ func TestWorkaroundReconciler(t *testing.T) {
 				c := mw.EXPECT().IsRequired(gomock.Any()).Return(true)
 				mw.EXPECT().Ensure(gomock.Any()).After(c).Return(nil)
 			},
-			want: ctrl.Result{Requeue: true, RequeueAfter: time.Hour},
+			want: ctrl.Result{RequeueAfter: time.Hour},
 		},
 		{
 			name: "is not required",
@@ -76,7 +76,7 @@ func TestWorkaroundReconciler(t *testing.T) {
 				c := mw.EXPECT().IsRequired(gomock.Any()).Return(false)
 				mw.EXPECT().Remove(gomock.Any()).After(c).Return(nil)
 			},
-			want: ctrl.Result{Requeue: true, RequeueAfter: time.Hour},
+			want: ctrl.Result{RequeueAfter: time.Hour},
 		},
 		{
 			name: "has error",

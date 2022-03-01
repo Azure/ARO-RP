@@ -70,6 +70,11 @@ jobs:
       make unit-test-go
     displayName: 🧪 Run Golang unit tests
 
+  - script: |
+      set -xe
+      make validate-fips
+    displayName: 🕵️ Validate FIPS
+
   - task: PublishTestResults@2
     displayName: 📊 Publish tests results
     inputs:

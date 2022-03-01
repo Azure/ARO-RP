@@ -22,4 +22,6 @@ const (
 	MachineControllerName                  = "Machine"
 	MachineSetControllerName               = "MachineSet"
 	ImageConfigControllerName              = "ImageConfig"
+	StorageAccountsControllerName          = "StorageAccounts"
+	ManagedUpgradeOperatorControllerName   = "ManagedUpgradeOperator"
 )

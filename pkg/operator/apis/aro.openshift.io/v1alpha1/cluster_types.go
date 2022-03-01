@@ -22,12 +22,14 @@ const (
 	InternetReachableFromWorker = "InternetReachableFromWorker"
 	MachineValid                = "MachineValid"
 	ServicePrincipalValid       = "ServicePrincipalValid"
+
+	ManagedUpgradeOperatorStatus = "ManagedUpgradeOperatorStatus"
 )
 
 // AllConditionTypes is a operator conditions currently in use, any condition not in this list is not
 // added to the operator.status.conditions list
 func AllConditionTypes() []string {
-	return []string{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid, ServicePrincipalValid}
+	return []string{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid, ServicePrincipalValid, ManagedUpgradeOperatorStatus}
 }
 
 // ClusterChecksTypes represents checks performed on the cluster to verify basic functionality
@@ -83,6 +85,7 @@ type ClusterSpec struct {
 	AZEnvironment            string              `json:"azEnvironment,omitempty"`
 	Location                 string              `json:"location,omitempty"`
 	InfraID                  string              `json:"infraId,omitempty"`
+	StorageSuffix            string              `json:"storageSuffix,omitempty"`
 	ArchitectureVersion      int                 `json:"architectureVersion,omitempty"`
 	GenevaLogging            GenevaLoggingSpec   `json:"genevaLogging,omitempty"`
 	InternetChecker          InternetCheckerSpec `json:"internetChecker,omitempty"`
@@ -92,6 +95,7 @@ type ClusterSpec struct {
 	GatewayDomains           []string            `json:"gatewayDomains,omitempty"`
 	GatewayPrivateEndpointIP string              `json:"gatewayPrivateEndpointIP,omitempty"`
 	Banner                   Banner              `json:"banner,omitempty"`
+	ServiceSubnets           []string            `json:"serviceSubnets,omitempty"`
 
 	// OperatorFlags defines feature gates for the ARO Operator
 	OperatorFlags OperatorFlags `json:"operatorflags,omitempty"`

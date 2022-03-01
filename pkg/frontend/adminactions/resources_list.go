@@ -6,7 +6,6 @@ package adminactions
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -39,7 +38,11 @@ func (a *azureActions) ResourcesList(ctx context.Context) ([]byte, error) {
 	for _, res := range resources {
 		apiVersion := azureclient.APIVersion(*res.Type)
 		if apiVersion == "" {
-			return nil, fmt.Errorf("API version not found for type %s", *res.Type)
+			// If custom resource types, or any we don't have listed in pkg/util/azureclient/apiversions.go,
+			// are returned, then skip over them instead of returning an error, otherwise it results in an
+			// HTTP 500 and prevents the known resource types from being returned.
+			a.log.Warnf("API version not found for type %q", *res.Type)
+			continue
 		}
 		switch *res.Type {
 		case "Microsoft.Compute/virtualMachines":

@@ -2,7 +2,6 @@ SHELL = /bin/bash
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
-ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(COMMIT)
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
 FLUENTBIT_VERSION = 1.7.8-1
@@ -14,14 +13,22 @@ ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
 endif
 
+ifeq ($(TAG),)
+	VERSION = $(COMMIT)
+else
+	VERSION = $(TAG)
+endif
+
+ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
+
 build-all:
 	go build -tags aro,containers_image_openpgp ./...
 
 aro: generate
-	go build -tags aro,containers_image_openpgp,codec.safe -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro
+	go build -tags aro,containers_image_openpgp,codec.safe -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
 
 runlocal-rp:
-	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro rp
+	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro rp
 
 az: pyenv
 	. pyenv/bin/activate && \
@@ -42,7 +49,7 @@ client: generate
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 deploy:
-	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
+	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 dev-config.yaml:
 	go run ./hack/gendevconfig >dev-config.yaml
@@ -58,12 +65,6 @@ generate:
 image-aro: aro e2e.test
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
-
-image-aro-tag: image-aro
-ifeq ($(TAG),)
-	$(error TAG undefined)
-endif
-	docker tag $(ARO_IMAGE) $(ARO_IMAGE_BASE):$(TAG)
 
 image-aro-multistage:
 	docker build --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) .
@@ -87,12 +88,6 @@ ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
 		docker push arointsvc.azurecr.io/aro:latest
 endif
 
-publish-image-aro-tag: image-aro-tag
-ifeq ($(TAG),)
-	$(error TAG undefined)
-endif
-	docker push $(ARO_IMAGE_BASE):$(TAG)
-
 publish-image-aro-multistage: image-aro-multistage
 	docker push $(ARO_IMAGE)
 ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
@@ -110,10 +105,10 @@ publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
 
 proxy:
-	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./hack/proxy
+	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
 
 run-portal:
-	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro portal
+	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
 
 build-portal:
 	cd portal && npm install && npm run build
@@ -143,7 +138,7 @@ tunnel:
 	go run ./hack/tunnel $(shell az network public-ip show -g ${RESOURCEGROUP} -n rp-pip --query 'ipAddress')
 
 e2e.test:
-	go test ./test/e2e -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" -o e2e.test
+	go test ./test/e2e -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" -o e2e.test
 
 test-e2e: e2e.test
 	./e2e.test -test.timeout 180m -test.v -ginkgo.v
@@ -160,6 +155,9 @@ validate-go:
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
 	go vet ./...
 	go test -tags e2e -run ^$$ ./test/e2e/...
+
+validate-fips:
+	hack/fips/validate-fips.sh
 
 unit-test-go:
 	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro -coverprofile=cover.out ./...
@@ -180,4 +178,4 @@ vendor:
 	# See comments in the script for background on why we need it
 	hack/update-go-module-dependencies.sh
 
-.PHONY: admin.kubeconfig aro az clean client deploy dev-config.yaml discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy lint-go runlocal-rp proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go  unit-test-go coverage-go
+.PHONY: admin.kubeconfig aro az clean client deploy dev-config.yaml discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy lint-go runlocal-rp proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go  unit-test-go coverage-go validate-fips

@@ -104,6 +104,9 @@ func TestMerge(t *testing.T) {
 						"openshift.io/sa.scc.supplemental-groups": "groups",
 						"openshift.io/sa.scc.uid-range":           "uids",
 					},
+					Labels: map[string]string{
+						"olm.operatorgroup.uid/jdfgbdfgdfhg": "test",
+					},
 				},
 				Spec: corev1.NamespaceSpec{
 					Finalizers: []corev1.FinalizerName{
@@ -121,6 +124,9 @@ func TestMerge(t *testing.T) {
 						"openshift.io/sa.scc.mcs":                 "mcs",
 						"openshift.io/sa.scc.supplemental-groups": "groups",
 						"openshift.io/sa.scc.uid-range":           "uids",
+					},
+					Labels: map[string]string{
+						"olm.operatorgroup.uid/jdfgbdfgdfhg": "test",
 					},
 				},
 				Spec: corev1.NamespaceSpec{
@@ -160,6 +166,65 @@ func TestMerge(t *testing.T) {
 						Name: "pullsecret1",
 					},
 				},
+			},
+			wantEmptyDiff: true,
+		},
+		{
+			name: "ConfigMap with injected ca bundle label and bundle, no changes",
+			old: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"config.openshift.io/inject-trusted-cabundle": "",
+					},
+				},
+				Data: map[string]string{
+					"ca-bundle.crt": "bundlehere",
+				},
+			},
+			new: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"config.openshift.io/inject-trusted-cabundle": "",
+					},
+				},
+			},
+			want: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"config.openshift.io/inject-trusted-cabundle": "",
+					},
+				},
+				Data: map[string]string{
+					"ca-bundle.crt": "bundlehere",
+				},
+			},
+			wantEmptyDiff: true,
+		},
+		{
+			name: "ConfigMap with injected ca bundle label and no bundle, no changes",
+			old: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"config.openshift.io/inject-trusted-cabundle": "",
+					},
+				},
+				Data: map[string]string{},
+			},
+			new: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"config.openshift.io/inject-trusted-cabundle": "",
+					},
+				},
+				Data: map[string]string{},
+			},
+			want: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"config.openshift.io/inject-trusted-cabundle": "",
+					},
+				},
+				Data: map[string]string{},
 			},
 			wantEmptyDiff: true,
 		},

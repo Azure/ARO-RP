@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
@@ -173,6 +174,12 @@ func merge(old, new kruntime.Object) (kruntime.Object, bool, string, error) {
 		} {
 			copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, name)
 		}
+		// Copy OLM label
+		for k := range old.Labels {
+			if strings.HasPrefix(k, "olm.operatorgroup.uid/") {
+				copyLabel(&new.ObjectMeta, &old.ObjectMeta, k)
+			}
+		}
 		new.Spec.Finalizers = old.Spec.Finalizers
 		new.Status = old.Status
 
@@ -193,6 +200,12 @@ func merge(old, new kruntime.Object) (kruntime.Object, bool, string, error) {
 	case *appsv1.Deployment:
 		old, new := old.(*appsv1.Deployment), new.(*appsv1.Deployment)
 		copyAnnotation(&new.ObjectMeta, &old.ObjectMeta, "deployment.kubernetes.io/revision")
+
+		// populated automatically by the Kubernetes API (observed on 4.9)
+		if old.Spec.Template.Spec.DeprecatedServiceAccount != "" {
+			new.Spec.Template.Spec.DeprecatedServiceAccount = old.Spec.Template.Spec.DeprecatedServiceAccount
+		}
+
 		new.Status = old.Status
 
 	case *mcv1.KubeletConfig:
@@ -210,6 +223,17 @@ func merge(old, new kruntime.Object) (kruntime.Object, bool, string, error) {
 	case *arov1alpha1.Cluster:
 		old, new := old.(*arov1alpha1.Cluster), new.(*arov1alpha1.Cluster)
 		new.Status = old.Status
+
+	case *corev1.ConfigMap:
+		old, new := old.(*corev1.ConfigMap), new.(*corev1.ConfigMap)
+
+		_, injectTrustBundle := new.ObjectMeta.Labels["config.openshift.io/inject-trusted-cabundle"]
+		if injectTrustBundle {
+			caBundle, ext := old.Data["ca-bundle.crt"]
+			if ext {
+				new.Data["ca-bundle.crt"] = caBundle
+			}
+		}
 	}
 
 	var diff string
@@ -226,6 +250,15 @@ func copyAnnotation(dst, src *metav1.ObjectMeta, name string) {
 			dst.Annotations = map[string]string{}
 		}
 		dst.Annotations[name] = src.Annotations[name]
+	}
+}
+
+func copyLabel(dst, src *metav1.ObjectMeta, name string) {
+	if _, found := src.Labels[name]; found {
+		if dst.Labels == nil {
+			dst.Labels = map[string]string{}
+		}
+		dst.Labels[name] = src.Labels[name]
 	}
 }
 

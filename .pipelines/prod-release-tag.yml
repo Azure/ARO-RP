@@ -8,7 +8,7 @@ parameters:
 variables:
 - group: Prod CI Credentials
 - group: Prod E2E Non-Secret Variables
-- group: PROD-INT E2E Credentials # This utilizes a variable group, don't update the spelling
+- group: PROD-INT E2E Credentials
 - name: rpImageAcr
   value: arosvc
 
@@ -80,6 +80,7 @@ stages:
       - southcentralus
       - westus
       - westus2
+      - westus3
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
       vsoProjectID: $(vso-project-id)
@@ -105,6 +106,7 @@ stages:
       - germanywestcentral
       - northeurope
       - norwayeast
+      - norwaywest
       - switzerlandnorth
       - switzerlandwest
       - westeurope

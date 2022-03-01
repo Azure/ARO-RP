@@ -1,0 +1,44 @@
+pr: none
+trigger: none
+
+resources:
+  pipelines:
+  - pipeline: mirror
+    source: Build and Push RP image tagged
+    trigger: true
+
+variables:
+- group: INT CI Credentials
+- name: rpIntImageAcr
+  value: arointsvc
+- name: rpProdImageAcr
+  value: arosvc
+
+jobs:
+- job: Mirror_ARO_to_INT
+  displayName: ➜ Mirror ARO to INT
+  condition: startsWith(variables['build.sourceBranch'], 'refs/tags/v2')
+  pool:
+    name: ARO-CI
+    demands: go-1.16
+
+  steps:
+  - template: ./templates/template-checkout.yml
+  - template: ./templates/template-az-cli-login.yml
+    parameters:
+      azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+  - script: |
+      # read current annotated tag that started this pipeline
+      TAG=$(git describe --exact-match)
+
+      # there is no this pipeline ends with error
+      [[ -z ${TAG} ]] && exit 1
+
+      ## set the variable
+      echo "##vso[task.setvariable variable=TAG]${TAG}"
+  - script: |
+      az acr login --name "${{variables.rpIntImageAcr}}"
+      az acr import \
+        --name "${{variables.rpIntImageAcr}}" \
+        --source "${{variables.rpProdImageAcr}}.azurecr.io/aro:${TAG}"
+  - template: ./templates/template-az-cli-logout.yml
