@@ -29,6 +29,10 @@ resources:
   - repository: rpconfig
     type: git
     name: RP-Config
+  - repository: arorp
+    type: github
+    name: Azure/ARO-RP
+    ref: refs/tags/v20220208.00
 
 extends:
   template: v2/OneBranch.NonOfficial.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
@@ -50,20 +54,7 @@ extends:
     stages:
     - stage: Build_Docker_Image
       jobs:
-      - job: Checkout_ARO_RP
-        pool:
-          type: linux
-        variables: # More settings at https://aka.ms/obpipelines/yaml/jobs
-          ob_outputDirectory: $(Build.SourcesDirectory)/out   # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
-        steps:
-        - task: Bash@3
-          displayName: Checkout ARO from GitHub
-          inputs:
-            targetType: inline
-            script: |
-              git checkout $(Build_Tag) s/dst
       - job: Build_Docker_Image
-        dependsOn: Checkout_ARO_RP
         pool:
           type: docker
           os: linux
@@ -72,6 +63,7 @@ extends:
           ob_git_checkout: false
 
         steps:
+        - checkout: arorp
         - template: .pipelines/onebranch/templates/template-buildrp-builddocker.yml@self
           parameters:
             build_tag: $(Build_Tag)
