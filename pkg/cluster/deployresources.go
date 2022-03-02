@@ -68,16 +68,25 @@ func (m *manager) deployResourceTemplate(ctx context.Context) error {
 
 // zones configures how master nodes are distributed across availability zones. In regions where the number of zones matches
 // the number of nodes, it's one node per zone. In regions where there are no zones, all the nodes are in the same place.
-// Anything else (e.g. 2-zone regions) is currently unsupported.
+// Valid zone values are nil, 1, 2, and 3. Greater than 3 zones is not supported.
 func zones(installConfig *installconfig.InstallConfig) (zones *[]string, err error) {
 	zoneCount := len(installConfig.Config.ControlPlane.Platform.Azure.Zones)
 	replicas := int(*installConfig.Config.ControlPlane.Replicas)
-	if reflect.DeepEqual(installConfig.Config.ControlPlane.Platform.Azure.Zones, []string{""}) {
-		// []string{""} indicates that there are no Azure Zones, so "zones" return value will be nil
-	} else if zoneCount == replicas {
-		zones = &[]string{"[copyIndex(1)]"}
+	region := installConfig.Config.Azure.Region
+
+	if zoneCount > replicas || replicas > 3 {
+		err = fmt.Errorf("cluster creation with %d zone(s) and %d replica(s) is unsupported", zoneCount, replicas)
+	} else if reflect.DeepEqual(installConfig.Config.ControlPlane.Platform.Azure.Zones, []string{""}) {
+		return
+	} else if region == "centraluseuap" {
+		// hack - centraluseuap has no compute available in zone 1, deployment must occur in zone 2 only.
+		zones = &[]string{"2"}
+		installConfig.Config.Azure.DefaultMachinePlatform.Zones = []string{"2"}
+	} else if zoneCount <= 2 {
+		zones = &installConfig.Config.ControlPlane.Platform.Azure.Zones
 	} else {
-		err = fmt.Errorf("cluster creation with %d zone(s) and %d replica(s) is unimplemented", zoneCount, replicas)
+		zones = &[]string{"[copyIndex(1)]"}
 	}
+
 	return
 }
