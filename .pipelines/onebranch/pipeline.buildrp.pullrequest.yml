@@ -53,6 +53,20 @@ extends:
         suppressionSet: default
 
     stages:
+    - stage: Tag_Test_Script
+      jobs:
+      - job: Tag_Test_Script
+        pool:
+          type: linux
+        steps:
+        - task: Bash@3
+          inputs:
+            targetType: inline
+            script: |
+              SHELL = /bin/bash
+              TAG ?= $(shell git describe --exact-match 2>/dev/null)
+              echo $TAG
+
     - stage: Build_Docker_Image
       jobs:
       - job: Build_Docker_Image
