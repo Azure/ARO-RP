@@ -159,8 +159,14 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 	}
 
 	// In development the portal API is proxied by the frontend dev server which is
-	// hosted at localhost:3000, so the hostname needs to be set to that
+	// hosted at localhost:3000, so the hostname needs to be set to that.
+	// Set the hostname to localhost:8444 if needing to test compiled portal locally without a frontend dev server
 	hostname := "localhost:3000"
+	_, noNpm := os.LookupEnv("NO_NPM")
+	if noNpm {
+		hostname = "localhost:8444"
+	}
+
 	address := "localhost:8444"
 	sshAddress := "localhost:2222"
 	if !_env.IsLocalDevelopmentMode() {
