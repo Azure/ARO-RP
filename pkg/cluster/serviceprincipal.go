@@ -8,25 +8,28 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	azgraphrbac "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
-	"github.com/Azure/go-autorest/autorest"
+	"github.com/jongio/azidext/go/azidext"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 )
 
 // initializeClusterSPClients initialized clients, based on cluster service principal
 func (m *manager) initializeClusterSPClients(ctx context.Context) error {
 	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-	tokenClient := aad.NewTokenClient()
-	token, err := tokenClient.GetToken(ctx, m.log, spp.ClientID, string(spp.ClientSecret), m.subscriptionDoc.Subscription.Properties.TenantID, m.env.Environment().ActiveDirectoryEndpoint, m.env.Environment().GraphEndpoint)
+	options := m.env.Environment().ClientSecretCredentialOptions()
+	credential, err := azidentity.NewClientSecretCredential(
+		m.subscriptionDoc.Subscription.Properties.TenantID,
+		spp.ClientID, string(spp.ClientSecret), options)
 	if err != nil {
 		return err
 	}
 
-	spGraphAuthorizer := autorest.NewBearerAuthorizer(token)
+	scopes := []string{m.env.Environment().GraphEndpoint + "/.default"}
+	spGraphAuthorizer := azidext.NewTokenCredentialAdapter(credential, scopes)
 
 	m.spApplications = graphrbac.NewApplicationsClient(m.env.Environment(), m.subscriptionDoc.Subscription.Properties.TenantID, spGraphAuthorizer)
 	return nil

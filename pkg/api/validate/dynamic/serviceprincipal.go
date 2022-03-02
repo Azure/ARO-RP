@@ -7,23 +7,28 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/form3tech-oss/jwt-go"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 )
 
-func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string) error {
+func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, tokenCredential azcore.TokenCredential) error {
 	dv.log.Print("ValidateServicePrincipal")
 
-	token, err := dv.tokenClient.GetToken(ctx, dv.log, clientID, clientSecret, tenantID, dv.azEnv.ActiveDirectoryEndpoint, dv.azEnv.GraphEndpoint)
+	tokenRequestOptions := policy.TokenRequestOptions{
+		Scopes: []string{dv.azEnv.GraphEndpoint + "/.default"},
+	}
+	token, err := tokenCredential.GetToken(ctx, tokenRequestOptions)
 	if err != nil {
 		return err
 	}
 
 	p := &jwt.Parser{}
 	c := &azureclaim.AzureClaim{}
-	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
+	_, _, err = p.ParseUnverified(token.Token, c)
 	if err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", err.Error())
 	}
