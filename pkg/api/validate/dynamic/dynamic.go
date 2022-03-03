@@ -53,6 +53,7 @@ type Dynamic interface {
 	ValidateQuota(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error
+	ValidateVMSku(ctx context.Context, location string, subscriptionID string, oc *api.OpenShiftCluster) error
 }
 
 type dynamic struct {
@@ -65,14 +66,17 @@ type dynamic struct {
 	providers          features.ProvidersClient
 	virtualNetworks    virtualNetworksGetClient
 	diskEncryptionSets compute.DiskEncryptionSetsClient
+	resourceSkusClient compute.ResourceSkusClient
 	spComputeUsage     compute.UsageClient
 	spNetworkUsage     network.UsageClient
 }
 
 type AuthorizerType string
 
-const AuthorizerFirstParty AuthorizerType = "resource provider"
-const AuthorizerClusterServicePrincipal AuthorizerType = "cluster"
+const (
+	AuthorizerFirstParty              AuthorizerType = "resource provider"
+	AuthorizerClusterServicePrincipal AuthorizerType = "cluster"
+)
 
 func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizer refreshable.Authorizer, authorizerType AuthorizerType) (Dynamic, error) {
 	return &dynamic{
@@ -87,6 +91,7 @@ func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEn
 		permissions:        authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer),
 		virtualNetworks:    newVirtualNetworksCache(network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer)),
 		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(azEnv, subscriptionID, authorizer),
+		resourceSkusClient: compute.NewResourceSkusClient(azEnv, subscriptionID, authorizer),
 	}, nil
 }
 

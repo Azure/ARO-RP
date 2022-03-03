@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -274,29 +275,7 @@ func (p *prod) populateVMSkus(ctx context.Context, resourceSkusClient compute.Re
 		return err
 	}
 
-	p.vmskus = map[string]*mgmtcompute.ResourceSku{}
-	for _, sku := range skus {
-		// TODO(mjudeikis): At some point some SKU's stopped returning zones and
-		// locations. IcM is open with MSFT but this might take a while.
-		// Revert once we find out right behaviour.
-		// https://github.com/Azure/ARO-RP/issues/1515
-		if len(*sku.Locations) == 0 || !strings.EqualFold((*sku.Locations)[0], p.Location()) ||
-			*sku.ResourceType != "virtualMachines" {
-			continue
-		}
-
-		if len(*sku.LocationInfo) == 0 { // happened in eastus2euap
-			continue
-		}
-
-		// We copy only part of the object so we don't have to keep
-		// a lot of data in memory.
-		p.vmskus[*sku.Name] = &mgmtcompute.ResourceSku{
-			Name:         sku.Name,
-			LocationInfo: sku.LocationInfo,
-			Capabilities: sku.Capabilities,
-		}
-	}
+	p.vmskus = computeskus.FilterVMSizes(skus, p.Location())
 
 	return nil
 }
