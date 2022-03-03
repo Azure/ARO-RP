@@ -121,5 +121,10 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
+	err = spDynamic.ValidateVMSku(ctx, dv.oc.Location, dv.subscriptionDoc.ID, dv.oc)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
