@@ -32,11 +32,11 @@ stages:
     billing_e2e_pipeline_name: $(billing_e2e_pipeline_name)
     billing_e2e_branch_name: $(billing_e2e_branch_name)
     locations:
-    - westcentralus
     - eastus2euap
     - australiacentral
     - australiacentral2
     - centraluseuap
+    - westcentralus
     - australiaeast
     - australiasoutheast
     - centralindia
