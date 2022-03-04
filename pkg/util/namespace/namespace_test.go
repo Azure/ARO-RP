@@ -80,3 +80,37 @@ func TestIsOpenShiftSystemNamespace(t *testing.T) {
 		})
 	}
 }
+
+func TestFilteredOpenShiftNamespace(t *testing.T) {
+	for _, tt := range []struct {
+		namespace string
+		want      bool
+	}{
+		{
+			namespace: "openshift-apiserver",
+			want:      true,
+		},
+		{
+			namespace: "openshift-azure-operator",
+			want:      true,
+		},
+		{
+			namespace: "openshift-gitops",
+			want:      false,
+		},
+		{
+			namespace: "default",
+			want:      false,
+		},
+		{
+			namespace: "customer",
+		},
+	} {
+		t.Run(tt.namespace, func(t *testing.T) {
+			got := FilteredOpenShiftNamespace(tt.namespace)
+			if tt.want != got {
+				t.Error(got)
+			}
+		})
+	}
+}
