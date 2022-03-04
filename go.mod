@@ -130,6 +130,23 @@ require (
 )
 
 exclude (
+	github.com/containerd/containerd v1.2.10
+	// exclude github.com/containerd/containerd < 1.6.1, 1.5.10, 1.14.12 https://nvd.nist.gov/vuln/detail/CVE-2022-23648
+	github.com/containerd/containerd v1.2.7
+	github.com/containerd/containerd v1.3.0
+	github.com/containerd/containerd v1.3.2
+	github.com/containerd/containerd v1.4.1
+	github.com/containerd/containerd v1.4.3
+	github.com/containerd/containerd v1.4.4
+	github.com/containerd/containerd v1.4.9
+	github.com/containerd/containerd v1.5.0-beta.1
+	github.com/containerd/containerd v1.5.0-beta.3
+	github.com/containerd/containerd v1.5.0-beta.4
+	github.com/containerd/containerd v1.5.0-rc.0
+	github.com/containerd/containerd v1.5.1
+	github.com/containerd/containerd v1.5.2
+	github.com/containerd/containerd v1.5.7
+	github.com/containerd/containerd v1.5.9
 	// force use of go.etcd.io/bbolt
 	github.com/coreos/bbolt v1.3.0
 	github.com/coreos/bbolt v1.3.2
