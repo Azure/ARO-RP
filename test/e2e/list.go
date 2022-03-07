@@ -28,7 +28,8 @@ var _ = Describe("List clusters", func() {
 
 		Expect(found).To(Equal(true))
 	})
-	Specify("the test cluster should be in the returned listByResourceGroup", func() {
+	// listByResourceGroup test marked Pending (X), don't reenable until ARM caching issue is fixed, see https://github.com/Azure/ARO-RP/pull/1995
+	XSpecify("the test cluster should be in the returned listByResourceGroup", func() {
 		ctx := context.Background()
 
 		ocList, err := clients.OpenshiftClustersv20200430.ListByResourceGroup(ctx, vnetResourceGroup)
