@@ -122,8 +122,8 @@ type IngressProfile struct {
 
 // MasterProfile masterProfile represents a master profile.
 type MasterProfile struct {
-	// VMSize - The size of the master VMs. Possible values include: 'StandardD16asV4', 'StandardD16sV3', 'StandardD2sV3', 'StandardD32asV4', 'StandardD32sV3', 'StandardD4asV4', 'StandardD4sV3', 'StandardD8asV4', 'StandardD8sV3', 'StandardE16sV3', 'StandardE32sV3', 'StandardE4sV3', 'StandardE64iV3', 'StandardE64isV3', 'StandardE8sV3', 'StandardF16sV2', 'StandardF32sV2', 'StandardF4sV2', 'StandardF72sV2', 'StandardF8sV2', 'StandardG5', 'StandardGS5', 'StandardM128ms'
-	VMSize VMSize `json:"vmSize,omitempty"`
+	// VMSize - The size of the master VMs.
+	VMSize *string `json:"vmSize,omitempty"`
 	// SubnetID - The Azure resource ID of the master subnet.
 	SubnetID *string `json:"subnetId,omitempty"`
 	// EncryptionAtHost - Whether master virtual machines are encrypted at host. Possible values include: 'Disabled', 'Enabled'
@@ -893,8 +893,8 @@ func (tr TrackedResource) MarshalJSON() ([]byte, error) {
 type WorkerProfile struct {
 	// Name - The worker profile name.
 	Name *string `json:"name,omitempty"`
-	// VMSize - The size of the worker VMs. Possible values include: 'StandardD16asV4', 'StandardD16sV3', 'StandardD2sV3', 'StandardD32asV4', 'StandardD32sV3', 'StandardD4asV4', 'StandardD4sV3', 'StandardD8asV4', 'StandardD8sV3', 'StandardE16sV3', 'StandardE32sV3', 'StandardE4sV3', 'StandardE64iV3', 'StandardE64isV3', 'StandardE8sV3', 'StandardF16sV2', 'StandardF32sV2', 'StandardF4sV2', 'StandardF72sV2', 'StandardF8sV2', 'StandardG5', 'StandardGS5', 'StandardM128ms'
-	VMSize VMSize `json:"vmSize,omitempty"`
+	// VMSize - The size of the worker VMs.
+	VMSize *string `json:"vmSize,omitempty"`
 	// DiskSizeGB - The disk size of the worker VMs.
 	DiskSizeGB *int32 `json:"diskSizeGB,omitempty"`
 	// SubnetID - The Azure resource ID of the worker subnet.

@@ -283,14 +283,8 @@ class IngressProfile(msrest.serialization.Model):
 class MasterProfile(msrest.serialization.Model):
     """MasterProfile represents a master profile.
 
-    :ivar vm_size: The size of the master VMs. Possible values include: "Standard_D16as_v4",
-     "Standard_D16s_v3", "Standard_D2s_v3", "Standard_D32as_v4", "Standard_D32s_v3",
-     "Standard_D4as_v4", "Standard_D4s_v3", "Standard_D8as_v4", "Standard_D8s_v3",
-     "Standard_E16s_v3", "Standard_E32s_v3", "Standard_E4s_v3", "Standard_E64i_v3",
-     "Standard_E64is_v3", "Standard_E8s_v3", "Standard_F16s_v2", "Standard_F32s_v2",
-     "Standard_F4s_v2", "Standard_F72s_v2", "Standard_F8s_v2", "Standard_G5", "Standard_GS5",
-     "Standard_M128ms".
-    :vartype vm_size: str or ~azure.mgmt.redhatopenshift.v2022_02_01.models.VMSize
+    :ivar vm_size: The size of the master VMs.
+    :vartype vm_size: str
     :ivar subnet_id: The Azure resource ID of the master subnet.
     :vartype subnet_id: str
     :ivar encryption_at_host: Whether master virtual machines are encrypted at host. Possible
@@ -312,21 +306,15 @@ class MasterProfile(msrest.serialization.Model):
     def __init__(
         self,
         *,
-        vm_size: Optional[Union[str, "VMSize"]] = None,
+        vm_size: Optional[str] = None,
         subnet_id: Optional[str] = None,
         encryption_at_host: Optional[Union[str, "EncryptionAtHost"]] = None,
         disk_encryption_set_id: Optional[str] = None,
         **kwargs
     ):
         """
-        :keyword vm_size: The size of the master VMs. Possible values include: "Standard_D16as_v4",
-         "Standard_D16s_v3", "Standard_D2s_v3", "Standard_D32as_v4", "Standard_D32s_v3",
-         "Standard_D4as_v4", "Standard_D4s_v3", "Standard_D8as_v4", "Standard_D8s_v3",
-         "Standard_E16s_v3", "Standard_E32s_v3", "Standard_E4s_v3", "Standard_E64i_v3",
-         "Standard_E64is_v3", "Standard_E8s_v3", "Standard_F16s_v2", "Standard_F32s_v2",
-         "Standard_F4s_v2", "Standard_F72s_v2", "Standard_F8s_v2", "Standard_G5", "Standard_GS5",
-         "Standard_M128ms".
-        :paramtype vm_size: str or ~azure.mgmt.redhatopenshift.v2022_02_01.models.VMSize
+        :keyword vm_size: The size of the master VMs.
+        :paramtype vm_size: str
         :keyword subnet_id: The Azure resource ID of the master subnet.
         :paramtype subnet_id: str
         :keyword encryption_at_host: Whether master virtual machines are encrypted at host. Possible
@@ -966,14 +954,8 @@ class WorkerProfile(msrest.serialization.Model):
 
     :ivar name: The worker profile name.
     :vartype name: str
-    :ivar vm_size: The size of the worker VMs. Possible values include: "Standard_D16as_v4",
-     "Standard_D16s_v3", "Standard_D2s_v3", "Standard_D32as_v4", "Standard_D32s_v3",
-     "Standard_D4as_v4", "Standard_D4s_v3", "Standard_D8as_v4", "Standard_D8s_v3",
-     "Standard_E16s_v3", "Standard_E32s_v3", "Standard_E4s_v3", "Standard_E64i_v3",
-     "Standard_E64is_v3", "Standard_E8s_v3", "Standard_F16s_v2", "Standard_F32s_v2",
-     "Standard_F4s_v2", "Standard_F72s_v2", "Standard_F8s_v2", "Standard_G5", "Standard_GS5",
-     "Standard_M128ms".
-    :vartype vm_size: str or ~azure.mgmt.redhatopenshift.v2022_02_01.models.VMSize
+    :ivar vm_size: The size of the worker VMs.
+    :vartype vm_size: str
     :ivar disk_size_gb: The disk size of the worker VMs.
     :vartype disk_size_gb: int
     :ivar subnet_id: The Azure resource ID of the worker subnet.
@@ -1003,7 +985,7 @@ class WorkerProfile(msrest.serialization.Model):
         self,
         *,
         name: Optional[str] = None,
-        vm_size: Optional[Union[str, "VMSize"]] = None,
+        vm_size: Optional[str] = None,
         disk_size_gb: Optional[int] = None,
         subnet_id: Optional[str] = None,
         count: Optional[int] = None,
@@ -1014,14 +996,8 @@ class WorkerProfile(msrest.serialization.Model):
         """
         :keyword name: The worker profile name.
         :paramtype name: str
-        :keyword vm_size: The size of the worker VMs. Possible values include: "Standard_D16as_v4",
-         "Standard_D16s_v3", "Standard_D2s_v3", "Standard_D32as_v4", "Standard_D32s_v3",
-         "Standard_D4as_v4", "Standard_D4s_v3", "Standard_D8as_v4", "Standard_D8s_v3",
-         "Standard_E16s_v3", "Standard_E32s_v3", "Standard_E4s_v3", "Standard_E64i_v3",
-         "Standard_E64is_v3", "Standard_E8s_v3", "Standard_F16s_v2", "Standard_F32s_v2",
-         "Standard_F4s_v2", "Standard_F72s_v2", "Standard_F8s_v2", "Standard_G5", "Standard_GS5",
-         "Standard_M128ms".
-        :paramtype vm_size: str or ~azure.mgmt.redhatopenshift.v2022_02_01.models.VMSize
+        :keyword vm_size: The size of the worker VMs.
+        :paramtype vm_size: str
         :keyword disk_size_gb: The disk size of the worker VMs.
         :paramtype disk_size_gb: int
         :keyword subnet_id: The Azure resource ID of the worker subnet.

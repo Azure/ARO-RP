@@ -59,31 +59,3 @@ class Visibility(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
 
     PRIVATE = "Private"
     PUBLIC = "Public"
-
-class VMSize(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
-    """VMSize represents a VM size.
-    """
-
-    STANDARD_D16_AS_V4 = "Standard_D16as_v4"
-    STANDARD_D16_S_V3 = "Standard_D16s_v3"
-    STANDARD_D2_S_V3 = "Standard_D2s_v3"
-    STANDARD_D32_AS_V4 = "Standard_D32as_v4"
-    STANDARD_D32_S_V3 = "Standard_D32s_v3"
-    STANDARD_D4_AS_V4 = "Standard_D4as_v4"
-    STANDARD_D4_S_V3 = "Standard_D4s_v3"
-    STANDARD_D8_AS_V4 = "Standard_D8as_v4"
-    STANDARD_D8_S_V3 = "Standard_D8s_v3"
-    STANDARD_E16_S_V3 = "Standard_E16s_v3"
-    STANDARD_E32_S_V3 = "Standard_E32s_v3"
-    STANDARD_E4_S_V3 = "Standard_E4s_v3"
-    STANDARD_E64_I_V3 = "Standard_E64i_v3"
-    STANDARD_E64_IS_V3 = "Standard_E64is_v3"
-    STANDARD_E8_S_V3 = "Standard_E8s_v3"
-    STANDARD_F16_S_V2 = "Standard_F16s_v2"
-    STANDARD_F32_S_V2 = "Standard_F32s_v2"
-    STANDARD_F4_S_V2 = "Standard_F4s_v2"
-    STANDARD_F72_S_V2 = "Standard_F72s_v2"
-    STANDARD_F8_S_V2 = "Standard_F8s_v2"
-    STANDARD_G5 = "Standard_G5"
-    STANDARD_GS5 = "Standard_GS5"
-    STANDARD_M128_MS = "Standard_M128ms"

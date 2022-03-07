@@ -62,7 +62,6 @@ from ._azure_red_hat_open_shift_client_enums import (
     EncryptionAtHost,
     FipsValidatedModules,
     ProvisioningState,
-    VMSize,
     Visibility,
 )
 
@@ -91,6 +90,5 @@ __all__ = [
     'EncryptionAtHost',
     'FipsValidatedModules',
     'ProvisioningState',
-    'VMSize',
     'Visibility',
 ]

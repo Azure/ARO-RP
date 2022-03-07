@@ -80,14 +80,14 @@ func validOpenShiftCluster() *OpenShiftCluster {
 				ServiceCIDR: "172.30.0.0/16",
 			},
 			MasterProfile: MasterProfile{
-				VMSize:           VMSizeStandardD8sV3,
+				VMSize:           "Standard_D8s_v3",
 				EncryptionAtHost: EncryptionAtHostDisabled,
 				SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID),
 			},
 			WorkerProfiles: []WorkerProfile{
 				{
 					Name:             "worker",
-					VMSize:           VMSizeStandardD4sV3,
+					VMSize:           "Standard_D4s_v3",
 					EncryptionAtHost: EncryptionAtHostDisabled,
 					DiskSizeGB:       128,
 					SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID),
@@ -479,7 +479,7 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 		{
 			name: "vmSize unsupported",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MasterProfile.VMSize = VMSizeStandardD2sV3
+				oc.Properties.MasterProfile.VMSize = "Standard_D2s_v3"
 			},
 			wantErr: "400: InvalidParameter: properties.masterProfile.vmSize: The provided master VM size 'Standard_D2s_v3' is invalid.",
 		},
@@ -870,7 +870,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		},
 		{
 			name:    "worker vmSize change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].VMSize = VMSizeStandardD8sV3 },
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].VMSize = "Standard_D8s_v3" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].vmSize: Changing property 'properties.workerProfiles['worker'].vmSize' is not allowed.",
 		},
 		{
