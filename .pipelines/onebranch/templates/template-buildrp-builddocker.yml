@@ -9,4 +9,4 @@ steps:
     saveImageToPath: aro-rp.tar
     buildkit: 1
     enable_network: true
-    build_tag: $(Build.BuildNumber)
+    build_tag: $(Build.SourceBranchName)
