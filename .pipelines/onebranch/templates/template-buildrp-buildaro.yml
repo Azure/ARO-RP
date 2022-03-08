@@ -12,3 +12,11 @@ steps:
       mkdir -p $(ob_outputDirectory) 
       cp aro $(ob_outputDirectory)/aro
     workingDirectory: $(Build.SourcesDirectory)
+- task: Bash@3
+  displayName: 🕵️ Validate FIPS
+  inputs:
+    targetType: inline
+    script: |
+      export GOPATH=$(Agent.TempDirectory)
+      make validate-fips
+    workingDirectory: $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
