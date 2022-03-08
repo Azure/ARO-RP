@@ -159,7 +159,9 @@ type MasterProfile struct {
 	DiskEncryptionSetID string `json:"diskEncryptionSetId,omitempty"`
 }
 
-// VMSize represents a VM size.
+// VM size availability varies by region.
+// If a node contains insufficient compute resources (memory, cpu, etc.), pods might fail to run correctly.
+// For more details on restricted VM sizes, see: https://docs.microsoft.com/en-us/azure/openshift/support-policies-v4#supported-virtual-machine-sizes
 type VMSize string
 
 // WorkerProfile represents a worker profile.

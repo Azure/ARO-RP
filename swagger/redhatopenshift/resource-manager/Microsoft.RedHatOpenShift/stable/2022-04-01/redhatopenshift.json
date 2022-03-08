@@ -833,7 +833,7 @@
       }
     },
     "VMSize": {
-      "description": "VMSize represents a VM size.",
+      "description": "VM size availability varies by region.\nIf a node contains insufficient compute resources (memory, cpu, etc.), pods might fail to run correctly.\nFor more details on restricted VM sizes, see: https://docs.microsoft.com/en-us/azure/openshift/support-policies-v4#supported-virtual-machine-sizes",
       "type": "string"
     },
     "Visibility": {
