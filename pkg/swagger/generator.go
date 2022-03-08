@@ -9,12 +9,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/api/v20210901preview"
-	v20220201 "github.com/Azure/ARO-RP/pkg/api/v20220201"
+	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
 )
 
 const apiv20200430Path = "github.com/Azure/ARO-RP/pkg/api/v20200430"
 const apiv20210901previewPath = "github.com/Azure/ARO-RP/pkg/api/v20210901preview"
-const apiv20220201Path = "github.com/Azure/ARO-RP/pkg/api/v20220201"
+const apiv20220401Path = "github.com/Azure/ARO-RP/pkg/api/v20220401"
 
 type generator struct {
 	exampleOpenShiftClusterPutParameter            func() interface{}
@@ -60,13 +60,13 @@ var apis = map[string]*generator{
 		systemData:         true,
 		kubeConfig:         true,
 	},
-	apiv20220201Path: {
-		exampleOpenShiftClusterPutParameter:            v20220201.ExampleOpenShiftClusterPutParameter,
-		exampleOpenShiftClusterPatchParameter:          v20220201.ExampleOpenShiftClusterPatchParameter,
-		exampleOpenShiftClusterResponse:                v20220201.ExampleOpenShiftClusterResponse,
-		exampleOpenShiftClusterCredentialsResponse:     v20220201.ExampleOpenShiftClusterCredentialsResponse,
-		exampleOpenShiftClusterListResponse:            v20220201.ExampleOpenShiftClusterListResponse,
-		exampleOpenShiftClusterAdminKubeconfigResponse: v20220201.ExampleOpenShiftClusterAdminKubeconfigResponse,
+	apiv20220401Path: {
+		exampleOpenShiftClusterPutParameter:            v20220401.ExampleOpenShiftClusterPutParameter,
+		exampleOpenShiftClusterPatchParameter:          v20220401.ExampleOpenShiftClusterPatchParameter,
+		exampleOpenShiftClusterResponse:                v20220401.ExampleOpenShiftClusterResponse,
+		exampleOpenShiftClusterCredentialsResponse:     v20220401.ExampleOpenShiftClusterCredentialsResponse,
+		exampleOpenShiftClusterListResponse:            v20220401.ExampleOpenShiftClusterListResponse,
+		exampleOpenShiftClusterAdminKubeconfigResponse: v20220401.ExampleOpenShiftClusterAdminKubeconfigResponse,
 		exampleOperationListResponse:                   api.ExampleOperationListResponse,
 
 		xmsEnum:            []string{"SoftwareDefinedNetwork", "EncryptionAtHost", "Visibility"},
