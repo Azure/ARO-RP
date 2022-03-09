@@ -42,6 +42,8 @@ E2e tests can also be run locally as follows:
 - Run the `make test-e2e` target
 - Delete the cosmos database, if applicable
 
+You can also modify the flags passed to the e2e.test run by setting the E2E_FLAGS environment variable before running `make test-e2e`.
+
 These steps can be acheived using commands below.  Look at the [e2e helper
 file](../hack/e2e/run-rp-and-e2e.sh) to understand each of the bash functions
 below.
