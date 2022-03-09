@@ -161,6 +161,12 @@ func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, c
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".resourceGroupId", "The provided resource group '%s' is invalid: must be different from resourceGroup of the OpenShift cluster object.", cp.ResourceGroupID)
 	}
 
+	switch cp.FipsValidatedModules {
+	case FipsValidatedModulesDisabled, FipsValidatedModulesEnabled:
+	default:
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".fipsValidatedModules", "The provided value '%s' is invalid.", cp.FipsValidatedModules)
+	}
+
 	return nil
 }
 

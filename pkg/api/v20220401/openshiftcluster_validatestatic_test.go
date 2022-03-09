@@ -63,10 +63,11 @@ func validOpenShiftCluster() *OpenShiftCluster {
 		Properties: OpenShiftClusterProperties{
 			ProvisioningState: ProvisioningStateSucceeded,
 			ClusterProfile: ClusterProfile{
-				PullSecret:      `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
-				Domain:          "cluster.location.aroapp.io",
-				Version:         version.InstallStream.Version.String(),
-				ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
+				PullSecret:           `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
+				Domain:               "cluster.location.aroapp.io",
+				Version:              version.InstallStream.Version.String(),
+				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
+				FipsValidatedModules: FipsValidatedModulesDisabled,
 			},
 			ConsoleProfile: ConsoleProfile{
 				URL: "https://console-openshift-console.apps.cluster.location.aroapp.io/",
@@ -324,6 +325,20 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 				oc.Properties.ClusterProfile.ResourceGroupID = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup"
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.resourceGroupId: The provided resource group '/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup' is invalid: must be different from resourceGroup of the OpenShift cluster object.",
+		},
+		{
+			name: "fips validated modules invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.FipsValidatedModules = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.fipsValidatedModules: The provided value 'invalid' is invalid.",
+		},
+		{
+			name: "fips validated modules empty",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.FipsValidatedModules = ""
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.fipsValidatedModules: The provided value '' is invalid.",
 		},
 	}
 
