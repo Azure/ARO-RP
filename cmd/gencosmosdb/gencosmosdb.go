@@ -8,7 +8,6 @@ import (
 	"strings"
 	"unicode"
 
-	_ "github.com/go-bindata/go-bindata"
 	"github.com/jewzaam/go-cosmosdb/pkg/gencosmosdb"
 )
 
