@@ -13,7 +13,8 @@
         "clusterProfile": {
           "pullSecret": "{\"auths\":{\"registry.connect.redhat.com\":{\"auth\":\"\"},\"registry.redhat.io\":{\"auth\":\"\"}}}",
           "domain": "cluster.location.aroapp.io",
-          "resourceGroupId": "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup"
+          "resourceGroupId": "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup",
+          "fipsValidatedModules": "Enabled"
         },
         "consoleProfile": {},
         "servicePrincipalProfile": {
@@ -26,7 +27,8 @@
         },
         "masterProfile": {
           "vmSize": "Standard_D8s_v3",
-          "subnetId": "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master"
+          "subnetId": "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master",
+          "encryptionAtHost": "Enabled"
         },
         "workerProfiles": [
           {
