@@ -16,7 +16,7 @@ from msrestazure.tools import resource_id, parse_resource_id
 from msrest.exceptions import HttpOperationError
 from knack.log import get_logger
 
-import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2021_09_01_preview.models as openshiftcluster
+import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2022_04_01.models as openshiftcluster
 
 from azext_aro._aad import AADManager
 from azext_aro._rbac import assign_role_to_resource, has_role_assignment_on_resource
