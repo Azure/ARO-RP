@@ -25,7 +25,7 @@ import (
 )
 
 func validListByResourceGroupMock(resources *mock_features.MockResourcesClient) {
-	resources.EXPECT().ListByResourceGroup(gomock.Any(), "test-cluster", "$filter=resourceType ne 'Microsoft.Compute/snapshots'", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
+	resources.EXPECT().ListByResourceGroup(gomock.Any(), "test-cluster", "resourceType ne 'Microsoft.Compute/snapshots'", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
 		{
 			Name: to.StringPtr("vm-1"),
 			ID:   to.StringPtr("/subscriptions/id"),
