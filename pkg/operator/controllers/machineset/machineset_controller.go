@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	maoclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

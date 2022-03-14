@@ -2,7 +2,6 @@ package aws
 
 import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/openshift/installer/pkg/rhcos"
 	"github.com/openshift/installer/pkg/types"
@@ -12,18 +11,12 @@ import (
 // This is subset of AWS regions and the regions where RHEL CoreOS images are published.
 // The result is a map of region identifier to region description
 func knownRegions(architecture types.Architecture) map[string]string {
-	required := sets.NewString(rhcos.AMIRegionsX86_64...)
-	if architecture == types.ArchitectureARM64 {
-		required = sets.NewString(rhcos.AMIRegionsAARCH64...)
-	}
+	required := rhcos.AMIRegions(architecture)
 
 	regions := make(map[string]string)
-	for _, partition := range endpoints.DefaultPartitions() {
-		for _, partitionRegion := range partition.Regions() {
-			partitionRegion := partitionRegion
-			if required.Has(partitionRegion.ID()) {
-				regions[partitionRegion.ID()] = partitionRegion.Description()
-			}
+	for _, region := range endpoints.AwsPartition().Regions() {
+		if required.Has(region.ID()) {
+			regions[region.ID()] = region.Description()
 		}
 	}
 	return regions

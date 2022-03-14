@@ -9,15 +9,14 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
-	maofake "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	maoclient "github.com/openshift/client-go/machine/clientset/versioned"
+	maofake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
-	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
@@ -25,7 +24,7 @@ import (
 func TestEmitNodeConditions(t *testing.T) {
 	ctx := context.Background()
 
-	provSpec, err := json.Marshal(azureproviderv1beta1.AzureMachineProviderSpec{})
+	provSpec, err := json.Marshal(machinev1beta1.AzureMachineProviderSpec{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,14 +140,14 @@ func TestEmitNodeConditions(t *testing.T) {
 func TestGetSpotInstances(t *testing.T) {
 	ctx := context.Background()
 
-	spotProvSpec, err := json.Marshal(azureproviderv1beta1.AzureMachineProviderSpec{
-		SpotVMOptions: &azureproviderv1beta1.SpotVMOptions{},
+	spotProvSpec, err := json.Marshal(machinev1beta1.AzureMachineProviderSpec{
+		SpotVMOptions: &machinev1beta1.SpotVMOptions{},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	provSpec, err := json.Marshal(azureproviderv1beta1.AzureMachineProviderSpec{})
+	provSpec, err := json.Marshal(machinev1beta1.AzureMachineProviderSpec{})
 	if err != nil {
 		t.Fatal(err)
 	}

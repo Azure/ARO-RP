@@ -21,6 +21,8 @@ import (
 	operv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/installer/pkg/ipnet"
 	"github.com/openshift/installer/pkg/types"
+	"github.com/openshift/installer/pkg/types/alibabacloud"
+	alibabacloudvalidation "github.com/openshift/installer/pkg/types/alibabacloud/validation"
 	"github.com/openshift/installer/pkg/types/aws"
 	awsvalidation "github.com/openshift/installer/pkg/types/aws/validation"
 	"github.com/openshift/installer/pkg/types/azure"
@@ -126,7 +128,7 @@ func ValidateInstallConfig(c *types.InstallConfig) field.ErrorList {
 
 	if c.Publish == types.InternalPublishingStrategy {
 		switch platformName := c.Platform.Name(); platformName {
-		case aws.Name, azure.Name, gcp.Name:
+		case aws.Name, azure.Name, gcp.Name, alibabacloud.Name:
 		default:
 			allErrs = append(allErrs, field.Invalid(field.NewPath("publish"), c.Publish, fmt.Sprintf("Internal publish strategy is not supported on %q platform", platformName)))
 		}
@@ -458,6 +460,11 @@ func validatePlatform(platform *types.Platform, fldPath *field.Path, network *ty
 		}
 		allErrs = append(allErrs, validation(fldPath.Child(n))...)
 	}
+	if platform.AlibabaCloud != nil {
+		validate(alibabacloud.Name, platform.AlibabaCloud, func(f *field.Path) field.ErrorList {
+			return alibabacloudvalidation.ValidatePlatform(platform.AlibabaCloud, network, f)
+		})
+	}
 	if platform.AWS != nil {
 		validate(aws.Name, platform.AWS, func(f *field.Path) field.ErrorList { return awsvalidation.ValidatePlatform(platform.AWS, f) })
 	}
@@ -553,6 +560,23 @@ func validateImageContentSources(groups []types.ImageContentSource, fldPath *fie
 func validateNamedRepository(r string) error {
 	ref, err := dockerref.ParseNamed(r)
 	if err != nil {
+		// If a mirror name is provided without the named reference,
+		// then the name is not considered canonical and will cause
+		// an error. e.g. registry.lab.redhat.com:5000 will result
+		// in an error. Instead we will check whether the input is
+		// a valid hostname as a workaround.
+		if err == dockerref.ErrNameNotCanonical {
+			// If the hostname string contains a port, lets attempt
+			// to split them
+			host, _, err := net.SplitHostPort(r)
+			if err != nil {
+				host = r
+			}
+			if err = validate.Host(host); err != nil {
+				return errors.Wrap(err, "the repository provided is invalid")
+			}
+			return nil
+		}
 		return errors.Wrap(err, "failed to parse")
 	}
 	if !dockerref.IsNameOnly(ref) {
@@ -583,7 +607,7 @@ func validateCloudCredentialsMode(mode types.CredentialsMode, fldPath *field.Pat
 	}
 	allErrs := field.ErrorList{}
 
-	allowedAzureModes := []types.CredentialsMode{types.MintCredentialsMode, types.PassthroughCredentialsMode, types.ManualCredentialsMode}
+	allowedAzureModes := []types.CredentialsMode{types.PassthroughCredentialsMode, types.ManualCredentialsMode}
 	if platform.Azure != nil && platform.Azure.CloudName == azure.StackCloud {
 		allowedAzureModes = []types.CredentialsMode{types.ManualCredentialsMode}
 	}
@@ -591,10 +615,11 @@ func validateCloudCredentialsMode(mode types.CredentialsMode, fldPath *field.Pat
 	// validPlatformCredentialsModes is a map from the platform name to a slice of credentials modes that are valid
 	// for the platform. If a platform name is not in the map, then the credentials mode cannot be set for that platform.
 	validPlatformCredentialsModes := map[string][]types.CredentialsMode{
-		aws.Name:      {types.MintCredentialsMode, types.PassthroughCredentialsMode, types.ManualCredentialsMode},
-		azure.Name:    allowedAzureModes,
-		gcp.Name:      {types.MintCredentialsMode, types.PassthroughCredentialsMode, types.ManualCredentialsMode},
-		ibmcloud.Name: {types.ManualCredentialsMode},
+		alibabacloud.Name: {types.ManualCredentialsMode},
+		aws.Name:          {types.MintCredentialsMode, types.PassthroughCredentialsMode, types.ManualCredentialsMode},
+		azure.Name:        allowedAzureModes,
+		gcp.Name:          {types.MintCredentialsMode, types.PassthroughCredentialsMode, types.ManualCredentialsMode},
+		ibmcloud.Name:     {types.ManualCredentialsMode},
 	}
 	if validModes, ok := validPlatformCredentialsModes[platform.Name()]; ok {
 		validModesSet := sets.NewString()

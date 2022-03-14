@@ -83,7 +83,7 @@ func (c *FakeConsoleYAMLSamples) Update(ctx context.Context, consoleYAMLSample *
 // Delete takes name of the consoleYAMLSample and deletes it. Returns an error if one occurs.
 func (c *FakeConsoleYAMLSamples) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(consoleyamlsamplesResource, name), &consolev1.ConsoleYAMLSample{})
+		Invokes(testing.NewRootDeleteActionWithOptions(consoleyamlsamplesResource, name, opts), &consolev1.ConsoleYAMLSample{})
 	return err
 }
 
