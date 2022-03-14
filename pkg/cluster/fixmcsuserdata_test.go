@@ -10,8 +10,8 @@ import (
 	"reflect"
 	"testing"
 
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	maofake "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	maofake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -19,13 +19,12 @@ import (
 	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
-	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
-func marshalAzureMachineProviderSpec(t *testing.T, spec *azureproviderv1beta1.AzureMachineProviderSpec) []byte {
+func marshalAzureMachineProviderSpec(t *testing.T, spec *machinev1beta1.AzureMachineProviderSpec) []byte {
 	serializer := kjson.NewSerializerWithOptions(
 		kjson.DefaultMetaFactory, scheme.Scheme, scheme.Scheme,
 		kjson.SerializerOptions{Yaml: true},
@@ -94,7 +93,7 @@ func userDataSecret(t *testing.T, namespace, name, appendSource, mergeSource str
 	}
 }
 
-func testMachine(t *testing.T, namespace, name string, spec *azureproviderv1beta1.AzureMachineProviderSpec) *machinev1beta1.Machine {
+func testMachine(t *testing.T, namespace, name string, spec *machinev1beta1.AzureMachineProviderSpec) *machinev1beta1.Machine {
 	return &machinev1beta1.Machine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -110,7 +109,7 @@ func testMachine(t *testing.T, namespace, name string, spec *azureproviderv1beta
 	}
 }
 
-func testMachineSet(t *testing.T, namespace, name string, spec *azureproviderv1beta1.AzureMachineProviderSpec) *machinev1beta1.MachineSet {
+func testMachineSet(t *testing.T, namespace, name string, spec *machinev1beta1.AzureMachineProviderSpec) *machinev1beta1.MachineSet {
 	return &machinev1beta1.MachineSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -151,12 +150,12 @@ func TestFixMCSUserData(t *testing.T) {
 			userDataSecret(t, "openshift-machine-api", "worker-user-data", "", "https://api-int.example.com:22623/config/worker"),
 		),
 		maocli: maofake.NewSimpleClientset(
-			testMachineSet(t, "openshift-machine-api", "worker", &azureproviderv1beta1.AzureMachineProviderSpec{
+			testMachineSet(t, "openshift-machine-api", "worker", &machinev1beta1.AzureMachineProviderSpec{
 				UserDataSecret: &corev1.SecretReference{
 					Name: "worker-user-data",
 				},
 			}),
-			testMachine(t, "openshift-machine-api", "master", &azureproviderv1beta1.AzureMachineProviderSpec{
+			testMachine(t, "openshift-machine-api", "master", &machinev1beta1.AzureMachineProviderSpec{
 				UserDataSecret: &corev1.SecretReference{
 					Name: "master-user-data",
 				},

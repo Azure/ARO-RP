@@ -46,13 +46,28 @@ type TemplateData struct {
 
 	// BaremetalIntrospectionEndpointOverride contains the url for the baremetal introspection endpoint
 	BaremetalIntrospectionEndpointOverride string
+
+	// ClusterOSImage contains 4 URLs to download RHCOS live iso, kernel, rootfs and initramfs
+	ClusterOSImage string
+
+	// API VIP for use by ironic during bootstrap.
+	APIVIP string
+
+	// Hosts is the information needed to create the objects in Ironic.
+	Hosts []*baremetal.Host
+
+	// ProvisioningNetwork displays the type of provisioning network being used
+	ProvisioningNetwork string
 }
 
 // GetTemplateData returns platform-specific data for bootstrap templates.
 func GetTemplateData(config *baremetal.Platform, networks []types.MachineNetworkEntry, ironicUsername, ironicPassword string) *TemplateData {
 	var templateData TemplateData
 
+	templateData.Hosts = config.Hosts
+
 	templateData.ProvisioningIP = config.BootstrapProvisioningIP
+	templateData.ProvisioningNetwork = string(config.ProvisioningNetwork)
 	templateData.BaremetalEndpointOverride = fmt.Sprintf("http://%s/v1", net.JoinHostPort(config.APIVIP, "6385"))
 	templateData.BaremetalIntrospectionEndpointOverride = fmt.Sprintf("http://%s/v1", net.JoinHostPort(config.APIVIP, "5050"))
 
@@ -74,7 +89,7 @@ func GetTemplateData(config *baremetal.Platform, networks []types.MachineNetwork
 
 		var dhcpAllowList []string
 		for _, host := range config.Hosts {
-			if host.Role == "master" {
+			if host.IsMaster() {
 				dhcpAllowList = append(dhcpAllowList, host.BootMACAddress)
 			}
 		}
@@ -97,6 +112,8 @@ func GetTemplateData(config *baremetal.Platform, networks []types.MachineNetwork
 
 	templateData.IronicUsername = ironicUsername
 	templateData.IronicPassword = ironicPassword
+	templateData.ClusterOSImage = config.ClusterOSImage
+	templateData.APIVIP = config.APIVIP
 
 	return &templateData
 }

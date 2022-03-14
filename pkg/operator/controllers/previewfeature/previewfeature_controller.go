@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
+	maoclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
