@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 
@@ -415,5 +416,28 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 		}
+	})
+})
+
+var _ = Describe("ARO Operator - Image Registry Config", func() {
+	ctx := context.Background()
+
+	It("should revert any changes to .Spec.DisableRedirect", func() {
+		payloadBytes := []byte(`{
+			"op": "replace",
+			"path": "/spec/disableRedirect",
+			"value": true
+		}`)
+		_, err := clients.ImageRegistry.ImageregistryV1().Configs().Patch(ctx, "cluster", types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		err = wait.PollImmediate(10*time.Second, 2*time.Minute, func() (bool, error) {
+			config, err := clients.ImageRegistry.ImageregistryV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
+			if err != nil {
+				log.Warn("Unable to fetch cluster config.imageregistry: %v", err)
+				return false, nil // retry
+			}
+			return !config.Spec.DisableRedirect, nil
+		})
+		Expect(err).NotTo(HaveOccurred())
 	})
 })
