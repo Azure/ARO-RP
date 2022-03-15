@@ -119,6 +119,30 @@ func TestReconciler(t *testing.T) {
 		assertControllerResultsEqual(t, gotResult, wantResult)
 		assertCurrentImageregistryConfigDisableRedirectEquals(t, reconciler.imageregistrycli, imageregistryConfig, true)
 	})
+
+	t.Run("should no-op 'cluster' config if already disabled", func(t *testing.T) {
+		// Given
+		imageregistryConfig := imageregistryv1.Config{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cluster",
+				Namespace: "",
+			},
+			Spec: imageregistryv1.ImageRegistrySpec{
+				DisableRedirect: true,
+			},
+		}
+		reconciler := getReconciler(clusterSpecFeatureEnabled, imageregistryConfig)
+		request := getReconcileRequestForImageRegistryConfig(imageregistryConfig)
+		wantResult := reconcile.Result{}
+
+		// When
+		gotResult, err := reconciler.Reconcile(context.Background(), request)
+
+		// Then
+		assertNoError(t, err)
+		assertControllerResultsEqual(t, gotResult, wantResult)
+		assertCurrentImageregistryConfigDisableRedirectEquals(t, reconciler.imageregistrycli, imageregistryConfig, true)
+	})
 }
 
 func getReconcileRequestForImageRegistryConfig(imageregistryConfig imageregistryv1.Config) reconcile.Request {
@@ -131,11 +155,11 @@ func getReconcileRequestForImageRegistryConfig(imageregistryConfig imageregistry
 }
 
 func getReconciler(cluster arov1alpha1.Cluster, imageregistryConfig imageregistryv1.Config) *Reconciler {
-	return &Reconciler{
-		log:              logrus.NewEntry(logrus.StandardLogger()),
-		arocli:           arofake.NewSimpleClientset(&cluster),
-		imageregistrycli: imageregistryfake.NewSimpleClientset(&imageregistryConfig),
-	}
+	return NewReconciler(
+		logrus.NewEntry(logrus.StandardLogger()),
+		arofake.NewSimpleClientset(&cluster),
+		imageregistryfake.NewSimpleClientset(&imageregistryConfig),
+	)
 }
 
 func assertNoError(t *testing.T, err error) {

@@ -63,7 +63,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
-	// TODO
+	// Otherwise, do nothing
 	return reconcile.Result{}, nil
 }
 
