@@ -6,10 +6,9 @@ package imageregistry
 import (
 	"context"
 
-	"github.com/sirupsen/logrus"
-
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
