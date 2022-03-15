@@ -26,7 +26,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/permissions"
-	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -292,11 +291,6 @@ func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actio
 	return wait.PollImmediateUntil(20*time.Second, func() (bool, error) {
 		dv.log.Debug("retry validateActions")
 		perms, err := dv.permissions.ListForResource(ctx, r.ResourceGroup, r.Provider, "", r.ResourceType, r.ResourceName)
-
-		if detailedErr, ok := err.(autorest.DetailedError); ok &&
-			detailedErr.StatusCode == http.StatusForbidden {
-			return false, steps.ErrWantRefresh
-		}
 		if err != nil {
 			return false, err
 		}
