@@ -57,8 +57,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if !registryConfig.Spec.DisableRedirect {
 		r.log.Info("An attempt was made to enable redirect! Disabling...")
 		registryConfig.Spec.DisableRedirect = true
-		r.imageregistrycli.ImageregistryV1().Configs().Update(ctx, registryConfig, metav1.UpdateOptions{})
-		return reconcile.Result{}, nil
+		_, err := r.imageregistrycli.ImageregistryV1().Configs().Update(ctx, registryConfig, metav1.UpdateOptions{})
+		if err != nil {
+			r.log.Errorf("Unexpected error while disabling image registry redirect: %v", err)
+		}
+		return reconcile.Result{}, err
 	}
 
 	// Otherwise, do nothing
