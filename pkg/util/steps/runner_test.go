@@ -9,32 +9,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 
-	mock_refreshable "github.com/Azure/ARO-RP/pkg/util/mocks/refreshable"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
-func successfulFunc(context.Context) error { return nil }
-func failingFunc(context.Context) error    { return errors.New("oh no!") }
-func failsWithAzureError(ctx context.Context) error {
-	return autorest.DetailedError{
-		Method:      "GET",
-		PackageType: "TEST",
-		Message:     "oops",
-		StatusCode:  403,
-		Original: &azure.ServiceError{
-			Code:    "AuthorizationFailed",
-			Message: "failed",
-		},
-	}
-}
+func successfulFunc(context.Context) error               { return nil }
+func failingFunc(context.Context) error                  { return errors.New("oh no!") }
 func alwaysFalseCondition(context.Context) (bool, error) { return false, nil }
 func alwaysTrueCondition(context.Context) (bool, error)  { return true, nil }
 func timingOutCondition(ctx context.Context) (bool, error) {
@@ -103,64 +88,6 @@ func TestStepRunner(t *testing.T) {
 			wantErr: `oh no!`,
 		},
 		{
-			name: "An AuthorizationRefreshingAction that fails but is retried successfully will allow a successful run",
-			steps: func(controller *gomock.Controller) []Step {
-				refreshable := mock_refreshable.NewMockAuthorizer(controller)
-				refreshable.EXPECT().
-					RefreshWithContext(gomock.Any(), gomock.Any()).
-					Return(true, nil)
-
-				errsRemaining := 1
-				action := Action(func(context.Context) error {
-					if errsRemaining > 0 {
-						errsRemaining--
-						return autorest.DetailedError{
-							Method:      "GET",
-							PackageType: "TEST",
-							Message:     "oops",
-							StatusCode:  403,
-							Original: &azure.ServiceError{
-								Code:    "AuthorizationFailed",
-								Message: "failed",
-							},
-						}
-					}
-					return nil
-				})
-
-				errorsOnce := &authorizationRefreshingActionStep{
-					step:         action,
-					authorizer:   refreshable,
-					retryTimeout: 50 * time.Millisecond,
-					pollInterval: 25 * time.Millisecond,
-				}
-
-				return []Step{
-					Action(successfulFunc),
-					errorsOnce,
-					Action(successfulFunc),
-				}
-			},
-			wantEntries: []map[string]types.GomegaMatcher{
-				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.MatchRegexp(`running step \[AuthorizationRefreshingAction \[Action github.com/Azure/ARO-RP/pkg/util/steps\.TestStepRunner\..*.\.1]]`),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal(`TEST#GET: oops: StatusCode=403 -- Original Error: Code="AuthorizationFailed" Message="failed"`),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-			},
-		},
-		{
 			name: "A successful condition will allow steps to continue",
 			steps: func(controller *gomock.Controller) []Step {
 				return []Step{
@@ -211,63 +138,6 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 			},
-		},
-		{
-			name: "AuthorizationRefreshingAction will not refresh once it is timed out",
-			steps: func(controller *gomock.Controller) []Step {
-				// We time out immediately, so we won't actually try and refresh
-				refreshable := mock_refreshable.NewMockAuthorizer(controller)
-				return []Step{
-					Action(successfulFunc),
-					&authorizationRefreshingActionStep{
-						step:         Action(failsWithAzureError),
-						authorizer:   refreshable,
-						retryTimeout: 1 * time.Nanosecond,
-					},
-					Action(successfulFunc),
-				}
-			},
-			wantEntries: []map[string]types.GomegaMatcher{
-				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("running step [AuthorizationRefreshingAction [Action github.com/Azure/ARO-RP/pkg/util/steps.failsWithAzureError]]"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal(`step [AuthorizationRefreshingAction [Action github.com/Azure/ARO-RP/pkg/util/steps.failsWithAzureError]] encountered error: TEST#GET: oops: StatusCode=403 -- Original Error: Code="AuthorizationFailed" Message="failed"`),
-					"level": gomega.Equal(logrus.ErrorLevel),
-				},
-			},
-			wantErr: `TEST#GET: oops: StatusCode=403 -- Original Error: Code="AuthorizationFailed" Message="failed"`,
-		},
-		{
-			name: "AuthorizationRefreshingAction will not refresh on a real failure",
-			steps: func(controller *gomock.Controller) []Step {
-				refreshable := mock_refreshable.NewMockAuthorizer(controller)
-				return []Step{
-					Action(successfulFunc),
-					AuthorizationRefreshingAction(refreshable, Action(failingFunc)),
-					Action(successfulFunc),
-				}
-			},
-			wantEntries: []map[string]types.GomegaMatcher{
-				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("running step [AuthorizationRefreshingAction [Action github.com/Azure/ARO-RP/pkg/util/steps.failingFunc]]"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal(`step [AuthorizationRefreshingAction [Action github.com/Azure/ARO-RP/pkg/util/steps.failingFunc]] encountered error: oh no!`),
-					"level": gomega.Equal(logrus.ErrorLevel),
-				},
-			},
-			wantErr: `oh no!`,
 		},
 		{
 			name: "A timed out Condition causes a failure",
@@ -361,19 +231,9 @@ func TestStepMetricsNameFormatting(t *testing.T) {
 			want: "condition.alwaysTrueCondition",
 		},
 		{
-			desc: "test refreshing step naming",
-			step: AuthorizationRefreshingAction(nil, Action(successfulFunc)),
-			want: "refreshing.successfulFunc",
-		},
-		{
 			desc: "test anonymous action step naming",
 			step: Action(func(context.Context) error { return nil }),
 			want: "action.func1",
-		},
-		{
-			desc: "test anonymous action step naming",
-			step: AuthorizationRefreshingAction(nil, Action(func(context.Context) error { return nil })),
-			want: "refreshing.func2",
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
