@@ -434,7 +434,7 @@ var _ = Describe("ARO Operator - Image Registry Config", func() {
 		err = wait.PollImmediate(10*time.Second, 2*time.Minute, func() (bool, error) {
 			config, err := clients.ImageRegistry.ImageregistryV1().Configs().Get(ctx, configName, metav1.GetOptions{})
 			if err != nil {
-				log.Warn("Unable to fetch cluster config.imageregistry: %v", err)
+				log.Warn(fmt.Sprintf("Unable to fetch cluster config.imageregistry: %v", err))
 				return false, nil // retry
 			}
 			return config.Spec.DisableRedirect, nil
