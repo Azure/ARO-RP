@@ -162,12 +162,10 @@ func Proxy(log *logrus.Entry, w http.ResponseWriter, r *http.Request, sz int) {
 		_, _ = io.Copy(c2, buf)
 	}()
 
-	func() {
-		// copy from c2->c1.  Call c1.CloseWrite() when done.
-		defer func() {
-			_ = c1.(interface{ CloseWrite() error }).CloseWrite()
-		}()
-		_, _ = io.Copy(c1, c2)
+	// copy from c2->c1.  Call c1.CloseWrite() when done.
+	defer func() {
+		_ = c1.(interface{ CloseWrite() error }).CloseWrite()
 	}()
+	_, _ = io.Copy(c1, c2)
 
 }
