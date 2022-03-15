@@ -422,21 +422,22 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 var _ = Describe("ARO Operator - Image Registry Config", func() {
 	ctx := context.Background()
 
-	It("should revert any changes to .Spec.DisableRedirect", func() {
+	It("should always disable redirect", func() {
+		configName := "cluster"
 		payloadBytes := []byte(`{
 			"op": "replace",
 			"path": "/spec/disableRedirect",
-			"value": true
+			"value": false
 		}`)
-		_, err := clients.ImageRegistry.ImageregistryV1().Configs().Patch(ctx, "cluster", types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
+		_, err := clients.ImageRegistry.ImageregistryV1().Configs().Patch(ctx, configName, types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		err = wait.PollImmediate(10*time.Second, 2*time.Minute, func() (bool, error) {
-			config, err := clients.ImageRegistry.ImageregistryV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
+			config, err := clients.ImageRegistry.ImageregistryV1().Configs().Get(ctx, configName, metav1.GetOptions{})
 			if err != nil {
 				log.Warn("Unable to fetch cluster config.imageregistry: %v", err)
 				return false, nil // retry
 			}
-			return !config.Spec.DisableRedirect, nil
+			return config.Spec.DisableRedirect, nil
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
