@@ -57,7 +57,7 @@ require (
 	github.com/gorilla/securecookie v1.1.1
 	github.com/gorilla/sessions v1.2.1
 	github.com/h2non/filetype v1.1.3 // indirect
-	github.com/jewzaam/go-cosmosdb v0.0.0-20211018134417-8d1494e7862f
+	github.com/jewzaam/go-cosmosdb v0.0.0-20220315232836-282b67c5b234
 	github.com/jstemmer/go-junit-report v0.9.1
 	github.com/klauspost/compress v1.14.2 // indirect
 	github.com/libvirt/libvirt-go v7.4.0+incompatible // indirect
