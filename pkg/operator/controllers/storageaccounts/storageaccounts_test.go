@@ -46,7 +46,7 @@ func getValidClusterInstance(operatorFlag bool) *arov1alpha1.Cluster {
 			ClusterResourceGroupID: clusterResourceGroupId,
 			StorageSuffix:          storageSuffix,
 			OperatorFlags: arov1alpha1.OperatorFlags{
-				ENABLED: strconv.FormatBool(operatorFlag),
+				controllerEnabled: strconv.FormatBool(operatorFlag),
 			},
 		},
 	}

@@ -20,12 +20,12 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
 const (
-	CONFIG_NAMESPACE string = "aro.banner"
-	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+	ControllerName = "Banner"
+
+	controllerEnabled = "aro.banner.enabled"
 )
 
 // BannerReconciler is the controller struct
@@ -52,7 +52,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
@@ -74,6 +74,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		// watching ConsoleNotifications in case a user edits it
 		Watches(&source.Kind{Type: &consolev1.ConsoleNotification{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(aroBannerPredicate)).
-		Named(controllers.BannerControllerName).
+		Named(ControllerName).
 		Complete(r)
 }

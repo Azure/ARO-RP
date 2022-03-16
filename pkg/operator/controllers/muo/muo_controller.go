@@ -20,14 +20,15 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
 const (
-	enabled  string = "rh.srep.muo.enabled"
-	managed  string = "rh.srep.muo.managed"
-	pullSpec string = "rh.srep.muo.deploy.pullspec"
+	ControllerName = "ManagedUpgradeOperator"
+
+	controllerEnabled  = "rh.srep.muo.enabled"
+	controllerManaged  = "rh.srep.muo.managed"
+	controllerPullSpec = "rh.srep.muo.deploy.pullspec"
 )
 
 type Reconciler struct {
@@ -54,12 +55,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(enabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
 
-	managed := instance.Spec.OperatorFlags.GetWithDefault(managed, "")
+	managed := instance.Spec.OperatorFlags.GetWithDefault(controllerManaged, "")
 
 	// If enabled and managed=true, install MUO
 	// If enabled and managed=false, remove the MUO deployment
@@ -113,6 +114,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return builder.
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}, predicate.LabelChangedPredicate{})).
-		Named(controllers.ManagedUpgradeOperatorControllerName).
+		Named(ControllerName).
 		Complete(r)
 }

@@ -43,9 +43,9 @@ func getValidClusterInstance(operatorFlagEnabled bool, operatorFlagNSG bool, ope
 			ClusterResourceGroupID: clusterResourceGroupId,
 			InfraID:                infraId,
 			OperatorFlags: arov1alpha1.OperatorFlags{
-				ENABLED:                  strconv.FormatBool(operatorFlagEnabled),
-				NSG_MANAGED:              strconv.FormatBool(operatorFlagNSG),
-				SERVICE_ENDPOINT_MANAGED: strconv.FormatBool(operatorFlagServiceEndpoint),
+				controllerEnabled:                strconv.FormatBool(operatorFlagEnabled),
+				controllerNSGManaged:             strconv.FormatBool(operatorFlagNSG),
+				controllerServiceEndpointManaged: strconv.FormatBool(operatorFlagServiceEndpoint),
 			},
 		},
 	}

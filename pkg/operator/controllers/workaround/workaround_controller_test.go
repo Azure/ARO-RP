@@ -50,7 +50,7 @@ func TestWorkaroundReconciler(t *testing.T) {
 			},
 			Spec: arov1alpha1.ClusterSpec{
 				OperatorFlags: arov1alpha1.OperatorFlags{
-					ENABLED: "true",
+					controllerEnabled: "true",
 				},
 			},
 		})

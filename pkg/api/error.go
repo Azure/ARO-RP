@@ -60,7 +60,7 @@ func (b *CloudErrorBody) String() string {
 }
 
 // CloudErrorCodes
-var (
+const (
 	CloudErrorCodeInternalServerError                = "InternalServerError"
 	CloudErrorCodeDeploymentFailed                   = "DeploymentFailed"
 	CloudErrorCodeInvalidParameter                   = "InvalidParameter"

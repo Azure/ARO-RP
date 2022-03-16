@@ -32,14 +32,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
 const (
-	CONFIG_NAMESPACE string = "aro.pullsecret"
-	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
-	MANAGED          string = CONFIG_NAMESPACE + ".managed"
+	ControllerName = "PullSecret"
+
+	controllerEnabled = "aro.pullsecret.enabled"
+	controllerManaged = "aro.pullsecret.managed"
 )
 
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
@@ -76,7 +76,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
@@ -90,7 +90,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// reconcile global pull secret
 	// detects if the global pull secret is broken and fixes it by using backup managed by ARO operator
-	if instance.Spec.OperatorFlags.GetSimpleBoolean(MANAGED) {
+	if instance.Spec.OperatorFlags.GetSimpleBoolean(controllerManaged) {
 		operatorSecret, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
 		if err != nil {
 			return reconcile.Result{}, err
@@ -135,7 +135,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(pullSecretPredicate),
 		).
-		Named(controllers.PullSecretControllerName).
+		Named(ControllerName).
 		Complete(r)
 }
 
