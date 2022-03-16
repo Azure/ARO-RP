@@ -11,12 +11,9 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	mock_deploy "github.com/Azure/ARO-RP/pkg/util/mocks/operator/deploy"
-	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 func TestEnsureAROOperator(t *testing.T) {
@@ -140,69 +137,46 @@ func TestAroDeploymentReady(t *testing.T) {
 	)
 
 	for _, tt := range []struct {
-		name           string
-		kubernetescli  *fake.Clientset
-		fixtureChecker func(*testdatabase.Fixture, *testdatabase.Checker, *cosmosdb.FakeOpenShiftClusterDocumentClient)
-		mocks          func(*mock_deploy.MockOperator)
-		wantRes        bool
+		name    string
+		doc     *api.OpenShiftClusterDocument
+		mocks   func(*mock_deploy.MockOperator)
+		wantRes bool
 	}{
 		{
 			name: "create/update success",
-
-			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
-				doc := &api.OpenShiftClusterDocument{
-					Key: strings.ToLower(key),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: key,
-						Properties: api.OpenShiftClusterProperties{
-							IngressProfiles: []api.IngressProfile{
-								{
-									Visibility: api.VisibilityPublic,
-									Name:       "default",
-								},
-							},
-							ProvisioningState: api.ProvisioningStateAdminUpdating,
-							ClusterProfile: api.ClusterProfile{
-								Version: "4.8.18",
-							},
-							NetworkProfile: api.NetworkProfile{
-								APIServerPrivateEndpointIP: "1.2.3.4",
+			doc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(key),
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: key,
+					Properties: api.OpenShiftClusterProperties{
+						IngressProfiles: []api.IngressProfile{
+							{
+								Visibility: api.VisibilityPublic,
+								Name:       "default",
 							},
 						},
 					},
-				}
-				fixture.AddOpenShiftClusterDocuments(doc)
-
-				doc.Dequeues = 1
-				checker.AddOpenShiftClusterDocuments(doc)
+				},
 			},
 			mocks: func(dep *mock_deploy.MockOperator) {
 				dep.EXPECT().
 					IsReady(gomock.Any()).
 					Return(true, nil)
 			},
-			kubernetescli: fake.NewSimpleClientset(),
-			wantRes:       true,
+			wantRes: true,
 		},
 		{
 			name: "enriched data not available - skip",
-			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
-				doc := &api.OpenShiftClusterDocument{
-					Key: strings.ToLower(key),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: key,
-						Properties: api.OpenShiftClusterProperties{
-							IngressProfiles:   nil,
-							ProvisioningState: api.ProvisioningStateAdminUpdating,
-						},
+			doc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(key),
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: key,
+					Properties: api.OpenShiftClusterProperties{
+						IngressProfiles: nil,
 					},
-				}
-				fixture.AddOpenShiftClusterDocuments(doc)
-				doc.Dequeues = 1
-				checker.AddOpenShiftClusterDocuments(doc)
+				},
 			},
-			kubernetescli: fake.NewSimpleClientset(),
-			wantRes:       true,
+			wantRes: true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -214,29 +188,9 @@ func TestAroDeploymentReady(t *testing.T) {
 				tt.mocks(dep)
 			}
 
-			dbOpenShiftClusters, dbClient := testdatabase.NewFakeOpenShiftClusters()
-			fixture := testdatabase.NewFixture().WithOpenShiftClusters(dbOpenShiftClusters)
-			checker := testdatabase.NewChecker()
-
-			if tt.fixtureChecker != nil {
-				tt.fixtureChecker(fixture, checker, dbClient)
-			}
-
-			err := fixture.Create()
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			doc, err := dbOpenShiftClusters.Dequeue(ctx)
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			m := &manager{
 				log:                 logrus.NewEntry(logrus.StandardLogger()),
-				doc:                 doc,
-				db:                  dbOpenShiftClusters,
-				kubernetescli:       tt.kubernetescli,
+				doc:                 tt.doc,
 				aroOperatorDeployer: dep,
 			}
 
@@ -245,9 +199,6 @@ func TestAroDeploymentReady(t *testing.T) {
 				t.Error(err)
 			}
 
-			for _, err = range checker.CheckOpenShiftClusters(dbClient) {
-				t.Error(err)
-			}
 		})
 	}
 }
