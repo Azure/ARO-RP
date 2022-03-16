@@ -25,17 +25,17 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 const (
-	CONFIG_NAMESPACE         string = "aro.azuresubnets"
-	ENABLED                  string = CONFIG_NAMESPACE + ".enabled"
-	NSG_MANAGED              string = CONFIG_NAMESPACE + ".nsg.managed"
-	SERVICE_ENDPOINT_MANAGED string = CONFIG_NAMESPACE + ".serviceendpoint.managed"
+	ControllerName = "AzureSubnets"
+
+	controllerEnabled                = "aro.azuresubnets.enabled"
+	controllerNSGManaged             = "aro.azuresubnets.nsg.managed"
+	controllerServiceEndpointManaged = "aro.azuresubnets.serviceendpoint.managed"
 )
 
 // Reconciler is the controller struct
@@ -75,12 +75,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(NSG_MANAGED) && !instance.Spec.OperatorFlags.GetSimpleBoolean(SERVICE_ENDPOINT_MANAGED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerNSGManaged) && !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerServiceEndpointManaged) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
@@ -126,14 +126,14 @@ func (r *reconcileManager) reconcileSubnets(ctx context.Context, instance *arov1
 	// to pay for keeping logic split, separate, and simple
 	for _, s := range subnets {
 
-		if instance.Spec.OperatorFlags.GetSimpleBoolean(NSG_MANAGED) {
+		if instance.Spec.OperatorFlags.GetSimpleBoolean(controllerNSGManaged) {
 			err = r.ensureSubnetNSG(ctx, s)
 			if err != nil {
 				combinedErrors = append(combinedErrors, err.Error())
 			}
 		}
 
-		if instance.Spec.OperatorFlags.GetSimpleBoolean(SERVICE_ENDPOINT_MANAGED) {
+		if instance.Spec.OperatorFlags.GetSimpleBoolean(controllerServiceEndpointManaged) {
 			err = r.ensureSubnetServiceEndpoints(ctx, s)
 			if err != nil {
 				combinedErrors = append(combinedErrors, err.Error())
@@ -158,6 +158,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		Watches(&source.Kind{Type: &machinev1beta1.Machine{}}, &handler.EnqueueRequestForObject{}). // to reconcile on machine replacement
 		Watches(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForObject{}).            // to reconcile on node status change
-		Named(controllers.AzureSubnetsControllerName).
+		Named(ControllerName).
 		Complete(r)
 }

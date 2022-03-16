@@ -67,7 +67,7 @@ var _ = Describe("Scale nodes", func() {
 		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		if instance.Spec.OperatorFlags.GetSimpleBoolean(machineset.ENABLED) {
+		if instance.Spec.OperatorFlags.GetSimpleBoolean(machineset.ControllerEnabled) {
 			Skip("MachineSet Controller is enabled, skipping this test")
 		}
 

@@ -31,7 +31,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 		},
 		Spec: arov1alpha1.ClusterSpec{
 			OperatorFlags: arov1alpha1.OperatorFlags{
-				pullSpec: setPullSpec,
+				controllerPullSpec: setPullSpec,
 			},
 		},
 	}
@@ -100,7 +100,7 @@ func TestDeployCreateOrUpdateSetsOwnerReferences(t *testing.T) {
 		},
 		Spec: arov1alpha1.ClusterSpec{
 			OperatorFlags: arov1alpha1.OperatorFlags{
-				pullSpec: setPullSpec,
+				controllerPullSpec: setPullSpec,
 			},
 		},
 	}

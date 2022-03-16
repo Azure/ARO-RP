@@ -21,12 +21,12 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
 const (
-	CONFIG_NAMESPACE string = "aro.alertwebhook"
-	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+	ControllerName = "Alertwebhook"
+
+	controllerEnabled = "aro.alertwebhook.enabled"
 )
 
 var alertManagerName = types.NamespacedName{Name: "alertmanager-main", Namespace: "openshift-monitoring"}
@@ -54,7 +54,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
@@ -125,6 +125,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Secret{}, builder.WithPredicates(isAlertManagerPredicate)).
-		Named(controllers.AlertwebhookControllerName).
+		Named(ControllerName).
 		Complete(r)
 }
