@@ -7,80 +7,6 @@ import (
 	"testing"
 )
 
-func TestIsOpenShift(t *testing.T) {
-	for _, tt := range []struct {
-		namespace string
-		want      bool
-	}{
-		{
-			want: true,
-		},
-		{
-			namespace: "openshift-ns",
-			want:      true,
-		},
-		{
-			namespace: "openshift",
-			want:      true,
-		},
-		{
-			namespace: "kube-ns",
-			want:      true,
-		},
-		{
-			namespace: "default",
-			want:      true,
-		},
-		{
-			namespace: "customer",
-		},
-	} {
-		t.Run(tt.namespace, func(t *testing.T) {
-			got := IsOpenShift(tt.namespace)
-			if tt.want != got {
-				t.Error(got)
-			}
-		})
-	}
-}
-
-func TestIsOpenShiftSystemNamespace(t *testing.T) {
-	for _, tt := range []struct {
-		namespace string
-		want      bool
-	}{
-		{
-			want: true,
-		},
-		{
-			namespace: "openshift-ns",
-			want:      true,
-		},
-		{
-			namespace: "openshift",
-			want:      true,
-		},
-		{
-			namespace: "kube-ns",
-			want:      true,
-		},
-		{
-			namespace: "default",
-			want:      false,
-		},
-		{
-			namespace: "customer",
-		},
-	} {
-		t.Run(tt.namespace, func(t *testing.T) {
-			got := IsOpenShiftSystemNamespace(tt.namespace)
-			if tt.want != got {
-				t.Error(got)
-			}
-		})
-	}
-}
-
 func TestFilteredOpenShiftNamespace(t *testing.T) {
 	for _, tt := range []struct {
 		namespace string
@@ -95,7 +21,15 @@ func TestFilteredOpenShiftNamespace(t *testing.T) {
 			want:      true,
 		},
 		{
+			namespace: "openshift-azure-logging",
+			want:      true,
+		},
+		{
 			namespace: "openshift-gitops",
+			want:      false,
+		},
+		{
+			namespace: "openshift-authentication",
 			want:      false,
 		},
 		{
