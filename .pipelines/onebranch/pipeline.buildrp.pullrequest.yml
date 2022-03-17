@@ -45,22 +45,8 @@ extends:
       suppression:
         suppressionFile: $(Build.SourcesDirectory)\.gdn\.gdnsuppress
         suppressionSet: default
-
+    
     stages:
-    - stage: Build_Docker_Image
-      jobs:
-      - job: Build_Docker_Image
-        pool:
-          type: docker
-          os: linux
-
-        variables:
-          ob_git_checkout: true
-
-        steps:
-        - template: .pipelines/onebranch/templates/template-buildrp-builddocker.yml@self
-
-
     - stage: Build_ARO
       jobs:
       - job: Build_ARO
@@ -72,3 +58,18 @@ extends:
 
         steps:
         - template: .pipelines/onebranch/templates/template-buildrp-buildaro.yml@self
+
+    - stage: Build_Docker_Image
+      dependsOn: Build_ARO
+      jobs:
+      - job: Build_Docker_Image
+        pool:
+          type: docker
+          os: linux
+
+        variables:
+          ob_git_checkout: true
+          release_tag: $[ stageDependencies.Build_ARO.Build_ARO.outputs['buildaro.releasetag'] ]
+
+        steps:
+        - template: .pipelines/onebranch/templates/template-buildrp-builddocker.yml@self
