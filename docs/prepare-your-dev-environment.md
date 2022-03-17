@@ -18,10 +18,18 @@ This document goes through the development dependencies one requires in order to
 
 1. Install the relevant packages required for your OS defined below.
 
-### Fedora Packages
+1. Install [Podman](https://podman.io/getting-started/installation) and [podman-docker](https://developers.redhat.com/blog/2019/02/21/podman-and-buildah-for-docker-users#) if you haven't already, used for building container images.
 
+1. Run for `az acr login` compatability
+```bash
+sudo touch /etc/containers/nodocker
+```
+
+### Fedora Packages
 1. Install the `gpgme-devel`, `libassuan-devel`, and `openssl` packages.
 > `sudo dnf install -y gpgme-devel libassuan-devel openssl`
+
+1. Install [Docker 17.05+](https://docs.docker.com/engine/install/fedora/) or later, used as an alternative to podman.
 
 ### Debian Packages
 1. Install the `libgpgme-dev` package.
