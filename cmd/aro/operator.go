@@ -23,6 +23,7 @@ import (
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/alertwebhook"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/autosizednodes"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/banner"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
@@ -209,6 +210,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (muo.NewReconciler(arocli, kubernetescli, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", muo.ControllerName, err)
+		}
+		if err = (autosizednodes.NewReconciler(
+			log.WithField("controller", autosizednodes.ControllerName),
+			mgr)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", autosizednodes.ControllerName, err)
 		}
 	}
 
