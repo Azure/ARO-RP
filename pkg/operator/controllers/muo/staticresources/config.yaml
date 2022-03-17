@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: managed-upgrade-operator-config
+  namespace:  openshift-managed-upgrade-operator
+data:
+  config.yaml: |
+    configManager:
+      source: LOCAL
+      localConfigName: managed-upgrade-config
+      watchInterval: 1
+    maintenance:
+      controlPlaneTime: 90
+      ignoredAlerts:
+        controlPlaneCriticals:
+        - ClusterOperatorDown
+        - ClusterOperatorDegraded
+    upgradeWindow:
+      delayTrigger: 30
+      timeOut: 120
+    nodeDrain:
+      timeOut: 45
+      expectedNodeDrainTime: 8
+    scale:
+      timeOut: 30
+    healthCheck:
+      ignoredCriticals:
+      - PrometheusRuleFailures
+      - CannotRetrieveUpdates
+      - FluentdNodeDown
+      ignoredNamespaces:
+      - openshift-logging
+      - openshift-redhat-marketplace
+      - openshift-operators
+      - openshift-user-workload-monitoring
+      - openshift-pipelines
