@@ -6,17 +6,20 @@ package muo
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 )
 
@@ -29,18 +32,13 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: arov1alpha1.SingletonClusterName,
 		},
-		Spec: arov1alpha1.ClusterSpec{
-			OperatorFlags: arov1alpha1.OperatorFlags{
-				controllerPullSpec: setPullSpec,
-			},
-		},
 	}
 
 	k8scli := fake.NewSimpleClientset()
 	dh := mock_dynamichelper.NewMockInterface(controller)
 
 	// When the DynamicHelper is called, count the number of objects it creates
-	// and capture any deployments so that we can check the pull secret
+	// and capture any deployments so that we can check the pullspec
 	var deployments []*appsv1.Deployment
 	deployedObjects := make(map[string]int)
 	check := func(ctx context.Context, objs ...kruntime.Object) error {
@@ -50,6 +48,9 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 			if err != nil {
 				return err
 			}
+			if d, ok := i.(*appsv1.Deployment); ok {
+				deployments = append(deployments, d)
+			}
 			deployedObjects[kind] = deployedObjects[kind] + 1
 		}
 		return nil
@@ -57,7 +58,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 	dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Do(check).Return(nil)
 
 	deployer := newDeployer(k8scli, dh)
-	err := deployer.CreateOrUpdate(context.Background(), cluster)
+	err := deployer.CreateOrUpdate(context.Background(), cluster, &config.MUODeploymentConfig{Pullspec: setPullSpec})
 	if err != nil {
 		t.Error(err)
 	}
@@ -65,7 +66,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 	// We expect these numbers of resources to be created
 	expectedKinds := map[string]int{
 		"ClusterRole":              1,
-		"ConfigMap":                1,
+		"ConfigMap":                2,
 		"ClusterRoleBinding":       1,
 		"CustomResourceDefinition": 1,
 		"Deployment":               1,
@@ -98,11 +99,6 @@ func TestDeployCreateOrUpdateSetsOwnerReferences(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: arov1alpha1.SingletonClusterName,
 		},
-		Spec: arov1alpha1.ClusterSpec{
-			OperatorFlags: arov1alpha1.OperatorFlags{
-				controllerPullSpec: setPullSpec,
-			},
-		},
 	}
 
 	k8scli := fake.NewSimpleClientset()
@@ -134,7 +130,7 @@ func TestDeployCreateOrUpdateSetsOwnerReferences(t *testing.T) {
 	dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Do(check).Return(nil)
 
 	deployer := newDeployer(k8scli, dh)
-	err := deployer.CreateOrUpdate(context.Background(), cluster)
+	err := deployer.CreateOrUpdate(context.Background(), cluster, &config.MUODeploymentConfig{Pullspec: setPullSpec})
 	if err != nil {
 		t.Error(err)
 	}
@@ -223,4 +219,132 @@ func TestDeployIsReadyMissing(t *testing.T) {
 		t.Error("deployment is wrongly seen as ready")
 	}
 
+}
+
+func TestDeployConfig(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	cluster := &arov1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: arov1alpha1.SingletonClusterName,
+		},
+	}
+
+	tests := []struct {
+		name             string
+		deploymentConfig *config.MUODeploymentConfig
+		expected         []string
+	}{
+		{
+			name:             "local",
+			deploymentConfig: &config.MUODeploymentConfig{EnableConnected: false},
+			expected: []string{
+				"configManager:",
+				"  localConfigName: managed-upgrade-config",
+				"  source: LOCAL",
+				"  watchInterval: 1",
+				"healthCheck:",
+				"  ignoredCriticals:",
+				"  - PrometheusRuleFailures",
+				"  - CannotRetrieveUpdates",
+				"  - FluentdNodeDown",
+				"  ignoredNamespaces:",
+				"  - openshift-logging",
+				"  - openshift-redhat-marketplace",
+				"  - openshift-operators",
+				"  - openshift-user-workload-monitoring",
+				"  - openshift-pipelines",
+				"maintenance:",
+				"  controlPlaneTime: 90",
+				"  ignoredAlerts:",
+				"    controlPlaneCriticals:",
+				"    - ClusterOperatorDown",
+				"    - ClusterOperatorDegraded",
+				"nodeDrain:",
+				"  expectedNodeDrainTime: 8",
+				"  timeOut: 45",
+				"scale:",
+				"  timeOut: 30",
+				"upgradeWindow:",
+				"  delayTrigger: 30",
+				"  timeOut: 120",
+				"",
+			},
+		},
+		{
+			name:             "connected",
+			deploymentConfig: &config.MUODeploymentConfig{EnableConnected: true, OCMBaseURL: "https://example.com"},
+			expected: []string{
+				"configManager:",
+				"  ocmBaseUrl: https://example.com",
+				"  source: OCM",
+				"  watchInterval: 1",
+				"healthCheck:",
+				"  ignoredCriticals:",
+				"  - PrometheusRuleFailures",
+				"  - CannotRetrieveUpdates",
+				"  - FluentdNodeDown",
+				"  ignoredNamespaces:",
+				"  - openshift-logging",
+				"  - openshift-redhat-marketplace",
+				"  - openshift-operators",
+				"  - openshift-user-workload-monitoring",
+				"  - openshift-pipelines",
+				"maintenance:",
+				"  controlPlaneTime: 90",
+				"  ignoredAlerts:",
+				"    controlPlaneCriticals:",
+				"    - ClusterOperatorDown",
+				"    - ClusterOperatorDegraded",
+				"nodeDrain:",
+				"  expectedNodeDrainTime: 8",
+				"  timeOut: 45",
+				"scale:",
+				"  timeOut: 30",
+				"upgradeWindow:",
+				"  delayTrigger: 30",
+				"  timeOut: 120",
+				"",
+			},
+		},
+	}
+	for _, tt := range tests {
+		k8scli := fake.NewSimpleClientset()
+		dh := mock_dynamichelper.NewMockInterface(controller)
+
+		// When the DynamicHelper is called, capture configmaps to inspect them
+		var configs []*corev1.ConfigMap
+		check := func(ctx context.Context, objs ...kruntime.Object) error {
+			for _, i := range objs {
+				if cm, ok := i.(*corev1.ConfigMap); ok {
+					configs = append(configs, cm)
+				}
+
+			}
+			return nil
+		}
+		dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Do(check).Return(nil)
+
+		deployer := newDeployer(k8scli, dh)
+		err := deployer.CreateOrUpdate(context.Background(), cluster, tt.deploymentConfig)
+		if err != nil {
+			t.Error(err)
+		}
+
+		foundConfig := false
+		for _, cms := range configs {
+			if cms.Name == "managed-upgrade-operator-config" && cms.Namespace == "openshift-managed-upgrade-operator" {
+				foundConfig = true
+				errs := deep.Equal(tt.expected, strings.Split(cms.Data["config.yaml"], "\n"))
+				for _, e := range errs {
+					t.Error(e)
+				}
+			}
+		}
+
+		if !foundConfig {
+			t.Error("MUO config was not found")
+		}
+	}
 }
