@@ -1,5 +1,11 @@
 trigger: none
+  paths:
+    exclude:
+    - docs/
 pr: none
+  paths:
+    exclude:
+    - docs/
 
 resources:
   pipelines:
