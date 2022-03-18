@@ -5,7 +5,7 @@ trigger:
     - master
   paths:
     exclude:
-    - docs/*
+    - docs/
   tags:
     include:
     - v2*
@@ -16,7 +16,7 @@ pr:
     - master
   paths:
     exclude:
-    - docs/*
+    - docs/
 
 variables:
 - template: vars.yml
