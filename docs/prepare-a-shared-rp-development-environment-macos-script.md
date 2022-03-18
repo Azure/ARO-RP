@@ -1,0 +1,91 @@
+Commands issues during working sessions between RedHat and CloudFit to get the ARO-RP running locally on MacOS
+
+PARENT_DOMAIN_NAME=osadev.cloud
+PARENT_DOMAIN_RESOURCEGROUP=dns
+SECRET_SA_ACCOUNT_NAME=rharosecretscf2
+ADMIN_OBJECT_ID="$(az ad group show -g 'Azure Red Hat OpenShift MSFT Engineering' --query objectId -o tsv)"
+echo $ADMIN_OBJECT_ID --> 2fdb57d4-3fd3-415d-b604-1d0e37a188fe
+PULL_SECRET='{"auths":{"arosvc.azurecr.io":{"auth":"OTM5MDQ5YjQtNTllMS00YzlhLWJlYzgtMjAyZTAxZjc2MWFlOjZCLkpFOmZPT2hvLTI3P244TlYybDZqQS9UdjBMd1hm"},"arointsvc.azurecr.io":{"auth":"MmY2Y2VhNzktZjUyYi00YmNjLTk3MDQtMmNiZGM0YjYyMTM5OlM1fi1acF9icTFUYjFTNFpvOHNxS0dBMFpYV35pZjJVNTI="}}}'
+AZURE_TENANT_ID=$(az account show --query tenantId -o tsv)
+AZURE_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+
+go run ./hack/genkey -client arm
+mv arm.* secrets
+AZURE_ARM_CLIENT_ID="$(az ad app create \
+ --display-name aro-v4-arm-shared-cf \
+ --query appId \
+ -o tsv)"
+az ad app credential reset \
+ --id "$AZURE_ARM_CLIENT_ID" \
+ --cert "$(base64 -b0 <secrets/arm.crt)" >/dev/null  
+az ad sp create --id "$AZURE_ARM_CLIENT_ID" >/dev/null
+AZURE_ARM_CLIENT_ID - aro-v4-arm-shared-cf - 9e1e2680-7835-46bb-912b-416b3f4c09c1 (this is app registration and also a service principal / enterprise application)
+
+go run ./hack/genkey -client firstparty
+mv firstparty.* secrets
+AZURE_FP_CLIENT_ID="$(az ad app create \
+ --display-name aro-v4-fp-shared-cf \
+ --query appId \
+ -o tsv)"
+az ad app credential reset \
+ --id "$AZURE_FP_CLIENT_ID" \
+ --cert "$(base64 -b0 <secrets/firstparty.crt)" >/dev/null
+az ad sp create --id "$AZURE_FP_CLIENT_ID" >/dev/null
+AZURE_FP_CLIENT_ID - aro-v4-fp-shared-cf - 659309db-b31e-4fe2-ab27-cab3f649fad9 (this is app registration and also a service principal / enterprise application)
+
+// F2F20FDB-B9EB-44F5-9027-89A61CF62183
+AZURE_RP_CLIENT_SECRET="$(uuidgen)"
+AZURE_RP_CLIENT_ID="$(az ad app create \
+ --display-name aro-v4-rp-shared-cf \
+ --end-date '2299-12-31T11:59:59+00:00' \
+ --key-type password \
+ --password "$AZURE_RP_CLIENT_SECRET" \
+ --query appId \
+ -o tsv)"
+az ad sp create --id "$AZURE_RP_CLIENT_ID" >/dev/null
+AZURE_RP_CLIENT_ID - aro-v4-rp-shared-cf - c75e8a68-34e6-413e-9687-398a4995198e (this is app registration and also a service principal / enterprise application)
+
+// AB7FB79C-46CD-4C3C-AEB6-2D8FBBC6313D
+AZURE_GATEWAY_CLIENT_SECRET="$(uuidgen)"
+AZURE_GATEWAY_CLIENT_ID="$(az ad app create \
+ --display-name aro-v4-gateway-shared-cf \
+ --end-date '2299-12-31T11:59:59+00:00' \
+ --key-type password \
+ --password "$AZURE_GATEWAY_CLIENT_SECRET" \
+ --query appId \
+ -o tsv)"
+az ad sp create --id "$AZURE_GATEWAY_CLIENT_ID" >/dev/null
+AZURE_GATEWAY_CLIENT_ID - aro-v4-gateway-shared-cf - 3045d26d-caa4-4aed-aef5-c29854825676 (this is app registration and also a service principal / enterprise application)
+
+// 898BEC6A-9147-4C9B-8B8A-CA5992C42328
+AZURE_CLIENT_SECRET="$(uuidgen)"
+AZURE_CLIENT_ID="$(az ad app create \
+ --display-name aro-v4-tooling-shared-cf \
+ --end-date '2299-12-31T11:59:59+00:00' \
+ --key-type password \
+ --password "$AZURE_CLIENT_SECRET" \
+ --query appId \
+ -o tsv)"
+az ad sp create --id "$AZURE_CLIENT_ID" >/dev/null
+AZURE_CLIENT_ID - aro-v4-tooling-shared-cf - 81bc2ad6-3025-4b9f-8d9b-6dbe7b49d6e4 (this is app registration and also a service principal / enterprise application)
+
+// Broke these up into three commands for debug
+LOCATION=eastus
+az deployment sub create \
+ -l $LOCATION \
+ --template-file deploy/rbac-development.json \
+ --parameters \
+   "armServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_ARM_CLIENT_ID'" --query '[].objectId' -o tsv)" \
+   "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
+   "devServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)" \
+ >/dev/null
+
+ERROR:
+
+WARNING: The underlying Active Directory Graph API will be replaced by Microsoft Graph API in a future version of Azure CLI. Please carefully review all breaking changes introduced during this migration: https://docs.microsoft.com/cli/azure/microsoft-graph-migration
+WARNING: The underlying Active Directory Graph API will be replaced by Microsoft Graph API in a future version of Azure CLI. Please carefully review all breaking changes introduced during this migration: https://docs.microsoft.com/cli/azure/microsoft-graph-migration
+WARNING: The underlying Active Directory Graph API will be replaced by Microsoft Graph API in a future version of Azure CLI. Please carefully review all breaking changes introduced during this migration: https://docs.microsoft.com/cli/azure/microsoft-graph-migration
+ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/DeployOperations for usage details.","details":[{"code":"BadRequest","message":"{\r\n  \"error\": {\r\n    \"code\": \"RoleAssignmentUpdateNotPermitted\",\r\n    \"message\": \"Tenant ID, application ID, principal ID, and scope are not allowed to be updated.\"\r\n  }\r\n}"},{"code":"Forbidden","message":"{\r\n  \"error\": {\r\n    \"code\": \"LinkedAuthorizationFailed\",\r\n    \"message\": \"The client 'v-cperkins@microsoft.com' with object id 'fa22c3cf-f51f-443c-abeb-830c405d24c7' has permission to perform action 'Microsoft.Authorization/roleDefinitions/write' on scope '/subscriptions/26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8'; however, it does not have permission to perform action 'Microsoft.Authorization/roleDefinitions/write' on the linked scope(s) '/subscriptions/46626fc5-476d-41ad-8c76-2ec49c6994eb' or the linked scope(s) are invalid.\"\r\n  }\r\n}"}]}}
+
+https://ms.portal.azure.com/#blade/HubsExtension/DeploymentDetailsBlade/overview/id/%2Fsubscriptions%2F26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8%2Fproviders%2FMicrosoft.Resources%2Fdeployments%2Frbac-development
+
