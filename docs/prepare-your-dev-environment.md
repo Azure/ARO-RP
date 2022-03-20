@@ -79,5 +79,14 @@ sudo pip3 install virtualenv
 1. Clone the repository to your local machine:
     ```bash
     go get -u github.com/Azure/ARO-RP/...
+    ```
+    Alternatively you can also use:
+    ```bash
+    git clone https://github.com/Azure/ARO-RP.git $GOPATH/src/github.com/Azure/ARO-RP
+    ```
+    
+1. Go to project:
+    ```bash
     cd ${GOPATH:-$HOME/go}/src/github.com/Azure/ARO-RP
     ```
+
