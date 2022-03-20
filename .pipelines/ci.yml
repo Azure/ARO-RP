@@ -22,6 +22,30 @@ variables:
 - template: vars.yml
 
 jobs:
+- job: Pre_Check_Vendor_Tidy
+  pool:
+    name: ARO-CI
+  steps:
+  - template: ./templates/template-checkout.yml
+  - script: |
+     set -xe
+     go mod vendor
+     if [ ! -z "$(git status --porcelain vendor/)" ]; then
+         echo "Running go mod vendor modified vendor directory"
+         exit 1
+     fi
+     exit 0
+    displayName: 🧬 Pre-Check Go Mod Vendor
+
+  - script: |
+     set -xe
+     go mod tidy
+     if [ ! -z "$(git status --porcelain go.mod go.sum)" ]; then
+         echo "Running go mod tidy modified go.mod and/or go.sum"
+         exit 1
+     fi
+     exit 0
+    displayName: 🧬 Pre-Check Go Mod Tidy
 
 - job: Python_Unit_Tests
   pool:
@@ -32,7 +56,7 @@ jobs:
       set -xe
       make test-python
       [[ -z "$(git status -s)" ]]
-    displayName: 🧪Run Python Unit Tests
+    displayName: 🧪 Run Python Unit Tests
 
 - job: Golang_Unit_Tests
   pool:
