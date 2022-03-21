@@ -1,13 +1,13 @@
 {
     "kind": "APIResourceList",
     "apiVersion": "v1",
-    "groupVersion": "helm.openshift.io/v1beta1",
+    "groupVersion": "flowcontrol.apiserver.k8s.io/v1beta2",
     "resources": [
         {
-            "name": "helmchartrepositories",
-            "singularName": "helmchartrepository",
+            "name": "flowschemas",
+            "singularName": "",
             "namespaced": false,
-            "kind": "HelmChartRepository",
+            "kind": "FlowSchema",
             "verbs": [
                 "create",
                 "delete",
@@ -18,13 +18,13 @@
                 "update",
                 "watch"
             ],
-            "storageVersionHash": "ufyXG8CiCus="
+            "storageVersionHash": "9bSnTLYweJ0="
         },
         {
-            "name": "helmchartrepositories/status",
+            "name": "flowschemas/status",
             "singularName": "",
             "namespaced": false,
-            "kind": "HelmChartRepository",
+            "kind": "FlowSchema",
             "verbs": [
                 "get",
                 "patch",
@@ -32,10 +32,10 @@
             ]
         },
         {
-            "name": "projecthelmchartrepositories",
-            "singularName": "projecthelmchartrepository",
-            "namespaced": true,
-            "kind": "ProjectHelmChartRepository",
+            "name": "prioritylevelconfigurations",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "PriorityLevelConfiguration",
             "verbs": [
                 "create",
                 "delete",
@@ -46,13 +46,13 @@
                 "update",
                 "watch"
             ],
-            "storageVersionHash": "u99qLV2ifAE="
+            "storageVersionHash": "BFVwf8eYnsw="
         },
         {
-            "name": "projecthelmchartrepositories/status",
+            "name": "prioritylevelconfigurations/status",
             "singularName": "",
-            "namespaced": true,
-            "kind": "ProjectHelmChartRepository",
+            "namespaced": false,
+            "kind": "PriorityLevelConfiguration",
             "verbs": [
                 "get",
                 "patch",

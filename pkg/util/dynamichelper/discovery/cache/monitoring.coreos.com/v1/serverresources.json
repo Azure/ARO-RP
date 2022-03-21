@@ -98,6 +98,9 @@
                 "update",
                 "watch"
             ],
+            "categories": [
+                "prometheus-operator"
+            ],
             "storageVersionHash": "RSJ8iG+KDOo="
         },
         {
