@@ -2,7 +2,7 @@ FROM registry.access.redhat.com/ubi8/nodejs-14
 WORKDIR /data
 USER root
 
-COPY /portal/ /data/
+COPY /portal/v2/ /data/
 RUN npm install -g
 
 RUN set -eux \
