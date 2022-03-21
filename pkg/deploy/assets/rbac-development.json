@@ -8,16 +8,20 @@
         "fpServicePrincipalId": {
             "type": "string"
         },
+        "fpRoleDefinitionId": {
+            "type": "string",
+            "defaultValue": "79ed474a-7267-4ff8-b226-96140be062a2"
+        },
         "devServicePrincipalId":{
             "type": "string"
         }
     },
     "resources": [
         {
-            "name": "79ed474a-7267-4ff8-b226-96140be062a2",
+            "name": "[parameters('fpRoleDefinitionId')]",
             "type": "Microsoft.Authorization/roleDefinitions",
             "properties": {
-                "roleName": "ARO v4 Development First Party Subscription",
+                "roleName": "ARO v4 Development First Party Subscription (DEV)",
                 "permissions": [
                     {
                         "actions": [
@@ -35,11 +39,11 @@
             "name": "[guid(subscription().id, 'FP / ARO v4 FP Subscription')]",
             "type": "Microsoft.Authorization/roleAssignments",
             "dependsOn": [
-                "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '79ed474a-7267-4ff8-b226-96140be062a2')]"
+                "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('fpRoleDefinitionId'))]"
             ],
             "properties": {
                 "scope": "[subscription().id]",
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '79ed474a-7267-4ff8-b226-96140be062a2')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', parameters('fpRoleDefinitionId'))]",
                 "principalId": "[parameters('fpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
