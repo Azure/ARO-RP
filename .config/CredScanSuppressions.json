@@ -36,6 +36,14 @@
         {
             "file": "verify_test_dsa.go",
             "_justification": "sample login for testing"
+        },
+        {
+            "file": "vendor/google.golang.org/api/compute/v1/compute-api.json",
+            "_justification": "example secret in comment on line 33112"
+        },
+        {
+            "file": "vendor/google.golang.org/api/compute/v1/compute-gen.go",
+            "_justification": "example secret in comment on line 8048"
         }
     ]
 }

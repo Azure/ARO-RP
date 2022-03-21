@@ -16,6 +16,7 @@ import (
 )
 
 func TestMerge(t *testing.T) {
+	serviceInternalTrafficPolicy := corev1.ServiceInternalTrafficPolicyCluster
 	for _, tt := range []struct {
 		name          string
 		old           kruntime.Object
@@ -103,6 +104,9 @@ func TestMerge(t *testing.T) {
 						"openshift.io/sa.scc.supplemental-groups": "groups",
 						"openshift.io/sa.scc.uid-range":           "uids",
 					},
+					Labels: map[string]string{
+						"olm.operatorgroup.uid/jdfgbdfgdfhg": "test",
+					},
 				},
 				Spec: corev1.NamespaceSpec{
 					Finalizers: []corev1.FinalizerName{
@@ -120,6 +124,9 @@ func TestMerge(t *testing.T) {
 						"openshift.io/sa.scc.mcs":                 "mcs",
 						"openshift.io/sa.scc.supplemental-groups": "groups",
 						"openshift.io/sa.scc.uid-range":           "uids",
+					},
+					Labels: map[string]string{
+						"olm.operatorgroup.uid/jdfgbdfgdfhg": "test",
 					},
 				},
 				Spec: corev1.NamespaceSpec{
@@ -163,20 +170,81 @@ func TestMerge(t *testing.T) {
 			wantEmptyDiff: true,
 		},
 		{
+			name: "ConfigMap with injected ca bundle label and bundle, no changes",
+			old: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"config.openshift.io/inject-trusted-cabundle": "",
+					},
+				},
+				Data: map[string]string{
+					"ca-bundle.crt": "bundlehere",
+				},
+			},
+			new: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"config.openshift.io/inject-trusted-cabundle": "",
+					},
+				},
+			},
+			want: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"config.openshift.io/inject-trusted-cabundle": "",
+					},
+				},
+				Data: map[string]string{
+					"ca-bundle.crt": "bundlehere",
+				},
+			},
+			wantEmptyDiff: true,
+		},
+		{
+			name: "ConfigMap with injected ca bundle label and no bundle, no changes",
+			old: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"config.openshift.io/inject-trusted-cabundle": "",
+					},
+				},
+				Data: map[string]string{},
+			},
+			new: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"config.openshift.io/inject-trusted-cabundle": "",
+					},
+				},
+				Data: map[string]string{},
+			},
+			want: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"config.openshift.io/inject-trusted-cabundle": "",
+					},
+				},
+				Data: map[string]string{},
+			},
+			wantEmptyDiff: true,
+		},
+		{
 			name: "Service no changes",
 			old: &corev1.Service{
 				Spec: corev1.ServiceSpec{
-					ClusterIP:       "1.2.3.4",
-					Type:            corev1.ServiceTypeClusterIP,
-					SessionAffinity: corev1.ServiceAffinityNone,
+					ClusterIP:             "1.2.3.4",
+					Type:                  corev1.ServiceTypeClusterIP,
+					SessionAffinity:       corev1.ServiceAffinityNone,
+					InternalTrafficPolicy: &serviceInternalTrafficPolicy,
 				},
 			},
 			new: &corev1.Service{},
 			want: &corev1.Service{
 				Spec: corev1.ServiceSpec{
-					ClusterIP:       "1.2.3.4",
-					Type:            corev1.ServiceTypeClusterIP,
-					SessionAffinity: corev1.ServiceAffinityNone,
+					ClusterIP:             "1.2.3.4",
+					Type:                  corev1.ServiceTypeClusterIP,
+					SessionAffinity:       corev1.ServiceAffinityNone,
+					InternalTrafficPolicy: &serviceInternalTrafficPolicy,
 				},
 			},
 			wantEmptyDiff: true,

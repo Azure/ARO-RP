@@ -22,6 +22,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -42,6 +43,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	// don't require a running cluster
 	toRun := []steps.Step{
 		steps.Action(m.initializeKubernetesClients), // must be first
+		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
 		steps.Action(m.ensureBillingRecord),         // belt and braces
 		steps.Action(m.ensureDefaults),
 		steps.Action(m.fixupClusterSPObjectID),
@@ -52,6 +54,9 @@ func (m *manager) adminUpdate() []steps.Step {
 		toRun = append(toRun,
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)), // re-create RP RBAC if needed after tenant migration
 			steps.Action(m.createOrUpdateDenyAssignment),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
+			steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
+			steps.Action(m.migrateStorageAccounts),
 			steps.Action(m.fixSSH),
 			steps.Action(m.populateDatabaseIntIP),
 			//steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
@@ -104,6 +109,7 @@ func (m *manager) Update(ctx context.Context) error {
 	steps := []steps.Step{
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
 		steps.Action(m.initializeKubernetesClients), // All init steps are first
+		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
 		steps.Action(m.initializeClusterSPClients),
 		steps.Action(m.clusterSPObjectID),
 		// credentials rotation flow steps
@@ -142,6 +148,7 @@ func (m *manager) Install(ctx context.Context) error {
 				return m.ensureInfraID(ctx, installConfig)
 			}),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
 				return m.deployStorageTemplate(ctx, installConfig)
@@ -159,12 +166,14 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.createAPIServerPrivateEndpoint),
 			steps.Action(m.createCertificates),
 			steps.Action(m.initializeKubernetesClients),
+			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 			steps.Condition(m.bootstrapConfigMapReady, 30*time.Minute, true),
 			steps.Action(m.ensureAROOperator),
 			steps.Action(m.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {
 			steps.Action(m.initializeKubernetesClients),
+			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 			steps.Action(m.removeBootstrap),
 			steps.Action(m.removeBootstrapIgnition),
 			steps.Action(m.configureAPIServerCertificate),
@@ -288,8 +297,15 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
-	m.registryclient, err = imageregistryclient.NewForConfig(restConfig)
+	m.imageregistrycli, err = imageregistryclient.NewForConfig(restConfig)
 	return err
+}
+
+// initializeKubernetesClients initializes clients which are used
+// once the cluster is up later on in the install process.
+func (m *manager) initializeOperatorDeployer(ctx context.Context) (err error) {
+	m.aroOperatorDeployer, err = deploy.New(m.log, m.env, m.doc.OpenShiftCluster, m.arocli, m.extensionscli, m.kubernetescli)
+	return
 }
 
 // updateProvisionedBy sets the deploying resource provider version in

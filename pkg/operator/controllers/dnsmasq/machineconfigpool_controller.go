@@ -16,8 +16,11 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+)
+
+const (
+	MachineConfigPoolControllerName = "DnsmasqMachineConfigPool"
 )
 
 type MachineConfigPoolReconciler struct {
@@ -45,7 +48,7 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
@@ -72,6 +75,6 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 func (r *MachineConfigPoolReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&mcv1.MachineConfigPool{}).
-		Named(controllers.DnsmasqMachineConfigPoolControllerName).
+		Named(MachineConfigPoolControllerName).
 		Complete(r)
 }

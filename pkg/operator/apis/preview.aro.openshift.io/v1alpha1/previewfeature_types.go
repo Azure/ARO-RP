@@ -24,13 +24,16 @@ type NSGFlowLogs struct {
 	// +kubebuilder:validation:Enum=1;2
 	Version int `json:"version,omitempty"`
 
-	// StorageAccountResourceID should be defined if BYO-Storage account is used.
+	// NetworkWatcherID specifies the ID of the network watcher.
+	NetworkWatcherID string `json:"networkWatcherID,omitempty"`
+
+	// StorageAccountResourceID of the storage account used for collecting the flow logs.
 	// Must be in the same region of flow log.
 	StorageAccountResourceID string `json:"storageAccountResourceId,omitempty"`
 
-	// Retention period for data.
-	// +kubebuilder:default:="2160h"
-	Retention metav1.Duration `json:"retention,omitempty"`
+	// RetentionDays specifies how many days the flowlogs should be retained.
+	// +kubebuilder:default:=90
+	RetentionDays int32 `json:"retentionDays,omitempty"`
 
 	// Required for TrafficAnalytics.
 	// Must be in the same region of flow log.
@@ -52,9 +55,8 @@ type PreviewFeatureSpec struct {
 
 // PreviewFeatureStatus defines the observed state of PreviewFeature
 type PreviewFeatureStatus struct {
-	OperatorVersion   string                         `json:"operatorVersion,omitempty"`
-	Conditions        []operatorv1.OperatorCondition `json:"conditions,omitempty"`
-	RedHatKeysPresent []string                       `json:"redHatKeysPresent,omitempty"`
+	OperatorVersion string                         `json:"operatorVersion,omitempty"`
+	Conditions      []operatorv1.OperatorCondition `json:"conditions,omitempty"`
 }
 
 // PreviewFeature is the Schema for the preview feature API

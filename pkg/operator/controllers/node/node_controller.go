@@ -18,13 +18,13 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
 const (
-	CONFIG_NAMESPACE string = "aro.nodedrainer"
-	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
+	ControllerName = "Node"
+
+	controllerEnabled = "aro.nodedrainer.enabled"
 )
 
 // Reconciler spots nodes that look like they're stuck upgrading.  When this
@@ -50,7 +50,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
@@ -101,9 +101,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	deadline := t.Add(gracePeriod)
 	now := time.Now()
 	if deadline.After(now) {
-		return reconcile.Result{
-			RequeueAfter: deadline.Sub(now),
-		}, err
+		return reconcile.Result{RequeueAfter: deadline.Sub(now)}, nil
 	}
 
 	// drain the node disabling eviction
@@ -141,7 +139,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Node{}).
-		Named(controllers.NodeControllerName).
+		Named(ControllerName).
 		Complete(r)
 }
 

@@ -5,10 +5,11 @@ import (
 	"github.com/openshift/installer/pkg/ipnet"
 	"github.com/openshift/installer/pkg/types"
 	awsdefaults "github.com/openshift/installer/pkg/types/aws/defaults"
+	"github.com/openshift/installer/pkg/types/azure"
 	azuredefaults "github.com/openshift/installer/pkg/types/azure/defaults"
 	baremetaldefaults "github.com/openshift/installer/pkg/types/baremetal/defaults"
 	gcpdefaults "github.com/openshift/installer/pkg/types/gcp/defaults"
-	kubevirtdefaults "github.com/openshift/installer/pkg/types/kubevirt/defaults"
+	ibmclouddefaults "github.com/openshift/installer/pkg/types/ibmcloud/defaults"
 	libvirtdefaults "github.com/openshift/installer/pkg/types/libvirt/defaults"
 	nonedefaults "github.com/openshift/installer/pkg/types/none/defaults"
 	openstackdefaults "github.com/openshift/installer/pkg/types/openstack/defaults"
@@ -22,6 +23,7 @@ var (
 	defaultClusterNetwork = ipnet.MustParseCIDR("10.128.0.0/14")
 	defaultHostPrefix     = 23
 	defaultNetworkType    = string(operv1.NetworkTypeOpenShiftSDN)
+	defaultOKDNetworkType = string(operv1.NetworkTypeOVNKubernetes)
 )
 
 // SetInstallConfigDefaults sets the defaults for the install config.
@@ -40,7 +42,11 @@ func SetInstallConfigDefaults(c *types.InstallConfig) {
 		}
 	}
 	if c.Networking.NetworkType == "" {
-		c.Networking.NetworkType = defaultNetworkType
+		if c.IsOKD() {
+			c.Networking.NetworkType = defaultOKDNetworkType
+		} else {
+			c.Networking.NetworkType = defaultNetworkType
+		}
 	}
 	if len(c.Networking.ServiceNetwork) == 0 {
 		c.Networking.ServiceNetwork = []ipnet.IPNet{*defaultServiceNetwork}
@@ -69,6 +75,13 @@ func SetInstallConfigDefaults(c *types.InstallConfig) {
 	for i := range c.Compute {
 		SetMachinePoolDefaults(&c.Compute[i], c.Platform.Name())
 	}
+
+	if c.CredentialsMode == "" {
+		if c.Platform.Azure != nil && c.Platform.Azure.CloudName == azure.StackCloud {
+			c.CredentialsMode = types.ManualCredentialsMode
+		}
+	}
+
 	switch {
 	case c.Platform.AWS != nil:
 		awsdefaults.SetPlatformDefaults(c.Platform.AWS)
@@ -76,6 +89,8 @@ func SetInstallConfigDefaults(c *types.InstallConfig) {
 		azuredefaults.SetPlatformDefaults(c.Platform.Azure)
 	case c.Platform.GCP != nil:
 		gcpdefaults.SetPlatformDefaults(c.Platform.GCP)
+	case c.Platform.IBMCloud != nil:
+		ibmclouddefaults.SetPlatformDefaults(c.Platform.IBMCloud)
 	case c.Platform.Libvirt != nil:
 		libvirtdefaults.SetPlatformDefaults(c.Platform.Libvirt)
 	case c.Platform.OpenStack != nil:
@@ -90,8 +105,6 @@ func SetInstallConfigDefaults(c *types.InstallConfig) {
 		for i := range c.Compute {
 			ovirtdefaults.SetComputeDefaults(c.Platform.Ovirt, &c.Compute[i])
 		}
-	case c.Platform.Kubevirt != nil:
-		kubevirtdefaults.SetPlatformDefaults(c.Platform.Kubevirt)
 	case c.Platform.None != nil:
 		nonedefaults.SetPlatformDefaults(c.Platform.None)
 	}

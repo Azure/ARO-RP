@@ -287,7 +287,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
-							OperatorFlags: api.DefaultOperatorFlags.Copy(),
+							OperatorFlags: api.DefaultOperatorFlags(),
 						},
 					},
 				})
@@ -311,7 +311,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					ClusterProfile: admin.ClusterProfile{
 						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
 					},
-					OperatorFlags: admin.OperatorFlags(api.DefaultOperatorFlags.Copy()),
+					OperatorFlags: admin.OperatorFlags(api.DefaultOperatorFlags()),
 				},
 			},
 		},
@@ -369,7 +369,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
-							OperatorFlags: api.DefaultOperatorFlags.Copy(),
+							OperatorFlags: api.DefaultOperatorFlags(),
 						},
 					},
 				})
@@ -393,7 +393,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},
-					OperatorFlags: admin.OperatorFlags(api.DefaultOperatorFlags.Copy()),
+					OperatorFlags: admin.OperatorFlags(api.DefaultOperatorFlags()),
 				},
 			},
 		},
@@ -719,9 +719,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
 							FeatureProfile: api.FeatureProfile{
-								GatewayEnabled: false,
+								GatewayEnabled: true,
 							},
-							OperatorFlags: api.DefaultOperatorFlags.Copy(),
+							OperatorFlags: api.DefaultOperatorFlags(),
 						},
 					},
 				})

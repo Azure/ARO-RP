@@ -24,15 +24,14 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
-	CONFIG_NAMESPACE string = "aro.routefix"
-	ENABLED          string = CONFIG_NAMESPACE + ".enabled"
-	MANAGED          string = CONFIG_NAMESPACE + ".managed"
+	ControllerName = "RouteFix"
+
+	controllerEnabled = "aro.routefix.enabled"
 )
 
 // Reconciler is the controller struct
@@ -75,7 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ENABLED) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
@@ -156,7 +155,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Namespace{}).
 		Owns(&appsv1.DaemonSet{}).
 		Owns(&securityv1.SecurityContextConstraints{}).
-		Named(controllers.RouteFixControllerName).
+		Named(ControllerName).
 		Complete(r)
 }
 

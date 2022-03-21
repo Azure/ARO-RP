@@ -71,7 +71,7 @@ func TestMachineReconciler(t *testing.T) {
 		Status:     arov1alpha1.ClusterStatus{Conditions: []operatorv1.OperatorCondition{}},
 		Spec: arov1alpha1.ClusterSpec{
 			OperatorFlags: arov1alpha1.OperatorFlags{
-				ENABLED: "true",
+				controllerEnabled: "true",
 			},
 		},
 	}
@@ -119,7 +119,7 @@ func TestMachineReconciler(t *testing.T) {
 			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
 				Status:  operatorv1.ConditionFalse,
-				Message: "machine foo-hx8z7-worker-1: invalid image '{bananas aro4   }'",
+				Message: "machine foo-hx8z7-worker-1: invalid image '{bananas aro4    }'",
 				Reason:  "CheckFailed",
 			}},
 		},

@@ -39,6 +39,14 @@ func (g *gateway) isAllowed(conn *proxyproto.Conn, host string) (string, bool, e
 		return "", false, fmt.Errorf("gateway record not found for linkID %s", linkID)
 	}
 
+	// Emit a gauge for the linkID if the host is empty
+	if host == "" {
+		g.m.EmitGauge("gateway.nohost", 1, map[string]string{
+			"linkid": linkID,
+			"action": "denied",
+		})
+	}
+
 	if _, found := g.allowList[strings.ToLower(host)]; found {
 		return gateway.ID, true, nil
 	}

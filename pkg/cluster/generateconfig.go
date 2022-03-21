@@ -177,7 +177,6 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 					CloudName:                azuretypes.CloudEnvironment(m.env.Environment().Name),
 					OutboundType:             azuretypes.LoadbalancerOutboundType,
 					ResourceGroupName:        resourceGroup,
-					ARO:                      true,
 				},
 			},
 			PullSecret: pullSecret,
@@ -204,12 +203,16 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 			},
 			Publish: types.ExternalPublishingStrategy,
 		},
-		Azure: icazure.NewMetadata(azuretypes.CloudEnvironment(m.env.Environment().Name), &icazure.Credentials{
-			TenantID:       m.subscriptionDoc.Subscription.Properties.TenantID,
-			ClientID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID,
-			ClientSecret:   string(m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret),
-			SubscriptionID: r.SubscriptionID,
-		}),
+		Azure: icazure.NewMetadataWithCredentials(
+			azuretypes.CloudEnvironment(m.env.Environment().Name),
+			m.env.Environment().ResourceManagerEndpoint,
+			&icazure.Credentials{
+				TenantID:       m.subscriptionDoc.Subscription.Properties.TenantID,
+				ClientID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID,
+				ClientSecret:   string(m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret),
+				SubscriptionID: r.SubscriptionID,
+			},
+		),
 	}
 
 	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPrivate {

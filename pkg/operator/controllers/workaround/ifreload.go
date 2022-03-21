@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -36,7 +37,7 @@ func (*ifReload) Name() string {
 	return "ifReload"
 }
 
-func (i *ifReload) IsRequired(clusterVersion *version.Version) bool {
+func (i *ifReload) IsRequired(clusterVersion *version.Version, cluster *arov1alpha1.Cluster) bool {
 	return clusterVersion.Lt(i.versionFixed)
 }
 

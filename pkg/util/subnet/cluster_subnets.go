@@ -34,7 +34,7 @@ func NewKubeManager(maocli maoclient.Interface, subscriptionID string) KubeManag
 }
 
 // List reconstructs subnetId used in machines object in the cluster
-// In cases we interat with customer vnets, we don't know which subnets are used in ARO.
+// In cases when we interact with customer vnets, we don't know which subnets are used in ARO.
 // Example : /subscriptions/{subscriptionID}/resourceGroups/{vnet-resource-group}/providers/Microsoft.Network/virtualNetworks/{vnet-name}/subnets/{subnet-name}
 func (m *kubeManager) List(ctx context.Context) ([]Subnet, error) {
 	subnetMap := []Subnet{}

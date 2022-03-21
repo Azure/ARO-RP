@@ -10,6 +10,7 @@ import (
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	consoleclient "github.com/openshift/client-go/console/clientset/versioned"
+	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
@@ -21,20 +22,24 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/alertwebhook"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/autosizednodes"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/banner"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/imageconfig"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machine"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machineset"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/node"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/previewfeature"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/rbac"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/routefix"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/storageaccounts"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/workaround"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
@@ -98,6 +103,10 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
+	imageregistrycli, err := imageregistryclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
 	// TODO (NE): dh is sometimes passed, sometimes created later. Can we standardize?
 	dh, err := dynamichelper.New(log, restConfig)
 	if err != nil {
@@ -106,92 +115,113 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 
 	if role == pkgoperator.RoleMaster {
 		if err = (genevalogging.NewReconciler(
-			log.WithField("controller", controllers.GenevaLoggingControllerName),
+			log.WithField("controller", genevalogging.ControllerName),
 			arocli, kubernetescli, securitycli,
 			restConfig)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller Genevalogging: %v", err)
+			return fmt.Errorf("unable to create controller %s: %v", genevalogging.ControllerName, err)
 		}
 		if err = (clusteroperatoraro.NewReconciler(
-			log.WithField("controller", controllers.ClusterOperatorAROName),
+			log.WithField("controller", clusteroperatoraro.ControllerName),
 			arocli, configcli)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller ClusterOperatorARO: %v", err)
+			return fmt.Errorf("unable to create controller %s: %v", clusteroperatoraro.ControllerName, err)
 		}
 		if err = (pullsecret.NewReconciler(
-			log.WithField("controller", controllers.PullSecretControllerName),
+			log.WithField("controller", pullsecret.ControllerName),
 			arocli, kubernetescli)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller PullSecret: %v", err)
+			return fmt.Errorf("unable to create controller %s: %v", pullsecret.ControllerName, err)
 		}
 		if err = (alertwebhook.NewReconciler(
-			log.WithField("controller", controllers.AlertwebhookControllerName),
+			log.WithField("controller", alertwebhook.ControllerName),
 			arocli, kubernetescli)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller AlertWebhook: %v", err)
+			return fmt.Errorf("unable to create controller %s: %v", alertwebhook.ControllerName, err)
 		}
 		if err = (workaround.NewReconciler(
-			log.WithField("controller", controllers.WorkaroundControllerName),
+			log.WithField("controller", workaround.ControllerName),
 			arocli, configcli, kubernetescli, mcocli, restConfig)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller Workaround: %v", err)
+			return fmt.Errorf("unable to create controller %s: %v", workaround.ControllerName, err)
 		}
 		if err = (routefix.NewReconciler(
-			log.WithField("controller", controllers.RouteFixControllerName),
+			log.WithField("controller", routefix.ControllerName),
 			arocli, configcli, kubernetescli, securitycli, restConfig)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller RouteFix: %v", err)
+			return fmt.Errorf("unable to create controller %s: %v", routefix.ControllerName, err)
 		}
 		if err = (monitoring.NewReconciler(
-			log.WithField("controller", controllers.MonitoringControllerName),
+			log.WithField("controller", monitoring.ControllerName),
 			arocli, kubernetescli)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller Monitoring: %v", err)
+			return fmt.Errorf("unable to create controller %s: %v", monitoring.ControllerName, err)
 		}
 		if err = (rbac.NewReconciler(
-			log.WithField("controller", controllers.RBACControllerName),
+			log.WithField("controller", rbac.ControllerName),
 			arocli, dh)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller RBAC: %v", err)
+			return fmt.Errorf("unable to create controller %s: %v", rbac.ControllerName, err)
 		}
 		if err = (dnsmasq.NewClusterReconciler(
-			log.WithField("controller", controllers.DnsmasqClusterControllerName),
+			log.WithField("controller", dnsmasq.ClusterControllerName),
 			arocli, mcocli, dh)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller DnsmasqCluster: %v", err)
+			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.ClusterControllerName, err)
 		}
 		if err = (dnsmasq.NewMachineConfigReconciler(
-			log.WithField("controller", controllers.DnsmasqMachineConfigControllerName),
+			log.WithField("controller", dnsmasq.MachineConfigControllerName),
 			arocli, mcocli, dh)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller DnsmasqMachineConfig: %v", err)
+			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.MachineConfigControllerName, err)
 		}
 		if err = (dnsmasq.NewMachineConfigPoolReconciler(
-			log.WithField("controller", controllers.DnsmasqMachineConfigPoolControllerName),
+			log.WithField("controller", dnsmasq.MachineConfigPoolControllerName),
 			arocli, mcocli, dh)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller DnsmasqMachineConfigPool: %v", err)
+			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.MachineConfigPoolControllerName, err)
 		}
 		if err = (node.NewReconciler(
-			log.WithField("controller", controllers.NodeControllerName),
+			log.WithField("controller", node.ControllerName),
 			arocli, kubernetescli)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller Node: %v", err)
+			return fmt.Errorf("unable to create controller %s: %v", node.ControllerName, err)
 		}
 		if err = (subnets.NewReconciler(
-			log.WithField("controller", controllers.AzureSubnetsControllerName),
+			log.WithField("controller", subnets.ControllerName),
 			arocli, kubernetescli, maocli)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller Subnets: %v", err)
+			return fmt.Errorf("unable to create controller %s: %v", subnets.ControllerName, err)
 		}
 		if err = (machine.NewReconciler(
-			log.WithField("controller", controllers.MachineControllerName),
+			log.WithField("controller", machine.ControllerName),
 			arocli, maocli, isLocalDevelopmentMode, role)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller Machine: %v", err)
+			return fmt.Errorf("unable to create controller %s: %v", machine.ControllerName, err)
 		}
 		if err = (banner.NewReconciler(
-			log.WithField("controller", controllers.BannerControllerName),
+			log.WithField("controller", banner.ControllerName),
 			arocli, consolecli)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller Banner: %v", err)
+			return fmt.Errorf("unable to create controller %s: %v", banner.ControllerName, err)
 		}
 		if err = (machineset.NewReconciler(
-			log.WithField("controller", controllers.MachineSetControllerName),
+			log.WithField("controller", machineset.ControllerName),
 			arocli, maocli)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller MachineSet: %v", err)
+			return fmt.Errorf("unable to create controller %s: %v", machineset.ControllerName, err)
+		}
+		if err = (imageconfig.NewReconciler(arocli, configcli)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", imageconfig.ControllerName, err)
+		}
+		if err = (previewfeature.NewReconciler(
+			log.WithField("controller", previewfeature.ControllerName),
+			arocli, kubernetescli, maocli)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", previewfeature.ControllerName, err)
+		}
+		if err = (storageaccounts.NewReconciler(
+			log.WithField("controller", storageaccounts.ControllerName),
+			arocli, maocli, kubernetescli, imageregistrycli)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", storageaccounts.ControllerName, err)
+		}
+		if err = (muo.NewReconciler(arocli, kubernetescli, dh)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", muo.ControllerName, err)
+		}
+		if err = (autosizednodes.NewReconciler(
+			log.WithField("controller", autosizednodes.ControllerName),
+			mgr)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", autosizednodes.ControllerName, err)
 		}
 	}
 
 	if err = (checker.NewReconciler(
-		log.WithField("controller", controllers.CheckerControllerName),
+		log.WithField("controller", checker.ControllerName),
 		arocli, kubernetescli, maocli, role)).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller Checker: %v", err)
+		return fmt.Errorf("unable to create controller %s: %v", checker.ControllerName, err)
 	}
 
 	// +kubebuilder:scaffold:builder

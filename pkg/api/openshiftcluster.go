@@ -300,6 +300,16 @@ const (
 	VMSizeStandardM128ms VMSize = "Standard_M128ms"
 	VMSizeStandardG5     VMSize = "Standard_G5"
 	VMSizeStandardGS5    VMSize = "Standard_GS5"
+
+	VMSizeStandardL4s    VMSize = "Standard_L4s"
+	VMSizeStandardL8s    VMSize = "Standard_L8s"
+	VMSizeStandardL16s   VMSize = "Standard_L16s"
+	VMSizeStandardL32s   VMSize = "Standard_L32s"
+	VMSizeStandardL8sV2  VMSize = "Standard_L8s_v2"
+	VMSizeStandardL16sV2 VMSize = "Standard_L16s_v2"
+	VMSizeStandardL32sV2 VMSize = "Standard_L32s_v2"
+	VMSizeStandardL48sV2 VMSize = "Standard_L48s_v2"
+	VMSizeStandardL64sV2 VMSize = "Standard_L64s_v2"
 )
 
 // WorkerProfile represents a worker profile

@@ -3,7 +3,9 @@
 This document goes through the development dependencies one requires in order to build the RP code.
 
 ## Software Required
-1. Install [Go 1.14](https://golang.org/dl) or later, if you haven't already.
+1. Install [Go 1.16](https://golang.org/dl) or later, if you haven't already.
+
+1. Configure `GOPATH` as an OS environment variable in your shell (a requirement of some dependencies for `make generate`). If you want to keep the default path, you can add something like `GOPATH=$(go env GOPATH)` to your shell's profile/RC file.
 
 1. Install [Python 3.6+](https://www.python.org/downloads), if you haven't already.  You will also need `python-setuptools` installed, if you don't have it installed already.
 
@@ -16,10 +18,18 @@ This document goes through the development dependencies one requires in order to
 
 1. Install the relevant packages required for your OS defined below.
 
-### Fedora Packages
+1. Install [Podman](https://podman.io/getting-started/installation) and [podman-docker](https://developers.redhat.com/blog/2019/02/21/podman-and-buildah-for-docker-users#) if you haven't already, used for building container images.
 
+1. Run for `az acr login` compatability
+```bash
+sudo touch /etc/containers/nodocker
+```
+
+### Fedora Packages
 1. Install the `gpgme-devel`, `libassuan-devel`, and `openssl` packages.
 > `sudo dnf install -y gpgme-devel libassuan-devel openssl`
+
+1. Install [Docker 17.05+](https://docs.docker.com/engine/install/fedora/) or later, used as an alternative to podman.
 
 ### Debian Packages
 1. Install the `libgpgme-dev` package.
@@ -69,5 +79,14 @@ sudo pip3 install virtualenv
 1. Clone the repository to your local machine:
     ```bash
     go get -u github.com/Azure/ARO-RP/...
+    ```
+    Alternatively you can also use:
+    ```bash
+    git clone https://github.com/Azure/ARO-RP.git $GOPATH/src/github.com/Azure/ARO-RP
+    ```
+    
+1. Go to project:
+    ```bash
     cd ${GOPATH:-$HOME/go}/src/github.com/Azure/ARO-RP
     ```
+

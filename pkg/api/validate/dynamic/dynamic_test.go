@@ -419,26 +419,56 @@ func TestValidateCIDRRanges(t *testing.T) {
 				},
 			}
 
-			vnet := mgmtnetwork.VirtualNetwork{
-				ID:       &vnetID,
-				Location: to.StringPtr("eastus"),
-				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-					Subnets: &[]mgmtnetwork.Subnet{
-						{
-							ID: &masterSubnet,
-							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-								AddressPrefix: to.StringPtr("10.0.0.0/24"),
-								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-									ID: &masterNSGv1,
+			vnets := []mgmtnetwork.VirtualNetwork{
+				{
+					ID:       &vnetID,
+					Location: to.StringPtr("eastus"),
+					Name:     to.StringPtr("VNET With AddressPrefix"),
+					VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
+						Subnets: &[]mgmtnetwork.Subnet{
+							{
+								ID: &masterSubnet,
+								SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+									AddressPrefix: to.StringPtr("10.0.0.0/24"),
+									NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+										ID: &masterNSGv1,
+									},
+								},
+							},
+							{
+								ID: &workerSubnet,
+								SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+									AddressPrefix: to.StringPtr("10.0.1.0/24"),
+									NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+										ID: &workerNSGv1,
+									},
 								},
 							},
 						},
-						{
-							ID: &workerSubnet,
-							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-								AddressPrefix: to.StringPtr("10.0.1.0/24"),
-								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-									ID: &workerNSGv1,
+					},
+				},
+				{
+					ID:       &vnetID,
+					Location: to.StringPtr("eastus"),
+					Name:     to.StringPtr("VNET With AddressPrefixes"),
+					VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
+						Subnets: &[]mgmtnetwork.Subnet{
+							{
+								ID: &masterSubnet,
+								SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+									AddressPrefixes: to.StringSlicePtr([]string{"10.0.0.0/24"}),
+									NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+										ID: &masterNSGv1,
+									},
+								},
+							},
+							{
+								ID: &workerSubnet,
+								SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+									AddressPrefixes: to.StringSlicePtr([]string{"10.0.1.0/24"}),
+									NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+										ID: &workerNSGv1,
+									},
 								},
 							},
 						},
@@ -450,23 +480,25 @@ func TestValidateCIDRRanges(t *testing.T) {
 				tt.modifyOC(oc)
 			}
 
-			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
-			if tt.vnetMocks != nil {
-				tt.vnetMocks(vnetClient, vnet)
-			}
+			for _, vnet := range vnets {
+				vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+				if tt.vnetMocks != nil {
+					tt.vnetMocks(vnetClient, vnet)
+				}
 
-			dv := &dynamic{
-				log:             logrus.NewEntry(logrus.StandardLogger()),
-				virtualNetworks: vnetClient,
-			}
+				dv := &dynamic{
+					log:             logrus.NewEntry(logrus.StandardLogger()),
+					virtualNetworks: vnetClient,
+				}
 
-			err := dv.validateCIDRRanges(ctx, []Subnet{
-				{ID: masterSubnet},
-				{ID: workerSubnet}},
-				oc.Properties.NetworkProfile.PodCIDR, oc.Properties.NetworkProfile.ServiceCIDR)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
+				err := dv.validateCIDRRanges(ctx, []Subnet{
+					{ID: masterSubnet},
+					{ID: workerSubnet}},
+					oc.Properties.NetworkProfile.PodCIDR, oc.Properties.NetworkProfile.ServiceCIDR)
+				if err != nil && err.Error() != tt.wantErr ||
+					err == nil && tt.wantErr != "" {
+					t.Error(*vnet.Name, err)
+				}
 			}
 		})
 	}

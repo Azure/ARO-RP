@@ -94,6 +94,11 @@ func (in *ClusterSpec) DeepCopyInto(out *ClusterSpec) {
 		copy(*out, *in)
 	}
 	out.Banner = in.Banner
+	if in.ServiceSubnets != nil {
+		in, out := &in.ServiceSubnets, &out.ServiceSubnets
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.OperatorFlags != nil {
 		in, out := &in.OperatorFlags, &out.OperatorFlags
 		*out = make(OperatorFlags, len(*in))

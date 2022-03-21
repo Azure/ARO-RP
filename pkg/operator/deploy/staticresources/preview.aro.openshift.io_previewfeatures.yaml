@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.6.2
+    controller-gen.kubebuilder.io/version: v0.6.3-0.20210916130746-94401651a6c3
   creationTimestamp: null
   name: previewfeatures.preview.aro.openshift.io
 spec:
@@ -46,13 +46,20 @@ spec:
                       when true the controller will try to reach the desired configuration,
                       when false it will try to disable the flow logs.'
                     type: boolean
-                  retention:
-                    default: 2160h
-                    description: Retention period for data.
+                  networkWatcherID:
+                    description: NetworkWatcherID specifies the ID of the network
+                      watcher.
                     type: string
+                  retentionDays:
+                    default: 90
+                    description: RetentionDays specifies how many days the flowlogs
+                      should be retained.
+                    format: int32
+                    type: integer
                   storageAccountResourceId:
-                    description: StorageAccountResourceID should be defined if BYO-Storage
-                      account is used. Must be in the same region of flow log.
+                    description: StorageAccountResourceID of the storage account used
+                      for collecting the flow logs. Must be in the same region of
+                      flow log.
                     type: string
                   trafficAnalyticsInterval:
                     default: 60m
@@ -99,10 +106,6 @@ spec:
                 type: array
               operatorVersion:
                 type: string
-              redHatKeysPresent:
-                items:
-                  type: string
-                type: array
             type: object
         type: object
     served: true

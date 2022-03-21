@@ -9,6 +9,7 @@ jobs:
 - job: Build_and_push_images
   pool:
     name: ARO-CI
+    demands: go-1.16
 
   steps:
   - template: ./templates/template-checkout.yml

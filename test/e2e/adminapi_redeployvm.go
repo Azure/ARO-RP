@@ -36,6 +36,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(vms).NotTo(HaveLen(0))
 		vm := vms[0]
+		log.Infof("selected vm: %s", *vm.Name)
 
 		By("triggering the redeploy action")
 		clockDrift := -1 * time.Minute
@@ -67,19 +68,18 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 			var nodeNotReady, rebooted, nodeReady bool
 
 			for _, event := range events.Items {
-				if event.CreationTimestamp.After(nodeKillTime.Time) {
-					if !nodeNotReady &&
-						event.Reason == "NodeNotReady" &&
-						event.Regarding.Name == *vm.Name {
+				if event.CreationTimestamp.After(nodeKillTime.Time) && event.Regarding.Name == *vm.Name {
+					if !nodeNotReady && event.Reason == "NodeNotReady" {
 						nodeNotReady = true
-					} else if !rebooted &&
-						event.Reason == "Rebooted" &&
-						event.Regarding.Name == *vm.Name {
+						log.Info("node entered not ready state")
+					}
+					if !rebooted && event.Reason == "Rebooted" {
 						rebooted = true
-					} else if !nodeReady &&
-						event.Reason == "NodeReady" &&
-						event.Regarding.Name == *vm.Name {
+						log.Info("node reboooted")
+					}
+					if !nodeReady && event.Reason == "NodeReady" {
 						nodeReady = true
+						log.Info("node returned to ready state")
 						break
 					}
 				}

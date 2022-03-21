@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -80,16 +81,18 @@ type manager struct {
 	subnet  subnet.Manager
 	graph   graph.Manager
 
-	kubernetescli  kubernetes.Interface
-	extensionscli  extensionsclient.Interface
-	maocli         maoclient.Interface
-	mcocli         mcoclient.Interface
-	operatorcli    operatorclient.Interface
-	configcli      configclient.Interface
-	samplescli     samplesclient.Interface
-	securitycli    securityclient.Interface
-	arocli         aroclient.Interface
-	registryclient imageregistryclient.Interface
+	kubernetescli    kubernetes.Interface
+	extensionscli    extensionsclient.Interface
+	maocli           maoclient.Interface
+	mcocli           mcoclient.Interface
+	operatorcli      operatorclient.Interface
+	configcli        configclient.Interface
+	samplescli       samplesclient.Interface
+	securitycli      securityclient.Interface
+	arocli           aroclient.Interface
+	imageregistrycli imageregistryclient.Interface
+
+	aroOperatorDeployer deploy.Operator
 }
 
 // New returns a cluster manager

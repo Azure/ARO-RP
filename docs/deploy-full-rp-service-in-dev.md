@@ -21,24 +21,11 @@
     make dev-config.yaml
     ```
 
-1. Update and resource your environment file
-    > It should look something like below once completed
+1. Create a full environment file, which overrides some default `./env` options when sourced
     ```bash
-    export LOCATION=eastus
-    export ARO_IMAGE=arointsvc.azurecr.io/aro:latest
-
-    . secrets/env
-
-    export RESOURCEGROUP=$USER-aro-$LOCATION
-    export DATABASE_ACCOUNT_NAME=$USER-aro-$LOCATION
-    export DATABASE_NAME=ARO
-    export KEYVAULT_PREFIX=$USER-aro-$LOCATION
-    export ARO_IMAGE=${USER}aro.azurecr.io/aro:$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty)
-    export FLUENTBIT_IMAGE=${USER}aro.azurecr.io/fluentbit:latest
-    ```
-
-    ```bash
-    . ./env
+    cp env-int.example env-int
+    vi env-int
+    . ./env-int
     ```
 
 1. Run `make deploy`
@@ -104,6 +91,7 @@
         export SRC_AUTH_QUAY=$(echo $USER_PULL_SECRET | jq -r '.auths."quay.io".auth')
         export SRC_AUTH_REDHAT=$(echo $USER_PULL_SECRET | jq -r '.auths."registry.redhat.io".auth')
         export DST_AUTH=$(echo -n '00000000-0000-0000-0000-000000000000:'$(az acr login -n ${DST_ACR_NAME} --expose-token | jq -r .accessToken) | base64 -w0)
+        ```
 
     1. Login to the Azure Container Registry
         ```bash

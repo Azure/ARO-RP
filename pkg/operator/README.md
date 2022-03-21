@@ -67,8 +67,59 @@ make admin.kubeconfig
 export KUBECONFIG=$(pwd)/admin.kubeconfig
 oc scale -n openshift-azure-operator deployment/aro-operator-master --replicas=0
 make generate
-go run ./cmd/aro operator master
+go run -tags aro ./cmd/aro operator master
 ```
+
+### How to create & publish ARO Operator image to ACR/Quay
+
+1. Login to AZ
+  ```bash
+  az login
+  ```
+
+2. Install Docker according to the steps outlined in [Prepare Your Dev Environment](../../docs/prepare-your-dev-environment.md)
+
+3. Publish Image to ACR
+
+   * Pre-requisite:
+     ```
+     ACR created in Azure Portal with Name ${USER}aro
+     2GB+ of Free RAM
+     ```
+
+    * Setup environment variables
+      ```bash
+      export DST_ACR_NAME=${USER}aro
+      export DST_AUTH=$(echo -n '00000000-0000-0000-0000-000000000000:'$(az acr login -n ${DST_ACR_NAME} --expose-token | jq -r .accessToken) | base64 -w0)
+      ```
+
+    * Login to the Azure Container Registry
+      ```bash
+      docker login -u 00000000-0000-0000-0000-000000000000 -p "$(echo $DST_AUTH | base64 -d | cut -d':' -f2)" "${DST_ACR_NAME}.azurecr.io"
+      ```
+
+4. Publish Image to Quay
+
+    * Pre-requisite:
+      ```
+      Quay account with repository created
+      2GB+ of Free RAM
+      ```
+
+    * Setup mirroring environment variables
+      ```bash
+      export DST_QUAY=<quay-user-name>/<repository-name>
+      ```
+
+    * Login to the Quay Registry
+      ```bash
+      docker login quay.io/${DST_QUAY}
+      ```
+
+5. Build and Push ARO Operator Image
+  ```bash
+  make publish-image-aro-multistage
+  ```
 
 ### How to run a custom operator image
 

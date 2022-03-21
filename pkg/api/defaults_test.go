@@ -27,7 +27,7 @@ func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
 				ClusterProfile: ClusterProfile{
 					FipsValidatedModules: FipsValidatedModulesDisabled,
 				},
-				OperatorFlags: DefaultOperatorFlags.Copy(),
+				OperatorFlags: DefaultOperatorFlags(),
 			},
 		},
 	}
