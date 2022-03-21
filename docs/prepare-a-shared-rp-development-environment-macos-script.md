@@ -69,7 +69,7 @@ AZURE_CLIENT_ID="$(az ad app create \
 az ad sp create --id "$AZURE_CLIENT_ID" >/dev/null
 AZURE_CLIENT_ID - aro-v4-tooling-shared-cf - 81bc2ad6-3025-4b9f-8d9b-6dbe7b49d6e4 (this is app registration and also a service principal / enterprise application)
 
-// Broke these up into three commands for debug
+// Added ability to customize the fp role def id to avoid interferring with other subs
 LOCATION=eastus
 az deployment sub create \
  -l $LOCATION \
@@ -77,10 +77,11 @@ az deployment sub create \
  --parameters \
    "armServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_ARM_CLIENT_ID'" --query '[].objectId' -o tsv)" \
    "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
+   "fpRoleDefinitionId"="$(uuidgen)" \
    "devServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)" \
  >/dev/null
 
-ERROR:
+ERROR (prior to allowing custom guid for fp role def id):
 
 WARNING: The underlying Active Directory Graph API will be replaced by Microsoft Graph API in a future version of Azure CLI. Please carefully review all breaking changes introduced during this migration: https://docs.microsoft.com/cli/azure/microsoft-graph-migration
 WARNING: The underlying Active Directory Graph API will be replaced by Microsoft Graph API in a future version of Azure CLI. Please carefully review all breaking changes introduced during this migration: https://docs.microsoft.com/cli/azure/microsoft-graph-migration
