@@ -24,7 +24,7 @@ func (mon *Monitor) emitDeploymentStatuses(ctx context.Context) error {
 		count += int64(len(ds.Items))
 
 		for _, d := range ds.Items {
-			if !namespace.IsOpenShift(d.Namespace) {
+			if !namespace.FilteredOpenShiftNamespace(d.Namespace) {
 				continue
 			}
 
