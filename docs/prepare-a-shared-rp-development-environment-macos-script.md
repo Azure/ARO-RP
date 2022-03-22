@@ -90,3 +90,60 @@ ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least
 
 https://ms.portal.azure.com/#blade/HubsExtension/DeploymentDetailsBlade/overview/id/%2Fsubscriptions%2F26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8%2Fproviders%2FMicrosoft.Resources%2Fdeployments%2Frbac-development
 
+go run ./hack/genkey -client portal-client
+mv portal-client.* secrets
+
+AZURE_PORTAL_CLIENT_ID="$(az ad app create \
+ --display-name aro-v4-portal-shared-cf \
+ --reply-urls "https://localhost:8444/callback" \
+ --query appId \
+ -o tsv)"
+az ad app credential reset \
+ --id "$AZURE_PORTAL_CLIENT_ID" \
+ --cert "$(base64 -b0 <secrets/portal-client.crt)" >/dev/null
+
+az rest --method PATCH \
+  --uri https://graph.microsoft.com/v1.0/applications/36a3e030-3ae6-483d-8cd8-710dd23b87d8/ \
+  --body '{"api":{"requestedAccessTokenVersion": 2}}'
+
+go run ./hack/genkey -ca vpn-ca
+mv vpn-ca.* secrets
+
+go run ./hack/genkey -client -keyFile secrets/vpn-ca.key -certFile secrets/vpn-ca.crt vpn-client
+mv vpn-client.* secrets
+
+go run ./hack/genkey proxy
+mv proxy.* secrets
+
+go run ./hack/genkey -client proxy-client
+mv proxy-client.* secrets
+
+ssh-keygen -f secrets/proxy_id_rsa -N ''
+Your identification has been saved in secrets/proxy_id_rsa
+Your public key has been saved in secrets/proxy_id_rsa.pub
+The key fingerprint is:
+SHA256:1q+ZTzkM0GOyfhMzvCUllBWva5Z1cWvf56NI7sIubkc corey@MacBook-Pro-2222.lan
+The key's randomart image is:
++---[RSA 3072]----+
+|          .oo.   |
+|         o.  .   |
+|        o = . ...|
+|         B + .  +|
+|        S O o .o.|
+|       o E @ =..o|
+|        + +.@   +|
+|       o =oO.. o.|
+|      o.+.*=... o|
++----[SHA256]-----+
+
+
+go run ./hack/genkey localhost
+mv localhost.* secrets
+
+go run ./hack/genkey -ca dev-ca
+mv dev-ca.* secrets
+
+go run ./hack/genkey -client -keyFile secrets/dev-ca.key -certFile secrets/dev-ca.crt dev-client
+mv dev-client.* secrets
+
+## pickup here tomorrow with Karan!

@@ -213,6 +213,7 @@ locations.
      --parameters \
        "armServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_ARM_CLIENT_ID'" --query '[].objectId' -o tsv)" \
        "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
+       "fpRoleDefinitionId"="$(uuidgen)" \
        "devServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)" \
      >/dev/null
    ```
@@ -229,15 +230,15 @@ locations.
    ```
 
    ```bash
+   // note: for macos change the -w0 option for base64 to -b0
    AZURE_PORTAL_CLIENT_ID="$(az ad app create \
-     --display-name aro-v4-portal-shared \
-     --identifier-uris "https://$(uuidgen)/" \
+     --display-name aro-v4-portal-shared-cf \
      --reply-urls "https://localhost:8444/callback" \
      --query appId \
      -o tsv)"
    az ad app credential reset \
      --id "$AZURE_PORTAL_CLIENT_ID" \
-     --cert "$(base64 -w0 <secrets/portal-client.crt)" >/dev/null
+     --cert "$(base64 -b0 <secrets/portal-client.crt)" >/dev/null
    ```
 
    TODO: more steps are needed to configure aro-v4-portal-shared.
@@ -247,13 +248,14 @@ locations.
    1. Create the application and set `requestedAccessTokenVersion`
 
    ```bash
-   AZURE_DBTOKEN_CLIENT_ID="$(az ad app create --display-name dbtoken \
+   AZURE_DBTOKEN_CLIENT_ID="$(az ad app create --display-name dbtoken-cf \
       --oauth2-allow-implicit-flow false \
       --query appId \
       -o tsv)"
 
    OBJ_ID="$(az ad app show --id $AZURE_DBTOKEN_CLIENT_ID --query objectId)"
 
+   // NOTE: the graph API requires this to be done from a managed machine
    az rest --method PATCH \
       --uri https://graph.microsoft.com/v1.0/applications/$OBJ_ID/ \
       --body '{"api":{"requestedAccessTokenVersion": 2}}'
