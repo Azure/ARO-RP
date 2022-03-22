@@ -306,7 +306,7 @@ func (l *tomlLexer) lexComma() tomlLexStateFn {
 // Parse the key and emits its value without escape sequences.
 // bare keys, basic string keys and literal string keys are supported.
 func (l *tomlLexer) lexKey() tomlLexStateFn {
-	var sb strings.Builder
+	growingString := ""
 
 	for r := l.peek(); isKeyChar(r) || r == '\n' || r == '\r'; r = l.peek() {
 		if r == '"' {
@@ -315,9 +315,7 @@ func (l *tomlLexer) lexKey() tomlLexStateFn {
 			if err != nil {
 				return l.errorf(err.Error())
 			}
-			sb.WriteString("\"")
-			sb.WriteString(str)
-			sb.WriteString("\"")
+			growingString += "\"" + str + "\""
 			l.next()
 			continue
 		} else if r == '\'' {
@@ -326,45 +324,41 @@ func (l *tomlLexer) lexKey() tomlLexStateFn {
 			if err != nil {
 				return l.errorf(err.Error())
 			}
-			sb.WriteString("'")
-			sb.WriteString(str)
-			sb.WriteString("'")
+			growingString += "'" + str + "'"
 			l.next()
 			continue
 		} else if r == '\n' {
 			return l.errorf("keys cannot contain new lines")
 		} else if isSpace(r) {
-			var str strings.Builder
-			str.WriteString(" ")
-
+			str := " "
 			// skip trailing whitespace
 			l.next()
 			for r = l.peek(); isSpace(r); r = l.peek() {
-				str.WriteRune(r)
+				str += string(r)
 				l.next()
 			}
 			// break loop if not a dot
 			if r != '.' {
 				break
 			}
-			str.WriteString(".")
+			str += "."
 			// skip trailing whitespace after dot
 			l.next()
 			for r = l.peek(); isSpace(r); r = l.peek() {
-				str.WriteRune(r)
+				str += string(r)
 				l.next()
 			}
-			sb.WriteString(str.String())
+			growingString += str
 			continue
 		} else if r == '.' {
 			// skip
 		} else if !isValidBareChar(r) {
 			return l.errorf("keys cannot contain %c character", r)
 		}
-		sb.WriteRune(r)
+		growingString += string(r)
 		l.next()
 	}
-	l.emitWithValue(tokenKey, sb.String())
+	l.emitWithValue(tokenKey, growingString)
 	return l.lexVoid
 }
 
@@ -389,7 +383,7 @@ func (l *tomlLexer) lexLeftBracket() tomlLexStateFn {
 }
 
 func (l *tomlLexer) lexLiteralStringAsString(terminator string, discardLeadingNewLine bool) (string, error) {
-	var sb strings.Builder
+	growingString := ""
 
 	if discardLeadingNewLine {
 		if l.follow("\r\n") {
@@ -403,14 +397,14 @@ func (l *tomlLexer) lexLiteralStringAsString(terminator string, discardLeadingNe
 	// find end of string
 	for {
 		if l.follow(terminator) {
-			return sb.String(), nil
+			return growingString, nil
 		}
 
 		next := l.peek()
 		if next == eof {
 			break
 		}
-		sb.WriteRune(l.next())
+		growingString += string(l.next())
 	}
 
 	return "", errors.New("unclosed string")
@@ -444,7 +438,7 @@ func (l *tomlLexer) lexLiteralString() tomlLexStateFn {
 // Terminator is the substring indicating the end of the token.
 // The resulting string does not include the terminator.
 func (l *tomlLexer) lexStringAsString(terminator string, discardLeadingNewLine, acceptNewLines bool) (string, error) {
-	var sb strings.Builder
+	growingString := ""
 
 	if discardLeadingNewLine {
 		if l.follow("\r\n") {
@@ -457,7 +451,7 @@ func (l *tomlLexer) lexStringAsString(terminator string, discardLeadingNewLine, 
 
 	for {
 		if l.follow(terminator) {
-			return sb.String(), nil
+			return growingString, nil
 		}
 
 		if l.follow("\\") {
@@ -475,61 +469,61 @@ func (l *tomlLexer) lexStringAsString(terminator string, discardLeadingNewLine, 
 					l.next()
 				}
 			case '"':
-				sb.WriteString("\"")
+				growingString += "\""
 				l.next()
 			case 'n':
-				sb.WriteString("\n")
+				growingString += "\n"
 				l.next()
 			case 'b':
-				sb.WriteString("\b")
+				growingString += "\b"
 				l.next()
 			case 'f':
-				sb.WriteString("\f")
+				growingString += "\f"
 				l.next()
 			case '/':
-				sb.WriteString("/")
+				growingString += "/"
 				l.next()
 			case 't':
-				sb.WriteString("\t")
+				growingString += "\t"
 				l.next()
 			case 'r':
-				sb.WriteString("\r")
+				growingString += "\r"
 				l.next()
 			case '\\':
-				sb.WriteString("\\")
+				growingString += "\\"
 				l.next()
 			case 'u':
 				l.next()
-				var code strings.Builder
+				code := ""
 				for i := 0; i < 4; i++ {
 					c := l.peek()
 					if !isHexDigit(c) {
 						return "", errors.New("unfinished unicode escape")
 					}
 					l.next()
-					code.WriteRune(c)
+					code = code + string(c)
 				}
-				intcode, err := strconv.ParseInt(code.String(), 16, 32)
+				intcode, err := strconv.ParseInt(code, 16, 32)
 				if err != nil {
-					return "", errors.New("invalid unicode escape: \\u" + code.String())
+					return "", errors.New("invalid unicode escape: \\u" + code)
 				}
-				sb.WriteRune(rune(intcode))
+				growingString += string(rune(intcode))
 			case 'U':
 				l.next()
-				var code strings.Builder
+				code := ""
 				for i := 0; i < 8; i++ {
 					c := l.peek()
 					if !isHexDigit(c) {
 						return "", errors.New("unfinished unicode escape")
 					}
 					l.next()
-					code.WriteRune(c)
+					code = code + string(c)
 				}
-				intcode, err := strconv.ParseInt(code.String(), 16, 64)
+				intcode, err := strconv.ParseInt(code, 16, 64)
 				if err != nil {
-					return "", errors.New("invalid unicode escape: \\U" + code.String())
+					return "", errors.New("invalid unicode escape: \\U" + code)
 				}
-				sb.WriteRune(rune(intcode))
+				growingString += string(rune(intcode))
 			default:
 				return "", errors.New("invalid escape sequence: \\" + string(l.peek()))
 			}
@@ -540,7 +534,7 @@ func (l *tomlLexer) lexStringAsString(terminator string, discardLeadingNewLine, 
 				return "", fmt.Errorf("unescaped control character %U", r)
 			}
 			l.next()
-			sb.WriteRune(r)
+			growingString += string(r)
 		}
 
 		if l.peek() == eof {
@@ -775,19 +769,19 @@ func init() {
 	// /!\ also matches the empty string
 	//
 	// Example matches:
-	// 1979-05-27T07:32:00Z
-	// 1979-05-27T00:32:00-07:00
-	// 1979-05-27T00:32:00.999999-07:00
-	// 1979-05-27 07:32:00Z
-	// 1979-05-27 00:32:00-07:00
-	// 1979-05-27 00:32:00.999999-07:00
-	// 1979-05-27T07:32:00
-	// 1979-05-27T00:32:00.999999
-	// 1979-05-27 07:32:00
-	// 1979-05-27 00:32:00.999999
-	// 1979-05-27
-	// 07:32:00
-	// 00:32:00.999999
+	//1979-05-27T07:32:00Z
+	//1979-05-27T00:32:00-07:00
+	//1979-05-27T00:32:00.999999-07:00
+	//1979-05-27 07:32:00Z
+	//1979-05-27 00:32:00-07:00
+	//1979-05-27 00:32:00.999999-07:00
+	//1979-05-27T07:32:00
+	//1979-05-27T00:32:00.999999
+	//1979-05-27 07:32:00
+	//1979-05-27 00:32:00.999999
+	//1979-05-27
+	//07:32:00
+	//00:32:00.999999
 	dateRegexp = regexp.MustCompile(`^(?:\d{1,4}-\d{2}-\d{2})?(?:[T ]?\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})?)?`)
 }
 

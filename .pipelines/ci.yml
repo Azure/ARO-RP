@@ -31,7 +31,7 @@ jobs:
      set -xe
      go mod vendor
      if [ ! -z "$(git status --porcelain vendor/)" ]; then
-         echo "Running go mod vendor modified vendor directory"
+         echo "Please run go mod vendor before committing."
          exit 1
      fi
      exit 0
@@ -41,7 +41,7 @@ jobs:
      set -xe
      go mod tidy
      if [ ! -z "$(git status --porcelain go.mod go.sum)" ]; then
-         echo "Running go mod tidy modified go.mod and/or go.sum"
+         echo "Please run go mod tidy before committing."
          exit 1
      fi
      exit 0
