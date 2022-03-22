@@ -22,9 +22,10 @@ variables:
 - template: vars.yml
 
 jobs:
-- job: Pre_Check_Vendor_Tidy
+- job: Check_Go_Vendor_Tidy
   pool:
     name: ARO-CI
+    demands: go-1.16
   steps:
   - template: ./templates/template-checkout.yml
   - script: |
@@ -54,7 +55,7 @@ jobs:
       set -xe
       make test-python
       [[ -z "$(git status -s)" ]]
-    displayName: 🧪 Run Python Unit Tests
+    displayName: 🧪Run Python Unit Tests
 
 - job: Golang_Unit_Tests
   pool:
