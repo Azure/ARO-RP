@@ -34,7 +34,6 @@ jobs:
          echo "Please run go mod vendor before committing."
          exit 1
      fi
-     exit 0
     displayName: 🧬 Pre-Check Go Mod Vendor
 
   - script: |
@@ -44,7 +43,6 @@ jobs:
          echo "Please run go mod tidy before committing."
          exit 1
      fi
-     exit 0
     displayName: 🧬 Pre-Check Go Mod Tidy
 
 - job: Python_Unit_Tests
