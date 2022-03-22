@@ -34,3 +34,4 @@ data:
       - openshift-operators
       - openshift-user-workload-monitoring
       - openshift-pipelines
+      - openshift-azure-logging
