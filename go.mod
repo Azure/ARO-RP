@@ -3,6 +3,7 @@ module github.com/Azure/ARO-RP
 go 1.16
 
 require (
+	cloud.google.com/go/compute v1.1.0 // indirect
 	github.com/AlecAivazis/survey/v2 v2.3.2 // indirect
 	github.com/AlekSi/gocov-xml v0.0.0-20190121064608-3a14fb1c4737
 	github.com/Azure/azure-sdk-for-go v61.3.0+incompatible
