@@ -29,21 +29,21 @@ jobs:
   steps:
   - template: ./templates/template-checkout.yml
   - script: |
-     set -xe
-     go mod vendor
-     if [ ! -z "$(git status --porcelain vendor/)" ]; then
-         echo "Please run go mod vendor before committing."
-         exit 1
-     fi
+      set -xe
+      go mod vendor
+      if [ ! -z "$(git status --porcelain vendor/)" ]; then
+          echo "Please run go mod vendor before committing."
+          exit 1
+      fi
     displayName: 🧬 Pre-Check Go Mod Vendor
 
   - script: |
-     set -xe
-     go mod tidy
-     if [ ! -z "$(git status --porcelain go.mod go.sum)" ]; then
-         echo "Please run go mod tidy before committing."
-         exit 1
-     fi
+      set -xe
+      go mod tidy
+      if [ ! -z "$(git status --porcelain go.mod go.sum)" ]; then
+          echo "Please run go mod tidy before committing."
+          exit 1
+      fi
     displayName: 🧬 Pre-Check Go Mod Tidy
 
 - job: Python_Unit_Tests
