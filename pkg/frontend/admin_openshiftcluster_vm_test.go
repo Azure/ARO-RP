@@ -31,6 +31,7 @@ func TestAdminRedeployVM(t *testing.T) {
 		name           string
 		resourceID     string
 		fixture        func(*testdatabase.Fixture)
+		vmActionRoute  string
 		vmName         string
 		mocks          func(*test, *mock_adminactions.MockAzureActions)
 		wantStatusCode int
@@ -40,9 +41,10 @@ func TestAdminRedeployVM(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			name:       "basic coverage",
-			vmName:     "aro-worker-australiasoutheast-7tcq7",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name:          "basic redeploy vmcoverage",
+			vmActionRoute: "redeployvm",
+			vmName:        "aro-worker-australiasoutheast-7tcq7",
+			resourceID:    testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
@@ -71,6 +73,72 @@ func TestAdminRedeployVM(t *testing.T) {
 			},
 			wantStatusCode: http.StatusOK,
 		},
+		{
+			name:          "basic restart vm coverage",
+			vmActionRoute: "restartvm",
+			vmName:        "aro-worker-australiasoutheast-7tcq7",
+			resourceID:    testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+							},
+						},
+					},
+				})
+
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockTenantID,
+						},
+					},
+				})
+			},
+			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().VMRestartAndWait(gomock.Any(), tt.vmName).Return(nil)
+			},
+			wantStatusCode: http.StatusOK,
+		},
+		{
+			name:          "basic start vm coverage",
+			vmActionRoute: "startvm",
+			vmName:        "aro-worker-australiasoutheast-7tcq7",
+			resourceID:    testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+							},
+						},
+					},
+				})
+
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockTenantID,
+						},
+					},
+				})
+			},
+			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().VMStartAndWait(gomock.Any(), tt.vmName).Return(nil)
+			},
+			wantStatusCode: http.StatusOK,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
@@ -95,7 +163,7 @@ func TestAdminRedeployVM(t *testing.T) {
 			go f.Run(ctx, nil, nil)
 
 			resp, b, err := ti.request(http.MethodPost,
-				fmt.Sprintf("https://server/admin%s/redeployvm?vmName=%s", tt.resourceID, tt.vmName),
+				fmt.Sprintf("https://server/admin%s/%s?vmName=%s", tt.resourceID, tt.vmActionRoute, tt.vmName),
 				nil, nil)
 			if err != nil {
 				t.Error(err)

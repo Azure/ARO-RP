@@ -175,6 +175,20 @@ func (mr *MockAzureActionsMockRecorder) VMRedeployAndWait(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMRedeployAndWait", reflect.TypeOf((*MockAzureActions)(nil).VMRedeployAndWait), arg0, arg1)
 }
 
+// VMRestartAndWait mocks base method.
+func (m *MockAzureActions) VMRestartAndWait(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VMRestartAndWait", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VMRestartAndWait indicates an expected call of VMRestartAndWait.
+func (mr *MockAzureActionsMockRecorder) VMRestartAndWait(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMRestartAndWait", reflect.TypeOf((*MockAzureActions)(nil).VMRestartAndWait), arg0, arg1)
+}
+
 // VMSerialConsole mocks base method.
 func (m *MockAzureActions) VMSerialConsole(arg0 context.Context, arg1 http.ResponseWriter, arg2 *logrus.Entry, arg3 string) error {
 	m.ctrl.T.Helper()
@@ -187,4 +201,18 @@ func (m *MockAzureActions) VMSerialConsole(arg0 context.Context, arg1 http.Respo
 func (mr *MockAzureActionsMockRecorder) VMSerialConsole(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSerialConsole", reflect.TypeOf((*MockAzureActions)(nil).VMSerialConsole), arg0, arg1, arg2, arg3)
+}
+
+// VMStartAndWait mocks base method.
+func (m *MockAzureActions) VMStartAndWait(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VMStartAndWait", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VMStartAndWait indicates an expected call of VMStartAndWait.
+func (mr *MockAzureActionsMockRecorder) VMStartAndWait(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMStartAndWait", reflect.TypeOf((*MockAzureActions)(nil).VMStartAndWait), arg0, arg1)
 }

@@ -77,6 +77,16 @@ func TestAuditTargetResourceData(t *testing.T) {
 			expectedName: fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/redeployvm", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 		},
 		{
+			url:          fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/restartvm", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
+			expectedKind: resourceType,
+			expectedName: fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/restartvm", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
+		},
+		{
+			url:          fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/startvm", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
+			expectedKind: resourceType,
+			expectedName: fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/startvm", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
+		},
+		{
 			url:          fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/upgrade", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),
 			expectedKind: resourceType,
 			expectedName: fmt.Sprintf("/admin/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/upgrade", subscriptionID, resourceGroupName, resourceProviderNamespace, resourceType, resourceName),

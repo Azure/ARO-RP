@@ -23,6 +23,8 @@ type AzureActions interface {
 	ResourcesList(ctx context.Context) ([]byte, error)
 	NICReconcileFailedState(ctx context.Context, nicName string) error
 	VMRedeployAndWait(ctx context.Context, vmName string) error
+	VMRestartAndWait(ctx context.Context, vmName string) error
+	VMStartAndWait(ctx context.Context, vmName string) error
 	VMSerialConsole(ctx context.Context, w http.ResponseWriter, log *logrus.Entry, vmName string) error
 }
 
@@ -68,4 +70,14 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 func (a *azureActions) VMRedeployAndWait(ctx context.Context, vmName string) error {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 	return a.virtualMachines.RedeployAndWait(ctx, clusterRGName, vmName)
+}
+
+func (a *azureActions) VMRestartAndWait(ctx context.Context, vmName string) error {
+	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
+	return a.virtualMachines.StartAndWait(ctx, clusterRGName, vmName)
+}
+
+func (a *azureActions) VMStartAndWait(ctx context.Context, vmName string) error {
+	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
+	return a.virtualMachines.StartAndWait(ctx, clusterRGName, vmName)
 }

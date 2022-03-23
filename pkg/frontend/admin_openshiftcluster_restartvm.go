@@ -12,12 +12,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
-func (f *frontend) postAdminOpenShiftClusterRedeployVM(w http.ResponseWriter, r *http.Request) {
+func (f *frontend) postAdminOpenShiftClusterRestartVM(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	err := f._postAdminOpenShiftClusterVM(ctx, r, log, redeployVM)
+	err := f._postAdminOpenShiftClusterVM(ctx, r, log, restartVM)
 
 	adminReply(log, w, nil, nil, err)
 }
