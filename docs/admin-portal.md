@@ -31,7 +31,7 @@ You will require Node.js and `npm`. These instructions were tested with the vers
 
 1. Complete Steps mentioned above to build and compile portal.
 
-1. Make sure development environment variables are set and also set `export NO_NPM=1`
+1. Make sure development environment variables are set and also set `export NO_NPM=1`. Setting this environment variable will make sure in development mode that the admin portal does not redirect to the front end development server at localhost:3000 and instead will route to localhost:8444 where the front end code is being served by the RP
 
 1. Run `make run-portal`
 
