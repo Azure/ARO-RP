@@ -100,6 +100,6 @@ jobs:
     name: ARO-CI
   steps:
   - script: |
-      podman build -f Dockerfile.portal_lint . -t linter
-      podman run -it --rm localhost/linter ./src --ext .ts
+      set -xe
+      make lint-admin-portal
     displayName: 🧹 Lint Admin Portal
