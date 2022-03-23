@@ -285,7 +285,8 @@ gpgcheck=yes
 EOF
 
 for attempt in {1..5}; do
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security docker openssl-perl td-agent-bit && break
+yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security docker openssl-perl td-agent-bit python3 && break
+  # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
