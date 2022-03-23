@@ -39,6 +39,10 @@ func TestFilteredOpenShiftNamespace(t *testing.T) {
 		{
 			namespace: "customer",
 		},
+		{
+			namespace: "openshift-/",
+			want:      false,
+		},
 	} {
 		t.Run(tt.namespace, func(t *testing.T) {
 			got := FilteredOpenShiftNamespace(tt.namespace)
