@@ -152,7 +152,7 @@ func (p *portal) setupRouter() error {
 		return err
 	}
 
-	p.tempv2, err = template.New("index2.html").Parse(string(assetv2))
+	p.tempv2, err = template.New("index.html").Parse(string(assetv2))
 	if err != nil {
 		return err
 	}
@@ -304,7 +304,7 @@ func (p *portal) index(w http.ResponseWriter, r *http.Request) {
 func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 	buf := &bytes.Buffer{}
 
-	err := p.tempv2.ExecuteTemplate(buf, "index2.html", map[string]interface{}{
+	err := p.tempv2.ExecuteTemplate(buf, "index.html", map[string]interface{}{
 		"location":       p.env.Location(),
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})
@@ -313,7 +313,7 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.ServeContent(w, r, "index2.html", time.Time{}, bytes.NewReader(buf.Bytes()))
+	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(buf.Bytes()))
 }
 
 // makeFetcher creates a cluster.FetchClient suitable for use by the Portal REST API
