@@ -69,8 +69,8 @@ type portal struct {
 
 	dialer proxy.Dialer
 
-	tempv1 *template.Template
-	tempv2 *template.Template
+	templateV1 *template.Template
+	templateV2 *template.Template
 
 	aad middleware.AAD
 
@@ -147,12 +147,12 @@ func (p *portal) setupRouter() error {
 		return err
 	}
 
-	p.tempv1, err = template.New("index.html").Parse(string(assetv1))
+	p.templateV1, err = template.New("index.html").Parse(string(assetv1))
 	if err != nil {
 		return err
 	}
 
-	p.tempv2, err = template.New("index.html").Parse(string(assetv2))
+	p.templateV2, err = template.New("index.html").Parse(string(assetv2))
 	if err != nil {
 		return err
 	}
@@ -289,7 +289,7 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 func (p *portal) index(w http.ResponseWriter, r *http.Request) {
 	buf := &bytes.Buffer{}
 
-	err := p.tempv1.ExecuteTemplate(buf, "index.html", map[string]interface{}{
+	err := p.templateV1.ExecuteTemplate(buf, "index.html", map[string]interface{}{
 		"location":       p.env.Location(),
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})
@@ -304,7 +304,7 @@ func (p *portal) index(w http.ResponseWriter, r *http.Request) {
 func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 	buf := &bytes.Buffer{}
 
-	err := p.tempv2.ExecuteTemplate(buf, "index.html", map[string]interface{}{
+	err := p.templateV2.ExecuteTemplate(buf, "index.html", map[string]interface{}{
 		"location":       p.env.Location(),
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})
