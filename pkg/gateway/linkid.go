@@ -31,12 +31,19 @@ func (g *gateway) isAllowed(conn *proxyproto.Conn, host string) (string, bool, e
 		return "", false, err
 	}
 
+	return g.gatewayVerification(host, linkID)
+}
+
+func (g *gateway) gatewayVerification(host, linkID string) (string, bool, error) {
 	g.mu.RLock()
 	gateway := g.gateways[linkID]
 	g.mu.RUnlock()
 
-	if gateway == nil || gateway.Deleting {
+	if gateway == nil {
 		return "", false, fmt.Errorf("gateway record not found for linkID %s", linkID)
+	}
+	if gateway.Deleting {
+		return gateway.ID, false, fmt.Errorf("gateway for linkId %s is being deleted", linkID)
 	}
 
 	// Emit a gauge for the linkID if the host is empty

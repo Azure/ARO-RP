@@ -155,8 +155,7 @@ func NewGateway(ctx context.Context, env env.Core, baseLog, accessLog *logrus.En
 		},
 
 		allowList: allowList,
-
-		m: m,
+		m:         m,
 	}
 
 	r := mux.NewRouter()
@@ -207,4 +206,22 @@ func (g *gateway) Run(ctx context.Context, done chan<- struct{}) {
 	// TODO: wait some more
 
 	close(done)
+}
+
+func (g *gateway) updateGateway(doc *api.GatewayDocument) {
+
+	if doc.Gateway.Deleting {
+		// https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
+		delete(g.gateways, doc.ID)
+	} else {
+		g.gateways[doc.ID] = doc.Gateway
+	}
+}
+
+func (g *gateway) updateGateways(docs []*api.GatewayDocument) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	for _, doc := range docs {
+		g.updateGateway(doc)
+	}
 }
