@@ -55,15 +55,38 @@ func TestMUOReconciler(t *testing.T) {
 			},
 		},
 		{
-			name: "managed, no pullspec",
+			name: "managed, no pullspec (uses default)",
 			flags: arov1alpha1.OperatorFlags{
 				controllerEnabled: "true",
 				controllerManaged: "true",
 			},
-			wantErr: "missing pullspec",
+			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
+				expectedConfig := &config.MUODeploymentConfig{
+					Pullspec: "acrtest.example.com/managed-upgrade-operator:aro-b1",
+				}
+				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
+				md.EXPECT().IsReady(gomock.Any()).Return(true, nil)
+			},
 		},
 		{
-			name: "managed, OCM allowed but no pull secret",
+			name: "managed, OCM allowed but pull secret entirely missing",
+			flags: arov1alpha1.OperatorFlags{
+				controllerEnabled:  "true",
+				controllerManaged:  "true",
+				controllerAllowOCM: "true",
+				controllerPullSpec: "wonderfulPullspec",
+			},
+			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
+				expectedConfig := &config.MUODeploymentConfig{
+					Pullspec:        "wonderfulPullspec",
+					EnableConnected: false,
+				}
+				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
+				md.EXPECT().IsReady(gomock.Any()).Return(true, nil)
+			},
+		},
+		{
+			name: "managed, OCM allowed but empty pullsecret",
 			flags: arov1alpha1.OperatorFlags{
 				controllerEnabled:  "true",
 				controllerManaged:  "true",
@@ -208,6 +231,7 @@ func TestMUOReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: tt.flags,
+					ACRDomain:     "acrtest.example.com",
 				},
 			}
 			arocli := arofake.NewSimpleClientset(cluster)
