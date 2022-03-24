@@ -15,14 +15,6 @@ import (
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
-type gatewayTestData struct {
-	expectedErr       error
-	host              string
-	idParam           string
-	expectedId        string
-	expectedIsAllowed bool
-}
-
 func TestGatewayVerification(t *testing.T) {
 	mockController := gomock.NewController(t)
 	defer mockController.Finish()
