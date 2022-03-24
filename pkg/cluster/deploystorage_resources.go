@@ -78,7 +78,6 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 // Legacy storage accounts (public) are not encrypted and cannot be retrofitted.
 // The flag controls this behavior in update/create.
 func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resource {
-
 	virtualNetworkRules := []mgmtstorage.VirtualNetworkRule{
 		{
 			VirtualNetworkResourceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),

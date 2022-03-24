@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"testing"
 
+<<<<<<< HEAD
 	"github.com/golang/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +19,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+=======
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
+>>>>>>> 98308f29a (add e2e test)
 )
 
 func TestCheckIngressIP(t *testing.T) {
@@ -133,6 +138,7 @@ func TestCheckIngressIP(t *testing.T) {
 		})
 	}
 }
+<<<<<<< HEAD
 
 func TestCreateDeploymentData(t *testing.T) {
 	operatorImageTag := "v20071110"
@@ -416,3 +422,5 @@ func TestCheckPodImageVersion(t *testing.T) {
 		})
 	}
 }
+=======
+>>>>>>> 98308f29a (add e2e test)

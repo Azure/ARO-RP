@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -22,9 +21,8 @@ type statsd struct {
 	log *logrus.Entry
 	env env.Core
 
-	account      string
-	namespace    string
-	mdmSocketEnv string
+	account   string
+	namespace string
 
 	conn net.Conn
 	ch   chan *metric
@@ -33,14 +31,13 @@ type statsd struct {
 }
 
 // New returns a new metrics.Emitter
-func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string, mdmSocketEnv string) metrics.Emitter {
+func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string) metrics.Emitter {
 	s := &statsd{
 		log: log,
 		env: env,
 
-		account:      account,
-		namespace:    namespace,
-		mdmSocketEnv: mdmSocketEnv,
+		account:   account,
+		namespace: namespace,
 
 		ch: make(chan *metric, 1024),
 
@@ -106,65 +103,13 @@ func (s *statsd) run() {
 	}
 }
 
-func (s *statsd) parseSocketEnv(env string) (string, string, error) {
-	// Verify network:address format
-	parameters := strings.SplitN(env, ":", 2)
-	if len(parameters) != 2 {
-		return "", "", fmt.Errorf("malformed definition for the mdm statds socket. Expecting udp:<hostname>:<port> or unix:<path-to-socket> format. Got: %q", env)
-	}
-	network := strings.ToLower(parameters[0])
-	address := parameters[1]
-	return network, address, nil
-}
-
-func (s *statsd) validateSocketDefinition(network string, address string) (bool, error) {
-	//Verify supported protocol provided. TCP might just work as well, but this was never tested
-	if network != "udp" && network != "unix" {
-		return false, fmt.Errorf("unsupported protocol for the mdm statds socket. Expecting  'udp:' or 'unix:'. Got: %q", network)
-	}
-
-	return true, nil
-}
-
-func (s *statsd) defaultSocketValues() (string, string) {
-	network := "unix"
-	address := "/var/etw/mdm_statsd.socket"
-
-	if s.env.IsLocalDevelopmentMode() {
-		address = "mdm_statsd.socket"
-	}
-
-	return network, address
-}
-
-func (s *statsd) connectionDetails() (string, string, error) {
-	// allow the default socket connection to be overwritten by ENV variable
-	if s.mdmSocketEnv == "" {
-		network, address := s.defaultSocketValues()
-		return network, address, nil
-	}
-
-	network, address, err := s.parseSocketEnv(s.mdmSocketEnv)
-	if err != nil {
-		return "", "", err
-	}
-
-	ok, err := s.validateSocketDefinition(network, address)
-	if !ok {
-		return "", "", err
-	}
-
-	return network, address, nil
-}
-
 func (s *statsd) dial() (err error) {
-	network, address, err := s.connectionDetails()
-	if err != nil {
-		return
+	path := "/var/etw/mdm_statsd.socket"
+	if s.env.IsLocalDevelopmentMode() {
+		path = "mdm_statsd.socket"
 	}
 
-	s.conn, err = net.Dial(network, address)
-
+	s.conn, err = net.Dial("unix", path)
 	return
 }
 

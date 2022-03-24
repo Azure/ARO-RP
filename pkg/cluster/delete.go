@@ -29,36 +29,17 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-// deleteNic deletes the network interface resource by first fetching the resource using the interface
-// client, checking the provisioning state to ensure it is 'succeeded', and then deletes it
-// If the nic is in a failed provisioning state, it will perform an empty CreateOrUpdate on it to put it back into
-// a succeeded provisioning state.
-//
-// The resources client incorrectly reports provisioningState hence we must use the interface client to fetch
-// this resource again so we get the correct provisioningState instead of always just "Succeeded"
-func (m *manager) deleteNic(ctx context.Context, nicName string) error {
+func (m *manager) deleteNic(ctx context.Context, resource mgmtfeatures.GenericResourceExpanded) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	nic, err := m.interfaces.Get(ctx, resourceGroup, nicName, "")
-
-	// nic is already gone which typically happens on PLS / PE nics
-	// as they are deleted in a different step
-	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		detailedErr.StatusCode == http.StatusNotFound {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-
-	if nic.ProvisioningState == mgmtnetwork.Failed {
-		m.log.Printf("NIC '%s' is in a Failed provisioning state, attempting to reconcile prior to deletion.", *nic.ID)
-		err := m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, nic)
+	if resource.ProvisioningState != nil && !strings.EqualFold(*resource.ProvisioningState, "succeeded") {
+		m.log.Printf("NIC '%s' is not in a succeeded provisioning state, attempting to reconcile prior to deletion.", *resource.ID)
+		err := m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *resource.Name, mgmtnetwork.Interface{})
 		if err != nil {
 			return err
 		}
 	}
-	return m.interfaces.DeleteAndWait(ctx, resourceGroup, *nic.Name)
+	return m.interfaces.DeleteAndWait(ctx, resourceGroup, *resource.Name)
 }
 
 func (m *manager) deletePrivateDNSVirtualNetworkLinks(ctx context.Context, resourceID string) error {
@@ -166,7 +147,7 @@ var deleteOrder = map[string]int{
 func (m *manager) deleteResources(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	resources, err := m.resources.ListByResourceGroup(ctx, resourceGroup, "", "", nil)
+	resources, err := m.resources.ListByResourceGroup(ctx, resourceGroup, "", "provisioningState", nil)
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		(detailedErr.StatusCode == http.StatusNotFound ||
 			detailedErr.StatusCode == http.StatusForbidden) {
@@ -222,7 +203,7 @@ func (m *manager) deleteResources(ctx context.Context) error {
 				}
 
 			case "microsoft.network/networkinterfaces":
-				err = m.deleteNic(ctx, *resource.Name)
+				err = m.deleteNic(ctx, *resource)
 				if err != nil {
 					return err
 				}

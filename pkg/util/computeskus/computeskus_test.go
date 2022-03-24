@@ -171,7 +171,6 @@ func TestFilterVmSizes(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-
 			sku := []mgmtcompute.ResourceSku{
 				{
 					Name: to.StringPtr("Fake_Sku"),
