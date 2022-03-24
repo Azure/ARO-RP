@@ -25,6 +25,8 @@ deploy_rp_dev() {
         -g "$RESOURCEGROUP" \
         -n rp-development \
         --template-file deploy/rp-development.json \
+        --debug \
+        --verbose \
         --parameters \
             "clusterParentDomainName=$PARENT_DOMAIN_NAME" \
             "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
