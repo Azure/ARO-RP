@@ -137,7 +137,7 @@ func (p *portal) setupRouter() error {
 	r := mux.NewRouter()
 	r.Use(middleware.Panic(p.log))
 
-	assetv1, err := Asset("v1/dist/index.html")
+	assetv1, err := Asset("v1/build/index.html")
 	if err != nil {
 		return err
 	}
@@ -262,7 +262,7 @@ func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 
 func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 	for _, name := range AssetNames() {
-		if name == "v1/dist/index.html" {
+		if name == "v1/build/index.html" {
 			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.index)
 			continue
 		}
@@ -272,7 +272,7 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 			continue
 		}
 
-		fmtName := strings.TrimPrefix(name, "v1/dist/")
+		fmtName := strings.TrimPrefix(name, "v1/build/")
 		fmtName = strings.TrimPrefix(fmtName, "v2/build/")
 
 		r.NewRoute().Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))

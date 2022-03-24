@@ -94,8 +94,8 @@ const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } 
 export function ClusterDetailPanel(props: {
   csrfToken: MutableRefObject<string>
   currentCluster: ICluster | null
-  onClose: any // TODO: function ptr .. any probably bad
-  loaded: string
+  onClose: Function
+  csrfTokenAvailable: string
 }) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
@@ -153,7 +153,7 @@ export function ClusterDetailPanel(props: {
       setFetching(resourceID)
     }
 
-    if (fetching === "" && props.loaded === "DONE" && resourceID != "") {
+    if (fetching === "" && props.csrfTokenAvailable === "DONE" && resourceID != "") {
       setFetching("FETCHING")
       setError(null)
       FetchClusterInfo(props.currentCluster).then(onData) // TODO: fetchClusterInfo accepts IClusterDetail
@@ -203,7 +203,6 @@ export function ClusterDetailPanel(props: {
     )
   }
 
-  // TODO: props.loaded rename to CSRFTokenAvailable
   return (
     <Panel
       isOpen={isOpen}
