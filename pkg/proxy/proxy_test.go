@@ -18,6 +18,7 @@ func TestRequestValidation(t *testing.T) {
 		subnet     string
 		hostname   string
 		wantStatus int
+		wantErr    bool
 	}{
 		{
 			name:       "get https same subnet",
@@ -25,6 +26,7 @@ func TestRequestValidation(t *testing.T) {
 			subnet:     "127.0.0.1/24",
 			hostname:   "https://127.0.0.2:123",
 			wantStatus: http.StatusMethodNotAllowed,
+			wantErr:    true,
 		},
 		{
 			name:       "get https different subnet",
@@ -32,6 +34,7 @@ func TestRequestValidation(t *testing.T) {
 			subnet:     "127.0.0.1/24",
 			hostname:   "https://10.0.0.2:123",
 			wantStatus: http.StatusMethodNotAllowed,
+			wantErr:    true,
 		},
 		{
 			name:       "connect http same subnet",
@@ -39,6 +42,7 @@ func TestRequestValidation(t *testing.T) {
 			subnet:     "127.0.0.1/24",
 			hostname:   "127.0.0.2:123",
 			wantStatus: http.StatusOK,
+			wantErr:    false,
 		},
 		{
 			name:       "connect http different subnet",
@@ -46,6 +50,15 @@ func TestRequestValidation(t *testing.T) {
 			subnet:     "127.0.0.1/24",
 			hostname:   "10.0.0.1:123",
 			wantStatus: http.StatusForbidden,
+			wantErr:    true,
+		},
+		{
+			name:       "wrong hostname",
+			method:     http.MethodGet,
+			subnet:     "127.0.0.1/24",
+			hostname:   "https://127.0.0.1::",
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
 		},
 	}
 
@@ -61,7 +74,10 @@ func TestRequestValidation(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(tt.method, tt.hostname, nil)
 
-			server.validateProxyResquest(recorder, request)
+			err = server.validateProxyResquest(recorder, request)
+			if (err != nil && !tt.wantErr) || (err == nil && tt.wantErr) {
+				t.Error(err)
+			}
 
 			response := recorder.Result()
 

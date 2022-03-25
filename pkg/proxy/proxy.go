@@ -108,14 +108,15 @@ func (s Server) proxyHandler(w http.ResponseWriter, r *http.Request) {
 // validateProxyResquest checks that the request is valid. If not, it writes the
 // appropriate http headers and returns an error.
 func (s Server) validateProxyResquest(w http.ResponseWriter, r *http.Request) error {
-	if r.Method != http.MethodConnect {
-		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-		return errors.New("Request is not valid")
-	}
 
 	ip, _, err := net.SplitHostPort(r.Host)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return errors.New("Request is not valid")
+	}
+
+	if r.Method != http.MethodConnect {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return errors.New("Request is not valid")
 	}
 
