@@ -226,7 +226,7 @@
                         "computerNamePrefix": "[concat('gateway-', parameters('vmssName'), '-')]",
                         "adminUsername": "cloud-user",
                         "linuxConfiguration": {
-                            "disablePasswordAuthentication": true,
+                            "disablePasswordAuthentication": false,
                             "ssh": {
                                 "publicKeys": [
                                     {
