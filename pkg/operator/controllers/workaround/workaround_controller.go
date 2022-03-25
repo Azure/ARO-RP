@@ -76,7 +76,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	for _, wa := range r.workarounds {
-		if wa.IsRequired(clusterVersion) {
+		if wa.IsRequired(clusterVersion, instance) {
 			err = wa.Ensure(ctx)
 		} else {
 			err = wa.Remove(ctx)

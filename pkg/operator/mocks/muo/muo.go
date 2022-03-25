@@ -12,6 +12,7 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 
 	v1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	config "github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 )
 
 // MockDeployer is a mock of Deployer interface.
@@ -38,17 +39,17 @@ func (m *MockDeployer) EXPECT() *MockDeployerMockRecorder {
 }
 
 // CreateOrUpdate mocks base method.
-func (m *MockDeployer) CreateOrUpdate(arg0 context.Context, arg1 *v1alpha1.Cluster) error {
+func (m *MockDeployer) CreateOrUpdate(arg0 context.Context, arg1 *v1alpha1.Cluster, arg2 *config.MUODeploymentConfig) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0, arg1)
+	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateOrUpdate indicates an expected call of CreateOrUpdate.
-func (mr *MockDeployerMockRecorder) CreateOrUpdate(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockDeployerMockRecorder) CreateOrUpdate(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockDeployer)(nil).CreateOrUpdate), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockDeployer)(nil).CreateOrUpdate), arg0, arg1, arg2)
 }
 
 // IsReady mocks base method.
@@ -81,7 +82,7 @@ func (mr *MockDeployerMockRecorder) Remove(arg0 interface{}) *gomock.Call {
 }
 
 // Resources mocks base method.
-func (m *MockDeployer) Resources(arg0 string) ([]runtime.Object, error) {
+func (m *MockDeployer) Resources(arg0 *config.MUODeploymentConfig) ([]runtime.Object, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Resources", arg0)
 	ret0, _ := ret[0].([]runtime.Object)
