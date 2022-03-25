@@ -290,6 +290,12 @@ yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install clamav azsec-c
 done
 
 rpm -e $(rpm -qa | grep ^abrt-)
+
+# https://access.redhat.com/security/cve/cve-2020-13401
+cat >/etc/sysctl.d/02-disable-accept-ra.conf <<'EOF'
+net.ipv6.conf.all.accept_ra=0
+EOF
+
 cat >/etc/sysctl.d/01-disable-core.conf <<'EOF'
 kernel.core_pattern = |/bin/true
 EOF
