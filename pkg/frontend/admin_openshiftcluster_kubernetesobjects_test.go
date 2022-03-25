@@ -277,13 +277,13 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 			name:      "Valid-NAME-01",
 			wantErr:   "400: InvalidParameter: : The provided groupKind '' is invalid.",
 		},
-		// {
-		// 	test:      "invalid namespace",
-		// 	groupKind: "Valid-kind.openshift.io",
-		// 	namespace: "openshift-/",
-		// 	name:      "Valid-NAME-01",
-		// 	wantErr:   "400: InvalidParameter: : The provided namespace 'openshift-/' is invalid.",
-		// },
+		{
+			test:      "invalid namespace",
+			groupKind: "Valid-kind.openshift.io",
+			namespace: "openshift-/",
+			name:      "Valid-NAME-01",
+			wantErr:   "403: Forbidden: : Access to the provided namespace 'openshift-/' is forbidden.",
+		},
 		{
 			test:      "invalid name",
 			groupKind: "Valid-kind.openshift.io",
