@@ -20,15 +20,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-var _ = Describe("[Admin API] Kubernetes objects action", func() {
+var _ = FDescribe("[Admin API] Kubernetes objects action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	const objName = "e2e-test-object"
 
-	When("in a standard openshift namespace", func() {
-		const namespace = "default"
+	FWhen("in a standard openshift namespace", func() {
+		const namespace = "openshift"
 
-		It("should be able to create, get, list, update and delete objects", func() {
+		FIt("should be able to create, get, list, update and delete objects", func() {
 			defer func() {
 				// When ran successfully this test should delete the object,
 				// but we need to remove the object in case of failure
