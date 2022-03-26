@@ -6,6 +6,7 @@ package namespace
 // FilteredOpenShiftNamespace returns true if ns is a namespace in the defined hardcoded map
 func FilteredOpenShiftNamespace(ns string) bool {
 	filteredNamespaces := map[string]struct{}{
+		"":                                                 {},
 		"openshift":                                        {},
 		"openshift-apiserver":                              {},
 		"openshift-apiserver-operator":                     {},

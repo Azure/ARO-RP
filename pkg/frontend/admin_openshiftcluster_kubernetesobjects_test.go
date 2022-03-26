@@ -246,20 +246,17 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 		{
 			test:      "allowed groupKind on read",
 			groupKind: "ClusterRole.rbac.authorization.k8s.io",
-			namespace: "openshift",
 			name:      "Valid-NAME-01",
 		},
 		{
 			test:      "allowed groupKind on read 2",
 			groupKind: "ClusterRole.authorization.openshift.io",
-			namespace: "openshift",
 			name:      "Valid-NAME-01",
 		},
 		{
 			test:      "forbidden groupKind on write",
 			method:    http.MethodPost,
 			groupKind: "ClusterRole.rbac.authorization.k8s.io",
-			namespace: "openshift",
 			name:      "Valid-NAME-01",
 			wantErr:   "403: Forbidden: : Write access to RBAC is forbidden.",
 		},
@@ -267,7 +264,6 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 			test:      "forbidden groupKind on write 2",
 			method:    http.MethodPost,
 			groupKind: "ClusterRole.authorization.openshift.io",
-			namespace: "openshift",
 			name:      "Valid-NAME-01",
 			wantErr:   "403: Forbidden: : Write access to RBAC is forbidden.",
 		},

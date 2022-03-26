@@ -38,9 +38,18 @@ func TestFilteredOpenShiftNamespace(t *testing.T) {
 		},
 		{
 			namespace: "customer",
+			want:      false,
 		},
 		{
 			namespace: "openshift-/",
+			want:      false,
+		},
+		{
+			namespace: "openshift-ns",
+			want:      false,
+		},
+		{
+			namespace: "kube-ns",
 			want:      false,
 		},
 	} {
