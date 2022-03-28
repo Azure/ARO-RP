@@ -112,17 +112,17 @@ func (s Server) validateProxyResquest(w http.ResponseWriter, r *http.Request) er
 	ip, _, err := net.SplitHostPort(r.Host)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return errors.New("Request is not valid")
+		return err
 	}
 
 	if r.Method != http.MethodConnect {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-		return errors.New("Request is not valid")
+		return errors.New("Request is not valid, method is not CONNECT")
 	}
 
 	if !s.subnet.Contains(net.ParseIP(ip)) {
 		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-		return errors.New("Request is not valid")
+		return errors.New("Request is not allowed, the originating IP is not part of the allowed subnet")
 	}
 
 	return nil
