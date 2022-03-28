@@ -693,7 +693,8 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/OpenShiftCluster"
-          }
+          },
+          "x-ms-identifiers": []
         },
         "nextLink": {
           "description": "The link used to get the next page of operations.",

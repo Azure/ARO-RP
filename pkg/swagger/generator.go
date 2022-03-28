@@ -29,6 +29,7 @@ type generator struct {
 	kubeConfig         bool
 	xmsEnum            []string
 	xmsSecretList      []string
+	xmsIdentifiers     []string
 	commonTypesVersion string
 }
 
@@ -68,8 +69,9 @@ var apis = map[string]*generator{
 		exampleOpenShiftClusterAdminKubeconfigResponse: v20220401.ExampleOpenShiftClusterAdminKubeconfigResponse,
 		exampleOperationListResponse:                   api.ExampleOperationListResponse,
 
-		xmsEnum:            []string{"SoftwareDefinedNetwork", "EncryptionAtHost", "Visibility"},
+		xmsEnum:            []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},
 		xmsSecretList:      []string{"kubeconfig", "kubeadminPassword"},
+		xmsIdentifiers:     []string{},
 		commonTypesVersion: "v2",
 		systemData:         true,
 		kubeConfig:         true,
