@@ -5,11 +5,14 @@ package muo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -20,20 +23,36 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
 const (
 	ControllerName = "ManagedUpgradeOperator"
 
-	controllerEnabled  = "rh.srep.muo.enabled"
-	controllerManaged  = "rh.srep.muo.managed"
-	controllerPullSpec = "rh.srep.muo.deploy.pullspec"
+	controllerEnabled                = "rh.srep.muo.enabled"
+	controllerManaged                = "rh.srep.muo.managed"
+	controllerPullSpec               = "rh.srep.muo.deploy.pullspec"
+	controllerAllowOCM               = "rh.srep.muo.deploy.allowOCM"
+	controllerOcmBaseURL             = "rh.srep.muo.deploy.ocmBaseUrl"
+	controllerOcmBaseURLDefaultValue = "https://api.openshift.com"
+
+	pullSecretOCMKey = "cloud.redhat.com"
 )
 
+var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
+
+type MUODeploymentConfig struct {
+	Pullspec     string
+	ConnectToOCM bool
+	OCMBaseURL   string
+}
+
 type Reconciler struct {
-	arocli   aroclient.Interface
-	deployer Deployer
+	arocli        aroclient.Interface
+	kubernetescli kubernetes.Interface
+	deployer      Deployer
 
 	readinessPollTime time.Duration
 	readinessTimeout  time.Duration
@@ -41,8 +60,9 @@ type Reconciler struct {
 
 func NewReconciler(arocli aroclient.Interface, kubernetescli kubernetes.Interface, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
-		arocli:   arocli,
-		deployer: newDeployer(kubernetescli, dh),
+		arocli:        arocli,
+		kubernetescli: kubernetescli,
+		deployer:      newDeployer(kubernetescli, dh),
 
 		readinessPollTime: 10 * time.Second,
 		readinessTimeout:  5 * time.Minute,
@@ -66,7 +86,48 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// If enabled and managed=false, remove the MUO deployment
 	// If enabled and managed is missing, do nothing
 	if strings.EqualFold(managed, "true") {
-		err = r.deployer.CreateOrUpdate(ctx, instance)
+		imagePullspec, ext := instance.Spec.OperatorFlags[controllerPullSpec]
+		if !ext {
+			return reconcile.Result{}, errors.New("missing pullspec")
+		}
+
+		config := &config.MUODeploymentConfig{
+			Pullspec: imagePullspec,
+		}
+
+		allowOCM := instance.Spec.OperatorFlags.GetSimpleBoolean(controllerAllowOCM)
+		if allowOCM {
+			useOCM := func() bool {
+				var userSecret *corev1.Secret
+
+				userSecret, err = r.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Get(ctx, pullSecretName.Name, metav1.GetOptions{})
+				if err != nil {
+					// if a pullsecret doesn't exist/etc, fallback to local
+					return false
+				}
+
+				parsedKeys, err := pullsecret.UnmarshalSecretData(userSecret)
+				if err != nil {
+					// if we can't parse the pullsecret, fallback to local
+					return false
+				}
+
+				// check for the key that connects the cluster to OCM (since
+				// clusters may have a RH registry pull secret but not the OCM
+				// one if they choose)
+				_, foundKey := parsedKeys[pullSecretOCMKey]
+				return foundKey
+			}()
+
+			// if we have a valid pullsecret, enable connected MUO
+			if useOCM {
+				config.EnableConnected = true
+				config.OCMBaseURL = instance.Spec.OperatorFlags.GetWithDefault(controllerOcmBaseURL, controllerOcmBaseURLDefaultValue)
+			}
+		}
+
+		// Deploy the MUO manifests and config
+		err = r.deployer.CreateOrUpdate(ctx, instance, config)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -100,7 +161,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate))
 
-	resources, err := r.deployer.Resources("")
+	resources, err := r.deployer.Resources(&config.MUODeploymentConfig{})
 	if err != nil {
 		return err
 	}
