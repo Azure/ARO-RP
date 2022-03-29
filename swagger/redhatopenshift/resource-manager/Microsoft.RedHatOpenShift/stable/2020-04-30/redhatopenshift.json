@@ -449,8 +449,7 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/CloudErrorBody"
-          },
-          "x-ms-identifiers": []
+          }
         }
       }
     },
@@ -593,8 +592,7 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/OpenShiftCluster"
-          },
-          "x-ms-identifiers": []
+          }
         },
         "nextLink": {
           "description": "The link used to get the next page of operations.",
@@ -635,8 +633,7 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/WorkerProfile"
-          },
-          "x-ms-identifiers": []
+          }
         },
         "apiserverProfile": {
           "$ref": "#/definitions/APIServerProfile",
@@ -647,8 +644,7 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/IngressProfile"
-          },
-          "x-ms-identifiers": []
+          }
         }
       }
     },
@@ -694,8 +690,7 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/Operation"
-          },
-          "x-ms-identifiers": []
+          }
         },
         "nextLink": {
           "description": "The link used to get the next page of operations.",

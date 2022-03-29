@@ -120,7 +120,9 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 			s.Items = tw.schemaFromType(t.Elem(), deps)
 			// https://github.com/Azure/autorest/tree/main/docs/extensions#x-ms-identifiers
 			// we do not use this field, but the upstream validation requires at least an empty array
-			s.XMSIdentifiers = &[]string{}
+			if tw.xmsIdentifiers != nil {
+				s.XMSIdentifiers = &[]string{}
+			}
 		}
 
 	case *types.Struct:
