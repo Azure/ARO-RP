@@ -209,6 +209,8 @@ func (g *gateway) Run(ctx context.Context, done chan<- struct{}) {
 }
 
 func (g *gateway) updateGateway(doc *api.GatewayDocument) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
 	if doc.Gateway.Deleting {
 		// https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
@@ -219,8 +221,6 @@ func (g *gateway) updateGateway(doc *api.GatewayDocument) {
 }
 
 func (g *gateway) updateGateways(docs []*api.GatewayDocument) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
 	for _, doc := range docs {
 		g.updateGateway(doc)
 	}

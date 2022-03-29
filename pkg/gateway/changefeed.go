@@ -26,17 +26,13 @@ func (g *gateway) updateFromIterator(ctx context.Context, ticker *time.Ticker, g
 
 	for {
 		docs, err := gwIterator.Next(ctx, -1)
-		successful := true
 
 		for ; docs != nil && err == nil; docs, err = gwIterator.Next(ctx, -1) {
 			g.updateGateways(docs.GatewayDocuments)
 		}
 		if err != nil {
-			successful = false
 			g.log.Error(err)
-		}
-
-		if successful {
+		} else {
 			g.lastChangefeed.Store(time.Now())
 		}
 
