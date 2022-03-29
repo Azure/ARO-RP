@@ -131,7 +131,30 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return fmt.Errorf("fp service principal id is not found")
 	}
 
-	c.log.Infof("creating AAD application")
+	// CDP-DOC: ZachJ modified so we could utilize AAD info created earlier in shared setup
+	appID := os.Getenv("AZURE_CLIENT_ID")
+	appSecret := os.Getenv("AZURE_CLIENT_SECRET")
+	if !(appID != "" && appSecret != "") {
+	  if appID == "" && appSecret == "" {
+	    c.log.Infof("creating AAD application")
+	    appID, appSecret, err = c.createApplication(ctx, "aro-"+clusterName)
+	    if err != nil {
+	      return err
+	    }
+	  } else {
+	    return fmt.Errorf("fp service principal id is not found")
+	  }
+	}
+	spID := os.Getenv("AZURE_SERVICE_PRINCIPAL_ID")
+	if spID == "" {
+	  spID, err = c.createServicePrincipal(ctx, appID)
+	  if err != nil {
+	    return err
+	  }
+	}
+
+	// CDP-DOC: Document this change in the updates to RH.
+	/*
 	appID, appSecret, err := c.createApplication(ctx, "aro-"+clusterName)
 	if err != nil {
 		return err
@@ -141,6 +164,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	if err != nil {
 		return err
 	}
+	*/
 
 	visibility := api.VisibilityPublic
 
@@ -291,6 +315,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 
 	c.log.Info("creating cluster")
 	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appID, appSecret, diskEncryptionSetID, visibility)
+	c.log.Info("creating cluster complete")
 
 	if err != nil {
 		return err
@@ -440,6 +465,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 	}
 
 	if c.env.IsLocalDevelopmentMode() {
+		c.log.Info("initiating registerSubscription in createCluster")
 		err := c.registerSubscription(ctx)
 		if err != nil {
 			return err
@@ -448,18 +474,23 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 	}
 
+	c.log.Info("marshaling oc structure in createCluster")	
 	ext := api.APIs[v20210901preview.APIVersion].OpenShiftClusterConverter().ToExternal(&oc)
 	data, err := json.Marshal(ext)
 	if err != nil {
 		return err
 	}
+	c.log.Info("completed model build, outputting...")
+	c.log.Info(string(data))
 
+	c.log.Info("unmarshaling oc structure in createCluster")	
 	ocExt := mgmtredhatopenshift20210901preview.OpenShiftCluster{}
 	err = json.Unmarshal(data, &ocExt)
 	if err != nil {
 		return err
 	}
 
+	c.log.Info("initiating CreateOrUpdateAndWait on api in createCluster")	
 	return c.openshiftclustersv20210901preview.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
 
 }

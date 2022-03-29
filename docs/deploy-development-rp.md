@@ -98,6 +98,8 @@
 
    OR use the create utility:
 
+   // CDP-DOC: CLUSTER maps to ClusterName
+   // NOTE: You can have one cluster per developer (managed by the cosmosdb OpenShiftClusters collection)
    ```bash
    CLUSTER=cluster go run ./hack/cluster create
    ```

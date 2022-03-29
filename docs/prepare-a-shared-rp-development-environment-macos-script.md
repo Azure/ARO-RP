@@ -210,4 +210,84 @@ EOF
 
 ** had trouble with make secrets-update and make secrets not wanting to read env vars, had to manually hack to move on
 
+***hack in create pkg/util/cluster/cluster.go (this is so that our env vars from secrets/env are used)
+  // CDP-PR: Make a PR for this that uses RP_MODE?
+  // CDP-DOC: ZachJ modified so we could utilize AAD info created earlier in shared setup
+  appID := os.Getenv("AZURE_CLIENT_ID")
+  appSecret := os.Getenv("AZURE_CLIENT_SECRET")
+  if !(appID != "" && appSecret != "") {
+    if appID == "" && appSecret == "" {
+      c.log.Infof("creating AAD application")
+      appID, appSecret, err = c.createApplication(ctx, "aro-"+clusterName)
+      if err != nil {
+        return err
+      }
+    } else {
+      return fmt.Errorf("fp service principal id is not found")
+    }
+  }
+  spID := os.Getenv("AZURE_SERVICE_PRINCIPAL_ID")
+  if spID == "" {
+    spID, err = c.createServicePrincipal(ctx, appID)
+    if err != nil {
+      return err
+    }
+  }
+
+  // CDP-DOC: Document this change in the updates to RH.
+  /*
+  appID, appSecret, err := c.createApplication(ctx, "aro-"+clusterName)
+  if err != nil {
+    return err
+  }
+
+  spID, err := c.createServicePrincipal(ctx, appID)
+  if err != nil {
+    return err
+  }
+  */
+
+
+Error: Happens on the deployments into the new aro cluster's GV
+{
+    "status": "Failed",
+    "error": {
+        "code": "ResourceDeploymentFailure",
+        "message": "The response for resource had empty or invalid content."
+    }
+}
+
+Solution:
+Karan used these queries and found the following error that was being hiddened by the error above:
+
+ShoeboxEntries
+| where resourceId contains "/subscriptions/26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8/resourceGroups/aro-aro-cdp-cf"
+| where TIMESTAMP > ago(1d)
+| where resultType == "Failure"
+| where correlationId == "01928c62-35cf-4d58-be0d-c509ae1a26b8"
+| order by TIMESTAMP desc 
+
+
+HttpIncomingRequests
+| where correlationId == "f50ed338-7d9f-45ae-8e2e-c11e428485d5"
+| where TIMESTAMP > ago(1d)
+
+{"statusCode":"BadRequest","serviceRequestId":null,"statusMessage":"{\"error\":{\"code\":\"SubnetsHaveNoServiceEndpointsConfigured\",\"message\":\"Subnets rp-subnet of virtual network /subscriptions/26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8/resourceGroups/v5-eastus/providers/Microsoft.Network/virtualNetworks/rp-vnet do not have ServiceEndpoints for Microsoft.Storage resources configured. Add Microsoft.Storage to subnet's ServiceEndpoints collection before try
+
+Karan created the service endpoint for our testing manually and this worked.
+Corey updated rp-development-predeploy.json with service endpoints for rp-subnet under rp-vnet. I used the same service endpointsw from rp-production-predeploy.json. This template has not yet been tested. Need to recreate the shared RP to do so. Or, just re-run that shell script.
+
+Next Error:
+_id= component=backend correlation_id= request_id=59b67467-2a9c-4fc9-bd3b-f5d08fd3cdf6 resource_group=v5-eastus resource_id=/subscriptions/26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8/resourcegroups/v5-eastus/providers/microsoft.redhatopenshift/openshiftclusters/aro-cdp-cf-5 resource_name=aro-cdp-cf-5 subscription_id=26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8
+ERRO[2022-03-25T11:18:07-05:00]pkg/util/steps/runner.go:34 steps.Run() step [AuthorizationRefreshingAction [Action github.com/Azure/ARO-RP/pkg/cluster.(*manager).validateResources-fm]] encountered error: 400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '/subscriptions/26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8/resourceGroups/v5-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/aro-cdp-cf-5-master' is invalid: must not have a network security group attached.  client_principal_name= client_request_id= component=backend correlation_id= request_id=59b67467-2a9c-4fc9-bd3b-f5d08fd3cdf6 resource_group=v5-eastus resource_id=/subscriptions/26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8/resourcegroups/v5-eastus/providers/microsoft.redhatopenshift/openshiftclusters/aro-cdp-cf-5 resource_name=aro-cdp-cf-5 subscription_id=26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8
+
+FATA[2022-03-25T11:18:14-05:00]hack/cluster/cluster.go:66 main.main() Code="InvalidLinkedVNet" Message="The provided subnet '/subscriptions/26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8/resourceGroups/v5-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/aro-cdp-cf-5-master' is invalid: must not have a network security group attached." Target="properties.masterProfile.subnetId"
+exit status 1
+
+**** This could be corruption from the many clusters we have created. I am going to cleanup and recreate my user cosmos db and try again.
+** Cleaned up all rgs, and other resources
+** emptied database records
+** creating cluster aro-cdp-cf-uno....
+
+
 

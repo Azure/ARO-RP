@@ -16,7 +16,7 @@ locations.
    resource group of the DNS Zone resource:
 
    ```bash
-   PARENT_DOMAIN_NAME=osadev.cloud
+   PARENT_DOMAIN_NAME=aroev2.osadev.cloud
    PARENT_DOMAIN_RESOURCEGROUP=dns
    ```
 
@@ -379,7 +379,7 @@ storage account so other people on your team can access it via `make secrets`
 # Environment file
 
 1. Choose the resource group prefix.  The resource group location will be
-   appended to the prefix to make the resource group name.
+   appended to the prefix to make the resource group name. Be unique here, just going with "v4" will run you into collisions with existing deployments?
 
    ```bash
    RESOURCEGROUP_PREFIX=v4
@@ -391,7 +391,7 @@ storage account so other people on your team can access it via `make secrets`
    ```bash
    PROXY_DOMAIN_NAME_LABEL=aroproxy
    ```
-
+// CDP UPDATE SECRETS EXAMPLE
 1. Create the secrets/env file:
 
    ```bash
@@ -458,6 +458,8 @@ each of the bash functions below.
    # Deploy the predeployment ARM template
    deploy_rp_dev_predeploy
    # Deploy the infrastructure resources such as Cosmos, KV, Vnet...
+   # HAD to remove ipRules - CDP ADD TO DOCS
+   # HAD to add gwy keyvault - CDP ADD TO DOCS
    deploy_rp_dev
    # Deploy the proxy and VPN
    deploy_env_dev
@@ -526,6 +528,7 @@ Vault Name: "$KEYVAULT_PREFIX-svc"
 Certificate: rp-firstparty
 Development value: secrets/firstparty.pem
 
+// COREY DELETE THIS AND MENTION IN PR
 Vault Name: "$KEYVAULT_PREFIX-svc"
 Certificate: cluster-mdsd
 Development value: secrets/cluster-logging-int.pem

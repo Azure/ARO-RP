@@ -123,22 +123,16 @@ pyenv:
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
 
 secrets:
-	# env vars not working, investigate later
-	#@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
+	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
 	rm -rf secrets
-	# env vars not working, investigate later
-	#az storage blob download -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
-	az storage blob download -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name rharosecretscf2 >/dev/null
+	az storage blob download -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
 	tar -xzf secrets.tar.gz
 	rm secrets.tar.gz
 
 secrets-update:
-	# env vars not working, investigate later
-	#@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
+	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
 	tar -czf secrets.tar.gz secrets
-	# env vars not working, investigate later
-	#az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
-	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name rharosecretscf2 >/dev/null
+	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
 	rm secrets.tar.gz
 
 tunnel:
