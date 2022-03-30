@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 VERSION = "unknown"
 
-class AzureRedHatOpenShiftClientConfiguration(Configuration):
+class AzureRedHatOpenShiftClientConfiguration(Configuration):  # pylint: disable=too-many-instance-attributes
     """Configuration for AzureRedHatOpenShiftClient.
 
     Note that all parameters used to create this instance are saved as instance
@@ -38,7 +38,8 @@ class AzureRedHatOpenShiftClientConfiguration(Configuration):
     :type credential: ~azure.core.credentials.TokenCredential
     :param subscription_id: The ID of the target subscription.
     :type subscription_id: str
-    :keyword api_version: Api Version. The default value is "2022-04-01". Note that overriding this default value may result in unsupported behavior.
+    :keyword api_version: Api Version. The default value is "2022-04-01". Note that overriding this
+     default value may result in unsupported behavior.
     :paramtype api_version: str
     """
 

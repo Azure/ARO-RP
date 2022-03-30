@@ -30,8 +30,9 @@ function generate_golang() {
 		-v $PWD/swagger:/swagger:z \
     "${AUTOREST_IMAGE}" \
 		--go \
-    --use=@microsoft.azure/autorest.go@2.1.183 \
-    --version=V2 \
+    --use=@microsoft.azure/autorest.go@~2.1.187 \
+    --use=@microsoft.azure/autorest.modeler@~2.3.38 \
+    --version=~2.0.4421 \
 		--license-header=MICROSOFT_APACHE_NO_VERSION \
 		--namespace=redhatopenshift \
 		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
@@ -53,8 +54,8 @@ function generate_python() {
     -v $PWD/python/client:/python/client:z \
     -v $PWD/swagger:/swagger:z \
     "${AUTOREST_IMAGE}" \
-    --version=3.5.1 \
-    --use=@autorest/python@5.12.0 \
+    --version=3.6.1 \
+    --use=@autorest/python@~5.12.0 \
     --use=@autorest/modelerfour@~4.20.0 \
     --python \
     --azure-arm \
