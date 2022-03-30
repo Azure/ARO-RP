@@ -30,3 +30,5 @@ gomock_reflect_*
 /portal/v1/node_modules/
 /portal/v2/node_modules/
 .idea*
+.vscode/
+/portal/v2/.vscode
