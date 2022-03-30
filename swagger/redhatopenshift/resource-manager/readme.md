@@ -26,7 +26,7 @@ These are the global settings for the Azure Red Hat OpenShift API.
 
 ``` yaml
 openapi-type: arm
-tag: package-2020-04-30
+tag: package-2022-04-01
 ```
 
 ### Tag: package-2020-04-30
@@ -67,10 +67,10 @@ This is not used by Autorest itself.
 
 ```yaml $(swagger-to-sdk)
 swagger-to-sdk:
-  - repo: azure-sdk-for-python
-    after_scripts:
-    - python ./scripts/multiapi_init_gen.py azure-mgmt-redhatopenshift
+  - repo: azure-sdk-for-python-track2
   - repo: azure-sdk-for-go
+  - repo: azure-sdk-for-go-track2
+  - repo: azure-resource-manager-schemas
 ```
 
 ## Go
