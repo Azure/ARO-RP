@@ -5,7 +5,6 @@ package muo
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -26,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
@@ -86,13 +86,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// If enabled and managed=false, remove the MUO deployment
 	// If enabled and managed is missing, do nothing
 	if strings.EqualFold(managed, "true") {
-		imagePullspec, ext := instance.Spec.OperatorFlags[controllerPullSpec]
-		if !ext {
-			return reconcile.Result{}, errors.New("missing pullspec")
+		// apply the default pullspec if the flag is empty or missing
+		pullSpec := instance.Spec.OperatorFlags.GetWithDefault(controllerPullSpec, "")
+		if pullSpec == "" {
+			pullSpec = version.MUOImage(instance.Spec.ACRDomain)
 		}
 
 		config := &config.MUODeploymentConfig{
-			Pullspec: imagePullspec,
+			Pullspec: pullSpec,
 		}
 
 		allowOCM := instance.Spec.OperatorFlags.GetSimpleBoolean(controllerAllowOCM)
