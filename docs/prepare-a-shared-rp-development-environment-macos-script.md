@@ -289,5 +289,45 @@ exit status 1
 ** emptied database records
 ** creating cluster aro-cdp-cf-uno....
 
+Changes I Made Manually:
 
+I created a new VPN in rp-vnet from Azure Portal. To do this, I had to first update the Address Space of rp-vnet to allow creation of a new VPN. For now i used the same public certificate we use for dev-vpn 
+
+Steps to Create Cluster:
+
+1. Go to VPN Point-to-Site Configuration rp-vnet p2s and download the VPN Client Certificate
+
+2. Store the OpenVPN client certificate as secrets/vpn-rp-eastus.ovpn
+
+3. Update the P2S client certificate and P2S client certificate private key to be same as secrets/vpn-eastus.ovpn
+
+4. run sudo openvpn secrets/vpn-rp-eastus.ovpn
+
+5. Update nsg priority to 120 here https://github.com/CloudFitSoftware/ARO-RP/blob/cfs/rh-cf-rp-dev-env-working-sessions/pkg/cluster/nsg.go#L34
+
+6. Update PROXY_HOSTNAME environment variable to point to internal ip of Proxy VM export PROXY_HOSTNAME="10.0.0.4"
+
+7. source updated environment file . ./env
+
+8. run make run-localrp
+
+9. in another terminal run CLUSTER=<cluster_name> go run ./hack/cluster create
+
+
+
+Steps to access Cluster:
+
+1. Once / If cluster creates, celebrate
+
+2. run CLUSTER=<cluster_name> make admin.kubeconfig
+
+3. disconnect from rp-vnet vpn and connect to dev-vnet vpn sudo openvpn secrets/vpn-eastus.ovpn
+
+4. change newly created admin.kubeconfig cluster.server to point to internal loadbalancer ip (get this internal load balancer from azure resource group for your cluster
+
+Eg: change server: https://api.kmagdani-test-rh.v4-eastus.osadev.cloud:6443 to something like server: https://10.x.x.x:6443
+
+5. export KUBECONFIG=$(pwd)/admin.kubeconfig
+
+6. Run kubectl/oc get nodes --insecure-skip-tls-verify to verify you can get cluster objects
 
