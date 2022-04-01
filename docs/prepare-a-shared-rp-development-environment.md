@@ -379,7 +379,7 @@ storage account so other people on your team can access it via `make secrets`
 # Environment file
 
 1. Choose the resource group prefix.  The resource group location will be
-   appended to the prefix to make the resource group name. Be unique here, just going with "v4" will run you into collisions with existing deployments?
+   appended to the prefix to make the resource group name. Be unique here, just going with "v4" will run you into collisions with existing deployments.
 
    ```bash
    RESOURCEGROUP_PREFIX=v4
