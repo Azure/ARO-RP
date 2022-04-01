@@ -20,8 +20,4 @@ const (
 	// Unit (MTU) on Azure virtual networks, which as of late 2021 is 3900 bytes.
 	// Otherwise cluster nodes will use the DHCP-provided MTU of 1500 bytes.
 	FeatureFlagMTU3900 = "Microsoft.RedHatOpenShift/MTU3900"
-
-	// FeatureFlagFIPS is the feature in the subscription that enables
-	// clusters to be built in FIPS mode as specified in the installer.
-	FeatureFlagFIPS = "Microsoft.RedHatOpenShift/FIPS"
 )
