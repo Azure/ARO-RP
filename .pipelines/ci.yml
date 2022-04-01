@@ -32,6 +32,8 @@ stages:
 - stage: Check_Changes
   jobs:
   - job: Check_Changes
+    pool:
+      name: ARO-CI
     steps:
     - template: ./templates/template-checkout.yml
     - powershell: |
