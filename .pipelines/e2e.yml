@@ -43,7 +43,6 @@ jobs:
 
       set -x
       . ./hack/e2e/run-rp-and-e2e.sh
-      trap 'set +e; echo "##vso[task.setvariable variable=mustGather]Yes' EXIT
 
       deploy_e2e_db
 
@@ -55,15 +54,21 @@ jobs:
       if make test-e2e;
       then
         echo "E2E Pass, Skipping must-gather"
-        echo "##vso[task.setvariable variable=mustGather]No
+        echo "##vso[task.setvariable variable=mustGather]No"
       else
         echo "E2E Failed, need must-gather"
-        echo "##vso[task.setvariable variable=mustGather]Yes
+        echo "##vso[task.setvariable variable=mustGather]Yes"
       fi
   - script: |
       set -e
       wget https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/4.9.8/openshift-client-linux-4.9.8.tar.gz
       tar xf openshift-client-linux-4.9.8.tar.gz
+
+      export LOCATION=eastus
+      export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+      export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+      . ./secrets/env
+      . ./hack/e2e/run-rp-and-e2e.sh
       make admin.kubeconfig
       export KUBECONFIG=admin.kubeconfig
       ./oc adm must-gather
