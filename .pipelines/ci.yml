@@ -57,7 +57,7 @@ stages:
         make test-python
         [[ -z "$(git status -s)" ]]
       displayName: 🧪Run Python Unit Tests
-    condition: and(succeeded(), eq(variables['IsPythonChanges'], "True"))
+    condition: and(succeeded(), eq(variables['IsPythonChanges'], True))
 
   - job: Golang_Unit_Tests
     pool:
@@ -119,7 +119,7 @@ stages:
         summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
         failIfCoverageEmpty: false
       condition: succeededOrFailed()
-    condition: and(succeeded(), eq(variables['IsGolangChanges'], "True"))
+    condition: and(succeeded(), eq(variables['IsGolangChanges'], True))
 
   - job: Lint_Admin_Portal
     pool:
@@ -129,4 +129,4 @@ stages:
         set -xe
         make lint-admin-portal
       displayName: 🧹 Lint Admin Portal
-    condition: and(succeeded(), eq(variables['IsTypescriptChanges'], "True"))
+    condition: and(succeeded(), eq(variables['IsTypescriptChanges'], True))
