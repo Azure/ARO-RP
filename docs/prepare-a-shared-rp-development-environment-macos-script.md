@@ -91,9 +91,6 @@ az deployment sub create \
 
 ERROR (prior to allowing custom guid for fp role def id):
 
-WARNING: The underlying Active Directory Graph API will be replaced by Microsoft Graph API in a future version of Azure CLI. Please carefully review all breaking changes introduced during this migration: https://docs.microsoft.com/cli/azure/microsoft-graph-migration
-WARNING: The underlying Active Directory Graph API will be replaced by Microsoft Graph API in a future version of Azure CLI. Please carefully review all breaking changes introduced during this migration: https://docs.microsoft.com/cli/azure/microsoft-graph-migration
-WARNING: The underlying Active Directory Graph API will be replaced by Microsoft Graph API in a future version of Azure CLI. Please carefully review all breaking changes introduced during this migration: https://docs.microsoft.com/cli/azure/microsoft-graph-migration
 ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/DeployOperations for usage details.","details":[{"code":"BadRequest","message":"{\r\n  \"error\": {\r\n    \"code\": \"RoleAssignmentUpdateNotPermitted\",\r\n    \"message\": \"Tenant ID, application ID, principal ID, and scope are not allowed to be updated.\"\r\n  }\r\n}"},{"code":"Forbidden","message":"{\r\n  \"error\": {\r\n    \"code\": \"LinkedAuthorizationFailed\",\r\n    \"message\": \"The client 'v-cperkins@microsoft.com' with object id 'fa22c3cf-f51f-443c-abeb-830c405d24c7' has permission to perform action 'Microsoft.Authorization/roleDefinitions/write' on scope '/subscriptions/26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8'; however, it does not have permission to perform action 'Microsoft.Authorization/roleDefinitions/write' on the linked scope(s) '/subscriptions/46626fc5-476d-41ad-8c76-2ec49c6994eb' or the linked scope(s) are invalid.\"\r\n  }\r\n}"}]}}
 
 https://ms.portal.azure.com/#blade/HubsExtension/DeploymentDetailsBlade/overview/id/%2Fsubscriptions%2F26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8%2Fproviders%2FMicrosoft.Resources%2Fdeployments%2Frbac-development
@@ -194,7 +191,7 @@ cat >env <<EOF
    export AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_GATEWAY_CLIENT_ID'" --query '[].objectId' -o tsv)'
    export AZURE_GATEWAY_CLIENT_SECRET='$AZURE_GATEWAY_CLIENT_SECRET'
    export RESOURCEGROUP="$RESOURCEGROUP_PREFIX-\$LOCATION"
-   export PROXY_HOSTNAME="vm0.$PROXY_DOMAIN_NAME_LABEL.\$LOCATION.cloudapp.azure.com"
+   export PROXY_HOSTNAME="vm0.$PROXY_DOMAIN_NAME_LABEL.\$LOCATION.cloudapp.azure.com" (this changes to IP when connected to rp-vpn)
    export DATABASE_NAME="\$USER"
    export RP_MODE='development'
    export PULL_SECRET='$PULL_SECRET'
@@ -257,77 +254,114 @@ Error: Happens on the deployments into the new aro cluster's GV
     }
 }
 
-Solution:
-Karan used these queries and found the following error that was being hiddened by the error above:
-
-ShoeboxEntries
-| where resourceId contains "/subscriptions/26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8/resourceGroups/aro-aro-cdp-cf"
-| where TIMESTAMP > ago(1d)
-| where resultType == "Failure"
-| where correlationId == "01928c62-35cf-4d58-be0d-c509ae1a26b8"
-| order by TIMESTAMP desc 
-
-
-HttpIncomingRequests
-| where correlationId == "f50ed338-7d9f-45ae-8e2e-c11e428485d5"
-| where TIMESTAMP > ago(1d)
-
 {"statusCode":"BadRequest","serviceRequestId":null,"statusMessage":"{\"error\":{\"code\":\"SubnetsHaveNoServiceEndpointsConfigured\",\"message\":\"Subnets rp-subnet of virtual network /subscriptions/26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8/resourceGroups/v5-eastus/providers/Microsoft.Network/virtualNetworks/rp-vnet do not have ServiceEndpoints for Microsoft.Storage resources configured. Add Microsoft.Storage to subnet's ServiceEndpoints collection before try
 
 Karan created the service endpoint for our testing manually and this worked.
 Corey updated rp-development-predeploy.json with service endpoints for rp-subnet under rp-vnet. I used the same service endpointsw from rp-production-predeploy.json. This template has not yet been tested. Need to recreate the shared RP to do so. Or, just re-run that shell script.
 
-Next Error:
-_id= component=backend correlation_id= request_id=59b67467-2a9c-4fc9-bd3b-f5d08fd3cdf6 resource_group=v5-eastus resource_id=/subscriptions/26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8/resourcegroups/v5-eastus/providers/microsoft.redhatopenshift/openshiftclusters/aro-cdp-cf-5 resource_name=aro-cdp-cf-5 subscription_id=26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8
-ERRO[2022-03-25T11:18:07-05:00]pkg/util/steps/runner.go:34 steps.Run() step [AuthorizationRefreshingAction [Action github.com/Azure/ARO-RP/pkg/cluster.(*manager).validateResources-fm]] encountered error: 400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '/subscriptions/26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8/resourceGroups/v5-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/aro-cdp-cf-5-master' is invalid: must not have a network security group attached.  client_principal_name= client_request_id= component=backend correlation_id= request_id=59b67467-2a9c-4fc9-bd3b-f5d08fd3cdf6 resource_group=v5-eastus resource_id=/subscriptions/26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8/resourcegroups/v5-eastus/providers/microsoft.redhatopenshift/openshiftclusters/aro-cdp-cf-5 resource_name=aro-cdp-cf-5 subscription_id=26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8
+Issue: We ran into an NSG Priority problem:
+Updated nsg priority to 120 here https://github.com/CloudFitSoftware/ARO-RP/blob/cfs/rh-cf-rp-dev-env-working-sessions/pkg/cluster/nsg.go#L34
 
-FATA[2022-03-25T11:18:14-05:00]hack/cluster/cluster.go:66 main.main() Code="InvalidLinkedVNet" Message="The provided subnet '/subscriptions/26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8/resourceGroups/v5-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/aro-cdp-cf-5-master' is invalid: must not have a network security group attached." Target="properties.masterProfile.subnetId"
-exit status 1
+# Preparation to Create Cluster:
 
-**** This could be corruption from the many clusters we have created. I am going to cleanup and recreate my user cosmos db and try again.
-** Cleaned up all rgs, and other resources
-** emptied database records
-** creating cluster aro-cdp-cf-uno....
+1. Update the Address Space of "rp-vnet" to allow for creation of a new VPN. You should be able to do this at: https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/<subscription-id>/resourceGroups/<aro-shared-rp-rg>/providers/Microsoft.Network/virtualNetworks/rp-vnet/addressSpace. See the table below for what we did.
 
-Changes I Made Manually:
+| Address Space | Address Range         | Address Count |
+| ------------- | --------------------- | ------------- |
+| 10.0.0.0/24   | 10.0.0.0 - 10.0.0.255 | 256 |
+| 10.1.0.0/24   | 10.1.0.0 - 10.1.0.255 | 256 |
 
-I created a new VPN in rp-vnet from Azure Portal. To do this, I had to first update the Address Space of rp-vnet to allow creation of a new VPN. For now i used the same public certificate we use for dev-vpn 
+1. Create a new "Virtual Network Gateway (Gateway type: VPN)" in the Azure Portal manually. This needs to be configured to the "Virtual Network" named "rp-vnet" which will already existing in the shared RP's resource group. This new VPN will allow the local ARO-RP to connect to the to the existing "rp-vnet" to create a cluster. 
 
-Steps to Create Cluster:
+1. Configure the new "rp-vnet" VPN with the same public certificate used for the existing dev-vpn. This is done at: https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/<subscription-id>/resourceGroups/<aro-shared-rp-rg>/providers/Microsoft.Network/virtualNetworkGateways/rp-vnet/pointtositeconfiguration. You can simply copy the info from: https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/<subscription-id>/resourceGroups/<aro-shared-rp-rg>/providers/Microsoft.Network/virtualNetworkGateways/dev-vpn/pointtositeconfiguration.
 
-1. Go to VPN Point-to-Site Configuration rp-vnet p2s and download the VPN Client Certificate
+1. Connect to the "rp-vnet" VPN created above. You can use openvpn or the azure vpn client, both have worked fine in our testing. 
+  1. Go to Point-to-Site Configuration for "rp-vnet" (https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/<subscription-id>/resourceGroups/<aro-shared-rp-rg>/providers/Microsoft.Network/virtualNetworkGateways/rp-vnet/pointtositeconfiguration) and download the VPN Client Certificate to your local environment. You can extract the zip file anywhere you would like, but we put it under the "secrets" folder because that is where the ARO-RP secrets reside.
+  1. For openvpn:
+    1. Copy ./secrets/rp-vnet/OpenVPN/vpnconfig.json to ./secrets/vpn-rp-eastus.ovpn
+    1. Copy the last two certificates ("P2S client certificate" and "P2S client certificate private key") from ./secrets/vpn-eastus.ovpn file to ./secrets/vpn-rp-eastus.ovpn. You can overwrite the placeholders for those certificates at the bottom in the ./secrets/vpn-rp-eastus.ovpn file.
+    1. Execute openvpn secrets/vpn-rp-eastus.ovpn. You may need sudo depending on your environment.
+  1. For azure vpn client:
+    1. Click the 'import' button in the vpn list, you will be prompted with an "open file dialog".
+    1. Select the file: ./secrets/rp-vnet/AzureVPN/azurevpnconfig.xml. The data will be filled into the import screen with the exception of "Client Certificate Public Key Data" and "Private Key".
+    1. Copy the "P2S client certificate" into the "Client Certificate Public Key Data" field and "P2S client certificate private key" into the "Private Key" field.
+    1. Click "Save" and you should see your newly created VPN connection in the VPN list on the left.
+    1. Click the new VPN connection and click "Connect".
+  1. Use nmap to execute the following command: nmap -p 443 -sT 10.x.x.x -Pn. You can get this IP at: https://ms.portal.azure.com/#blade/Microsoft_Azure_Compute/VirtualMachineInstancesMenuBlade/Networking/instanceId/subscriptions/<subscription-id>/resourceGroups/<aro-shared-rp-rg>/providers/Microsoft.Compute/virtualMachineScaleSets/dev-proxy-vmss/virtualMachines/0. Look for "NIC Private IP", ours during setup became 10.0.0.4. This is the internal ip of the Proxy VM.
+    1. Confirm the nmap output looks like this: (if it does not then your VPN is not connected correctly; kill anything using port 443 and connect again)
+    ```bash
+    Starting Nmap 7.92 ( https://nmap.org ) at 2022-03-29 18:29 EDT
+    Nmap scan report for 10.0.0.4
+    Host is up (0.015s latency).
 
-2. Store the OpenVPN client certificate as secrets/vpn-rp-eastus.ovpn
+    PORT STATE SERVICE
+    443/tcp open https
 
-3. Update the P2S client certificate and P2S client certificate private key to be same as secrets/vpn-eastus.ovpn
+    Nmap done: 1 IP address (1 host up) scanned in 0.25 seconds
+    ```
+    1. Update the PROXY_HOSTNAME environment variable in ./secrets/env to point the IP you located above of for the Proxy VM.
+  1. Now that your VPN is connected correctly and you've updated PROXY_HOSTNAME you need to source your env file for that update.
+  ```bash
+  . ./secrets/env
+  ```
+  1. Execute the local ARO-RP
+  ```bash
+  make runlocal-rp
+  ```
 
-4. run sudo openvpn secrets/vpn-rp-eastus.ovpn
+# Steps to Create Cluster:
 
-5. Update nsg priority to 120 here https://github.com/CloudFitSoftware/ARO-RP/blob/cfs/rh-cf-rp-dev-env-working-sessions/pkg/cluster/nsg.go#L34
+  1. Open another terminal (make sure you source your ./secrets/env file in this terminal as well)
+  1. Execute this command to create a cluster
+  ```bash
+  CLUSTER=<aro-cluster-name> go run ./hack/cluster create
+  ```
 
-6. Update PROXY_HOSTNAME environment variable to point to internal ip of Proxy VM export PROXY_HOSTNAME="10.0.0.4"
+  This will take a while but eventually if the cluster is created you should see the following in your terminal indicating the cluster creation was successful:
+  ```bash
+  INFO[2022-04-01T10:02:41-05:00]pkg/util/cluster/cluster.go:318 cluster.(*Cluster).Create() creating cluster complete
+  ```
 
-7. source updated environment file . ./env
+# Steps to connect to the Cluster and confirm it is up via kubectl or oc:
 
-8. run make run-localrp
+1. At your terminal execute to create the admin.kubeconfig locally. This will allow you to connect to the cluster via kubectl or oc
+   ```bash
+   CLUSTER=<aro-cluster-name> make admin.kubeconfig
+   ```
 
-9. in another terminal run CLUSTER=<cluster_name> go run ./hack/cluster create
+1. Disconnect from "rp-vnet" vpn and connect to "dev-vnet" vpn. The steps are identical to connecting to "rp-vnet" in the #preparation-to-create-cluster section. You will just need to download the dev-vpn client certificate locally, create the VPN connection using your VPN client of choice, and use nmap to get the IP of the internal load balancer from the <aro-cluster-name-rg>. You can find this address at: https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/<subscriptionid>/resourceGroups/<aro-cluster-rp-rg>/providers/Microsoft.Network/loadBalancers/<aro-cluster-name>-<random string for your lb>-internal/frontendIpPool (internal-lb-ip-v4). In my case the IP was 10.62.174.
+```bash
+nmap -p 6443 -sT 10.62.174.4 -Pn
+Starting Nmap 7.92 ( https://nmap.org ) at 2022-04-01 10:36 CDT
+Nmap scan report for 10.62.174.4
+Host is up (0.070s latency).
 
+PORT STATE SERVICE
+6443/tcp open sun-sr-https
 
+Nmap done: 1 IP address (1 host up) scanned in 0.14 seconds
+```
+1. Update admin.kubeconfig cluster.server parameter to use this IP as well. It should look like this:
+```bash
+server: https://<ip>:6443
+```
+1. Updated your kubeconfig env var to point to the admin.kubeconfig
+```bash
+export KUBECONFIG=$(pwd)/admin.kubeconfig
+```
+1. Execute a kubectl (or oc) command to see if you can list any K8s objects
+```bash
+kubectl get nodes --insecure-skip-tls-verify
+```
+2. You should see something like this. If so, your cluster is up!
+```bash
+NAME                                        STATUS   ROLES    AGE    VERSION
+cdp-cfs-eleven-bljdk-master-0               Ready    master   3h7m   v1.22.3+4dd1b5a
+cdp-cfs-eleven-bljdk-master-1               Ready    master   3h6m   v1.22.3+4dd1b5a
+cdp-cfs-eleven-bljdk-master-2               Ready    master   3h6m   v1.22.3+4dd1b5a
+cdp-cfs-eleven-bljdk-worker-eastus1-2r9b4   Ready    worker   177m   v1.22.3+4dd1b5a
+cdp-cfs-eleven-bljdk-worker-eastus2-jgrj9   Ready    worker   177m   v1.22.3+4dd1b5a
+cdp-cfs-eleven-bljdk-worker-eastus3-fd646   Ready    worker   177m   v1.22.3+4dd1b5a
+```
 
-Steps to access Cluster:
-
-1. Once / If cluster creates, celebrate
-
-2. run CLUSTER=<cluster_name> make admin.kubeconfig
-
-3. disconnect from rp-vnet vpn and connect to dev-vnet vpn sudo openvpn secrets/vpn-eastus.ovpn
-
-4. change newly created admin.kubeconfig cluster.server to point to internal loadbalancer ip (get this internal load balancer from azure resource group for your cluster
-
-Eg: change server: https://api.kmagdani-test-rh.v4-eastus.osadev.cloud:6443 to something like server: https://10.x.x.x:6443
-
-5. export KUBECONFIG=$(pwd)/admin.kubeconfig
-
-6. Run kubectl/oc get nodes --insecure-skip-tls-verify to verify you can get cluster objects
-
+*** There are some pods not coming up but we are going to investigate those soon.
