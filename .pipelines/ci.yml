@@ -36,16 +36,31 @@ stages:
       name: ARO-CI
     steps:
     - template: ./templates/template-checkout.yml
-    - powershell: |
-        $editedFiles = git diff HEAD HEAD~ --name-only
-        $editedFiles | ForEach-Object {
-          Switch -Wildcard ($_ ) {
-            '*tsx' { Write-Output "##vso[task.setvariable variable=IsTypescriptChanges]True" }
-            '*go'  { Write-Output "##vso[task.setvariable variable=IsGolangChanges]True" }
-            '*py'  { Write-Output "##vso[task.setvariable variable=IsPythonChanges]True" }
-          }
-        }
+    - bash: |
+        editedFiles=`git diff HEAD HEAD~ --name-only`
 
+        SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
+        IFS=$'\n'      # Change IFS to newline char
+        editedFiles=($editedFiles)
+
+        for (( i=0; i<${#editedFiles[@]}; i++ ))
+        do
+            case ${editedFiles[$i]} in
+            *.go)
+                echo "##vso[task.setvariable variable=IsGolangChanges]True"
+                ;;
+
+            *.py)
+                echo "##vso[task.setvariable variable=IsPythonChanges]True"
+                ;;
+
+            *.tsx)
+                echo "##vso[task.setvariable variable=IsTypescriptChanges]True" 
+                ;;
+            esac
+        done
+
+        IFS=$SAVEIFS   # Restore original IFS
 
 - stage: Unit_Tests_And_Linting
   jobs:
