@@ -19,7 +19,7 @@ const (
 )
 
 // FIPS Mode is set differently and the test needs updating after 2022-04-01 API is active
-var _ = XSpecify("Validate FIPS Mode", func() {
+var _ = XDescribe("Validate FIPS Mode", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	ctx := context.Background()
