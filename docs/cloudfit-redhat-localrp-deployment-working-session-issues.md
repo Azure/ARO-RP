@@ -14,8 +14,8 @@ ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least
 
 https://ms.portal.azure.com/#blade/HubsExtension/DeploymentDetailsBlade/overview/id/%2Fsubscriptions%2F26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8%2Fproviders%2FMicrosoft.Resources%2Fdeployments%2Frbac-development
 
-### TODO: Make PR for update to ./deploy/rbac-development.json that allows for a custom fpRoleDefinitionId
-
+### TODO: Make PR for update to ./deploy/rbac-development.json that allows for a custom fpRoleDefinitionId (generated above)
+### TODO: Make PR for similar issue on deleting a cluster
 ### TODO: Make PR for this issue separate from this branch (below). Just suggest RP-MODE check?
 ***hack in create pkg/util/cluster/cluster.go (this is so that our env vars from secrets/env are used)
   appID := os.Getenv("AZURE_CLIENT_ID")
