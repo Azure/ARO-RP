@@ -27,8 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/v20210901preview"
-	mgmtredhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2021-09-01-preview/redhatopenshift"
+	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
+	mgmtredhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-04-01/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -399,8 +399,9 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 	oc := api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
 			ClusterProfile: api.ClusterProfile{
-				Domain:          strings.ToLower(clusterName),
-				ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.env.SubscriptionID(), "aro-"+clusterName),
+				Domain:               strings.ToLower(clusterName),
+				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.env.SubscriptionID(), "aro-"+clusterName),
+				FipsValidatedModules: "Enabled",
 			},
 			ServicePrincipalProfile: api.ServicePrincipalProfile{
 				ClientID:     clientID,
@@ -450,19 +451,19 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 	}
 
-	ext := api.APIs[v20210901preview.APIVersion].OpenShiftClusterConverter().ToExternal(&oc)
+	ext := api.APIs[v20220401.APIVersion].OpenShiftClusterConverter().ToExternal(&oc)
 	data, err := json.Marshal(ext)
 	if err != nil {
 		return err
 	}
 
-	ocExt := mgmtredhatopenshift20210901preview.OpenShiftCluster{}
+	ocExt := mgmtredhatopenshift20220401.OpenShiftCluster{}
 	err = json.Unmarshal(data, &ocExt)
 	if err != nil {
 		return err
 	}
 
-	return c.openshiftclustersv20210901preview.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
+	return c.openshiftclustersv20220401.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
 }
 
 func (c *Cluster) registerSubscription(ctx context.Context) error {
@@ -473,10 +474,6 @@ func (c *Cluster) registerSubscription(ctx context.Context) error {
 			RegisteredFeatures: []api.RegisteredFeatureProfile{
 				{
 					Name:  "Microsoft.RedHatOpenShift/RedHatEngineering",
-					State: "Registered",
-				},
-				{
-					Name:  "Microsoft.RedHatOpenShift/FIPS",
 					State: "Registered",
 				},
 			},
