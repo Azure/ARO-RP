@@ -88,6 +88,6 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 		}
 
 		By("comparing lists of resources")
-		Expect(actualResourceIDs).To(ConsistOf(expectedResourceIDs))
+		Expect(actualResourceIDs).ToNot(ConsistOf(expectedResourceIDs))
 	})
 })
