@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
@@ -284,6 +285,68 @@ func TestMerge(t *testing.T) {
 			}
 			if diff == "" != tt.wantEmptyDiff {
 				t.Error(diff)
+			}
+		})
+	}
+}
+
+func TestMakeURLSegments(t *testing.T) {
+	for _, tt := range []struct {
+		gvr         *schema.GroupVersionResource
+		namespace   string
+		uname, name string
+		url         []string
+		want        []string
+	}{
+		{
+			uname: "Group is empty",
+			gvr: &schema.GroupVersionResource{
+				Group:    "",
+				Version:  "4.10",
+				Resource: "test-resource",
+			},
+			namespace: "openshift",
+			name:      "test-name-1",
+			want:      []string{"api", "4.10", "namespaces", "openshift", "test-resource", "test-name-1"},
+		},
+		{
+			uname: "Group is not empty",
+			gvr: &schema.GroupVersionResource{
+				Group:    "test-group",
+				Version:  "4.10",
+				Resource: "test-resource",
+			},
+			namespace: "openshift-apiserver",
+			name:      "test-name-2",
+			want:      []string{"apis", "test-group", "4.10", "namespaces", "openshift-apiserver", "test-resource", "test-name-2"},
+		},
+		{
+			uname: "Namespace is empty",
+			gvr: &schema.GroupVersionResource{
+				Group:    "test-group",
+				Version:  "4.10",
+				Resource: "test-resource",
+			},
+			namespace: "",
+			name:      "test-name-3",
+			want:      []string{"apis", "test-group", "4.10", "test-resource", "test-name-3"},
+		},
+		{
+			uname: "Name is empty",
+			gvr: &schema.GroupVersionResource{
+				Group:    "test-group",
+				Version:  "4.10",
+				Resource: "test-resource",
+			},
+			namespace: "",
+			name:      "",
+			want:      []string{"apis", "test-group", "4.10", "test-resource"},
+		},
+	} {
+		t.Run(tt.uname, func(t *testing.T) {
+			got := makeURLSegments(tt.gvr, tt.namespace, tt.name)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Error(cmp.Diff(got, tt.want))
 			}
 		})
 	}
