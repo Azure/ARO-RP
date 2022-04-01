@@ -32,7 +32,7 @@ var _ = Describe("[Admin API] List clusters action", func() {
 				oc = ocs[i]
 			}
 		}
-		Expect(oc).ToNot(BeNil())
+		Expect(oc).To(BeNil())
 	})
 
 	It("should be able to return list clusters with admin fields by subscription", func() {

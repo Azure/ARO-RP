@@ -43,7 +43,7 @@ jobs:
 
       set -x
       . ./hack/e2e/run-rp-and-e2e.sh
-      trap 'set +e; kill_rp; clean_e2e_db' EXIT
+      trap 'set +e; echo "##vso[task.setvariable variable=mustGather]Yes' EXIT
 
       deploy_e2e_db
 
@@ -68,6 +68,8 @@ jobs:
       export KUBECONFIG=admin.kubeconfig
       ./oc adm must-gather
       tar cf must-gather-$CLUSTER.tar.gz must-gather.local.*
+      kill_rp 
+      clean_e2e_db
     condition: eq(variables['mustGather'], 'Yes')
     displayName: Collect Must Gather
   - publish: /home/cloud-user/must-gather.tar.gz
