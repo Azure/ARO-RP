@@ -5,6 +5,7 @@ package storageaccounts
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
@@ -34,6 +35,7 @@ const (
 	ControllerName = "StorageAccounts"
 
 	controllerEnabled = "aro.storageaccounts.enabled"
+	controllerManaged = "aro.storageaccounts.managed"
 )
 
 // Reconciler is the controller struct
@@ -76,8 +78,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+	// If disabled or managed is missing, do nothing
+	managed := strings.EqualFold("true", instance.Spec.OperatorFlags.GetWithDefault(controllerManaged, ""))
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) || !managed {
 		return reconcile.Result{}, nil
 	}
 
@@ -108,7 +111,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		storage:          storage.NewAccountsClient(&azEnv, resource.SubscriptionID, authorizer),
 	}
 
-	return reconcile.Result{}, manager.reconcileAccounts(ctx)
+	return reconcile.Result{}, manager.reconcileAccounts(ctx, managed)
 }
 
 // SetupWithManager creates the controller

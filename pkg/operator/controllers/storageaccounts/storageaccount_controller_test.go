@@ -6,12 +6,9 @@ package storageaccounts
 import (
 	"context"
 	"errors"
-	"fmt"
-	"strings"
 	"testing"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
@@ -24,85 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-var (
-	subscriptionId           = "0000000-0000-0000-0000-000000000000"
-	clusterResourceGroupName = "aro-iljrzb5a"
-	clusterResourceGroupId   = "/subscriptions/" + subscriptionId + "/resourcegroups/" + clusterResourceGroupName
-	vnetResourceGroup        = "vnet-rg"
-	vnetName                 = "vnet"
-	subnetNameWorker         = "worker"
-	subnetNameMaster         = "master"
-
-	storageSuffix              = "random-suffix"
-	clusterStorageAccountName  = "cluster" + storageSuffix
-	registryStorageAccountName = "image-registry-account"
-
-	resourceIdMaster = "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
-	resourceIdWorker = "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
-
-	rpServiceSubnet      = "/subscriptions/" + subscriptionId + "/resourceGroups/rp-vnet/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-subnet"
-	gatewayServiceSubnet = "/subscriptions/" + subscriptionId + "/resourceGroups/gwy-vnet/providers/Microsoft.Network/virtualNetworks/gwy-vnet/subnets/gwy-subnet"
-)
-
-func getValidAccount(virtualNetworkResourceIDs []string, defaultAction mgmtstorage.DefaultAction) mgmtstorage.Account {
-	account := mgmtstorage.Account{
-		AccountProperties: &mgmtstorage.AccountProperties{
-			NetworkRuleSet: &mgmtstorage.NetworkRuleSet{
-				VirtualNetworkRules: &[]mgmtstorage.VirtualNetworkRule{},
-				DefaultAction:       defaultAction,
-			},
-		},
-	}
-
-	for _, rule := range virtualNetworkResourceIDs {
-		*account.AccountProperties.NetworkRuleSet.VirtualNetworkRules = append(*account.AccountProperties.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
-			VirtualNetworkResourceID: to.StringPtr(rule),
-			Action:                   mgmtstorage.Allow,
-		})
-	}
-	return account
-}
-
-// Implement gomock.Matcher so we don't worry about pointers and comparison of networkRuleSets
-type accountUpdateParamsEq struct {
-	expected mgmtstorage.AccountUpdateParameters
-}
-
-// Matches checks all the NetworkRuleSet in the expected account update params
-// are present in the actual struct in any order along with the default action
-func (s accountUpdateParamsEq) Matches(actual interface{}) bool {
-	accountUpdateParams := actual.(mgmtstorage.AccountUpdateParameters)
-
-	for _, expectedRule := range *s.expected.NetworkRuleSet.VirtualNetworkRules {
-		matches := false
-
-		for _, actualRule := range *accountUpdateParams.NetworkRuleSet.VirtualNetworkRules {
-			if strings.EqualFold(to.String(expectedRule.VirtualNetworkResourceID), to.String(actualRule.VirtualNetworkResourceID)) && expectedRule.Action == actualRule.Action {
-				matches = true
-				break
-			}
-		}
-
-		if !matches {
-			fmt.Printf("expected rule '%v' with action '%v' not found", expectedRule.VirtualNetworkResourceID, expectedRule.Action)
-			return false
-		}
-	}
-
-	return accountUpdateParams.NetworkRuleSet.DefaultAction == s.expected.NetworkRuleSet.DefaultAction
-}
-
-func (s accountUpdateParamsEq) String() string {
-	return "account update parameters equal in any rule order"
-}
-
-// AccountUpdateParamsEq checks all the rules in the expected account update params
-// are present in the actual struct in any order
-func AccountUpdateParamsEq(expected mgmtstorage.AccountUpdateParameters) gomock.Matcher {
-	return accountUpdateParamsEq{expected: expected}
-}
-
-func TestReconcileAccounts(t *testing.T) {
+func TestReconcile(t *testing.T) {
 	imagecli := imageregistryfake.NewSimpleClientset(
 		&imageregistryv1.Config{
 			ObjectMeta: metav1.ObjectMeta{

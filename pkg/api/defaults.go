@@ -58,6 +58,7 @@ func DefaultOperatorFlags() OperatorFlags {
 	// Maybe into a subpackage like `github.com/Azure/ARO-RP/pkg/api/defaults`?
 	return OperatorFlags{
 		"aro.alertwebhook.enabled":                 flagTrue,
+		"aro.autosizednodes.enable":                flagFalse,
 		"aro.azuresubnets.enabled":                 flagTrue,
 		"aro.azuresubnets.nsg.managed":             flagTrue,
 		"aro.azuresubnets.serviceendpoint.managed": flagTrue,
@@ -77,8 +78,8 @@ func DefaultOperatorFlags() OperatorFlags {
 		"aro.rbac.enabled":                         flagTrue,
 		"aro.routefix.enabled":                     flagTrue,
 		"aro.storageaccounts.enabled":              flagTrue,
+		"aro.storageaccounts.managed":              flagTrue,
 		"aro.workaround.enabled":                   flagTrue,
-		"aro.autosizednodes.enable":                flagFalse,
 		"rh.srep.muo.enabled":                      flagTrue,
 		"rh.srep.muo.managed":                      flagTrue,
 	}
