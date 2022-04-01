@@ -69,7 +69,7 @@ jobs:
       ./oc adm must-gather
       tar cf must-gather-$CLUSTER.tar.gz must-gather.local.*
     condition: eq(variables['mustGather'], 'Yes')
-    displayName: Need Must Gather
-    publish: /home/cloud-user/must-gather.tar.gz
+    displayName: Collect Must Gather
+  - publish: /home/cloud-user/must-gather.tar.gz
     artifact: must-gather
   - template: ./templates/template-az-cli-logout.yml
