@@ -8,7 +8,7 @@ The admin portal runs inside the RP and calls against the RP for cluster informa
 
 The front end is developed using react and typescript. The back end api is written in golang and makes direct calls to CosmoDB for cluster information.
 
-The portal front end lives in the top level directory of the ARO-RP repo within the `portal` directory. The portal back end exists within the `pkg/portal`
+The portal front end lives in the top level directory of the ARO-RP repo within the `portal` directory. The portal back end exists within `pkg/portal`
 
 The front end code is compiled into go code using the bindata golang module. This front end code is then served through the RP.
 
