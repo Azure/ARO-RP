@@ -6,7 +6,7 @@ The admin portal is a SRE-facing front end used for performing various actions a
 
 The admin portal runs inside the RP and calls against the RP for cluster information and serves that information using a MSFT inspired front end.
 
-The front end is developed using react and typescript. The back end api is written in golang and makes direct calls to CosmoDB for cluster information.
+The front end is developed using react and typescript. The back end api is written in golang and makes direct calls to CosmosDB for cluster information.
 
 The portal front end lives in the top level directory of the ARO-RP repo within the `portal` directory. The portal back end exists within `pkg/portal`
 
