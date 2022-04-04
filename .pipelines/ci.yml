@@ -53,9 +53,9 @@ stages:
                 ;;
             esac
         done
-      name: checkChanges
 
         IFS=$SAVEIFS   # Restore original IFS
+        name: checkChanges
     - bash: echo "$(IsGolangChanges) $(IsPythonChanges) $(IsTypescriptChanges)"
 
 - stage: Unit_Tests_And_Linting
