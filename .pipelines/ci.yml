@@ -22,42 +22,6 @@ variables:
 - template: vars.yml
 
 stages:
-
-- stage: Check_Changes
-  jobs:
-  - job: Check_Changes
-    pool:
-      name: ARO-CI
-    steps:
-    - template: ./templates/template-checkout.yml
-    - bash: |
-        editedFiles=`git diff origin/master HEAD --name-only`
-
-        SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
-        IFS=$'\n'      # Change IFS to newline char
-        editedFiles=($editedFiles)
-
-        for (( i=0; i<${#editedFiles[@]}; i++ ))
-        do
-            case ${editedFiles[$i]} in
-            *.go)
-                echo "##vso[task.setvariable variable=IsGolangChanges;isoutput=true]True"
-                ;;
-
-            *.py)
-                echo "##vso[task.setvariable variable=IsPythonChanges;isoutput=true]True"
-                ;;
-
-            *.tsx)
-                echo "##vso[task.setvariable variable=IsTypescriptChanges;isoutput=true]True"
-                ;;
-            esac
-        done
-
-        IFS=$SAVEIFS   # Restore original IFS
-        name: checkChanges
-    - bash: echo "$(IsGolangChanges) $(IsPythonChanges) $(IsTypescriptChanges)"
-
 - stage: Unit_Tests_And_Linting
   jobs:
   - job: Python_Unit_Tests
@@ -70,7 +34,6 @@ stages:
         make test-python
         [[ -z "$(git status -s)" ]]
       displayName: 🧪Run Python Unit Tests
-    condition: and(succeeded(), eq(stageDependencies.Check_Changes.Check_Changes.outputs['checkChanges.IsPythonChanges'], True))
 
   - job: Golang_Unit_Tests
     pool:
@@ -132,7 +95,6 @@ stages:
         summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
         failIfCoverageEmpty: false
       condition: succeededOrFailed()
-    condition: and(succeeded(), eq(stageDependencies.Check_Changes.Check_Changes.outputs['checkChanges.IsGolangChanges'], True))
 
   - job: Lint_Admin_Portal
     pool:
@@ -142,4 +104,3 @@ stages:
         set -xe
         make lint-admin-portal
       displayName: 🧹 Lint Admin Portal
-    condition: and(succeeded(), eq(stageDependencies.Check_Changes.Check_Changes.outputs['checkChanges.IsTypescriptChanges'], True))
