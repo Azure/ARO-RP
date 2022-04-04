@@ -35,6 +35,9 @@ stages:
     pool:
       name: ARO-CI
     steps:
+    - checkout: master
+      path: go/src/github.com/Azure/ARO-RP
+      displayName: ⚙️ Check-out Master
     - template: ./templates/template-checkout.yml
     - bash: |
         editedFiles=`git diff master HEAD --name-only`
@@ -47,15 +50,15 @@ stages:
         do
             case ${editedFiles[$i]} in
             *.go)
-                echo "##vso[task.setvariable variable=IsGolangChanges]True"
+                echo "##vso[task.setvariable variable=IsGolangChanges;]True"
                 ;;
 
             *.py)
-                echo "##vso[task.setvariable variable=IsPythonChanges]True"
+                echo "##vso[task.setvariable variable=IsPythonChanges;]True"
                 ;;
 
             *.tsx)
-                echo "##vso[task.setvariable variable=IsTypescriptChanges]True" 
+                echo "##vso[task.setvariable variable=IsTypescriptChanges;]True"
                 ;;
             esac
         done
