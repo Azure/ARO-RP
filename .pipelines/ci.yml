@@ -37,8 +37,6 @@ stages:
     steps:
     - template: ./templates/template-checkout.yml
     - bash: |
-        echo `git diff origin/master HEAD --name-only`
-        echo "$(IsGolangChanges) $(IsPythonChanges) $(IsTypescriptChanges)"
         editedFiles=`git diff origin/master HEAD --name-only`
 
         SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
@@ -50,24 +48,20 @@ stages:
             case ${editedFiles[$i]} in
             *.go)
                 echo "##vso[task.setvariable variable=IsGolangChanges;isoutput=true]True"
-                echo "$(IsGolangChanges) $(IsPythonChanges) $(IsTypescriptChanges)"
                 ;;
 
             *.py)
                 echo "##vso[task.setvariable variable=IsPythonChanges;isoutput=true]True"
-                echo "$(IsGolangChanges) $(IsPythonChanges) $(IsTypescriptChanges)"
                 ;;
 
             *.tsx)
                 echo "##vso[task.setvariable variable=IsTypescriptChanges;isoutput=true]True"
-                echo "$(IsGolangChanges) $(IsPythonChanges) $(IsTypescriptChanges)"
                 ;;
             esac
         done
 
-        echo "$(IsGolangChanges) $(IsPythonChanges) $(IsTypescriptChanges)"
-
         IFS=$SAVEIFS   # Restore original IFS
+    - bash: echo "$(IsGolangChanges) $(IsPythonChanges) $(IsTypescriptChanges)"
 
 - stage: Unit_Tests_And_Linting
   jobs:
