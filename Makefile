@@ -168,8 +168,8 @@ lint-go:
 	go run ./vendor/github.com/golangci/golangci-lint/cmd/golangci-lint run
 
 lint-admin-portal:
-	podman build -f Dockerfile.portal_lint . -t linter
-	podman run -it --rm localhost/linter ./src --ext .ts
+	docker build -f Dockerfile.portal_lint . -t linter
+	docker run -it --rm localhost/linter ./src --ext .ts
 
 test-python: pyenv az
 	. pyenv/bin/activate && \
