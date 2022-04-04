@@ -78,7 +78,7 @@ users:
 
 1. `go run hack/aead/aead.go --file fakekubeconfig`
 
-1. Replace the CosmosDB Kubeconfig entries with what's returned (excepting the logs)
+1. Replace the CosmosDB Kubeconfig entries with what's returned (except the logs)
 
 1. Replace `OpenShiftCluster.Properties.APIServerProfile.IP` value in CosmosDB with "127.0.0.1"
 
