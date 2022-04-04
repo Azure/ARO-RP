@@ -50,7 +50,7 @@ client: generate
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 deploy:
-	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
+	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 dev-config.yaml:
 	go run ./hack/gendevconfig >dev-config.yaml
@@ -109,7 +109,7 @@ proxy:
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
 
 run-portal:
-	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
+	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
 
 build-portal:
 	cd portal && npm install && npm run build
@@ -161,7 +161,7 @@ validate-fips:
 	hack/fips/validate-fips.sh
 
 unit-test-go:
-	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro -coverprofile=cover.out ./...
+	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverprofile=cover.out ./...
 
 lint-go:
 	go run ./vendor/github.com/golangci/golangci-lint/cmd/golangci-lint run
