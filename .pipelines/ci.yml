@@ -35,9 +35,6 @@ stages:
     pool:
       name: ARO-CI
     steps:
-    - checkout: master
-      path: go/src/github.com/Azure/ARO-RP
-      displayName: ⚙️ Check-out Master
     - template: ./templates/template-checkout.yml
     - bash: |
         echo `git branch`
