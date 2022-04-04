@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 
@@ -144,27 +145,27 @@ func Proxy(log *logrus.Entry, w http.ResponseWriter, r *http.Request, sz int) {
 	}
 
 	defer c1.Close()
-	ch := make(chan struct{})
+	var wg sync.WaitGroup
 
+	// Wait for the c1->c2 goroutine to complete before exiting.
+	//Then the deferred c1.Close() and c2.Close() will be called.
+	defer wg.Wait()
+
+	wg.Add(1)
 	go func() {
 		// use a goroutine to copy from c1->c2.  Call c2.CloseWrite() when done.
 		defer recover.Panic(log)
-		defer close(ch)
+		defer wg.Done()
 		defer func() {
 			_ = c2.(*net.TCPConn).CloseWrite()
 		}()
 		_, _ = io.Copy(c2, buf)
 	}()
 
-	func() {
-		// copy from c2->c1.  Call c1.CloseWrite() when done.
-		defer func() {
-			_ = c1.(interface{ CloseWrite() error }).CloseWrite()
-		}()
-		_, _ = io.Copy(c1, c2)
+	// copy from c2->c1.  Call c1.CloseWrite() when done.
+	defer func() {
+		_ = c1.(interface{ CloseWrite() error }).CloseWrite()
 	}()
+	_, _ = io.Copy(c1, c2)
 
-	// wait for the c1->c2 goroutine to complete.  Then the deferred c1.Close()
-	// and c2.Close() will be called.
-	<-ch
 }
