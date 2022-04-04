@@ -21,11 +21,11 @@ pr:
 variables:
 - template: vars.yml
 - name: IsGolangChanges
-  value: false
+  value: False
 - name: IsPythonChanges
-  value: false
+  value: False
 - name: IsTypescriptChanges
-  value: false
+  value: False
 
 stages:
 
@@ -37,7 +37,7 @@ stages:
     steps:
     - template: ./templates/template-checkout.yml
     - bash: |
-        editedFiles=`git diff HEAD HEAD~ --name-only`
+        editedFiles=`git diff master HEAD --name-only`
 
         SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
         IFS=$'\n'      # Change IFS to newline char
