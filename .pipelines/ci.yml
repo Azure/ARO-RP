@@ -37,7 +37,7 @@ stages:
     steps:
     - template: ./templates/template-checkout.yml
     - bash: |
-        echo `git fetch -v`
+        echo `git diff origin/master HEAD --name-only`
         editedFiles=`git diff origin/master HEAD --name-only`
 
         SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
