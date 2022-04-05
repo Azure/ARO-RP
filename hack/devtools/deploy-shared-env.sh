@@ -11,7 +11,7 @@ deploy_rp_dev_predeploy() {
     az deployment group create \
         -g "$RESOURCEGROUP" \
         -n rp-development-predeploy \
-        --template-file deploy/rp-development-predeploy.json \
+        --template-file deploy/rp-development-predeploy.bicep \
         --parameters \
             "adminObjectId=$ADMIN_OBJECT_ID" \
             "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
@@ -24,7 +24,7 @@ deploy_rp_dev() {
     az deployment group create \
         -g "$RESOURCEGROUP" \
         -n rp-development \
-        --template-file deploy/rp-development.json \
+        --template-file deploy/rp-development.bicep \
         --parameters \
             "clusterParentDomainName=$PARENT_DOMAIN_NAME" \
             "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
