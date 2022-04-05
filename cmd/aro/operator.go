@@ -31,6 +31,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/imageconfig"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machine"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/machinehealthcheck"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machineset"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo"
@@ -215,6 +216,10 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", autosizednodes.ControllerName),
 			mgr)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", autosizednodes.ControllerName, err)
+		}
+		if err = (machinehealthcheck.NewReconciler(
+			arocli, dh)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", machinehealthcheck.ControllerName, err)
 		}
 	}
 
