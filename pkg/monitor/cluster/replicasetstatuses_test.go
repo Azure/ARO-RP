@@ -53,7 +53,7 @@ func TestEmitReplicasetStatuses(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	m := mock_metrics.NewMockInterface(controller)
+	m := mock_metrics.NewMockEmitter(controller)
 
 	mon := &Monitor{
 		cli: cli,
@@ -73,5 +73,4 @@ func TestEmitReplicasetStatuses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 }

@@ -14,7 +14,7 @@ import (
 )
 
 // Metric records request metrics for tracking
-func Metrics(m metrics.Interface) func(http.Handler) http.Handler {
+func Metrics(m metrics.Emitter) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			vars := mux.Vars(r)

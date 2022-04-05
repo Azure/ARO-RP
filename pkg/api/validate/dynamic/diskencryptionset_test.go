@@ -291,5 +291,4 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 			}
 		})
 	}
-
 }

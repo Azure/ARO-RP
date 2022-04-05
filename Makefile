@@ -45,12 +45,12 @@ clean:
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 client: generate
-	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview
+	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 deploy:
-	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
+	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 dev-config.yaml:
 	go run ./hack/gendevconfig >dev-config.yaml
@@ -109,10 +109,11 @@ proxy:
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
 
 run-portal:
-	go run -tags aro -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
+	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
 
 build-portal:
-	cd portal && npm install && npm run build
+	cd portal/v1 && npm install && npm run build && cd ../v2 && npm install && npm run build
+	make generate
 
 pyenv:
 	python3 -m venv pyenv
@@ -132,7 +133,7 @@ secrets:
 secrets-update:
 	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
 	tar -czf secrets.tar.gz secrets
-	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
+	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --overwrite --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
 	rm secrets.tar.gz
 
 tunnel:
@@ -161,10 +162,14 @@ validate-fips:
 	hack/fips/validate-fips.sh
 
 unit-test-go:
-	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro -coverprofile=cover.out ./...
+	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverprofile=cover.out ./...
 
 lint-go:
 	go run ./vendor/github.com/golangci/golangci-lint/cmd/golangci-lint run
+
+lint-admin-portal:
+	docker build -f Dockerfile.portal_lint . -t linter
+	docker run -it --rm localhost/linter ./src --ext .ts
 
 test-python: pyenv az
 	. pyenv/bin/activate && \
@@ -174,6 +179,13 @@ test-python: pyenv az
 
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
+	$(MAKE) update-admin.kubeconfig
+
+# ! Temporary solution till dns can be migrated to new subscription
+PUBLIC_IP_ADDR = $(shell az network dns record-set a show -g ${RESOURCEGROUP} --zone-name ${LOCATION}.${PARENT_DOMAIN_NAME} -n api.${CLUSTER} --query aRecords[0].ipv4Address)
+PUBLIC_IP_FQDN = $(shell az network dns record-set a show -g ${RESOURCEGROUP} --zone-name ${LOCATION}.${PARENT_DOMAIN_NAME} -n api.${CLUSTER} --query fqdn)
+update-admin.kubeconfig:
+	sudo -- sh -c -e "echo '$(PUBLIC_IP_ADDR) ${PUBLIC_IP_FQDN}' >> /etc/hosts";
 
 vendor:
 	# See comments in the script for background on why we need it

@@ -95,13 +95,13 @@ func Run(api, outputDir string) error {
 		names = append(names, "OpenShiftClusterAdminKubeconfig")
 	}
 
-	err = define(s.Definitions, api, g.xmsEnum, g.xmsSecretList, names...)
+	err = define(s.Definitions, api, g.xmsEnum, g.xmsSecretList, g.xmsIdentifiers, names...)
 	if err != nil {
 		return err
 	}
 
 	names = []string{"CloudError", "OperationList"}
-	err = define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api", g.xmsEnum, g.xmsSecretList, names...)
+	err = define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api", g.xmsEnum, g.xmsSecretList, g.xmsIdentifiers, names...)
 	if err != nil {
 		return err
 	}
@@ -211,6 +211,6 @@ func removeNamedSchemas(list NameSchemas, remove string) NameSchemas {
 		}
 		result = append(result, schema)
 	}
-	return result
 
+	return result
 }

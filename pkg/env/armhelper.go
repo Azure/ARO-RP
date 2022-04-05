@@ -90,7 +90,6 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 		if err != nil {
 			return nil, err
 		}
-
 	} else {
 		key, certs, err := env.ServiceKeyvault().GetCertificateSecret(ctx, RPDevARMSecretName)
 		if err != nil {

@@ -620,6 +620,9 @@ done
 				Tier:     to.StringPtr("Standard"),
 				Capacity: to.Int64Ptr(1339),
 			},
+			Tags: map[string]*string{
+				"SkipLinuxAzSecPack": to.StringPtr("true"),
+			},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
 				UpgradePolicy: &mgmtcompute.UpgradePolicy{
 					Mode: mgmtcompute.UpgradeModeManual,

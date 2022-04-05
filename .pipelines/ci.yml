@@ -22,7 +22,6 @@ variables:
 - template: vars.yml
 
 jobs:
-
 - job: Python_Unit_Tests
   pool:
     name: ARO-CI
@@ -95,3 +94,11 @@ jobs:
       failIfCoverageEmpty: false
     condition: succeededOrFailed()
 
+- job: Lint_Admin_Portal
+  pool:
+    name: ARO-CI
+  steps:
+  - script: |
+      set -xe
+      make lint-admin-portal
+    displayName: 🧹 Lint Admin Portal

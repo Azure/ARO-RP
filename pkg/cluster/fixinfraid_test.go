@@ -98,7 +98,6 @@ func TestFixInfraID(t *testing.T) {
 			if tt.wantInfraID != doc.OpenShiftCluster.Properties.InfraID {
 				t.Error(doc.OpenShiftCluster.Properties.InfraID)
 			}
-
 		})
 	}
 }

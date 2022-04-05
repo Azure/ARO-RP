@@ -36,7 +36,6 @@ func (c *virtualMachineScaleSetsClient) List(ctx context.Context, resourceGroupN
 		if err != nil {
 			return nil, err
 		}
-
 	}
 	return scaleSets, nil
 }

@@ -284,7 +284,6 @@ func (sv *openShiftClusterStaticValidator) validateAPIServerProfile(path string,
 		ip := net.ParseIP(ap.IP)
 		if ip == nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid.", ap.IP)
-
 		}
 		if ip.To4() == nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid: must be IPv4.", ap.IP)
@@ -307,7 +306,6 @@ func (sv *openShiftClusterStaticValidator) validateIngressProfile(path string, p
 		ip := net.ParseIP(p.IP)
 		if ip == nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid.", p.IP)
-
 		}
 		if ip.To4() == nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid: must be IPv4.", p.IP)

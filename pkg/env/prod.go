@@ -216,7 +216,6 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 func (p *prod) InitializeAuthorizers() error {
 	if !p.FeatureIsSet(FeatureEnableDevelopmentAuthorizer) {
 		p.armClientAuthorizer = clientauthorizer.NewARM(p.log, p.Core)
-
 	} else {
 		armClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
 			p.log,

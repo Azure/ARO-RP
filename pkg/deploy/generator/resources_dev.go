@@ -306,11 +306,14 @@ for attempt in {1..5}; do
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
-lvextend -l +50%FREE /dev/rootvg/varlv
-xfs_growfs /var
-
-lvextend -l +100%FREE /dev/rootvg/homelv
+lvextend -l +50%FREE /dev/rootvg/homelv
 xfs_growfs /home
+
+lvextend -l +50%FREE /dev/rootvg/tmplv
+xfs_growfs /tmp
+
+lvextend -l +100%FREE /dev/rootvg/varlv
+xfs_growfs /var
 
 rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
 rpm --import https://packages.microsoft.com/keys/microsoft.asc
@@ -506,11 +509,11 @@ rm cron
 }
 
 const (
-	sharedKeyVaultName          = "concat(take(resourceGroup().name,15), '" + SharedKeyVaultNameSuffix + "')"
+	sharedKeyVaultName          = "concat(take(resourceGroup().name,10), '" + SharedKeyVaultNameSuffix + "')"
 	sharedDiskEncryptionSetName = "concat(resourceGroup().name, '" + SharedDiskEncryptionSetNameSuffix + "')"
 	sharedDiskEncryptionKeyName = "concat(resourceGroup().name, '-disk-encryption-key')"
-
-	SharedKeyVaultNameSuffix          = "-sharedKV"
+	// cannot have two keyvaults with same name, change after migration
+	SharedKeyVaultNameSuffix          = "-dev-sharedKV"
 	SharedDiskEncryptionSetNameSuffix = "-disk-encryption-set"
 )
 

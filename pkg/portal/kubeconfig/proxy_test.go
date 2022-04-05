@@ -316,7 +316,6 @@ func TestProxy(t *testing.T) {
 				checker.AddPortalDocuments(portalDocument)
 
 				openShiftClustersClient.SetError(fmt.Errorf("sad"))
-
 			},
 			wantStatusCode: http.StatusInternalServerError,
 			wantBody:       "Internal Server Error\n",

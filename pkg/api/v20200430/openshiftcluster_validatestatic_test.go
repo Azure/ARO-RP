@@ -138,7 +138,6 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 					if tt.wantErr != "" {
 						t.Error(err)
 					}
-
 				} else {
 					if err.Error() != tt.wantErr {
 						t.Error(err)

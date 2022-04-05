@@ -709,7 +709,6 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				if tt.wantErr != "" {
 					t.Error(err)
 				}
-
 			} else {
 				if err.Error() != tt.wantErr {
 					t.Error(err)

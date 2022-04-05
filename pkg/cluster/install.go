@@ -124,7 +124,6 @@ func (m *manager) Update(ctx context.Context) error {
 
 // Install installs an ARO cluster
 func (m *manager) Install(ctx context.Context) error {
-
 	var (
 		installConfig *installconfig.InstallConfig
 		image         *releaseimage.Image
@@ -135,7 +134,6 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
 			steps.Action(m.ensureACRToken),
 			steps.Action(m.generateSSHKey),
-			steps.Action(m.generateFIPSMode),
 			steps.Action(func(ctx context.Context) error {
 				var err error
 				installConfig, image, err = m.generateInstallConfig(ctx)

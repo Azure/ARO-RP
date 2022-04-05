@@ -58,7 +58,7 @@ func TestEmitPodConditions(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	m := mock_metrics.NewMockInterface(controller)
+	m := mock_metrics.NewMockEmitter(controller)
 
 	mon := &Monitor{
 		cli: cli,
@@ -126,7 +126,7 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	m := mock_metrics.NewMockInterface(controller)
+	m := mock_metrics.NewMockEmitter(controller)
 
 	mon := &Monitor{
 		cli: cli,
@@ -146,7 +146,6 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 }
 
 func TestEmitPodContainerRestartCounter(t *testing.T) {
-
 	cli := fake.NewSimpleClientset(
 		&corev1.Pod{ // #1 metrics and log entry expected
 			ObjectMeta: metav1.ObjectMeta{
@@ -259,7 +258,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	m := mock_metrics.NewMockInterface(controller)
+	m := mock_metrics.NewMockEmitter(controller)
 
 	mon := &Monitor{
 		cli:       cli,
