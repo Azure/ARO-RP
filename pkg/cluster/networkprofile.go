@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// PopulateMTUSize ensures that every new cluster object has the MTUSize field defined
+// populateMTUSize ensures that every new cluster object has the MTUSize field defined
 func (m *manager) populateMTUSize(ctx context.Context) error {
 	// Get appropriate MTU size
 	mtuSize := api.MTU1500
@@ -29,7 +29,7 @@ func (m *manager) populateMTUSize(ctx context.Context) error {
 	return err
 }
 
-// EnsureMTUSize ensures that an existing cluster object has the MTUSize field defined
+// ensureMTUSize ensures that an existing cluster object has the MTUSize field defined
 func (m *manager) ensureMTUSize(ctx context.Context) error {
 	// Cluster needs MTUSize field patched
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.MTUSize == 0 {
@@ -46,6 +46,7 @@ func (m *manager) ensureMTUSize(ctx context.Context) error {
 				return err
 			}
 		}
+
 		// Patch the cluster object with correct MTU size
 		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 			doc.OpenShiftCluster.Properties.NetworkProfile.MTUSize = mtuSize
