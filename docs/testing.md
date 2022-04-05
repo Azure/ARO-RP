@@ -67,7 +67,7 @@ export LOCAL_E2E="true"
 # source the e2e helper file
 . ./hack/e2e/run-rp-and-e2e.sh
 
-# Deploy a new DB
+# Deploy a new DB if it does not exist yet
 deploy_e2e_db
 
 # build the rp binary

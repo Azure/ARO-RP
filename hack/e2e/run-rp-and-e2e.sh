@@ -76,10 +76,17 @@ clean_e2e_db(){
 if [ -z "${LOCAL_E2E}" ] ; then 
     export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
     export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-else 
-    export CLUSTER="$USER-local-e2e"
-    export DATABASE_NAME="$USER-local-e2e"
-fi 
+fi
+
+if [ -z "${CLUSTER}" ] ; then 
+    echo "CLUSTER is not set , aborting"
+    exit 1
+fi
+
+if [ -z "${DATABASE_NAME}" ] ; then 
+    echo "DATABASE_NAME is not set , aborting"
+    exit 1
+fi
 
 echo "######################################"
 echo "##### ARO V4 E2e helper sourced ######"
