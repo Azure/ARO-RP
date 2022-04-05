@@ -33,7 +33,7 @@ func NewOperationsClient(environment *azureclient.AROEnvironment, subscriptionID
 		client.Sender = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
+					InsecureSkipVerify: true, // #nosec G402
 				},
 			},
 		}
