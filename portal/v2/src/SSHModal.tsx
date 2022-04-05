@@ -27,9 +27,9 @@ const cancelIcon: IIconProps = { iconName: "Cancel" }
 const copyIcon: IIconProps = { iconName: "Copy" }
 
 const machineOptions = [
-  { key: 1, text: "master-0" },
-  { key: 2, text: "master-1" },
-  { key: 3, text: "master-2" },
+  { key: 0, text: "master-0" },
+  { key: 1, text: "master-1" },
+  { key: 2, text: "master-2" },
 ]
 
 type SSHModalProps = {
