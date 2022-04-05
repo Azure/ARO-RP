@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -138,6 +139,11 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 		domain += "." + o.env.Domain()
 	}
 
+	ingressIP, err := checkIngressIP(o.oc.Properties.IngressProfiles)
+	if err != nil {
+		return nil, err
+	}
+
 	serviceSubnets := []string{
 		"/subscriptions/" + o.env.SubscriptionID() + "/resourceGroups/" + o.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet",
 		"/subscriptions/" + o.env.SubscriptionID() + "/resourceGroups/" + o.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-subnet",
@@ -180,7 +186,7 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 			},
 
 			APIIntIP:                 o.oc.Properties.APIServerProfile.IntIP,
-			IngressIP:                o.oc.Properties.IngressProfiles[0].IP,
+			IngressIP:                ingressIP,
 			GatewayPrivateEndpointIP: o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP,
 			// Update the OperatorFlags from the version in the RP
 			OperatorFlags: arov1alpha1.OperatorFlags(o.oc.Properties.OperatorFlags),
@@ -312,6 +318,21 @@ func (o *operator) IsReady(ctx context.Context) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func checkIngressIP(ingressProfiles []api.IngressProfile) (string, error) {
+	if ingressProfiles == nil || len(ingressProfiles) < 1 {
+		return "", errors.New("No Ingress Profiles found")
+	}
+	ingressIP := ingressProfiles[0].IP
+	if len(ingressProfiles) > 1 {
+		for _, p := range ingressProfiles {
+			if p.Name == "default" {
+				return p.IP, nil
+			}
+		}
+	}
+	return ingressIP, nil
 }
 
 func isCRDEstablished(crd *extensionsv1.CustomResourceDefinition) bool {
