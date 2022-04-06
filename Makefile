@@ -112,7 +112,8 @@ run-portal:
 	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
 
 build-portal:
-	cd portal && npm install && npm run build
+	cd portal/v1 && npm install && npm run build && cd ../v2 && npm install && npm run build
+	make generate
 
 pyenv:
 	python3 -m venv pyenv
@@ -165,6 +166,10 @@ unit-test-go:
 
 lint-go:
 	go run ./vendor/github.com/golangci/golangci-lint/cmd/golangci-lint run
+
+lint-admin-portal:
+	docker build -f Dockerfile.portal_lint . -t linter
+	docker run -it --rm localhost/linter ./src --ext .ts
 
 test-python: pyenv az
 	. pyenv/bin/activate && \
