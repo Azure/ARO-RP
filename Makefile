@@ -2,7 +2,7 @@ SHELL = /bin/bash
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
-E2E_FLAGS ?= -test.timeout 180m -test.v -ginkgo.v
+E2E_FLAGS ?= -test.timeout 180m -test.v -ginkgo.v -ginkgo.noColor
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
 FLUENTBIT_VERSION = 1.7.8-1
@@ -113,6 +113,7 @@ run-portal:
 
 build-portal:
 	cd portal/v1 && npm install && npm run build && cd ../v2 && npm install && npm run build
+	make generate
 
 pyenv:
 	python3 -m venv pyenv
@@ -167,8 +168,8 @@ lint-go:
 	go run ./vendor/github.com/golangci/golangci-lint/cmd/golangci-lint run
 
 lint-admin-portal:
-	podman build -f Dockerfile.portal_lint . -t linter
-	podman run -it --rm localhost/linter ./src --ext .ts
+	docker build -f Dockerfile.portal_lint . -t linter
+	docker run -it --rm localhost/linter ./src --ext .ts
 
 test-python: pyenv az
 	. pyenv/bin/activate && \

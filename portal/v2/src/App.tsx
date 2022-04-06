@@ -205,7 +205,6 @@ function App() {
 
   return (
     <>
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
       <Stack styles={stackStyles} tokens={containerStackTokens} horizontalAlign={"stretch"}>
         <Panel
           isLightDismiss

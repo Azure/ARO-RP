@@ -77,5 +77,7 @@ func DefaultOperatorFlags() OperatorFlags {
 		"aro.storageaccounts.enabled":              flagTrue,
 		"aro.workaround.enabled":                   flagTrue,
 		"aro.autosizednodes.enable":                flagFalse,
+		"rh.srep.muo.enabled":                      flagTrue,
+		"rh.srep.muo.managed":                      flagTrue,
 	}
 }

@@ -84,3 +84,8 @@ func MdsdImage(acrDomain string) string {
 
 	return acrDomain + "/genevamdsd:master_20211223.1"
 }
+
+// MUOImage contains the location of the Managed Upgrade Operator container image
+func MUOImage(acrDomain string) string {
+	return acrDomain + "/managed-upgrade-operator:aro-b1"
+}
