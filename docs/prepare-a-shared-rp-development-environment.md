@@ -45,7 +45,7 @@ locations.
    PULL_SECRET=...
    ```
 
-1. Install [Go 1.16](https://golang.org/dl) or later, if you haven't already.
+1. Install [Go 1.17](https://golang.org/dl) or later, if you haven't already.
 
 1. Install the [Azure
    CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), if you
