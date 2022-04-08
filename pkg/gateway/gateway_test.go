@@ -49,7 +49,7 @@ func TestUpdateGateway(t *testing.T) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			gateway.updateGateway(tt.doc)
+			gateway.updateGateways([]*api.GatewayDocument{tt.doc})
 
 			if _, ok := gateway.gateways[tt.doc.ID]; ok != tt.wantValue {
 				t.Error(tt.doc.ID)
