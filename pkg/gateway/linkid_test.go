@@ -25,6 +25,7 @@ func TestGatewayVerification(t *testing.T) {
 		wantIsAllowed bool
 		wantErr       string
 		deleting      bool
+		allowList     map[string]struct{}
 	}{
 		{
 			name:          "accepted id=1",
@@ -39,6 +40,14 @@ func TestGatewayVerification(t *testing.T) {
 			idParam:       "2",
 			wantId:        "2",
 			wantIsAllowed: true,
+		},
+		{
+			name:          "accepted allowlist",
+			host:          "redhat.com",
+			idParam:       "2",
+			wantId:        "2",
+			wantIsAllowed: true,
+			allowList:     map[string]struct{}{"redhat.com": {}},
 		},
 		{
 			name:          "middle part not valid",
@@ -88,9 +97,10 @@ func TestGatewayVerification(t *testing.T) {
 				AnyTimes()
 
 			gateway := gateway{
-				m:        mock_metrics.NewMockInterface(mockController),
-				gateways: gatewayMap,
-				env:      mockCore,
+				m:         mock_metrics.NewMockInterface(mockController),
+				gateways:  gatewayMap,
+				env:       mockCore,
+				allowList: tt.allowList,
 			}
 
 			gatewayID, isAllowed, err := gateway.gatewayVerification(tt.host, tt.idParam)
