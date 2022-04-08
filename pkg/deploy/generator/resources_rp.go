@@ -543,7 +543,8 @@ semanage fcontext -a -t var_log_t "/var/log/journal(/.*)?"
 mkdir -p /var/log/journal
 
 for attempt in {1..5}; do
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security docker openssl-perl && break
+yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security docker openssl-perl python3 && break
+  # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
@@ -1050,8 +1051,8 @@ cat >/etc/default/vsa-nodescan-agent.config <<EOF
   }
 EOF
 
-# we start a cron job to run every hour to ensure the said directory is accessible 
-# by the correct user as it gets created by root and may cause a race condition 
+# we start a cron job to run every hour to ensure the said directory is accessible
+# by the correct user as it gets created by root and may cause a race condition
 # where root owns the dir instead of syslog
 # TODO: https://msazure.visualstudio.com/AzureRedHatOpenShift/_workitems/edit/12591207
 cat >/etc/cron.d/mdsd-chown-workaround <<EOF
@@ -1082,6 +1083,9 @@ restorecon -RF /var/log/*
 				Name:     to.StringPtr("[parameters('vmSize')]"),
 				Tier:     to.StringPtr("Standard"),
 				Capacity: to.Int64Ptr(1338),
+			},
+			Tags: map[string]*string{
+				"SkipLinuxAzSecPack": to.StringPtr("true"),
 			},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
 				UpgradePolicy: &mgmtcompute.UpgradePolicy{

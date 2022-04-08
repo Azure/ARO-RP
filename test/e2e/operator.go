@@ -417,3 +417,31 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		}
 	})
 })
+
+var _ = Describe("ARO Operator - MUO Deployment", func() {
+	ctx := context.Background()
+
+	Specify("MUO should be deployed by default", func() {
+		muoIsDeployed := func() (bool, error) {
+			pods, err := clients.Kubernetes.CoreV1().Pods("openshift-managed-upgrade-operator").List(ctx, metav1.ListOptions{
+				LabelSelector: "name=managed-upgrade-operator",
+			})
+			if err != nil {
+				return false, err
+			}
+			if len(pods.Items) != 1 {
+				return false, fmt.Errorf("%d managed-upgrade-operator pods found", len(pods.Items))
+			}
+			b, err := clients.Kubernetes.CoreV1().Pods("openshift-managed-upgrade-operator").GetLogs(pods.Items[0].Name, &corev1.PodLogOptions{}).DoRaw(ctx)
+			if err != nil {
+				return false, err
+			}
+
+			// check for mandated FIPS
+			return strings.Contains(string(b), `msg="FIPS crypto mandated: true"`), nil
+		}
+
+		err := wait.PollImmediate(30*time.Second, 10*time.Minute, muoIsDeployed)
+		Expect(err).NotTo(HaveOccurred())
+	})
+})

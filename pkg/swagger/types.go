@@ -245,9 +245,10 @@ type Schema struct {
 	ExternalDocs         *ExternalDocumentation `json:"externalDocs,omitempty"`
 	Example              interface{}            `json:"example,omitempty"`
 
-	ClientFlatten bool     `json:"x-ms-client-flatten,omitempty"`
-	XMSEnum       *XMSEnum `json:"x-ms-enum,omitempty"`
-	XMSSecret     bool     `json:"x-ms-secret,omitempty"`
+	ClientFlatten  bool      `json:"x-ms-client-flatten,omitempty"`
+	XMSEnum        *XMSEnum  `json:"x-ms-enum,omitempty"`
+	XMSSecret      bool      `json:"x-ms-secret,omitempty"`
+	XMSIdentifiers *[]string `json:"x-ms-identifiers,omitempty"`
 }
 
 // XMSEnum is x-ms-enum swagger extension adding the ability to generate static enums
@@ -317,7 +318,7 @@ type SecurityRequirement map[string][]string
 // NameParameters is a slice of NameParameters
 type NameParameters []NameParameter
 
-// NameParameter representes a name and a Parameter
+// NameParameter represents a name and a Parameter
 type NameParameter struct {
 	Name      string
 	Parameter interface{}
