@@ -72,6 +72,12 @@ func TestGatewayVerification(t *testing.T) {
 			wantIsAllowed: false,
 		},
 		{
+			name:          "no host",
+			idParam:       "1",
+			wantId:        "1",
+			wantIsAllowed: false,
+		},
+		{
 			name:     "gateway deleting",
 			host:     "account2.blob.storageEndpointSuffix",
 			wantErr:  "gateway for linkId deleting is being deleted",
@@ -96,8 +102,17 @@ func TestGatewayVerification(t *testing.T) {
 				Return(&azureclient.AROEnvironment{Environment: azure.Environment{StorageEndpointSuffix: "storageEndpointSuffix"}}).
 				AnyTimes()
 
+			mock_metrics := mock_metrics.NewMockInterface(mockController)
+
+			if tt.host == "" {
+				mock_metrics.EXPECT().EmitGauge("gateway.nohost", int64(1), map[string]string{
+					"linkid": tt.idParam,
+					"action": "denied",
+				}).MinTimes(1)
+			}
+
 			gateway := gateway{
-				m:         mock_metrics.NewMockInterface(mockController),
+				m:         mock_metrics,
 				gateways:  gatewayMap,
 				env:       mockCore,
 				allowList: tt.allowList,
