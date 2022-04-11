@@ -181,7 +181,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	if len(vnetResourceGroup) > 15 {
 		// keyvault names need to have a maximum length of 24,
 		// so we need to cut off some chars if the resource group name is too long
-		kvName = vnetResourceGroup[:14] + generator.SharedKeyVaultNameSuffix
+		kvName = vnetResourceGroup[:15] + generator.SharedKeyVaultNameSuffix
 	} else {
 		kvName = vnetResourceGroup + generator.SharedKeyVaultNameSuffix
 	}
