@@ -29,14 +29,6 @@ func TestRequestValidation(t *testing.T) {
 			wantErr:    true,
 		},
 		{
-			name:       "get https different subnet",
-			method:     http.MethodGet,
-			subnet:     "127.0.0.1/24",
-			hostname:   "https://10.0.0.2:123",
-			wantStatus: http.StatusMethodNotAllowed,
-			wantErr:    true,
-		},
-		{
 			name:       "connect http same subnet",
 			method:     http.MethodConnect,
 			subnet:     "127.0.0.1/24",
@@ -85,7 +77,6 @@ func TestRequestValidation(t *testing.T) {
 				fmt.Println(response.StatusCode, tt.wantStatus)
 				t.Error(tt.hostname)
 			}
-
 		})
 	}
 }
