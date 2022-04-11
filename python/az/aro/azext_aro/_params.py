@@ -46,7 +46,6 @@ def load_arguments(self, _):
                    options_list=['--fips-validated-modules', '--fips'],
                    help='Use FIPS validated cryptography modules.')
 
-
         c.argument('client_id',
                    help='Client ID of cluster service principal.',
                    validator=validate_client_id)
