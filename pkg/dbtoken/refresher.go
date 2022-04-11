@@ -33,11 +33,11 @@ type refresher struct {
 
 	lastRefresh atomic.Value //time.Time
 
-	m            metrics.Interface
+	m            metrics.Emitter
 	metricPrefix string
 }
 
-func NewRefresher(log *logrus.Entry, env env.Core, authorizer autorest.Authorizer, insecureSkipVerify bool, dbc cosmosdb.DatabaseClient, permission string, m metrics.Interface, metricPrefix string) (Refresher, error) {
+func NewRefresher(log *logrus.Entry, env env.Core, authorizer autorest.Authorizer, insecureSkipVerify bool, dbc cosmosdb.DatabaseClient, permission string, m metrics.Emitter, metricPrefix string) (Refresher, error) {
 	c, err := NewClient(env, authorizer, insecureSkipVerify)
 	if err != nil {
 		return nil, err

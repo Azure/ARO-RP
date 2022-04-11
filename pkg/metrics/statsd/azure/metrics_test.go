@@ -18,7 +18,7 @@ func TestTracer(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	m := mock_metrics.NewMockInterface(controller)
+	m := mock_metrics.NewMockEmitter(controller)
 
 	m.EXPECT().EmitGauge("client.azure.duration", gomock.Any(), map[string]string{
 		"client": "test",

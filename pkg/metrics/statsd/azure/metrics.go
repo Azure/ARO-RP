@@ -17,7 +17,7 @@ import (
 var _ tracing.Tracer = (*tracer)(nil)
 
 type tracer struct {
-	m metrics.Interface
+	m metrics.Emitter
 }
 
 type contextKey int
@@ -31,7 +31,7 @@ type metric struct {
 	name string
 }
 
-func New(m metrics.Interface) tracing.Tracer {
+func New(m metrics.Emitter) tracing.Tracer {
 	return &tracer{
 		m: m,
 	}
