@@ -74,7 +74,7 @@ func TestRequestValidation(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(tt.method, tt.hostname, nil)
 
-			err = server.validateProxyResquest(recorder, request)
+			err = server.validateProxyRequest(recorder, request)
 			if (err != nil && !tt.wantErr) || (err == nil && tt.wantErr) {
 				t.Error(err)
 			}
@@ -87,7 +87,5 @@ func TestRequestValidation(t *testing.T) {
 			}
 
 		})
-
 	}
-
 }

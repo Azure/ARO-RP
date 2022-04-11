@@ -98,16 +98,16 @@ func (s *Server) Run() error {
 }
 
 func (s Server) proxyHandler(w http.ResponseWriter, r *http.Request) {
-	err := s.validateProxyResquest(w, r)
+	err := s.validateProxyRequest(w, r)
 	if err != nil {
 		return
 	}
 	Proxy(s.Log, w, r, 0)
 }
 
-// validateProxyResquest checks that the request is valid. If not, it writes the
+// validateProxyRequest checks that the request is valid. If not, it writes the
 // appropriate http headers and returns an error.
-func (s Server) validateProxyResquest(w http.ResponseWriter, r *http.Request) error {
+func (s Server) validateProxyRequest(w http.ResponseWriter, r *http.Request) error {
 
 	ip, _, err := net.SplitHostPort(r.Host)
 	if err != nil {
