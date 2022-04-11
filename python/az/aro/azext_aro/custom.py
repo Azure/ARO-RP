@@ -40,6 +40,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                pull_secret=None,
                domain=None,
                cluster_resource_group=None,
+               fips_validated_modules=None,
                client_id=None,
                client_secret=None,
                pod_cidr=None,
@@ -102,6 +103,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
             domain=domain or random_id,
             resource_group_id=(f"/subscriptions/{subscription_id}"
                                f"/resourceGroups/{cluster_resource_group or 'aro-' + random_id}"),
+            fips_validated_modules='Enabled' if fips_validated_modules else 'Disabled',
         ),
         service_principal_profile=openshiftcluster.ServicePrincipalProfile(
             client_id=client_id,
