@@ -332,15 +332,26 @@ func TestMakeURLSegments(t *testing.T) {
 			want:      []string{"apis", "test-group", "4.10", "test-resource", "test-name-3"},
 		},
 		{
+			uname: "Namespace is not empty",
+			gvr: &schema.GroupVersionResource{
+				Group:    "test-group",
+				Version:  "4.10",
+				Resource: "test-resource",
+			},
+			namespace: "openshift-sdn",
+			name:      "test-name-3",
+			want:      []string{"apis", "test-group", "4.10", "namespaces", "openshift-sdn", "test-resource", "test-name-3"},
+		},
+		{
 			uname: "Name is empty",
 			gvr: &schema.GroupVersionResource{
 				Group:    "test-group",
 				Version:  "4.10",
 				Resource: "test-resource",
 			},
-			namespace: "",
+			namespace: "openshift-ns",
 			name:      "",
-			want:      []string{"apis", "test-group", "4.10", "test-resource"},
+			want:      []string{"apis", "test-group", "4.10", "namespaces", "openshift-ns", "test-resource"},
 		},
 	} {
 		t.Run(tt.uname, func(t *testing.T) {
