@@ -51,7 +51,7 @@ func (mon *Monitor) emitPodConditions(ctx context.Context) error {
 
 func (mon *Monitor) _emitPodConditions(ps *corev1.PodList) {
 	for _, p := range ps.Items {
-		if !namespace.FilteredOpenShiftNamespace(p.Namespace) {
+		if !namespace.IsOpenShiftNamespace(p.Namespace) {
 			continue
 		}
 
@@ -89,7 +89,7 @@ func (mon *Monitor) _emitPodConditions(ps *corev1.PodList) {
 
 func (mon *Monitor) _emitPodContainerStatuses(ps *corev1.PodList) {
 	for _, p := range ps.Items {
-		if !namespace.FilteredOpenShiftNamespace(p.Namespace) {
+		if !namespace.IsOpenShiftNamespace(p.Namespace) {
 			continue
 		}
 
@@ -126,7 +126,7 @@ func (mon *Monitor) _emitPodContainerStatuses(ps *corev1.PodList) {
 
 func (mon *Monitor) _emitPodContainerRestartCounter(ps *corev1.PodList) {
 	for _, p := range ps.Items {
-		if !namespace.FilteredOpenShiftNamespace(p.Namespace) {
+		if !namespace.IsOpenShiftNamespace(p.Namespace) {
 			continue
 		}
 

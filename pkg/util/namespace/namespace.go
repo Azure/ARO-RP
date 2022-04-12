@@ -3,16 +3,22 @@ package namespace
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// FilteredOpenShiftNamespace returns true if ns is a namespace in the defined hardcoded map
-func FilteredOpenShiftNamespace(ns string) bool {
-	filteredNamespaces := map[string]struct{}{
-		"":                                                 {},
+// IsOpenShiftNamespace returns true if ns is a namespace in the defined hardcoded map
+func IsOpenShiftNamespace(ns string) bool {
+	GetNamespace := map[string]struct{}{
+		// Added "" to satisfy unit tests
+		"": {},
+
+		// ARO specific namespaces
+		"openshift-azure-logging":            {},
+		"openshift-azure-operator":           {},
+		"openshift-managed-upgrade-operator": {},
+
+		// OCP namespaces
 		"openshift":                                        {},
 		"openshift-apiserver":                              {},
 		"openshift-apiserver-operator":                     {},
 		"openshift-authentication-operator":                {},
-		"openshift-azure-logging":                          {},
-		"openshift-azure-operator":                         {},
 		"openshift-cloud-controller-manager":               {},
 		"openshift-cloud-controller-manager-operator":      {},
 		"openshift-cloud-credential-operator":              {},
@@ -50,7 +56,6 @@ func FilteredOpenShiftNamespace(ns string) bool {
 		"openshift-kube-storage-version-migrator-operator": {},
 		"openshift-machine-api":                            {},
 		"openshift-machine-config-operator":                {},
-		"openshift-managed-upgrade-operator":               {},
 		"openshift-marketplace":                            {},
 		"openshift-monitoring":                             {},
 		"openshift-multus":                                 {},
@@ -64,9 +69,7 @@ func FilteredOpenShiftNamespace(ns string) bool {
 		"openshift-sdn":                                    {},
 		"openshift-service-ca":                             {},
 		"openshift-service-ca-operator":                    {},
-		"openshift-user-workload-monitoring":               {},
-		"openshift-vsphere-infra":                          {},
 	}
-	_, ok := filteredNamespaces[ns]
+	_, ok := GetNamespace[ns]
 	return ok
 }

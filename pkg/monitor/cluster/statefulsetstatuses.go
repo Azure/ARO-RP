@@ -24,7 +24,7 @@ func (mon *Monitor) emitStatefulsetStatuses(ctx context.Context) error {
 		count += int64(len(sss.Items))
 
 		for _, ss := range sss.Items {
-			if !namespace.FilteredOpenShiftNamespace(ss.Namespace) {
+			if !namespace.IsOpenShiftNamespace(ss.Namespace) {
 				continue
 			}
 

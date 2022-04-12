@@ -24,7 +24,7 @@ func (mon *Monitor) emitReplicasetStatuses(ctx context.Context) error {
 		count += int64(len(rss.Items))
 
 		for _, rs := range rss.Items {
-			if !namespace.FilteredOpenShiftNamespace(rs.Namespace) {
+			if !namespace.IsOpenShiftNamespace(rs.Namespace) {
 				continue
 			}
 

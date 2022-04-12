@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestFilteredOpenShiftNamespace(t *testing.T) {
+func TestIsOpenShiftNamespace(t *testing.T) {
 	for _, tt := range []struct {
 		namespace string
 		want      bool
@@ -54,7 +54,7 @@ func TestFilteredOpenShiftNamespace(t *testing.T) {
 		},
 	} {
 		t.Run(tt.namespace, func(t *testing.T) {
-			got := FilteredOpenShiftNamespace(tt.namespace)
+			got := IsOpenShiftNamespace(tt.namespace)
 			if tt.want != got {
 				t.Error(got)
 			}
