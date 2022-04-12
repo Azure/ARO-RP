@@ -132,7 +132,7 @@ secrets:
 secrets-update:
 	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
 	tar -czf secrets.tar.gz secrets
-	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --overwrite --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
+	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
 	rm secrets.tar.gz
 
 tunnel:
@@ -174,6 +174,13 @@ test-python: pyenv az
 
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
+	$(MAKE) update-admin.kubeconfig
+
+# ! Temporary solution till dns can be migrated to new subscription
+PUBLIC_IP_ADDR = $(shell az network dns record-set a show -g ${RESOURCEGROUP} --zone-name ${LOCATION}.${PARENT_DOMAIN_NAME} -n api.${CLUSTER} --query aRecords[0].ipv4Address)
+PUBLIC_IP_FQDN = $(shell az network dns record-set a show -g ${RESOURCEGROUP} --zone-name ${LOCATION}.${PARENT_DOMAIN_NAME} -n api.${CLUSTER} --query fqdn)
+update-admin.kubeconfig:
+	sudo -- sh -c -e "echo '$(PUBLIC_IP_ADDR) ${PUBLIC_IP_FQDN}' >> /etc/hosts";
 
 vendor:
 	# See comments in the script for background on why we need it

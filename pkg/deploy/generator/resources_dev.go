@@ -509,8 +509,8 @@ const (
 	sharedKeyVaultName          = "concat(take(resourceGroup().name,15), '" + SharedKeyVaultNameSuffix + "')"
 	sharedDiskEncryptionSetName = "concat(resourceGroup().name, '" + SharedDiskEncryptionSetNameSuffix + "')"
 	sharedDiskEncryptionKeyName = "concat(resourceGroup().name, '-disk-encryption-key')"
-
-	SharedKeyVaultNameSuffix          = "-sharedKV"
+	// cannot have two keyvaults with same name, change after migration
+	SharedKeyVaultNameSuffix          = "-dev-sharedKV"
 	SharedDiskEncryptionSetNameSuffix = "-disk-encryption-set"
 )
 
