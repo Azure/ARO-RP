@@ -95,7 +95,7 @@
     1. Copy ./secrets/rp-vnet/OpenVPN/vpnconfig.json to ./secrets/vpn-rp-eastus.ovpn
     1. Copy the last two certificates ("P2S client certificate" and "P2S client certificate private key") from ./secrets/vpn-eastus.ovpn file to ./secrets/vpn-rp-eastus.ovpn. You can overwrite the placeholders for those certificates at the bottom in the ./secrets/vpn-rp-eastus.ovpn file.
     1. Execute openvpn secrets/vpn-rp-eastus.ovpn. You may need sudo depending on your environment.
-  1. For azure vpn client:
+  1. For azure vpn client (the azure vpn client for windows appears to require extra efforts; this is only for MacOS atm):
     1. Click the 'import' button in the vpn list, you will be prompted with an "open file dialog".
     1. Select the file: ./secrets/rp-vnet/AzureVPN/azurevpnconfig.xml. The data will be filled into the import screen with the exception of "Client Certificate Public Key Data" and "Private Key".
     1. Copy the "P2S client certificate" into the "Client Certificate Public Key Data" field and "P2S client certificate private key" into the "Private Key" field.
