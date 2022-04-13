@@ -167,6 +167,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.initializeKubernetesClients),
 			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 			steps.Condition(m.bootstrapConfigMapReady, 30*time.Minute, true),
+			steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Action(m.ensureAROOperator),
 			steps.Action(m.incrInstallPhase),
 		},
