@@ -116,6 +116,13 @@ questions or comments.
 
     * machineset: Ensures that a minimum of two worker replicas are met.
 
+    * machinehealthcheck: Ensures the MachineHealthCheck resource is running as configured so that at most one worker node at a time is automatically
+      reconciled when not ready for at least 5 minutes.
+        * The CR will only be applied when both `aro.machinehealthcheck.managed` and `aro.machinehealthcheck.enabled` are set to `"true"`.
+        * When `aro.machinehealthcheck.enabled` is `"false"` and `aro.machinehealthcheck.managed` is `"false"` the CR will be removed from the cluster.
+        * If `aro.machinehealthcheck.enabled` is `"false"` no actions will be taken to modify the CR.
+        * More information around the MHC CR can be found [in openshift documentation of MHC](https://docs.openshift.com/container-platform/4.9/machine_management/deploying-machine-health-checks.html)
+
     * monitoring: Ensures that the OpenShift monitoring configuration in the `openshift-monitoring` namespace is consistent and immutable.
 
     * node: Force deletes pods when a node fails to drain for 1 hour.  It should clear up any pods that refuse to be evicted on a drain due to violating a pod disruption budget.
