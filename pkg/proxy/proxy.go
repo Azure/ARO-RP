@@ -6,6 +6,7 @@ package proxy
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net"
@@ -25,6 +26,7 @@ type Server struct {
 	KeyFile        string
 	ClientCertFile string
 	Subnet         string
+	subnet         *net.IPNet
 }
 
 func (s *Server) Run() error {
@@ -32,6 +34,7 @@ func (s *Server) Run() error {
 	if err != nil {
 		return err
 	}
+	s.subnet = subnet
 
 	b, err := ioutil.ReadFile(s.ClientCertFile)
 	if err != nil {
@@ -92,25 +95,38 @@ func (s *Server) Run() error {
 		return err
 	}
 
-	return http.Serve(l, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodConnect {
-			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-			return
-		}
+	return http.Serve(l, http.HandlerFunc(s.proxyHandler))
+}
 
-		ip, _, err := net.SplitHostPort(r.Host)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+func (s Server) proxyHandler(w http.ResponseWriter, r *http.Request) {
+	err := s.validateProxyRequest(w, r)
+	if err != nil {
+		return
+	}
+	Proxy(s.Log, w, r, 0)
+}
 
-		if !subnet.Contains(net.ParseIP(ip)) {
-			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-			return
-		}
+// validateProxyRequest checks that the request is valid. If not, it writes the
+// appropriate http headers and returns an error.
+func (s Server) validateProxyRequest(w http.ResponseWriter, r *http.Request) error {
 
-		Proxy(s.Log, w, r, 0)
-	}))
+	ip, _, err := net.SplitHostPort(r.Host)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return err
+	}
+
+	if r.Method != http.MethodConnect {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return errors.New("Request is not valid, method is not CONNECT")
+	}
+
+	if !s.subnet.Contains(net.ParseIP(ip)) {
+		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		return errors.New("Request is not allowed, the originating IP is not part of the allowed subnet")
+	}
+
+	return nil
 }
 
 // Proxy takes an HTTP/1.x CONNECT Request and ResponseWriter from the Golang
