@@ -19,7 +19,7 @@ jobs:
   - template: ./templates/template-clean-subscription.yml
     parameters:
       dryRun: ${{ parameters.dryRun }}
-      subscriptionCredentialsJSON: $(aro-v4-e2e-devops-spn)
+      subscriptionCredentialsJSON: $(aro-ado-pipeline-secrets)
       subscriptionId: $(subscriptionId)
       purgeCreatedTag: $(purgeCreatedTag)
       resourceGroupDeletePrefixes: $(resourceGroupDeletePrefixes)
