@@ -24,11 +24,11 @@ type Runnable interface {
 // refactor our entire metrics stack to do things that way.
 type golang struct {
 	log *logrus.Entry
-	m   metrics.Interface
+	m   metrics.Emitter
 	r   *prometheus.Registry
 }
 
-func NewMetrics(log *logrus.Entry, m metrics.Interface) (Runnable, error) {
+func NewMetrics(log *logrus.Entry, m metrics.Emitter) (Runnable, error) {
 	g := &golang{
 		log: log,
 		m:   m,
