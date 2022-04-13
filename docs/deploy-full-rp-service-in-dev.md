@@ -93,7 +93,7 @@
 
 <!-- TODO: this is almost duplicated elsewhere.  Would be nice to move to common area -->
 1. Update the certificates in keyvault
-    > __NOTE:__ If you reuse an old name, you might run into soft-delete of the keyvaults. `az keyvault recover --name` to fix this.
+    > __NOTE:__ If you reuse an old name, you might run into soft-delete of the keyvaults. Run `az keyvault recover --name` to fix this.
 
     > __NOTE:__ Check to ensure that the $KEYVAULT_PREFIX environment variable set on workstation matches the prefix deployed into the resource group.
 
