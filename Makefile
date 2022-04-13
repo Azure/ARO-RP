@@ -171,6 +171,9 @@ lint-admin-portal:
 	docker build -f Dockerfile.portal_lint . -t linter
 	docker run -it --rm localhost/linter ./src --ext .ts
 
+test-image-pull:
+	docker run --network="host" -d -p 4444:4444 selenium/standalone-chrome:latest
+
 test-python: pyenv az
 	. pyenv/bin/activate && \
 		azdev linter && \
