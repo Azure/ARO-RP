@@ -201,9 +201,7 @@ locations.
    * Click 'Add permissions'
    * This request will need to be approved by a tenant administrator. If you are one, you can click the `Grant admin consent for <name>` button to the right of the `Add a permission` button on the app page
 
-1. Set up the RP role definitions and subscription role assignments in your
-   Azure subscription. This mimics the RBAC that ARM sets up.  With at least
-   `User Access Administrator` permissions on your subscription, do:
+1. Set up the RP role definitions and subscription role assignments in your Azure subscription. The usage of "uuidgen" for fpRoleDefinitionId is simply there to keep from interfering with any linked resources and to create the role net new. This mimics the RBAC that ARM sets up. With at least `User Access Administrator` permissions on your subscription, do:
 
    ```bash
    LOCATION=eastus
