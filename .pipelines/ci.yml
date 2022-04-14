@@ -102,3 +102,12 @@ jobs:
       set -xe
       make lint-admin-portal
     displayName: 🧹 Lint Admin Portal
+
+- job: Check_Image_Pull
+  pool:
+    name: ARO-CI
+  steps:
+  - script: |
+      set -xe
+      make test-image-pull
+    displayName: Just checking
