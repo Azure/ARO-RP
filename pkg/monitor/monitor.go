@@ -29,8 +29,8 @@ type monitor struct {
 	dbOpenShiftClusters database.OpenShiftClusters
 	dbSubscriptions     database.Subscriptions
 
-	m        metrics.Interface
-	clusterm metrics.Interface
+	m        metrics.Emitter
+	clusterm metrics.Emitter
 	mu       sync.RWMutex
 	docs     map[string]*cacheDoc
 	subs     map[string]*api.SubscriptionDocument
@@ -48,7 +48,7 @@ type Runnable interface {
 	Run(context.Context) error
 }
 
-func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Interface) Runnable {
+func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Emitter) Runnable {
 	return &monitor{
 		baseLog: log,
 		dialer:  dialer,

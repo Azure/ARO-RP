@@ -18,11 +18,11 @@ var _ http.RoundTripper = (*tracerRoundTripper)(nil)
 
 type tracerRoundTripper struct {
 	log *logrus.Entry
-	m   metrics.Interface
+	m   metrics.Emitter
 	tr  http.RoundTripper
 }
 
-func New(log *logrus.Entry, tr *http.Transport, m metrics.Interface) *tracerRoundTripper {
+func New(log *logrus.Entry, tr *http.Transport, m metrics.Emitter) *tracerRoundTripper {
 	return &tracerRoundTripper{
 		log: log,
 		m:   m,

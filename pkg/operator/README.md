@@ -65,6 +65,13 @@ Make sure KUBECONFIG is set:
 ```sh
 make admin.kubeconfig
 export KUBECONFIG=$(pwd)/admin.kubeconfig
+```
+If you are using a private cluster, you need to connect to the respective VPN of your region. For example for eastus:
+```sh
+sudo openvpn --config secrets/vpn-eastus.ovpn
+```
+Then do:
+```sh
 oc scale -n openshift-azure-operator deployment/aro-operator-master --replicas=0
 make generate
 go run -tags aro ./cmd/aro operator master

@@ -9,10 +9,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/api/v20210901preview"
+	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
 )
 
 const apiv20200430Path = "github.com/Azure/ARO-RP/pkg/api/v20200430"
 const apiv20210901previewPath = "github.com/Azure/ARO-RP/pkg/api/v20210901preview"
+const apiv20220401Path = "github.com/Azure/ARO-RP/pkg/api/v20220401"
 
 type generator struct {
 	exampleOpenShiftClusterPutParameter            func() interface{}
@@ -27,6 +29,7 @@ type generator struct {
 	kubeConfig         bool
 	xmsEnum            []string
 	xmsSecretList      []string
+	xmsIdentifiers     []string
 	commonTypesVersion string
 }
 
@@ -53,6 +56,22 @@ var apis = map[string]*generator{
 
 		xmsEnum:            []string{"VMSize", "SoftwareDefinedNetwork", "EncryptionAtHost", "Visibility"},
 		xmsSecretList:      []string{"kubeconfig", "kubeadminPassword"},
+		commonTypesVersion: "v2",
+		systemData:         true,
+		kubeConfig:         true,
+	},
+	apiv20220401Path: {
+		exampleOpenShiftClusterPutParameter:            v20220401.ExampleOpenShiftClusterPutParameter,
+		exampleOpenShiftClusterPatchParameter:          v20220401.ExampleOpenShiftClusterPatchParameter,
+		exampleOpenShiftClusterResponse:                v20220401.ExampleOpenShiftClusterResponse,
+		exampleOpenShiftClusterCredentialsResponse:     v20220401.ExampleOpenShiftClusterCredentialsResponse,
+		exampleOpenShiftClusterListResponse:            v20220401.ExampleOpenShiftClusterListResponse,
+		exampleOpenShiftClusterAdminKubeconfigResponse: v20220401.ExampleOpenShiftClusterAdminKubeconfigResponse,
+		exampleOperationListResponse:                   api.ExampleOperationListResponse,
+
+		xmsEnum:            []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},
+		xmsSecretList:      []string{"kubeconfig", "kubeadminPassword"},
+		xmsIdentifiers:     []string{},
 		commonTypesVersion: "v2",
 		systemData:         true,
 		kubeConfig:         true,

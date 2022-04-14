@@ -40,6 +40,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
 	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
+	redhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-04-01/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
 
@@ -54,6 +55,7 @@ type Cluster struct {
 	serviceprincipals                 graphrbac.ServicePrincipalClient
 	openshiftclustersv20200430        redhatopenshift20200430.OpenShiftClustersClient
 	openshiftclustersv20210901preview redhatopenshift20210901preview.OpenShiftClustersClient
+	openshiftclustersv20220401        redhatopenshift20220401.OpenShiftClustersClient
 	securitygroups                    network.SecurityGroupsClient
 	subnets                           network.SubnetsClient
 	routetables                       network.RouteTablesClient
@@ -105,6 +107,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		groups:                            features.NewResourceGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20200430:        redhatopenshift20200430.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20210901preview: redhatopenshift20210901preview.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		openshiftclustersv20220401:        redhatopenshift20220401.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		applications:                      graphrbac.NewApplicationsClient(environment.Environment(), environment.TenantID(), graphAuthorizer),
 		serviceprincipals:                 graphrbac.NewServicePrincipalClient(environment.Environment(), environment.TenantID(), graphAuthorizer),
 		securitygroups:                    network.NewSecurityGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
@@ -178,7 +181,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	if len(vnetResourceGroup) > 15 {
 		// keyvault names need to have a maximum length of 24,
 		// so we need to cut off some chars if the resource group name is too long
-		kvName = vnetResourceGroup[:14] + generator.SharedKeyVaultNameSuffix
+		kvName = vnetResourceGroup[:15] + generator.SharedKeyVaultNameSuffix
 	} else {
 		kvName = vnetResourceGroup + generator.SharedKeyVaultNameSuffix
 	}

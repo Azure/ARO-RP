@@ -69,8 +69,24 @@ clean_e2e_db(){
 
 # TODO: CLUSTER and is also recalculated in multiple places
 # in the billing pipelines :-(
-export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+
+
+# if LOCAL_E2E is set, set the value with the local test names
+# If it it not set, it defaults to the build ID 
+if [ -z "${LOCAL_E2E}" ] ; then 
+    export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+    export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+fi
+
+if [ -z "${CLUSTER}" ] ; then 
+    echo "CLUSTER is not set , aborting"
+    exit 1
+fi
+
+if [ -z "${DATABASE_NAME}" ] ; then 
+    echo "DATABASE_NAME is not set , aborting"
+    exit 1
+fi
 
 echo "######################################"
 echo "##### ARO V4 E2e helper sourced ######"
