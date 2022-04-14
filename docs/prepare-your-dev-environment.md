@@ -73,7 +73,7 @@ sudo pip3 install virtualenv
 ## Getting Started
 1. Login to Azure:
     ```bash
-    az login --tenant 64dc69e4-d083-49fc-9569-ebece1dd1408
+    az login
     ```
 
 1. Clone the repository to your local machine:
