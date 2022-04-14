@@ -11,115 +11,65 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, count int) error {
+type azureVM struct {
+	Size      api.VMSize
+	CoreCount int
+	Family    string
+}
+
+func vmFromSize(vmType api.VMSize) (azureVM, bool) {
+	vm, ok := _vmTypesMap[vmType]
+	return vm, ok
+}
+
+// this should be considered as a const and only accessed via vmFromSize
+var _vmTypesMap map[api.VMSize]azureVM = map[api.VMSize]azureVM{
+	api.VMSizeStandardD2sV3: {Size: api.VMSizeStandardD2sV3, CoreCount: 2, Family: "standardDSv3Family"},
+
+	api.VMSizeStandardD4asV4:  {Size: api.VMSizeStandardD4asV4, CoreCount: 4, Family: "standardDASv4Family"},
+	api.VMSizeStandardD8asV4:  {Size: api.VMSizeStandardD8asV4, CoreCount: 8, Family: "standardDASv4Family"},
+	api.VMSizeStandardD16asV4: {Size: api.VMSizeStandardD16asV4, CoreCount: 16, Family: "standardDASv4Family"},
+	api.VMSizeStandardD32asV4: {Size: api.VMSizeStandardD32asV4, CoreCount: 32, Family: "standardDASv4Family"},
+
+	api.VMSizeStandardD4sV3:  {Size: api.VMSizeStandardD4sV3, CoreCount: 4, Family: "standardDSv3Family"},
+	api.VMSizeStandardD8sV3:  {Size: api.VMSizeStandardD8sV3, CoreCount: 8, Family: "standardDSv3Family"},
+	api.VMSizeStandardD16sV3: {Size: api.VMSizeStandardD16sV3, CoreCount: 16, Family: "standardDSv3Family"},
+	api.VMSizeStandardD32sV3: {Size: api.VMSizeStandardD32sV3, CoreCount: 32, Family: "standardDSv3Family"},
+
+	api.VMSizeStandardE4sV3:   {Size: api.VMSizeStandardE4sV3, CoreCount: 4, Family: "standardESv3Family"},
+	api.VMSizeStandardE8sV3:   {Size: api.VMSizeStandardE8sV3, CoreCount: 8, Family: "standardESv3Family"},
+	api.VMSizeStandardE16sV3:  {Size: api.VMSizeStandardE16sV3, CoreCount: 16, Family: "standardESv3Family"},
+	api.VMSizeStandardE32sV3:  {Size: api.VMSizeStandardE32sV3, CoreCount: 32, Family: "standardESv3Family"},
+	api.VMSizeStandardE64isV3: {Size: api.VMSizeStandardE64isV3, CoreCount: 64, Family: "standardESv3Family"},
+	api.VMSizeStandardE64iV3:  {Size: api.VMSizeStandardE64iV3, CoreCount: 64, Family: "standardESv3Family"},
+
+	api.VMSizeStandardF4sV2:  {Size: api.VMSizeStandardF4sV2, CoreCount: 4, Family: "standardFSv2Family"},
+	api.VMSizeStandardF8sV2:  {Size: api.VMSizeStandardF8sV2, CoreCount: 8, Family: "standardFSv2Family"},
+	api.VMSizeStandardF16sV2: {Size: api.VMSizeStandardF16sV2, CoreCount: 16, Family: "standardFSv2Family"},
+	api.VMSizeStandardF32sV2: {Size: api.VMSizeStandardF32sV2, CoreCount: 32, Family: "standardFSv2Family"},
+	api.VMSizeStandardF72sV2: {Size: api.VMSizeStandardF72sV2, CoreCount: 72, Family: "standardFSv2Family"},
+
+	api.VMSizeStandardM128ms: {Size: api.VMSizeStandardM128ms, CoreCount: 128, Family: "standardMSFamily"},
+	api.VMSizeStandardG5:     {Size: api.VMSizeStandardG5, CoreCount: 32, Family: "standardGFamily"},
+	api.VMSizeStandardGS5:    {Size: api.VMSizeStandardGS5, CoreCount: 32, Family: "standardGFamily"},
+
+	api.VMSizeStandardL4s:    {Size: api.VMSizeStandardL4s, CoreCount: 4, Family: "standardLsv2Family"},
+	api.VMSizeStandardL8s:    {Size: api.VMSizeStandardL8s, CoreCount: 8, Family: "standardLsv2Family"},
+	api.VMSizeStandardL16s:   {Size: api.VMSizeStandardL16s, CoreCount: 16, Family: "standardLsv2Family"},
+	api.VMSizeStandardL32s:   {Size: api.VMSizeStandardL32s, CoreCount: 32, Family: "standardLsv2Family"},
+	api.VMSizeStandardL8sV2:  {Size: api.VMSizeStandardL8sV2, CoreCount: 8, Family: "standardLsv2Family"},
+	api.VMSizeStandardL16sV2: {Size: api.VMSizeStandardL16sV2, CoreCount: 16, Family: "standardLsv2Family"},
+	api.VMSizeStandardL32sV2: {Size: api.VMSizeStandardL32sV2, CoreCount: 32, Family: "standardLsv2Family"},
+	api.VMSizeStandardL48sV2: {Size: api.VMSizeStandardL48sV2, CoreCount: 48, Family: "standardLsv2Family"},
+	api.VMSizeStandardL64sV2: {Size: api.VMSizeStandardL64sV2, CoreCount: 64, Family: "standardLsv2Family"},
+}
+
+func addRequiredResources(requiredResources map[string]int, vm azureVM, count int) {
 	requiredResources["virtualMachines"] += count
 	requiredResources["PremiumDiskCount"] += count
-	switch vmSize {
-	case api.VMSizeStandardD2sV3:
-		requiredResources["standardDSv3Family"] += (count * 2)
-		requiredResources["cores"] += (count * 2)
 
-	case api.VMSizeStandardD4asV4:
-		requiredResources["standardDASv4Family"] += (count * 4)
-		requiredResources["cores"] += (count * 4)
-	case api.VMSizeStandardD8asV4:
-		requiredResources["standardDASv4Family"] += (count * 8)
-		requiredResources["cores"] += (count * 8)
-	case api.VMSizeStandardD16asV4:
-		requiredResources["standardDASv4Family"] += (count * 16)
-		requiredResources["cores"] += (count * 16)
-	case api.VMSizeStandardD32asV4:
-		requiredResources["standardDASv4Family"] += (count * 32)
-		requiredResources["cores"] += (count * 32)
-
-	case api.VMSizeStandardD4sV3:
-		requiredResources["standardDSv3Family"] += (count * 4)
-		requiredResources["cores"] += (count * 4)
-	case api.VMSizeStandardD8sV3:
-		requiredResources["standardDSv3Family"] += (count * 8)
-		requiredResources["cores"] += (count * 8)
-	case api.VMSizeStandardD16sV3:
-		requiredResources["standardDSv3Family"] += (count * 16)
-		requiredResources["cores"] += (count * 16)
-	case api.VMSizeStandardD32sV3:
-		requiredResources["standardDSv3Family"] += (count * 32)
-		requiredResources["cores"] += (count * 32)
-
-	case api.VMSizeStandardE4sV3:
-		requiredResources["standardESv3Family"] += (count * 4)
-		requiredResources["cores"] += (count * 4)
-	case api.VMSizeStandardE8sV3:
-		requiredResources["standardESv3Family"] += (count * 8)
-		requiredResources["cores"] += (count * 8)
-	case api.VMSizeStandardE16sV3:
-		requiredResources["standardESv3Family"] += (count * 16)
-		requiredResources["cores"] += (count * 16)
-	case api.VMSizeStandardE32sV3:
-		requiredResources["standardESv3Family"] += (count * 32)
-		requiredResources["cores"] += (count * 32)
-		//Support for Compute isolation
-	case api.VMSizeStandardE64iV3:
-		requiredResources["standardEIv3Family"] += (count * 64)
-		requiredResources["cores"] += (count * 64)
-	case api.VMSizeStandardE64isV3:
-		requiredResources["standardEISv3Family"] += (count * 64)
-		requiredResources["cores"] += (count * 64)
-	case api.VMSizeStandardF4sV2:
-		requiredResources["standardFSv2Family"] += (count * 4)
-		requiredResources["cores"] += (count * 4)
-	case api.VMSizeStandardF8sV2:
-		requiredResources["standardFSv2Family"] += (count * 8)
-		requiredResources["cores"] += (count * 8)
-	case api.VMSizeStandardF16sV2:
-		requiredResources["standardFSv2Family"] += (count * 16)
-		requiredResources["cores"] += (count * 16)
-	case api.VMSizeStandardF32sV2:
-		requiredResources["standardFSv2Family"] += (count * 32)
-		requiredResources["cores"] += (count * 32)
-	case api.VMSizeStandardF72sV2:
-		requiredResources["standardFSv2Family"] += (count * 72)
-		requiredResources["cores"] += (count * 72)
-	case api.VMSizeStandardM128ms:
-		requiredResources["standardMSFamily"] += (count * 128)
-		requiredResources["cores"] += (count * 128)
-	case api.VMSizeStandardG5:
-		requiredResources["standardGFamily"] += (count * 32)
-		requiredResources["cores"] += (count * 32)
-	case api.VMSizeStandardGS5:
-		requiredResources["standardGSFamily"] += (count * 32)
-		requiredResources["cores"] += (count * 32)
-	case api.VMSizeStandardL4s:
-		requiredResources["standardLsFamily"] += (count * 4)
-		requiredResources["cores"] += (count * 4)
-	case api.VMSizeStandardL8s:
-		requiredResources["standardLsFamily"] += (count * 8)
-		requiredResources["cores"] += (count * 8)
-	case api.VMSizeStandardL16s:
-		requiredResources["standardLsFamily"] += (count * 16)
-		requiredResources["cores"] += (count * 16)
-	case api.VMSizeStandardL32s:
-		requiredResources["standardLsFamily"] += (count * 32)
-		requiredResources["cores"] += (count * 32)
-	case api.VMSizeStandardL8sV2:
-		requiredResources["standardLsv2Family"] += (count * 8)
-		requiredResources["cores"] += (count * 8)
-	case api.VMSizeStandardL16sV2:
-		requiredResources["standardLsv2Family"] += (count * 16)
-		requiredResources["cores"] += (count * 16)
-	case api.VMSizeStandardL32sV2:
-		requiredResources["standardLsv2Family"] += (count * 32)
-		requiredResources["cores"] += (count * 32)
-	case api.VMSizeStandardL48sV2:
-		requiredResources["standardLsv2Family"] += (count * 48)
-		requiredResources["cores"] += (count * 48)
-	case api.VMSizeStandardL64sV2:
-		requiredResources["standardLsv2Family"] += (count * 64)
-		requiredResources["cores"] += (count * 64)
-	default:
-		//will only happen if pkg/api verification allows new VMSizes
-		return fmt.Errorf("unexpected node VMSize %s", vmSize)
-	}
-	return nil
+	requiredResources[vm.Family] += vm.CoreCount * count
+	requiredResources["cores"] += vm.CoreCount * count
 }
 
 // ValidateQuota checks usage quotas vs. resources required by cluster before cluster
@@ -133,16 +83,18 @@ func (dv *dynamic) ValidateQuota(ctx context.Context, oc *api.OpenShiftCluster) 
 	}
 
 	requiredResources := map[string]int{}
-	err := addRequiredResources(requiredResources, oc.Properties.MasterProfile.VMSize, 3)
-	if err != nil {
-		return err
+	vm, ok := vmFromSize(oc.Properties.MasterProfile.VMSize)
+	if !ok {
+		return fmt.Errorf("unsupported MasterProfile VMSize %s", oc.Properties.MasterProfile.VMSize)
 	}
+	addRequiredResources(requiredResources, vm, 3)
 	//worker node resource calculation
 	for _, w := range oc.Properties.WorkerProfiles {
-		err = addRequiredResources(requiredResources, w.VMSize, w.Count)
-		if err != nil {
-			return err
+		vm, ok := vmFromSize(w.VMSize)
+		if !ok {
+			return fmt.Errorf("unsupported WorkerProfile VMSize %s", w.VMSize)
 		}
+		addRequiredResources(requiredResources, vm, w.Count)
 	}
 
 	//Public IP Addresses minimum requirement: 2 for ARM template deployment and 1 for kube-controller-manager
