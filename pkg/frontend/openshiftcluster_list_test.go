@@ -162,7 +162,6 @@ func TestListOpenShiftCluster(t *testing.T) {
 				return &v20200430.OpenShiftClusterList{
 					OpenShiftClusters: []*v20200430.OpenShiftCluster{},
 				}
-
 			},
 		},
 		{

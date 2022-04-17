@@ -157,7 +157,6 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 					b, _ := json.Marshal(ocs)
 					t.Error(string(b))
 				}
-
 			} else {
 				cloudErr := &api.CloudError{StatusCode: resp.StatusCode}
 				err = json.Unmarshal(b, &cloudErr)

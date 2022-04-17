@@ -97,7 +97,6 @@ func applyPythonLicense() error {
 				bb = append(bb, []byte("\n\n")...)
 				bb = append(bb, pythonLicense...)
 				bb = append(bb, b[i:]...)
-
 			} else {
 				bb = append(bb, pythonLicense...)
 				bb = append(bb, []byte("\n\n")...)

@@ -221,7 +221,6 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 				doc.Dequeues = 1
 				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = "1.2.3.4"
 				checker.AddOpenShiftClusterDocuments(doc)
-
 			},
 			mocks: func(publicIPAddresses *mock_network.MockPublicIPAddressesClient, dns *mock_dns.MockManager, subnet *mock_subnet.MockManager) {
 				publicIPAddresses.EXPECT().
@@ -267,7 +266,6 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 				doc.Dequeues = 1
 				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = "1.2.3.4"
 				checker.AddOpenShiftClusterDocuments(doc)
-
 			},
 			mocks: func(publicIPAddresses *mock_network.MockPublicIPAddressesClient, dns *mock_dns.MockManager, subnet *mock_subnet.MockManager) {
 				subnet.EXPECT().

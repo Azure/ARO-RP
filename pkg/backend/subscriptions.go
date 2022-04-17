@@ -66,7 +66,6 @@ func (sb *subscriptionBackend) try(ctx context.Context) (bool, error) {
 		if err != nil {
 			log.Error(err)
 		}
-
 	}()
 
 	return true, nil

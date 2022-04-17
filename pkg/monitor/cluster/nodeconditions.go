@@ -32,7 +32,6 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 	mon.emitGauge("node.count", int64(len(ns.Items)), nil)
 
 	for _, n := range ns.Items {
-
 		for _, c := range n.Status.Conditions {
 			if c.Status == nodeConditionsExpected[c.Type] {
 				continue
@@ -63,7 +62,6 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 			"nodeName":       n.Name,
 			"kubeletVersion": n.Status.NodeInfo.KubeletVersion,
 		})
-
 	}
 
 	return nil

@@ -155,7 +155,6 @@ func TestAdminReply(t *testing.T) {
 				if !reflect.DeepEqual(body, tt.wantBody) {
 					t.Error(w.Body.String())
 				}
-
 			} else {
 				if w.Body.Len() > 0 {
 					t.Error(w.Body.String())

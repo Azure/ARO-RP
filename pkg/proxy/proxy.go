@@ -109,7 +109,6 @@ func (s Server) proxyHandler(w http.ResponseWriter, r *http.Request) {
 // validateProxyRequest checks that the request is valid. If not, it writes the
 // appropriate http headers and returns an error.
 func (s Server) validateProxyRequest(w http.ResponseWriter, r *http.Request) error {
-
 	ip, _, err := net.SplitHostPort(r.Host)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -183,5 +182,4 @@ func Proxy(log *logrus.Entry, w http.ResponseWriter, r *http.Request, sz int) {
 		_ = c1.(interface{ CloseWrite() error }).CloseWrite()
 	}()
 	_, _ = io.Copy(c1, c2)
-
 }

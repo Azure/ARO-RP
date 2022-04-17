@@ -159,7 +159,6 @@ func TestIsOperatorAvailable(t *testing.T) {
 			progressingCondition: configv1.ConditionFalse,
 		},
 	} {
-
 		operator := &configv1.ClusterOperator{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "name",

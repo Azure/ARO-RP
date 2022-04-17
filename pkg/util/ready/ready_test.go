@@ -84,7 +84,6 @@ func TestNodeIsReady(t *testing.T) {
 				t.Fatalf("error with NodeIsReady: got %v wanted: %v", got, tt.want)
 			}
 		})
-
 	}
 }
 

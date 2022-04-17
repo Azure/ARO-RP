@@ -46,7 +46,6 @@ func (m *manager) enumerateUserDataSecrets(ctx context.Context) map[corev1.Secre
 	machinesets, err := m.maocli.MachineV1beta1().MachineSets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		m.log.Print(err)
-
 	} else {
 		for _, machineset := range machinesets.Items {
 			ref, err := getUserDataSecretReference(&machineset.ObjectMeta, &machineset.Spec.Template.Spec)
@@ -63,7 +62,6 @@ func (m *manager) enumerateUserDataSecrets(ctx context.Context) map[corev1.Secre
 	machines, err := m.maocli.MachineV1beta1().Machines("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		m.log.Print(err)
-
 	} else {
 		for _, machine := range machines.Items {
 			ref, err := getUserDataSecretReference(&machine.ObjectMeta, &machine.Spec)

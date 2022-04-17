@@ -59,7 +59,6 @@ func (dv *dynamic) ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenS
 		if err != nil {
 			return err
 		}
-
 	}
 
 	return nil
