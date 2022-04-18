@@ -506,7 +506,7 @@ rm cron
 }
 
 const (
-	sharedKeyVaultName          = "concat(take(resourceGroup().name,15), '" + SharedKeyVaultNameSuffix + "')"
+	sharedKeyVaultName          = "concat(take(resourceGroup().name,10), '" + SharedKeyVaultNameSuffix + "')"
 	sharedDiskEncryptionSetName = "concat(resourceGroup().name, '" + SharedDiskEncryptionSetNameSuffix + "')"
 	sharedDiskEncryptionKeyName = "concat(resourceGroup().name, '-disk-encryption-key')"
 	// cannot have two keyvaults with same name, change after migration
