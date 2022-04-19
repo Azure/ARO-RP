@@ -10,7 +10,6 @@ import (
 )
 
 func TestUpdateGateway(t *testing.T) {
-
 	for _, tt := range []struct {
 		name                   string
 		gatewaysAlreadyPresent []*api.Gateway
@@ -39,7 +38,6 @@ func TestUpdateGateway(t *testing.T) {
 			wantValue: false,
 		},
 	} {
-
 		gateway := gateway{
 			gateways: make(map[string]*api.Gateway),
 		}
@@ -57,9 +55,6 @@ func TestUpdateGateway(t *testing.T) {
 			if doc := gateway.gateways[tt.doc.ID]; tt.wantValue && doc == nil {
 				t.Error(doc)
 			}
-
 		})
-
 	}
-
 }
