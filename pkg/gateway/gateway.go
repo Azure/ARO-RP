@@ -155,8 +155,7 @@ func NewGateway(ctx context.Context, env env.Core, baseLog, accessLog *logrus.En
 		},
 
 		allowList: allowList,
-
-		m: m,
+		m:         m,
 	}
 
 	r := mux.NewRouter()
