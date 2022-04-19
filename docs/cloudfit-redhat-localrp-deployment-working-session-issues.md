@@ -1,20 +1,4 @@
-// Added ability to customize the fp role def id to avoid interferring with other subs
-LOCATION=eastus
-az deployment sub create \
- -l $LOCATION \
- --template-file deploy/rbac-development.json \
- --parameters \
-   "armServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_ARM_CLIENT_ID'" --query '[].objectId' -o tsv)" \
-   "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
-   "fpRoleDefinitionId"="$(uuidgen)" \
-   "devServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)" \
- >/dev/null
-
-ERROR: {"status":"Failed","error":{"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/DeployOperations for usage details.","details":[{"code":"BadRequest","message":"{\r\n  \"error\": {\r\n    \"code\": \"RoleAssignmentUpdateNotPermitted\",\r\n    \"message\": \"Tenant ID, application ID, principal ID, and scope are not allowed to be updated.\"\r\n  }\r\n}"},{"code":"Forbidden","message":"{\r\n  \"error\": {\r\n    \"code\": \"LinkedAuthorizationFailed\",\r\n    \"message\": \"The client 'v-cperkins@microsoft.com' with object id 'fa22c3cf-f51f-443c-abeb-830c405d24c7' has permission to perform action 'Microsoft.Authorization/roleDefinitions/write' on scope '/subscriptions/26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8'; however, it does not have permission to perform action 'Microsoft.Authorization/roleDefinitions/write' on the linked scope(s) '/subscriptions/46626fc5-476d-41ad-8c76-2ec49c6994eb' or the linked scope(s) are invalid.\"\r\n  }\r\n}"}]}}
-
-https://ms.portal.azure.com/#blade/HubsExtension/DeploymentDetailsBlade/overview/id/%2Fsubscriptions%2F26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8%2Fproviders%2FMicrosoft.Resources%2Fdeployments%2Frbac-development
-
-### TODO: Make PR for update to ./deploy/rbac-development.json that allows for a custom fpRoleDefinitionId (generated above)
+### TODO: Make PR for update to ./deploy/rbac-development.json that allows for a custom fpRoleDefinitionId (https://github.com/Azure/ARO-RP/pull/2055)
 ### TODO: Make PR for similar issue on deleting a cluster
 ### TODO: Make PR for this issue separate from this branch (below). Just suggest RP-MODE check?
 ***hack in create pkg/util/cluster/cluster.go (this is so that our env vars from secrets/env are used)
