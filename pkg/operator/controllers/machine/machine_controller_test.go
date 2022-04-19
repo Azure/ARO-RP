@@ -230,7 +230,7 @@ func getValidMachine(name, diskSize, imagePublisher, vmSize, offer string, isMas
 			ProviderSpec: machinev1beta1.ProviderSpec{
 				Value: &kruntime.RawExtension{
 					Raw: []byte(fmt.Sprintf(`{
-"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+"apiVersion": "machine.openshift.io/v1beta1",
 "kind": "AzureMachineProviderSpec",
 "osDisk": {
 "diskSizeGB": %v

@@ -39,4 +39,7 @@ func init() {
 	utilruntime.Must(rbacv1defaults.RegisterDefaults(scheme.Scheme))
 	utilruntime.Must(machinev1beta1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(consolev1.AddToScheme(scheme.Scheme))
+
+	// AzureMachineProviderSpec is not registered by default
+	scheme.Scheme.AddKnownTypes(machinev1beta1.GroupVersion, &machinev1beta1.AzureMachineProviderSpec{})
 }
