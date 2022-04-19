@@ -12,7 +12,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	maofake "github.com/openshift/client-go/machine/clientset/versioned/fake"
+	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -24,7 +24,7 @@ import (
 
 func TestMachineReconciler(t *testing.T) {
 	// Fake cluster with AZs
-	newFakeMao1 := func(diskSize, imagePublisher, vmSize, masterVmSize string) *maofake.Clientset {
+	newFakeMao1 := func(diskSize, imagePublisher, vmSize, masterVmSize string) *machinefake.Clientset {
 		master0 := getValidMachine("foo-hx8z7-master-0", "", "", "", "", true)
 		master1 := getValidMachine("foo-hx8z7-master-1", "", "", "", "", true)
 		master2 := getValidMachine("foo-hx8z7-master-2", "", "", masterVmSize, "", true)
@@ -35,11 +35,11 @@ func TestMachineReconciler(t *testing.T) {
 		workerMachineSet1 := workerMachineSet("foo-hx8z7-machineset-1")
 		workerMachineSet2 := workerMachineSet("foo-hx8z7-machineset-2")
 
-		return maofake.NewSimpleClientset(worker0, worker1, worker2, master0, master1, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
+		return machinefake.NewSimpleClientset(worker0, worker1, worker2, master0, master1, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
 	}
 
 	// Fake cluster missing a master
-	newFakeMao2 := func() *maofake.Clientset {
+	newFakeMao2 := func() *machinefake.Clientset {
 		master0 := getValidMachine("foo-hx8z7-master-0", "", "", "", "", true)
 		master2 := getValidMachine("foo-hx8z7-master-2", "", "", "", "", true)
 		worker0 := getValidMachine("foo-hx8z7-worker-0", "", "", "", "", false)
@@ -49,11 +49,11 @@ func TestMachineReconciler(t *testing.T) {
 		workerMachineSet1 := workerMachineSet("foo-hx8z7-machineset-1")
 		workerMachineSet2 := workerMachineSet("foo-hx8z7-machineset-2")
 
-		return maofake.NewSimpleClientset(worker0, worker1, worker2, master0, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
+		return machinefake.NewSimpleClientset(worker0, worker1, worker2, master0, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
 	}
 
 	// Fake cluster missing a worker
-	newFakeMao3 := func() *maofake.Clientset {
+	newFakeMao3 := func() *machinefake.Clientset {
 		master0 := getValidMachine("foo-hx8z7-master-0", "", "", "", "", true)
 		master1 := getValidMachine("foo-hx8z7-master-1", "", "", "", "", true)
 		master2 := getValidMachine("foo-hx8z7-master-2", "", "", "", "", true)
@@ -63,7 +63,7 @@ func TestMachineReconciler(t *testing.T) {
 		workerMachineSet1 := workerMachineSet("foo-hx8z7-machineset-1")
 		workerMachineSet2 := workerMachineSet("foo-hx8z7-machineset-2")
 
-		return maofake.NewSimpleClientset(worker0, worker1, master0, master1, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
+		return machinefake.NewSimpleClientset(worker0, worker1, master0, master1, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
 	}
 
 	baseCluster := arov1alpha1.Cluster{
@@ -79,7 +79,7 @@ func TestMachineReconciler(t *testing.T) {
 	tests := []struct {
 		name           string
 		request        ctrl.Request
-		maocli         *maofake.Clientset
+		maocli         *machinefake.Clientset
 		arocli         *arofake.Clientset
 		wantConditions []operatorv1.OperatorCondition
 	}{

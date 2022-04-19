@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	maofake "github.com/openshift/client-go/machine/clientset/versioned/fake"
+	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -93,7 +93,7 @@ func TestListFromCluster(t *testing.T) {
 			}
 
 			m := kubeManager{
-				maocli:         maofake.NewSimpleClientset(&workerMachine, &masterMachine),
+				maocli:         machinefake.NewSimpleClientset(&workerMachine, &masterMachine),
 				subscriptionID: subscriptionId,
 			}
 

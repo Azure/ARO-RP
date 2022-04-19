@@ -9,7 +9,7 @@ import (
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	maoclient "github.com/openshift/client-go/machine/clientset/versioned"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -31,13 +31,13 @@ type Reconciler struct {
 	log *logrus.Entry
 
 	arocli aroclient.Interface
-	maocli maoclient.Interface
+	maocli machineclient.Interface
 
 	isLocalDevelopmentMode bool
 	role                   string
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, maocli maoclient.Interface, isLocalDevelopmentMode bool, role string) *Reconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, maocli machineclient.Interface, isLocalDevelopmentMode bool, role string) *Reconciler {
 	return &Reconciler{
 		log:                    log,
 		arocli:                 arocli,

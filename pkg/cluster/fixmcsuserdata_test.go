@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	maofake "github.com/openshift/client-go/machine/clientset/versioned/fake"
+	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -149,7 +149,7 @@ func TestFixMCSUserData(t *testing.T) {
 			userDataSecret(t, "openshift-machine-api", "master-user-data", "https://api-int.example.com:22623/config/master", ""),
 			userDataSecret(t, "openshift-machine-api", "worker-user-data", "", "https://api-int.example.com:22623/config/worker"),
 		),
-		maocli: maofake.NewSimpleClientset(
+		maocli: machinefake.NewSimpleClientset(
 			testMachineSet(t, "openshift-machine-api", "worker", &machinev1beta1.AzureMachineProviderSpec{
 				UserDataSecret: &corev1.SecretReference{
 					Name: "worker-user-data",
