@@ -11,7 +11,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	consoleclient "github.com/openshift/client-go/console/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
-	maoclient "github.com/openshift/client-go/machine/clientset/versioned"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
@@ -92,7 +92,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	maocli, err := maoclient.NewForConfig(restConfig)
+	maocli, err := machineclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}

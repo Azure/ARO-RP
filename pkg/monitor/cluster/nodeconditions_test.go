@@ -10,8 +10,8 @@ import (
 
 	"github.com/golang/mock/gomock"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	maoclient "github.com/openshift/client-go/machine/clientset/versioned"
-	maofake "github.com/openshift/client-go/machine/clientset/versioned/fake"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,7 +68,7 @@ func TestEmitNodeConditions(t *testing.T) {
 			},
 		},
 	})
-	maoclient := maofake.NewSimpleClientset(
+	machineclient := machinefake.NewSimpleClientset(
 		&machinev1beta1.Machine{
 			Spec: machinev1beta1.MachineSpec{
 				ProviderSpec: machinev1beta1.ProviderSpec{
@@ -104,7 +104,7 @@ func TestEmitNodeConditions(t *testing.T) {
 
 	mon := &Monitor{
 		cli:    cli,
-		maocli: maoclient,
+		maocli: machineclient,
 		m:      m,
 	}
 
@@ -154,13 +154,13 @@ func TestGetSpotInstances(t *testing.T) {
 
 	for _, tt := range []struct {
 		name                 string
-		maocli               maoclient.Interface
+		maocli               machineclient.Interface
 		node                 corev1.Node
 		expectedSpotInstance bool
 	}{
 		{
 			name: "node is a spot instance",
-			maocli: maofake.NewSimpleClientset(&machinev1beta1.Machine{
+			maocli: machinefake.NewSimpleClientset(&machinev1beta1.Machine{
 				Spec: machinev1beta1.MachineSpec{
 					ProviderSpec: machinev1beta1.ProviderSpec{
 						Value: &kruntime.RawExtension{
@@ -185,7 +185,7 @@ func TestGetSpotInstances(t *testing.T) {
 		},
 		{
 			name: "node is not a spot instance",
-			maocli: maofake.NewSimpleClientset(&machinev1beta1.Machine{
+			maocli: machinefake.NewSimpleClientset(&machinev1beta1.Machine{
 				Spec: machinev1beta1.MachineSpec{
 					ProviderSpec: machinev1beta1.ProviderSpec{
 						Value: &kruntime.RawExtension{
@@ -210,7 +210,7 @@ func TestGetSpotInstances(t *testing.T) {
 		},
 		{
 			name: "node is missing annotation",
-			maocli: maofake.NewSimpleClientset(&machinev1beta1.Machine{
+			maocli: machinefake.NewSimpleClientset(&machinev1beta1.Machine{
 				Spec: machinev1beta1.MachineSpec{
 					ProviderSpec: machinev1beta1.ProviderSpec{
 						Value: &kruntime.RawExtension{
@@ -233,7 +233,7 @@ func TestGetSpotInstances(t *testing.T) {
 		},
 		{
 			name: "malformed json in providerSpec",
-			maocli: maofake.NewSimpleClientset(&machinev1beta1.Machine{
+			maocli: machinefake.NewSimpleClientset(&machinev1beta1.Machine{
 				Spec: machinev1beta1.MachineSpec{
 					ProviderSpec: machinev1beta1.ProviderSpec{
 						Value: &kruntime.RawExtension{

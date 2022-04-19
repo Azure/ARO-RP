@@ -10,7 +10,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	maoclient "github.com/openshift/client-go/machine/clientset/versioned"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -25,7 +25,7 @@ const (
 )
 
 func newWorkerProfilesEnricherTask(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster) (enricherTask, error) {
-	maocli, err := maoclient.NewForConfig(restConfig)
+	maocli, err := machineclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func newWorkerProfilesEnricherTask(log *logrus.Entry, restConfig *rest.Config, o
 
 type workerProfilesEnricherTask struct {
 	log    *logrus.Entry
-	maocli maoclient.Interface
+	maocli machineclient.Interface
 	oc     *api.OpenShiftCluster
 }
 

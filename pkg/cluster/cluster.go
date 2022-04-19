@@ -9,7 +9,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
-	maoclient "github.com/openshift/client-go/machine/clientset/versioned"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
@@ -83,7 +83,7 @@ type manager struct {
 
 	kubernetescli    kubernetes.Interface
 	extensionscli    extensionsclient.Interface
-	maocli           maoclient.Interface
+	maocli           machineclient.Interface
 	mcocli           mcoclient.Interface
 	operatorcli      operatorclient.Interface
 	configcli        configclient.Interface

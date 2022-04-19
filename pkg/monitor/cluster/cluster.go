@@ -12,7 +12,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	maoclient "github.com/openshift/client-go/machine/clientset/versioned"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -35,7 +35,7 @@ type Monitor struct {
 	restconfig *rest.Config
 	cli        kubernetes.Interface
 	configcli  configclient.Interface
-	maocli     maoclient.Interface
+	maocli     machineclient.Interface
 	mcocli     mcoclient.Interface
 	m          metrics.Emitter
 	arocli     aroclient.Interface
@@ -72,7 +72,7 @@ func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config,
 		return nil, err
 	}
 
-	maocli, err := maoclient.NewForConfig(restConfig)
+	maocli, err := machineclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
 	}

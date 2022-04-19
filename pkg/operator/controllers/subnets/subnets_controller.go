@@ -10,7 +10,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	maoclient "github.com/openshift/client-go/machine/clientset/versioned"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,7 +44,7 @@ type Reconciler struct {
 
 	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
-	maocli        maoclient.Interface
+	maocli        machineclient.Interface
 }
 
 // reconcileManager is an instance of the manager instantiated per request
@@ -59,7 +59,7 @@ type reconcileManager struct {
 }
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli maoclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli machineclient.Interface) *Reconciler {
 	return &Reconciler{
 		log:           log,
 		arocli:        arocli,
