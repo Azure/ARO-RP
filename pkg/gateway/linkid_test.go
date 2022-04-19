@@ -102,7 +102,7 @@ func TestGatewayVerification(t *testing.T) {
 				Return(&azureclient.AROEnvironment{Environment: azure.Environment{StorageEndpointSuffix: "storageEndpointSuffix"}}).
 				AnyTimes()
 
-			mock_metrics := mock_metrics.NewMockInterface(mockController)
+			mock_metrics := mock_metrics.NewMockEmitter(mockController)
 
 			if tt.host == "" {
 				mock_metrics.EXPECT().EmitGauge("gateway.nohost", int64(1), map[string]string{
