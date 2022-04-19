@@ -397,7 +397,7 @@
                         "computerNamePrefix": "[concat('rp-', parameters('vmssName'), '-')]",
                         "adminUsername": "cloud-user",
                         "linuxConfiguration": {
-                            "disablePasswordAuthentication": true,
+                            "disablePasswordAuthentication": false,
                             "ssh": {
                                 "publicKeys": [
                                     {
