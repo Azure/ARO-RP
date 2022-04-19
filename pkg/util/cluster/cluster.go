@@ -134,15 +134,29 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return fmt.Errorf("fp service principal id is not found")
 	}
 
-	c.log.Infof("creating AAD application")
-	appID, appSecret, err := c.createApplication(ctx, "aro-"+clusterName)
-	if err != nil {
-		return err
+	appID := ""
+	appSecret := ""
+	spID := ""
+
+	if env.IsLocalDevelopmentMode() {
+		// for local dev the AAD application is setup via the ./docs/prepare-a-shared-rp-development-environment.md instructions, simply retrieve the values from the env
+		appID = os.Getenv("AZURE_CLIENT_ID")
+		appSecret = os.Getenv("AZURE_CLIENT_SECRET")
+		spID = os.Getenv("AZURE_SERVICE_PRINCIPAL_ID")
+	} else {
+		appID, appSecret, err = c.createApplication(ctx, "aro-"+clusterName)
+		if err != nil {
+			return err
+		}
+
+		spID, err = c.createServicePrincipal(ctx, appID)
+		if err != nil {
+			return err
+		}
 	}
 
-	spID, err := c.createServicePrincipal(ctx, appID)
-	if err != nil {
-		return err
+	if (appID == "" || appSecret == "") {
+		return fmt.Errorf("AAD application id and secret must be set")
 	}
 
 	visibility := api.VisibilityPublic
