@@ -118,7 +118,6 @@ func (p *prometheus) modifyResponse(r *http.Response) error {
 	n, err := html.Parse(bytes.NewReader(b))
 	if err != nil {
 		buf.Write(b)
-
 	} else {
 		// walk the HTML parse tree calling makeRelative() on each node
 		walk(n, makeRelative)

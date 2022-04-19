@@ -636,7 +636,6 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestPutOrPatchOpenShiftCluster(t *testing.T) {
@@ -784,7 +783,6 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-
 			},
 			wantSystemDataEnriched: true,
 			wantDocuments: func(c *testdatabase.Checker) {
@@ -1466,7 +1464,6 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 }
 
 func TestEnrichSystemData(t *testing.T) {
-
 	accountID1 := "00000000-0000-0000-0000-000000000001"
 	accountID2 := "00000000-0000-0000-0000-000000000002"
 	timestampString := "2021-01-23T12:34:54.0000000Z"

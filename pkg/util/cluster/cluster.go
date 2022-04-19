@@ -356,7 +356,6 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 				errs = append(errs, err)
 			}
 		}
-
 	} else {
 		// Deleting the deployment does not clean up the associated resources
 		c.log.Info("deleting deployment")
@@ -464,7 +463,6 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 	}
 
 	return c.openshiftclustersv20210901preview.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
-
 }
 
 func (c *Cluster) registerSubscription(ctx context.Context) error {

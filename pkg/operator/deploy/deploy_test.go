@@ -12,7 +12,6 @@ import (
 )
 
 func TestCheckIngressIP(t *testing.T) {
-
 	type test struct {
 		name    string
 		oc      func() *api.OpenShiftClusterProperties

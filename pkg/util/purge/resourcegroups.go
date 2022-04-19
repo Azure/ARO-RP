@@ -93,7 +93,6 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 				}
 			}
 		}
-
 	}
 
 	return nil

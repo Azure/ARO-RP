@@ -358,7 +358,6 @@ func TestLogin(t *testing.T) {
 			if !strings.HasPrefix(w.Header().Get("Location"), "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=&redirect_uri=https%3A%2F%2F%2Fcallback&response_type=code&scope=openid+profile&state=") {
 				t.Error(w.Header().Get("Location"))
 			}
-
 		})
 	}
 }

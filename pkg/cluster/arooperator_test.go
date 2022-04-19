@@ -221,7 +221,6 @@ func TestAroDeploymentReady(t *testing.T) {
 			if err != nil || ok != tt.wantRes {
 				t.Error(err)
 			}
-
 		})
 	}
 }

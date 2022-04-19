@@ -164,7 +164,6 @@ func getNodeUptime(node string) (time.Time, error) {
 	for reader.Scan() {
 		select {
 		case <-ctx.Done():
-			break
 		default:
 			line := reader.Text()
 			message += line

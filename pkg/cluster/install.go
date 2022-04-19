@@ -124,7 +124,6 @@ func (m *manager) Update(ctx context.Context) error {
 
 // Install installs an ARO cluster
 func (m *manager) Install(ctx context.Context) error {
-
 	var (
 		installConfig *installconfig.InstallConfig
 		image         *releaseimage.Image

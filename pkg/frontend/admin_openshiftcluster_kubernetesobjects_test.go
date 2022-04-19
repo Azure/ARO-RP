@@ -51,7 +51,6 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				k.EXPECT().
 					KubeGet(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName).
 					Return([]byte(`{"Kind": "test"}`), nil)
-
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse:   []byte(`{"Kind": "test"}` + "\n"),
@@ -66,7 +65,6 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				k.EXPECT().
 					KubeList(gomock.Any(), tt.objKind, tt.objNamespace).
 					Return([]byte(`{"Kind": "test"}`), nil)
-
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse:   []byte(`{"Kind": "test"}` + "\n"),
@@ -105,7 +103,6 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				k.EXPECT().
 					KubeDelete(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName).
 					Return(nil)
-
 			},
 			wantStatusCode: http.StatusOK,
 		},

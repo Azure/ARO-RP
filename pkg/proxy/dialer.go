@@ -156,5 +156,4 @@ func NewDialer(isLocalDevelopmentMode bool) (Dialer, error) {
 	}
 
 	return d, nil
-
 }

@@ -146,7 +146,6 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 }
 
 func TestEmitPodContainerRestartCounter(t *testing.T) {
-
 	cli := fake.NewSimpleClientset(
 		&corev1.Pod{ // #1 metrics and log entry expected
 			ObjectMeta: metav1.ObjectMeta{

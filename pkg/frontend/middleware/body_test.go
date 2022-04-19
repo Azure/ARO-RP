@@ -96,7 +96,6 @@ func TestBody(t *testing.T) {
 							t.Error(string(body))
 						}
 					}
-
 				} else {
 					var cloudErr *api.CloudError
 					err = json.Unmarshal(w.Body.Bytes(), &cloudErr)

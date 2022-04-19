@@ -23,7 +23,6 @@ import (
 
 func (a *azureActions) VMSerialConsole(ctx context.Context, w http.ResponseWriter,
 	log *logrus.Entry, vmName string) error {
-
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 	vm, err := a.virtualMachines.Get(ctx, clusterRGName, vmName, mgmtcompute.InstanceView)
 	if err != nil {

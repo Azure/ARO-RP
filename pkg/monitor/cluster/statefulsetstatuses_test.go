@@ -73,5 +73,4 @@ func TestEmitStatefulsetStatuses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 }

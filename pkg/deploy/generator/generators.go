@@ -83,7 +83,6 @@ func (g *generator) Artifacts() error {
 		if err != nil {
 			return err
 		}
-
 	} else {
 		err := g.writeTemplate(g.devSharedTemplate(), fileEnvDevelopment)
 		if err != nil {
