@@ -16,7 +16,6 @@ import (
 )
 
 func TestGatewayVerification(t *testing.T) {
-
 	for _, tt := range []struct {
 		name          string
 		host          string
@@ -132,8 +131,6 @@ func TestGatewayVerification(t *testing.T) {
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
 			}
-
 		})
 	}
-
 }

@@ -89,6 +89,5 @@ func TestUpdateFromIterator(t *testing.T) {
 				t.Error(cmp.Diff(gateway.gateways, tt.wantGateways))
 			}
 		})
-
 	}
 }
