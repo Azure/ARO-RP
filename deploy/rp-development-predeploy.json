@@ -74,7 +74,15 @@
                             "networkSecurityGroup": {
                                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]",
                                 "tags": null
-                            }
+                            },
+                            "serviceEndpoints": [
+                                {
+                                    "service": "Microsoft.Storage",
+                                    "locations": [
+                                        "*"
+                                    ]
+                                }
+                            ]
                         },
                         "name": "rp-subnet"
                     }
