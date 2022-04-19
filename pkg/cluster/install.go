@@ -56,8 +56,7 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)), // re-create RP RBAC if needed after tenant migration
 			steps.Action(m.createOrUpdateDenyAssignment),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
-			steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
-			steps.Action(m.migrateStorageAccounts),
+			steps.Action(m.populateRegistryStorageAccountName),
 			steps.Action(m.fixSSH),
 			steps.Action(m.populateDatabaseIntIP),
 			//steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out

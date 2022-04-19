@@ -71,6 +71,11 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context, managed bool) 
 			changed = true
 		}
 
+		// Migrate storage account to v2
+		if account.Kind != mgmtstorage.StorageV2 {
+			changed = true
+		}
+
 		for _, subnet := range subnets {
 			// if subnet ResourceID was found and we need to append
 			found := false
@@ -97,6 +102,7 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context, managed bool) 
 				AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
 					NetworkRuleSet: account.AccountProperties.NetworkRuleSet,
 				},
+				Kind: mgmtstorage.StorageV2,
 			}
 
 			_, err = r.storage.Update(ctx, resourceGroup, accountName, sa)

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/to"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
@@ -79,8 +80,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// If disabled or managed is missing, do nothing
-	managed := strings.EqualFold("true", instance.Spec.OperatorFlags.GetWithDefault(controllerManaged, ""))
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) || !managed {
+	var managed *bool
+	switch strings.ToUpper(instance.Spec.OperatorFlags.GetWithDefault(controllerManaged, "")) {
+	case "TRUE":
+		managed = to.BoolPtr(true)
+	case "FALSE":
+		managed = to.BoolPtr(false)
+	}
+
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) || managed == nil {
 		return reconcile.Result{}, nil
 	}
 
@@ -111,7 +119,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		storage:          storage.NewAccountsClient(&azEnv, resource.SubscriptionID, authorizer),
 	}
 
-	return reconcile.Result{}, manager.reconcileAccounts(ctx, managed)
+	return reconcile.Result{}, manager.reconcileAccounts(ctx, *managed)
 }
 
 // SetupWithManager creates the controller

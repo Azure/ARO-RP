@@ -201,6 +201,13 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// SetDefaults will set defaults on cluster document
 	api.SetDefaults(doc)
 
+	// TODO: remove once we develop using a VPN and traffic comes from a known location
+	// Storage account network lockdown should be unmanaged in local dev mode
+	// so the defaultAction is allow on the storage account
+	if f.env.IsLocalDevelopmentMode() {
+		doc.OpenShiftCluster.Properties.OperatorFlags["aro.storageaccounts.managed"] = "false"
+	}
+
 	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, r, doc)
 	if err != nil {
 		return nil, err

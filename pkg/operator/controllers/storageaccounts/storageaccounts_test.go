@@ -44,7 +44,7 @@ var (
 	gatewayServiceSubnet = "/subscriptions/" + subscriptionId + "/resourceGroups/gwy-vnet/providers/Microsoft.Network/virtualNetworks/gwy-vnet/subnets/gwy-subnet"
 )
 
-func getValidAccount(virtualNetworkResourceIDs []string, defaultAction mgmtstorage.DefaultAction) mgmtstorage.Account {
+func getValidAccount(storageKind mgmtstorage.Kind, virtualNetworkResourceIDs []string, defaultAction mgmtstorage.DefaultAction) mgmtstorage.Account {
 	account := mgmtstorage.Account{
 		AccountProperties: &mgmtstorage.AccountProperties{
 			NetworkRuleSet: &mgmtstorage.NetworkRuleSet{
@@ -52,6 +52,7 @@ func getValidAccount(virtualNetworkResourceIDs []string, defaultAction mgmtstora
 				DefaultAction:       defaultAction,
 			},
 		},
+		Kind: storageKind,
 	}
 
 	for _, rule := range virtualNetworkResourceIDs {
@@ -89,11 +90,11 @@ func (s accountUpdateParamsEq) Matches(actual interface{}) bool {
 		}
 	}
 
-	return accountUpdateParams.NetworkRuleSet.DefaultAction == s.expected.NetworkRuleSet.DefaultAction
+	return accountUpdateParams.NetworkRuleSet.DefaultAction == s.expected.NetworkRuleSet.DefaultAction && accountUpdateParams.Kind == s.expected.Kind
 }
 
 func (s accountUpdateParamsEq) String() string {
-	return "account update parameters equal in any rule order"
+	return fmt.Sprintf("%v", s.expected)
 }
 
 // AccountUpdateParamsEq checks all the rules in the expected account update params
@@ -169,7 +170,7 @@ func TestReconcileAccounts(t *testing.T) {
 			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager) {
 				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{{ResourceID: resourceIdMaster}, {ResourceID: resourceIdWorker}}, nil)
 
-				result := getValidAccount([]string{}, mgmtstorage.DefaultActionDeny)
+				result := getValidAccount(mgmtstorage.StorageV2, []string{}, mgmtstorage.DefaultActionDeny)
 				storage.EXPECT().
 					GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, mgmtstorage.AccountExpand("")).
 					Return(result, nil)
@@ -183,46 +184,46 @@ func TestReconcileAccounts(t *testing.T) {
 			wantErr:           `failed to update storage account`,
 		},
 		{
-			name: "managed == false; reconcile default action and missing subnets",
+			name: "managed == false; reconcile default action, missing subnets, and storage kind",
 			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager) {
 				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{{ResourceID: resourceIdMaster}, {ResourceID: resourceIdWorker}}, nil)
 
 				// storage objects in azure
 				updated := mgmtstorage.AccountUpdateParameters{
 					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
-						NetworkRuleSet: getValidAccount([]string{resourceIdMaster, resourceIdWorker, rpServiceSubnet, gatewayServiceSubnet}, mgmtstorage.DefaultActionAllow).NetworkRuleSet,
+						NetworkRuleSet: getValidAccount(mgmtstorage.StorageV2, []string{resourceIdMaster, resourceIdWorker, rpServiceSubnet, gatewayServiceSubnet}, mgmtstorage.DefaultActionAllow).NetworkRuleSet,
 					},
+					Kind: mgmtstorage.StorageV2,
 				}
 
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, mgmtstorage.AccountExpand("")).Return(getValidAccount([]string{}, mgmtstorage.DefaultActionDeny), nil)
+				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, mgmtstorage.AccountExpand("")).Return(getValidAccount(mgmtstorage.Storage, []string{}, mgmtstorage.DefaultActionDeny), nil)
 				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, AccountUpdateParamsEq(updated))
 
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, mgmtstorage.AccountExpand("")).Return(getValidAccount([]string{}, mgmtstorage.DefaultActionDeny), nil)
+				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, mgmtstorage.AccountExpand("")).Return(getValidAccount(mgmtstorage.Storage, []string{}, mgmtstorage.DefaultActionDeny), nil)
 				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, AccountUpdateParamsEq(updated))
-
 			},
 			imageregistrycli:  imagecli,
 			controllerManaged: false,
 			wantErr:           "",
 		},
 		{
-			name: "managed == true; reconcile default action and missing subnets",
+			name: "managed == true; reconcile default action, missing subnets, and storage kind",
 			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager) {
 				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{{ResourceID: resourceIdMaster}, {ResourceID: resourceIdWorker}}, nil)
 
 				// storage objects in azure
 				updated := mgmtstorage.AccountUpdateParameters{
 					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
-						NetworkRuleSet: getValidAccount([]string{resourceIdMaster, resourceIdWorker, rpServiceSubnet, gatewayServiceSubnet}, mgmtstorage.DefaultActionDeny).NetworkRuleSet,
+						NetworkRuleSet: getValidAccount(mgmtstorage.StorageV2, []string{resourceIdMaster, resourceIdWorker, rpServiceSubnet, gatewayServiceSubnet}, mgmtstorage.DefaultActionDeny).NetworkRuleSet,
 					},
+					Kind: mgmtstorage.StorageV2,
 				}
 
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, mgmtstorage.AccountExpand("")).Return(getValidAccount([]string{}, mgmtstorage.DefaultActionAllow), nil)
+				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, mgmtstorage.AccountExpand("")).Return(getValidAccount(mgmtstorage.Storage, []string{}, mgmtstorage.DefaultActionAllow), nil)
 				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, AccountUpdateParamsEq(updated))
 
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, mgmtstorage.AccountExpand("")).Return(getValidAccount([]string{}, mgmtstorage.DefaultActionAllow), nil)
+				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, mgmtstorage.AccountExpand("")).Return(getValidAccount(mgmtstorage.Storage, []string{}, mgmtstorage.DefaultActionAllow), nil)
 				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, AccountUpdateParamsEq(updated))
-
 			},
 			imageregistrycli:  imagecli,
 			controllerManaged: true,

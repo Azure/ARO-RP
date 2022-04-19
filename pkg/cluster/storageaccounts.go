@@ -13,8 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 // enableServiceEndpoints should enable service endpoints on
@@ -68,29 +66,6 @@ func (m *manager) enableServiceEndpoints(ctx context.Context) error {
 		}
 	}
 	return nil
-}
-
-// migrateStorageAccounts redeploys storage accounts with firewall rules preventing external access
-// The encryption flag is set to false/disabled for legacy storage accounts.
-func (m *manager) migrateStorageAccounts(ctx context.Context) error {
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	if len(m.doc.OpenShiftCluster.Properties.WorkerProfiles) == 0 {
-		m.log.Error("skipping migrateStorageAccounts due to missing WorkerProfiles.")
-		return nil
-	}
-	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
-	registryStorageAccountName := m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName
-
-	t := &arm.Template{
-		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-		ContentVersion: "1.0.0.0",
-		Resources: []*arm.Resource{
-			m.storageAccount(clusterStorageAccountName, m.doc.OpenShiftCluster.Location, false),
-			m.storageAccount(registryStorageAccountName, m.doc.OpenShiftCluster.Location, false),
-		},
-	}
-
-	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
 }
 
 func (m *manager) populateRegistryStorageAccountName(ctx context.Context) error {
