@@ -17,13 +17,7 @@ type azureVM struct {
 	Family    string
 }
 
-func vmFromSize(vmType api.VMSize) (azureVM, bool) {
-	vm, ok := _vmTypesMap[vmType]
-	return vm, ok
-}
-
-// this should be considered as a const and only accessed via vmFromSize
-var _vmTypesMap map[api.VMSize]azureVM = map[api.VMSize]azureVM{
+var vmTypesMap map[api.VMSize]azureVM = map[api.VMSize]azureVM{
 	api.VMSizeStandardD2sV3: {Size: api.VMSizeStandardD2sV3, CoreCount: 2, Family: "standardDSv3Family"},
 
 	api.VMSizeStandardD4asV4:  {Size: api.VMSizeStandardD4asV4, CoreCount: 4, Family: "standardDASv4Family"},
@@ -83,14 +77,14 @@ func (dv *dynamic) ValidateQuota(ctx context.Context, oc *api.OpenShiftCluster) 
 	}
 
 	requiredResources := map[string]int{}
-	vm, ok := vmFromSize(oc.Properties.MasterProfile.VMSize)
+	vm, ok := vmTypesMap[oc.Properties.MasterProfile.VMSize]
 	if !ok {
 		return fmt.Errorf("unsupported MasterProfile VMSize %s", oc.Properties.MasterProfile.VMSize)
 	}
 	addRequiredResources(requiredResources, vm, 3)
 	//worker node resource calculation
 	for _, w := range oc.Properties.WorkerProfiles {
-		vm, ok := vmFromSize(w.VMSize)
+		vm, ok := vmTypesMap[w.VMSize]
 		if !ok {
 			return fmt.Errorf("unsupported WorkerProfile VMSize %s", w.VMSize)
 		}
