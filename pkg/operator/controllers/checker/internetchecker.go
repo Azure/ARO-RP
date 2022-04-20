@@ -112,7 +112,6 @@ func (r *InternetChecker) Check(ctx context.Context) error {
 			Message: "Outgoing connection successful",
 			Reason:  "CheckDone",
 		}
-
 	}
 
 	err = conditions.SetCondition(ctx, r.arocli, condition, r.role)

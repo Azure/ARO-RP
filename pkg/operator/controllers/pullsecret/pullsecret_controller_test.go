@@ -277,7 +277,6 @@ func TestPullSecretReconciler(t *testing.T) {
 			if !reflect.DeepEqual(status.RedHatKeysPresent, tt.wantKeys) {
 				t.Fatalf("Unexpected status found\nwant: %v\ngot: %v", tt.wantKeys, status.RedHatKeysPresent)
 			}
-
 		})
 	}
 }
@@ -319,7 +318,6 @@ func TestParseRedHatKeys(t *testing.T) {
 			if !reflect.DeepEqual(out, tt.wantKeys) {
 				t.Fatalf("Enexpected keys found:\nwant: %v\ngot: %v", tt.wantKeys, out)
 			}
-
 		})
 	}
 }
@@ -652,7 +650,6 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			if !reflect.DeepEqual(s, tt.wantSecret) {
 				t.Fatalf("Unexpected secret mismatch\ngot: %v\nwant: %v", s, tt.wantSecret)
 			}
-
 		})
 	}
 }

@@ -28,7 +28,7 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 		name               string
 		url                string
 		rt                 http.RoundTripper
-		mocks              func(*mock_metrics.MockInterface)
+		mocks              func(*mock_metrics.MockEmitter)
 		wantErr            string
 		wantRespStatusCode int
 	}{
@@ -37,7 +37,7 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 			rt: &testRoundTripper{
 				err: errors.New("roundtrip failed"),
 			},
-			mocks: func(m *mock_metrics.MockInterface) {
+			mocks: func(m *mock_metrics.MockEmitter) {
 				m.EXPECT().EmitGauge("client.cosmosdb.count", int64(1), map[string]string{
 					"verb": http.MethodGet,
 					"path": "/foo",
@@ -66,7 +66,7 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(m *mock_metrics.MockInterface) {
+			mocks: func(m *mock_metrics.MockEmitter) {
 				m.EXPECT().EmitGauge("client.cosmosdb.count", int64(1), map[string]string{
 					"verb": http.MethodGet,
 					"path": "/foo",
@@ -91,7 +91,7 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(m *mock_metrics.MockInterface) {
+			mocks: func(m *mock_metrics.MockEmitter) {
 				m.EXPECT().EmitGauge("client.cosmosdb.count", int64(1), map[string]string{
 					"verb": http.MethodGet,
 					"path": "/docs/{id}",
@@ -115,7 +115,7 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			m := mock_metrics.NewMockInterface(controller)
+			m := mock_metrics.NewMockEmitter(controller)
 			tt.mocks(m)
 
 			tripper := &tracerRoundTripper{

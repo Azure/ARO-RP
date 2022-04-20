@@ -171,7 +171,6 @@ func TestBannerReconcile(t *testing.T) {
 					t.Errorf("Expected not to get a ConsoleNotification, but it exists")
 				}
 			}
-
 		})
 	}
 }

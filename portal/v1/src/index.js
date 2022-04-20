@@ -96,4 +96,8 @@ jQuery(function () {
             dataType: "json",
         });
     });
+
+    $("#btnV2").click(function () {
+        window.location = "/v2";
+    });
 });

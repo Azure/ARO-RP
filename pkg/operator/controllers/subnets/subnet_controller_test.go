@@ -137,7 +137,6 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
-
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: subnetResourceIdMaster,
@@ -172,7 +171,6 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
-
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: subnetResourceIdMaster,
@@ -202,7 +200,6 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
-
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: subnetResourceIdMaster,
@@ -232,7 +229,6 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
-
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: subnetResourceIdMaster,
@@ -270,7 +266,6 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
-
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
 						ResourceID: subnetResourceIdWorker,

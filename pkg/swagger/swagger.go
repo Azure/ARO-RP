@@ -211,6 +211,6 @@ func removeNamedSchemas(list NameSchemas, remove string) NameSchemas {
 		}
 		result = append(result, schema)
 	}
-	return result
 
+	return result
 }

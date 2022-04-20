@@ -37,7 +37,7 @@ type Monitor struct {
 	configcli  configclient.Interface
 	maocli     maoclient.Interface
 	mcocli     mcoclient.Interface
-	m          metrics.Interface
+	m          metrics.Emitter
 	arocli     aroclient.Interface
 
 	// access below only via the helper functions in cache.go
@@ -49,7 +49,7 @@ type Monitor struct {
 	}
 }
 
-func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Interface, hourlyRun bool) (*Monitor, error) {
+func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hourlyRun bool) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err

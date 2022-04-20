@@ -1,8 +1,37 @@
 run:
   timeout: 5m
+  skip-dirs:
+    - vendor/portal
 
 issues:
   exclude-rules:
   - linters:
     - staticcheck
     text: "SA1019: codec.BasicHandle is deprecated"
+  # This is set to false to disregard the default EXC0011 exclusion
+  # which shadows all the ST* checks. Refer https://github.com/golangci/golangci-lint/issues/2281
+  exclude-use-default: false
+
+linters-settings:
+  gofmt:
+    simplify: false
+  
+  stylecheck:
+    # added additional checks for comments in Go. 
+    # Refer https://staticcheck.io/docs/options#checks for details
+    checks: ["all", "-ST1000", "ST1020", "ST1021", "ST1022"]
+
+
+linters:
+  disable-all: true
+  enable:
+    - gofmt
+    - unused
+    - deadcode
+    - gosimple
+    - govet
+    - staticcheck
+    # TODO: Enable the stylecheck linter in a follow-up PR as it requires changes in a lot of files
+    # - stylecheck  
+    - whitespace
+

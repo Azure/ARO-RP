@@ -55,7 +55,6 @@ func (r *reconcileManager) ensureSubnetServiceEndpoints(ctx context.Context, s s
 		if err != nil {
 			return err
 		}
-
 	}
 	return nil
 }

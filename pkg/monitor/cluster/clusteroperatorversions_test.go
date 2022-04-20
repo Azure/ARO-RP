@@ -50,7 +50,7 @@ func TestEmitClusterOperatorVersion(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	m := mock_metrics.NewMockInterface(controller)
+	m := mock_metrics.NewMockEmitter(controller)
 
 	mon := &Monitor{
 		configcli: configcli,

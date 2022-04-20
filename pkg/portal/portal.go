@@ -69,11 +69,12 @@ type portal struct {
 
 	dialer proxy.Dialer
 
-	t *template.Template
+	templateV1 *template.Template
+	templateV2 *template.Template
 
 	aad middleware.AAD
 
-	m metrics.Interface
+	m metrics.Emitter
 }
 
 func NewPortal(env env.Core,
@@ -96,7 +97,7 @@ func NewPortal(env env.Core,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbPortal database.Portal,
 	dialer proxy.Dialer,
-	m metrics.Interface,
+	m metrics.Emitter,
 ) Runnable {
 	return &portal{
 		env:           env,
@@ -136,12 +137,22 @@ func (p *portal) setupRouter() error {
 	r := mux.NewRouter()
 	r.Use(middleware.Panic(p.log))
 
-	asset, err := Asset("index.html")
+	assetv1, err := Asset("v1/build/index.html")
 	if err != nil {
 		return err
 	}
 
-	p.t, err = template.New("index.html").Parse(string(asset))
+	assetv2, err := Asset("v2/build/index.html")
+	if err != nil {
+		return err
+	}
+
+	p.templateV1, err = template.New("index.html").Parse(string(assetv1))
+	if err != nil {
+		return err
+	}
+
+	p.templateV2, err = template.New("index.html").Parse(string(assetv2))
 	if err != nil {
 		return err
 	}
@@ -251,12 +262,20 @@ func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 
 func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 	for _, name := range AssetNames() {
-		if name == "index.html" {
+		if name == "v1/build/index.html" {
 			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.index)
 			continue
 		}
 
-		r.NewRoute().Methods(http.MethodGet).Path("/" + name).HandlerFunc(p.serve(name))
+		if name == "v2/build/index.html" {
+			r.NewRoute().Methods(http.MethodGet).Path("/v2").HandlerFunc(p.indexV2)
+			continue
+		}
+
+		fmtName := strings.TrimPrefix(name, "v1/build/")
+		fmtName = strings.TrimPrefix(fmtName, "v2/build/")
+
+		r.NewRoute().Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
 	}
 
 	r.NewRoute().Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
@@ -270,7 +289,22 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 func (p *portal) index(w http.ResponseWriter, r *http.Request) {
 	buf := &bytes.Buffer{}
 
-	err := p.t.ExecuteTemplate(buf, "index.html", map[string]interface{}{
+	err := p.templateV1.ExecuteTemplate(buf, "index.html", map[string]interface{}{
+		"location":       p.env.Location(),
+		csrf.TemplateTag: csrf.TemplateField(r),
+	})
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(buf.Bytes()))
+}
+
+func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
+	buf := &bytes.Buffer{}
+
+	err := p.templateV2.ExecuteTemplate(buf, "index.html", map[string]interface{}{
 		"location":       p.env.Location(),
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})

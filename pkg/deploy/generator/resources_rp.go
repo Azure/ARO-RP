@@ -1051,8 +1051,8 @@ cat >/etc/default/vsa-nodescan-agent.config <<EOF
   }
 EOF
 
-# we start a cron job to run every hour to ensure the said directory is accessible 
-# by the correct user as it gets created by root and may cause a race condition 
+# we start a cron job to run every hour to ensure the said directory is accessible
+# by the correct user as it gets created by root and may cause a race condition
 # where root owns the dir instead of syslog
 # TODO: https://msazure.visualstudio.com/AzureRedHatOpenShift/_workitems/edit/12591207
 cat >/etc/cron.d/mdsd-chown-workaround <<EOF
@@ -1083,6 +1083,9 @@ restorecon -RF /var/log/*
 				Name:     to.StringPtr("[parameters('vmSize')]"),
 				Tier:     to.StringPtr("Standard"),
 				Capacity: to.Int64Ptr(1338),
+			},
+			Tags: map[string]*string{
+				"SkipLinuxAzSecPack": to.StringPtr("true"),
 			},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
 				UpgradePolicy: &mgmtcompute.UpgradePolicy{

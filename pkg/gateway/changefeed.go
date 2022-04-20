@@ -7,6 +7,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -18,6 +20,10 @@ func (g *gateway) changefeed(ctx context.Context) {
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
 
+	g.updateFromIterator(ctx, t, gwIterator)
+}
+
+func (g *gateway) updateFromIterator(ctx context.Context, ticker *time.Ticker, gwIterator cosmosdb.GatewayDocumentIterator) {
 	for {
 		successful := true
 
@@ -32,18 +38,7 @@ func (g *gateway) changefeed(ctx context.Context) {
 				break
 			}
 
-			g.mu.Lock()
-
-			for _, doc := range docs.GatewayDocuments {
-				if doc.Gateway.Deleting {
-					// https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
-					delete(g.gateways, doc.ID)
-				} else {
-					g.gateways[doc.ID] = doc.Gateway
-				}
-			}
-
-			g.mu.Unlock()
+			g.updateGateways(docs.GatewayDocuments)
 		}
 
 		if successful {
@@ -51,9 +46,23 @@ func (g *gateway) changefeed(ctx context.Context) {
 		}
 
 		select {
-		case <-t.C:
+		case <-ticker.C:
 		case <-ctx.Done():
 			return
+		}
+	}
+}
+
+func (g *gateway) updateGateways(docs []*api.GatewayDocument) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	for _, doc := range docs {
+		if doc.Gateway.Deleting {
+			// https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
+			delete(g.gateways, doc.ID)
+		} else {
+			g.gateways[doc.ID] = doc.Gateway
 		}
 	}
 }

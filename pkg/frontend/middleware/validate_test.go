@@ -120,7 +120,6 @@ func TestValidate(t *testing.T) {
 				if w.Body.String() != "" {
 					t.Error(w.Body.String())
 				}
-
 			} else {
 				t.Log(w.Body.String())
 				var cloudErr *api.CloudError

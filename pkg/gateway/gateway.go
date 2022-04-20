@@ -68,7 +68,7 @@ type gateway struct {
 
 	allowList map[string]struct{}
 
-	m                metrics.Interface
+	m                metrics.Emitter
 	httpConnections  int64
 	httpsConnections int64
 }
@@ -87,7 +87,7 @@ const SocketSize = 65536
 
 // TODO: may one day want to limit gateway readiness on # active connections
 
-func NewGateway(ctx context.Context, env env.Core, baseLog, accessLog *logrus.Entry, dbGateway database.Gateway, httpsl, httpl net.Listener, acrResourceID, gatewayDomains string, m metrics.Interface) (Runnable, error) {
+func NewGateway(ctx context.Context, env env.Core, baseLog, accessLog *logrus.Entry, dbGateway database.Gateway, httpsl, httpl net.Listener, acrResourceID, gatewayDomains string, m metrics.Emitter) (Runnable, error) {
 	var domains []string
 	if gatewayDomains != "" {
 		domains = strings.Split(gatewayDomains, ",")
@@ -155,8 +155,7 @@ func NewGateway(ctx context.Context, env env.Core, baseLog, accessLog *logrus.En
 		},
 
 		allowList: allowList,
-
-		m: m,
+		m:         m,
 	}
 
 	r := mux.NewRouter()
