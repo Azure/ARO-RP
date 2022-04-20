@@ -1096,7 +1096,7 @@ restorecon -RF /var/log/*
 						ComputerNamePrefix: to.StringPtr("[concat('rp-', parameters('vmssName'), '-')]"),
 						AdminUsername:      to.StringPtr("cloud-user"),
 						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
-							DisablePasswordAuthentication: to.BoolPtr(false),
+							DisablePasswordAuthentication: to.BoolPtr(true),
 							SSH: &mgmtcompute.SSHConfiguration{
 								PublicKeys: &[]mgmtcompute.SSHPublicKey{
 									{
