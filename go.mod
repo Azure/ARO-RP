@@ -85,9 +85,11 @@ require (
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/prometheus/client_golang v1.12.0
 	github.com/prometheus/common v0.32.1
+	github.com/serge1peshcoff/selenium-go-conditions v0.0.0-20170824121757-5afbdb74596b
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.3.0 // indirect
 	github.com/stretchr/testify v1.7.0
+	github.com/tebeka/selenium v0.9.9
 	github.com/ugorji/go/codec v1.2.6
 	github.com/vbauerster/mpb/v7 v7.3.2 // indirect
 	github.com/vmware/govmomi v0.27.2 // indirect
@@ -238,7 +240,6 @@ replace (
 	github.com/Unknwon/com => github.com/unknwon/com v1.0.1
 	github.com/clarketm/json => github.com/clarketm/json v1.15.7 // Later versions not compatible with Go 1.16
 	github.com/cockroachdb/sentry-go => github.com/getsentry/sentry-go v0.11.0
-	github.com/docker/spdystream => github.com/docker/spdystream v0.1.0
 	github.com/go-openapi/spec => github.com/go-openapi/spec v0.19.8
 	// Replace old GoGo Protobuf versions https://nvd.nist.gov/vuln/detail/CVE-2021-3121
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
@@ -344,6 +345,5 @@ replace (
 	sigs.k8s.io/cluster-api-provider-openstack => github.com/openshift/cluster-api-provider-openstack v0.0.0-20210820223719-a7442bb18bce
 	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.0
 	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
-	sourcegraph.com/sourcegraph/go-diff => github.com/sourcegraph/go-diff v0.5.1
 	vbom.ml/util => github.com/fvbommel/util v0.0.3
 )

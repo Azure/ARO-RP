@@ -184,6 +184,8 @@ github.com/axw/gocov/gocov/internal/testflag
 github.com/axw/gocov/gocovutil
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
+# github.com/blang/semver v3.5.1+incompatible
+github.com/blang/semver
 # github.com/bombsimon/wsl/v3 v3.1.0
 github.com/bombsimon/wsl/v3
 # github.com/cespare/xxhash/v2 v2.1.2
@@ -995,7 +997,7 @@ github.com/pascaldekloe/name
 # github.com/pborman/uuid v1.2.1
 ## explicit
 github.com/pborman/uuid
-# github.com/pelletier/go-toml v1.8.1
+# github.com/pelletier/go-toml v1.8.0
 github.com/pelletier/go-toml
 # github.com/peterbourgon/diskv v2.0.1+incompatible
 github.com/peterbourgon/diskv
@@ -1050,6 +1052,9 @@ github.com/ryanrolds/sqlclosecheck/pkg/analyzer
 # github.com/securego/gosec/v2 v2.5.0
 github.com/securego/gosec/v2
 github.com/securego/gosec/v2/rules
+# github.com/serge1peshcoff/selenium-go-conditions v0.0.0-20170824121757-5afbdb74596b
+## explicit
+github.com/serge1peshcoff/selenium-go-conditions
 # github.com/shazow/go-diff v0.0.0-20160112020656-b6b7b6733b8c
 github.com/shazow/go-diff/difflib
 # github.com/sirupsen/logrus v1.8.1
@@ -1093,6 +1098,13 @@ github.com/subosito/gotenv
 github.com/syndtr/gocapability/capability
 # github.com/tdakkota/asciicheck v0.0.0-20200416200610-e657995f937b
 github.com/tdakkota/asciicheck
+# github.com/tebeka/selenium v0.9.9
+## explicit
+github.com/tebeka/selenium
+github.com/tebeka/selenium/chrome
+github.com/tebeka/selenium/firefox
+github.com/tebeka/selenium/internal/zip
+github.com/tebeka/selenium/log
 # github.com/tetafro/godot v0.4.9
 github.com/tetafro/godot
 # github.com/timakin/bodyclose v0.0.0-20200424151742-cb6215831a94
@@ -1929,7 +1941,7 @@ sigs.k8s.io/controller-runtime/pkg/certwatcher
 sigs.k8s.io/controller-runtime/pkg/client
 sigs.k8s.io/controller-runtime/pkg/client/apiutil
 sigs.k8s.io/controller-runtime/pkg/client/config
-sigs.k8s.io/controller-runtime/pkg/client/fake/
+sigs.k8s.io/controller-runtime/pkg/client/fake
 sigs.k8s.io/controller-runtime/pkg/cluster
 sigs.k8s.io/controller-runtime/pkg/config
 sigs.k8s.io/controller-runtime/pkg/config/v1alpha1
@@ -2071,7 +2083,6 @@ sigs.k8s.io/yaml
 # github.com/Unknwon/com => github.com/unknwon/com v1.0.1
 # github.com/clarketm/json => github.com/clarketm/json v1.15.7
 # github.com/cockroachdb/sentry-go => github.com/getsentry/sentry-go v0.11.0
-# github.com/docker/spdystream => github.com/docker/spdystream v0.1.0
 # github.com/go-openapi/spec => github.com/go-openapi/spec v0.19.8
 # github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
 # github.com/mrnold/go-libnbd => github.com/mrnold/go-libnbd v1.4.1-cdi
@@ -2171,5 +2182,4 @@ sigs.k8s.io/yaml
 # sigs.k8s.io/cluster-api-provider-openstack => github.com/openshift/cluster-api-provider-openstack v0.0.0-20210820223719-a7442bb18bce
 # sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.0
 # sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
-# sourcegraph.com/sourcegraph/go-diff => github.com/sourcegraph/go-diff v0.5.1
 # vbom.ml/util => github.com/fvbommel/util v0.0.3

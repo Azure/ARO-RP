@@ -5,12 +5,22 @@ package e2e
 
 import (
 	"context"
+	"encoding/gob"
+	"flag"
 	"fmt"
+	"math"
+	"net/http"
 	"os"
+	"os/exec"
+	"strconv"
+	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
+	"github.com/gorilla/securecookie"
+	"github.com/gorilla/sessions"
+	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tebeka/selenium"
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -30,15 +40,24 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
+	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
 	redhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-04-01/redhatopenshift"
+	redhatopenshift20220904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-09-04/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
 type clientSet struct {
-	OpenshiftClustersv20200430 redhatopenshift20200430.OpenShiftClustersClient
-	Operationsv20200430        redhatopenshift20200430.OperationsClient
-	OpenshiftClustersv20220401 redhatopenshift20220401.OpenShiftClustersClient
+	OpenshiftClustersv20200430        redhatopenshift20200430.OpenShiftClustersClient
+	Operationsv20200430               redhatopenshift20200430.OperationsClient
+	OpenshiftClustersv20210901preview redhatopenshift20210901preview.OpenShiftClustersClient
+	Operationsv20210901preview        redhatopenshift20210901preview.OperationsClient
+	OpenshiftClustersv20220401        redhatopenshift20220401.OpenShiftClustersClient
+	Operationsv20220401               redhatopenshift20220401.OperationsClient
+	OpenshiftClustersv20220904        redhatopenshift20220904.OpenShiftClustersClient
+	Operationsv20220904               redhatopenshift20220904.OperationsClient
 
 	VirtualMachines       compute.VirtualMachinesClient
 	Resources             features.ResourcesClient
@@ -68,6 +87,157 @@ var (
 func skipIfNotInDevelopmentEnv() {
 	if !_env.IsLocalDevelopmentMode() {
 		Skip("skipping tests in non-development environment")
+	}
+}
+
+func generateSession(ctx context.Context, log *logrus.Entry) (string, error) {
+
+	const (
+		SessionName        = "session"
+		SessionKeyExpires  = "expires"
+		sessionKeyState    = "state"
+		SessionKeyUsername = "user_name"
+		SessionKeyGroups   = "groups"
+		username           = "testuser"
+		groups             = ""
+	)
+
+	flag.Parse()
+
+	_env, err := env.NewCore(ctx, log)
+	if err != nil {
+		return "", err
+	}
+
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceIdentifiers.KeyVault)
+	if err != nil {
+		return "", err
+	}
+
+	portalKeyvaultURI, err := keyvault.URI(_env, env.PortalKeyvaultSuffix)
+	if err != nil {
+		return "", err
+	}
+
+	portalKeyvault := keyvault.NewManager(msiKVAuthorizer, portalKeyvaultURI)
+
+	sessionKey, err := portalKeyvault.GetBase64Secret(ctx, env.PortalServerSessionKeySecretName, "")
+	if err != nil {
+		return "", err
+	}
+
+	store := sessions.NewCookieStore(sessionKey)
+
+	store.MaxAge(0)
+	store.Options.Secure = true
+	store.Options.HttpOnly = true
+	store.Options.SameSite = http.SameSiteLaxMode
+
+	session := sessions.NewSession(store, SessionName)
+	opts := *store.Options
+	session.Options = &opts
+
+	session.Values[SessionKeyUsername] = username
+	session.Values[SessionKeyGroups] = strings.Split(groups, ",")
+	session.Values[SessionKeyExpires] = time.Now().Add(time.Hour)
+
+	encoded, err := securecookie.EncodeMulti(session.Name(), session.Values,
+		store.Codecs...)
+	if err != nil {
+		log.Infof(err.Error())
+		return "", err
+	}
+
+	// encoded
+	log.Infof("session=%s", encoded)
+
+	return encoded, nil
+}
+
+func adminPortalSessionSetup() *selenium.WebDriver {
+	const (
+		port = 4444
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	caps := selenium.Capabilities{
+		"browserName":         "MicrosoftEdge",
+		"acceptInsecureCerts": true,
+	}
+	wd := selenium.WebDriver(nil)
+
+	var err error
+
+	for {
+		wd, err = selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
+		if wd != nil || ctx.Err() != nil {
+			break
+		}
+	}
+
+	if err != nil {
+		panic(err)
+	}
+
+	// Navigate to the simple playground interface.
+	if err := wd.Get(os.Getenv("PORTAL_HOSTNAME") + ":8444/api/info"); err != nil {
+		panic(err)
+	}
+
+	log := utillog.GetLogger()
+
+	gob.Register(time.Time{})
+
+	session, err := generateSession(context.Background(), log)
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Session: %s", session)
+
+	cookie := &selenium.Cookie{
+		Name:   "session",
+		Value:  session,
+		Expiry: math.MaxUint32,
+	}
+
+	if err := wd.AddCookie(cookie); err != nil {
+		panic(err)
+	}
+
+	tests, err := wd.GetCookies()
+	if err != nil {
+		panic(err)
+	}
+
+	for _, test := range tests {
+		fmt.Printf("Name : %s\n Value : %s\n Domain : %s\n Path : %s\n Secure: %s\n Expiry : %d\n",
+			test.Name,
+			test.Value,
+			test.Domain,
+			test.Path,
+			strconv.FormatBool(test.Secure),
+			test.Expiry)
+	}
+
+	if err := wd.Get(os.Getenv("PORTAL_HOSTNAME") + ":8444/v2"); err != nil {
+		panic(err)
+	}
+
+	return &wd
+}
+
+func adminPortalSessionTearDown() {
+	log.Infof("Stopping Selenium Grid")
+	cmd := exec.Command("docker", "rm", "--force", "selenium-edge-standalone")
+
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		log.Fatalf("Error occurred stopping selenium grid\n Output: %s\n Error: %s\n", output, err)
 	}
 }
 
@@ -132,9 +302,12 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}
 
 	return &clientSet{
-		OpenshiftClustersv20200430: redhatopenshift20200430.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Operationsv20200430:        redhatopenshift20200430.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		OpenshiftClustersv20220401: redhatopenshift20220401.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClustersv20200430:        redhatopenshift20200430.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Operationsv20200430:               redhatopenshift20200430.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClustersv20210901preview: redhatopenshift20210901preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Operationsv20210901preview:        redhatopenshift20210901preview.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClustersv20220401:        redhatopenshift20220401.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Operationsv20220401:               redhatopenshift20220401.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		VirtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Resources:             features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
@@ -197,6 +370,15 @@ func setup(ctx context.Context) error {
 		return err
 	}
 
+	log.Infof("Starting Selenium Grid")
+	cmd := exec.CommandContext(ctx, "docker", "run", "-d", "-p", "4444:4444", "--name", "selenium-edge-standalone", "--network=host", "--shm-size=2g", "selenium/standalone-edge:latest")
+
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		log.Fatalf("Error occurred starting selenium grid\n Output: %s\n Error: %s\n", output, err)
+	}
+
 	return nil
 }
 
@@ -213,6 +395,8 @@ func done(ctx context.Context) error {
 			return err
 		}
 	}
+
+	adminPortalSessionTearDown()
 
 	return nil
 }

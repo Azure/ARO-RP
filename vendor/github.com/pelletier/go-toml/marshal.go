@@ -18,7 +18,6 @@ const (
 	tagFieldComment = "comment"
 	tagCommented    = "commented"
 	tagMultiline    = "multiline"
-	tagLiteral      = "literal"
 	tagDefault      = "default"
 )
 
@@ -28,7 +27,6 @@ type tomlOpts struct {
 	comment      string
 	commented    bool
 	multiline    bool
-	literal      bool
 	include      bool
 	omitempty    bool
 	defaultValue string
@@ -48,7 +46,6 @@ type annotation struct {
 	comment      string
 	commented    string
 	multiline    string
-	literal      string
 	defaultValue string
 }
 
@@ -57,16 +54,15 @@ var annotationDefault = annotation{
 	comment:      tagFieldComment,
 	commented:    tagCommented,
 	multiline:    tagMultiline,
-	literal:      tagLiteral,
 	defaultValue: tagDefault,
 }
 
-type MarshalOrder int
+type marshalOrder int
 
 // Orders the Encoder can write the fields to the output stream.
 const (
 	// Sort fields alphabetically.
-	OrderAlphabetical MarshalOrder = iota + 1
+	OrderAlphabetical marshalOrder = iota + 1
 	// Preserve the order the fields are encountered. For example, the order of fields in
 	// a struct.
 	OrderPreserve
@@ -80,7 +76,6 @@ var textUnmarshalerType = reflect.TypeOf(new(encoding.TextUnmarshaler)).Elem()
 var localDateType = reflect.TypeOf(LocalDate{})
 var localTimeType = reflect.TypeOf(LocalTime{})
 var localDateTimeType = reflect.TypeOf(LocalDateTime{})
-var mapStringInterfaceType = reflect.TypeOf(map[string]interface{}{})
 
 // Check if the given marshal type maps to a Tree primitive
 func isPrimitive(mtype reflect.Type) bool {
@@ -258,12 +253,11 @@ type Encoder struct {
 	w io.Writer
 	encOpts
 	annotation
-	line            int
-	col             int
-	order           MarshalOrder
-	promoteAnon     bool
-	compactComments bool
-	indentation     string
+	line        int
+	col         int
+	order       marshalOrder
+	promoteAnon bool
+	indentation string
 }
 
 // NewEncoder returns a new encoder that writes to w.
@@ -322,7 +316,7 @@ func (e *Encoder) ArraysWithOneElementPerLine(v bool) *Encoder {
 }
 
 // Order allows to change in which order fields will be written to the output stream.
-func (e *Encoder) Order(ord MarshalOrder) *Encoder {
+func (e *Encoder) Order(ord marshalOrder) *Encoder {
 	e.order = ord
 	return e
 }
@@ -370,12 +364,6 @@ func (e *Encoder) PromoteAnonymous(promote bool) *Encoder {
 	return e
 }
 
-// CompactComments removes the new line before each comment in the tree.
-func (e *Encoder) CompactComments(cc bool) *Encoder {
-	e.compactComments = cc
-	return e
-}
-
 func (e *Encoder) marshal(v interface{}) ([]byte, error) {
 	// Check if indentation is valid
 	for _, char := range e.indentation {
@@ -415,7 +403,7 @@ func (e *Encoder) marshal(v interface{}) ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
-	_, err = t.writeToOrdered(&buf, "", "", 0, e.arraysOneElementPerLine, e.order, e.indentation, e.compactComments, false)
+	_, err = t.writeToOrdered(&buf, "", "", 0, e.arraysOneElementPerLine, e.order, e.indentation, false)
 
 	return buf.Bytes(), err
 }
@@ -448,12 +436,10 @@ func (e *Encoder) valueToTree(mtype reflect.Type, mval reflect.Value) (*Tree, er
 					if tree, ok := val.(*Tree); ok && mtypef.Anonymous && !opts.nameFromTag && !e.promoteAnon {
 						e.appendTree(tval, tree)
 					} else {
-						val = e.wrapTomlValue(val, tval)
 						tval.SetPathWithOptions([]string{opts.name}, SetOptions{
 							Comment:   opts.comment,
 							Commented: opts.commented,
 							Multiline: opts.multiline,
-							Literal:   opts.literal,
 						}, val)
 					}
 				}
@@ -488,7 +474,6 @@ func (e *Encoder) valueToTree(mtype reflect.Type, mval reflect.Value) (*Tree, er
 			if err != nil {
 				return nil, err
 			}
-			val = e.wrapTomlValue(val, tval)
 			if e.quoteMapKeys {
 				keyStr, err := tomlValueStringRepresentation(key.String(), "", "", e.order, e.arraysOneElementPerLine)
 				if err != nil {
@@ -531,13 +516,13 @@ func (e *Encoder) valueToOtherSlice(mtype reflect.Type, mval reflect.Value) (int
 
 // Convert given marshal value to toml value
 func (e *Encoder) valueToToml(mtype reflect.Type, mval reflect.Value) (interface{}, error) {
+	e.line++
 	if mtype.Kind() == reflect.Ptr {
 		switch {
 		case isCustomMarshaler(mtype):
 			return callCustomMarshaler(mval)
 		case isTextMarshaler(mtype):
-			b, err := callTextMarshaler(mval)
-			return string(b), err
+			return callTextMarshaler(mval)
 		default:
 			return e.valueToToml(mtype.Elem(), mval.Elem())
 		}
@@ -549,8 +534,7 @@ func (e *Encoder) valueToToml(mtype reflect.Type, mval reflect.Value) (interface
 	case isCustomMarshaler(mtype):
 		return callCustomMarshaler(mval)
 	case isTextMarshaler(mtype):
-		b, err := callTextMarshaler(mval)
-		return string(b), err
+		return callTextMarshaler(mval)
 	case isTree(mtype):
 		return e.valueToTree(mtype, mval)
 	case isOtherSequence(mtype), isCustomMarshalerSequence(mtype), isTextMarshalerSequence(mtype):
@@ -591,26 +575,6 @@ func (e *Encoder) appendTree(t, o *Tree) error {
 		t.values[key] = value
 	}
 	return nil
-}
-
-// Create a toml value with the current line number as the position line
-func (e *Encoder) wrapTomlValue(val interface{}, parent *Tree) interface{} {
-	_, isTree := val.(*Tree)
-	_, isTreeS := val.([]*Tree)
-	if isTree || isTreeS {
-		e.line++
-		return val
-	}
-
-	ret := &tomlValue{
-		value: val,
-		position: Position{
-			e.line,
-			parent.position.Col,
-		},
-	}
-	e.line++
-	return ret
 }
 
 // Unmarshal attempts to unmarshal the Tree into a Go struct pointed by v.
@@ -717,8 +681,6 @@ func (d *Decoder) unmarshal(v interface{}) error {
 
 	switch elem.Kind() {
 	case reflect.Struct, reflect.Map:
-	case reflect.Interface:
-		elem = mapStringInterfaceType
 	default:
 		return errors.New("only a pointer to struct or map can be unmarshaled from TOML")
 	}
@@ -754,10 +716,6 @@ func (d *Decoder) valueFromTree(mtype reflect.Type, tval *Tree, mval1 *reflect.V
 	// Check if pointer to value implements the Unmarshaler interface.
 	if mvalPtr := reflect.New(mtype); isCustomUnmarshaler(mvalPtr.Type()) {
 		d.visitor.visitAll()
-
-		if tval == nil {
-			return mvalPtr.Elem(), nil
-		}
 
 		if err := callCustomUnmarshaler(mvalPtr, tval.ToMap()); err != nil {
 			return reflect.ValueOf(nil), fmt.Errorf("unmarshal toml: %v", err)
@@ -843,21 +801,7 @@ func (d *Decoder) valueFromTree(mtype reflect.Type, tval *Tree, mval1 *reflect.V
 					case reflect.Int32:
 						val, err = strconv.ParseInt(opts.defaultValue, 10, 32)
 					case reflect.Int64:
-						// Check if the provided number has a non-numeric extension.
-						var hasExtension bool
-						if len(opts.defaultValue) > 0 {
-							lastChar := opts.defaultValue[len(opts.defaultValue)-1]
-							if lastChar < '0' || lastChar > '9' {
-								hasExtension = true
-							}
-						}
-						// If the value is a time.Duration with extension, parse as duration.
-						// If the value is an int64 or a time.Duration without extension, parse as number.
-						if hasExtension && mvalf.Type().String() == "time.Duration" {
-							val, err = time.ParseDuration(opts.defaultValue)
-						} else {
-							val, err = strconv.ParseInt(opts.defaultValue, 10, 64)
-						}
+						val, err = strconv.ParseInt(opts.defaultValue, 10, 64)
 					case reflect.Float32:
 						val, err = strconv.ParseFloat(opts.defaultValue, 32)
 					case reflect.Float64:
@@ -1031,18 +975,8 @@ func (d *Decoder) valueFromToml(mtype reflect.Type, tval interface{}, mval1 *ref
 		return reflect.ValueOf(nil), fmt.Errorf("Can't convert %v(%T) to a slice", tval, tval)
 	default:
 		d.visitor.visit()
-		mvalPtr := reflect.New(mtype)
-
-		// Check if pointer to value implements the Unmarshaler interface.
-		if isCustomUnmarshaler(mvalPtr.Type()) {
-			if err := callCustomUnmarshaler(mvalPtr, tval); err != nil {
-				return reflect.ValueOf(nil), fmt.Errorf("unmarshal toml: %v", err)
-			}
-			return mvalPtr.Elem(), nil
-		}
-
 		// Check if pointer to value implements the encoding.TextUnmarshaler.
-		if isTextUnmarshaler(mvalPtr.Type()) && !isTimeType(mtype) {
+		if mvalPtr := reflect.New(mtype); isTextUnmarshaler(mvalPtr.Type()) && !isTimeType(mtype) {
 			if err := d.unmarshalText(tval, mvalPtr); err != nil {
 				return reflect.ValueOf(nil), fmt.Errorf("unmarshal text: %v", err)
 			}
@@ -1181,7 +1115,6 @@ func tomlOptions(vf reflect.StructField, an annotation) tomlOpts {
 	}
 	commented, _ := strconv.ParseBool(vf.Tag.Get(an.commented))
 	multiline, _ := strconv.ParseBool(vf.Tag.Get(an.multiline))
-	literal, _ := strconv.ParseBool(vf.Tag.Get(an.literal))
 	defaultValue := vf.Tag.Get(tagDefault)
 	result := tomlOpts{
 		name:         vf.Name,
@@ -1189,7 +1122,6 @@ func tomlOptions(vf reflect.StructField, an annotation) tomlOpts {
 		comment:      comment,
 		commented:    commented,
 		multiline:    multiline,
-		literal:      literal,
 		include:      true,
 		omitempty:    false,
 		defaultValue: defaultValue,
