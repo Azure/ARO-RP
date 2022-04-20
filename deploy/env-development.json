@@ -241,7 +241,7 @@
             ]
         },
         {
-            "name": "[concat(take(resourceGroup().name,15), '-sharedKV')]",
+            "name": "[concat(take(resourceGroup().name,10), '-dev-sharedKV')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
             "properties": {
@@ -261,16 +261,16 @@
                 "kty": "RSA",
                 "keySize": 4096
             },
-            "name": "[concat(concat(take(resourceGroup().name,15), '-sharedKV'), '/', concat(resourceGroup().name, '-disk-encryption-key'))]",
+            "name": "[concat(concat(take(resourceGroup().name,10), '-dev-sharedKV'), '/', concat(resourceGroup().name, '-disk-encryption-key'))]",
             "type": "Microsoft.KeyVault/vaults/keys",
             "location": "[resourceGroup().location]",
             "apiVersion": "2019-09-01",
             "dependsOn": [
-                "[resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,15), '-sharedKV'))]"
+                "[resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,10), '-dev-sharedKV'))]"
             ]
         },
         {
-            "name": "[concat(concat(take(resourceGroup().name,15), '-sharedKV'), '/add')]",
+            "name": "[concat(concat(take(resourceGroup().name,10), '-dev-sharedKV'), '/add')]",
             "type": "Microsoft.KeyVault/vaults/accessPolicies",
             "location": "[resourceGroup().location]",
             "properties": {
@@ -300,9 +300,9 @@
             "properties": {
                 "activeKey": {
                     "sourceVault": {
-                        "id": "[resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,15), '-sharedKV'))]"
+                        "id": "[resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,10), '-dev-sharedKV'))]"
                     },
-                    "keyUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/keys', concat(take(resourceGroup().name,15), '-sharedKV'), concat(resourceGroup().name, '-disk-encryption-key')), '2019-09-01', 'Full').properties.keyUriWithVersion]"
+                    "keyUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/keys', concat(take(resourceGroup().name,10), '-dev-sharedKV'), concat(resourceGroup().name, '-disk-encryption-key')), '2019-09-01', 'Full').properties.keyUriWithVersion]"
                 }
             },
             "name": "[concat(resourceGroup().name, '-disk-encryption-set')]",
@@ -310,7 +310,7 @@
             "location": "[resourceGroup().location]",
             "apiVersion": "2020-12-01",
             "dependsOn": [
-                "[resourceId('Microsoft.KeyVault/vaults/keys', concat(take(resourceGroup().name,15), '-sharedKV'), concat(resourceGroup().name, '-disk-encryption-key'))]"
+                "[resourceId('Microsoft.KeyVault/vaults/keys', concat(take(resourceGroup().name,10), '-dev-sharedKV'), concat(resourceGroup().name, '-disk-encryption-key'))]"
             ]
         },
         {
