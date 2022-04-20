@@ -632,7 +632,7 @@ done
 						ComputerNamePrefix: to.StringPtr("[concat('gateway-', parameters('vmssName'), '-')]"),
 						AdminUsername:      to.StringPtr("cloud-user"),
 						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
-							DisablePasswordAuthentication: to.BoolPtr(false),
+							DisablePasswordAuthentication: to.BoolPtr(true),
 							SSH: &mgmtcompute.SSHConfiguration{
 								PublicKeys: &[]mgmtcompute.SSHPublicKey{
 									{
