@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -28,6 +29,19 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
+
+func (m *manager) deleteNic(ctx context.Context, resource mgmtfeatures.GenericResourceExpanded) error {
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	if resource.ProvisioningState != nil && !strings.EqualFold(*resource.ProvisioningState, "succeeded") {
+		m.log.Printf("NIC '%s' is not in a succeeded provisioning state, attempting to reconcile prior to deletion.", *resource.ID)
+		err := m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *resource.Name, mgmtnetwork.Interface{})
+		if err != nil {
+			return err
+		}
+	}
+	return m.interfaces.DeleteAndWait(ctx, resourceGroup, *resource.Name)
+}
 
 func (m *manager) deletePrivateDNSVirtualNetworkLinks(ctx context.Context, resourceID string) error {
 	r, err := azure.ParseResourceID(resourceID)
@@ -124,16 +138,17 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 // parallel and waiting for completion before we proceed.  Any type not in the
 // map is considered to be at level 0.  Keys must be lower case.
 var deleteOrder = map[string]int{
-	"microsoft.compute/virtualmachines":     -1, // first, and before microsoft.compute/disks, microsoft.network/networkinterfaces
-	"microsoft.network/privatelinkservices": -1, // before microsoft.network/loadbalancers
-	"microsoft.network/privateendpoints":    -1, // before microsoft.network/networkinterfaces
+	"microsoft.compute/virtualmachines":     -2, // first, and before microsoft.compute/disks, microsoft.network/networkinterfaces
+	"microsoft.network/privatelinkservices": -2, // before microsoft.network/loadbalancers
+	"microsoft.network/privateendpoints":    -2, // before microsoft.network/networkinterfaces
+	"microsoft.network/networkinterfaces":   -1, // before microsoft.network/loadbalancers
 	"microsoft.network/privatednszones":     1,  // after everything else: get other deletions underway first
 }
 
 func (m *manager) deleteResources(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	resources, err := m.resources.ListByResourceGroup(ctx, resourceGroup, "", "", nil)
+	resources, err := m.resources.ListByResourceGroup(ctx, resourceGroup, "", "provisioningState", nil)
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		(detailedErr.StatusCode == http.StatusNotFound ||
 			detailedErr.StatusCode == http.StatusForbidden) {
@@ -184,6 +199,12 @@ func (m *manager) deleteResources(ctx context.Context) error {
 			case "microsoft.network/privatednszones":
 				m.log.Printf("deleting private DNS nested resources of %s", *resource.ID)
 				err = m.deletePrivateDNSVirtualNetworkLinks(ctx, *resource.ID)
+				if err != nil {
+					return err
+				}
+
+			case "microsoft.network/networkinterfaces":
+				err = m.deleteNic(ctx, *resource)
 				if err != nil {
 					return err
 				}
