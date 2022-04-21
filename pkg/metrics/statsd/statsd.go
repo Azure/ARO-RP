@@ -6,8 +6,11 @@ package statsd
 // statsd implementation for https://genevamondocs.azurewebsites.net/collect/references/statsdref.html
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -30,7 +33,9 @@ type statsd struct {
 	now func() time.Time
 }
 
-// New returns a new metrics.Emitter
+const STATSD_SOCKET_ENV = "ARO_STATSD_SOCKET"
+
+// New returns a new metrics.Interface
 func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string) metrics.Emitter {
 	s := &statsd{
 		log: log,
@@ -103,13 +108,42 @@ func (s *statsd) run() {
 	}
 }
 
-func (s *statsd) dial() (err error) {
-	path := "/var/etw/mdm_statsd.socket"
-	if s.env.IsLocalDevelopmentMode() {
-		path = "mdm_statsd.socket"
+func (s *statsd) getConnectionDetails() (protocol string, connectionstring string, err error) {
+	// allow the socket connection to be overriden via ENV Variable
+	o, isset := os.LookupEnv(STATSD_SOCKET_ENV)
+	if !isset { //original behaviour
+		protocol = "unix"
+		connectionstring = "/var/etw/mdm_statsd.socket"
+		if s.env.IsLocalDevelopmentMode() {
+			connectionstring = "mdm_statsd.socket"
+		}
+
+		return
 	}
 
-	s.conn, err = net.Dial("unix", path)
+	// Assume protocol:connectionstring format
+	a := strings.SplitN(o, ":", 2)
+	if len(a) != 2 {
+		err = errors.New("malformated ENV Variable ARO_STATSD_SOCKET. Expecting udp:host:port or unix:path-to-socket format")
+
+		return
+	}
+	protocol = strings.ToLower(a[0])
+	connectionstring = a[1]
+
+	return
+
+}
+
+func (s *statsd) dial() (err error) {
+
+	p, c, err := s.getConnectionDetails()
+	if err != nil {
+		return
+	}
+
+	s.conn, err = net.Dial(p, c)
+
 	return
 }
 
@@ -146,5 +180,6 @@ func (s *statsd) write(m *metric) (err error) {
 	}
 
 	_, err = s.conn.Write(b)
+
 	return
 }

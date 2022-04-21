@@ -1,5 +1,21 @@
 
 
+
+#/bin/bash
+
+failedChecks=0
+while read var; do
+  [ -z "${!var}" ] && { echo "required $var is empty or not set."; let failedChecks=failedChecks+1; }
+done << EOF
+LOCATION
+RESOURCEGROUP
+USER
+EOF
+
+if [ $failedChecks -gt 0 ]; then
+  exit 1
+fi
+
 BASE=$( git rev-parse --show-toplevel)
 
 SOCKETPATH="$BASE/cmd/aro"

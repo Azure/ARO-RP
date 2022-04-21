@@ -87,6 +87,6 @@ ssh $CLOUDUSER@$PUBLICIP "sudo firewall-cmd --zone=public --add-port=12345/tcp -
 ssh $CLOUDUSER@$PUBLICIP "sudo firewall-cmd --reload"
 
 
-scp $BASE/dockerStartCommand.sh $CLOUDUSER@$PUBLICIP:
-ssh $CLOUDUSER@$PUBLICIP "chmod +x dockerStartCommand.sh"
-ssh $CLOUDUSER@$PUBLICIP "sudo ./dockerStartCommand.sh &"
+scp $BASE/dockerStartCommand-UDS.sh $CLOUDUSER@$PUBLICIP:
+ssh $CLOUDUSER@$PUBLICIP "chmod +x dockerStartCommand-UDS.sh"
+ssh $CLOUDUSER@$PUBLICIP "sudo ./dockerStartCommand-UDS.sh &"
