@@ -1,15 +1,20 @@
 package cluster
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
-	"github.com/Azure/ARO-RP/pkg/api"
-	testdatabase "github.com/Azure/ARO-RP/test/database"
+	"strings"
+	"testing"
+
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strings"
-	"testing"
+
+	"github.com/Azure/ARO-RP/pkg/api"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 // TestPopulateMTUSize will test our populate MTUSize function
