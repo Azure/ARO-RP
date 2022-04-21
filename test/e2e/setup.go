@@ -154,7 +154,7 @@ func generateSession(ctx context.Context, log *logrus.Entry) (string, error) {
 	return encoded, nil
 }
 
-func adminPortalSessionSetup() *selenium.WebDriver {
+func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 	const (
 		port = 4444
 	)
@@ -181,14 +181,20 @@ func adminPortalSessionSetup() *selenium.WebDriver {
 		panic(err)
 	}
 
-	// Navigate to the simple playground interface.
-	if err := wd.Get(os.Getenv("PORTAL_HOSTNAME") + ":8444/api/info"); err != nil {
-		panic(err)
-	}
-
 	log := utillog.GetLogger()
 
 	gob.Register(time.Time{})
+
+	// Navigate to the simple playground interface.
+	host, isNotLocal := os.LookupEnv("PORTAL_HOSTNAME")
+	if !isNotLocal {
+		host = "https://127.0.0.1:8444"
+	}
+	if err := wd.Get(host + "/api/info"); err != nil {
+		fmt.Printf("Could not get to %s", host)
+		log.Infof("Could not get to %s", host)
+		panic(err)
+	}
 
 	session, err := generateSession(context.Background(), log)
 
@@ -223,11 +229,7 @@ func adminPortalSessionSetup() *selenium.WebDriver {
 			test.Expiry)
 	}
 
-	if err := wd.Get(os.Getenv("PORTAL_HOSTNAME") + ":8444/v2"); err != nil {
-		panic(err)
-	}
-
-	return &wd
+	return host, &wd
 }
 
 func adminPortalSessionTearDown() {

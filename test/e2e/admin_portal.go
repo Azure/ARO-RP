@@ -4,8 +4,6 @@ package e2e
 // Licensed under the Apache License 2.0.
 
 import (
-	"os"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	conditions "github.com/serge1peshcoff/selenium-go-conditions"
@@ -14,10 +12,13 @@ import (
 
 var _ = FDescribe("Admin Portal E2E Testing", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
+	var wdPoint *WebDriver
 	var wd WebDriver
+	var host string
 	JustBeforeEach(func() {
-		wd = *adminPortalSessionSetup()
-		wd.Get(os.Getenv("PORTAL_HOSTNAME") + ":8444/v2")
+		host, wdPoint = adminPortalSessionSetup()
+		wd = *wdPoint
+		wd.Get(host + "/v2")
 		wd.Refresh()
 	})
 
