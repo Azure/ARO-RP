@@ -76,42 +76,115 @@
      >/dev/null
    ```
 
+## Preparation to Create Cluster:
 
-## Run the RP and create a cluster
+1. Update the Address Space of "rp-vnet" to allow for creation of a new VPN. You should be able to do this at: https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/<subscription-id>/resourceGroups/<aro-shared-rp-rg>/providers/Microsoft.Network/virtualNetworks/rp-vnet/addressSpace. See the table below for what we did.
 
-1. Source your environment file.
+| Address Space | Address Range         | Address Count |
+| ------------- | --------------------- | ------------- |
+| 10.0.0.0/24   | 10.0.0.0 - 10.0.0.255 | 256 |
+| 10.1.0.0/24   | 10.1.0.0 - 10.1.0.255 | 256 |
 
+2. Create a new "Virtual Network Gateway (Gateway type: VPN)" in the Azure Portal manually. This needs to be configured to the "Virtual Network" named "rp-vnet" which will already existing in the shared RP's resource group. This new VPN will allow the local ARO-RP to connect to the to the existing "rp-vnet" to create a cluster. 
+
+3. Configure the new `rp-vnet` VPN with the same public certificate used for the existing dev-vpn. This is done at: `https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/<subscription-id>/resourceGroups/<aro-shared-rp-rg>/providers/Microsoft.Network/virtualNetworkGateways/rp-vnet/pointtositeconfiguration`. 
+You can simply copy the info from the dev-vpn at: `https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/<subscription-id>/resourceGroups/<aro-shared-rp-rg>/providers/Microsoft.Network/virtualNetworkGateways/dev-vpn/pointtositeconfiguration`.
+
+4. Connect to the "rp-vnet" VPN created above. You can use openvpn or the azure vpn client, both have worked fine in our testing. 
+5. Go to Point-to-Site Configuration for "rp-vnet" (`https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/<subscription-id>/resourceGroups/<aro-shared-rp-rg>/providers/Microsoft.Network/virtualNetworkGateways/rp-vnet/pointtositeconfiguration`) and download the VPN Client Certificate to your local environment. You can extract the zip file anywhere you would like, but we put it under the "secrets" folder because that is where the ARO-RP secrets reside.
+6. If using openvpn:
+```
+  1. Copy the last two certificates ("P2S client certificate" and "P2S client certificate private key") from ./secrets/vpn-eastus.ovpn file to ./secrets/vpn-rp-eastus.ovpn. You can overwrite the placeholders for those certificates at the bottom in the ./secrets/vpn-rp-eastus.ovpn file.
+
+  2. Execute openvpn secrets/vpn-rp-eastus.ovpn. You may need sudo depending on your environment.
+```
+7. If using Azure VPN Client
+> __NOTE:__ the azure vpn client for windows appears to require extra efforts; this is only for MacOS atm
+```
+  1. Click the 'import' button in the vpn list, you will be prompted with an "open file dialog".
+  2. Select the file: ./secrets/rp-vnet/AzureVPN/azurevpnconfig.xml. The data will be filled into the import screen with the exception of "Client Certificate Public Key Data" and "Private Key".
+  3. Copy the "P2S client certificate" into the "Client Certificate Public Key Data" field and "P2S client certificate private key" into the "Private Key" field.
+  4. Click "Save" and you should see your newly created VPN connection in the VPN list on the left.
+  5. Click the new VPN connection and click "Connect".
+```
+8. Use nmap to execute the following command: nmap -p 443 -sT 10.x.x.x -Pn. You can get this IP at: `https://ms.portal.azure.com/#blade/Microsoft_Azure_Compute/VirtualMachineInstancesMenuBlade/Networking/instanceId/subscriptions/<subscription-id>/resourceGroups/<aro-shared-rp-rg>/providers/Microsoft.Compute/virtualMachineScaleSets/dev-proxy-vmss/virtualMachines/0`. Look for "NIC Private IP", ours during setup became 10.0.0.4. This is the internal ip of the Proxy VM.
+9. Confirm the nmap output looks like this: (if it does not then your VPN is not connected correctly; kill anything using port 443 and connect again)
+```bash
+Starting Nmap 7.92 ( https://nmap.org ) at 2022-03-29 18:29 EDT
+Nmap scan report for 10.0.0.4
+Host is up (0.015s latency).
+
+PORT STATE SERVICE
+443/tcp open https
+
+Nmap done: 1 IP address (1 host up) scanned in 0.25 seconds
+```
+10. Update the PROXY_HOSTNAME environment variable in ./secrets/env to point the IP you located above of for the Proxy VM.
+11. Now that your VPN is connected correctly and you've updated PROXY_HOSTNAME you need to source your env file for that update.
+```bash
+. ./secrets/env
+```
+12. Execute the local ARO-RP
+```bash
+make runlocal-rp
+```
+
+## Steps to Create Cluster:
+
+  1. Open another terminal (make sure you source your ./secrets/env file in this terminal as well)
+  1. Execute this command to create a cluster
+  ```bash
+  CLUSTER=<aro-cluster-name> go run ./hack/cluster create
+  ```
+
+  This will take a while but eventually if the cluster is created you should see the following in your terminal indicating the cluster creation was successful:
+  ```bash
+  INFO[2022-04-01T10:02:41-05:00]pkg/util/cluster/cluster.go:318 cluster.(*Cluster).Create() creating cluster complete
+  ```
+
+## Steps to connect to the Cluster and confirm it is up via kubectl or oc:
+
+1. At your terminal execute to create the admin.kubeconfig locally. This will allow you to connect to the cluster via kubectl or oc
    ```bash
-   . ./env
+   CLUSTER=<aro-cluster-name> make admin.kubeconfig
    ```
 
-1. Run the RP
+1. Disconnect from "rp-vnet" vpn and connect to "dev-vnet" vpn. The steps are identical to connecting to "rp-vnet" in the #preparation-to-create-cluster section. You will just need to download the dev-vpn client certificate locally, create the VPN connection using your VPN client of choice, and use nmap to get the IP of the internal load balancer from the <aro-cluster-name-rg>. You can find this address at: `https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/<subscriptionid>/resourceGroups/<aro-cluster-rp-rg>/providers/Microsoft.Network/loadBalancers/<aro-cluster-name>-<random string for your lb>-internal/frontendIpPool` (internal-lb-ip-v4). In my case the IP was 10.62.174.
+```bash
+nmap -p 6443 -sT 10.62.174.4 -Pn
+Starting Nmap 7.92 ( https://nmap.org ) at 2022-04-01 10:36 CDT
+Nmap scan report for 10.62.174.4
+Host is up (0.070s latency).
 
-   ```bash
-   make runlocal-rp
-   ```
+PORT STATE SERVICE
+6443/tcp open sun-sr-https
 
-1. To create a cluster, EITHER follow the instructions in [Create, access, and
-   manage an Azure Red Hat OpenShift 4.3 Cluster][1].  Note that as long as the
-   `RP_MODE` environment variable is set to `development`, the `az aro` client
-   will connect to your local RP.
+Nmap done: 1 IP address (1 host up) scanned in 0.14 seconds
+```
+1. Update admin.kubeconfig cluster.server parameter to use this IP as well. It should look like this:
+```bash
+server: https://<ip>:6443
+```
+1. Updated your kubeconfig env var to point to the admin.kubeconfig
+```bash
+export KUBECONFIG=$(pwd)/admin.kubeconfig
+```
+1. Execute a kubectl (or oc) command to see if you can list any K8s objects
+```bash
+kubectl get nodes --insecure-skip-tls-verify
+```
+2. You should see something like this. If so, your cluster is up!
+```bash
+NAME                                        STATUS   ROLES    AGE    VERSION
+cdp-cfs-eleven-bljdk-master-0               Ready    master   3h7m   v1.22.3+4dd1b5a
+cdp-cfs-eleven-bljdk-master-1               Ready    master   3h6m   v1.22.3+4dd1b5a
+cdp-cfs-eleven-bljdk-master-2               Ready    master   3h6m   v1.22.3+4dd1b5a
+cdp-cfs-eleven-bljdk-worker-eastus1-2r9b4   Ready    worker   177m   v1.22.3+4dd1b5a
+cdp-cfs-eleven-bljdk-worker-eastus2-jgrj9   Ready    worker   177m   v1.22.3+4dd1b5a
+cdp-cfs-eleven-bljdk-worker-eastus3-fd646   Ready    worker   177m   v1.22.3+4dd1b5a
+```
 
-   OR use the create utility:
-
-   ```bash
-   CLUSTER=cluster go run ./hack/cluster create
-   ```
-
-   Later the cluster can be deleted as follows:
-
-   ```bash
-   CLUSTER=cluster go run ./hack/cluster delete
-   ```
-
-   [1]: https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster
-
-1. The following additional RP endpoints are available but not exposed via `az
-   aro`:
+## Available RP endpoints not exposed via `az aro`
 
    * Delete a subscription, cascading deletion to all its clusters:
 
