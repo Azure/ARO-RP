@@ -26,7 +26,6 @@ func (g *generator) rpTemplate() *arm.Template {
 		"databaseAccountName",
 		"fpServicePrincipalId",
 		"rpServicePrincipalId",
-		"ipRules",
 	}
 	if g.production {
 		params = append(params,
@@ -50,6 +49,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"fluentbitImage",
 			"fpClientId",
 			"fpServicePrincipalId",
+			"ipRules",
 			"keyvaultPrefix",
 			"keyvaultDNSSuffix",
 			"gatewayDomains",
