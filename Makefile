@@ -166,6 +166,7 @@ unit-test-go:
 
 lint-go:
 	go run ./vendor/github.com/golangci/golangci-lint/cmd/golangci-lint run
+	go run ./vendor/github.com/golangci/golangci-lint/cmd/golangci-lint run -c ./.golangci-funlen.yml
 
 lint-admin-portal:
 	docker build -f Dockerfile.portal_lint . -t linter
