@@ -5,13 +5,20 @@ package e2e
 
 import (
 	"os"
+	"time"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	conditions "github.com/serge1peshcoff/selenium-go-conditions"
 	"github.com/tebeka/selenium"
 	. "github.com/tebeka/selenium"
 )
+
+func IsValidUUID(u string, e error) bool {
+	_, err := uuid.Parse(u)
+	return err == nil && e == nil
+}
 
 var _ = FDescribe("Admin Portal E2E Testing", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
@@ -152,16 +159,62 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 		Expect(resourceId).To(Equal("/subscriptions/225e02bc-43d0-43d1-a01a-17e584a4ef69/resourceGroups/v4-eastus/providers/Microsoft.RedHatOpenShift/openShiftClusters/" + os.Getenv("CLUSTER")))
 	})
 
-	// It("Should be able to open ssh panel and get ssh details", func() {
-	// 	wd.Wait(conditions.ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))
+	It("Should be able to open ssh panel and get ssh details", func() {
+		wd.Wait(conditions.ElementIsLocated(ByCSSSelector, "button[aria-label='SSH']"))
 
-	// 	cluster, err := wd.FindElement(ByCSSSelector, "div[data-automation-key='name']")
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
+		button, err := wd.FindElement(ByCSSSelector, "button[aria-label='SSH']")
+		if err != nil {
+			panic(err)
+		}
 
-	// 	Expect(cluster.Text()).To(Equal(os.Getenv("CLUSTER")))
-	// })
+		button.Click()
+
+		wd.Wait(conditions.ElementIsLocated(ByID, "ModalFocusTrapZone25"))
+
+		sshDropdown, err := wd.FindElement(ByID, "Dropdown55")
+		if err != nil {
+			panic(err)
+		}
+
+		sshDropdown.Click()
+
+		wd.Wait(conditions.ElementIsLocated(ByID, "Dropdown55-list0"))
+		machine, err := wd.FindElement(ByID, "Dropdown55-list0")
+		if err != nil {
+			panic(err)
+		}
+
+		machine.Click()
+
+		wd.Wait(conditions.ElementIsLocated(ByID, "id__56"))
+		requestBtn, err := wd.FindElement(ByID, "id__56")
+		if err != nil {
+			panic(err)
+		}
+
+		requestBtn.Click()
+
+		wd.Wait(conditions.ElementIsLocated(ByID, "title24"))
+
+		command, err := wd.FindElement(ByID, "TextField70")
+		if err != nil {
+			panic(err)
+		}
+
+		password, err := wd.FindElement(ByID, "TextField78")
+		if err != nil {
+			panic(err)
+		}
+
+		// WHY NO WORK
+		err = wd.WaitWithTimeout(conditions.ElementAttributeIs(command, "value", "ssh -p 2222 testuser@localhost"), time.Second*10)
+		if err != nil {
+			panic(err)
+		}
+
+		Expect(command.GetAttribute("value")).To(Equal("ssh -p 2222 testuser@localhost"))
+		Expect(IsValidUUID(password.GetAttribute("value"))).To(BeTrue())
+	})
 
 	// It("Should be able to download kubeconfig", func() {
 	// 	wd.Wait(conditions.ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))
