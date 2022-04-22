@@ -14,7 +14,7 @@ In this case we will be using an existing release payload as a base for testing.
 
 1. Pull the release payload you want to use as a base to test your changes.
    `config.json` must contain an appropriate pull secret, e.g. one from
-   `cloud.redhat.com`. An example:
+   `cloud.openshift.com`. An example:
 
    ```bash
    podman pull quay.io/openshift-release-dev/ocp-release-nightly@sha256:ab5022516a948e40190e4ce5729737780b96c96d2cf4d3fc665105b32d751d20 \
