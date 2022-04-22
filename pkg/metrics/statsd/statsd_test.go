@@ -130,7 +130,6 @@ func TestEmitGaugeViaUDP(t *testing.T) {
 	if m != `{"Metric":"tests.test_key","Account":"*","Namespace":"*","Dims":{"hostname":"test-host","key":"value","location":"eastus"},"TS":"0001-01-01T00:00:00.000"}:42|g`+"\n" {
 		t.Error(errors.New(m))
 	}
-
 }
 
 func TestGetConnectionDetails(t *testing.T) {
@@ -210,10 +209,8 @@ func TestGetConnectionDetails(t *testing.T) {
 				if conn != tt.connectionstring {
 					t.Fail()
 				}
-
 			}
 		})
-
 	}
 }
 

@@ -147,7 +147,6 @@ func (s *statsd) getDefaultSocketValues() (string, string) {
 	}
 
 	return protocol, connectionstring
-
 }
 
 func (s *statsd) getConnectionDetails() (string, string, error) {
