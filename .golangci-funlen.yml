@@ -15,6 +15,13 @@ issues:
   new-from-rev: 5668a316afae97b690871edac2c59eb8f84efacb
   exclude-use-default: false
 
+output: 
+    print-issued-lines: false
+
+linters-settings:
+  funlen:
+    lines: -1
+
 linters:
   disable-all: true
   enable:
