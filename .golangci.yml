@@ -13,11 +13,8 @@ issues:
   exclude-use-default: false
 
 linters-settings:
-  gofmt:
-    simplify: false
-  
   stylecheck:
-    # added additional checks for comments in Go. 
+    # added additional checks for comments in Go.
     # Refer https://staticcheck.io/docs/options#checks for details
     checks: ["all", "-ST1000", "ST1020", "ST1021", "ST1022"]
 
@@ -32,6 +29,5 @@ linters:
     - govet
     - staticcheck
     # TODO: Enable the stylecheck linter in a follow-up PR as it requires changes in a lot of files
-    # - stylecheck  
+    # - stylecheck
     - whitespace
-
