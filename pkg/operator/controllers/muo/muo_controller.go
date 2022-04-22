@@ -141,7 +141,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return r.deployer.IsReady(ctx)
 		}, timeoutCtx.Done())
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("Managed Upgrade Operator deployment timed out on Ready: %w", err)
+			return reconcile.Result{}, fmt.Errorf("managed Upgrade Operator deployment timed out on Ready: %w", err)
 		}
 	} else if strings.EqualFold(managed, "false") {
 		err := r.deployer.Remove(ctx)
