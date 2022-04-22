@@ -23,9 +23,9 @@ There are two ways to set to acchieve this:
 - Run the Geneva MDM container locally
 - Spawn a VM, start the Geneva container there and connect/tunnel to it.
 
-and two protocolls to chose from:
-- Unix Domain Sockets, which is the way production is currently (April 2022) is run
-- or UDP, which is much easier to use and is way it will be used to allow for deploying the RP and related components on kubernetes clusters
+and two protocols to chose from:
+- Unix Domain Sockets, which is the way production is currently (April 2022) run
+- or UDP, which is much easier to use and is the way it will be used on kubernetes clusters in the future
 
 ## Local Container Setup
 

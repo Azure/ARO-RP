@@ -97,19 +97,15 @@ func TestEmitGaugeViaUDP(t *testing.T) {
 
 	socket := "127.0.0.1:8001"
 
-	os.Setenv(STATSD_SOCKET_ENV, "udp:"+socket)
+	os.Setenv(statsdSocketEnv, "udp:"+socket)
 	c2, _ := net.ListenPacket("udp", socket)
-	//c2.SetReadDeadline(time.Now().Add(5 * time.Second))
 
 	s := &statsd{
-		env: env,
-
+		env:       env,
 		account:   "*",
 		namespace: "*",
-
-		ch: make(chan *metric),
-
-		now: func() time.Time { return time.Time{} },
+		ch:        make(chan *metric),
+		now:       func() time.Time { return time.Time{} },
 	}
 
 	c := make(chan string)
@@ -118,11 +114,8 @@ func TestEmitGaugeViaUDP(t *testing.T) {
 		// set 5 second read timeout. That should be plenty of time to receive the emitted Gauge
 		c2.SetReadDeadline(time.Now().Add(5 * time.Second))
 		m := ""
-		//fmt.Println("Read")
 		n, _, err := c2.ReadFrom(buf)
 		if err != nil {
-			//fmt.Println(err.Error())
-			//m = err.Error()
 			m = err.Error()
 		} else {
 			m = string(buf[:n])
@@ -141,7 +134,6 @@ func TestEmitGaugeViaUDP(t *testing.T) {
 }
 
 func TestGetConnectionDetails(t *testing.T) {
-
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
@@ -154,12 +146,6 @@ func TestGetConnectionDetails(t *testing.T) {
 		connectionstring string
 		wantError        bool
 	}{
-		{
-			name:         "Random string",
-			set:          true,
-			socketstring: "randomstring234234809$#54ew5",
-			wantError:    true,
-		},
 		{
 			name:             "Old Bevaviour / production mode",
 			set:              false,
@@ -176,12 +162,6 @@ func TestGetConnectionDetails(t *testing.T) {
 			wantError:        false,
 		},
 		{
-			name:         "Empty env variable",
-			set:          true,
-			socketstring: "",
-			wantError:    true,
-		},
-		{
 			name:             "Valid UDP env variable",
 			set:              true,
 			socketstring:     "udp:127.0.0.1:9000",
@@ -189,17 +169,8 @@ func TestGetConnectionDetails(t *testing.T) {
 			connectionstring: "127.0.0.1:9000",
 			wantError:        false,
 		},
-		{
-			name:             "Valid Unix domain socket env variable",
-			set:              true,
-			socketstring:     "unix:test.socket",
-			protocol:         "unix",
-			connectionstring: "test.socket",
-			wantError:        false,
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			fmt.Println(tt.name)
 			env := mock_env.NewMockInterface(controller)
 
 			if !tt.set {
@@ -214,12 +185,12 @@ func TestGetConnectionDetails(t *testing.T) {
 				env: env,
 			}
 
-			os.Unsetenv(STATSD_SOCKET_ENV)
+			os.Unsetenv(statsdSocketEnv)
 			if tt.set {
-				os.Setenv(STATSD_SOCKET_ENV, tt.socketstring)
+				os.Setenv(statsdSocketEnv, tt.socketstring)
 			}
 
-			p, c, err := s.getConnectionDetails()
+			protocol, conn, err := s.getConnectionDetails()
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -232,9 +203,11 @@ func TestGetConnectionDetails(t *testing.T) {
 				if err != nil && tt.wantError == false {
 					fmt.Println(err.Error())
 					t.Fail()
-				} else if p != tt.protocol {
+				}
+				if protocol != tt.protocol {
 					t.Fail()
-				} else if c != tt.connectionstring {
+				}
+				if conn != tt.connectionstring {
 					t.Fail()
 				}
 
@@ -242,5 +215,100 @@ func TestGetConnectionDetails(t *testing.T) {
 		})
 
 	}
+}
 
+func TestParseSocketEnv(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	for _, tt := range []struct {
+		name             string
+		socketEnv        string
+		protocol         string
+		connectionstring string
+		wantError        bool
+	}{
+		{
+			name:      "Random string",
+			socketEnv: "randomstring234234809$#54ew5",
+			wantError: true,
+		},
+		{
+			name:      "Empty env variable",
+			socketEnv: "",
+			wantError: true,
+		},
+		{
+			name:             "Valid UDP env variable",
+			socketEnv:        "udp:127.0.0.1:9000",
+			protocol:         "udp",
+			connectionstring: "127.0.0.1:9000",
+			wantError:        false,
+		},
+		{
+			name:             "Valid UDP DNS env variable",
+			socketEnv:        "udp:localhost:9000",
+			protocol:         "udp",
+			connectionstring: "localhost:9000",
+			wantError:        false,
+		},
+		{
+			name:             "Valid Unix domain socket env variable",
+			socketEnv:        "unix:test.socket",
+			protocol:         "unix",
+			connectionstring: "test.socket",
+			wantError:        false,
+		},
+		{
+			name:             "Unsupported protocol",
+			socketEnv:        "tcp:127.0.0.1:8125",
+			protocol:         "",
+			connectionstring: "",
+			wantError:        true,
+		},
+		{
+			name:             "Invalid UDP env variable",
+			socketEnv:        "udp:127.0.0.1:90000000",
+			protocol:         "",
+			connectionstring: "",
+			wantError:        true,
+		},
+		{
+			name:             "Valid IPV6 UDP env variable",
+			socketEnv:        "udp:[2001:db8:3333:4444:5555:6666:7777:8888]:9000",
+			protocol:         "udp",
+			connectionstring: "[2001:db8:3333:4444:5555:6666:7777:8888]:9000",
+			wantError:        false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			env := mock_env.NewMockInterface(controller)
+
+			s := &statsd{
+				env: env,
+			}
+
+			protocol, conn, err := s.parseSocketEnv(tt.socketEnv)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+
+			if tt.wantError {
+				if err == nil {
+					t.Fail()
+				}
+			} else {
+				if err != nil && tt.wantError == false {
+					fmt.Println(err.Error())
+					t.Fail()
+				}
+				if protocol != tt.protocol {
+					t.Fail()
+				}
+				if conn != tt.connectionstring {
+					t.Fail()
+				}
+			}
+		})
+	}
 }

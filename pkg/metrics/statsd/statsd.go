@@ -6,7 +6,6 @@ package statsd
 // statsd implementation for https://genevamondocs.azurewebsites.net/collect/references/statsdref.html
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -33,7 +32,7 @@ type statsd struct {
 	now func() time.Time
 }
 
-const STATSD_SOCKET_ENV = "ARO_STATSD_SOCKET"
+const statsdSocketEnv = "ARO_STATSD_SOCKET"
 
 // New returns a new metrics.Interface
 func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string) metrics.Emitter {
@@ -108,41 +107,67 @@ func (s *statsd) run() {
 	}
 }
 
-func (s *statsd) getConnectionDetails() (protocol string, connectionstring string, err error) {
-	// allow the socket connection to be overriden via ENV Variable
-	o, isset := os.LookupEnv(STATSD_SOCKET_ENV)
-	if !isset { //original behaviour
-		protocol = "unix"
-		connectionstring = "/var/etw/mdm_statsd.socket"
-		if s.env.IsLocalDevelopmentMode() {
-			connectionstring = "mdm_statsd.socket"
+func (s *statsd) parseSocketEnv(env string) (string, string, error) {
+	const (
+		malformed           = "malformed ENV variable ARO_STATSD_SOCKET. Expecting udp:<hostname>:<port> or unix:<path-to-socket> format. Got: %s"
+		unsupportedProtocol = "unsupported protocol in ENV variable ARO_STATSD_SOCKET. Expecting  'udp:' or 'unix:'. Got: %s in %s"
+		invalidUDPAddress   = "invalid UDP address in ENV variable ARO_STATSD_SOCKET %s. Error: %s "
+	)
+
+	// Verify protocol:connectionstring format
+	parameters := strings.SplitN(env, ":", 2)
+	if len(parameters) != 2 {
+		return "", "", fmt.Errorf(malformed, env)
+	}
+	protocol := parameters[0]
+	connectionstring := parameters[1]
+
+	//Verify supported protocol provided
+	if protocol != "udp" && protocol != "unix" {
+		return "", "", fmt.Errorf(unsupportedProtocol, protocol, env)
+	}
+
+	//UDP address check, no such (meaningful) thing for unix:
+	if protocol == "udp" {
+		_, err := net.ResolveUDPAddr(protocol, connectionstring)
+		if err != nil {
+			return "", "", fmt.Errorf(invalidUDPAddress, env, err)
 		}
-
-		return
 	}
 
-	// Assume protocol:connectionstring format
-	a := strings.SplitN(o, ":", 2)
-	if len(a) != 2 {
-		err = errors.New("malformated ENV Variable ARO_STATSD_SOCKET. Expecting udp:host:port or unix:path-to-socket format")
+	return protocol, connectionstring, nil
+}
 
-		return
+func (s *statsd) getDefaultSocketValues() (string, string) {
+	protocol := "unix"
+	connectionstring := "/var/etw/mdm_statsd.socket"
+
+	if s.env.IsLocalDevelopmentMode() {
+		connectionstring = "mdm_statsd.socket"
 	}
-	protocol = strings.ToLower(a[0])
-	connectionstring = a[1]
 
-	return
+	return protocol, connectionstring
 
 }
 
-func (s *statsd) dial() (err error) {
+func (s *statsd) getConnectionDetails() (string, string, error) {
+	// allow the socket connection to be overriden via ENV Variable
+	socketEnv, isset := os.LookupEnv(statsdSocketEnv)
+	if !isset { //original behaviour
+		protocol, connectionstring := s.getDefaultSocketValues()
+		return protocol, connectionstring, nil
+	}
 
-	p, c, err := s.getConnectionDetails()
+	return s.parseSocketEnv(socketEnv)
+}
+
+func (s *statsd) dial() (err error) {
+	protocol, connectionstring, err := s.getConnectionDetails()
 	if err != nil {
 		return
 	}
 
-	s.conn, err = net.Dial(p, c)
+	s.conn, err = net.Dial(protocol, connectionstring)
 
 	return
 }
