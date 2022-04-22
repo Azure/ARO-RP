@@ -151,14 +151,14 @@ func TestPullSecretReconciler(t *testing.T) {
 			name: "valid RH keys present",
 			fakecli: newFakecli(&corev1.Secret{
 				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.redhat.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 				},
 			}, &corev1.Secret{Data: map[string][]byte{
-				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.redhat.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
 			arocli:   newFakeAro(&baseCluster),
-			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.redhat.com":{"auth":"ZnJlZDplbnRlcg=="}}}`,
-			wantKeys: []string{"registry.redhat.io", "cloud.redhat.com"},
+			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			wantKeys: []string{"registry.redhat.io", "cloud.openshift.com"},
 		},
 		{
 			name: "management disabled, valid RH key present",
@@ -298,9 +298,9 @@ func TestParseRedHatKeys(t *testing.T) {
 		{
 			name: "with all rh key",
 			ps: &corev1.Secret{Data: map[string][]byte{
-				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.connect.redhat.com":{"auth":"ZnJlZDplbnRlcg=="},"cloud.redhat.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.connect.redhat.com":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}},
-			wantKeys: []string{"registry.redhat.io", "cloud.redhat.com", "registry.connect.redhat.com"},
+			wantKeys: []string{"registry.redhat.io", "cloud.openshift.com", "registry.connect.redhat.com"},
 		},
 	}
 

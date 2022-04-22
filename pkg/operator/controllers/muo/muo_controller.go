@@ -38,7 +38,7 @@ const (
 	controllerOcmBaseURL             = "rh.srep.muo.deploy.ocmBaseUrl"
 	controllerOcmBaseURLDefaultValue = "https://api.openshift.com"
 
-	pullSecretOCMKey = "cloud.redhat.com"
+	pullSecretOCMKey = "cloud.openshift.com"
 )
 
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
