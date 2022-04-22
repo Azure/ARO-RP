@@ -37,13 +37,40 @@ kill_rp(){
     wait $rppid
 }
 
-run_vpn() {
-    sudo openvpn --config secrets/$VPN --daemon --writepid vpnpid
-    sleep 10
+validate_portal_running() {
+    echo "########## ？Checking Admin Portal Status ##########"
+    ELAPSED=0
+    while true; do
+        http_code=$(curl -k -s -o /dev/null -w '%{http_code}' https://localhost:8444/api/info || true)
+        case $http_code in
+            "403")
+            echo "########## ✅ ARO Admin Portal Running ##########"
+            break
+            ;;
+            *)
+            echo "Attempt $ELAPSED - local Admin Portal is NOT up. Code : $http_code, waiting"
+            sleep 2
+            # after 40 secs return exit 1 to not block ci
+            ELAPSED=$((ELAPSED+1))
+            if [ $ELAPSED -eq 20 ]
+            then
+                exit 1
+            fi
+            ;;
+        esac
+    done
 }
 
-kill_vpn() {
-    while read pid; do sudo kill $pid; done < vpnpid
+run_portal() {
+    echo "########## 🚀 Run Admin Portal in background ##########"
+    ./aro portal &
+}
+
+kill_portal(){
+    echo "########## Kill the Admin Portal running in background ##########"
+    rppid=$(lsof -t -i :8444)
+    kill $rppid
+    wait $rppid
 }
 
 deploy_e2e_db() {
