@@ -32,7 +32,7 @@ type statsd struct {
 	now func() time.Time
 }
 
-const statsdSocketEnv = "ARO_STATSD_SOCKET"
+const statsdSocketEnv = "MDM_STATSD_SOCKET"
 
 // New returns a new metrics.Interface
 func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string) metrics.Emitter {
@@ -108,34 +108,28 @@ func (s *statsd) run() {
 }
 
 func (s *statsd) parseSocketEnv(env string) (string, string, error) {
-	const (
-		malformed           = "malformed ENV variable ARO_STATSD_SOCKET. Expecting udp:<hostname>:<port> or unix:<path-to-socket> format. Got: %s"
-		unsupportedProtocol = "unsupported protocol in ENV variable ARO_STATSD_SOCKET. Expecting  'udp:' or 'unix:'. Got: %s in %s"
-		invalidUDPAddress   = "invalid UDP address in ENV variable ARO_STATSD_SOCKET %s. Error: %s "
-	)
-
 	// Verify protocol:connectionstring format
 	parameters := strings.SplitN(env, ":", 2)
 	if len(parameters) != 2 {
-		return "", "", fmt.Errorf(malformed, env)
+		return "", "", fmt.Errorf("malformed ENV variable %s. Expecting udp:<hostname>:<port> or unix:<path-to-socket> format. Got: %s", statsdSocketEnv, env)
 	}
-	protocol := parameters[0]
-	connectionstring := parameters[1]
+	network := strings.ToLower(parameters[0])
+	address := parameters[1]
 
 	//Verify supported protocol provided
-	if protocol != "udp" && protocol != "unix" {
-		return "", "", fmt.Errorf(unsupportedProtocol, protocol, env)
+	if network != "udp" && network != "unix" {
+		return "", "", fmt.Errorf("unsupported protocol in ENV variable %s. Expecting  'udp:' or 'unix:'. Got: %s: in %s", statsdSocketEnv, network, env)
 	}
 
 	//UDP address check, no such (meaningful) thing for unix:
-	if protocol == "udp" {
-		_, err := net.ResolveUDPAddr(protocol, connectionstring)
+	if network == "udp" {
+		_, err := net.ResolveUDPAddr(network, address)
 		if err != nil {
-			return "", "", fmt.Errorf(invalidUDPAddress, env, err)
+			return "", "", fmt.Errorf("invalid UDP address in ENV variable %s %s. Error: %s", statsdSocketEnv, env, err)
 		}
 	}
 
-	return protocol, connectionstring, nil
+	return network, address, nil
 }
 
 func (s *statsd) getDefaultSocketValues() (string, string) {
@@ -153,10 +147,9 @@ func (s *statsd) getConnectionDetails() (string, string, error) {
 	// allow the socket connection to be overriden via ENV Variable
 	socketEnv, isset := os.LookupEnv(statsdSocketEnv)
 	if !isset { //original behaviour
-		protocol, connectionstring := s.getDefaultSocketValues()
-		return protocol, connectionstring, nil
+		network, address := s.getDefaultSocketValues()
+		return network, address, nil
 	}
-
 	return s.parseSocketEnv(socketEnv)
 }
 

@@ -106,7 +106,7 @@ Stop the script with Ctrl-C. The script then will do its best to stop the ssh an
 
 If required you can adapt the [deploy script for the Unix domain socket way](../hack/local-monitor-testing/deploy_MDM_VM.sh) deploys such a VM called $USER-mdm-link on Azure, configures it and installs the mdm container.
 
-Provided that you get the firewall rules in place you should be able to point your local monitor process to the remote UDP socket directly by setting the ARO_STATSD_SOCKET="udp:<IP of your remote VM>:<port>" # default mdm udp port  is 8125
+Provided that you get the firewall rules in place you should be able to point your local monitor process to the remote UDP socket directly by setting the MDM_STATSD_SOCKET="udp:<IP of your remote VM>:<port>" # default mdm udp port  is 8125
 
 ## Starting the monitor
 
@@ -119,15 +119,15 @@ environment variables set to Geneva account and namespace where you metrics is s
 
 Use `go run -tags aro ./cmd/aro monitor`  to start the monitor. You want to check what the current directory of your monitor is, because that's the folder the monitor will use to search for the mdm_statds.socket file and that needs to match where your mdm container or the socat command creates it. Please note that in local dev mode the monitor will silently ignore if it can't connect to the socket.
 
-> If you modified the default path of the Unix Domain Socket or use the UDP way you will need to set the `ARO_STATSD_SOCKET` to configure the monitor process accordingly
+> If you modified the default path of the Unix Domain Socket or use the UDP way you will need to set the `MDM_STATSD_SOCKET` to configure the monitor process accordingly
 
 The format would be 
 ````
-ARO_STATSD_SOCKET="unix:/my/path/my/file"
+MDM_STATSD_SOCKET="unix:/my/path/my/file"
 
 or
 
-ARO_STATSD_SOCKET="udp:<hostname>:<port>" # default mdm udp port  is 8125
+MDM_STATSD_SOCKET="udp:<hostname>:<port>" # default mdm udp port  is 8125
 
 ````
 
@@ -147,7 +147,7 @@ A VS Code launch config that does the same would look like.
             ],    
             "env": {"CLUSTER_MDM_ACCOUNT": "<PUT YOUR ACCOUNT HERE>",
             "CLUSTER_MDM_NAMESPACE":"<PUT YOUR NAMESPACE HERE>",
-            "ARO_STATSD_SOCKET":"<YOUR CONNECTION STRING> }    
+            "MDM_STATSD_SOCKET":"<YOUR CONNECTION STRING> }    
         },
 ````
 

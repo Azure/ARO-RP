@@ -137,36 +137,36 @@ func TestGetConnectionDetails(t *testing.T) {
 	defer controller.Finish()
 
 	for _, tt := range []struct {
-		name             string
-		set              bool
-		isLocalDev       bool
-		socketstring     string
-		protocol         string
-		connectionstring string
-		wantError        bool
+		name         string
+		set          bool
+		isLocalDev   bool
+		socketstring string
+		network      string
+		address      string
+		wantError    bool
 	}{
 		{
-			name:             "Old Bevaviour / production mode",
-			set:              false,
-			protocol:         "unix",
-			connectionstring: "/var/etw/mdm_statsd.socket",
-			wantError:        false,
+			name:      "Old Bevaviour / production mode",
+			set:       false,
+			network:   "unix",
+			address:   "/var/etw/mdm_statsd.socket",
+			wantError: false,
 		},
 		{
-			name:             "Old Bevaviour / localdev mode",
-			set:              false,
-			isLocalDev:       true,
-			protocol:         "unix",
-			connectionstring: "mdm_statsd.socket",
-			wantError:        false,
+			name:       "Old Bevaviour / localdev mode",
+			set:        false,
+			isLocalDev: true,
+			network:    "unix",
+			address:    "mdm_statsd.socket",
+			wantError:  false,
 		},
 		{
-			name:             "Valid UDP env variable",
-			set:              true,
-			socketstring:     "udp:127.0.0.1:9000",
-			protocol:         "udp",
-			connectionstring: "127.0.0.1:9000",
-			wantError:        false,
+			name:         "Valid UDP env variable",
+			set:          true,
+			socketstring: "udp:127.0.0.1:9000",
+			network:      "udp",
+			address:      "127.0.0.1:9000",
+			wantError:    false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -189,7 +189,7 @@ func TestGetConnectionDetails(t *testing.T) {
 				os.Setenv(statsdSocketEnv, tt.socketstring)
 			}
 
-			protocol, conn, err := s.getConnectionDetails()
+			network, address, err := s.getConnectionDetails()
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -203,10 +203,10 @@ func TestGetConnectionDetails(t *testing.T) {
 					fmt.Println(err.Error())
 					t.Fail()
 				}
-				if protocol != tt.protocol {
+				if network != tt.network {
 					t.Fail()
 				}
-				if conn != tt.connectionstring {
+				if address != tt.address {
 					t.Fail()
 				}
 			}
@@ -219,11 +219,11 @@ func TestParseSocketEnv(t *testing.T) {
 	defer controller.Finish()
 
 	for _, tt := range []struct {
-		name             string
-		socketEnv        string
-		protocol         string
-		connectionstring string
-		wantError        bool
+		name      string
+		socketEnv string
+		network   string
+		address   string
+		wantError bool
 	}{
 		{
 			name:      "Random string",
@@ -236,46 +236,67 @@ func TestParseSocketEnv(t *testing.T) {
 			wantError: true,
 		},
 		{
-			name:             "Valid UDP env variable",
-			socketEnv:        "udp:127.0.0.1:9000",
-			protocol:         "udp",
-			connectionstring: "127.0.0.1:9000",
-			wantError:        false,
+			name:      "Valid UDP env variable",
+			socketEnv: "udp:127.0.0.1:9000",
+			network:   "udp",
+			address:   "127.0.0.1:9000",
+			wantError: false,
 		},
 		{
-			name:             "Valid UDP DNS env variable",
-			socketEnv:        "udp:localhost:9000",
-			protocol:         "udp",
-			connectionstring: "localhost:9000",
-			wantError:        false,
+			name:      "Valid UDP env variable",
+			socketEnv: "UDP:127.0.0.1:9000",
+			network:   "udp",
+			address:   "127.0.0.1:9000",
+			wantError: false,
 		},
 		{
-			name:             "Valid Unix domain socket env variable",
-			socketEnv:        "unix:test.socket",
-			protocol:         "unix",
-			connectionstring: "test.socket",
-			wantError:        false,
+			name:      "Valid UDP DNS env variable",
+			socketEnv: "udp:localhost:9000",
+			network:   "udp",
+			address:   "localhost:9000",
+			wantError: false,
 		},
 		{
-			name:             "Unsupported protocol",
-			socketEnv:        "tcp:127.0.0.1:8125",
-			protocol:         "",
-			connectionstring: "",
-			wantError:        true,
+			name:      "Valid Unix domain socket env variable",
+			socketEnv: "unix:test.socket",
+			network:   "unix",
+			address:   "test.socket",
+			wantError: false,
 		},
 		{
-			name:             "Invalid UDP env variable",
-			socketEnv:        "udp:127.0.0.1:90000000",
-			protocol:         "",
-			connectionstring: "",
-			wantError:        true,
+			name:      "Unsupported /network",
+			socketEnv: "tcp:127.0.0.1:8125",
+			network:   "",
+			address:   "",
+			wantError: true,
 		},
 		{
-			name:             "Valid IPV6 UDP env variable",
-			socketEnv:        "udp:[2001:db8:3333:4444:5555:6666:7777:8888]:9000",
-			protocol:         "udp",
-			connectionstring: "[2001:db8:3333:4444:5555:6666:7777:8888]:9000",
-			wantError:        false,
+			name:      "Invalid UDP env variable",
+			socketEnv: "udp:127.0.0.1:90000000",
+			network:   "",
+			address:   "",
+			wantError: true,
+		},
+		{
+			name:      "Valid IPV6 UDP env variable",
+			socketEnv: "udp:[2001:db8:3333:4444:5555:6666:7777:8888]:9000",
+			network:   "udp",
+			address:   "[2001:db8:3333:4444:5555:6666:7777:8888]:9000",
+			wantError: false,
+		},
+		{
+			name:      "Valid Unix Test",
+			socketEnv: "unix:/var/this/that/or/another",
+			network:   "unix",
+			address:   "/var/this/that/or/another",
+			wantError: false,
+		},
+		{
+			name:      "Valid Unix Path",
+			socketEnv: "unix:../another.test.socket",
+			network:   "unix",
+			address:   "../another.test.socket",
+			wantError: false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -285,7 +306,7 @@ func TestParseSocketEnv(t *testing.T) {
 				env: env,
 			}
 
-			protocol, conn, err := s.parseSocketEnv(tt.socketEnv)
+			network, address, err := s.parseSocketEnv(tt.socketEnv)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -299,10 +320,10 @@ func TestParseSocketEnv(t *testing.T) {
 					fmt.Println(err.Error())
 					t.Fail()
 				}
-				if protocol != tt.protocol {
+				if network != tt.network {
 					t.Fail()
 				}
-				if conn != tt.connectionstring {
+				if address != tt.address {
 					t.Fail()
 				}
 			}
