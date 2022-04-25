@@ -293,7 +293,6 @@ func TestEnsureMTUSize(t *testing.T) {
 
 			assert.Equal(t, tt.expectedErr, err, "Unexpected error exception")
 			assert.Equal(t, tt.expectedMTU, tt.m.doc.OpenShiftCluster.Properties.NetworkProfile.MTUSize, "MTUSize was not updated as expected exception")
-
 		})
 	}
 }
