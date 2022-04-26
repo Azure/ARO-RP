@@ -15,16 +15,6 @@ func isStandardLibrary(path string) bool {
 	return !strings.ContainsRune(strings.SplitN(path, "/", 2)[0], '.')
 }
 
-func validateDotImport(path string) error {
-	switch path {
-	case "github.com/onsi/ginkgo",
-		"github.com/onsi/gomega":
-		return nil
-	}
-
-	return fmt.Errorf("invalid . import %s", path)
-}
-
 func validateUnderscoreImport(path string) error {
 	if regexp.MustCompile(`^github\.com/Azure/ARO-RP/pkg/api/(admin|v[^/]+)$`).MatchString(path) {
 		return nil
@@ -227,10 +217,7 @@ nextImport:
 		value := strings.Trim(imp.Path.Value, `"`)
 
 		if imp.Name != nil && imp.Name.Name == "." {
-			err := validateDotImport(value)
-			if err != nil {
-				errs = append(errs, err)
-			}
+			//accept dotimports because we check them with golangci-lint
 			continue
 		}
 
@@ -279,7 +266,6 @@ nextImport:
 				continue nextImport
 			}
 		}
-
 		errs = append(errs, fmt.Errorf("%s is imported as %q, should be %q", value, imp.Name, names))
 	}
 
