@@ -4,13 +4,15 @@ package dynamichelper
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/to"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	appsv1 "k8s.io/api/apps/v1"
+	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	"github.com/golang/mock/gomock"
+
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	extensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -22,6 +24,76 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
+
+func TestEsureDeleted(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		uname     string
+		grpkind   string
+		namespace string
+		name      string
+		wantErr   error
+		grpvr     *schema.GroupVersionResource
+	}{
+		{
+			uname:     "Test EnsureDeleted 1",
+			grpkind:   "configmap",
+			namespace: "test-namespace-1",
+			name:      "test-name-1",
+			wantErr:   errors.New("this is a new error"),
+			grpvr:     &schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"},
+		},
+		{
+			uname:     "Test EnsureDeleted 2",
+			grpkind:   "configmap",
+			namespace: "test-namespace-2",
+			name:      "test-name-2",
+			wantErr:   errors.New("This is another error"),
+			grpvr:     &schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"},
+		},
+	} {
+		t.Run(tt.uname, func(t *testing.T) {
+			mockController := gomock.NewController(t)
+			defer mockController.Finish()
+
+			mockCore := mock_dynamichelper.NewMockGVRResolver(mockController)
+			mockCore.
+				EXPECT().
+				Resolve("configmap", "").
+				Return(nil, tt.wantErr).
+				AnyTimes()
+
+			dh := &dynamicHelper{GVRResolver: mockCore, delete: func(context.Context, *schema.GroupVersionResource, string, string) error {
+				return nil
+			}}
+
+			err := dh.EnsureDeleted(ctx, tt.grpkind, tt.namespace, tt.name)
+
+			if !reflect.DeepEqual(err, tt.wantErr) {
+				t.Error(err)
+			}
+
+			dh_2 := &dynamicHelper{delete: func(context.Context, *schema.GroupVersionResource, string, string) error {
+				return nil
+			}}
+
+			err = dh_2.delete(ctx, tt.grpvr, tt.namespace, tt.name)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			dh_3 := &dynamicHelper{GVRResolver: mockCore, delete: func(context.Context, *schema.GroupVersionResource, string, string) error {
+				return (tt.wantErr)
+			}}
+
+			err = dh_3.delete(ctx, tt.grpvr, tt.namespace, tt.name)
+			if !reflect.DeepEqual(err, tt.wantErr) {
+				t.Error(err)
+			}
+		})
+	}
+}
 
 func TestMerge(t *testing.T) {
 	serviceInternalTrafficPolicy := corev1.ServiceInternalTrafficPolicyCluster
