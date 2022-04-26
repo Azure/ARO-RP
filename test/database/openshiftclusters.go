@@ -177,7 +177,7 @@ func (i *fakeOpenShiftClustersQueueLengthIterator) Next(ctx context.Context, max
 
 func (i *fakeOpenShiftClustersQueueLengthIterator) NextRaw(ctx context.Context, continuation int, out interface{}) error {
 	if i.called {
-		return errors.New("Can't call twice!")
+		return errors.New("can't call twice!")
 	}
 	i.called = true
 

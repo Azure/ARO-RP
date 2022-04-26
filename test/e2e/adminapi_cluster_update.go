@@ -21,7 +21,7 @@ var _ = Describe("[Admin API] Cluster admin update action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("should be able to run cluster update operation on a cluster", func() {
-		var oc *admin.OpenShiftCluster = &admin.OpenShiftCluster{}
+		var oc = &admin.OpenShiftCluster{}
 		ctx := context.Background()
 		resourceID := resourceIDFromEnv()
 
