@@ -39,6 +39,12 @@ type CloudErrorBody struct {
 	// The target of the particular error. For example, the name of the property in error.
 	Target string `json:"target,omitempty"`
 
+	// The category for the error, being either a user or server error
+	Category string
+
+	// The location that depends on this functioning correctly, for example OpenShiftInstaller would be a dependency
+	Dependency string
+
 	//A list of additional details about the error.
 	Details []CloudErrorBody `json:"details,omitempty"`
 }
@@ -56,7 +62,7 @@ func (b *CloudErrorBody) String() string {
 		}
 	}
 
-	return fmt.Sprintf("%s: %s: %s%s", b.Code, b.Target, b.Message, details)
+	return fmt.Sprintf("%s: %s: %s: %s: %s%s", b.Code, b.Target, b.Message, b.Category, b.Dependency, details)
 }
 
 // CloudErrorCodes
@@ -97,6 +103,12 @@ const (
 	CloudErrorResourceProviderNotRegistered          = "ResourceProviderNotRegistered"
 )
 
+// CloudErrorCategories
+const (
+	AROUserError           = "ARO-UserError"
+	AROInternalServerError = "ARO-InternalServerError"
+)
+
 // NewCloudError returns a new CloudError
 func NewCloudError(statusCode int, code, target, message string, a ...interface{}) *CloudError {
 	return &CloudError{
@@ -105,6 +117,20 @@ func NewCloudError(statusCode int, code, target, message string, a ...interface{
 			Code:    code,
 			Message: fmt.Sprintf(message, a...),
 			Target:  target,
+		},
+	}
+}
+
+// NewCloudError returns a new CloudError with category and dependency
+func NewCloudErrorWithCategory(statusCode int, code, target, message string, category string, dependency string, a ...interface{}) *CloudError {
+	return &CloudError{
+		StatusCode: statusCode,
+		CloudErrorBody: &CloudErrorBody{
+			Code:       code,
+			Message:    fmt.Sprintf(message, a...),
+			Target:     target,
+			Category:   category,
+			Dependency: dependency,
 		},
 	}
 }
