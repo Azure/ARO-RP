@@ -625,6 +625,14 @@ rules:
   - list
   - watch
 - apiGroups:
+  - upgrade.managed.openshift.io
+  resources:
+  - upgradeconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - user.openshift.io
   resources:
   - groups
