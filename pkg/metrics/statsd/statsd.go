@@ -145,8 +145,8 @@ func (s *statsd) getDefaultSocketValues() (string, string) {
 
 func (s *statsd) getConnectionDetails() (string, string, error) {
 	// allow the socket connection to be overriden via ENV Variable
-	socketEnv, isset := os.LookupEnv(statsdSocketEnv)
-	if !isset { //original behaviour
+	socketEnv, isSet := os.LookupEnv(statsdSocketEnv)
+	if !isSet { //original behaviour
 		network, address := s.getDefaultSocketValues()
 		return network, address, nil
 	}

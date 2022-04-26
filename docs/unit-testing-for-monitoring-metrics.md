@@ -19,7 +19,7 @@ The monitor picks the required information about which clusters should actually 
 
 If you work on monitor metrics in local dev mode (RP_MODE=Development) you most likely want to see your data somewhere in Geneva INT (https://jarvis-west-int.cloudapp.net/) before you ship your code.
 
-There are two ways to set to acchieve this: 
+There are two ways to set to achieve this: 
 - Run the Geneva MDM container locally
 - Spawn a VM, start the Geneva container there and connect/tunnel to it.
 
@@ -42,7 +42,7 @@ Before you start, make sure :
 ### The Unix Domain Socket way
 
 An example docker command to start the container locally using UNIX domain sockets is here (you may need to adapt some parameters):
-[Example](../hack/local-monitor-testing/samples/dockerStartCommand-UDS.sh). As mentioned this is the way it's run in production. The script will configure the mdm container to connect to Geneva INT.  The sample script tries to copy the certificate file to /etc/mdm.pem to mimic production. You can change that by changing the corresponding volume definition. In that case you'll also need to set the `ARP_STATDS_SOCKET` environment variable to `"unix:/<path to where the socket file should be created>"` to point the monitor (or RP for that matter) to the same place/file.
+[Example](../hack/local-monitor-testing/samples/dockerStartCommand-UDS.sh). As mentioned this is the way it's run in production. The script will configure the mdm container to connect to Geneva INT.  The sample script tries to copy the certificate file to /etc/mdm.pem to mimic production. You can change that by changing the corresponding volume definition. In that case you'll also need to set the `MDM_STATSD_SOCKET` environment variable to `"unix:/<path to where the socket file should be created>"` to point the monitor (or RP for that matter) to the same place/file.
 
 When you start the montitor locally in local dev mode, by default he monitor looks for a Unix Socket file called `mdm_statsd.socket` in the current directory from where the cmd/aro command is executed, typically either the base folder of your repo or `./cmd/aro` is started through VSCode (for example)
 
@@ -53,7 +53,7 @@ When you start the montitor locally in local dev mode, by default he monitor loo
 
 An example docker command to start the container locally using UDP is here (you may need to adapt some parameters):
 [Example](../hack/local-monitor-testing/samples/dockerStartCommand-UDP.sh). This will start an mdm container on `0.0.0.0:8125`. 
-Please note that you need to set the `ARP_STATDS_SOCKET` environment variable at monitor start up time so that the monitor finds that socket.
+Please note that you need to set the `MDM_STATSD_SOCKET` environment variable at monitor start up time so that the monitor finds that socket.
 
 
 ## Remote Container Setup
@@ -104,7 +104,7 @@ Stop the script with Ctrl-C. The script then will do its best to stop the ssh an
 
 ### The UDP way
 
-If required you can adapt the [deploy script for the Unix domain socket way](../hack/local-monitor-testing/deploy_MDM_VM.sh) deploys such a VM called $USER-mdm-link on Azure, configures it and installs the mdm container.
+If required you can adapt the [deploy script for the Unix domain socket way](../hack/local-monitor-testing/deploy_MDM_VM.sh) that deploys such a VM called $USER-mdm-link on Azure, configures it and installs the mdm container.
 
 Provided that you get the firewall rules in place you should be able to point your local monitor process to the remote UDP socket directly by setting the MDM_STATSD_SOCKET="udp:<IP of your remote VM>:<port>" # default mdm udp port  is 8125
 
@@ -156,13 +156,12 @@ A VS Code launch config that does the same would look like.
 If all goes well, you should see your metric data  in the Jarvis metrics list (Geneva INT (https://jarvis-west-int.cloudapp.net/) -> Manage ->  Metrics) under the account and namespace you specified in CLUSTER_MDM_ACCOUNT and CLUSTER_MDM_NAMESPACE and also be available is the dashboard settings.
 
 
-## Injecting Test Data into Geneva INT
+## Injecting Test Data into Geneva INT 
 
 Once your monitor code is done you will want to create pre-aggregates, dashboards and alert on the Geneva side and test with a variety of data.
 Your end-2-end testing with real cluster will generate some data and cover many test scenarios, but if that's not feasible or too time-consuming you can inject data directly into the Genava mdm container via the socat/ssh network chain.
 
-An example metric script is shown below, you can connect it to 
-
+An example metric script is shown below. If you try the Unix socket way you can connect it with 
 
 ````
 myscript.sh | socat TCP-CONNECT:127.0.0.1:12345 - 
@@ -173,6 +172,11 @@ myscript.sh | socat UNIX-CONNECT:$SOCKETFILE -
 ````
 (see above of the $SOCKETFILE )
 
+
+for the UDP way use:
+````
+myscript.sh | socat UDP:127.0.0.1:8125 - 
+````
 
 
 ### Sample metric script
