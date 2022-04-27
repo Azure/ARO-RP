@@ -77,3 +77,7 @@ func (v *Version) Eq(w *Version) bool {
 	}
 	return true
 }
+
+func (v *Version) MinorVersion() string {
+	return fmt.Sprintf("%d.%d", v.V[0], v.V[1])
+}
