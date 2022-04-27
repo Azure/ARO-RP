@@ -265,12 +265,12 @@ func TestMUOReconciler(t *testing.T) {
 				readinessPollTime: 1 * time.Second,
 			}
 			_, err := r.Reconcile(context.Background(), reconcile.Request{})
+			if err != nil && err.Error() != tt.wantErr {
+				t.Errorf("got error '%v', wanted error '%v'", err, tt.wantErr)
+			}
+
 			if err == nil && tt.wantErr != "" {
-				t.Error(err)
-			} else if err != nil {
-				if err.Error() != tt.wantErr {
-					t.Errorf("wanted '%v', got '%v'", tt.wantErr, err)
-				}
+				t.Errorf("did not get an error, but wanted error '%v'", tt.wantErr)
 			}
 		})
 	}
