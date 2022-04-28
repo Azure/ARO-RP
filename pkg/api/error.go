@@ -42,7 +42,7 @@ type CloudErrorBody struct {
 	// The category for the error, being either a user or server error
 	Category string
 
-	// The location that depends on this functioning correctly, for example OpenShiftInstaller would be a dependency
+	// Dependency is the source where this error originates from
 	Dependency string
 
 	//A list of additional details about the error.
