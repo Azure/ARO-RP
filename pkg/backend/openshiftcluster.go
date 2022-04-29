@@ -30,10 +30,23 @@ type openShiftClusterBackend struct {
 	newManager func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument) (cluster.Interface, error)
 }
 
+type clusterResult struct {
+	// ResultType will consist of 0 for success, 1 for user error, and 2 for internal server error
+	resultType   int
+	errorDetails error
+}
+
 func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
 	return &openShiftClusterBackend{
 		backend:    b,
 		newManager: cluster.New,
+	}
+}
+
+func newClusterResult(resultType int, backendErr error) *clusterResult {
+	return &clusterResult{
+		resultType:   resultType,
+		errorDetails: backendErr,
 	}
 }
 
@@ -204,6 +217,7 @@ func (ocb *openShiftClusterBackend) heartbeat(ctx context.Context, cancel contex
 
 func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, log *logrus.Entry, id string, oc *api.OpenShiftCluster, provisioningState, failedProvisioningState api.ProvisioningState, backendErr error) error {
 	if id != "" {
+		resultType := 0
 		_, err := ocb.dbAsyncOperations.Patch(ctx, id, func(asyncdoc *api.AsyncOperationDocument) error {
 			asyncdoc.AsyncOperation.ProvisioningState = provisioningState
 
@@ -215,10 +229,14 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 				// asyncOperations errors. Otherwise - return generic error
 				err, ok := backendErr.(*api.CloudError)
 				if ok {
-					log.Print(backendErr)
+					if err.CloudErrorBody.Category != "" && err.CloudErrorBody.Category == api.AROUserError {
+						resultType = 1
+					} else {
+						resultType = 2
+					}
 					asyncdoc.AsyncOperation.Error = err.CloudErrorBody
 				} else {
-					log.Error(backendErr)
+					resultType = 2
 					asyncdoc.AsyncOperation.Error = &api.CloudErrorBody{
 						Code:    api.CloudErrorCodeInternalServerError,
 						Message: "Internal server error.",
@@ -234,6 +252,9 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 
 				asyncdoc.OpenShiftCluster = &ocCopy
 			}
+
+			clusterResult := newClusterResult(resultType, backendErr)
+			log.Print("Cluster async operation result: %s", clusterResult)
 
 			return nil
 		})
