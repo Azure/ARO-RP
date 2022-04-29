@@ -119,7 +119,7 @@ const (
 	SoftwareDefinedNetworkOpenShiftSDN  SoftwareDefinedNetwork = "OpenShiftSDN"
 )
 
-// MTUSize represents the MTU size of a cluster
+// MTUSize represents the MTU size of a cluster (Maximum transmission unit)
 type MTUSize int
 
 // MTUSize constants
