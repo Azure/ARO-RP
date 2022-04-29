@@ -155,6 +155,13 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		c.log.Infof("creating resource group")
 		_, err = c.groups.CreateOrUpdate(ctx, vnetResourceGroup, mgmtfeatures.ResourceGroup{
 			Location: to.StringPtr(c.env.Location()),
+			// Tags prevent NRMS Simply Secure (V1) from applying NSGs to e2e subnets
+			// https://eng.ms/docs/security-compliance-identity-and-management-scim/security/azure-security/security-health-analytics/network-isolation/netiso-teamdocs/netiso-program-overview/manage/hypernet-and-nrms-simply-secure-v1-network-security-rules
+			Tags: map[string]*string{
+				"SkipNRMSDatabricks": to.StringPtr("Hypernet"),
+				"SkipNRMSCorp":       to.StringPtr("Hypernet"),
+				"SkipNRMSSAW":        to.StringPtr("Hypernet"),
+			},
 		})
 		if err != nil {
 			return err
