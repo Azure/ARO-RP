@@ -112,7 +112,6 @@ func extractValuesFromAuthHeader(header string) (string, string, error) {
 }
 
 func (client ociRegClient) getToken(user, password string) (string, error) {
-
 	//	req, _ := http.NewRequest(http.MethodGet, "https://quay.io/v2/auth?account=rh_ee_jfacchet&scope=repository%3Arh_ee_jfacchet%2Fmyfirstrepo%3Apull&service=quay.io", nil)
 	req, _ := http.NewRequestWithContext(client.ctx, http.MethodGet, client.bearerRealm, nil)
 	query := req.URL.Query()
@@ -137,7 +136,6 @@ func (client ociRegClient) getToken(user, password string) (string, error) {
 }
 
 func (client ociRegClient) tokenIsValid(token, user, repo string) (bool, error) {
-
 	url := fmt.Sprintf("https://%s/v2/%s/%s/manifests/latest", client.serviceURL, user, repo)
 	req, err := http.NewRequestWithContext(client.ctx, http.MethodGet, url, nil)
 	if err != nil {
