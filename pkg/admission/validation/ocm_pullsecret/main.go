@@ -15,7 +15,6 @@ import (
 )
 
 func main() {
-
 	b64, _ := ioutil.ReadFile("./test.b64")
 	client := &http.Client{
 		Timeout: time.Second * 3,
@@ -61,7 +60,6 @@ func validate(client requestDoer, b64 string, ignored map[string]bool) {
 		return
 	}
 	log.Println("success")
-
 }
 
 func (client *ociRegClient) fetchAuthURL() error {
@@ -84,11 +82,9 @@ func (client *ociRegClient) fetchAuthURL() error {
 
 	log.Printf("authentication URL returned by %s is %s", client.serviceURL, client.bearerRealm)
 	return err
-
 }
 
 func extractValuesFromAuthHeader(header string) (string, string, error) {
-
 	if !strings.HasPrefix(header, "Bearer realm=\"") {
 		return "", "", fmt.Errorf("header is missing data")
 	}
@@ -212,7 +208,6 @@ func (authsStruct *authsStruct) validateCredentials(client requestDoer, ignored 
 }
 
 func (authsStruct *authsStruct) validateCredential(httpclient requestDoer, service string, results chan error) {
-
 	user, password, err := authsStruct.userPasswordForService(service)
 	if err != nil {
 		results <- err

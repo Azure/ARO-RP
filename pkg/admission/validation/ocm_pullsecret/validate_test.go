@@ -55,7 +55,6 @@ func TestUserPasswordFromB64(t *testing.T) {
 				t.Error(tt.name)
 			}
 		})
-
 	}
 }
 
@@ -103,6 +102,5 @@ func TestExtractFromHeader(t *testing.T) {
 				t.Error(tt.name)
 			}
 		})
-
 	}
 }
