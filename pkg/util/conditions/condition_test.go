@@ -27,7 +27,7 @@ func TestSetCondition(t *testing.T) {
 	version := "unknown"
 
 	kubeclock = &clock.FakeClock{}
-	var transitionTime metav1.Time = metav1.Time{Time: kubeclock.Now()}
+	var transitionTime = metav1.Time{Time: kubeclock.Now()}
 
 	for _, tt := range []struct {
 		name      string

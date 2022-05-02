@@ -117,12 +117,12 @@ func (s Server) validateProxyRequest(w http.ResponseWriter, r *http.Request) err
 
 	if r.Method != http.MethodConnect {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-		return errors.New("Request is not valid, method is not CONNECT")
+		return errors.New("request is not valid, method is not CONNECT")
 	}
 
 	if !s.subnet.Contains(net.ParseIP(ip)) {
 		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-		return errors.New("Request is not allowed, the originating IP is not part of the allowed subnet")
+		return errors.New("request is not allowed, the originating IP is not part of the allowed subnet")
 	}
 
 	return nil

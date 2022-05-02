@@ -16,7 +16,10 @@ linters-settings:
   stylecheck:
     # added additional checks for comments in Go.
     # Refer https://staticcheck.io/docs/options#checks for details
-    checks: ["all", "-ST1000", "ST1020", "ST1021", "ST1022"]
+    checks: ["all", "-ST1000", "-ST1003", "-ST1016", "-ST1020", "-ST1021", "-ST1022"]
+    dot-import-whitelist:
+      - github.com/onsi/ginkgo
+      - github.com/onsi/gomega
 
 
 linters:
@@ -28,6 +31,5 @@ linters:
     - gosimple
     - govet
     - staticcheck
-    # TODO: Enable the stylecheck linter in a follow-up PR as it requires changes in a lot of files
-    # - stylecheck
     - whitespace
+    - stylecheck
