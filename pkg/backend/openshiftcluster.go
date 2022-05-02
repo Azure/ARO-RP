@@ -34,7 +34,7 @@ type clusterResult struct {
 	// ResultType will consist of 0 for success, 1 for user error, and 2 for internal server error
 	resultType    int
 	operationType string
-	errorDetails  error
+	errorDetails  string
 }
 
 func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
@@ -48,7 +48,7 @@ func newClusterResult(resultType int, operationType string, backendErr error) *c
 	return &clusterResult{
 		resultType:    resultType,
 		operationType: operationType,
-		errorDetails:  backendErr,
+		errorDetails:  backendErr.Error(),
 	}
 }
 
@@ -256,7 +256,7 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 			}
 
 			clusterResult := newClusterResult(resultType, initialProvisioningState.String(), backendErr)
-			log.Print("Long running result: %s", clusterResult)
+			log.Print("Long running result: %v", *clusterResult)
 
 			return nil
 		})
