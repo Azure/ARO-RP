@@ -36,7 +36,7 @@ func (m *manager) createDNS(ctx context.Context) error {
 	return m.dns.Create(ctx, m.doc.OpenShiftCluster)
 }
 
-func (m *manager) ensureInfraID(ctx context.Context, installConfig *installconfig.InstallConfig) error {
+func (m *manager) ensureInfraID(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.Properties.InfraID != "" {
 		return nil
 	}
