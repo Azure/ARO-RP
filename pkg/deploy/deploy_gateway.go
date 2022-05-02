@@ -50,6 +50,9 @@ func (d *deployer) DeployGateway(ctx context.Context) error {
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
 		Value: rpMSI.PrincipalID.String(),
 	}
+	parameters.Parameters["fluentbitImage"] = &arm.ParametersParameter{
+		Value: *d.config.Configuration.FluentbitImage,
+	}
 	parameters.Parameters["gatewayServicePrincipalId"] = &arm.ParametersParameter{
 		Value: gwMSI.PrincipalID.String(),
 	}
