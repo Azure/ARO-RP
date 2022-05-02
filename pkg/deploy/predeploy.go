@@ -25,9 +25,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
-// Rotate the secret on every deploy of the RP iff the most recent
-// secret is less than 3 days old
-const rotateSecretAfter = time.Hour * 72
+// Rotate the secret on every deploy of the RP if the most recent
+// secret is greater than 7 days old
+const rotateSecretAfter = time.Hour * 168
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
