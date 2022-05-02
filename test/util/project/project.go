@@ -60,11 +60,11 @@ func (p Project) Verify(ctx context.Context) error {
 
 	sa, err := p.cli.CoreV1().ServiceAccounts(p.name).Get(ctx, "default", metav1.GetOptions{})
 	if err != nil || kerrors.IsNotFound(err) {
-		return fmt.Errorf("Error retrieving default ServiceAccount")
+		return fmt.Errorf("error retrieving default ServiceAccount")
 	}
 
 	if len(sa.Secrets) == 0 {
-		return fmt.Errorf("Default ServiceAccount does not have secrets")
+		return fmt.Errorf("default ServiceAccount does not have secrets")
 	}
 
 	proj, err := p.projectClient.ProjectV1().Projects().Get(ctx, p.name, metav1.GetOptions{})

@@ -195,7 +195,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		}
 
 		if result.NameAvailable != nil && !*result.NameAvailable {
-			return fmt.Errorf("Could not generate unique key vault name: %v", result.Reason)
+			return fmt.Errorf("could not generate unique key vault name: %v", result.Reason)
 		}
 	}
 
