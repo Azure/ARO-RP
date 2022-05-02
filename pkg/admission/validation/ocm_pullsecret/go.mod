@@ -1,3 +1,3 @@
-module test-docker-login
+module ocmvalidation
 
 go 1.16
