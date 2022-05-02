@@ -134,6 +134,7 @@ func (m *manager) Install(ctx context.Context) error {
 		api.InstallPhaseBootstrap: {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
 			steps.Action(m.ensureACRToken),
+			steps.Action(m.ensureInfraID),
 			steps.Action(m.generateSSHKey),
 			steps.Action(m.populateMTUSize),
 			steps.Action(func(ctx context.Context) error {
@@ -144,9 +145,6 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.createDNS),
 			steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
 			steps.Action(m.clusterSPObjectID),
-			steps.Action(func(ctx context.Context) error {
-				return m.ensureInfraID(ctx, installConfig)
-			}),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies)),
