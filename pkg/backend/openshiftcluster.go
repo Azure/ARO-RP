@@ -32,8 +32,9 @@ type openShiftClusterBackend struct {
 
 type clusterResult struct {
 	// ResultType will consist of 0 for success, 1 for user error, and 2 for internal server error
-	resultType   int
-	errorDetails error
+	resultType    int
+	operationType string
+	errorDetails  error
 }
 
 func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
@@ -43,10 +44,11 @@ func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
 	}
 }
 
-func newClusterResult(resultType int, backendErr error) *clusterResult {
+func newClusterResult(resultType int, operationType string, backendErr error) *clusterResult {
 	return &clusterResult{
-		resultType:   resultType,
-		errorDetails: backendErr,
+		resultType:    resultType,
+		operationType: operationType,
+		errorDetails:  backendErr,
 	}
 }
 
@@ -165,7 +167,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 		}
 
-		err = ocb.updateAsyncOperation(ctx, log, doc.AsyncOperationID, nil, api.ProvisioningStateSucceeded, "", nil)
+		err = ocb.updateAsyncOperation(ctx, log, doc.AsyncOperationID, nil, api.ProvisioningStateSucceeded, "", api.ProvisioningStateDeleting, nil)
 		if err != nil {
 			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 		}
@@ -215,7 +217,7 @@ func (ocb *openShiftClusterBackend) heartbeat(ctx context.Context, cancel contex
 	}
 }
 
-func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, log *logrus.Entry, id string, oc *api.OpenShiftCluster, provisioningState, failedProvisioningState api.ProvisioningState, backendErr error) error {
+func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, log *logrus.Entry, id string, oc *api.OpenShiftCluster, provisioningState, failedProvisioningState, initialProvisioningState api.ProvisioningState, backendErr error) error {
 	if id != "" {
 		resultType := 0
 		_, err := ocb.dbAsyncOperations.Patch(ctx, id, func(asyncdoc *api.AsyncOperationDocument) error {
@@ -253,8 +255,8 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 				asyncdoc.OpenShiftCluster = &ocCopy
 			}
 
-			clusterResult := newClusterResult(resultType, backendErr)
-			log.Print("Cluster async operation result: %s", clusterResult)
+			clusterResult := newClusterResult(resultType, initialProvisioningState.String(), backendErr)
+			log.Print("Long running result: %s", clusterResult)
 
 			return nil
 		})
@@ -270,16 +272,17 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.Entry, stop func(), doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState, backendErr error) error {
 	var adminUpdateError *string
 	var failedProvisioningState api.ProvisioningState
+	initialProvisioningState := doc.OpenShiftCluster.Properties.ProvisioningState
 
-	if doc.OpenShiftCluster.Properties.ProvisioningState != api.ProvisioningStateAdminUpdating &&
+	if initialProvisioningState != api.ProvisioningStateAdminUpdating &&
 		provisioningState == api.ProvisioningStateFailed {
-		failedProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
+		failedProvisioningState = initialProvisioningState
 	}
 
 	// If cluster is in the non-terminal state we are still in the same
 	// operational context and AsyncOperation should not be updated.
 	if provisioningState.IsTerminal() {
-		err := ocb.updateAsyncOperation(ctx, log, doc.AsyncOperationID, doc.OpenShiftCluster, provisioningState, failedProvisioningState, backendErr)
+		err := ocb.updateAsyncOperation(ctx, log, doc.AsyncOperationID, doc.OpenShiftCluster, provisioningState, failedProvisioningState, initialProvisioningState, backendErr)
 		if err != nil {
 			return err
 		}
@@ -287,7 +290,7 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		ocb.emitMetrics(doc, provisioningState)
 	}
 
-	if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateAdminUpdating {
+	if initialProvisioningState == api.ProvisioningStateAdminUpdating {
 		provisioningState = doc.OpenShiftCluster.Properties.LastProvisioningState
 		failedProvisioningState = doc.OpenShiftCluster.Properties.FailedProvisioningState
 
