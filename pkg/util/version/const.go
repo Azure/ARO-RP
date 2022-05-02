@@ -4,8 +4,6 @@ package version
 // Licensed under the Apache License 2.0.
 
 import (
-	"os"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
@@ -67,21 +65,11 @@ func FluentbitImage(acrDomain string) string {
 
 // MdmImage contains the location of the MDM container image
 func MdmImage(acrDomain string) string {
-	// for the latest version see https://genevamondocs.azurewebsites.net/collect/references/linuxcontainers.html?q=container
-	if os.Getenv("GENEVA_MDM_IMAGE_OVERRIDE") != "" {
-		return os.Getenv("GENEVA_MDM_IMAGE_OVERRIDE")
-	}
-
 	return acrDomain + "/genevamdm:master_20220419.1"
 }
 
 // MdsdImage contains the location of the MDSD container image
 func MdsdImage(acrDomain string) string {
-	// for the latest version see https://genevamondocs.azurewebsites.net/collect/references/linuxcontainers.html?q=container
-	if os.Getenv("GENEVA_MDSD_IMAGE_OVERRIDE") != "" {
-		return os.Getenv("GENEVA_MDSD_IMAGE_OVERRIDE")
-	}
-
 	return acrDomain + "/genevamdsd:master_20220419.1"
 }
 
