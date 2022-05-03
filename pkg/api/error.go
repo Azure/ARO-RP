@@ -40,10 +40,10 @@ type CloudErrorBody struct {
 	Target string `json:"target,omitempty"`
 
 	// The category for the error, being either a user or server error
-	Category string
+	Category string `json:"-"`
 
 	// Dependency is the source where this error originates from
-	Dependency string
+	Dependency string `json:"-"`
 
 	//A list of additional details about the error.
 	Details []CloudErrorBody `json:"details,omitempty"`
