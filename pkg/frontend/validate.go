@@ -127,6 +127,12 @@ func validateNetworkInterfaceName(nicName string) error {
 	if nicName == "" || !rxNetworkInterfaceName.MatchString(nicName) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided nicName '%s' is invalid.", nicName)
 	}
+	return nil
+}
 
+func validateAdminVMSize(vmSize string) error {
+	if vmSize == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmSize '%s' is invalid.", vmSize)
+	}
 	return nil
 }

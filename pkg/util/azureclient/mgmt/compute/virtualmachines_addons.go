@@ -7,6 +7,7 @@ import (
 	"context"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	"github.com/Azure/go-autorest/autorest/to"
 )
 
 // VirtualMachinesClientAddons contains addons for VirtualMachinesClient
@@ -15,6 +16,7 @@ type VirtualMachinesClientAddons interface {
 	DeleteAndWait(ctx context.Context, resourceGroupName string, VMName string, forceDeletion *bool) error
 	RedeployAndWait(ctx context.Context, resourceGroupName string, VMName string) error
 	StartAndWait(ctx context.Context, resourceGroupName string, VMName string) error
+	StopAndWait(ctx context.Context, resourceGroupName string, VMName string) error
 	List(ctx context.Context, resourceGroupName string) (result []mgmtcompute.VirtualMachine, err error)
 }
 
@@ -47,6 +49,15 @@ func (c *virtualMachinesClient) RedeployAndWait(ctx context.Context, resourceGro
 
 func (c *virtualMachinesClient) StartAndWait(ctx context.Context, resourceGroupName string, VMName string) error {
 	future, err := c.Start(ctx, resourceGroupName, VMName)
+	if err != nil {
+		return err
+	}
+
+	return future.WaitForCompletionRef(ctx, c.Client)
+}
+
+func (c *virtualMachinesClient) StopAndWait(ctx context.Context, resourceGroupName string, VMName string) error {
+	future, err := c.PowerOff(ctx, resourceGroupName, VMName, to.BoolPtr(false))
 	if err != nil {
 		return err
 	}
