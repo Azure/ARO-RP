@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"time"
 
@@ -191,7 +190,6 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		host = "https://127.0.0.1:8444"
 	}
 	if err := wd.Get(host + "/api/info"); err != nil {
-		fmt.Printf("Could not get to %s", host)
 		log.Infof("Could not get to %s", host)
 		panic(err)
 	}
@@ -202,8 +200,6 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		panic(err)
 	}
 
-	fmt.Printf("Session: %s", session)
-
 	cookie := &selenium.Cookie{
 		Name:   "session",
 		Value:  session,
@@ -212,21 +208,6 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 
 	if err := wd.AddCookie(cookie); err != nil {
 		panic(err)
-	}
-
-	tests, err := wd.GetCookies()
-	if err != nil {
-		panic(err)
-	}
-
-	for _, test := range tests {
-		fmt.Printf("Name : %s\n Value : %s\n Domain : %s\n Path : %s\n Secure: %s\n Expiry : %d\n",
-			test.Name,
-			test.Value,
-			test.Domain,
-			test.Path,
-			strconv.FormatBool(test.Secure),
-			test.Expiry)
 	}
 
 	return host, &wd

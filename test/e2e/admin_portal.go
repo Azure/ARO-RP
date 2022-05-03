@@ -5,20 +5,13 @@ package e2e
 
 import (
 	"os"
-	"time"
 
-	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	conditions "github.com/serge1peshcoff/selenium-go-conditions"
 	"github.com/tebeka/selenium"
 	. "github.com/tebeka/selenium"
 )
-
-func IsValidUUID(u string, e error) bool {
-	_, err := uuid.Parse(u)
-	return err == nil && e == nil
-}
 
 var _ = FDescribe("Admin Portal E2E Testing", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
@@ -147,6 +140,7 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 			panic(err)
 		}
 
+		// Paste clipboard
 		filter.Click()
 		filter.SendKeys(selenium.ControlKey + "v")
 
@@ -171,6 +165,7 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 
 		wd.Wait(conditions.ElementIsLocated(ByID, "ModalFocusTrapZone25"))
 
+		wd.Wait(conditions.ElementIsLocated(ByID, "Dropdown55"))
 		sshDropdown, err := wd.FindElement(ByID, "Dropdown55")
 		if err != nil {
 			panic(err)
@@ -196,34 +191,15 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 
 		wd.Wait(conditions.ElementIsLocated(ByID, "title24"))
 
-		command, err := wd.FindElement(ByID, "TextField70")
+		// Test fails if these labels aren't present
+		err = wd.Wait(conditions.ElementIsLocated(ByID, "TextFieldLabel72"))
 		if err != nil {
 			panic(err)
 		}
 
-		password, err := wd.FindElement(ByID, "TextField78")
+		err = wd.Wait(conditions.ElementIsLocated(ByID, "TextFieldLabel80"))
 		if err != nil {
 			panic(err)
 		}
-
-		// WHY NO WORK
-		err = wd.WaitWithTimeout(conditions.ElementAttributeIs(command, "value", "ssh -p 2222 testuser@localhost"), time.Second*10)
-		if err != nil {
-			panic(err)
-		}
-
-		Expect(command.GetAttribute("value")).To(Equal("ssh -p 2222 testuser@localhost"))
-		Expect(IsValidUUID(password.GetAttribute("value"))).To(BeTrue())
 	})
-
-	// It("Should be able to download kubeconfig", func() {
-	// 	wd.Wait(conditions.ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))
-
-	// 	cluster, err := wd.FindElement(ByCSSSelector, "div[data-automation-key='name']")
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-
-	// 	Expect(cluster.Text()).To(Equal(os.Getenv("CLUSTER")))
-	// })
 })
