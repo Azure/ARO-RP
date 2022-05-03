@@ -46,7 +46,7 @@
    shared development environment secrets and save them in `secrets`:
 
    ```bash
-   SECRET_SA_ACCOUNT_NAME=rharosecrets make secrets
+   SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets
    ```
 
 1. Copy, edit (if necessary) and source your environment file.  The required

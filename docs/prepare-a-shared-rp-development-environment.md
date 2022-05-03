@@ -27,7 +27,7 @@ locations.
    Set SECRET_SA_ACCOUNT_NAME to the name of the storage account:
 
    ```bash
-   SECRET_SA_ACCOUNT_NAME=rharosecrets
+   SECRET_SA_ACCOUNT_NAME=rharosecretsdev
    ```
 
 1. You will need an AAD object (this could be your AAD user, or an AAD group of
@@ -368,7 +368,7 @@ az ad app credential reset \
 
 5. The RP makes API calls to kubernetes cluster via a proxy VMSS agent. For the agent to get the updated certificates, this vm needs to be redeployed. Proxy VM is currently deployed by the `deploy_env_dev` function in `deploy-shared-env.sh`. It makes use of `env-development.json`
 
-6. Run `[rharosecrets|aroe2esecrets] make secrets-update` to upload it to your
+6. Run `[rharosecretsdev|aroe2esecrets] make secrets-update` to upload it to your
 storage account so other people on your team can access it via `make secrets`
 
 # Environment file
