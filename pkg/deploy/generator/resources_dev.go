@@ -360,7 +360,9 @@ EOF
 cat >/etc/cron.hourly/tmpwatch <<'EOF'
 #!/bin/bash
 
-exec /sbin/tmpwatch 24h /tmp
+/sbin/tmpwatch 24h /tmp
+/sbin/tmpwatch 24h $(su -c 'go env GOCACHE' cloud-user)
+
 EOF
 chmod +x /etc/cron.hourly/tmpwatch
 
@@ -381,24 +383,10 @@ fi
 EOF
 chmod +x /usr/local/bin/fix-podman-pause.sh
 
-# HACK - /tmp will fill up causing build failures
-# delete anything not accessed within 2 days
-cat >/usr/local/bin/clean-tmp.sh <<'EOF'
-#!/bin/bash
-
-find /tmp -type f \( ! -user root \) -atime +2 -delete
-
-EOF
-chmod +x /usr/local/bin/clean-tmp.sh
-
-echo "0 0 */1 * * /usr/local/bin/clean-tmp.sh" >> cron
-echo "* * * * * /usr/local/bin/fix-podman-pause.sh" >> cron
+echo "* * * * * /usr/local/bin/fix-podman-pause.sh" > /etc/cron.d/fix-podman-pause
 
 # HACK - https://github.com/containers/podman/issues/9002
-echo "@reboot loginctl enable-linger cloud-user" >> cron
-
-crontab cron
-rm cron
+echo "@reboot loginctl enable-linger cloud-user" > /etc/cron.d/cloud-user-linger
 
 (sleep 30; reboot) &
 `))
