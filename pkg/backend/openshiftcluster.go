@@ -30,7 +30,7 @@ type openShiftClusterBackend struct {
 	newManager func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument) (cluster.Interface, error)
 }
 
-type clusterResult struct {
+type operationResult struct {
 	// ResultType will consist of 0 for success, 1 for user error, and 2 for internal server error
 	resultType    int
 	operationType string
@@ -44,12 +44,16 @@ func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
 	}
 }
 
-func newClusterResult(resultType int, operationType string, backendErr error) *clusterResult {
-	return &clusterResult{
+func newOperationResult(resultType int, operationType string, backendErr error) *operationResult {
+	return &operationResult{
 		resultType:    resultType,
 		operationType: operationType,
 		errorDetails:  backendErr.Error(),
 	}
+}
+
+func (o *operationResult) String() string {
+	return fmt.Sprintf("%d: %s: %s:", o.resultType, o.operationType, o.errorDetails)
 }
 
 // try tries to dequeue an OpenShiftClusterDocument for work, and works it on a
@@ -255,8 +259,8 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 				asyncdoc.OpenShiftCluster = &ocCopy
 			}
 
-			clusterResult := newClusterResult(resultType, initialProvisioningState.String(), backendErr)
-			log.Print("Long running result: %v", *clusterResult)
+			clusterResult := newOperationResult(resultType, initialProvisioningState.String(), backendErr)
+			log.Printf("Long running result: %s", clusterResult.String())
 
 			return nil
 		})
