@@ -15,6 +15,11 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	admission "k8s.io/api/admission/v1"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func main() {
@@ -23,6 +28,74 @@ func main() {
 		Timeout: time.Second * 3,
 	}
 	validate(client, string(b64), map[string]bool{"cloud.openshift.com": true})
+
+	fmt.Println(admission.AdmissionReview{Request: &admission.AdmissionRequest{Name: "stuff"}})
+}
+
+func unmarshalReview(body io.Reader) (admission.AdmissionReview, error) {
+	result := admission.AdmissionReview{}
+	decoder := json.NewDecoder(body)
+
+	err := decoder.Decode(&result)
+
+	return result, err
+}
+
+func unmarshalRequestToSecret(request *admission.AdmissionRequest) (v1.Secret, error) {
+	secret := v1.Secret{}
+
+	return secret, json.Unmarshal(request.Object.Raw, &secret)
+}
+
+func validateSecret(review admission.AdmissionReview) error {
+	secret, err := unmarshalRequestToSecret(review.Request)
+	if err != nil {
+		return err
+	}
+	errors := validate(nil, string(secret.Data[".dockerconfigjson"]), map[string]bool{"cloud.openshift.com": true})
+	if len(errors) == 0 {
+		return nil
+	}
+
+	return fmt.Errorf("some credentials in the pull secret were not valid")
+}
+
+func createSuccessResponse(uid types.UID) admission.AdmissionReview {
+	return createResponse(uid, true, 200, "")
+}
+
+// most fields are use for failure. For success, prefer createSuccessResponse
+func createResponse(uid types.UID, success bool, code int32, message string) admission.AdmissionReview {
+	response := admission.AdmissionResponse{}
+	response.UID = uid
+	if !success {
+		response.Allowed = false
+		response.Result = &metav1.Status{
+			Code:    code,
+			Message: message,
+		}
+	} else {
+		response.Allowed = true
+	}
+	return admission.AdmissionReview{Response: &response}
+}
+
+func handleRequest(w http.ResponseWriter, req *http.Request) {
+	review, err := unmarshalReview(req.Body)
+	var responseReview admission.AdmissionReview
+	if err != nil {
+		responseReview = createResponse(review.Request.UID, false, 400, "could not unmarshall the review")
+	} else {
+		err = validateSecret(review)
+		if err != nil {
+			responseReview = createResponse(review.Request.UID, false, 400, "some credentials in the pull secret were not valid")
+		} else {
+			responseReview = createSuccessResponse(review.Request.UID)
+		}
+	}
+	w.WriteHeader(200)
+	encoder := json.NewEncoder(w)
+	encoder.Encode(responseReview)
 }
 
 type requestDoer interface {
@@ -48,7 +121,7 @@ func decodeResponse(body io.Reader) (string, error) {
 	return response.Token, err
 }
 
-func validate(client requestDoer, b64 string, ignored map[string]bool) {
+func validate(client requestDoer, b64 string, ignored map[string]bool) []error {
 	log.Println("decoding the base64 credentials")
 	jsonBytes, _ := base64.StdEncoding.DecodeString(b64)
 
@@ -60,9 +133,10 @@ func validate(client requestDoer, b64 string, ignored map[string]bool) {
 		for _, v := range errs {
 			log.Println(v)
 		}
-		return
+		return errs
 	}
 	log.Println("success")
+	return nil
 }
 
 func (client *ociRegClient) fetchAuthURL() error {
