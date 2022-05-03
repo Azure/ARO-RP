@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	admission "k8s.io/api/admission/v1"
-	v1 "k8s.io/api/core/v1"
+	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -29,11 +29,13 @@ func main() {
 	}
 	validate(client, string(b64), map[string]bool{"cloud.openshift.com": true})
 
-	fmt.Println(admission.AdmissionReview{Request: &admission.AdmissionRequest{Name: "stuff"}})
+	fmt.Println(admissionv1.AdmissionReview{Request: &admissionv1.AdmissionRequest{Name: "stuff"}})
+	http.HandleFunc("/", handleRequest)
+	go http.ListenAndServe(":8080", nil)
 }
 
-func unmarshalReview(body io.Reader) (admission.AdmissionReview, error) {
-	result := admission.AdmissionReview{}
+func unmarshalReview(body io.Reader) (admissionv1.AdmissionReview, error) {
+	result := admissionv1.AdmissionReview{}
 	decoder := json.NewDecoder(body)
 
 	err := decoder.Decode(&result)
@@ -41,13 +43,13 @@ func unmarshalReview(body io.Reader) (admission.AdmissionReview, error) {
 	return result, err
 }
 
-func unmarshalRequestToSecret(request *admission.AdmissionRequest) (v1.Secret, error) {
-	secret := v1.Secret{}
+func unmarshalRequestToSecret(request *admissionv1.AdmissionRequest) (corev1.Secret, error) {
+	secret := corev1.Secret{}
 
 	return secret, json.Unmarshal(request.Object.Raw, &secret)
 }
 
-func validateSecret(review admission.AdmissionReview) error {
+func validateSecret(review admissionv1.AdmissionReview) error {
 	secret, err := unmarshalRequestToSecret(review.Request)
 	if err != nil {
 		return err
@@ -60,13 +62,13 @@ func validateSecret(review admission.AdmissionReview) error {
 	return fmt.Errorf("some credentials in the pull secret were not valid")
 }
 
-func createSuccessResponse(uid types.UID) admission.AdmissionReview {
+func createSuccessResponse(uid types.UID) admissionv1.AdmissionReview {
 	return createResponse(uid, true, 200, "")
 }
 
 // most fields are use for failure. For success, prefer createSuccessResponse
-func createResponse(uid types.UID, success bool, code int32, message string) admission.AdmissionReview {
-	response := admission.AdmissionResponse{}
+func createResponse(uid types.UID, success bool, code int32, message string) admissionv1.AdmissionReview {
+	response := admissionv1.AdmissionResponse{}
 	response.UID = uid
 	if !success {
 		response.Allowed = false
@@ -77,12 +79,12 @@ func createResponse(uid types.UID, success bool, code int32, message string) adm
 	} else {
 		response.Allowed = true
 	}
-	return admission.AdmissionReview{Response: &response}
+	return admissionv1.AdmissionReview{Response: &response}
 }
 
 func handleRequest(w http.ResponseWriter, req *http.Request) {
 	review, err := unmarshalReview(req.Body)
-	var responseReview admission.AdmissionReview
+	var responseReview admissionv1.AdmissionReview
 	if err != nil {
 		responseReview = createResponse(review.Request.UID, false, 400, "could not unmarshall the review")
 	} else {
