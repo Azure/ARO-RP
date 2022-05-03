@@ -20,7 +20,6 @@ import (
 const (
 	SessionName        = "session"
 	SessionKeyExpires  = "expires"
-	sessionKeyState    = "state"
 	SessionKeyUsername = "user_name"
 	SessionKeyGroups   = "groups"
 )
@@ -31,7 +30,6 @@ var (
 )
 
 func run(ctx context.Context, log *logrus.Entry) error {
-
 	flag.Parse()
 
 	_env, err := env.NewCore(ctx, log)

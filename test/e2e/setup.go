@@ -90,7 +90,6 @@ func skipIfNotInDevelopmentEnv() {
 }
 
 func generateSession(ctx context.Context, log *logrus.Entry) (string, error) {
-
 	const (
 		SessionName        = "session"
 		SessionKeyExpires  = "expires"
