@@ -40,7 +40,7 @@ type CloudErrorBody struct {
 	Target string `json:"target,omitempty"`
 
 	// The category for the error, being either a user or server error
-	Category string `json:"-"`
+	Category CloudErrorCategory `json:"-"`
 
 	// Dependency is the source where this error originates from
 	Dependency string `json:"-"`
@@ -104,9 +104,11 @@ const (
 )
 
 // CloudErrorCategories
+type CloudErrorCategory string
+
 const (
-	AROUserError           = "ARO-UserError"
-	AROInternalServerError = "ARO-InternalServerError"
+	AROUserError           CloudErrorCategory = "ARO-UserError"
+	AROInternalServerError CloudErrorCategory = "ARO-InternalServerError"
 )
 
 // NewCloudError returns a new CloudError
@@ -122,7 +124,7 @@ func NewCloudError(statusCode int, code, target, message string, a ...interface{
 }
 
 // NewCloudError returns a new CloudError with category and dependency
-func NewCloudErrorWithCategory(statusCode int, code, target, message string, category string, dependency string, a ...interface{}) *CloudError {
+func NewCloudErrorWithCategory(statusCode int, code, target, message string, category CloudErrorCategory, dependency string, a ...interface{}) *CloudError {
 	return &CloudError{
 		StatusCode: statusCode,
 		CloudErrorBody: &CloudErrorBody{
