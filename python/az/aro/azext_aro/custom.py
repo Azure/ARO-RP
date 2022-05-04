@@ -16,7 +16,7 @@ from msrestazure.tools import resource_id, parse_resource_id
 from msrest.exceptions import HttpOperationError
 from knack.log import get_logger
 
-import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2021_09_01_preview.models as openshiftcluster
+import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2022_04_01.models as openshiftcluster
 
 from azext_aro._aad import AADManager
 from azext_aro._rbac import assign_role_to_resource, has_role_assignment_on_resource
@@ -40,6 +40,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                pull_secret=None,
                domain=None,
                cluster_resource_group=None,
+               fips_validated_modules=None,
                client_id=None,
                client_secret=None,
                pod_cidr=None,
@@ -102,6 +103,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
             domain=domain or random_id,
             resource_group_id=(f"/subscriptions/{subscription_id}"
                                f"/resourceGroups/{cluster_resource_group or 'aro-' + random_id}"),
+            fips_validated_modules='Enabled' if fips_validated_modules else 'Disabled',
         ),
         service_principal_profile=openshiftcluster.ServicePrincipalProfile(
             client_id=client_id,
