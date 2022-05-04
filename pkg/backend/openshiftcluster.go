@@ -53,7 +53,7 @@ func newOperationResult(resultType int, operationType string, backendErr error) 
 }
 
 func (o *operationResult) String() string {
-	return fmt.Sprintf("operationType: %s, resultType: %d, errorDetails: %s:", o.resultType, o.operationType, o.errorDetails)
+	return fmt.Sprintf("operationType: %s, resultType: %d, errorDetails: %s:", o.operationType, o.resultType, o.errorDetails)
 }
 
 // try tries to dequeue an OpenShiftClusterDocument for work, and works it on a
