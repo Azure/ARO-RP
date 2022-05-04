@@ -1,3 +1,4 @@
+//nolint:unparam
 package e2e
 
 // Copyright (c) Microsoft Corporation.
@@ -15,11 +16,11 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/gorilla/securecookie" //nolint
-	. "github.com/gorilla/sessions"     //nolint
-	. "github.com/onsi/ginkgo"          //nolint
-	. "github.com/onsi/gomega"          //nolint
-	. "github.com/tebeka/selenium"      //nolint
+	. "github.com/gorilla/securecookie"
+	. "github.com/gorilla/sessions"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	. "github.com/tebeka/selenium"
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"

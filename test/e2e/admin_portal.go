@@ -1,3 +1,4 @@
+//nolint:unparam
 package e2e
 
 // Copyright (c) Microsoft Corporation.
@@ -6,10 +7,10 @@ package e2e
 import (
 	"os"
 
-	. "github.com/onsi/ginkgo"                           //nolint
-	. "github.com/onsi/gomega"                           //nolint
-	. "github.com/serge1peshcoff/selenium-go-conditions" //nolint
-	. "github.com/tebeka/selenium"                       //nolint
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	. "github.com/serge1peshcoff/selenium-go-conditions"
+	. "github.com/tebeka/selenium"
 )
 
 var _ = FDescribe("Admin Portal E2E Testing", func() {
