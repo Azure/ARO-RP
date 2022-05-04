@@ -15,11 +15,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/securecookie"
-	"github.com/gorilla/sessions"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/tebeka/selenium"
+	. "github.com/gorilla/securecookie" //nolint
+	. "github.com/gorilla/sessions"     //nolint
+	. "github.com/onsi/ginkgo"          //nolint
+	. "github.com/onsi/gomega"          //nolint
+	. "github.com/tebeka/selenium"      //nolint
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -124,14 +124,14 @@ func generateSession(ctx context.Context, log *logrus.Entry) (string, error) {
 		return "", err
 	}
 
-	store := sessions.NewCookieStore(sessionKey)
+	store := NewCookieStore(sessionKey)
 
 	store.MaxAge(0)
 	store.Options.Secure = true
 	store.Options.HttpOnly = true
 	store.Options.SameSite = http.SameSiteLaxMode
 
-	session := sessions.NewSession(store, SessionName)
+	session := NewSession(store, SessionName)
 	opts := *store.Options
 	session.Options = &opts
 
@@ -139,7 +139,7 @@ func generateSession(ctx context.Context, log *logrus.Entry) (string, error) {
 	session.Values[SessionKeyGroups] = strings.Split(groups, ",")
 	session.Values[SessionKeyExpires] = time.Now().Add(time.Hour)
 
-	encoded, err := securecookie.EncodeMulti(session.Name(), session.Values,
+	encoded, err := EncodeMulti(session.Name(), session.Values,
 		store.Codecs...)
 	if err != nil {
 		log.Infof(err.Error())
@@ -152,7 +152,7 @@ func generateSession(ctx context.Context, log *logrus.Entry) (string, error) {
 	return encoded, nil
 }
 
-func adminPortalSessionSetup() (string, *selenium.WebDriver) {
+func adminPortalSessionSetup() (string, *WebDriver) {
 	const (
 		port = 4444
 	)
@@ -160,16 +160,16 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	caps := selenium.Capabilities{
+	caps := Capabilities{
 		"browserName":         "MicrosoftEdge",
 		"acceptInsecureCerts": true,
 	}
-	wd := selenium.WebDriver(nil)
+	wd := WebDriver(nil)
 
 	var err error
 
 	for {
-		wd, err = selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
+		wd, err = NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
 		if wd != nil || ctx.Err() != nil {
 			break
 		}
@@ -199,7 +199,7 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		panic(err)
 	}
 
-	cookie := &selenium.Cookie{
+	cookie := &Cookie{
 		Name:   "session",
 		Value:  session,
 		Expiry: math.MaxUint32,

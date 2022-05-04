@@ -1,5 +1,8 @@
 package main
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
 	"encoding/gob"
@@ -9,12 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
-	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
 const (
