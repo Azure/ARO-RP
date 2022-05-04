@@ -9,7 +9,7 @@ import uuid
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
-from azure.cli.core.azclierror import InvalidArgumentValueError, \
+from azure.cli.core.azclierror import CLIInternalError, InvalidArgumentValueError, \
     RequiredArgumentMissingError
 from knack.log import get_logger
 from msrestazure.azure_exceptions import CloudError
@@ -154,8 +154,10 @@ def validate_subnet(key):
             client.subnets.get(parts['resource_group'],
                                parts['name'], parts['child_name_1'])
         except CloudError as err:
-            raise InvalidArgumentValueError(
-                f"Invald --{key.replace('_', '-')}, error when getting '{subnet}': {err.message}") from err
+            if err.status_code == 404:
+                raise InvalidArgumentValueError(
+                    f"Invald --{key.replace('_', '-')}, error when getting '{subnet}': {err.message}") from err
+            raise CLIInternalError(err.message) from err
 
     return _validate_subnet
 
