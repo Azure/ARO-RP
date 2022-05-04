@@ -20,9 +20,9 @@ func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
 		Resource: mgmtinsights.ActionGroupResource{
 			ActionGroup: &mgmtinsights.ActionGroup{
 				Enabled:        to.BoolPtr(true),
-				GroupShortName: to.StringPtr(shortName),
+				GroupShortName: &shortName,
 			},
-			Name:     to.StringPtr(name),
+			Name:     &name,
 			Type:     to.StringPtr("Microsoft.Insights/actionGroups"),
 			Location: to.StringPtr("Global"),
 		},
@@ -147,7 +147,7 @@ func (g *generator) keyVault(name string, accessPolicies *[]mgmtkeyvault.AccessP
 				TenantID:       &tenantUUIDHack,
 				AccessPolicies: accessPolicies,
 			},
-			Name:     to.StringPtr(name),
+			Name:     &name,
 			Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
