@@ -69,7 +69,7 @@ func (m *manager) ensureResourceGroup(ctx context.Context) error {
 
 	group := mgmtfeatures.ResourceGroup{
 		Location:  &m.doc.OpenShiftCluster.Location,
-		ManagedBy: to.StringPtr(m.doc.OpenShiftCluster.ID),
+		ManagedBy: &m.doc.OpenShiftCluster.ID,
 	}
 	if m.env.IsLocalDevelopmentMode() {
 		// grab tags so we do not accidently remove them on createOrUpdate, set purge tag to true for dev clusters
