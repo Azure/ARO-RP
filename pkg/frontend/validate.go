@@ -111,6 +111,14 @@ func validateAdminKubernetesObjects(method, groupKind, namespace, name string) e
 	return nil
 }
 
+func validateAdminKubernetesObjectsForceDelete(groupKind string) error {
+	if !strings.EqualFold(groupKind, "Pod") {
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Force deleting groupKind '%s' is forbidden.", groupKind)
+	}
+
+	return nil
+}
+
 func validateAdminVMName(vmName string) error {
 	if vmName == "" || !rxKubernetesString.MatchString(vmName) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmName '%s' is invalid.", vmName)

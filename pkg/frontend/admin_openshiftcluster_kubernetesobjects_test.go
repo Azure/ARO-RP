@@ -32,6 +32,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 		objKind        string
 		objNamespace   string
 		objName        string
+		force          string
 		mocks          func(*test, *mock_adminactions.MockKubeActions)
 		method         string
 		wantStatusCode int
@@ -101,10 +102,38 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			objName:      "config",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
-					KubeDelete(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName).
+					KubeDelete(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName, false).
 					Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
+		},
+		{
+			method:       http.MethodDelete,
+			name:         "force delete pod",
+			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			objKind:      "Pod",
+			objNamespace: "openshift",
+			objName:      "aro-pod",
+			force:        "true",
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeDelete(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName, true).
+					Return(nil)
+			},
+			wantStatusCode: http.StatusOK,
+		},
+		{
+			method:       http.MethodDelete,
+			name:         "force delete not allowed",
+			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			objKind:      "ConfigMap",
+			objNamespace: "openshift",
+			objName:      "config",
+			force:        "true",
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+			},
+			wantStatusCode: http.StatusForbidden,
+			wantError:      "403: Forbidden: : Force deleting groupKind 'ConfigMap' is forbidden.",
 		},
 		{
 			method:       http.MethodDelete,
@@ -180,8 +209,13 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
+			requestStr := fmt.Sprintf("https://server/admin%s/kubernetesObjects?kind=%s&namespace=%s&name=%s", tt.resourceID, tt.objKind, tt.objNamespace, tt.objName)
+			if tt.method == http.MethodDelete && tt.force != "" {
+				requestStr = fmt.Sprintf("%s&force=%s", requestStr, tt.force)
+			}
+
 			resp, b, err := ti.request(tt.method,
-				fmt.Sprintf("https://server/admin%s/kubernetesObjects?kind=%s&namespace=%s&name=%s", tt.resourceID, tt.objKind, tt.objNamespace, tt.objName),
+				requestStr,
 				nil, nil)
 			if err != nil {
 				t.Fatal(err)
