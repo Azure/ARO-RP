@@ -19,9 +19,6 @@ allowedImportNames:
     - utildiscovery
   github.com/Azure/ARO-RP/pkg/util/embed:
     - utilembed
-  github.com/Azure/ARO-RP/pkg/util/machine:
-    - utilmachine
-    - ""
   github.com/Azure/ARO-RP/pkg/util/namespace:
     - utilnamespace
     - ""

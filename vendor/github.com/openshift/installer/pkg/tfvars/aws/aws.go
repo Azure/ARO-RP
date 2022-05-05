@@ -3,6 +3,7 @@ package aws
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/pkg/errors"

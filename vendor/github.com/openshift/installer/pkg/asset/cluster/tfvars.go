@@ -4,24 +4,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
 	igntypes "github.com/coreos/ignition/v2/config/v3_2/types"
 	coreosarch "github.com/coreos/stream-metadata-go/arch"
 	"github.com/ghodss/yaml"
-	gcpprovider "github.com/openshift/cluster-api-provider-gcp/pkg/apis/gcpprovider/v1beta1"
+	ibmcloudprovider "github.com/openshift/cluster-api-provider-ibmcloud/pkg/apis/ibmcloudprovider/v1beta1"
 	libvirtprovider "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 	ovirtprovider "github.com/openshift/cluster-api-provider-ovirt/pkg/apis/ovirtprovider/v1beta1"
-	vsphereprovider "github.com/openshift/machine-api-operator/pkg/apis/vsphereprovider/v1beta1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	awsprovider "sigs.k8s.io/cluster-api-provider-aws/pkg/apis/awsprovider/v1beta1"
-	azureprovider "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
-	openstackprovider "sigs.k8s.io/cluster-api-provider-openstack/pkg/apis/openstackproviderconfig/v1alpha1"
 
 	configv1 "github.com/openshift/api/config/v1"
+	machinev1 "github.com/openshift/api/machine/v1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/ignition"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
@@ -30,7 +28,6 @@ import (
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	awsconfig "github.com/openshift/installer/pkg/asset/installconfig/aws"
 	gcpconfig "github.com/openshift/installer/pkg/asset/installconfig/gcp"
-	openstackconfig "github.com/openshift/installer/pkg/asset/installconfig/openstack"
 	ovirtconfig "github.com/openshift/installer/pkg/asset/installconfig/ovirt"
 	"github.com/openshift/installer/pkg/asset/machines"
 	"github.com/openshift/installer/pkg/asset/manifests"
@@ -38,6 +35,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/rhcos"
 	rhcospkg "github.com/openshift/installer/pkg/rhcos"
 	"github.com/openshift/installer/pkg/tfvars"
+	alibabacloudtfvars "github.com/openshift/installer/pkg/tfvars/alibabacloud"
 	awstfvars "github.com/openshift/installer/pkg/tfvars/aws"
 	azuretfvars "github.com/openshift/installer/pkg/tfvars/azure"
 	baremetaltfvars "github.com/openshift/installer/pkg/tfvars/baremetal"
@@ -48,6 +46,7 @@ import (
 	ovirttfvars "github.com/openshift/installer/pkg/tfvars/ovirt"
 	vspheretfvars "github.com/openshift/installer/pkg/tfvars/vsphere"
 	"github.com/openshift/installer/pkg/types"
+	"github.com/openshift/installer/pkg/types/alibabacloud"
 	"github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
 	"github.com/openshift/installer/pkg/types/baremetal"
@@ -64,11 +63,11 @@ const (
 	// TfVarsFileName is the filename for Terraform variables.
 	TfVarsFileName = "terraform.tfvars.json"
 
-	// TfPlatformVarsFileName is a template for platform-specific
+	// TfPlatformVarsFileName is the name for platform-specific
 	// Terraform variable files.
 	//
 	// https://www.terraform.io/docs/configuration/variables.html#variable-files
-	TfPlatformVarsFileName = "terraform.%s.auto.tfvars.json"
+	TfPlatformVarsFileName = "terraform.platform.auto.tfvars.json"
 
 	tfvarsAssetName = "Terraform Variables"
 )
@@ -291,7 +290,7 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
 		}
 		t.FileList = append(t.FileList, &asset.File{
-			Filename: fmt.Sprintf(TfPlatformVarsFileName, platform),
+			Filename: TfPlatformVarsFileName,
 			Data:     data,
 		})
 	case azure.Name:
@@ -310,40 +309,55 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 		if err != nil {
 			return err
 		}
-		masterConfigs := make([]*azureprovider.AzureMachineProviderSpec, len(masters))
+		masterConfigs := make([]*machinev1beta1.AzureMachineProviderSpec, len(masters))
 		for i, m := range masters {
-			masterConfigs[i] = m.Spec.ProviderSpec.Value.Object.(*azureprovider.AzureMachineProviderSpec)
+			masterConfigs[i] = m.Spec.ProviderSpec.Value.Object.(*machinev1beta1.AzureMachineProviderSpec)
 		}
 		workers, err := workersAsset.MachineSets()
 		if err != nil {
 			return err
 		}
-		workerConfigs := make([]*azureprovider.AzureMachineProviderSpec, len(workers))
+		workerConfigs := make([]*machinev1beta1.AzureMachineProviderSpec, len(workers))
 		for i, w := range workers {
-			workerConfigs[i] = w.Spec.Template.Spec.ProviderSpec.Value.Object.(*azureprovider.AzureMachineProviderSpec)
+			workerConfigs[i] = w.Spec.Template.Spec.ProviderSpec.Value.Object.(*machinev1beta1.AzureMachineProviderSpec)
 		}
 
 		preexistingnetwork := installConfig.Config.Azure.VirtualNetwork != ""
+
+		var bootstrapIgnStub, bootstrapIgnURLPlaceholder string
+		if installConfig.Azure.CloudName == azure.StackCloud {
+			// Due to the SAS created in Terraform to limit access to bootstrap ignition, we cannot know the URL in advance.
+			// Instead, we will pass a placeholder string in the ignition to be replaced in TF once the value is known.
+			bootstrapIgnURLPlaceholder = "BOOTSTRAP_IGNITION_URL_PLACEHOLDER"
+			shim, err := bootstrap.GenerateIgnitionShimWithCertBundle(bootstrapIgnURLPlaceholder, installConfig.Config.AdditionalTrustBundle)
+			if err != nil {
+				return errors.Wrap(err, "failed to create stub Ignition config for bootstrap")
+			}
+			bootstrapIgnStub = string(shim)
+		}
+
 		data, err := azuretfvars.TFVars(
 			azuretfvars.TFVarsSources{
-				Auth:                        auth,
-				CloudName:                   installConfig.Config.Azure.CloudName,
-				ARMEndpoint:                 installConfig.Config.Azure.ARMEndpoint,
-				ResourceGroupName:           installConfig.Config.Azure.ResourceGroupName,
-				BaseDomainResourceGroupName: installConfig.Config.Azure.BaseDomainResourceGroupName,
-				MasterConfigs:               masterConfigs,
-				WorkerConfigs:               workerConfigs,
-				ImageURL:                    string(*rhcosImage),
-				PreexistingNetwork:          preexistingnetwork,
-				Publish:                     installConfig.Config.Publish,
-				OutboundType:                installConfig.Config.Azure.OutboundType,
+				Auth:                            auth,
+				CloudName:                       installConfig.Config.Azure.CloudName,
+				ARMEndpoint:                     installConfig.Config.Azure.ARMEndpoint,
+				ResourceGroupName:               installConfig.Config.Azure.ResourceGroupName,
+				BaseDomainResourceGroupName:     installConfig.Config.Azure.BaseDomainResourceGroupName,
+				MasterConfigs:                   masterConfigs,
+				WorkerConfigs:                   workerConfigs,
+				ImageURL:                        string(*rhcosImage),
+				PreexistingNetwork:              preexistingnetwork,
+				Publish:                         installConfig.Config.Publish,
+				OutboundType:                    installConfig.Config.Azure.OutboundType,
+				BootstrapIgnStub:                bootstrapIgnStub,
+				BootstrapIgnitionURLPlaceholder: bootstrapIgnURLPlaceholder,
 			},
 		)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
 		}
 		t.FileList = append(t.FileList, &asset.File{
-			Filename: fmt.Sprintf(TfPlatformVarsFileName, platform),
+			Filename: TfPlatformVarsFileName,
 			Data:     data,
 		})
 	case gcp.Name:
@@ -361,17 +375,17 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 		if err != nil {
 			return err
 		}
-		masterConfigs := make([]*gcpprovider.GCPMachineProviderSpec, len(masters))
+		masterConfigs := make([]*machinev1beta1.GCPMachineProviderSpec, len(masters))
 		for i, m := range masters {
-			masterConfigs[i] = m.Spec.ProviderSpec.Value.Object.(*gcpprovider.GCPMachineProviderSpec)
+			masterConfigs[i] = m.Spec.ProviderSpec.Value.Object.(*machinev1beta1.GCPMachineProviderSpec)
 		}
 		workers, err := workersAsset.MachineSets()
 		if err != nil {
 			return err
 		}
-		workerConfigs := make([]*gcpprovider.GCPMachineProviderSpec, len(workers))
+		workerConfigs := make([]*machinev1beta1.GCPMachineProviderSpec, len(workers))
 		for i, w := range workers {
-			workerConfigs[i] = w.Spec.Template.Spec.ProviderSpec.Value.Object.(*gcpprovider.GCPMachineProviderSpec)
+			workerConfigs[i] = w.Spec.Template.Spec.ProviderSpec.Value.Object.(*machinev1beta1.GCPMachineProviderSpec)
 		}
 		if installConfig.Config.Publish == types.ExternalPublishingStrategy {
 			publicZone, err := gcpconfig.GetPublicZone(ctx, installConfig.Config.GCP.ProjectID, installConfig.Config.BaseDomain)
@@ -416,7 +430,7 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
 		}
 		t.FileList = append(t.FileList, &asset.File{
-			Filename: fmt.Sprintf(TfPlatformVarsFileName, platform),
+			Filename: TfPlatformVarsFileName,
 			Data:     data,
 		})
 	case ibmcloud.Name:
@@ -428,28 +442,72 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			APIKey: client.Authenticator.ApiKey,
 		}
 
-		// TODO: IBM: Get master and worker machine info
-		// masters, err := mastersAsset.Machines()
-		// if err != nil {
-		// 	return err
-		// }
-		// masterConfigs := make([]*ibmcloudprovider.IBMCloudMachineProviderSpec, len(masters))
-		// for i, m := range masters {
-		// 	masterConfigs[i] = m.Spec.ProviderSpec.Value.Object.(*ibmcloudprovider.IBMCloudMachineProviderSpec)
-		// }
-		// workers, err := workersAsset.MachineSets()
-		// if err != nil {
-		// 	return err
-		// }
-		// workerConfigs := make([]*ibmcloudprovider.IBMCloudMachineProviderSpec, len(workers))
-		// for i, w := range workers {
-		// 	workerConfigs[i] = w.Spec.Template.Spec.ProviderSpec.Value.Object.(*ibmcloudprovider.IBMCloudMachineProviderSpec)
-		// }
-
-		// TODO: IBM: Fetch config from masterConfig instead
-		zones, err := client.GetVPCZonesForRegion(ctx, installConfig.Config.Platform.IBMCloud.Region)
+		// Get master and worker machine info
+		masters, err := mastersAsset.Machines()
 		if err != nil {
 			return err
+		}
+		masterConfigs := make([]*ibmcloudprovider.IBMCloudMachineProviderSpec, len(masters))
+		for i, m := range masters {
+			masterConfigs[i] = m.Spec.ProviderSpec.Value.Object.(*ibmcloudprovider.IBMCloudMachineProviderSpec)
+		}
+		workers, err := workersAsset.MachineSets()
+		if err != nil {
+			return err
+		}
+		workerConfigs := make([]*ibmcloudprovider.IBMCloudMachineProviderSpec, len(workers))
+		for i, w := range workers {
+			workerConfigs[i] = w.Spec.Template.Spec.ProviderSpec.Value.Object.(*ibmcloudprovider.IBMCloudMachineProviderSpec)
+		}
+
+		// Set machine pool info
+		var masterMachinePool ibmcloud.MachinePool
+		var workerMachinePool ibmcloud.MachinePool
+		if installConfig.Config.Platform.IBMCloud.DefaultMachinePlatform != nil {
+			masterMachinePool.Set(installConfig.Config.Platform.IBMCloud.DefaultMachinePlatform)
+			workerMachinePool.Set(installConfig.Config.Platform.IBMCloud.DefaultMachinePlatform)
+		}
+		if installConfig.Config.ControlPlane.Platform.IBMCloud != nil {
+			masterMachinePool.Set(installConfig.Config.ControlPlane.Platform.IBMCloud)
+		}
+		if worker := installConfig.Config.WorkerMachinePool(); worker != nil {
+			workerMachinePool.Set(worker.Platform.IBMCloud)
+		}
+
+		// Get master dedicated host info
+		var masterDedicatedHosts []ibmcloudtfvars.DedicatedHost
+		for _, dhost := range masterMachinePool.DedicatedHosts {
+			if dhost.Name != "" {
+				dh, err := client.GetDedicatedHostByName(ctx, dhost.Name, installConfig.Config.Platform.IBMCloud.Region)
+				if err != nil {
+					return err
+				}
+				masterDedicatedHosts = append(masterDedicatedHosts, ibmcloudtfvars.DedicatedHost{
+					ID: *dh.ID,
+				})
+			} else {
+				masterDedicatedHosts = append(masterDedicatedHosts, ibmcloudtfvars.DedicatedHost{
+					Profile: dhost.Profile,
+				})
+			}
+		}
+
+		// Get worker dedicated host info
+		var workerDedicatedHosts []ibmcloudtfvars.DedicatedHost
+		for _, dhost := range workerMachinePool.DedicatedHosts {
+			if dhost.Name != "" {
+				dh, err := client.GetDedicatedHostByName(ctx, dhost.Name, installConfig.Config.Platform.IBMCloud.Region)
+				if err != nil {
+					return err
+				}
+				workerDedicatedHosts = append(workerDedicatedHosts, ibmcloudtfvars.DedicatedHost{
+					ID: *dh.ID,
+				})
+			} else {
+				workerDedicatedHosts = append(workerDedicatedHosts, ibmcloudtfvars.DedicatedHost{
+					Profile: dhost.Profile,
+				})
+			}
 		}
 
 		// Get CISInstanceCRN from InstallConfig metadata
@@ -460,23 +518,22 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 
 		data, err = ibmcloudtfvars.TFVars(
 			ibmcloudtfvars.TFVarsSources{
-				Auth:              auth,
-				CISInstanceCRN:    crn,
-				PublishStrategy:   installConfig.Config.Publish,
-				ResourceGroupName: installConfig.Config.Platform.IBMCloud.ResourceGroupName,
-
-				// TODO: IBM: Fetch config from masterConfig instead
-				Region:                  installConfig.Config.Platform.IBMCloud.Region,
-				MachineType:             "bx2d-4x16",
-				MasterAvailabilityZones: zones,
-				ImageURL:                string(*rhcosImage),
+				Auth:                 auth,
+				CISInstanceCRN:       crn,
+				ImageURL:             string(*rhcosImage),
+				MasterConfigs:        masterConfigs,
+				MasterDedicatedHosts: masterDedicatedHosts,
+				PublishStrategy:      installConfig.Config.Publish,
+				ResourceGroupName:    installConfig.Config.Platform.IBMCloud.ResourceGroupName,
+				WorkerConfigs:        workerConfigs,
+				WorkerDedicatedHosts: workerDedicatedHosts,
 			},
 		)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
 		}
 		t.FileList = append(t.FileList, &asset.File{
-			Filename: fmt.Sprintf(TfPlatformVarsFileName, platform),
+			Filename: TfPlatformVarsFileName,
 			Data:     data,
 		})
 	case libvirt.Name:
@@ -508,57 +565,23 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
 		}
 		t.FileList = append(t.FileList, &asset.File{
-			Filename: fmt.Sprintf(TfPlatformVarsFileName, platform),
+			Filename: TfPlatformVarsFileName,
 			Data:     data,
 		})
 	case openstack.Name:
-		cloud, err := openstackconfig.GetSession(installConfig.Config.Platform.OpenStack.Cloud)
-		if err != nil {
-			return errors.Wrap(err, "failed to get cloud config for openstack")
-		}
-		var caCert string
-		// Get the ca-cert-bundle key if there is a value for cacert in clouds.yaml
-		if caPath := cloud.CloudConfig.CACertFile; caPath != "" {
-			caFile, err := ioutil.ReadFile(caPath)
-			if err != nil {
-				return errors.Wrap(err, "failed to read clouds.yaml ca-cert from disk")
-			}
-			caCert = string(caFile)
-		}
-
-		masters, err := mastersAsset.Machines()
-		if err != nil {
-			return err
-		}
-
-		var masterSpecs []*openstackprovider.OpenstackProviderSpec
-		for _, master := range masters {
-			masterSpecs = append(masterSpecs, master.Spec.ProviderSpec.Value.Object.(*openstackprovider.OpenstackProviderSpec))
-		}
 		data, err = openstacktfvars.TFVars(
-			masterSpecs,
-			installConfig.Config.Platform.OpenStack.Cloud,
-			installConfig.Config.Platform.OpenStack.ExternalNetwork,
-			installConfig.Config.Platform.OpenStack.ExternalDNS,
-			installConfig.Config.Platform.OpenStack.APIFloatingIP,
-			installConfig.Config.Platform.OpenStack.IngressFloatingIP,
-			installConfig.Config.Platform.OpenStack.APIVIP,
-			installConfig.Config.Platform.OpenStack.IngressVIP,
+			installConfig,
+			mastersAsset,
+			workersAsset,
 			string(*rhcosImage),
-			installConfig.Config.Platform.OpenStack.ClusterOSImageProperties,
-			clusterID.InfraID,
-			caCert,
+			clusterID,
 			bootstrapIgn,
-			installConfig.Config.ControlPlane.Platform.OpenStack,
-			installConfig.Config.OpenStack.DefaultMachinePlatform,
-			installConfig.Config.Platform.OpenStack.MachinesSubnet,
-			installConfig.Config.Proxy,
 		)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
 		}
 		t.FileList = append(t.FileList, &asset.File{
-			Filename: fmt.Sprintf(TfPlatformVarsFileName, platform),
+			Filename: TfPlatformVarsFileName,
 			Data:     data,
 		})
 	case baremetal.Name:
@@ -570,6 +593,7 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 		}
 
 		data, err = baremetaltfvars.TFVars(
+			*installConfig.Config.ControlPlane.Replicas,
 			installConfig.Config.Platform.BareMetal.LibvirtURI,
 			installConfig.Config.Platform.BareMetal.APIVIP,
 			imageCacheIP,
@@ -588,7 +612,7 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
 		}
 		t.FileList = append(t.FileList, &asset.File{
-			Filename: fmt.Sprintf(TfPlatformVarsFileName, platform),
+			Filename: TfPlatformVarsFileName,
 			Data:     data,
 		})
 	case ovirt.Name:
@@ -645,7 +669,7 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
 		}
 		t.FileList = append(t.FileList, &asset.File{
-			Filename: fmt.Sprintf(TfPlatformVarsFileName, platform),
+			Filename: TfPlatformVarsFileName,
 			Data:     data,
 		})
 	case vsphere.Name:
@@ -653,9 +677,9 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 		if err != nil {
 			return err
 		}
-		controlPlaneConfigs := make([]*vsphereprovider.VSphereMachineProviderSpec, len(controlPlanes))
+		controlPlaneConfigs := make([]*machinev1beta1.VSphereMachineProviderSpec, len(controlPlanes))
 		for i, c := range controlPlanes {
-			controlPlaneConfigs[i] = c.Spec.ProviderSpec.Value.Object.(*vsphereprovider.VSphereMachineProviderSpec)
+			controlPlaneConfigs[i] = c.Spec.ProviderSpec.Value.Object.(*machinev1beta1.VSphereMachineProviderSpec)
 		}
 
 		// Set this flag to use an existing folder specified in the install-config. Otherwise, create one.
@@ -669,16 +693,85 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 				Cluster:             installConfig.Config.VSphere.Cluster,
 				ImageURL:            string(*rhcosImage),
 				PreexistingFolder:   preexistingFolder,
+				DiskType:            installConfig.Config.Platform.VSphere.DiskType,
 			},
 		)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
 		}
 		t.FileList = append(t.FileList, &asset.File{
-			Filename: fmt.Sprintf(TfPlatformVarsFileName, platform),
+			Filename: TfPlatformVarsFileName,
 			Data:     data,
 		})
+	case alibabacloud.Name:
+		client, err := installConfig.AlibabaCloud.Client()
+		if err != nil {
+			return errors.Wrapf(err, "failed to create new client use region %s", installConfig.Config.Platform.AlibabaCloud.Region)
+		}
+		bucket := fmt.Sprintf("%s-bootstrap", clusterID.InfraID)
+		object := "bootstrap.ign"
+		signURL, err := client.GetOSSObjectSignURL(bucket, object)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get a presigned URL for OSS object %s", object)
+		}
 
+		auth := alibabacloudtfvars.Auth{
+			AccessKey: client.AccessKeyID,
+			SecretKey: client.AccessKeySecret,
+		}
+
+		masters, err := mastersAsset.Machines()
+		if err != nil {
+			return errors.Wrapf(err, "failed to get master machine info")
+		}
+		masterConfigs := make([]*machinev1.AlibabaCloudMachineProviderConfig, len(masters))
+		for i, m := range masters {
+			masterConfigs[i] = m.Spec.ProviderSpec.Value.Object.(*machinev1.AlibabaCloudMachineProviderConfig)
+		}
+		workers, err := workersAsset.MachineSets()
+		if err != nil {
+			return errors.Wrapf(err, "failed to get worker machine info")
+		}
+		workerConfigs := make([]*machinev1.AlibabaCloudMachineProviderConfig, len(workers))
+		for i, w := range workers {
+			workerConfigs[i] = w.Spec.Template.Spec.ProviderSpec.Value.Object.(*machinev1.AlibabaCloudMachineProviderConfig)
+		}
+
+		natGatewayZones, err := client.ListEnhanhcedNatGatewayAvailableZones()
+		if err != nil {
+			return errors.Wrapf(err, "failed to list avaliable zones for NAT gateway")
+		}
+		natGatewayZoneID := natGatewayZones.Zones[0].ZoneId
+
+		vswitchIDs := []string{}
+		if len(installConfig.Config.AlibabaCloud.VSwitchIDs) > 0 {
+			vswitchIDs = installConfig.Config.AlibabaCloud.VSwitchIDs
+		}
+		data, err := alibabacloudtfvars.TFVars(
+			alibabacloudtfvars.TFVarsSources{
+				Auth:                  auth,
+				VpcID:                 installConfig.Config.AlibabaCloud.VpcID,
+				VSwitchIDs:            vswitchIDs,
+				PrivateZoneID:         installConfig.Config.AlibabaCloud.PrivateZoneID,
+				ResourceGroupID:       installConfig.Config.AlibabaCloud.ResourceGroupID,
+				BaseDomain:            installConfig.Config.BaseDomain,
+				NatGatewayZoneID:      natGatewayZoneID,
+				MasterConfigs:         masterConfigs,
+				WorkerConfigs:         workerConfigs,
+				IgnitionBucket:        bucket,
+				IgnitionPresignedURL:  signURL,
+				AdditionalTrustBundle: installConfig.Config.AdditionalTrustBundle,
+				Architecture:          installConfig.Config.ControlPlane.Architecture,
+				Publish:               installConfig.Config.Publish,
+			},
+		)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
+		}
+		t.FileList = append(t.FileList, &asset.File{
+			Filename: TfPlatformVarsFileName,
+			Data:     data,
+		})
 	default:
 		logrus.Warnf("unrecognized platform %s", platform)
 	}
@@ -702,11 +795,12 @@ func (t *TerraformVariables) Load(f asset.FileFetcher) (found bool, err error) {
 	}
 	t.FileList = []*asset.File{file}
 
-	fileList, err := f.FetchByPattern(fmt.Sprintf(TfPlatformVarsFileName, "*"))
-	if err != nil {
+	switch file, err := f.FetchByName(TfPlatformVarsFileName); {
+	case err == nil:
+		t.FileList = append(t.FileList, file)
+	case !os.IsNotExist(err):
 		return false, err
 	}
-	t.FileList = append(t.FileList, fileList...)
 
 	return true, nil
 }

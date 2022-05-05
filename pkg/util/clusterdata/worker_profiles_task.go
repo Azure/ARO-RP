@@ -75,14 +75,17 @@ func (ef *workerProfilesEnricherTask) FetchData(ctx context.Context, callbacks c
 			continue
 		}
 
-		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(machineset.Spec.Template.Spec.ProviderSpec.Value.Raw, nil, nil)
+		o, _, err := scheme.Codecs.UniversalDeserializer().Decode(machineset.Spec.Template.Spec.ProviderSpec.Value.Raw, nil, nil)
 		if err != nil {
 			ef.log.Info(err)
 			continue
 		}
-		machineProviderSpec, ok := obj.(*machinev1beta1.AzureMachineProviderSpec)
+
+		machineProviderSpec, ok := o.(*machinev1beta1.AzureMachineProviderSpec)
 		if !ok {
-			ef.log.Infof("failed to read provider spec from the machine set %q: %T", machineset.Name, obj)
+			// This should never happen: codecs uses scheme that has only one registered type
+			// and if something is wrong with the provider spec - decoding should fail
+			ef.log.Infof("failed to read provider spec from the machine set %q: %T", machineset.Name, o)
 			continue
 		}
 

@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/url"
 	"time"
@@ -53,21 +52,13 @@ func testGetPodLogsOK(ctx context.Context, containerName, podName, namespace str
 		err = clients.Kubernetes.CoreV1().Pods(namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 	}()
-	err = wait.PollInfinite(time.Second*5, func() (done bool, err error) {
+	err = wait.Poll(time.Second, time.Second*60, func() (done bool, err error) {
 		pod, err = clients.Kubernetes.CoreV1().Pods(namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
-
-		switch pod.Status.Phase {
-		case corev1.PodSucceeded:
+		if pod.Status.Phase == corev1.PodSucceeded {
 			return true, nil
-		case corev1.PodPending:
-			if pod.CreationTimestamp.Time.Add(5*time.Minute).Unix() < time.Now().Unix() {
-				return false, errors.New("pod was pending for more than 5min")
-			}
-			return false, nil
-		case corev1.PodFailed:
-			return true, errors.New(pod.Status.Message)
 		}
+
 		return false, nil
 	})
 	Expect(err).NotTo(HaveOccurred())

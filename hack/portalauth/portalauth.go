@@ -80,7 +80,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	// encoded
-	fmt.Printf("session=%s", encoded)
+	fmt.Printf("%s", encoded)
 
 	return nil
 }

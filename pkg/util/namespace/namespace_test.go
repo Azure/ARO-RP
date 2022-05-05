@@ -58,7 +58,7 @@ func TestIsOpenShiftNamespace(t *testing.T) {
 		},
 		{
 			namespace: "openshift-operator-lifecycle-manager",
-			want:      true,
+			want:      false,
 		},
 		{
 			namespace: "openshift-cluster-version",

@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"fmt"
 	"strings"
@@ -32,6 +33,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	utilembed "github.com/Azure/ARO-RP/pkg/util/embed"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -39,6 +41,9 @@ import (
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
+
+//go:embed staticresources
+var embeddedFiles embed.FS
 
 type Operator interface {
 	CreateOrUpdate(context.Context) error
@@ -78,16 +83,10 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli 
 	}, nil
 }
 
-func (o *operator) resources() ([]kruntime.Object, error) {
-	// first static resources from Assets
+func (o *operator) staticResources() ([]kruntime.Object, error) {
 	results := []kruntime.Object{}
-	for _, assetName := range AssetNames() {
-		b, err := Asset(assetName)
-		if err != nil {
-			return nil, err
-		}
-
-		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(b, nil, nil)
+	for _, fileBytes := range utilembed.ReadDirRecursive(embeddedFiles, "staticresources") {
+		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(fileBytes, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -97,9 +96,18 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 			if d.Labels == nil {
 				d.Labels = map[string]string{}
 			}
-			d.Labels["version"] = version.GitCommit
+			var image string
+
+			if o.oc.Properties.OperatorVersion != "" {
+				image = fmt.Sprintf("%s/aro:%s", o.env.ACRDomain(), o.oc.Properties.OperatorVersion)
+				d.Labels["version"] = o.oc.Properties.OperatorVersion
+			} else {
+				image = o.env.AROOperatorImage()
+				d.Labels["version"] = version.GitCommit
+			}
+
 			for i := range d.Spec.Template.Spec.Containers {
-				d.Spec.Template.Spec.Containers[i].Image = o.env.AROOperatorImage()
+				d.Spec.Template.Spec.Containers[i].Image = image
 
 				if o.env.IsLocalDevelopmentMode() {
 					d.Spec.Template.Spec.Containers[i].Env = append(d.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
@@ -112,6 +120,16 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 
 		results = append(results, obj)
 	}
+	return results, nil
+}
+
+func (o *operator) resources() ([]kruntime.Object, error) {
+	// first static resources from Assets
+	results, err := o.staticResources()
+	if err != nil {
+		return nil, err
+	}
+
 	// then dynamic resources
 	key, cert := o.env.ClusterGenevaLoggingSecret()
 	gcsKeyBytes, err := utiltls.PrivateKeyAsBytes(key)
@@ -193,12 +211,10 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 		},
 	}
 
-	if o.oc.Properties.FeatureProfile.GatewayEnabled && o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
-		cluster.Spec.GatewayDomains = append(o.env.GatewayDomains(), o.oc.Properties.ImageRegistryStorageAccountName+".blob."+o.env.Environment().StorageEndpointSuffix)
-	} else {
-		// covers the case of an admin-disable, we need to update dnsmasq on each node
-		cluster.Spec.GatewayDomains = make([]string, 0)
-	}
+	// TODO (BV): reenable gateway once we fix bugs
+	// if o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
+	// 	cluster.Spec.GatewayDomains = append(o.env.GatewayDomains(), o.oc.Properties.ImageRegistryStorageAccountName+".blob."+o.env.Environment().StorageEndpointSuffix)
+	// }
 
 	// create a secret here for genevalogging, later we will copy it to
 	// the genevalogging namespace.

@@ -8,28 +8,25 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
-	baremetalapi "github.com/metal3-io/cluster-api-provider-baremetal/pkg/apis"
-	baremetalprovider "github.com/metal3-io/cluster-api-provider-baremetal/pkg/apis/baremetal/v1alpha1"
-	gcpapi "github.com/openshift/cluster-api-provider-gcp/pkg/apis"
-	gcpprovider "github.com/openshift/cluster-api-provider-gcp/pkg/apis/gcpprovider/v1beta1"
+	baremetalhost "github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1"
+	machinev1 "github.com/openshift/api/machine/v1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	baremetalapi "github.com/openshift/cluster-api-provider-baremetal/pkg/apis"
+	baremetalprovider "github.com/openshift/cluster-api-provider-baremetal/pkg/apis/baremetal/v1alpha1"
 	ibmcloudapi "github.com/openshift/cluster-api-provider-ibmcloud/pkg/apis"
 	ibmcloudprovider "github.com/openshift/cluster-api-provider-ibmcloud/pkg/apis/ibmcloudprovider/v1beta1"
 	libvirtapi "github.com/openshift/cluster-api-provider-libvirt/pkg/apis"
 	libvirtprovider "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 	ovirtproviderapi "github.com/openshift/cluster-api-provider-ovirt/pkg/apis"
 	ovirtprovider "github.com/openshift/cluster-api-provider-ovirt/pkg/apis/ovirtprovider/v1beta1"
-	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	vsphereapi "github.com/openshift/machine-api-operator/pkg/apis/vsphereprovider"
-	vsphereprovider "github.com/openshift/machine-api-operator/pkg/apis/vsphereprovider/v1beta1"
 	mcfgv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	awsapi "sigs.k8s.io/cluster-api-provider-aws/pkg/apis"
 	awsprovider "sigs.k8s.io/cluster-api-provider-aws/pkg/apis/awsprovider/v1beta1"
-	azureapi "sigs.k8s.io/cluster-api-provider-azure/pkg/apis"
-	azureprovider "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 	openstackapi "sigs.k8s.io/cluster-api-provider-openstack/pkg/apis"
 	openstackprovider "sigs.k8s.io/cluster-api-provider-openstack/pkg/apis/openstackproviderconfig/v1alpha1"
 
@@ -37,6 +34,7 @@ import (
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
+	"github.com/openshift/installer/pkg/asset/machines/alibabacloud"
 	"github.com/openshift/installer/pkg/asset/machines/aws"
 	"github.com/openshift/installer/pkg/asset/machines/azure"
 	"github.com/openshift/installer/pkg/asset/machines/baremetal"
@@ -51,6 +49,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/templates/content/bootkube"
 	rhcosutils "github.com/openshift/installer/pkg/rhcos"
 	"github.com/openshift/installer/pkg/types"
+	alibabacloudtypes "github.com/openshift/installer/pkg/types/alibabacloud"
 	awstypes "github.com/openshift/installer/pkg/types/aws"
 	awsdefaults "github.com/openshift/installer/pkg/types/aws/defaults"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
@@ -76,6 +75,10 @@ type Master struct {
 	// controllers on hosts.
 	SecretFiles []*asset.File
 
+	// NetworkConfigSecretFiles is used by the baremetal platform to
+	// store the networking configuration per host
+	NetworkConfigSecretFiles []*asset.File
+
 	// HostFiles is the list of baremetal hosts provided in the
 	// installer configuration.
 	HostFiles []*asset.File
@@ -87,6 +90,11 @@ const (
 	// secretFileName is the format string for constructing the Secret
 	// filenames for baremetal clusters.
 	secretFileName = "99_openshift-cluster-api_host-bmc-secrets-%s.yaml"
+
+	// networkConfigSecretFileName is the format string for constructing
+	// the networking configuration Secret filenames for baremetal
+	// clusters.
+	networkConfigSecretFileName = "99_openshift-cluster-api_host-network-config-secrets-%s.yaml"
 
 	// hostFileName is the format string for constucting the Host
 	// filenames for baremetal clusters.
@@ -102,9 +110,10 @@ const (
 )
 
 var (
-	secretFileNamePattern        = fmt.Sprintf(secretFileName, "*")
-	hostFileNamePattern          = fmt.Sprintf(hostFileName, "*")
-	masterMachineFileNamePattern = fmt.Sprintf(masterMachineFileName, "*")
+	secretFileNamePattern              = fmt.Sprintf(secretFileName, "*")
+	networkConfigSecretFileNamePattern = fmt.Sprintf(networkConfigSecretFileName, "*")
+	hostFileNamePattern                = fmt.Sprintf(hostFileName, "*")
+	masterMachineFileNamePattern       = fmt.Sprintf(masterMachineFileName, "*")
 
 	_ asset.WritableAsset = (*Master)(nil)
 )
@@ -149,12 +158,46 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 	aroDNSConfig := &bootkube.ARODNSConfig{}
 	dependencies.Get(clusterID, installConfig, rhcosImage, mign, aroDNSConfig)
 
+	masterUserDataSecretName := "master-user-data"
+
 	ic := installConfig.Config
 
 	pool := *ic.ControlPlane
 	var err error
-	machines := []machineapi.Machine{}
+	machines := []machinev1beta1.Machine{}
 	switch ic.Platform.Name() {
+	case alibabacloudtypes.Name:
+		client, err := installConfig.AlibabaCloud.Client()
+		if err != nil {
+			return err
+		}
+		vswitchMaps, err := installConfig.AlibabaCloud.VSwitchMaps()
+		if err != nil {
+			return errors.Wrap(err, "failed to get VSwitchs map")
+		}
+		mpool := alibabacloudtypes.DefaultMasterMachinePoolPlatform()
+		mpool.ImageID = string(*rhcosImage)
+		mpool.Set(ic.Platform.AlibabaCloud.DefaultMachinePlatform)
+		mpool.Set(pool.Platform.AlibabaCloud)
+		if len(mpool.Zones) == 0 {
+			if len(vswitchMaps) > 0 {
+				for zone := range vswitchMaps {
+					mpool.Zones = append(mpool.Zones, zone)
+				}
+			} else {
+				azs, err := client.GetAvailableZonesByInstanceType(mpool.InstanceType)
+				if err != nil || len(azs) == 0 {
+					return errors.Wrap(err, "failed to fetch availability zones")
+				}
+				mpool.Zones = azs
+			}
+		}
+
+		pool.Platform.AlibabaCloud = &mpool
+		machines, err = alibabacloud.Machines(clusterID.InfraID, ic, &pool, "master", masterUserDataSecretName, installConfig.Config.Platform.AlibabaCloud.Tags, vswitchMaps)
+		if err != nil {
+			return errors.Wrap(err, "failed to create master machine objects")
+		}
 	case awstypes.Name:
 		subnets := map[string]string{}
 		if len(ic.Platform.AWS.Subnets) > 0 {
@@ -216,7 +259,7 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 			subnets,
 			&pool,
 			"master",
-			"master-user-data",
+			masterUserDataSecretName,
 			installConfig.Config.Platform.AWS.UserTags,
 		)
 		if err != nil {
@@ -235,7 +278,7 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 			mpool.Zones = azs
 		}
 		pool.Platform.GCP = &mpool
-		machines, err = gcp.Machines(clusterID.InfraID, ic, &pool, string(*rhcosImage), "master", "master-user-data")
+		machines, err = gcp.Machines(clusterID.InfraID, ic, &pool, string(*rhcosImage), "master", masterUserDataSecretName)
 		if err != nil {
 			return errors.Wrap(err, "failed to create master machine objects")
 		}
@@ -252,7 +295,7 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 			mpool.Zones = azs
 		}
 		pool.Platform.IBMCloud = &mpool
-		machines, err = ibmcloud.Machines(clusterID.InfraID, ic, &pool, "master", "master-user-data")
+		machines, err = ibmcloud.Machines(clusterID.InfraID, ic, &pool, "master", masterUserDataSecretName)
 		if err != nil {
 			return errors.Wrap(err, "failed to create master machine objects")
 		}
@@ -263,7 +306,7 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		mpool.Set(ic.Platform.Libvirt.DefaultMachinePlatform)
 		mpool.Set(pool.Platform.Libvirt)
 		pool.Platform.Libvirt = &mpool
-		machines, err = libvirt.Machines(clusterID.InfraID, ic, &pool, "master", "master-user-data")
+		machines, err = libvirt.Machines(clusterID.InfraID, ic, &pool, "master", masterUserDataSecretName)
 		if err != nil {
 			return errors.Wrap(err, "failed to create master machine objects")
 		}
@@ -275,7 +318,7 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 
 		imageName, _ := rhcosutils.GenerateOpenStackImageName(string(*rhcosImage), clusterID.InfraID)
 
-		machines, err = openstack.Machines(clusterID.InfraID, ic, &pool, imageName, "master", "master-user-data")
+		machines, err = openstack.Machines(clusterID.InfraID, ic, &pool, imageName, "master", masterUserDataSecretName)
 		if err != nil {
 			return errors.Wrap(err, "failed to create master machine objects")
 		}
@@ -308,7 +351,7 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 
 		pool.Platform.Azure = &mpool
 
-		machines, err = azure.Machines(clusterID.InfraID, ic, &pool, string(*rhcosImage), "master", "master-user-data")
+		machines, err = azure.Machines(clusterID.InfraID, ic, &pool, string(*rhcosImage), "master", masterUserDataSecretName)
 		if err != nil {
 			return errors.Wrap(err, "failed to create master machine objects")
 		}
@@ -319,7 +362,10 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		mpool.Set(pool.Platform.BareMetal)
 		pool.Platform.BareMetal = &mpool
 
-		machines, err = baremetal.Machines(clusterID.InfraID, ic, &pool, string(*rhcosImage), "master", "master-user-data")
+		// Use managed user data secret, since we always have up to date images
+		// available in the cluster
+		masterUserDataSecretName = "master-user-data-managed"
+		machines, err = baremetal.Machines(clusterID.InfraID, ic, &pool, "master", masterUserDataSecretName)
 		if err != nil {
 			return errors.Wrap(err, "failed to create master machine objects")
 		}
@@ -329,39 +375,24 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 			return errors.Wrap(err, "failed to assemble host data")
 		}
 
-		if len(hostSettings.Hosts) > 0 {
-			m.HostFiles = make([]*asset.File, len(hostSettings.Hosts))
-			padFormat := fmt.Sprintf("%%0%dd", len(fmt.Sprintf("%d", len(hostSettings.Hosts))))
-			for i, host := range hostSettings.Hosts {
-				data, err := yaml.Marshal(host)
-				if err != nil {
-					return errors.Wrapf(err, "marshal host %d", i)
-				}
-
-				padded := fmt.Sprintf(padFormat, i)
-				m.HostFiles[i] = &asset.File{
-					Filename: filepath.Join(directory, fmt.Sprintf(hostFileName, padded)),
-					Data:     data,
-				}
-			}
+		hosts, err := createHostAssetFiles(hostSettings.Hosts, hostFileName)
+		if err != nil {
+			return err
 		}
+		m.HostFiles = append(m.HostFiles, hosts...)
 
-		if len(hostSettings.Secrets) > 0 {
-			m.SecretFiles = make([]*asset.File, len(hostSettings.Secrets))
-			padFormat := fmt.Sprintf("%%0%dd", len(fmt.Sprintf("%d", len(hostSettings.Secrets))))
-			for i, secret := range hostSettings.Secrets {
-				data, err := yaml.Marshal(secret)
-				if err != nil {
-					return errors.Wrapf(err, "marshal secret %d", i)
-				}
-
-				padded := fmt.Sprintf(padFormat, i)
-				m.SecretFiles[i] = &asset.File{
-					Filename: filepath.Join(directory, fmt.Sprintf(secretFileName, padded)),
-					Data:     data,
-				}
-			}
+		secrets, err := createSecretAssetFiles(hostSettings.Secrets, secretFileName)
+		if err != nil {
+			return err
 		}
+		m.SecretFiles = append(m.SecretFiles, secrets...)
+
+		networkSecrets, err := createSecretAssetFiles(hostSettings.NetworkConfigSecrets, networkConfigSecretFileName)
+		if err != nil {
+			return err
+		}
+		m.NetworkConfigSecretFiles = append(m.NetworkConfigSecretFiles, networkSecrets...)
+
 	case ovirttypes.Name:
 		mpool := defaultOvirtMachinePoolPlatform()
 		mpool.VMType = ovirttypes.VMTypeHighPerformance
@@ -371,7 +402,7 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 
 		imageName, _ := rhcosutils.GenerateOpenStackImageName(string(*rhcosImage), clusterID.InfraID)
 
-		machines, err = ovirt.Machines(clusterID.InfraID, ic, &pool, imageName, "master", "master-user-data")
+		machines, err = ovirt.Machines(clusterID.InfraID, ic, &pool, imageName, "master", masterUserDataSecretName)
 		if err != nil {
 			return errors.Wrap(err, "failed to create master machine objects for ovirt provider")
 		}
@@ -385,7 +416,7 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		pool.Platform.VSphere = &mpool
 		templateName := clusterID.InfraID + "-rhcos"
 
-		machines, err = vsphere.Machines(clusterID.InfraID, ic, &pool, templateName, "master", "master-user-data")
+		machines, err = vsphere.Machines(clusterID.InfraID, ic, &pool, templateName, "master", masterUserDataSecretName)
 		if err != nil {
 			return errors.Wrap(err, "failed to create master machine objects")
 		}
@@ -395,7 +426,7 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		return fmt.Errorf("invalid Platform")
 	}
 
-	data, err := userDataSecret("master-user-data", mign.File.Data)
+	data, err := userDataSecret(masterUserDataSecretName, mign.File.Data)
 	if err != nil {
 		return errors.Wrap(err, "failed to create user-data secret for master machines")
 	}
@@ -465,6 +496,7 @@ func (m *Master) Files() []*asset.File {
 	// Hosts refer to secrets, so place the secrets before the hosts
 	// to avoid unnecessary reconciliation errors.
 	files = append(files, m.SecretFiles...)
+	files = append(files, m.NetworkConfigSecretFiles...)
 	// Machines are linked to hosts via the machineRef, so we create
 	// the hosts first to ensure if the operator starts trying to
 	// reconcile a machine it can pick up the related host.
@@ -497,6 +529,12 @@ func (m *Master) Load(f asset.FileFetcher) (found bool, err error) {
 	}
 	m.SecretFiles = fileList
 
+	fileList, err = f.FetchByPattern(filepath.Join(directory, networkConfigSecretFileNamePattern))
+	if err != nil {
+		return true, err
+	}
+	m.NetworkConfigSecretFiles = fileList
+
 	fileList, err = f.FetchByPattern(filepath.Join(directory, hostFileNamePattern))
 	if err != nil {
 		return true, err
@@ -513,32 +551,37 @@ func (m *Master) Load(f asset.FileFetcher) (found bool, err error) {
 }
 
 // Machines returns master Machine manifest structures.
-func (m *Master) Machines() ([]machineapi.Machine, error) {
+func (m *Master) Machines() ([]machinev1beta1.Machine, error) {
 	scheme := runtime.NewScheme()
 	awsapi.AddToScheme(scheme)
-	azureapi.AddToScheme(scheme)
 	baremetalapi.AddToScheme(scheme)
-	gcpapi.AddToScheme(scheme)
 	ibmcloudapi.AddToScheme(scheme)
 	libvirtapi.AddToScheme(scheme)
 	openstackapi.AddToScheme(scheme)
 	ovirtproviderapi.AddToScheme(scheme)
-	vsphereapi.AddToScheme(scheme)
+	scheme.AddKnownTypes(machinev1beta1.SchemeGroupVersion,
+		&machinev1beta1.VSphereMachineProviderSpec{},
+		&machinev1beta1.AzureMachineProviderSpec{},
+		&machinev1beta1.GCPMachineProviderSpec{},
+	)
+	scheme.AddKnownTypes(machinev1.GroupVersion,
+		&machinev1.AlibabaCloudMachineProviderConfig{},
+	)
+	machinev1beta1.AddToScheme(scheme)
 	decoder := serializer.NewCodecFactory(scheme).UniversalDecoder(
+		machinev1.GroupVersion,
 		awsprovider.SchemeGroupVersion,
-		azureprovider.SchemeGroupVersion,
 		baremetalprovider.SchemeGroupVersion,
-		gcpprovider.SchemeGroupVersion,
 		ibmcloudprovider.SchemeGroupVersion,
 		libvirtprovider.SchemeGroupVersion,
 		openstackprovider.SchemeGroupVersion,
-		vsphereprovider.SchemeGroupVersion,
+		machinev1beta1.SchemeGroupVersion,
 		ovirtprovider.SchemeGroupVersion,
 	)
 
-	machines := []machineapi.Machine{}
+	machines := []machinev1beta1.Machine{}
 	for i, file := range m.MachineFiles {
-		machine := &machineapi.Machine{}
+		machine := &machinev1beta1.Machine{}
 		err := yaml.Unmarshal(file.Data, &machine)
 		if err != nil {
 			return machines, errors.Wrapf(err, "unmarshal master %d", i)
@@ -581,4 +624,43 @@ func IsMachineManifest(file *asset.File) bool {
 	} else {
 		return matched
 	}
+}
+
+func createSecretAssetFiles(resources []corev1.Secret, fileName string) ([]*asset.File, error) {
+
+	var objects []interface{}
+	for _, r := range resources {
+		objects = append(objects, r)
+	}
+
+	return createAssetFiles(objects, fileName)
+}
+
+func createHostAssetFiles(resources []baremetalhost.BareMetalHost, fileName string) ([]*asset.File, error) {
+
+	var objects []interface{}
+	for _, r := range resources {
+		objects = append(objects, r)
+	}
+
+	return createAssetFiles(objects, fileName)
+}
+
+func createAssetFiles(objects []interface{}, fileName string) ([]*asset.File, error) {
+
+	assetFiles := make([]*asset.File, len(objects))
+	padFormat := fmt.Sprintf("%%0%dd", len(fmt.Sprintf("%d", len(objects))))
+	for i, obj := range objects {
+		data, err := yaml.Marshal(obj)
+		if err != nil {
+			return nil, errors.Wrapf(err, "marshal resource %d", i)
+		}
+		padded := fmt.Sprintf(padFormat, i)
+		assetFiles[i] = &asset.File{
+			Filename: filepath.Join(directory, fmt.Sprintf(fileName, padded)),
+			Data:     data,
+		}
+	}
+
+	return assetFiles, nil
 }

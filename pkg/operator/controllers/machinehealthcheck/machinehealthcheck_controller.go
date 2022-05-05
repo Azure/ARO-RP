@@ -7,7 +7,7 @@ import (
 	"context"
 	"time"
 
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -52,10 +52,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		if err != nil {
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}
+
+		err = r.dh.EnsureDeleted(ctx, "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert")
+		if err != nil {
+			return reconcile.Result{RequeueAfter: time.Hour}, err
+		}
 		return reconcile.Result{}, nil
 	}
 
 	var resources []kruntime.Object
+
 	// this loop prevents us from hard coding resource strings
 	// and ensures all static resources are accounted for.
 	for _, assetName := range AssetNames() {

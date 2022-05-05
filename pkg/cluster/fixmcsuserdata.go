@@ -78,17 +78,18 @@ func (m *manager) enumerateUserDataSecrets(ctx context.Context) map[corev1.Secre
 }
 
 func getUserDataSecretReference(objMeta *metav1.ObjectMeta, spec *machinev1beta1.MachineSpec) (*corev1.SecretReference, error) {
-	if spec.ProviderSpec.Value == nil || objMeta == nil {
+	if spec.ProviderSpec.Value == nil {
 		return nil, nil
 	}
 
-	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(spec.ProviderSpec.Value.Raw, nil, nil)
+	o, _, err := scheme.Codecs.UniversalDeserializer().Decode(spec.ProviderSpec.Value.Raw, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	machineProviderSpec, ok := obj.(*machinev1beta1.AzureMachineProviderSpec)
+
+	machineProviderSpec, ok := o.(*machinev1beta1.AzureMachineProviderSpec)
 	if !ok {
-		return nil, fmt.Errorf("machine %s: failed to read provider spec: %T", spec.Name, obj)
+		return nil, fmt.Errorf("failed to read provider spec: %T", o)
 	}
 
 	if machineProviderSpec.UserDataSecret == nil {

@@ -165,20 +165,16 @@ unit-test-go:
 	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverprofile=cover.out ./...
 
 lint-go:
-	go run ./vendor/github.com/golangci/golangci-lint/cmd/golangci-lint run
+	hack/lint-go.sh
 
 lint-admin-portal:
 	docker build -f Dockerfile.portal_lint . -t linter
 	docker run -it --rm localhost/linter ./src --ext .ts
 
-test-image-pull:
-	docker run --network="host" -d -p 4444:4444 selenium/standalone-chrome:latest
-
 test-python: pyenv az
 	. pyenv/bin/activate && \
 		azdev linter && \
-		azdev style && \
-		hack/format-yaml/format-yaml.py .pipelines
+		azdev style 
 
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig

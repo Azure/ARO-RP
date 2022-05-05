@@ -1,4 +1,3 @@
-//nolint:unparam
 package e2e
 
 // Copyright (c) Microsoft Corporation.
@@ -7,20 +6,15 @@ package e2e
 import (
 	"context"
 	"encoding/gob"
-	"flag"
 	"fmt"
 	"math"
-	"net/http"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
-	. "github.com/gorilla/securecookie"
-	. "github.com/gorilla/sessions"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	. "github.com/tebeka/selenium"
+	. "github.com/onsi/ginkgo"     //nolint
+	. "github.com/onsi/gomega"     //nolint
+	. "github.com/tebeka/selenium" //nolint
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -44,7 +38,6 @@ import (
 	redhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-04-01/redhatopenshift"
 	redhatopenshift20220904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-09-04/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
@@ -90,69 +83,6 @@ func skipIfNotInDevelopmentEnv() {
 	}
 }
 
-func generateSession(ctx context.Context, log *logrus.Entry) (string, error) {
-	const (
-		SessionName        = "session"
-		SessionKeyExpires  = "expires"
-		sessionKeyState    = "state"
-		SessionKeyUsername = "user_name"
-		SessionKeyGroups   = "groups"
-		username           = "testuser"
-		groups             = ""
-	)
-
-	flag.Parse()
-
-	_env, err := env.NewCore(ctx, log)
-	if err != nil {
-		return "", err
-	}
-
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceIdentifiers.KeyVault)
-	if err != nil {
-		return "", err
-	}
-
-	portalKeyvaultURI, err := keyvault.URI(_env, env.PortalKeyvaultSuffix)
-	if err != nil {
-		return "", err
-	}
-
-	portalKeyvault := keyvault.NewManager(msiKVAuthorizer, portalKeyvaultURI)
-
-	sessionKey, err := portalKeyvault.GetBase64Secret(ctx, env.PortalServerSessionKeySecretName, "")
-	if err != nil {
-		return "", err
-	}
-
-	store := NewCookieStore(sessionKey)
-
-	store.MaxAge(0)
-	store.Options.Secure = true
-	store.Options.HttpOnly = true
-	store.Options.SameSite = http.SameSiteLaxMode
-
-	session := NewSession(store, SessionName)
-	opts := *store.Options
-	session.Options = &opts
-
-	session.Values[SessionKeyUsername] = username
-	session.Values[SessionKeyGroups] = strings.Split(groups, ",")
-	session.Values[SessionKeyExpires] = time.Now().Add(time.Hour)
-
-	encoded, err := EncodeMulti(session.Name(), session.Values,
-		store.Codecs...)
-	if err != nil {
-		log.Infof(err.Error())
-		return "", err
-	}
-
-	// encoded
-	log.Infof("session=%s", encoded)
-
-	return encoded, nil
-}
-
 func adminPortalSessionSetup() (string, *WebDriver) {
 	const (
 		port = 4444
@@ -169,11 +99,12 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 
 	var err error
 
-	for {
+	for i := 1; i < 5; i++ {
 		wd, err = NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
 		if wd != nil || ctx.Err() != nil {
 			break
 		}
+		time.Sleep(time.Second * 1)
 	}
 
 	if err != nil {
@@ -193,23 +124,26 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 		log.Infof("Could not get to %s", host)
 		panic(err)
 	}
-
-	session, err := generateSession(context.Background(), log)
+	cmd := exec.Command("go", "run", "./hack/portalauth", "-username", "test", "-groups", "$AZURE_PORTAL_ELEVATED_GROUP_IDS", "2>", "/dev/null")
+	output, err := cmd.Output()
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Error occurred creating session cookie\n Output: %s\n Error: %s\n", output, err)
 	}
+
+	os.Setenv("SESSION", string(output))
+
+	log.Infof("Session Output : %s\n", os.Getenv("SESSION"))
 
 	cookie := &Cookie{
 		Name:   "session",
-		Value:  session,
+		Value:  os.Getenv("SESSION"),
 		Expiry: math.MaxUint32,
 	}
 
 	if err := wd.AddCookie(cookie); err != nil {
 		panic(err)
 	}
-
 	return host, &wd
 }
 
@@ -354,9 +288,21 @@ func setup(ctx context.Context) error {
 	}
 
 	log.Infof("Starting Selenium Grid")
-	cmd := exec.CommandContext(ctx, "docker", "run", "-d", "-p", "4444:4444", "--name", "selenium-edge-standalone", "--network=host", "--shm-size=2g", "selenium/standalone-edge:latest")
+	cmd := exec.CommandContext(ctx, "docker", "pull", "selenium/standalone-edge:latest")
 
 	output, err := cmd.CombinedOutput()
+
+	log.Infof("Selenium Image Pull Output : %s\n", output)
+
+	if err != nil {
+		log.Fatalf("Error occurred pulling selenium image\n Output: %s\n Error: %s\n", output, err)
+	}
+
+	cmd = exec.CommandContext(ctx, "docker", "run", "-d", "--name", "selenium-edge-standalone", "--network=host", "--shm-size=2g", "selenium/standalone-edge:latest")
+
+	output, err = cmd.CombinedOutput()
+
+	log.Infof("Selenium Container Run Output : %s\n", output)
 
 	if err != nil {
 		log.Fatalf("Error occurred starting selenium grid\n Output: %s\n Error: %s\n", output, err)

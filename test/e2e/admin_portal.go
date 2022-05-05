@@ -1,4 +1,3 @@
-//nolint:unparam
 package e2e
 
 // Copyright (c) Microsoft Corporation.
@@ -7,13 +6,13 @@ package e2e
 import (
 	"os"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	. "github.com/serge1peshcoff/selenium-go-conditions"
-	. "github.com/tebeka/selenium"
+	. "github.com/onsi/ginkgo"                           //nolint
+	. "github.com/onsi/gomega"                           //nolint
+	. "github.com/serge1peshcoff/selenium-go-conditions" //nolint
+	. "github.com/tebeka/selenium"                       //nolint
 )
 
-var _ = FDescribe("Admin Portal E2E Testing", func() {
+var _ = Describe("Admin Portal E2E Testing", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 	var wdPoint *WebDriver
 	var wd WebDriver
@@ -61,42 +60,36 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 		Expect(text.Text()).To(Equal("Showing 0 items"))
 	})
 
-	It("Should be able to populate cluster info panel correctly", func() {
-		testValues := [17]string{
-			"Public",
-			"Undefined",
-			"1",
-			"Undefined",
-			"2021-11-03T06:04:39Z",
-			"unknown",
-			"Undefined",
-			"elljohns-test-hrqbs",
-			"Undefined",
-			"Undefined",
-			"Undefined",
-			"Undefined",
-			"Undefined",
-			"elljohns-test",
-			"Succeeded",
-			"4.8.11",
-			"Installed"}
-
-		wd.Wait(ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))
+	FIt("Should be able to populate cluster info panel correctly", func() {
+		err := wd.Wait(ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))
+		if err != nil {
+			panic(err)
+		}
 
 		cluster, err := wd.FindElement(ByCSSSelector, "div[data-automation-key='name']")
 		if err != nil {
 			panic(err)
 		}
 
-		cluster.Click()
-
-		wd.Wait(ElementIsLocated(ByCSSSelector, "ms-Panel is-open ms-Panel--hasCloseButton ms-Panel--custom root-225"))
-
-		panelFields, err := wd.FindElements(ByCSSSelector, "css-287")
+		err = cluster.Click()
 		if err != nil {
 			panic(err)
 		}
 
+		err = wd.Wait(ElementIsLocated(ByCSSSelector, "div.css-113"))
+		if err != nil {
+			panic(err)
+		}
+
+		err = wd.Wait(ElementIsLocated(ByCSSSelector, "span.css-287"))
+		if err != nil {
+			panic(err)
+		}
+
+		panelFields, err := wd.FindElements(ByCSSSelector, "span.css-287")
+		if err != nil {
+			panic(err)
+		}
 		var filteredPanelFields []string
 		for _, panelField := range panelFields {
 			panelText, err := panelField.Text()
@@ -109,20 +102,22 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 			}
 		}
 
-		panelValues, err := wd.FindElements(ByCSSSelector, "css-290")
+		Expect(panelFields).ShouldNot(BeEmpty())
+
+		panelValues, err := wd.FindElements(ByCSSSelector, "span.css-290")
 		if err != nil {
 			panic(err)
 		}
 
-		for i, panelValue := range panelValues {
-			panelFieldText := filteredPanelFields[i]
+		Expect(len(panelValues)).To(Equal(len(filteredPanelFields)))
 
+		for _, panelValue := range panelValues {
 			panelValueText, err := panelValue.Text()
 			if err != nil {
 				panic(err)
 			}
 
-			Expect(panelFieldText + " : " + panelValueText).To(Equal(panelFieldText + " : " + testValues[i]))
+			Expect(panelValueText).To(Not(BeNil()))
 		}
 	})
 
