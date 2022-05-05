@@ -78,7 +78,7 @@ def validate_disk_encryption_set(cmd, namespace):
         except CloudError as err:
             raise InvalidArgumentValueError(
                 f"Invald --disk-encryption-set, error when getting '{namespace.disk_encryption_set}':"
-                f" {err.message}") from err
+                f" {str(err)}") from err
 
 
 def validate_domain(namespace):
