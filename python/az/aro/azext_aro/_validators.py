@@ -155,7 +155,7 @@ def validate_subnet(key):
             client.subnets.get(parts['resource_group'],
                                parts['name'], parts['child_name_1'])
         except Exception as err:
-            if type(err) == ResourceNotFoundError:
+            if isinstance(err, ResourceNotFoundError):
                 raise InvalidArgumentValueError(
                     f"Invald --{key.replace('_', '-')}, error when getting '{subnet}': {str(err)}") from err
             raise CLIInternalError(f"Unexpected error when getting subnet '{subnet}': {str(err)}") from err
