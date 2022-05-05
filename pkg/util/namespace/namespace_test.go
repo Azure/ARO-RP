@@ -52,6 +52,10 @@ func TestIsOpenShiftNamespace(t *testing.T) {
 			namespace: "kube-ns",
 			want:      false,
 		},
+		{
+			namespace: "openshift-operator-lifecycle-manager",
+			want:      false,
+		},
 	} {
 		t.Run(tt.namespace, func(t *testing.T) {
 			got := IsOpenShiftNamespace(tt.namespace)

@@ -3,10 +3,12 @@ package namespace
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// IsOpenShiftNamespace returns true if ns is a namespace in the defined hardcoded map
+// IsOpenShiftNamespace returns true if ns is a namespace in the defined hardcoded map.
+// We should only add new namespaces into this hardcoded list but never delete
+// the existing ones in the namespace list to avoid backward compatibility issues.
 func IsOpenShiftNamespace(ns string) bool {
-	GetNamespace := map[string]struct{}{
-		// Added "" to satisfy unit tests
+	nsmap := map[string]struct{}{
+		// Allow validation against non-namespaced objects via Geneva actions
 		"": {},
 
 		// ARO specific namespaces
@@ -63,13 +65,12 @@ func IsOpenShiftNamespace(ns string) bool {
 		"openshift-network-operator":                       {},
 		"openshift-oauth-apiserver":                        {},
 		"openshift-openstack-infra":                        {},
-		"openshift-operator-lifecycle-manager":             {},
 		"openshift-operators":                              {},
 		"openshift-ovirt-infra":                            {},
 		"openshift-sdn":                                    {},
 		"openshift-service-ca":                             {},
 		"openshift-service-ca-operator":                    {},
 	}
-	_, ok := GetNamespace[ns]
+	_, ok := nsmap[ns]
 	return ok
 }
