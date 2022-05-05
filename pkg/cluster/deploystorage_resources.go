@@ -79,11 +79,11 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resource {
 	virtualNetworkRules := []mgmtstorage.VirtualNetworkRule{
 		{
-			VirtualNetworkResourceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+			VirtualNetworkResourceID: &m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
 			Action:                   mgmtstorage.Allow,
 		},
 		{
-			VirtualNetworkResourceID: to.StringPtr(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID),
+			VirtualNetworkResourceID: &m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
 			Action:                   mgmtstorage.Allow,
 		},
 		{
@@ -189,7 +189,7 @@ func (m *manager) networkPrivateLinkService(azureRegion string) *arm.Resource {
 					{
 						PrivateLinkServiceIPConfigurationProperties: &mgmtnetwork.PrivateLinkServiceIPConfigurationProperties{
 							Subnet: &mgmtnetwork.Subnet{
-								ID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+								ID: &m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
 							},
 						},
 						Name: to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pls-nic"),
@@ -208,7 +208,7 @@ func (m *manager) networkPrivateLinkService(azureRegion string) *arm.Resource {
 			},
 			Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pls"),
 			Type:     to.StringPtr("Microsoft.Network/privateLinkServices"),
-			Location: to.StringPtr(azureRegion),
+			Location: &azureRegion,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
@@ -255,7 +255,7 @@ func (m *manager) networkPublicIPAddress(azureRegion string, name string) *arm.R
 			},
 			Name:     &name,
 			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
-			Location: to.StringPtr(azureRegion),
+			Location: &azureRegion,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
@@ -281,7 +281,7 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 				},
 				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 					{
-						Name: to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID),
+						Name: &m.doc.OpenShiftCluster.Properties.InfraID,
 					},
 					{
 						Name: to.StringPtr("ssh-0"),
@@ -428,7 +428,7 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 			},
 			Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-internal"),
 			Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
-			Location: to.StringPtr(azureRegion),
+			Location: &azureRegion,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
@@ -475,9 +475,9 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string) *arm.Resource {
 				},
 			},
 		},
-		Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID),
+		Name:     &m.doc.OpenShiftCluster.Properties.InfraID,
 		Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
-		Location: to.StringPtr(azureRegion),
+		Location: &azureRegion,
 	}
 
 	if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
