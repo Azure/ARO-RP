@@ -255,6 +255,20 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
               />
             </TooltipHost>
             <KubeconfigButton resourceId={item.resourceId} csrfToken={props.csrfToken} />
+            {/* <TooltipHost content={`Geneva`}>
+              <IconButton
+                iconProps={{iconName: "Health"}}
+                aria-label="Geneva"
+                href={item.resourceId + `/geneva`}
+              />
+            </TooltipHost>
+            <TooltipHost content={`Feature Flags`}>
+              <IconButton
+                iconProps={{iconName: "IconSetsFlag"}}
+                aria-label="featureFlags"
+                href={item.resourceId + `/feature-flags`}
+              />
+            </TooltipHost> */}
           </Stack>
         ),
       },
@@ -348,8 +362,8 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
 export function ClusterList(props: {
   csrfToken: MutableRefObject<string>
   sshBox: MutableRefObject<any>
-  setCurrentCluster: any
-  csrfTokenAvailable: string
+  setCurrentCluster: any // TODO: fix this. probably bad - this is a helper function..
+  loaded: string
 }) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
@@ -388,11 +402,11 @@ export function ClusterList(props: {
       setFetching("DONE")
     }
 
-    if (fetching === "" && props.csrfTokenAvailable === "DONE") {
+    if (fetching === "" && props.loaded === "DONE") {
       setFetching("FETCHING")
       FetchClusters().then(onData)
     }
-  }, [data, fetching, setFetching, props.csrfTokenAvailable])
+  }, [data, fetching, setFetching, props.loaded])
 
   const _items: ICommandBarItemProps[] = [
     {
