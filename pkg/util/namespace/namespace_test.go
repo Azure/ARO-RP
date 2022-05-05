@@ -13,6 +13,10 @@ func TestIsOpenShiftNamespace(t *testing.T) {
 		want      bool
 	}{
 		{
+			namespace: "",
+			want:      true,
+		},
+		{
 			namespace: "openshift-apiserver",
 			want:      true,
 		},
