@@ -328,7 +328,24 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel go-toolset-1.16.12-1.module+el8.5.0+13637+960c7771
+yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel htop openssl-devel
+
+# go-toolset-1.17.X is only available for RHEL 8.6 so let's use the Google binaries to build the Microsoft Go BoringSSL code for the time being
+GO_BOOTSTRAP_VERSION=1.17.9
+curl -s https://dl.google.com/go/go${GO_BOOTSTRAP_VERSION}.linux-amd64.tar.gz | tar -xz -C /usr/local/
+ln -sf /usr/local/go/bin/go /usr/local/bin/go
+ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt
+
+# Fetch and build the Golang BoringSSL release for FIPS support
+MSFT_GO_FIPS_VERSION="v1.17.9-1-fips/go.20220414.4"
+mkdir -p /tmp/go-build
+wget -qO- https://github.com/microsoft/go/releases/download/${MSFT_GO_FIPS_VERSION}.src.tar.gz | tar xz -C /tmp/go-build
+pushd /tmp/go-build/go/src
+echo "go1.17.9-fips" > ../VERSION
+HOME=~/ GOROOT_BOOTSTRAP=/usr/local/go GOPATH=~/go/ ./make.bash
+popd
+mv /usr/local/go /usr/local/go-$GO_BOOTSTRAP_VERSION
+mv /tmp/go-build/go /usr/local/go
 
 # Suppress emulation output for podman instead of docker for az acr compatability
 mkdir -p /etc/containers/
@@ -337,7 +354,7 @@ touch /etc/containers/nodocker
 VSTS_AGENT_VERSION=2.193.1
 mkdir /home/cloud-user/agent
 pushd /home/cloud-user/agent
-curl https://vstsagentpackage.azureedge.net/agent/${VSTS_AGENT_VERSION}/vsts-agent-linux-x64-${VSTS_AGENT_VERSION}.tar.gz | tar -xz
+curl -s https://vstsagentpackage.azureedge.net/agent/${VSTS_AGENT_VERSION}/vsts-agent-linux-x64-${VSTS_AGENT_VERSION}.tar.gz | tar -xz
 chown -R cloud-user:cloud-user .
 
 ./bin/installdependencies.sh
@@ -349,9 +366,10 @@ cat >/home/cloud-user/agent/.path <<'EOF'
 /usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/cloud-user/.local/bin:/home/cloud-user/bin
 EOF
 
-# HACK for XDG_RUNTIME_DIR: https://github.com/containers/podman/issues/427
+# Set the agent's "System capabilities" for tests (go-1.17 and GOLANG_FIPS) in the agent's .env file
+# and add a HACK for XDG_RUNTIME_DIR: https://github.com/containers/podman/issues/427
 cat >/home/cloud-user/agent/.env <<'EOF'
-go-1.16=true
+go-1.17=true
 GOLANG_FIPS=1
 XDG_RUNTIME_DIR=/run/user/1000
 EOF
@@ -509,11 +527,11 @@ rm cron
 }
 
 const (
-	sharedKeyVaultName          = "concat(take(resourceGroup().name,10), '" + SharedKeyVaultNameSuffix + "')"
+	sharedKeyVaultName          = "concat(take(resourceGroup().name,15), '" + SharedKeyVaultNameSuffix + "')"
 	sharedDiskEncryptionSetName = "concat(resourceGroup().name, '" + SharedDiskEncryptionSetNameSuffix + "')"
 	sharedDiskEncryptionKeyName = "concat(resourceGroup().name, '-disk-encryption-key')"
 	// Conflicts with current development subscription. cannot have two keyvaults with same name
-	SharedKeyVaultNameSuffix          = "-dev-sharedKV"
+	SharedKeyVaultNameSuffix          = "-sharedKV"
 	SharedDiskEncryptionSetNameSuffix = "-disk-encryption-set"
 )
 
