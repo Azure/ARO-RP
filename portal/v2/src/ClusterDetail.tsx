@@ -18,7 +18,7 @@ import {
 import { AxiosResponse } from "axios"
 import { FetchClusterInfo } from "./Request"
 import { ICluster, headerStyles } from "./App"
-import { Nav, INavLink, INavLinkGroup, INavStyles } from "@fluentui/react/lib/Nav"
+import { Nav, INavLink, INavStyles } from "@fluentui/react/lib/Nav"
 import { ClusterDetailComponent } from "./ClusterDetailList"
 import React from "react"
 
@@ -35,29 +35,6 @@ const navStyles: Partial<INavStyles> = {
     marginBottom: "0px",
   },
 }
-
-const navLinkGroups: INavLinkGroup[] = [
-  {
-    links: [
-      {
-        name: "Overview",
-        key: "overview",
-        url: "#overview",
-        icon: "ThisPC",
-      },
-    ],
-  },
-  /*  {
-    links: [
-      {
-        name: "Nodes",
-        key: "nodes",
-        url: "#nodes",
-        icon: "BuildQueue",
-      },
-    ],
-  }, */
-]
 
 const customPanelStyle: Partial<IPanelStyles> = {
   root: { top: "40px", left: "225px" },
@@ -89,13 +66,18 @@ const headerIconStyles: Partial<IIconStyles> = {
   },
 }
 
+export const overviewKey = "overview"
+export const nodesKey = "nodes"
+export const machinesKey = "machines"
+export const machineSetsKey = "machinesets"
+
 const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
 
 export function ClusterDetailPanel(props: {
   csrfToken: MutableRefObject<string>
   currentCluster: ICluster | null
-  onClose: Function
-  csrfTokenAvailable: string
+  onClose: any // TODO: function ptr .. any probably bad
+  loaded: string
 }) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
@@ -117,6 +99,37 @@ export function ClusterDetailPanel(props: {
       </MessageBar>
     )
   }
+
+  const navLinkGroups = [
+    {
+      links: [
+        {
+          name: 'Overview',
+          key: overviewKey,
+          url: '#overview',
+          icon: 'ThisPC',
+        },
+        {
+          name: 'Nodes',
+          key: nodesKey,
+          url: '#nodes',
+          icon: 'BuildQueue',
+        },
+        {
+          name: 'Machines',
+          key: machinesKey,
+          url: '#machines',
+          icon: 'BuildQueue',
+        },
+        {
+          name: 'MachineSets',
+          key: machineSetsKey,
+          url: '#machinesets',
+          icon: 'BuildQueue',
+        },
+      ],
+    },
+  ];
 
   // updateData - updates the state of the component
   // can be used if we want a refresh button.
@@ -141,7 +154,7 @@ export function ClusterDetailPanel(props: {
     if (props.currentCluster == null) {
       return
     }
-    var resourceID = props.currentCluster.resourceId
+    const resourceID = props.currentCluster.resourceId
 
     const onData = (result: AxiosResponse | null) => {
       if (result?.status === 200) {
@@ -153,7 +166,7 @@ export function ClusterDetailPanel(props: {
       setFetching(resourceID)
     }
 
-    if (fetching === "" && props.csrfTokenAvailable === "DONE" && resourceID != "") {
+    if (fetching === "" && props.loaded === "DONE" && resourceID != "") {
       setFetching("FETCHING")
       setError(null)
       FetchClusterInfo(props.currentCluster).then(onData) // TODO: fetchClusterInfo accepts IClusterDetail
@@ -165,7 +178,7 @@ export function ClusterDetailPanel(props: {
       setDataLoaded(false)
       return
     }
-    var resourceID = props.currentCluster.resourceId
+    const resourceID = props.currentCluster.resourceId
 
     if (resourceID != "") {
       if (resourceID == fetching) {
@@ -203,6 +216,7 @@ export function ClusterDetailPanel(props: {
     )
   }
 
+  // TODO: props.loaded rename to CSRFTokenAvailable
   return (
     <Panel
       isOpen={isOpen}

@@ -261,13 +261,13 @@ function App() {
               csrfToken={csrfRef}
               sshBox={sshRef}
               setCurrentCluster={setCurrentCluster}
-              csrfTokenAvailable={fetching}
+              loaded={fetching}
             />
           </Stack.Item>
           <Stack.Item grow>
             <ClusterDetailPanel
               csrfToken={csrfRef}
-              csrfTokenAvailable={fetching}
+              loaded={fetching}
               currentCluster={currentCluster}
               onClose={_onCloseDetailPanel}
             />
