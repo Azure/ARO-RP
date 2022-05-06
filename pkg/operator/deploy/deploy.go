@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"fmt"
 	"strings"
@@ -32,6 +33,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	utilembed "github.com/Azure/ARO-RP/pkg/util/embed"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -39,6 +41,9 @@ import (
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
+
+//go:embed staticresources
+var embeddedFiles embed.FS
 
 type Operator interface {
 	CreateOrUpdate(context.Context) error
@@ -81,13 +86,8 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli 
 func (o *operator) resources() ([]kruntime.Object, error) {
 	// first static resources from Assets
 	results := []kruntime.Object{}
-	for _, assetName := range AssetNames() {
-		b, err := Asset(assetName)
-		if err != nil {
-			return nil, err
-		}
-
-		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(b, nil, nil)
+	for _, fileBytes := range utilembed.ReadDirRecursive(embeddedFiles, "staticresources") {
+		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(fileBytes, nil, nil)
 		if err != nil {
 			return nil, err
 		}
