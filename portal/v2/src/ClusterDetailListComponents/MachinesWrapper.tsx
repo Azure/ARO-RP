@@ -89,7 +89,7 @@ export function MachinesWrapper(props: {
         props.loaded &&
         props.currentCluster.name != "") {
       setFetching("FETCHING")
-      FetchMachines(props.currentCluster).then(onData) // TODO: fetchClusterInfo accepts IClusterDetail
+      FetchMachines(props.currentCluster).then(onData)
     }
   }, [data, props.loaded, props.detailPanelSelected])
 

@@ -59,7 +59,7 @@ export function OverviewWrapper(props: {
         props.loaded &&
         props.currentCluster.name != "") {
       setFetching("FETCHING")
-      FetchClusterInfo(props.currentCluster).then(onData) // TODO: fetchClusterInfo accepts IClusterDetail
+      FetchClusterInfo(props.currentCluster).then(onData)
     }
   }, [data, props.loaded, props.clusterName])
 

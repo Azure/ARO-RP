@@ -30,7 +30,6 @@ interface IMachineSetsState {
 machineSets: IMachineSet[]
 }
 
-// TODO: Get Styling to look pretty
 const renderMachineSets = (machineSets: IMachineSet[]) => {
     return machineSets.map(machineSet => {
         return <PivotItem key={machineSet.name} headerText={machineSet.name}>

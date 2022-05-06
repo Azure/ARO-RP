@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	maofake "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -23,7 +23,7 @@ func TestMachines(t *testing.T) {
 
 	txt, _ := machinesJsonBytes()
 
-	var machines machineapi.MachineList
+	var machines machinev1beta1.MachineList
 	err := json.Unmarshal(txt, &machines)
 	if err != nil {
 		t.Error(err)
@@ -35,13 +35,13 @@ func TestMachines(t *testing.T) {
 		converted[i] = &machines.Items[i]
 	}
 
-	maoclient := maofake.NewSimpleClientset(converted...)
+	machineclient := machinefake.NewSimpleClientset(converted...)
 
 	_, log := testlog.New()
 
 	rf := &realFetcher{
-		maoclient: maoclient,
-		log:       log,
+		machineclient: machineclient,
+		log:           log,
 	}
 
 	c := &client{fetcher: rf, log: log}
@@ -68,7 +68,7 @@ func TestMachines(t *testing.T) {
 	sort.SliceStable(expected.Machines, func(i, j int) bool { return expected.Machines[i].Name < expected.Machines[j].Name })
 
 	dateRegex := regexp.MustCompile(`\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [\+-]\d{4} \w+`)
-	expDateFormat := "2021-08-10 12:21:47 +1000 AEST"
+	expDateFormat := "2021-08-10T12:21:47 +1000 AEST"
 	for i, machine := range info.Machines {
 		if machine.CreatedTime == "" {
 			t.Error("Node field CreatedTime was null, expected not null")

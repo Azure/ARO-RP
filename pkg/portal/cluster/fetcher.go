@@ -7,7 +7,7 @@ import (
 	"context"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
@@ -44,7 +44,7 @@ type realFetcher struct {
 	log           *logrus.Entry
 	configcli     configclient.Interface
 	kubernetescli kubernetes.Interface
-	maoclient     maoclient.Interface
+	machineclient machineclient.Interface
 }
 
 func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument) (*realFetcher, error) {
@@ -60,14 +60,22 @@ func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftCl
 	}
 
 	kubernetescli, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
 
-	maoclient, err := maoclient.NewForConfig(restConfig)
+	machineclient, err := machineclient.NewForConfig(restConfig)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
 
 	return &realFetcher{
 		log:           log,
 		configcli:     configcli,
 		kubernetescli: kubernetescli,
-		maoclient:     maoclient,
+		machineclient: machineclient,
 	}, nil
 }
 

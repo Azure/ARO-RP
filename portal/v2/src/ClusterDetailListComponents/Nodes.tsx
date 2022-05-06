@@ -63,7 +63,6 @@ const ObjectFromStringMap = (items: Map<string,string>) => {
     return newItems
 }
 
-// TODO: Get Styling to look pretty
 const renderNodes = (nodes: INode[]) => {
     return nodes.map(node => {
         return <PivotItem key={node.name} headerText={node.name}>

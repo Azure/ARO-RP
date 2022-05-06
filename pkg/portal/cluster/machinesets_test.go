@@ -8,10 +8,11 @@ import (
 	"encoding/json"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
-	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	maofake "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -22,7 +23,7 @@ func TestMachineSets(t *testing.T) {
 
 	txt, _ := machinesetsJsonBytes()
 
-	var machineSets machineapi.MachineSetList
+	var machineSets machinev1beta1.MachineSetList
 	err := json.Unmarshal(txt, &machineSets)
 	if err != nil {
 		t.Error(err)
@@ -34,13 +35,13 @@ func TestMachineSets(t *testing.T) {
 		converted[i] = &machineSets.Items[i]
 	}
 
-	maoclient := maofake.NewSimpleClientset(converted...)
+	machineclient := machinefake.NewSimpleClientset(converted...)
 
 	_, log := testlog.New()
 
 	rf := &realFetcher{
-		maoclient: maoclient,
-		log:       log,
+		machineclient: machineclient,
+		log:           log,
 	}
 
 	c := &client{fetcher: rf, log: log}
@@ -51,12 +52,20 @@ func TestMachineSets(t *testing.T) {
 		return
 	}
 
+	for i, machineSet := range machineSets.Items {
+		if i < len(info.MachineSets) {
+			info.MachineSets[i].CreatedAt = machineSet.CreationTimestamp.In(time.UTC).String()
+		} else {
+			t.Error(err)
+		}
+	}
+
 	expected := &MachineSetListInformation{
 		MachineSets: []MachineSetsInformation{
 			{
 				Name:            "aro-v4-shared-gxqb4-infra-eastus1",
 				Type:            "infra",
-				CreatedAt:       "2021-03-09T13:48:16Z",
+				CreatedAt:       "2021-03-09 13:48:16 +0000 UTC",
 				DesiredReplicas: 0,
 				Replicas:        0,
 				ErrorReason:     "None",

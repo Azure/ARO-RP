@@ -6,7 +6,7 @@ package cluster
 import (
 	"context"
 
-	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,7 +25,7 @@ type MachineListInformation struct {
 	Machines []MachinesInformation `json:"machines"`
 }
 
-func MachinesFromMachineList(machines *machineapi.MachineList) *MachineListInformation {
+func MachinesFromMachineList(machines *machinev1beta1.MachineList) *MachineListInformation {
 	final := &MachineListInformation{
 		Machines: make([]MachinesInformation, 0, len(machines.Items)),
 	}
@@ -74,7 +74,7 @@ func MachinesFromMachineList(machines *machineapi.MachineList) *MachineListInfor
 }
 
 func (f *realFetcher) Machines(ctx context.Context) (*MachineListInformation, error) {
-	r, err := f.maoclient.MachineV1beta1().Machines("").List(ctx, metav1.ListOptions{})
+	r, err := f.machineclient.MachineV1beta1().Machines("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

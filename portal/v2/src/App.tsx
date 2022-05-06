@@ -261,7 +261,7 @@ function App() {
               csrfToken={csrfRef}
               sshBox={sshRef}
               setCurrentCluster={setCurrentCluster}
-              loaded={fetching}
+              csrfTokenAvailable={fetching}
             />
           </Stack.Item>
           <Stack.Item grow>

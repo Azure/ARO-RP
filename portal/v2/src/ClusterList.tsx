@@ -362,8 +362,8 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
 export function ClusterList(props: {
   csrfToken: MutableRefObject<string>
   sshBox: MutableRefObject<any>
-  setCurrentCluster: any // TODO: fix this. probably bad - this is a helper function..
-  loaded: string
+  setCurrentCluster: any
+  csrfTokenAvailable: string
 }) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
@@ -402,11 +402,11 @@ export function ClusterList(props: {
       setFetching("DONE")
     }
 
-    if (fetching === "" && props.loaded === "DONE") {
+    if (fetching === "" && props.csrfTokenAvailable === "DONE") {
       setFetching("FETCHING")
       FetchClusters().then(onData)
     }
-  }, [data, fetching, setFetching, props.loaded])
+  }, [data, fetching, setFetching, props.csrfTokenAvailable])
 
   const _items: ICommandBarItemProps[] = [
     {

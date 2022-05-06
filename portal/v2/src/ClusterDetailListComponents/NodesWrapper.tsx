@@ -133,7 +133,7 @@ export function NodesWrapper(props: {
         props.loaded &&
         props.currentCluster.name != "") {
       setFetching("FETCHING")
-      FetchNodes(props.currentCluster).then(onData) // TODO: fetchClusterInfo accepts IClusterDetail
+      FetchNodes(props.currentCluster).then(onData)
     }
   }, [data, props.loaded, props.detailPanelSelected])
 
