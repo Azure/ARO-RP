@@ -29,7 +29,6 @@ interface IMachinesState {
 machines: IMachine[]
 }
 
-// TODO: Get Styling to look pretty
 const renderMachines = (machines: IMachine[]) => {
     return machines.map(machine => {
         return <PivotItem key={machine.name} headerText={machine.name}>
