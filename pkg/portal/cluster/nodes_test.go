@@ -158,7 +158,6 @@ func TestNodes(t *testing.T) {
 				info.Nodes[i].Conditions[j].LastTransitionTime = ""
 			}
 		}
-
 	}
 
 	// No need to check every single node

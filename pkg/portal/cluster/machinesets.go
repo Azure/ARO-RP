@@ -30,7 +30,6 @@ func MachineSetsFromMachineSetList(machineSets *machineapi.MachineSetList) *Mach
 	}
 
 	for _, machineSet := range machineSets.Items {
-
 		errorReason := "None"
 		if machineSet.Status.ErrorReason != nil {
 			errorReason = string(*machineSet.Status.ErrorReason)

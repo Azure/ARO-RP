@@ -60,8 +60,16 @@ func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftCl
 	}
 
 	kubernetescli, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
 
 	maoclient, err := maoclient.NewForConfig(restConfig)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
 
 	return &realFetcher{
 		log:           log,
