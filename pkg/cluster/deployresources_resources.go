@@ -33,7 +33,7 @@ func (m *manager) networkBootstrapNIC(installConfig *installconfig.InstallConfig
 								},
 							},
 							Subnet: &mgmtnetwork.Subnet{
-								ID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+								ID: &m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
 							},
 						},
 						Name: to.StringPtr("bootstrap-nic-ip-v4"),
@@ -67,7 +67,7 @@ func (m *manager) networkMasterNICs(installConfig *installconfig.InstallConfig) 
 								},
 							},
 							Subnet: &mgmtnetwork.Subnet{
-								ID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+								ID: &m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
 							},
 						},
 						Name: to.StringPtr("pipConfig"),

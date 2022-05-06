@@ -69,7 +69,7 @@ func (m *manager) ensureResourceGroup(ctx context.Context) error {
 
 	group := mgmtfeatures.ResourceGroup{
 		Location:  &m.doc.OpenShiftCluster.Location,
-		ManagedBy: to.StringPtr(m.doc.OpenShiftCluster.ID),
+		ManagedBy: &m.doc.OpenShiftCluster.ID,
 	}
 	if m.env.IsLocalDevelopmentMode() {
 		// grab tags so we do not accidently remove them on createOrUpdate, set purge tag to true for dev clusters
@@ -124,29 +124,30 @@ func (m *manager) ensureResourceGroup(ctx context.Context) error {
 	return m.env.EnsureARMResourceGroupRoleAssignment(ctx, m.fpAuthorizer, resourceGroup)
 }
 
-func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig) error {
+func (m *manager) deployStorageTemplate(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
 	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+	azureRegion := strings.ToLower(m.doc.OpenShiftCluster.Location) // Used in k8s object names, so must pass DNS-1123 validation
 
 	resources := []*arm.Resource{
-		m.storageAccount(clusterStorageAccountName, installConfig.Config.Azure.Region, true),
+		m.storageAccount(clusterStorageAccountName, azureRegion, true),
 		m.storageAccountBlobContainer(clusterStorageAccountName, "ignition"),
 		m.storageAccountBlobContainer(clusterStorageAccountName, "aro"),
-		m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, installConfig.Config.Azure.Region, true),
+		m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, azureRegion, true),
 		m.storageAccountBlobContainer(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, "image-registry"),
-		m.clusterNSG(infraID, installConfig.Config.Azure.Region),
+		m.clusterNSG(infraID, azureRegion),
 		m.clusterServicePrincipalRBAC(),
-		m.networkPrivateLinkService(installConfig),
-		m.networkPublicIPAddress(installConfig, infraID+"-pip-v4"),
-		m.networkInternalLoadBalancer(installConfig),
-		m.networkPublicLoadBalancer(installConfig),
+		m.networkPrivateLinkService(azureRegion),
+		m.networkPublicIPAddress(azureRegion, infraID+"-pip-v4"),
+		m.networkInternalLoadBalancer(azureRegion),
+		m.networkPublicLoadBalancer(azureRegion),
 	}
 
 	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPublic {
 		resources = append(resources,
-			m.networkPublicIPAddress(installConfig, infraID+"-default-v4"),
+			m.networkPublicIPAddress(azureRegion, infraID+"-default-v4"),
 		)
 	}
 
