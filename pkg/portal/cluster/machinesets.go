@@ -6,7 +6,7 @@ package cluster
 import (
 	"context"
 
-	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -24,7 +24,7 @@ type MachineSetListInformation struct {
 	MachineSets []MachineSetsInformation `json:"machines"`
 }
 
-func MachineSetsFromMachineSetList(machineSets *machineapi.MachineSetList) *MachineSetListInformation {
+func MachineSetsFromMachineSetList(machineSets *machinev1beta1.MachineSetList) *MachineSetListInformation {
 	final := &MachineSetListInformation{
 		MachineSets: make([]MachineSetsInformation, 0, len(machineSets.Items)),
 	}

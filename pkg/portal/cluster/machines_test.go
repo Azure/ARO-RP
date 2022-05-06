@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	maofake "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
@@ -23,7 +23,7 @@ func TestMachines(t *testing.T) {
 
 	txt, _ := machinesJsonBytes()
 
-	var machines machineapi.MachineList
+	var machines machinev1beta1.MachineList
 	err := json.Unmarshal(txt, &machines)
 	if err != nil {
 		t.Error(err)
