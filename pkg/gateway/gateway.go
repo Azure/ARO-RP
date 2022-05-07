@@ -5,6 +5,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -100,6 +101,10 @@ func NewGateway(ctx context.Context, env env.Core, baseLog, accessLog *logrus.En
 		u, err := url.Parse(rawurl)
 		if err != nil {
 			return nil, err
+		}
+
+		if u.Hostname() == "" {
+			return nil, errors.New("missing required domain. Ensure the environment has both ActiveDirectoryEndpoint and ResourceManagerEndpoint")
 		}
 
 		domains = append(domains, u.Hostname())

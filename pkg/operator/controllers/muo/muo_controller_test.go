@@ -174,7 +174,7 @@ func TestMUOReconciler(t *testing.T) {
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any()).Return(false, nil)
 			},
-			wantErr: "Managed Upgrade Operator deployment timed out on Ready: timed out waiting for the condition",
+			wantErr: "managed Upgrade Operator deployment timed out on Ready: timed out waiting for the condition",
 		},
 		{
 			name: "managed, CreateOrUpdate() fails",

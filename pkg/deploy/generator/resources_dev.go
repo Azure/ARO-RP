@@ -509,11 +509,11 @@ rm cron
 }
 
 const (
-	sharedKeyVaultName          = "concat(take(resourceGroup().name,15), '" + SharedKeyVaultNameSuffix + "')"
+	sharedKeyVaultName          = "concat(take(resourceGroup().name,10), '" + SharedKeyVaultNameSuffix + "')"
 	sharedDiskEncryptionSetName = "concat(resourceGroup().name, '" + SharedDiskEncryptionSetNameSuffix + "')"
 	sharedDiskEncryptionKeyName = "concat(resourceGroup().name, '-disk-encryption-key')"
-
-	SharedKeyVaultNameSuffix          = "-sharedKV"
+	// Conflicts with current development subscription. cannot have two keyvaults with same name
+	SharedKeyVaultNameSuffix          = "-dev-sharedKV"
 	SharedDiskEncryptionSetNameSuffix = "-disk-encryption-set"
 )
 

@@ -5,12 +5,13 @@ package e2e
 
 import (
 	"context"
-	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 const (
@@ -18,12 +19,11 @@ const (
 	mFips = "99-master-fips"
 )
 
-// FIPS Mode is set differently and the test needs updating after 2022-04-01 API is active
-var _ = XDescribe("Validate FIPS Mode", func() {
-	BeforeEach(skipIfNotInDevelopmentEnv)
-
+var _ = Describe("Validate FIPS Mode", func() {
 	ctx := context.Background()
-	It("should be possible to validate fips master and worker machineconfigs exist", func() {
+	It("should be possible to validate fips mode is set correctly", func() {
+		oc, err := clients.OpenshiftClustersv20220401.Get(ctx, vnetResourceGroup, clusterName)
+		Expect(err).NotTo(HaveOccurred())
 		mcp, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		masterFips, workerFips := false, false
@@ -37,13 +37,15 @@ var _ = XDescribe("Validate FIPS Mode", func() {
 				}
 			}
 		}
-		if !masterFips {
-			err = fmt.Errorf("FIPS machine configs not found on master")
+		By("checking if FipsValidatedModules is enabled or disabled")
+		if string(oc.ClusterProfile.FipsValidatedModules) == string(api.FipsValidatedModulesEnabled) {
+			By("checking FIPs machine configs exist on master and worker")
+			Expect(masterFips).To(BeTrue())
+			Expect(workerFips).To(BeTrue())
+		} else {
+			By("checking FIPs machine configs do not exist on master and worker")
+			Expect(masterFips).To(BeFalse())
+			Expect(workerFips).To(BeFalse())
 		}
-		Expect(err).NotTo(HaveOccurred())
-		if !workerFips {
-			err = fmt.Errorf("FIPS machine configs not found on worker")
-		}
-		Expect(err).NotTo(HaveOccurred())
 	})
 })

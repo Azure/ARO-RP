@@ -108,9 +108,9 @@ func DevConfig(_env env.Core) (*Config, error) {
 		Configuration: &Configuration{
 			ACRResourceID:                to.StringPtr("/subscriptions/" + _env.SubscriptionID() + "/resourceGroups/" + os.Getenv("USER") + "-global/providers/Microsoft.ContainerRegistry/registries/" + os.Getenv("USER") + "aro"),
 			AdminAPICABundle:             to.StringPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
-			AdminAPIClientCertCommonName: to.StringPtr(clientCert.Subject.CommonName),
+			AdminAPIClientCertCommonName: &clientCert.Subject.CommonName,
 			ARMAPICABundle:               to.StringPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
-			ARMAPIClientCertCommonName:   to.StringPtr(clientCert.Subject.CommonName),
+			ARMAPIClientCertCommonName:   &clientCert.Subject.CommonName,
 			ARMClientID:                  to.StringPtr(os.Getenv("AZURE_ARM_CLIENT_ID")),
 			AzureSecPackVSATenantId:      to.StringPtr(""),
 			ClusterMDMAccount:            to.StringPtr(version.DevClusterGenevaMetricsAccount),

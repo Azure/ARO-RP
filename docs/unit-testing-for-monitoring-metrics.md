@@ -29,7 +29,7 @@ There are two ways to set to acchieve this:
 
 Before you start, make sure :
 - to run `source ./env`
-- you ran `SECRET_SA_ACCOUNT_NAME=rharosecrets make secrets` before 
+- you ran `SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets` before 
 - know which "account" and "namespace" value you want to use on Geneva INT for your metric data and
   update your env to set the 
   - CLUSTER_MDM_ACCOUNT
@@ -54,7 +54,7 @@ Before you start make sure:
 - you can ssh into the cloud-user on your VM without ssh prompting you for anything 
 - run `source ./env`
 - you `az login`  into your subscription
-- you ran `SECRET_SA_ACCOUNT_NAME=rharosecrets make secrets` before 
+- you ran `SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets` before 
 - know which "account" and "namespace" value you want to use on Geneva INT for your metric data and
   update your env to set the 
   - CLUSTER_MDM_ACCOUNT

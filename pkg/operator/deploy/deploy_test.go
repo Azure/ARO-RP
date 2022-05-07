@@ -100,7 +100,7 @@ func TestCheckIngressIP(t *testing.T) {
 				}
 			},
 			want:    "",
-			wantErr: errors.New("No Ingress Profiles found"),
+			wantErr: errors.New("no Ingress Profiles found"),
 		},
 		{
 			name: "Nil IngressProfiles, Error",
@@ -108,7 +108,7 @@ func TestCheckIngressIP(t *testing.T) {
 				return &api.OpenShiftClusterProperties{}
 			},
 			want:    "",
-			wantErr: errors.New("No Ingress Profiles found"),
+			wantErr: errors.New("no Ingress Profiles found"),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
