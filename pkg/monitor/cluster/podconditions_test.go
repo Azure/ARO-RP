@@ -235,7 +235,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 		&corev1.Pod{ // #6 Multi-container pod
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "multi-container-pod",
-				Namespace: "openshift-test",
+				Namespace: "openshift",
 			},
 			Status: corev1.PodStatus{
 				ContainerStatuses: []corev1.ContainerStatus{
@@ -285,7 +285,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 
 	m.EXPECT().EmitGauge("pod.restartcounter", int64(restartCounterThreshold*2), map[string]string{
 		"name":      "multi-container-pod",
-		"namespace": "openshift-test",
+		"namespace": "openshift",
 	})
 
 	ps, _ := cli.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
