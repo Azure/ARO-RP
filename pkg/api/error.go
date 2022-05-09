@@ -123,20 +123,6 @@ func NewCloudError(statusCode int, code, target, message string, a ...interface{
 	}
 }
 
-// NewCloudError returns a new CloudError with category and dependency
-func NewCloudErrorWithCategory(statusCode int, code, target, message string, category CloudErrorCategory, dependency string, a ...interface{}) *CloudError {
-	return &CloudError{
-		StatusCode: statusCode,
-		CloudErrorBody: &CloudErrorBody{
-			Code:       code,
-			Message:    fmt.Sprintf(message, a...),
-			Target:     target,
-			Category:   category,
-			Dependency: dependency,
-		},
-	}
-}
-
 // WriteError constructs and writes a CloudError to the given ResponseWriter
 func WriteError(w http.ResponseWriter, statusCode int, code, target, message string, a ...interface{}) {
 	WriteCloudError(w, NewCloudError(statusCode, code, target, message, a...))

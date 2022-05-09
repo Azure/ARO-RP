@@ -31,11 +31,19 @@ type openShiftClusterBackend struct {
 }
 
 type operationResult struct {
-	// ResultType will consist of 0 for success, 1 for user error, and 2 for internal server error
-	resultType    int
+	// ResultType will consist of success, user error, and internal server error
+	resultType    resultType
 	operationType string
 	errorDetails  string
 }
+
+type resultType string
+
+const (
+	successResultType     resultType = "Success"
+	userErrorResultType   resultType = "UserError"
+	serverErrorResultType resultType = "InternalServerError"
+)
 
 func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
 	return &openShiftClusterBackend{
@@ -44,7 +52,7 @@ func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
 	}
 }
 
-func newOperationResult(resultType int, operationType string, backendErr error) *operationResult {
+func newOperationResult(resultType resultType, operationType string, backendErr error) *operationResult {
 	return &operationResult{
 		resultType:    resultType,
 		operationType: operationType,
@@ -53,7 +61,7 @@ func newOperationResult(resultType int, operationType string, backendErr error) 
 }
 
 func (o *operationResult) String() string {
-	return fmt.Sprintf("operationType: %s, resultType: %d, errorDetails: %s:", o.operationType, o.resultType, o.errorDetails)
+	return fmt.Sprintf("operationType: %s, resultType: %s, errorDetails: %s:", o.operationType, o.resultType, o.errorDetails)
 }
 
 // try tries to dequeue an OpenShiftClusterDocument for work, and works it on a
@@ -171,7 +179,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 		}
 
-		err = ocb.updateAsyncOperation(ctx, log, doc.AsyncOperationID, nil, api.ProvisioningStateSucceeded, "", api.ProvisioningStateDeleting, nil)
+		_, err = ocb.updateAsyncOperation(ctx, log, doc.AsyncOperationID, nil, api.ProvisioningStateSucceeded, "", api.ProvisioningStateDeleting, nil)
 		if err != nil {
 			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 		}
@@ -221,9 +229,9 @@ func (ocb *openShiftClusterBackend) heartbeat(ctx context.Context, cancel contex
 	}
 }
 
-func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, log *logrus.Entry, id string, oc *api.OpenShiftCluster, provisioningState, failedProvisioningState, initialProvisioningState api.ProvisioningState, backendErr error) error {
+func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, log *logrus.Entry, id string, oc *api.OpenShiftCluster, provisioningState, failedProvisioningState, initialProvisioningState api.ProvisioningState, backendErr error) (operationResult, error) {
+	operationResult := newOperationResult(successResultType, initialProvisioningState.String(), backendErr)
 	if id != "" {
-		resultType := 0
 		_, err := ocb.dbAsyncOperations.Patch(ctx, id, func(asyncdoc *api.AsyncOperationDocument) error {
 			asyncdoc.AsyncOperation.ProvisioningState = provisioningState
 
@@ -235,14 +243,16 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 				// asyncOperations errors. Otherwise - return generic error
 				err, ok := backendErr.(*api.CloudError)
 				if ok {
+					log.Print(backendErr)
 					if err.CloudErrorBody.Category != "" && err.CloudErrorBody.Category == api.AROUserError {
-						resultType = 1
+						operationResult.resultType = userErrorResultType
 					} else {
-						resultType = 2
+						operationResult.resultType = serverErrorResultType
 					}
 					asyncdoc.AsyncOperation.Error = err.CloudErrorBody
 				} else {
-					resultType = 2
+					log.Error(backendErr)
+					operationResult.resultType = serverErrorResultType
 					asyncdoc.AsyncOperation.Error = &api.CloudErrorBody{
 						Code:    api.CloudErrorCodeInternalServerError,
 						Message: "Internal server error.",
@@ -259,18 +269,15 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 				asyncdoc.OpenShiftCluster = &ocCopy
 			}
 
-			clusterResult := newOperationResult(resultType, initialProvisioningState.String(), backendErr)
-			log.Printf("Long running result: %s", clusterResult.String())
-
 			return nil
 		})
 
 		if err != nil {
-			return err
+			return *operationResult, err
 		}
 	}
 
-	return nil
+	return *operationResult, nil
 }
 
 func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.Entry, stop func(), doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState, backendErr error) error {
@@ -286,11 +293,11 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 	// If cluster is in the non-terminal state we are still in the same
 	// operational context and AsyncOperation should not be updated.
 	if provisioningState.IsTerminal() {
-		err := ocb.updateAsyncOperation(ctx, log, doc.AsyncOperationID, doc.OpenShiftCluster, provisioningState, failedProvisioningState, initialProvisioningState, backendErr)
+		operationResult, err := ocb.updateAsyncOperation(ctx, log, doc.AsyncOperationID, doc.OpenShiftCluster, provisioningState, failedProvisioningState, initialProvisioningState, backendErr)
 		if err != nil {
 			return err
 		}
-
+		log.Printf("Long running result: %s", operationResult.String())
 		ocb.emitMetrics(doc, provisioningState)
 	}
 
