@@ -45,7 +45,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			name:         "cluster exist in db - get",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objKind:      "ConfigMap",
-			objNamespace: "openshift-project",
+			objNamespace: "openshift",
 			objName:      "config",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
@@ -60,7 +60,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			name:         "cluster exist in db - list",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objKind:      "ConfigMap",
-			objNamespace: "openshift-project",
+			objNamespace: "openshift",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
 					KubeList(gomock.Any(), tt.objKind, tt.objNamespace).
@@ -73,7 +73,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			method:       http.MethodGet,
 			name:         "no groupKind provided",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			objNamespace: "openshift-project",
+			objNamespace: "openshift",
 			objName:      "config",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 			},
@@ -85,7 +85,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			name:         "secret requested",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objKind:      "Secret",
-			objNamespace: "openshift-project",
+			objNamespace: "openshift",
 			objName:      "config",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 			},
@@ -97,7 +97,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			name:         "cluster exist in db",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objKind:      "ConfigMap",
-			objNamespace: "openshift-project",
+			objNamespace: "openshift",
 			objName:      "config",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
@@ -110,7 +110,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			method:       http.MethodDelete,
 			name:         "no groupKind provided",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			objNamespace: "openshift-project",
+			objNamespace: "openshift",
 			objName:      "config",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 			},
@@ -122,7 +122,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			name:         "no name provided",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objKind:      "this",
-			objNamespace: "openshift-project",
+			objNamespace: "openshift",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 			},
 			wantStatusCode: http.StatusBadRequest,
@@ -133,7 +133,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			name:         "secret requested",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objKind:      "Secret",
-			objNamespace: "openshift-project",
+			objNamespace: "openshift",
 			objName:      "config",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 			},
@@ -222,21 +222,21 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 		{
 			test:      "invalid groupKind",
 			groupKind: "$",
-			namespace: "openshift-ns",
+			namespace: "openshift",
 			name:      "Valid-NAME-01",
 			wantErr:   "400: InvalidParameter: : The provided groupKind '$' is invalid.",
 		},
 		{
 			test:      "forbidden groupKind",
 			groupKind: "Secret",
-			namespace: "openshift-ns",
+			namespace: "openshift",
 			name:      "Valid-NAME-01",
 			wantErr:   "403: Forbidden: : Access to secrets is forbidden.",
 		},
 		{
 			test:      "forbidden groupKind",
 			groupKind: "Anything.oauth.openshift.io",
-			namespace: "openshift-ns",
+			namespace: "openshift",
 			name:      "Valid-NAME-01",
 			wantErr:   "403: Forbidden: : Access to secrets is forbidden.",
 		},
@@ -266,7 +266,7 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 		},
 		{
 			test:      "empty groupKind",
-			namespace: "openshift-ns",
+			namespace: "openshift",
 			name:      "Valid-NAME-01",
 			wantErr:   "400: InvalidParameter: : The provided groupKind '' is invalid.",
 		},
@@ -275,12 +275,12 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 			groupKind: "Valid-kind.openshift.io",
 			namespace: "openshift-/",
 			name:      "Valid-NAME-01",
-			wantErr:   "400: InvalidParameter: : The provided namespace 'openshift-/' is invalid.",
+			wantErr:   "403: Forbidden: : Access to the provided namespace 'openshift-/' is forbidden.",
 		},
 		{
 			test:      "invalid name",
 			groupKind: "Valid-kind.openshift.io",
-			namespace: "openshift-ns",
+			namespace: "openshift",
 			name:      longName,
 			wantErr:   "400: InvalidParameter: : The provided name '" + longName + "' is invalid.",
 		},
@@ -288,14 +288,14 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 			test:      "post: empty name",
 			method:    http.MethodPost,
 			groupKind: "Valid-kind.openshift.io",
-			namespace: "openshift-ns",
+			namespace: "openshift",
 			wantErr:   "400: InvalidParameter: : The provided name '' is invalid.",
 		},
 		{
 			test:      "delete: empty name",
 			method:    http.MethodDelete,
 			groupKind: "Valid-kind.openshift.io",
-			namespace: "openshift-ns",
+			namespace: "openshift",
 			wantErr:   "400: InvalidParameter: : The provided name '' is invalid.",
 		},
 	} {
@@ -353,6 +353,10 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			objInBody: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind": "Secret",
+					"metadata": map[string]interface{}{
+						"namespace": "openshift",
+						"name":      "secret",
+					},
 				},
 			},
 			mocks:          func(tt *test, k *mock_adminactions.MockKubeActions) {},
