@@ -223,7 +223,7 @@ def validate_vnet_resource_group_name(namespace):
 
 def validate_worker_count(namespace):
     if not namespace.worker_count:
-        return 
+        return
     if namespace.worker_count < 3:
         raise InvalidArgumentValueError('--worker-count must be greater than or equal to 3.')
 
