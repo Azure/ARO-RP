@@ -157,6 +157,8 @@ func acceptableNames(path string) []string {
 		return []string{"coreosarch"}
 	case "github.com/openshift/installer/pkg/rhcos":
 		return []string{"rhcospkg"}
+	case "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1":
+		return []string{"monitoringv1"}
 	case "golang.org/x/crypto/ssh":
 		return []string{"", "cryptossh"}
 	case "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1":
