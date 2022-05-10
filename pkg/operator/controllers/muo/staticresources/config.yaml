@@ -6,8 +6,9 @@ metadata:
 data:
   config.yaml: |
     configManager:
-      source: LOCAL
-      localConfigName: managed-upgrade-config
+      source: {{ if .EnableConnected }}OCM{{ else }}LOCAL{{ end }}
+      {{ if .EnableConnected }}ocmBaseUrl: {{.OCMBaseURL}}{{end}}
+      {{ if not .EnableConnected }}localConfigName: managed-upgrade-config{{end}}
       watchInterval: 1
     maintenance:
       controlPlaneTime: 90

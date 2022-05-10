@@ -5,6 +5,7 @@ package muo
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"strings"
 	"time"
@@ -23,6 +24,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
+	"github.com/Azure/ARO-RP/pkg/util/deployer"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -41,6 +43,9 @@ const (
 	pullSecretOCMKey = "cloud.openshift.com"
 )
 
+//go:embed staticresources
+var staticFiles embed.FS
+
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
 
 type MUODeploymentConfig struct {
@@ -52,7 +57,7 @@ type MUODeploymentConfig struct {
 type Reconciler struct {
 	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
-	deployer      Deployer
+	deployer      deployer.Deployer
 
 	readinessPollTime time.Duration
 	readinessTimeout  time.Duration
@@ -62,7 +67,7 @@ func NewReconciler(arocli aroclient.Interface, kubernetescli kubernetes.Interfac
 	return &Reconciler{
 		arocli:        arocli,
 		kubernetescli: kubernetescli,
-		deployer:      newDeployer(kubernetescli, dh),
+		deployer:      deployer.NewDeployer(kubernetescli, dh, staticFiles, "staticresources"),
 
 		readinessPollTime: 10 * time.Second,
 		readinessTimeout:  5 * time.Minute,
@@ -138,13 +143,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		defer cancel()
 
 		err := wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
-			return r.deployer.IsReady(ctx)
+			return r.deployer.IsReady(ctx, "openshift-managed-upgrade-operator", "managed-upgrade-operator")
 		}, timeoutCtx.Done())
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("managed Upgrade Operator deployment timed out on Ready: %w", err)
 		}
 	} else if strings.EqualFold(managed, "false") {
-		err := r.deployer.Remove(ctx)
+		err := r.deployer.Remove(ctx, config.MUODeploymentConfig{})
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -162,7 +167,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate))
 
-	resources, err := r.deployer.Resources(&config.MUODeploymentConfig{})
+	resources, err := r.deployer.Template(&config.MUODeploymentConfig{}, staticFiles)
 	if err != nil {
 		return err
 	}

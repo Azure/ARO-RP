@@ -22,7 +22,8 @@ func validateUnderscoreImport(path string) error {
 
 	switch path {
 	case "net/http/pprof",
-		"github.com/Azure/ARO-RP/pkg/util/scheme":
+		"github.com/Azure/ARO-RP/pkg/util/scheme",
+		"embed":
 		return nil
 	}
 
