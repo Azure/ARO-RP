@@ -2,7 +2,7 @@
 # Licensed under the Apache License 2.0.
 
 import unittest
-import mock
+from unittest import mock
 from azext_aro.custom import generate_random_id
 
 
