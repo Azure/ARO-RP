@@ -1,4 +1,4 @@
-package cluster
+package arm
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -11,15 +11,16 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 )
 
-func (m *manager) deployARMTemplate(ctx context.Context, resourceGroupName string, deploymentName string, template *arm.Template, parameters map[string]interface{}) error {
-	m.log.Printf("deploying %s template", deploymentName)
-	err := m.deployments.CreateOrUpdateAndWait(ctx, resourceGroupName, deploymentName, mgmtfeatures.Deployment{
+func DeployTemplate(ctx context.Context, log *logrus.Entry, deployments features.DeploymentsClient, resourceGroupName string, deploymentName string, template *Template, parameters map[string]interface{}) error {
+	log.Printf("deploying %s template", deploymentName)
+	err := deployments.CreateOrUpdateAndWait(ctx, resourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   template,
 			Parameters: parameters,
@@ -28,8 +29,8 @@ func (m *manager) deployARMTemplate(ctx context.Context, resourceGroupName strin
 	})
 
 	if azureerrors.IsDeploymentActiveError(err) {
-		m.log.Printf("waiting for %s template to be deployed", deploymentName)
-		err = m.deployments.Wait(ctx, resourceGroupName, deploymentName)
+		log.Printf("waiting for %s template to be deployed", deploymentName)
+		err = deployments.Wait(ctx, resourceGroupName, deploymentName)
 	}
 
 	if azureerrors.HasAuthorizationFailedError(err) ||

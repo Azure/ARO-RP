@@ -1,4 +1,4 @@
-package cluster
+package arm
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -14,7 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 )
 
@@ -25,7 +24,7 @@ func TestDeployARMTemplate(t *testing.T) {
 
 	resourceGroup := "fakeResourceGroup"
 
-	armTemplate := &arm.Template{}
+	armTemplate := &Template{}
 	params := map[string]interface{}{}
 
 	deployment := mgmtfeatures.Deployment{
@@ -108,12 +107,9 @@ func TestDeployARMTemplate(t *testing.T) {
 			deploymentsClient := mock_features.NewMockDeploymentsClient(controller)
 			tt.mocks(deploymentsClient)
 
-			m := &manager{
-				log:         logrus.NewEntry(logrus.StandardLogger()),
-				deployments: deploymentsClient,
-			}
+			log := logrus.NewEntry(logrus.StandardLogger())
 
-			err := m.deployARMTemplate(ctx, resourceGroup, deploymentName, armTemplate, params)
+			err := DeployTemplate(ctx, log, deploymentsClient, resourceGroup, deploymentName, armTemplate, params)
 
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
