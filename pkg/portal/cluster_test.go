@@ -226,7 +226,6 @@ func TestClusterDetail(t *testing.T) {
 		"lastProvisioningState":   api.ProvisioningStateCreating.String(),
 		"provisioningState":       api.ProvisioningStateSucceeded.String(),
 		"installStatus":           "Installed",
-		"lastModified":            "2011-01-02T01:03:00Z",
 	}
 
 	for _, l := range deep.Equal(expected, r) {
