@@ -5,7 +5,6 @@ package statsd
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -323,4 +322,3 @@ func TestGetConnectionDetails(t *testing.T) {
 		})
 	}
 }
-
