@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"strings"
 	"time"
 
@@ -23,8 +22,9 @@ type statsd struct {
 	log *logrus.Entry
 	env env.Core
 
-	account   string
-	namespace string
+	account      string
+	namespace    string
+	mdmsocketEnv string
 
 	conn net.Conn
 	ch   chan *metric
@@ -32,16 +32,15 @@ type statsd struct {
 	now func() time.Time
 }
 
-const statsdSocketEnv = "MDM_STATSD_SOCKET"
-
 // New returns a new metrics.Interface
-func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string) metrics.Emitter {
+func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string, mdmsocketEnv string) metrics.Emitter {
 	s := &statsd{
 		log: log,
 		env: env,
 
-		account:   account,
-		namespace: namespace,
+		account:      account,
+		namespace:    namespace,
+		mdmsocketEnv: mdmsocketEnv,
 
 		ch: make(chan *metric, 1024),
 
@@ -108,58 +107,63 @@ func (s *statsd) run() {
 }
 
 func (s *statsd) parseSocketEnv(env string) (string, string, error) {
-	// Verify protocol:connectionstring format
+	// Verify network:address format
 	parameters := strings.SplitN(env, ":", 2)
 	if len(parameters) != 2 {
-		return "", "", fmt.Errorf("malformed ENV variable %s. Expecting udp:<hostname>:<port> or unix:<path-to-socket> format. Got: %s", statsdSocketEnv, env)
+		return "", "", fmt.Errorf("malformed definition for the mdm statds socket. Expecting udp:<hostname>:<port> or unix:<path-to-socket> format. Got: %q", env)
 	}
 	network := strings.ToLower(parameters[0])
 	address := parameters[1]
+	return network, address, nil
+}
 
-	//Verify supported protocol provided
+func (s *statsd) validateSocketDefinition(network string, address string) (bool, error) {
+	//Verify supported protocol provided. TCP might just work as well, but this was never tested
 	if network != "udp" && network != "unix" {
-		return "", "", fmt.Errorf("unsupported protocol in ENV variable %s. Expecting  'udp:' or 'unix:'. Got: %s: in %s", statsdSocketEnv, network, env)
+		return false, fmt.Errorf("unsupported protocol for the mdm statds socket. Expecting  'udp:' or 'unix:'. Got: %q", network)
 	}
 
-	//UDP address check, no such (meaningful) thing for unix:
-	if network == "udp" {
-		_, err := net.ResolveUDPAddr(network, address)
-		if err != nil {
-			return "", "", fmt.Errorf("invalid UDP address in ENV variable %s %s. Error: %s", statsdSocketEnv, env, err)
-		}
+	return true, nil
+}
+
+func (s *statsd) getDefaultSocketValues() (string, string) {
+	network := "unix"
+	address := "/var/etw/mdm_statsd.socket"
+
+	if s.env.IsLocalDevelopmentMode() {
+		address = "mdm_statsd.socket"
+	}
+
+	return network, address
+}
+
+func (s *statsd) getConnectionDetails() (string, string, error) {
+	// allow the default socket connection to be overriden
+	if s.mdmsocketEnv == "" { //original behaviour
+		network, address := s.getDefaultSocketValues()
+		return network, address, nil
+	}
+
+	network, address, err := s.parseSocketEnv(s.mdmsocketEnv)
+	if err != nil {
+		return "", "", err
+	}
+
+	ok, err := s.validateSocketDefinition(network, address)
+	if !ok {
+		return "", "", err
 	}
 
 	return network, address, nil
 }
 
-func (s *statsd) getDefaultSocketValues() (string, string) {
-	protocol := "unix"
-	connectionstring := "/var/etw/mdm_statsd.socket"
-
-	if s.env.IsLocalDevelopmentMode() {
-		connectionstring = "mdm_statsd.socket"
-	}
-
-	return protocol, connectionstring
-}
-
-func (s *statsd) getConnectionDetails() (string, string, error) {
-	// allow the socket connection to be overriden via ENV Variable
-	socketEnv, isSet := os.LookupEnv(statsdSocketEnv)
-	if !isSet { //original behaviour
-		network, address := s.getDefaultSocketValues()
-		return network, address, nil
-	}
-	return s.parseSocketEnv(socketEnv)
-}
-
 func (s *statsd) dial() (err error) {
-	protocol, connectionstring, err := s.getConnectionDetails()
+	network, address, err := s.getConnectionDetails()
 	if err != nil {
 		return
 	}
 
-	s.conn, err = net.Dial(protocol, connectionstring)
+	s.conn, err = net.Dial(network, address)
 
 	return
 }
@@ -197,6 +201,5 @@ func (s *statsd) write(m *metric) (err error) {
 	}
 
 	_, err = s.conn.Write(b)
-
 	return
 }

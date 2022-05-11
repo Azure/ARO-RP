@@ -43,7 +43,7 @@ echo "MDMSOURCEENV  = $MDMSOURCEENVIRONMENT"
 echo "MDMSOURCEROLE  = $MDMSOURCEROLE"
 echo "MDMSOURCEROLEINSTANCE  = $MDMSOURCEROLEINSTANCE"
 
-cp $BASE/secrets/rp-metrics-int.pem /etc/mdm.pem
+#cp $BASE/secrets/rp-metrics-int.pem /etc/mdm.pem
 
 
 
@@ -55,7 +55,7 @@ podman run \
   -d \
   --restart=always \
   -m 2g \
-  -v /etc/mdm.pem:/etc/mdm.pem \
+  -v $BASE/secrets/rp-metrics-int.pem:/etc/mdm.pem \
   -v $SOCKETPATH:/var/etw:z \
   $MDMIMAGE \
   -CertFile /etc/mdm.pem \
