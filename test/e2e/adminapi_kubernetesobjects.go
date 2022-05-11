@@ -26,7 +26,7 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 	const objName = "e2e-test-object"
 
 	When("in a standard openshift namespace", func() {
-		const namespace = "default"
+		const namespace = "openshift"
 
 		It("should be able to create, get, list, update and delete objects", func() {
 			defer func() {

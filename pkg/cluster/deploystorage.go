@@ -167,7 +167,7 @@ func (m *manager) deployStorageTemplate(ctx context.Context) error {
 		t.Resources = append(t.Resources, m.denyAssignment())
 	}
 
-	return m.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
+	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
 }
 
 func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.InstallConfig, image *releaseimage.Image) error {

@@ -52,7 +52,7 @@ func (m *manager) deployResourceTemplate(ctx context.Context) error {
 			m.computeMasterVMs(installConfig, zones, machineMaster),
 		},
 	}
-	return m.deployARMTemplate(ctx, resourceGroup, "resources", t, map[string]interface{}{
+	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "resources", t, map[string]interface{}{
 		"sas": map[string]interface{}{
 			"value": map[string]interface{}{
 				"signedStart":         m.doc.OpenShiftCluster.Properties.Install.Now.Format(time.RFC3339),

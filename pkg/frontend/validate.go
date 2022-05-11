@@ -77,7 +77,7 @@ func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.Open
 var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9.]{0,255}$`)
 
 func validateAdminKubernetesObjectsNonCustomer(method, groupKind, namespace, name string) error {
-	if !utilnamespace.IsOpenShift(namespace) {
+	if !utilnamespace.IsOpenShiftNamespace(namespace) {
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to the provided namespace '%s' is forbidden.", namespace)
 	}
 
@@ -127,6 +127,12 @@ func validateNetworkInterfaceName(nicName string) error {
 	if nicName == "" || !rxNetworkInterfaceName.MatchString(nicName) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided nicName '%s' is invalid.", nicName)
 	}
+	return nil
+}
 
+func validateAdminVMSize(vmSize string) error {
+	if vmSize == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmSize '%s' is invalid.", vmSize)
+	}
 	return nil
 }

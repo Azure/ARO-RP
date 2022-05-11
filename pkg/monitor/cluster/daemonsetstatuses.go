@@ -24,7 +24,7 @@ func (mon *Monitor) emitDaemonsetStatuses(ctx context.Context) error {
 		count += int64(len(dss.Items))
 
 		for _, ds := range dss.Items {
-			if !namespace.IsOpenShift(ds.Namespace) {
+			if !namespace.IsOpenShiftNamespace(ds.Namespace) {
 				continue
 			}
 

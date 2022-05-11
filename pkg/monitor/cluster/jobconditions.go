@@ -30,7 +30,7 @@ func (mon *Monitor) emitJobConditions(ctx context.Context) error {
 		count += int64(len(jobs.Items))
 
 		for _, job := range jobs.Items {
-			if !namespace.IsOpenShift(job.Namespace) {
+			if !namespace.IsOpenShiftNamespace(job.Namespace) {
 				continue
 			}
 

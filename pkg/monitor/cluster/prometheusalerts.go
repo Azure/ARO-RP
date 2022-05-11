@@ -80,7 +80,7 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 	mon.emitGauge("prometheus.alerts.count", int64(len(alerts)), nil)
 
 	for _, alert := range alerts {
-		if !namespace.IsOpenShift(string(alert.Labels["namespace"])) {
+		if !namespace.IsOpenShiftNamespace(string(alert.Labels["namespace"])) {
 			continue
 		}
 

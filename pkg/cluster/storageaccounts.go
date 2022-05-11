@@ -81,7 +81,7 @@ func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 		},
 	}
 
-	return m.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
+	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
 }
 
 func (m *manager) populateRegistryStorageAccountName(ctx context.Context) error {
