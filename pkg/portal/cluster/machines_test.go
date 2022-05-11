@@ -68,7 +68,7 @@ func TestMachines(t *testing.T) {
 	sort.SliceStable(expected.Machines, func(i, j int) bool { return expected.Machines[i].Name < expected.Machines[j].Name })
 
 	dateRegex := regexp.MustCompile(`\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [\+-]\d{4} \w+`)
-	expDateFormat := "2021-08-10 12:21:47 +1000 AEST"
+	expDateFormat := "2021-08-10T12:21:47 +1000 AEST"
 	for i, machine := range info.Machines {
 		if machine.CreatedTime == "" {
 			t.Error("Node field CreatedTime was null, expected not null")
