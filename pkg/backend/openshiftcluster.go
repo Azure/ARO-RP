@@ -32,9 +32,8 @@ type openShiftClusterBackend struct {
 
 type operationResult struct {
 	// ResultType will consist of success, user error, and internal server error
-	resultType    resultType
-	operationType string
-	errorDetails  string
+	resultType   resultType
+	errorDetails string
 }
 
 type resultType string
@@ -52,16 +51,15 @@ func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
 	}
 }
 
-func newOperationResult(resultType resultType, operationType string, backendErr error) *operationResult {
+func newOperationResult(resultType resultType, backendErr error) *operationResult {
 	return &operationResult{
-		resultType:    resultType,
-		operationType: operationType,
-		errorDetails:  backendErr.Error(),
+		resultType:   resultType,
+		errorDetails: backendErr.Error(),
 	}
 }
 
 func (o *operationResult) String() string {
-	return fmt.Sprintf("operationType: %s, resultType: %s, errorDetails: %s:", o.operationType, o.resultType, o.errorDetails)
+	return fmt.Sprintf("resultType: %s, errorDetails: %s:", o.resultType, o.errorDetails)
 }
 
 // try tries to dequeue an OpenShiftClusterDocument for work, and works it on a
@@ -179,7 +177,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 		}
 
-		_, err = ocb.updateAsyncOperation(ctx, log, doc.AsyncOperationID, nil, api.ProvisioningStateSucceeded, "", api.ProvisioningStateDeleting, nil)
+		_, err = ocb.updateAsyncOperation(ctx, log, doc.AsyncOperationID, nil, api.ProvisioningStateSucceeded, "", nil)
 		if err != nil {
 			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 		}
@@ -229,8 +227,8 @@ func (ocb *openShiftClusterBackend) heartbeat(ctx context.Context, cancel contex
 	}
 }
 
-func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, log *logrus.Entry, id string, oc *api.OpenShiftCluster, provisioningState, failedProvisioningState, initialProvisioningState api.ProvisioningState, backendErr error) (operationResult, error) {
-	operationResult := newOperationResult(successResultType, initialProvisioningState.String(), backendErr)
+func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, log *logrus.Entry, id string, oc *api.OpenShiftCluster, provisioningState, failedProvisioningState api.ProvisioningState, backendErr error) (operationResult, error) {
+	operationResult := newOperationResult(successResultType, backendErr)
 	if id != "" {
 		_, err := ocb.dbAsyncOperations.Patch(ctx, id, func(asyncdoc *api.AsyncOperationDocument) error {
 			asyncdoc.AsyncOperation.ProvisioningState = provisioningState
@@ -244,11 +242,7 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 				err, ok := backendErr.(*api.CloudError)
 				if ok {
 					log.Print(backendErr)
-					if err.CloudErrorBody.Category != "" && err.CloudErrorBody.Category == api.AROUserError {
-						operationResult.resultType = userErrorResultType
-					} else {
-						operationResult.resultType = serverErrorResultType
-					}
+					operationResult.resultType = userErrorResultType
 					asyncdoc.AsyncOperation.Error = err.CloudErrorBody
 				} else {
 					log.Error(backendErr)
@@ -293,11 +287,15 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 	// If cluster is in the non-terminal state we are still in the same
 	// operational context and AsyncOperation should not be updated.
 	if provisioningState.IsTerminal() {
-		operationResult, err := ocb.updateAsyncOperation(ctx, log, doc.AsyncOperationID, doc.OpenShiftCluster, provisioningState, failedProvisioningState, initialProvisioningState, backendErr)
+		operationResult, err := ocb.updateAsyncOperation(ctx, log, doc.AsyncOperationID, doc.OpenShiftCluster, provisioningState, failedProvisioningState, backendErr)
 		if err != nil {
 			return err
 		}
-		log.Printf("Long running result: %s", operationResult.String())
+		log.WithFields(logrus.Fields{
+			"resultType":    operationResult.resultType,
+			"operationType": initialProvisioningState.String(),
+			"errorDetails":  operationResult.errorDetails,
+		}).Print("Long running operation result")
 		ocb.emitMetrics(doc, provisioningState)
 	}
 

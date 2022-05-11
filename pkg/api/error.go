@@ -39,9 +39,6 @@ type CloudErrorBody struct {
 	// The target of the particular error. For example, the name of the property in error.
 	Target string `json:"target,omitempty"`
 
-	// The category for the error, being either a user or server error
-	Category CloudErrorCategory `json:"-"`
-
 	// Dependency is the source where this error originates from
 	Dependency string `json:"-"`
 
@@ -62,7 +59,7 @@ func (b *CloudErrorBody) String() string {
 		}
 	}
 
-	return fmt.Sprintf("Code: %s, Target: %s, Message: %s, Category: %s, Dependency: %s%s", b.Code, b.Target, b.Message, b.Category, b.Dependency, details)
+	return fmt.Sprintf("Code: %s, Target: %s, Message: %s, Dependency: %s%s", b.Code, b.Target, b.Message, b.Dependency, details)
 }
 
 // CloudErrorCodes
@@ -101,14 +98,6 @@ const (
 	CloudErrorCodeResourceQuotaExceeded              = "ResourceQuotaExceeded"
 	CloudErrorCodeQuotaExceeded                      = "QuotaExceeded"
 	CloudErrorResourceProviderNotRegistered          = "ResourceProviderNotRegistered"
-)
-
-// CloudErrorCategories
-type CloudErrorCategory string
-
-const (
-	AROUserError           CloudErrorCategory = "ARO-UserError"
-	AROInternalServerError CloudErrorCategory = "ARO-InternalServerError"
 )
 
 // NewCloudError returns a new CloudError
