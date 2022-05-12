@@ -27,34 +27,34 @@ class TestValidators(unittest.TestCase):
 
         testcases: List[namedtuple] = [
             TestData(
-                "should not raise exception when valid IPv4 address",
-                Dummyclass('192.168.0.0/28'),
-                'key',
-                None
+                test_description="should not raise exception when valid IPv4 address",
+                dummyclass=Dummyclass('192.168.0.0/28'),
+                attribute_to_get_from_object='key',
+                expected_exception=None
             ),
             TestData(
-                "should raise InvalidArgumentValueError when non valid IPv4 address due to beeing a simple string",
-                Dummyclass('this is an invalid network'),
-                'key',
-                InvalidArgumentValueError
+                test_description="should raise InvalidArgumentValueError when non valid IPv4 address due to beeing a simple string",
+                dummyclass=Dummyclass('this is an invalid network'),
+                attribute_to_get_from_object='key',
+                expected_exception=InvalidArgumentValueError
             ),
             TestData(
-                "should raise InvalidArgumentValueError when non valid IPv4 address due to invalid network ID",
-                Dummyclass('192.168.0.0.0.0/28'),
-                'key',
-                InvalidArgumentValueError
+                test_description="should raise InvalidArgumentValueError when non valid IPv4 address due to invalid network ID",
+                dummyclass=Dummyclass('192.168.0.0.0.0/28'),
+                attribute_to_get_from_object='key',
+                expected_exception=InvalidArgumentValueError
             ),
             TestData(
-                "should raise InvalidArgumentValueError when non valid IPv4 address due to invalid hostID",
-                Dummyclass('192.168.0.0.0.0/2888'),
-                'key',
-                InvalidArgumentValueError
+                test_description="should raise InvalidArgumentValueError when non valid IPv4 address due to invalid hostID",
+                dummyclass=Dummyclass('192.168.0.0.0.0/2888'),
+                attribute_to_get_from_object='key',
+                expected_exception=InvalidArgumentValueError
             ),
             TestData(
-                "should not raise exception when IPv4 address is None ",
-                Dummyclass(None),
-                'key',
-                None
+                test_description="should not raise exception when IPv4 address is None ",
+                dummyclass=Dummyclass(None),
+                attribute_to_get_from_object='key',
+                expected_exception=None
             )
         ]
 
@@ -63,7 +63,7 @@ class TestValidators(unittest.TestCase):
             if tc.expected_exception is None:
                 validate_cidr_fn(tc.dummyclass)
             else:
-                with self.assertRaises(tc.expected_exception):
+                with self.assertRaises(tc.expected_exception, msg=tc.test_description):
                     validate_cidr_fn(tc.dummyclass)
 
     def test_validate_client_id(self):
@@ -103,7 +103,7 @@ class TestValidators(unittest.TestCase):
             if tc.expected_exception is None:
                 validate_client_id(tc.namespace)
             else:
-                with self.assertRaises(tc.expected_exception):
+                with self.assertRaises(tc.expected_exception, msg=tc.test_description):
                     validate_client_id(tc.namespace)
 
     def test_validate_client_secret(self):
