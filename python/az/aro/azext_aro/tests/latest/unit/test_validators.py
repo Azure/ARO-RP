@@ -4,11 +4,18 @@
 from collections import namedtuple
 from typing import List
 import unittest
-from azext_aro._validators import validate_cidr, validate_client_id
+from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret
 from azure.cli.core.azclierror import InvalidArgumentValueError, InvalidArgumentValueError, RequiredArgumentMissingError
 
 
+class Namespace:
+    def __init__(self, client_id=None, client_secret=None):
+        self.client_id = client_id
+        self.client_secret = client_secret
+
+
 class TestValidators(unittest.TestCase):
+
     def test_validate_cidr(self):
         class Dummyclass:
             def __init__(self, key=None):
@@ -60,11 +67,6 @@ class TestValidators(unittest.TestCase):
                     validate_cidr_fn(tc.dummyclass)
 
     def test_validate_client_id(self):
-        class Namespace:
-            def __init__(self, client_id=None, client_secret=None):
-                self.client_id = client_id
-                self.client_secret = client_secret
-
         namedtuple_name = 'Testdata'
         namedtuple_attributes = ["test_description", 'namespace', "expected_exception"]
         TestData = namedtuple(namedtuple_name, namedtuple_attributes)
@@ -103,3 +105,49 @@ class TestValidators(unittest.TestCase):
             else:
                 with self.assertRaises(tc.expected_exception):
                     validate_client_id(tc.namespace)
+
+    def test_validate_client_secret(self):
+        namedtuple_name = 'Testdata'
+        namedtuple_attributes = ["test_description", "isCreate", 'namespace', "expected_exception"]
+        TestData = namedtuple(namedtuple_name, namedtuple_attributes)
+
+        testcases: List[namedtuple] = [
+            TestData(
+                test_description="should not raise exception when isCreate is false",
+                isCreate=False,
+                namespace=Namespace(client_id=None),
+                expected_exception=None
+            ),
+            TestData(
+                test_description="should not raise exception when namespace.client_secret is None",
+                isCreate=True,
+                namespace=Namespace(client_secret=None),
+                expected_exception=None
+            ),
+            TestData(
+                test_description="should raise RequiredArgumentMissingError exception when namespace.client_id is None and client_secret is not None",
+                isCreate=True,
+                namespace=Namespace(client_id=None, client_secret="123"),
+                expected_exception=RequiredArgumentMissingError
+            ),
+            TestData(
+                test_description="should raise RequiredArgumentMissingError exception when can not crate a string representation from namespace.client_id because is empty",
+                isCreate=True,
+                namespace=Namespace(client_id="", client_secret="123"),
+                expected_exception=RequiredArgumentMissingError
+            ),
+            TestData(
+                test_description="should raise RequiredArgumentMissingError exception when can not crate a string representation from namespace.client_id because is None",
+                isCreate=True,
+                namespace=Namespace(client_id=None, client_secret="123"),
+                expected_exception=RequiredArgumentMissingError
+            )
+        ]
+
+        for tc in testcases:
+            validate_client_secret_fn = validate_client_secret(tc.isCreate)
+            if tc.expected_exception is None:
+                validate_client_secret_fn(tc.namespace)
+            else:
+                with self.assertRaises(tc.expected_exception, msg=tc.test_description):
+                    validate_client_secret_fn(tc.namespace)
