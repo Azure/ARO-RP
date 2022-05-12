@@ -1030,6 +1030,8 @@ export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
 export MONITORING_TENANT='$LOCATION'
 export MONITORING_ROLE=rp
 export MONITORING_ROLE_INSTANCE='$(hostname)'
+
+export MDSD_MSGPACK_SORT_COLUMNS=1
 EOF
 
 # setting MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault seems to have caused mdsd not

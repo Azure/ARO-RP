@@ -74,7 +74,7 @@ type portal struct {
 
 	aad middleware.AAD
 
-	m metrics.Interface
+	m metrics.Emitter
 }
 
 func NewPortal(env env.Core,
@@ -97,7 +97,7 @@ func NewPortal(env env.Core,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbPortal database.Portal,
 	dialer proxy.Dialer,
-	m metrics.Interface,
+	m metrics.Emitter,
 ) Runnable {
 	return &portal{
 		env:           env,

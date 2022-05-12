@@ -67,7 +67,7 @@ func TestEmitSummary(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	m := mock_metrics.NewMockInterface(controller)
+	m := mock_metrics.NewMockEmitter(controller)
 
 	mockCreatedAt := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 

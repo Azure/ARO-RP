@@ -54,12 +54,6 @@ jobs:
 
   - script: |
       set -xe
-      make lint-go
-      [[ -z "$(git status -s)" ]]
-    displayName: 🕵️ Lint Golang code
-
-  - script: |
-      set -xe
       make build-all
       [[ -z "$(git status -s)" ]]
     displayName: 🕵️ Build Golang code

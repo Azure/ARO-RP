@@ -76,7 +76,6 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 							})
 						}
 					}
-
 				}
 			}
 

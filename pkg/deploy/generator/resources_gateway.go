@@ -202,6 +202,7 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 		"dbtokenUrl",
 		"mdmFrontendUrl",
 		"mdsdEnvironment",
+		"fluentbitImage",
 		"gatewayMdsdConfigVersion",
 		"gatewayDomains",
 		"gatewayFeatures",
@@ -255,7 +256,6 @@ rm -f /var/lib/rpm/__db*
 
 rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
 rpm --import https://packages.microsoft.com/keys/microsoft.asc
-rpm --import https://packages.fluentbit.io/fluentbit.key
 
 for attempt in {1..5}; do
   yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && break
@@ -276,16 +276,11 @@ enabled=yes
 gpgcheck=no
 EOF
 
-cat >/etc/yum.repos.d/td-agent-bit.repo <<'EOF'
-[td-agent-bit]
-name=td-agent-bit
-baseurl=https://packages.fluentbit.io/centos/7/$basearch
-enabled=yes
-gpgcheck=yes
-EOF
+semanage fcontext -a -t var_log_t "/var/log/journal(/.*)?"
+mkdir -p /var/log/journal
 
 for attempt in {1..5}; do
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security docker openssl-perl td-agent-bit python3 && break
+yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security docker openssl-perl python3 && break
   # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
@@ -305,7 +300,30 @@ sysctl --system
 firewall-cmd --add-port=80/tcp --permanent
 firewall-cmd --add-port=443/tcp --permanent
 
-cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
+export AZURE_CLOUD_NAME=$AZURECLOUDNAME
+az login -i --allow-no-subscriptions
+
+# The managed identity that the VM runs as only has a single roleassignment.
+# This role assignment is ACRPull which is not necessarily present in the
+# subscription we're deploying into.  If the identity does not have any
+# role assignments scoped on the subscription we're deploying into, it will
+# not show on az login -i, which is why the below line is commented.
+# az account set -s "$SUBSCRIPTIONID"
+
+systemctl start docker.service
+az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+
+MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
+docker pull "$MDMIMAGE"
+docker pull "$RPIMAGE"
+docker pull "$FLUENTBITIMAGE"
+
+az logout
+
+mkdir -p /etc/fluentbit/
+mkdir -p /var/lib/fluent
+
+cat >/etc/fluentbit/fluentbit.conf <<'EOF'
 [INPUT]
 	Name systemd
 	Tag journald
@@ -323,24 +341,42 @@ cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 	Port 29230
 EOF
 
-export AZURE_CLOUD_NAME=$AZURECLOUDNAME
-az login -i --allow-no-subscriptions
+echo "FLUENTBITIMAGE=$FLUENTBITIMAGE" >/etc/sysconfig/fluentbit
 
-# The managed identity that the VM runs as only has a single roleassignment.
-# This role assignment is ACRPull which is not necessarily present in the
-# subscription we're deploying into.  If the identity does not have any
-# role assignments scoped on the subscription we're deploying into, it will
-# not show on az login -i, which is why the below line is commented.
-# az account set -s "$SUBSCRIPTIONID"
+cat >/etc/systemd/system/fluentbit.service <<'EOF'
+[Unit]
+After=docker.service
+Requires=docker.service
+StartLimitIntervalSec=0
 
-systemctl start docker.service
-az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+[Service]
+RestartSec=1s
+EnvironmentFile=/etc/sysconfig/fluentbit
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStart=/usr/bin/docker run \
+  --security-opt label=disable \
+  --entrypoint /opt/td-agent-bit/bin/td-agent-bit \
+  --net=host \
+  --hostname %H \
+  --name %N \
+  --rm \
+  --cap-drop net_raw \
+  -v /etc/fluentbit/fluentbit.conf:/etc/fluentbit/fluentbit.conf \
+  -v /var/lib/fluent:/var/lib/fluent:z \
+  -v /var/log/journal:/var/log/journal:ro \
+  -v /run/log/journal:/run/log/journal:ro \
+  -v /etc/machine-id:/etc/machine-id:ro \
+  $FLUENTBITIMAGE \
+  -c /etc/fluentbit/fluentbit.conf
 
-MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
-docker pull "$MDMIMAGE"
-docker pull "$RPIMAGE"
+ExecStop=/usr/bin/docker stop %N
+Restart=always
+RestartSec=5
+StartLimitInterval=0
 
-az logout
+[Install]
+WantedBy=multi-user.target
+EOF
 
 cat >/etc/sysconfig/mdm <<EOF
 MDMFRONTENDURL='$MDMFRONTENDURL'
@@ -567,6 +603,8 @@ export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
 export MONITORING_TENANT='$LOCATION'
 export MONITORING_ROLE=gateway
 export MONITORING_ROLE_INSTANCE='$(hostname)'
+
+export MDSD_MSGPACK_SORT_COLUMNS=1
 EOF
 
 # setting MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault seems to have caused mdsd not
@@ -598,13 +636,15 @@ PATH=/bin
 0 * * * * root chown syslog:syslog /var/opt/microsoft/linuxmonagent/eh/EventNotice/arorplogs*
 EOF
 
-for service in aro-gateway auoms azsecd azsecmond mdsd mdm chronyd td-agent-bit; do
+for service in aro-gateway auoms azsecd azsecmond mdsd mdm chronyd fluentbit; do
   systemctl enable $service.service
 done
 
 for scan in baseline clamav software; do
   /usr/local/bin/azsecd config -s $scan -d P1D
 done
+
+restorecon -RF /var/log/*
 
 (sleep 30; reboot) &
 `))

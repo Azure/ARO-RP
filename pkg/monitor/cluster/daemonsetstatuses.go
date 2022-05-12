@@ -44,7 +44,6 @@ func (mon *Monitor) emitDaemonsetStatuses(ctx context.Context) error {
 		if cont == "" {
 			break
 		}
-
 	}
 
 	mon.emitGauge("daemonset.count", count, nil)

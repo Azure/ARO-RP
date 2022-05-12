@@ -42,7 +42,7 @@ type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster
 
 type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error)
 
-type ocEnricherFactory func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Interface) clusterdata.OpenShiftClusterEnricher
+type ocEnricherFactory func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher
 
 type frontend struct {
 	auditLog *logrus.Entry
@@ -54,7 +54,7 @@ type frontend struct {
 	dbSubscriptions     database.Subscriptions
 
 	apis map[string]*api.Version
-	m    metrics.Interface
+	m    metrics.Emitter
 	aead encryption.AEAD
 
 	kubeActionsFactory  kubeActionsFactory
@@ -88,7 +88,7 @@ func NewFrontend(ctx context.Context,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbSubscriptions database.Subscriptions,
 	apis map[string]*api.Version,
-	m metrics.Interface,
+	m metrics.Emitter,
 	aead encryption.AEAD,
 	kubeActionsFactory kubeActionsFactory,
 	azureActionsFactory azureActionsFactory,
@@ -245,6 +245,18 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterRedeployVM).Name("postAdminOpenShiftClusterRedeployVM")
 
 	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/stopvm").
+		Subrouter()
+
+	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterStopVM).Name("postAdminOpenShiftClusterStopVM")
+
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/startvm").
+		Subrouter()
+
+	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterStartVM).Name("postAdminOpenShiftClusterStartVM")
+
+	s = r.
 		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/upgrade").
 		Subrouter()
 
@@ -255,6 +267,18 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getAdminOpenShiftClusters).Name("getAdminOpenShiftClusters")
+
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/skus").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.getAdminOpenShiftClusterVMResizeOptions).Name("getAdminOpenShiftClusterVMResizeOptions")
+
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/resize").
+		Subrouter()
+
+	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterVMResize).Name("postAdminOpenShiftClusterVMResize")
 
 	s = r.
 		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/reconcilefailednic").

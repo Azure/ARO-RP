@@ -17,7 +17,6 @@ func Panic(log *logrus.Entry) {
 		if log != nil {
 			log.Error(e)
 			log.Info(string(debug.Stack()))
-
 		} else {
 			fmt.Fprintln(os.Stderr, e)
 			debug.PrintStack()

@@ -81,6 +81,7 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Action(m.configureAPIServerCertificate),
 			steps.Action(m.configureIngressCertificate),
 			steps.Action(m.populateRegistryStorageAccountName),
+			steps.Action(m.ensureMTUSize),
 			steps.Action(m.populateCreatedAt), // TODO(mikalai): Remove after a round of admin updates
 
 		)
@@ -124,7 +125,6 @@ func (m *manager) Update(ctx context.Context) error {
 
 // Install installs an ARO cluster
 func (m *manager) Install(ctx context.Context) error {
-
 	var (
 		installConfig *installconfig.InstallConfig
 		image         *releaseimage.Image
@@ -135,6 +135,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
 			steps.Action(m.ensureACRToken),
 			steps.Action(m.generateSSHKey),
+			steps.Action(m.populateMTUSize),
 			steps.Action(func(ctx context.Context) error {
 				var err error
 				installConfig, image, err = m.generateInstallConfig(ctx)
@@ -149,9 +150,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies)),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
-				return m.deployStorageTemplate(ctx, installConfig)
-			})),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.deployStorageTemplate)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.updateAPIIPEarly)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.createOrUpdateRouterIPEarly)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureGatewayCreate)),
@@ -167,6 +166,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.initializeKubernetesClients),
 			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 			steps.Condition(m.bootstrapConfigMapReady, 30*time.Minute, true),
+			steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Action(m.ensureAROOperator),
 			steps.Action(m.incrInstallPhase),
 		},

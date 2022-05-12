@@ -114,7 +114,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 }
 
 func (r *reconcileManager) reconcileSubnets(ctx context.Context, instance *arov1alpha1.Cluster) error {
-
 	subnets, err := r.kubeSubnets.List(ctx)
 	if err != nil {
 		return err
@@ -125,7 +124,6 @@ func (r *reconcileManager) reconcileSubnets(ctx context.Context, instance *arov1
 	// This potentially calls an update twice for the same loop, but this is the price
 	// to pay for keeping logic split, separate, and simple
 	for _, s := range subnets {
-
 		if instance.Spec.OperatorFlags.GetSimpleBoolean(controllerNSGManaged) {
 			err = r.ensureSubnetNSG(ctx, s)
 			if err != nil {

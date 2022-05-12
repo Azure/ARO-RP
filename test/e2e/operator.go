@@ -367,7 +367,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 	// Creates an empty NSG that gets assigned to master/worker subnets.
 	createE2ENSG := func() {
 		testnsg = mgmtnetwork.SecurityGroup{
-			Location:                      to.StringPtr(location),
+			Location:                      &location,
 			Name:                          to.StringPtr(nsg),
 			Type:                          to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 			SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{},

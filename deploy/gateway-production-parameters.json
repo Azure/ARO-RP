@@ -20,6 +20,9 @@
         "dbtokenUrl": {
             "value": ""
         },
+        "fluentbitImage": {
+            "value": ""
+        },
         "gatewayDomains": {
             "value": ""
         },

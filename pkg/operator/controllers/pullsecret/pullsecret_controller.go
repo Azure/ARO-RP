@@ -43,7 +43,7 @@ const (
 )
 
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
-var rhKeys = []string{"registry.redhat.io", "cloud.redhat.com", "registry.connect.redhat.com"}
+var rhKeys = []string{"registry.redhat.io", "cloud.openshift.com", "registry.connect.redhat.com"}
 
 // Reconciler reconciles a Cluster object
 type Reconciler struct {
@@ -201,7 +201,7 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 
 // parseRedHatKeys unmarshal and extract following RH keys from pull-secret:
 //   - redhat.registry.io
-//   - cloud.redhat.com
+//   - cloud.openshift.com
 //   - registry.connect.redhat.com
 // if present, return error when the parsing fail, which means broken secret
 func (r *Reconciler) parseRedHatKeys(secret *corev1.Secret) (foundKeys []string, err error) {

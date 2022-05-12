@@ -234,6 +234,15 @@ const (
 	SoftwareDefinedNetworkOpenShiftSDN  SoftwareDefinedNetwork = "OpenShiftSDN"
 )
 
+// MTUSize represents the MTU size of a cluster
+type MTUSize int
+
+// MTUSize constants
+const (
+	MTU1500 MTUSize = 1500
+	MTU3900 MTUSize = 3900
+)
+
 // NetworkProfile represents a network profile
 type NetworkProfile struct {
 	MissingFields
@@ -241,6 +250,7 @@ type NetworkProfile struct {
 	PodCIDR                string                 `json:"podCidr,omitempty"`
 	ServiceCIDR            string                 `json:"serviceCidr,omitempty"`
 	SoftwareDefinedNetwork SoftwareDefinedNetwork `json:"softwareDefinedNetwork,omitempty"`
+	MTUSize                MTUSize                `json:"mtuSize,omitempty"`
 
 	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
 	GatewayPrivateEndpointIP   string `json:"gatewayPrivateEndpointIp,omitempty"`
@@ -270,7 +280,7 @@ type MasterProfile struct {
 type VMSize string
 
 // VMSize constants
-// add required resources in pkg/api/validate/quota.go when adding a new VMSize
+// add required resources in pkg/api/validate/dynamic/quota.go when adding a new VMSize
 const (
 	VMSizeStandardD2sV3 VMSize = "Standard_D2s_v3"
 

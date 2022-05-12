@@ -66,11 +66,9 @@ func TestAdminListResourcesList(t *testing.T) {
 				})
 			},
 			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
-
 				a.EXPECT().
 					ResourcesList(gomock.Any()).
 					Return([]byte(`[{"properties":{"dhcpOptions":{"dnsServers":[]}},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`), nil)
-
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse:   []byte(`[{"properties":{"dhcpOptions":{"dnsServers":[]}},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]` + "\n"),

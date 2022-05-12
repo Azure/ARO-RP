@@ -218,7 +218,6 @@ func TestDeployIsReadyMissing(t *testing.T) {
 	if ready {
 		t.Error("deployment is wrongly seen as ready")
 	}
-
 }
 
 func TestDeployConfig(t *testing.T) {
@@ -322,7 +321,6 @@ func TestDeployConfig(t *testing.T) {
 				if cm, ok := i.(*corev1.ConfigMap); ok {
 					configs = append(configs, cm)
 				}
-
 			}
 			return nil
 		}

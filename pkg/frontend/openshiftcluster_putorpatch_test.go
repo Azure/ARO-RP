@@ -565,7 +565,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, apis, &noop.Noop{}, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Interface) clusterdata.OpenShiftClusterEnricher {
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, apis, &noop.Noop{}, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
 				return ti.enricher
 			})
 			if err != nil {
@@ -636,7 +636,6 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestPutOrPatchOpenShiftCluster(t *testing.T) {
@@ -784,7 +783,6 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-
 			},
 			wantSystemDataEnriched: true,
 			wantDocuments: func(c *testdatabase.Checker) {
@@ -1393,7 +1391,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, apis, &noop.Noop{}, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Interface) clusterdata.OpenShiftClusterEnricher {
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, apis, &noop.Noop{}, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
 				return ti.enricher
 			})
 			if err != nil {
@@ -1466,7 +1464,6 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 }
 
 func TestEnrichSystemData(t *testing.T) {
-
 	accountID1 := "00000000-0000-0000-0000-000000000001"
 	accountID2 := "00000000-0000-0000-0000-000000000002"
 	timestampString := "2021-01-23T12:34:54.0000000Z"

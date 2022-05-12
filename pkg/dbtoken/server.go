@@ -41,7 +41,7 @@ type server struct {
 	l                       net.Listener
 	verifier                oidc.Verifier
 	permissionClientFactory func(userid string) cosmosdb.PermissionClient
-	m                       metrics.Interface
+	m                       metrics.Emitter
 }
 
 func NewServer(
@@ -54,7 +54,7 @@ func NewServer(
 	servingCerts []*x509.Certificate,
 	verifier oidc.Verifier,
 	userc cosmosdb.UserClient,
-	m metrics.Interface,
+	m metrics.Emitter,
 ) (Server, error) {
 	config := &tls.Config{
 		Certificates: []tls.Certificate{

@@ -9,8 +9,9 @@ import uuid
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
-from azure.cli.core.azclierror import InvalidArgumentValueError, \
+from azure.cli.core.azclierror import CLIInternalError, InvalidArgumentValueError, \
     RequiredArgumentMissingError
+from azure.core.exceptions import ResourceNotFoundError
 from knack.log import get_logger
 from msrestazure.azure_exceptions import CloudError
 from msrestazure.tools import is_valid_resource_id
@@ -77,7 +78,7 @@ def validate_disk_encryption_set(cmd, namespace):
         except CloudError as err:
             raise InvalidArgumentValueError(
                 f"Invald --disk-encryption-set, error when getting '{namespace.disk_encryption_set}':"
-                f" {err.message}") from err
+                f" {str(err)}") from err
 
 
 def validate_domain(namespace):
@@ -153,9 +154,11 @@ def validate_subnet(key):
         try:
             client.subnets.get(parts['resource_group'],
                                parts['name'], parts['child_name_1'])
-        except CloudError as err:
-            raise InvalidArgumentValueError(
-                f"Invald --{key.replace('_', '-')}, error when getting '{subnet}': {err.message}") from err
+        except Exception as err:
+            if isinstance(err, ResourceNotFoundError):
+                raise InvalidArgumentValueError(
+                    f"Invald --{key.replace('_', '-')}, error when getting '{subnet}': {str(err)}") from err
+            raise CLIInternalError(f"Unexpected error when getting subnet '{subnet}': {str(err)}") from err
 
     return _validate_subnet
 

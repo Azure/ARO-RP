@@ -42,6 +42,9 @@ def load_arguments(self, _):
         c.argument('cluster_resource_group',
                    help='Resource group of cluster.',
                    validator=validate_cluster_resource_group)
+        c.argument('fips_validated_modules', arg_type=get_three_state_flag(),
+                   options_list=['--fips-validated-modules', '--fips'],
+                   help='Use FIPS validated cryptography modules.')
 
         c.argument('client_id',
                    help='Client ID of cluster service principal.',

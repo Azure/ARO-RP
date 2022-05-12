@@ -151,14 +151,14 @@ func TestPullSecretReconciler(t *testing.T) {
 			name: "valid RH keys present",
 			fakecli: newFakecli(&corev1.Secret{
 				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.redhat.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 				},
 			}, &corev1.Secret{Data: map[string][]byte{
-				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.redhat.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
 			arocli:   newFakeAro(&baseCluster),
-			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.redhat.com":{"auth":"ZnJlZDplbnRlcg=="}}}`,
-			wantKeys: []string{"registry.redhat.io", "cloud.redhat.com"},
+			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			wantKeys: []string{"registry.redhat.io", "cloud.openshift.com"},
 		},
 		{
 			name: "management disabled, valid RH key present",
@@ -277,7 +277,6 @@ func TestPullSecretReconciler(t *testing.T) {
 			if !reflect.DeepEqual(status.RedHatKeysPresent, tt.wantKeys) {
 				t.Fatalf("Unexpected status found\nwant: %v\ngot: %v", tt.wantKeys, status.RedHatKeysPresent)
 			}
-
 		})
 	}
 }
@@ -299,9 +298,9 @@ func TestParseRedHatKeys(t *testing.T) {
 		{
 			name: "with all rh key",
 			ps: &corev1.Secret{Data: map[string][]byte{
-				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.connect.redhat.com":{"auth":"ZnJlZDplbnRlcg=="},"cloud.redhat.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.connect.redhat.com":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}},
-			wantKeys: []string{"registry.redhat.io", "cloud.redhat.com", "registry.connect.redhat.com"},
+			wantKeys: []string{"registry.redhat.io", "cloud.openshift.com", "registry.connect.redhat.com"},
 		},
 	}
 
@@ -319,7 +318,6 @@ func TestParseRedHatKeys(t *testing.T) {
 			if !reflect.DeepEqual(out, tt.wantKeys) {
 				t.Fatalf("Enexpected keys found:\nwant: %v\ngot: %v", tt.wantKeys, out)
 			}
-
 		})
 	}
 }
@@ -652,7 +650,6 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			if !reflect.DeepEqual(s, tt.wantSecret) {
 				t.Fatalf("Unexpected secret mismatch\ngot: %v\nwant: %v", s, tt.wantSecret)
 			}
-
 		})
 	}
 }

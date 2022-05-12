@@ -33,7 +33,7 @@ type enricherTask interface {
 
 // NewBestEffortEnricher returns an enricher that attempts to populate
 // fields, but ignores errors in case of failures
-func NewBestEffortEnricher(log *logrus.Entry, dialer proxy.Dialer, m metrics.Interface) OpenShiftClusterEnricher {
+func NewBestEffortEnricher(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) OpenShiftClusterEnricher {
 	return &bestEffortEnricher{
 		log:    log,
 		dialer: dialer,
@@ -52,7 +52,7 @@ func NewBestEffortEnricher(log *logrus.Entry, dialer proxy.Dialer, m metrics.Int
 type bestEffortEnricher struct {
 	log    *logrus.Entry
 	dialer proxy.Dialer
-	m      metrics.Interface
+	m      metrics.Emitter
 
 	restConfig       func(dialer proxy.Dialer, oc *api.OpenShiftCluster) (*rest.Config, error)
 	taskConstructors []enricherTaskConstructor

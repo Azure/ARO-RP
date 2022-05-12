@@ -44,6 +44,7 @@ func TestEmitClusterVersion(t *testing.T) {
 		wantProvisionedByResourceProviderVersion string
 		wantAvailableVersion                     string
 		wantAvailableRP                          string
+		wantActualMinorVersion                   string
 	}{
 		{
 			name: "without spec",
@@ -79,6 +80,7 @@ func TestEmitClusterVersion(t *testing.T) {
 			wantProvisionedByResourceProviderVersion: "",
 			wantAvailableVersion:                     "4.5.39",
 			wantAvailableRP:                          "unknown",
+			wantActualMinorVersion:                   "4.5",
 		},
 		{
 			name: "with spec",
@@ -103,6 +105,7 @@ func TestEmitClusterVersion(t *testing.T) {
 			wantDesiredVersion:                       "4.5.4",
 			wantProvisionedByResourceProviderVersion: "",
 			wantAvailableRP:                          "unknown",
+			wantActualMinorVersion:                   "",
 		},
 		{
 			name: "with ProvisionedBy",
@@ -141,7 +144,7 @@ func TestEmitClusterVersion(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			m := mock_metrics.NewMockInterface(controller)
+			m := mock_metrics.NewMockEmitter(controller)
 
 			mon := &Monitor{
 				configcli: configcli,
@@ -158,6 +161,8 @@ func TestEmitClusterVersion(t *testing.T) {
 				"resourceProviderVersion":              "unknown",
 				"availableVersion":                     tt.wantAvailableVersion,
 				"availableRP":                          tt.wantAvailableRP,
+				"latestGaMinorVersion":                 version.InstallStream.Version.MinorVersion(),
+				"actualMinorVersion":                   tt.wantActualMinorVersion,
 			})
 
 			err := mon.emitClusterVersions(ctx)

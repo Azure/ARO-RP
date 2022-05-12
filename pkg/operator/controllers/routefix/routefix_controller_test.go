@@ -10,7 +10,6 @@ import (
 )
 
 func TestIsRequired(t *testing.T) {
-
 	for _, tt := range []struct {
 		name           string
 		clusterVersion string

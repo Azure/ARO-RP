@@ -28,6 +28,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		"databaseAccountName",
 		"dbtokenClientId",
 		"dbtokenUrl",
+		"fluentbitImage",
 		"gatewayDomains",
 		"gatewayFeatures",
 		"gatewayMdsdConfigVersion",

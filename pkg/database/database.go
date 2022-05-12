@@ -35,7 +35,7 @@ const (
 	collSubscriptions     = "Subscriptions"
 )
 
-func NewDatabaseClient(log *logrus.Entry, env env.Core, authorizer cosmosdb.Authorizer, m metrics.Interface, aead encryption.AEAD) (cosmosdb.DatabaseClient, error) {
+func NewDatabaseClient(log *logrus.Entry, env env.Core, authorizer cosmosdb.Authorizer, m metrics.Emitter, aead encryption.AEAD) (cosmosdb.DatabaseClient, error) {
 	for _, key := range []string{
 		"DATABASE_ACCOUNT_NAME",
 	} {

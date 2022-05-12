@@ -16,7 +16,7 @@ func TestTracer(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	m := mock_metrics.NewMockInterface(controller)
+	m := mock_metrics.NewMockEmitter(controller)
 
 	m.EXPECT().EmitGauge("client.k8s.count", int64(1), map[string]string{
 		"verb": "GET",

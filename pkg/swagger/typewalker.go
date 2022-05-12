@@ -154,7 +154,6 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 				}
 				s.Properties = append(s.Properties, ns)
 			}
-
 		}
 
 	default:

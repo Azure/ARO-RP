@@ -30,8 +30,8 @@ type statsd struct {
 	now func() time.Time
 }
 
-// New returns a new metrics.Interface
-func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string) metrics.Interface {
+// New returns a new metrics.Emitter
+func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string) metrics.Emitter {
 	s := &statsd{
 		log: log,
 		env: env,
