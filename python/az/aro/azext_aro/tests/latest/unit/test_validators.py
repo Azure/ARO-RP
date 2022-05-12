@@ -4,53 +4,102 @@
 from collections import namedtuple
 from typing import List
 import unittest
-from azext_aro._validators import validate_cidr
-from azure.cli.core.azclierror import InvalidArgumentValueError
-
-
-class Dummyclass:
-    def __init__(self, key=None):
-        self.key = key
+from azext_aro._validators import validate_cidr, validate_client_id
+from azure.cli.core.azclierror import InvalidArgumentValueError, InvalidArgumentValueError, RequiredArgumentMissingError
 
 
 class TestValidators(unittest.TestCase):
     def test_validate_cidr(self):
+        class Dummyclass:
+            def __init__(self, key=None):
+                self.key = key
+
         namedtuple_name = 'Testdata'
-        namedtuple_attributes = ["test_description", 'dummyclass', 'key', "expected_exception"]
+        namedtuple_attributes = ["test_description", 'dummyclass', 'attribute_to_get_from_object', "expected_exception"]
         TestData = namedtuple(namedtuple_name, namedtuple_attributes)
 
         testcases: List[namedtuple] = [
             TestData(
-                "should not raise exception when valid IPv4Network",
+                "should not raise exception when valid IPv4 address",
                 Dummyclass('192.168.0.0/28'),
                 'key',
                 None
             ),
             TestData(
-                "should raise InvalidArgumentValueError when non valid IPv4Network due to beeing a simple string",
+                "should raise InvalidArgumentValueError when non valid IPv4 address due to beeing a simple string",
                 Dummyclass('this is an invalid network'),
                 'key',
                 InvalidArgumentValueError
             ),
             TestData(
-                "should raise InvalidArgumentValueError when non valid IPv4Network due to invalid network ID",
+                "should raise InvalidArgumentValueError when non valid IPv4 address due to invalid network ID",
                 Dummyclass('192.168.0.0.0.0/28'),
                 'key',
                 InvalidArgumentValueError
             ),
             TestData(
-                "should raise InvalidArgumentValueError when non valid IPv4Network due to invalid hostID",
+                "should raise InvalidArgumentValueError when non valid IPv4 address due to invalid hostID",
                 Dummyclass('192.168.0.0.0.0/2888'),
                 'key',
                 InvalidArgumentValueError
+            ),
+            TestData(
+                "should not raise exception when IPv4 address is None ",
+                Dummyclass(None),
+                'key',
+                None
             )
         ]
 
         for tc in testcases:
-            validate_cidr_fn = validate_cidr(tc.key)
+            validate_cidr_fn = validate_cidr(tc.attribute_to_get_from_object)
             if tc.expected_exception is None:
-                result = validate_cidr_fn(tc.dummyclass)
-                self.assertIsNone(result)
+                validate_cidr_fn(tc.dummyclass)
             else:
-                with self.assertRaises(InvalidArgumentValueError):
-                    result = validate_cidr_fn(tc.dummyclass)
+                with self.assertRaises(tc.expected_exception):
+                    validate_cidr_fn(tc.dummyclass)
+
+    def test_validate_client_id(self):
+        class Namespace:
+            def __init__(self, client_id=None, client_secret=None):
+                self.client_id = client_id
+                self.client_secret = client_secret
+
+        namedtuple_name = 'Testdata'
+        namedtuple_attributes = ["test_description", 'namespace', "expected_exception"]
+        TestData = namedtuple(namedtuple_name, namedtuple_attributes)
+
+        testcases: List[namedtuple] = [
+            TestData(
+                "should return None when namespace.client_id is None",
+                Namespace(client_id=None),
+                None
+            ),
+            TestData(
+                "should raise InvalidArgumentValueError when it can not create a UUID from namespace.client_id",
+                Namespace(client_id="invalid_client_id"),
+                InvalidArgumentValueError
+            ),
+            TestData(
+                "should raise RequiredArgumentMissingError when can not crate a string representation from namespace.client_secret because is None",
+                Namespace(client_id="12345678123456781234567812345678", client_secret=None),
+                RequiredArgumentMissingError
+            ),
+            TestData(
+                "should raise RequiredArgumentMissingError when can not crate a string representation from namespace.client_secret because it is an empty string",
+                Namespace(client_id="12345678123456781234567812345678", client_secret=""),
+                RequiredArgumentMissingError
+            ),
+            TestData(
+                "should not raise exception when namespace.client_id is a valid input for creating a UUID and namespace.client_secret has a valid str representation",
+                Namespace(client_id="12345678123456781234567812345678", client_secret="12345"),
+                None
+            )
+        ]
+
+        for tc in testcases:
+            if tc.expected_exception is None:
+                validate_client_id(tc.namespace)
+            else:
+                with self.assertRaises(tc.expected_exception):
+                    validate_client_id(tc.namespace)
