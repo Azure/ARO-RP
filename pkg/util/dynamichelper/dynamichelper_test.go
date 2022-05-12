@@ -20,14 +20,11 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	"github.com/Azure/go-autorest/autorest/to"
 )
 
 func TestMerge(t *testing.T) {
 	serviceInternalTrafficPolicy := corev1.ServiceInternalTrafficPolicyCluster
-	var terminateGracePeriod int64 = corev1.DefaultTerminationGracePeriodSeconds
-	var revisionHistoryLimit int32 = 10
-	var replicasDeployment int32 = 1
-	var progressDlineSec int32 = 600
 
 	for _, tt := range []struct {
 		name          string
@@ -291,7 +288,7 @@ func TestMerge(t *testing.T) {
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: &terminateGracePeriod,
+							TerminationGracePeriodSeconds: to.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -304,7 +301,7 @@ func TestMerge(t *testing.T) {
 							MaxSurge:       &intstr.IntOrString{IntVal: 0},
 						},
 					},
-					RevisionHistoryLimit: &revisionHistoryLimit,
+					RevisionHistoryLimit: to.Int32Ptr(10),
 				},
 			},
 			wantChanged: true,
@@ -345,11 +342,11 @@ func TestMerge(t *testing.T) {
 					UpdatedReplicas:   3,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: &replicasDeployment,
+					Replicas: to.Int32Ptr(1),
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:                 "Always",
-							TerminationGracePeriodSeconds: &terminateGracePeriod,
+							TerminationGracePeriodSeconds: to.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds),
 							DNSPolicy:                     "ClusterFirst",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 "default-scheduler",
@@ -369,8 +366,8 @@ func TestMerge(t *testing.T) {
 							},
 						},
 					},
-					RevisionHistoryLimit:    &revisionHistoryLimit,
-					ProgressDeadlineSeconds: &progressDlineSec,
+					RevisionHistoryLimit:    to.Int32Ptr(10),
+					ProgressDeadlineSeconds: to.Int32Ptr(600),
 				},
 			},
 			wantChanged: true,
@@ -443,7 +440,7 @@ func TestMerge(t *testing.T) {
 			wantEmptyDiff: true,
 		},
 		{
-			name: "CustomResourceDefinition no changes",
+			name: "CustomResourceDefinition changes",
 			old: &extensionsv1.CustomResourceDefinition{
 				Status: extensionsv1.CustomResourceDefinitionStatus{
 					Conditions: []extensionsv1.CustomResourceDefinitionCondition{
