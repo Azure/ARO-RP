@@ -33,14 +33,14 @@ type statsd struct {
 }
 
 // New returns a new metrics.Emitter
-func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string, mdmsocketEnv string) metrics.Emitter {
+func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string, mdmSocketEnv string) metrics.Emitter {
 	s := &statsd{
 		log: log,
 		env: env,
 
 		account:      account,
 		namespace:    namespace,
-		mdmSocketEnv: mdmsocketEnv,
+		mdmSocketEnv: mdmSocketEnv,
 
 		ch: make(chan *metric, 1024),
 
