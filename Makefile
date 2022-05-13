@@ -20,6 +20,17 @@ else
 	VERSION = $(TAG)
 endif
 
+# default to registry.access.redhat.com for build images on local builds and CI builds without $RP_IMAGE_ACR set.
+ifeq ($(RP_IMAGE_ACR),arointsvc)
+	REGISTRY = arointsvc.azurecr.io
+else ifeq ($(RP_IMAGE_ACR),arosvc)
+	REGISTRY = arosvc.azurecr.io
+else ifeq ($(RP_IMAGE_ACR),)
+	REGISTRY = registry.access.redhat.com
+else
+	REGISTRY = $(RP_IMAGE_ACR)
+endif
+
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 
 build-all:
@@ -64,23 +75,21 @@ generate:
 	go generate ./...
 
 image-aro: aro e2e.test
-	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
+	docker pull $(REGISTRY)/ubi8/ubi-minimal
+	docker build --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
 
 image-aro-multistage:
-	docker build --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) .
+	docker build --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
 
 image-autorest:
-	docker build --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" \
-	  -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
+	docker build --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
 
 image-fluentbit:
-	docker build --network=host --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) \
-	  -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
+	docker build --network=host --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
 
 image-proxy: proxy
-	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build --no-cache -f Dockerfile.proxy -t ${RP_IMAGE_ACR}.azurecr.io/proxy:latest .
+	docker pull $(REGISTRY)/ubi8/ubi-minimal
+	docker build --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) .
 
 publish-image-aro: image-aro
 	docker push $(ARO_IMAGE)
@@ -175,7 +184,8 @@ lint-go:
 	hack/lint-go.sh
 
 lint-admin-portal:
-	docker build -f Dockerfile.portal_lint . -t linter
+	echo $(REGISTRY)
+	docker build --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.portal_lint . -t linter
 	docker run -it --rm localhost/linter ./src --ext .ts
 
 test-python: pyenv az
