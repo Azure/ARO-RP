@@ -24,7 +24,7 @@ type statsd struct {
 
 	account      string
 	namespace    string
-	mdmsocketEnv string
+	mdmSocketEnv string
 
 	conn net.Conn
 	ch   chan *metric
@@ -40,7 +40,7 @@ func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespac
 
 		account:      account,
 		namespace:    namespace,
-		mdmsocketEnv: mdmsocketEnv,
+		mdmSocketEnv: mdmsocketEnv,
 
 		ch: make(chan *metric, 1024),
 
@@ -126,7 +126,7 @@ func (s *statsd) validateSocketDefinition(network string, address string) (bool,
 	return true, nil
 }
 
-func (s *statsd) getDefaultSocketValues() (string, string) {
+func (s *statsd) defaultSocketValues() (string, string) {
 	network := "unix"
 	address := "/var/etw/mdm_statsd.socket"
 
@@ -137,14 +137,14 @@ func (s *statsd) getDefaultSocketValues() (string, string) {
 	return network, address
 }
 
-func (s *statsd) getConnectionDetails() (string, string, error) {
-	// allow the default socket connection to be overriden
-	if s.mdmsocketEnv == "" { //original behaviour
-		network, address := s.getDefaultSocketValues()
+func (s *statsd) connectionDetails() (string, string, error) {
+	// allow the default socket connection to be overwritten by ENV variable
+	if s.mdmSocketEnv == "" {
+		network, address := s.defaultSocketValues()
 		return network, address, nil
 	}
 
-	network, address, err := s.parseSocketEnv(s.mdmsocketEnv)
+	network, address, err := s.parseSocketEnv(s.mdmSocketEnv)
 	if err != nil {
 		return "", "", err
 	}
@@ -158,7 +158,7 @@ func (s *statsd) getConnectionDetails() (string, string, error) {
 }
 
 func (s *statsd) dial() (err error) {
-	network, address, err := s.getConnectionDetails()
+	network, address, err := s.connectionDetails()
 	if err != nil {
 		return
 	}

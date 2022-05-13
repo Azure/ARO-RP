@@ -5,9 +5,7 @@ package statsd
 
 import (
 	"bufio"
-	"fmt"
 	"net"
-	"strings"
 	"testing"
 	"time"
 
@@ -88,83 +86,79 @@ func TestEmitFloat(t *testing.T) {
 
 func TestParseSocketEnv(t *testing.T) {
 	for _, tt := range []struct {
-		name       string
-		teststring string
-		part1      string
-		part2      string
-		wantError  bool
+		name        string
+		teststring  string
+		wantNetwork string
+		wantAddress string
+		wantError   string
 	}{
 		{
-			name:       "Valid string",
-			teststring: "part1:part2",
-			part1:      "part1",
-			part2:      "part2",
-			wantError:  false,
+			name:        "Valid string",
+			teststring:  "foo:bar",
+			wantNetwork: "foo",
+			wantAddress: "bar",
 		},
 		{
-			name:       "Empty first part-regarded valid",
-			teststring: ":part2",
-			part1:      "",
-			part2:      "part2",
-			wantError:  false,
+			name:        "Empty network part-regarded valid",
+			teststring:  ":bar",
+			wantNetwork: "",
+			wantAddress: "bar",
 		},
 		{
-			name:       "Empty second part-regarded valid",
-			teststring: "part1:",
-			part1:      "part1",
-			part2:      "",
-			wantError:  false,
+			name:        "Empty address part-regarded valid",
+			teststring:  "foo:",
+			wantNetwork: "foo",
+			wantAddress: "",
 		},
 		{
 			name:       "No separator",
-			teststring: "somerandommtext",
-			wantError:  true,
+			teststring: "somerandomtext",
+			wantError:  "malformed definition for the mdm statds socket. Expecting udp:<hostname>:<port> or unix:<path-to-socket> format. Got: \"somerandomtext\"",
 		},
 		{
 			name:       "Empty string",
 			teststring: "",
-			wantError:  true,
+			wantError:  "malformed definition for the mdm statds socket. Expecting udp:<hostname>:<port> or unix:<path-to-socket> format. Got: \"\"",
 		},
 		{
-			name:       "More than one separator",
-			teststring: "a:b:c",
-			part1:      "a",
-			part2:      "b:c",
-			wantError:  false,
+			name:        "More than one separator",
+			teststring:  "a:b:c",
+			wantNetwork: "a",
+			wantAddress: "b:c",
 		},
 		{
-			name:       "Many separators",
-			teststring: ":::::",
-			part1:      "",
-			part2:      "::::",
-			wantError:  false,
+			name:        "Many separators",
+			teststring:  ":::::",
+			wantNetwork: "",
+			wantAddress: "::::",
 		},
 		{
-			name:       "One separator only",
-			teststring: ":",
-			part1:      "",
-			part2:      "",
-			wantError:  false,
+			name:        "One separator only",
+			teststring:  ":",
+			wantNetwork: "",
+			wantAddress: "",
+		},
+		{
+			name:        "Convert Upper Case network to lower case but leave address alone",
+			teststring:  "FOO:BAR",
+			wantNetwork: "foo",
+			wantAddress: "BAR",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &statsd{}
-			part1, part2, err := s.parseSocketEnv(tt.teststring)
+			network, address, err := s.parseSocketEnv(tt.teststring)
 
-			if tt.wantError {
-				if err == nil {
-					t.Error(fmt.Errorf("expected error but didn't get one."))
-				}
-			} else {
-				if err != nil {
-					t.Error(fmt.Errorf("unexpected error received: %q ", err.Error()))
-				}
-				if part1 != tt.part1 {
-					t.Error(fmt.Errorf("part1 does not match: Wanted: %q but got %q ", tt.part1, part1))
-				}
-				if part2 != tt.part2 {
-					t.Error(fmt.Errorf("part2 does not match: Wanted: %q but got %q ", tt.part2, part2))
-				}
+			if err != nil && err.Error() != tt.wantError ||
+				err == nil && tt.wantError != "" {
+				t.Fatal(err)
+			}
+
+			if network != tt.wantNetwork {
+				t.Error(network)
+			}
+			if address != tt.wantAddress {
+				t.Error(address)
 			}
 		})
 	}
@@ -176,35 +170,32 @@ func TestValidateSocketDefinition(t *testing.T) {
 		network      string
 		address      string
 		expectToPass bool
-		wantError    bool
+		wantError    string
 	}{
 		{
 			name:         "Valid UDP case",
 			network:      "udp",
 			address:      "127.0.0.1:9000",
 			expectToPass: true,
-			wantError:    false,
 		},
 		{
 			name:         "Valid Unix Domain Socket case",
 			network:      "unix",
 			address:      "/var/something/or/another",
 			expectToPass: true,
-			wantError:    false,
 		},
 		{
 			name:         "Invalid protocoll",
 			network:      "tcp",
 			address:      "127.0.0.1:12",
 			expectToPass: false,
-			wantError:    true,
+			wantError:    "unsupported protocol for the mdm statds socket. Expecting  'udp:' or 'unix:'. Got: \"tcp\"",
 		},
 		{
 			name:         "Valid protocol, random invalid address - is good here",
 			network:      "udp",
 			address:      "somerandomtext149203#$%",
 			expectToPass: true,
-			wantError:    false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -212,74 +203,67 @@ func TestValidateSocketDefinition(t *testing.T) {
 
 			ok, err := s.validateSocketDefinition(tt.network, tt.address)
 
-			if tt.wantError && err == nil {
-				t.Error(fmt.Errorf("Test %s, expected error but didn't get one.", tt.name))
-			}
-
-			if !tt.wantError && err != nil {
-				t.Error(fmt.Errorf("Test %s, unexpected validation error %q.", tt.name, err.Error()))
+			if err != nil && err.Error() != tt.wantError ||
+				err == nil && tt.wantError != "" {
+				t.Fatal(err)
 			}
 
 			if ok != tt.expectToPass {
-				t.Error(fmt.Errorf("Test %q,unexpected validation result: Expected: %t, Got %t ", tt.name, tt.expectToPass, ok))
+				t.Error(ok)
 			}
 		})
 	}
 }
 
-func TestGetConnectionDetails(t *testing.T) {
+func TestConnectionDetails(t *testing.T) {
 	for _, tt := range []struct {
 		name string
 
-		isLocalDev           bool
-		mdmsocketstring      string
-		network              string
-		address              string
-		wantErrorToStartWith string
+		isLocalDev      bool
+		mdmsocketstring string
+		network         string
+		address         string
+		wantError       string
 	}{
 		{
-			name:                 "Old behaviour / production mode",
-			isLocalDev:           false,
-			mdmsocketstring:      "",
-			network:              "unix",
-			address:              "/var/etw/mdm_statsd.socket",
-			wantErrorToStartWith: "",
+			name:            "Old behaviour / production mode",
+			isLocalDev:      false,
+			mdmsocketstring: "",
+			network:         "unix",
+			address:         "/var/etw/mdm_statsd.socket",
 		},
 		{
-			name:                 "Old Behaviour / localdev mode",
-			isLocalDev:           true,
-			mdmsocketstring:      "",
-			network:              "unix",
-			address:              "mdm_statsd.socket",
-			wantErrorToStartWith: "",
+			name:            "Old Behaviour / localdev mode",
+			isLocalDev:      true,
+			mdmsocketstring: "",
+			network:         "unix",
+			address:         "mdm_statsd.socket",
 		},
 		{
-			name:                 "Valid UDP env variable",
-			isLocalDev:           false,
-			mdmsocketstring:      "udp:127.0.0.1:9000",
-			network:              "udp",
-			address:              "127.0.0.1:9000",
-			wantErrorToStartWith: "",
+			name:            "Valid UDP env variable",
+			isLocalDev:      false,
+			mdmsocketstring: "udp:127.0.0.1:9000",
+			network:         "udp",
+			address:         "127.0.0.1:9000",
 		},
 		{
-			name:                 "Don't override default in localdev ",
-			isLocalDev:           true,
-			mdmsocketstring:      "udp:127.0.0.1:9000",
-			network:              "udp",
-			address:              "127.0.0.1:9000",
-			wantErrorToStartWith: "",
+			name:            "Don't override default in localdev ",
+			isLocalDev:      true,
+			mdmsocketstring: "udp:127.0.0.1:9000",
+			network:         "udp",
+			address:         "127.0.0.1:9000",
 		},
 		{
-			name:                 "Random string without separator",
-			isLocalDev:           true,
-			mdmsocketstring:      "another random string without separator",
-			wantErrorToStartWith: "malformed definition",
+			name:            "Random string without separator",
+			isLocalDev:      true,
+			mdmsocketstring: "another random string without separator",
+			wantError:       "malformed definition for the mdm statds socket. Expecting udp:<hostname>:<port> or unix:<path-to-socket> format. Got: \"another random string without separator\"",
 		},
 		{
-			name:                 "Invalid Protocol",
-			isLocalDev:           true,
-			mdmsocketstring:      "foo:bar",
-			wantErrorToStartWith: "unsupported protocol",
+			name:            "Invalid Protocol",
+			isLocalDev:      true,
+			mdmsocketstring: "foo:bar",
+			wantError:       "unsupported protocol for the mdm statds socket. Expecting  'udp:' or 'unix:'. Got: \"foo\"",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -297,27 +281,21 @@ func TestGetConnectionDetails(t *testing.T) {
 
 			s := &statsd{
 				env:          env,
-				mdmsocketEnv: tt.mdmsocketstring,
+				mdmSocketEnv: tt.mdmsocketstring,
 			}
 
-			network, address, err := s.getConnectionDetails()
+			network, address, err := s.connectionDetails()
 
-			if tt.wantErrorToStartWith != "" {
-				if err == nil {
-					t.Error(fmt.Errorf("Test %s, expected error \"%s...\" but didn't get one.", tt.name, tt.wantErrorToStartWith))
-				} else if !strings.HasPrefix(err.Error(), tt.wantErrorToStartWith) {
-					t.Error(fmt.Errorf("Test %s, unexpected error received. Expected \"%s...\" but got %q.", tt.name, tt.wantErrorToStartWith, err.Error()))
-				}
-			} else {
-				if err != nil {
-					t.Error(fmt.Errorf("Test %q,unexpected error received: %q ", tt.name, err.Error()))
-				}
-				if network != tt.network {
-					t.Error(fmt.Errorf("Test %q,network does not match: Wanted: %q but got %q ", tt.name, tt.network, network))
-				}
-				if address != tt.address {
-					t.Error(fmt.Errorf("Test %q,part2 does not match: Wanted: %q but got %q ", tt.name, tt.address, address))
-				}
+			if err != nil && err.Error() != tt.wantError ||
+				err == nil && tt.wantError != "" {
+				t.Fatal(err)
+			}
+
+			if network != tt.network {
+				t.Error(network)
+			}
+			if address != tt.address {
+				t.Error(address)
 			}
 		})
 	}

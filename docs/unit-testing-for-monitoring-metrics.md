@@ -32,10 +32,9 @@ and two protocols to chose from:
 Before you start, make sure :
 - to run `source ./env`
 - you ran `SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets` before 
-- know which "account" and "namespace" value you want to use on Geneva INT for your metric data and
-  update your env to set the 
+- know which "account" and "namespace" value you want to use on Geneva INT for your metric data and update your env to set the following variables before you start the monitor:
   - CLUSTER_MDM_ACCOUNT
-  - CLUSTER_MDM_NAMESPACE variables before you start the monitor. 
+  - CLUSTER_MDM_NAMESPACE 
 
  The container needs to be provided with the Geneva key and certificate. For the INT instance that is the rp-metrics-int.pem you find in the secrets folder after running the `make secrets` command above.  
 
@@ -121,7 +120,7 @@ A VS Code launch config that does the same would look like.
 If all goes well, you should see your metric data  in the Jarvis metrics list (Geneva INT (https://jarvis-west-int.cloudapp.net/) -> Manage ->  Metrics) under the account and namespace you specified in CLUSTER_MDM_ACCOUNT and CLUSTER_MDM_NAMESPACE and also be available is the dashboard settings.
 
 
-## Injecting Test Data into Geneva INT 
+## Injecting Test Data into Geneva INT
 
 Once your monitor code is done you will want to create pre-aggregates, dashboards and alert on the Geneva side and test with a variety of data.
 Your end-2-end testing with real cluster will generate some data and cover many test scenarios, but if that's not feasible or too time-consuming you can inject data directly into the Genava mdm container via the socat/ssh network chain.
