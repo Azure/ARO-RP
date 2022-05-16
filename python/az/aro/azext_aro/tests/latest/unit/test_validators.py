@@ -154,18 +154,11 @@ class TestValidators(unittest.TestCase):
                 with self.assertRaises(tc.expected_exception, msg=tc.test_description):
                     validate_client_secret_fn(tc.namespace)
 
-    @patch('azext_aro._validators.get_mgmt_service_client')    
+    @patch('azext_aro._validators.get_mgmt_service_client')
     def test_validate_cluster_resource_group(self, get_mgmt_service_client_mock):
         namedtuple_name = 'Testdata'
         namedtuple_attributes = ["test_description", "client_mock", "cmd_mock", 'namespace', "expected_exception"]
         TestData = namedtuple(namedtuple_name, namedtuple_attributes)
-
-        client_mock = Mock(name="client_mock")
-        client_mock.resource_groups = Mock()
-        client_mock.resource_groups.check_existence.return_value = True
-
-        cmd_mock = Mock(name="resource_groups_mock")
-        cmd_mock.cli_ctx = 1
 
         testcases: List[namedtuple] = [
             TestData(
@@ -176,9 +169,9 @@ class TestValidators(unittest.TestCase):
                 expected_exception=None
             ),
             TestData(
-                test_description="should raise InvalidArgumentValueError exception when resource group exists in the given CLI context of the client_mock",
-                client_mock=client_mock,
-                cmd_mock=cmd_mock,
+                test_description="should raise InvalidArgumentValueError exception when resource group exists in the given CLI context of the client",
+                client_mock=Mock(**{"resource_groups.check_existence.return_value": True}),
+                cmd_mock=Mock(cli_ctx=None),
                 namespace=Namespace(cluster_resource_group="some_resource_group"),
                 expected_exception=InvalidArgumentValueError
             ),
@@ -186,11 +179,9 @@ class TestValidators(unittest.TestCase):
 
         for tc in testcases:
             get_mgmt_service_client_mock.return_value = tc.client_mock
-            # self.assertEqual(get_mgmt_service_client_mock(None, None).resource_groups.check_existence(None), True)
 
             if tc.expected_exception is None:
                 validate_cluster_resource_group(tc.cmd_mock, tc.namespace)
             else:
-                #self.assertEqual(get_mgmt_service_client_mock(None, None), True)
                 with self.assertRaises(tc.expected_exception, msg=tc.test_description):
                     validate_cluster_resource_group(tc.cmd_mock, tc.namespace)
