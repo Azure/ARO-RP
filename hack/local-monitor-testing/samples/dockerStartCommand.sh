@@ -43,10 +43,6 @@ echo "MDMSOURCEENV  = $MDMSOURCEENVIRONMENT"
 echo "MDMSOURCEROLE  = $MDMSOURCEROLE"
 echo "MDMSOURCEROLEINSTANCE  = $MDMSOURCEROLEINSTANCE"
 
-#cp $BASE/secrets/rp-metrics-int.pem /etc/mdm.pem
-
-
-
 
 podman run \
   --entrypoint /usr/sbin/MetricsExtension \
