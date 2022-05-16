@@ -175,6 +175,13 @@ class TestValidators(unittest.TestCase):
                 namespace=Namespace(cluster_resource_group="some_resource_group"),
                 expected_exception=InvalidArgumentValueError
             ),
+            TestData(
+                test_description="should not raise exception when resource group does not exists in the given CLI context of the client",
+                client_mock=Mock(**{"resource_groups.check_existence.return_value": False}),
+                cmd_mock=Mock(cli_ctx=None),
+                namespace=Namespace(cluster_resource_group="some_resource_group"),
+                expected_exception=None
+            ),
         ]
 
         for tc in testcases:
