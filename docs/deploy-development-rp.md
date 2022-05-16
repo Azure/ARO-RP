@@ -99,13 +99,13 @@
    OR use the create utility:
 
    ```bash
-   CLUSTER=cluster go run ./hack/cluster create
+   CLUSTER=<cluster-name> go run ./hack/cluster create
    ```
 
    Later the cluster can be deleted as follows:
 
    ```bash
-   CLUSTER=cluster go run ./hack/cluster delete
+   CLUSTER=<cluster-name> go run ./hack/cluster delete
    ```
 
    [1]: https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster
