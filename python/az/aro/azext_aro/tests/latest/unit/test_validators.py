@@ -162,21 +162,21 @@ class TestValidators(unittest.TestCase):
 
         testcases: List[namedtuple] = [
             TestData(
-                test_description="should not raise exception when namespace.cluster_resource_group is None",
+                test_description="should not raise any exception when namespace.cluster_resource_group is None",
                 client_mock=None,
                 cmd_mock=None,
                 namespace=Namespace(cluster_resource_group=None),
                 expected_exception=None
             ),
             TestData(
-                test_description="should raise InvalidArgumentValueError exception when resource group exists in the given CLI context of the client",
+                test_description="should raise InvalidArgumentValueError exception when namespace.cluster_resource_group is not None and resource group exists in the client returned by get_mgmt_service_client",
                 client_mock=Mock(**{"resource_groups.check_existence.return_value": True}),
                 cmd_mock=Mock(cli_ctx=None),
                 namespace=Namespace(cluster_resource_group="some_resource_group"),
                 expected_exception=InvalidArgumentValueError
             ),
             TestData(
-                test_description="should not raise exception when resource group does not exists in the given CLI context of the client",
+                test_description="should not raise any exception when namespace.cluster_resource_group is not None and resource group does not exists in the client returned by get_mgmt_service_client",
                 client_mock=Mock(**{"resource_groups.check_existence.return_value": False}),
                 cmd_mock=Mock(cli_ctx=None),
                 namespace=Namespace(cluster_resource_group="some_resource_group"),
