@@ -4,14 +4,16 @@
 from collections import namedtuple
 from typing import List
 import unittest
-from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret
+from unittest.mock import Mock, patch
+from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group
 from azure.cli.core.azclierror import InvalidArgumentValueError, InvalidArgumentValueError, RequiredArgumentMissingError
 
 
 class Namespace:
-    def __init__(self, client_id=None, client_secret=None):
+    def __init__(self, client_id=None, client_secret=None, cluster_resource_group=None):
         self.client_id = client_id
         self.client_secret = client_secret
+        self.cluster_resource_group = cluster_resource_group
 
 
 class TestValidators(unittest.TestCase):
@@ -131,13 +133,13 @@ class TestValidators(unittest.TestCase):
                 expected_exception=RequiredArgumentMissingError
             ),
             TestData(
-                test_description="should raise RequiredArgumentMissingError exception when can not crate a string representation from namespace.client_id because is empty",
+                test_description="should raise RequiredArgumentMissingError exception when can not crate a string representation from namespace.client_id because it is empty",
                 isCreate=True,
                 namespace=Namespace(client_id="", client_secret="123"),
                 expected_exception=RequiredArgumentMissingError
             ),
             TestData(
-                test_description="should raise RequiredArgumentMissingError exception when can not crate a string representation from namespace.client_id because is None",
+                test_description="should raise RequiredArgumentMissingError exception when can not crate a string representation from namespace.client_id because it is None",
                 isCreate=True,
                 namespace=Namespace(client_id=None, client_secret="123"),
                 expected_exception=RequiredArgumentMissingError
@@ -151,3 +153,44 @@ class TestValidators(unittest.TestCase):
             else:
                 with self.assertRaises(tc.expected_exception, msg=tc.test_description):
                     validate_client_secret_fn(tc.namespace)
+
+    @patch('azext_aro._validators.get_mgmt_service_client')    
+    def test_validate_cluster_resource_group(self, get_mgmt_service_client_mock):
+        namedtuple_name = 'Testdata'
+        namedtuple_attributes = ["test_description", "client_mock", "cmd_mock", 'namespace', "expected_exception"]
+        TestData = namedtuple(namedtuple_name, namedtuple_attributes)
+
+        client_mock = Mock(name="client_mock")
+        client_mock.resource_groups = Mock()
+        client_mock.resource_groups.check_existence.return_value = True
+
+        cmd_mock = Mock(name="resource_groups_mock")
+        cmd_mock.cli_ctx = 1
+
+        testcases: List[namedtuple] = [
+            TestData(
+                test_description="should not raise exception when namespace.cluster_resource_group is None",
+                client_mock=None,
+                cmd_mock=None,
+                namespace=Namespace(cluster_resource_group=None),
+                expected_exception=None
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when resource group exists in the given CLI context of the client_mock",
+                client_mock=client_mock,
+                cmd_mock=cmd_mock,
+                namespace=Namespace(cluster_resource_group="some_resource_group"),
+                expected_exception=InvalidArgumentValueError
+            ),
+        ]
+
+        for tc in testcases:
+            get_mgmt_service_client_mock.return_value = tc.client_mock
+            # self.assertEqual(get_mgmt_service_client_mock(None, None).resource_groups.check_existence(None), True)
+
+            if tc.expected_exception is None:
+                validate_cluster_resource_group(tc.cmd_mock, tc.namespace)
+            else:
+                #self.assertEqual(get_mgmt_service_client_mock(None, None), True)
+                with self.assertRaises(tc.expected_exception, msg=tc.test_description):
+                    validate_cluster_resource_group(tc.cmd_mock, tc.namespace)
