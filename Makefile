@@ -179,6 +179,9 @@ test-python: pyenv az
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
 
+aks.kubeconfig:
+	hack/get-admin-aks-kubeconfig.sh
+
 vendor:
 	# See comments in the script for background on why we need it
 	hack/update-go-module-dependencies.sh
