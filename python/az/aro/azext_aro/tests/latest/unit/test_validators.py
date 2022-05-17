@@ -5,15 +5,17 @@ from collections import namedtuple
 from typing import List
 import unittest
 from unittest.mock import Mock, patch
-from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group
+from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set
 from azure.cli.core.azclierror import InvalidArgumentValueError, InvalidArgumentValueError, RequiredArgumentMissingError
+from msrestazure.azure_exceptions import CloudError
 
 
 class Namespace:
-    def __init__(self, client_id=None, client_secret=None, cluster_resource_group=None):
+    def __init__(self, client_id=None, client_secret=None, cluster_resource_group=None, disk_encryption_set=None):
         self.client_id = client_id
         self.client_secret = client_secret
         self.cluster_resource_group = cluster_resource_group
+        self.disk_encryption_set = disk_encryption_set
 
 
 class TestValidators(unittest.TestCase):
@@ -192,3 +194,41 @@ class TestValidators(unittest.TestCase):
             else:
                 with self.assertRaises(tc.expected_exception, msg=tc.test_description):
                     validate_cluster_resource_group(tc.cmd_mock, tc.namespace)
+
+    @patch('azext_aro._validators.get_mgmt_service_client')
+    @patch('azext_aro._validators.parse_resource_id')
+    @patch('azext_aro._validators.is_valid_resource_id')
+    def test_validate_disk_encryption_set(self, is_valid_resource_id_mock, parse_resource_id_mock, get_mgmt_service_client_mock):
+        namedtuple_name = 'Testdata'
+        namedtuple_attributes = ["test_description", "cmd_mock", "namespace", "is_valid_resource_id_return_value", "compute_client_mock", "expected_exception"]
+        TestData = namedtuple(namedtuple_name, namedtuple_attributes)
+
+        testcases: List[namedtuple] = [
+            TestData(
+                test_description="should not raise any exception when namespace.disk_encryption_set is None",
+                cmd_mock=None,
+                namespace=Namespace(disk_encryption_set=None),
+                is_valid_resource_id_return_value=None,
+                compute_client_mock=None,
+                expected_exception=None
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when namespace.disk_encryption_set is not None and is_valid_resource_id(namespace.disk_encryption_set) returns False",
+                cmd_mock=None,
+                namespace=Namespace(disk_encryption_set="something different than None"),
+                is_valid_resource_id_return_value=False,
+                compute_client_mock=None,
+                expected_exception=InvalidArgumentValueError
+            )
+        ]
+
+        for tc in testcases:
+            is_valid_resource_id_mock.return_value = tc.is_valid_resource_id_return_value
+            parse_resource_id_mock.return_value = None
+            get_mgmt_service_client_mock.return_value = tc.compute_client_mock
+
+            if tc.expected_exception is None:
+                validate_disk_encryption_set(tc.cmd_mock, tc.namespace)
+            else:
+                with self.assertRaises(tc.expected_exception, msg=tc.test_description):
+                    validate_disk_encryption_set(tc.cmd_mock, tc.namespace)
