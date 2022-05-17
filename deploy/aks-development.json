@@ -1,0 +1,441 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminObjectId": {
+            "type": "string",
+            "metadata": {
+                "description": "The AAD admin group's object ID."
+            }
+        },
+        "aksClusterName": {
+            "type": "string",
+            "defaultValue": "aro-aks-cluster",
+            "metadata": {
+                "description": "The name of the AKS Managed Cluster resource."
+            }
+        },
+        "keyvaultPrefix": {
+            "type": "string",
+            "defaultValue": "[take(resourceGroup().name, 20)]",
+            "maxLength": 20
+        },
+        "dnsPrefix": {
+            "type": "string",
+            "defaultValue": "[parameters('aksClusterName')]",
+            "metadata": {
+                "description": "Optional DNS prefix to use with hosted Kubernetes API server FQDN."
+            }
+        },
+        "agentCount": {
+            "defaultValue": 3,
+            "minValue": 1,
+            "maxValue": 100,
+            "type": "int",
+            "metadata": {
+                "description": "The number of agent nodes for the cluster. Production workloads have a recommended minimum of 3."
+            }
+        },
+        "agentVMSize": {
+            "defaultValue": "Standard_D2s_v3",
+            "type": "string",
+            "metadata": {
+                "description": "The size of the Virtual Machine."
+            }
+        },
+        "osDiskSizeGB": {
+            "defaultValue": 32,
+            "minValue": 0,
+            "maxValue": 1023,
+            "type": "int",
+            "metadata": {
+                "description": "Disk size (in GB) to provision for each of the agent pool nodes. This value ranges from 0 to 1023. Specifying 0 will apply the default disk size for that agentVMSize."
+            }
+        },
+        "maxPods": {
+            "defaultValue": 30,
+            "type": "int",
+            "metadata": {
+                "description": "Maximum number of pods that can run on a node."
+            }
+        },
+        "linuxAdminUsername": {
+            "type": "string",
+            "defaultValue": "cloud-user",
+            "metadata": {
+                "description": "User name for the Linux Virtual Machines."
+            }
+        },
+        "sshRSAPublicKey": {
+            "type": "string",
+            "metadata": {
+                "description": "Configure all linux machines with the SSH RSA public key string. Your key should include three parts, for example 'ssh-rsa AAAAB...snip...UcyupgH azureuser@linuxvm'"
+            }
+        },
+        "kubernetesVersion": {
+            "defaultValue": "1.23.5",
+            "type": "string",
+            "metadata": {
+                "description": "The version of Kubernetes."
+            }
+        },
+        "networkPlugin": {
+            "allowedValues": [
+                "azure",
+                "kubenet"
+            ],
+            "defaultValue": "azure",
+            "type": "string",
+            "metadata": {
+                "description": "Network plugin used for building Kubernetes network."
+            }
+        },
+        "enableRBAC": {
+            "defaultValue": true,
+            "type": "bool",
+            "metadata": {
+                "description": "boolean flag to turn on and off of RBAC"
+            }
+        },
+        "vnetName": {
+            "type": "string",
+            "defaultValue": "aks-net",
+            "metadata": {
+                "description": "Name of the VNET that will contain the AKS cluster and related resources."
+            }
+        },
+        "vnetAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.128.0.0/9",
+            "metadata": {
+                "description": "VNET address prefix"
+            }
+        },
+        "vnetSubnetName": {
+            "type": "string",
+            "defaultValue": "ClusterSubnet",
+            "metadata": {
+                "description": "Subnet name that will contain the App Service Environment"
+            }
+        },
+        "subnetPrefix": {
+            "type": "string",
+            "defaultValue": "10.128.64.0/18",
+            "metadata": {
+                "description": "Subnet address prefix"
+            }
+        },
+        "vnetGatewaySubnetName": {
+            "type": "string",
+            "defaultValue": "GatewaySubnet",
+            "metadata": {
+                "description": "Subnet name that will contain the App Service Environment"
+            }
+        },
+        "vnetGatewaySubnetPrefix": {
+            "type": "string",
+            "defaultValue": "10.128.0.0/24",
+            "metadata": {
+                "description": "Subnet address prefix"
+            }
+        },
+        "serviceCidr": {
+            "type": "string",
+            "defaultValue": "10.128.128.0/18",
+            "metadata": {
+                "description": "A CIDR notation IP range from which to assign service cluster IPs."
+            }
+        },
+        "dnsServiceIP": {
+            "type": "string",
+            "defaultValue": "10.128.128.10",
+            "metadata": {
+                "description": "Containers DNS server IP address."
+            }
+        },
+        "dockerBridgeCidr": {
+            "type": "string",
+            "defaultValue": "172.17.0.1/16",
+            "metadata": {
+                "description": "A CIDR notation IP for Docker bridge."
+            }
+        },
+        "vpnCACertificate": {
+            "type": "string",
+            "defaultValue": ""
+        }
+    },
+    "variables": {
+        "vnetSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('vnetSubnetName'))]",
+        "networkContributorRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '4d97b98b-1d4f-4787-a291-c67834d212e7')]"
+    },
+    "resources": [
+        {
+            "properties": {},
+            "name": "aks-nsg",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2020-08-01"
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2020-06-01",
+            "location": "[resourceGroup().location]",
+            "name": "[parameters('vnetName')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'aks-nsg')]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('vnetAddressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('vnetSubnetName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('subnetPrefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'aks-nsg')]"
+                            },
+                            "serviceEndpoints": [
+                                {
+                                    "service": "Microsoft.AzureCosmosDB"
+                                },
+                                {
+                                    "service": "Microsoft.ContainerRegistry"
+                                },
+                                {
+                                    "service": "Microsoft.Storage"
+                                },
+                                {
+                                    "service": "Microsoft.KeyVault"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "[parameters('vnetGatewaySubnetName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('vnetGatewaySubnetPrefix')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "aks-vpn-pip",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2020-08-01",
+            "sku": {
+                "name": "Basic"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic"
+            }
+        },
+        {
+            "apiVersion": "2022-03-01",
+            "type": "Microsoft.ContainerService/managedClusters",
+            "location": "[resourceGroup().location]",
+            "name": "[parameters('aksClusterName')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+            ],
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "servicePrincipalProfile": {
+                    "clientId": "msi"
+                },
+                "apiServerAccessProfile": {
+                    "enablePrivateCluster": true
+                },
+                "kubernetesVersion": "[parameters('kubernetesVersion')]",
+                "enableRBAC": "[parameters('enableRBAC')]",
+                "dnsPrefix": "[parameters('dnsPrefix')]",
+                "linuxProfile": {
+                    "adminUsername": "[parameters('linuxAdminUsername')]",
+                    "ssh": {
+                        "publicKeys": [
+                            {
+                                "keyData": "[parameters('sshRSAPublicKey')]"
+                            }
+                        ]
+                    }
+                },
+                "agentPoolProfiles": [
+                    {
+                        "name": "systempool",
+                        "osType": "Linux",
+                        "mode": "System",
+                        "enableEncryptionAtHost": true,
+                        "enableFIPS": true,
+                        "OSDiskType": "Ephemeral",
+                        "osDiskSizeGB": "[parameters('osDiskSizeGB')]",
+                        "count": "[parameters('agentCount')]",
+                        "vmSize": "[parameters('agentVMSize')]",
+                        "vnetSubnetID": "[variables('vnetSubnetID')]",
+                        "maxPods": "[parameters('maxPods')]",
+                        "availabilityZones": [
+                            "1",
+                            "2",
+                            "3"
+                        ]
+                    }
+                ],
+                "networkProfile": {
+                    "networkPlugin": "[parameters('networkPlugin')]",
+                    "serviceCidr": "[parameters('serviceCidr')]",
+                    "dnsServiceIP": "[parameters('dnsServiceIP')]",
+                    "dockerBridgeCidr": "[parameters('dockerBridgeCidr')]"
+                },
+                "aadProfile": {
+                    "managed": true,
+                    "enableAzureRBAC": true,
+                    "tenantId": "[subscription().tenantId]",
+                    "adminObjectIds": [
+                        "[parameters('adminObjectId')]"
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "2019-09-01",
+            "type": "Microsoft.KeyVault/vaults",
+            "name": "[concat(parameters('keyvaultPrefix'), '-aks')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[parameters('aksClusterName')]"
+            ],
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": [
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[reference(resourceId('Microsoft.ContainerService/managedClusters/', parameters('aksClusterName')), '2020-06-01', 'Full').identity.principalId]",
+                        "permissions": {
+                            "secrets": [
+                                "get"
+                            ]
+                        }
+                    },
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[parameters('adminObjectId')]",
+                        "permissions": {
+                            "secrets": [
+                                "get",
+                                "set",
+                                "list"
+                            ],
+                            "certificates": [
+                                "delete",
+                                "get",
+                                "import",
+                                "list"
+                            ]
+                        }
+                    }
+                ],
+                "enableSoftDelete": true
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "name": "[concat(parameters('vnetName'), '/peering-rp-pe-vnet-001')]",
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]",
+                "[parameters('aksClusterName')]"
+            ],
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "name": "[concat('rp-pe-vnet-001/peering-', parameters('vnetName'))]",
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworkGateways",
+            "name": "aks-vpn",
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', 'aks-vpn-pip')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]",
+                "[parameters('aksClusterName')]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('vnetGatewaySubnetName'))]"
+                            },
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'aks-vpn-pip')]"
+                            }
+                        },
+                        "name": "default"
+                    }
+                ],
+                "vpnType": "RouteBased",
+                "sku": {
+                    "name": "VpnGw1",
+                    "tier": "VpnGw1"
+                },
+                "vpnClientConfiguration": {
+                    "vpnClientAddressPool": {
+                        "addressPrefixes": [
+                            "192.168.254.0/24"
+                        ]
+                    },
+                    "vpnClientRootCertificates": [
+                        {
+                            "properties": {
+                                "publicCertData": "[parameters('vpnCACertificate')]"
+                            },
+                            "name": "aks-vpn-ca"
+                        }
+                    ],
+                    "vpnClientProtocols": [
+                        "OpenVPN"
+                    ]
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "privateFQDN": {
+            "type": "string",
+            "value": "[reference(concat('Microsoft.ContainerService/managedClusters/', parameters('aksClusterName'))).privateFQDN]"
+        }
+    }
+}
