@@ -129,7 +129,12 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	fpSPID := os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")
+<<<<<<< HEAD
 	c.log.Warn("client id: ", os.Getenv("AZURE_CLIENT_ID"))
+=======
+	clientId := os.Getenv("AZURE_CLIENT_ID")
+	c.log.Warn(clientId[0 : len(clientId)-1])
+>>>>>>> 47912f59c (try to debug this)
 	s := os.Getenv("AZURE_CLIENT_SECRET")
 	if len(s) != 0 {
 		firstChar := s[0:1]
