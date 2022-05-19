@@ -243,6 +243,27 @@ class TestValidators(TestCase):
                 namespace=Mock(domain=None)
             ),
             TestData(
+                test_description="should not raise any exception when namespace.domain has '-'",
+                namespace=Mock(domain="my-domain.com")
+            ),
+            TestData(
+                test_description="should not raise any exception when namespace.domain is google.com.au",
+                namespace=Mock(domain="google.com.au")
+            ),
+            TestData(
+                test_description="should not raise any exception when namespace.domain is some.more.than.expected",
+                namespace=Mock(domain="some.more.than.expected")
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when namespace.domain ends with '.'",
+                namespace=Mock(domain="google."),
+                expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should not raise any exception when namespace.domain is azure.microsoft.com",
+                namespace=Mock(domain="azure.microsoft.com")
+            ),
+            TestData(
                 test_description="should raise InvalidArgumentValueError exception when namespace.domain has '_'",
                 namespace=Mock(domain="my_domain.com"),
                 expected_exception=InvalidArgumentValueError
