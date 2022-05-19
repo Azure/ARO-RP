@@ -3,13 +3,13 @@
 
 from typing import Dict, List
 import unittest
+from unittest import mock
 from unittest.mock import Mock, patch
-from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set
-from azure.cli.core.azclierror import InvalidArgumentValueError, InvalidArgumentValueError, RequiredArgumentMissingError
+from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain
+from azure.cli.core.azclierror import InvalidArgumentValueError, RequiredArgumentMissingError
 
 
 class TestValidators(unittest.TestCase):
-
     def test_validate_cidr(self):
         class TestData():
             def __init__(self, test_description: str = None, dummyclass: Mock = None, attribute_to_get_from_object: str = None, expected_exception: Exception = None) -> None:
@@ -230,3 +230,24 @@ class TestValidators(unittest.TestCase):
             else:
                 with self.assertRaises(tc.expected_exception, msg=tc.test_description):
                     validate_disk_encryption_set(tc.cmd_mock, tc.namespace)
+
+    def test_validate_domain(self):
+        class TestData():
+            def __init__(self, test_description: str = None, namespace: Mock = None, expected_exception: Exception = None) -> None:
+                self.test_description = test_description
+                self.namespace = namespace
+                self.expected_exception = expected_exception
+
+        testcases: List[TestData] = [
+            TestData(
+                test_description="should not raise any exception when namespace.domain is None",
+                namespace=Mock(domain=None)
+            )
+        ]
+
+        for tc in testcases:
+            if tc.expected_exception is None:
+                validate_domain(tc.namespace)
+            else:
+                with self.assertRaises(tc.expected_exception, msg=tc.test_description):
+                    validate_domain(tc.namespace)
