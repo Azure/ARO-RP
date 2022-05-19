@@ -3,7 +3,6 @@
 
 from typing import Dict, List
 import unittest
-from unittest import mock
 from unittest.mock import Mock, patch
 from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain
 from azure.cli.core.azclierror import InvalidArgumentValueError, RequiredArgumentMissingError
@@ -242,6 +241,11 @@ class TestValidators(unittest.TestCase):
             TestData(
                 test_description="should not raise any exception when namespace.domain is None",
                 namespace=Mock(domain=None)
+            ),
+            TestData(
+                test_description="should raise any exception when namespace.domain has '_'",
+                namespace=Mock(domain="my_domain.com"),
+                expected_exception=InvalidArgumentValueError
             )
         ]
 
