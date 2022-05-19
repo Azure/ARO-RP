@@ -39,9 +39,6 @@ type CloudErrorBody struct {
 	// The target of the particular error. For example, the name of the property in error.
 	Target string `json:"target,omitempty"`
 
-	// Dependency is the source where this error originates from
-	Dependency string `json:"-"`
-
 	//A list of additional details about the error.
 	Details []CloudErrorBody `json:"details,omitempty"`
 }
@@ -59,7 +56,7 @@ func (b *CloudErrorBody) String() string {
 		}
 	}
 
-	return fmt.Sprintf("Code: %s, Target: %s, Message: %s, Dependency: %s%s", b.Code, b.Target, b.Message, b.Dependency, details)
+	return fmt.Sprintf("Code: %s, Target: %s, Message: %s%s", b.Code, b.Target, b.Message, details)
 }
 
 // CloudErrorCodes
