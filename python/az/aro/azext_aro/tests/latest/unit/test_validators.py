@@ -243,7 +243,7 @@ class TestValidators(TestCase):
                 namespace=Mock(domain=None)
             ),
             TestData(
-                test_description="should raise any exception when namespace.domain has '_'",
+                test_description="should raise InvalidArgumentValueError exception when namespace.domain has '_'",
                 namespace=Mock(domain="my_domain.com"),
                 expected_exception=InvalidArgumentValueError
             )
