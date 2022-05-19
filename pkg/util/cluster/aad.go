@@ -48,7 +48,7 @@ func (c *Cluster) createApplication(ctx context.Context, displayName string) (st
 		},
 	})
 	if err != nil {
-		c.log.Warn("err is: %v", err)
+		c.log.Warnf("err is: %v", err)
 		return "", "", err
 	}
 
