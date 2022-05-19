@@ -2,13 +2,13 @@
 # Licensed under the Apache License 2.0.
 
 from typing import Dict, List
-import unittest
+from unittest import TestCase
 from unittest.mock import Mock, patch
 from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain
 from azure.cli.core.azclierror import InvalidArgumentValueError, RequiredArgumentMissingError
 
 
-class TestValidators(unittest.TestCase):
+class TestValidators(TestCase):
     def test_validate_cidr(self):
         class TestData():
             def __init__(self, test_description: str = None, dummyclass: Mock = None, attribute_to_get_from_object: str = None, expected_exception: Exception = None) -> None:
