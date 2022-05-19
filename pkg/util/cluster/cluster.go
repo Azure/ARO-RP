@@ -129,7 +129,12 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	fpSPID := os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")
-	c.log.Warn(os.Getenv("AZURE_CLIENT_ID"))
+	c.log.Warn("client id: ", os.Getenv("AZURE_CLIENT_ID"))
+	s := os.Getenv("AZURE_CLIENT_SECRET")
+	if len(s) != 0 {
+		firstChar := s[0:1]
+		c.log.Warn(firstChar)
+	}
 
 	if fpSPID == "" {
 		return fmt.Errorf("fp service principal id is not found")
