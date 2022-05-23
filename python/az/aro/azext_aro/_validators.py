@@ -115,7 +115,9 @@ def validate_pull_secret(namespace):
 def validate_sdn(namespace):
     if namespace.software_defined_network is None:
         return
-    if namespace.software_defined_network not in ['OVNKubernetes', 'OpenshiftSDN']:
+
+    target_values = ['OVNKubernetes', 'OpenshiftSDN']
+    if namespace.software_defined_network not in target_values:
         raise InvalidArgumentValueError(
             f"Invalid --software-defined-network '{namespace.software_defined_network}'.")
 

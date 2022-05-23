@@ -4,7 +4,7 @@
 from typing import Dict, List
 from unittest import TestCase
 from unittest.mock import Mock, patch
-from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain
+from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn
 from azure.cli.core.azclierror import InvalidArgumentValueError, RequiredArgumentMissingError
 
 
@@ -255,17 +255,22 @@ class TestValidators(TestCase):
                 namespace=Mock(domain="some.more.than.expected")
             ),
             TestData(
+                test_description="should not raise any exception when namespace.domain is azure.microsoft.com",
+                namespace=Mock(domain="azure.microsoft.com")
+            ),
+            TestData(
                 test_description="should raise InvalidArgumentValueError exception when namespace.domain ends with '.'",
                 namespace=Mock(domain="google."),
                 expected_exception=InvalidArgumentValueError
             ),
             TestData(
-                test_description="should not raise any exception when namespace.domain is azure.microsoft.com",
-                namespace=Mock(domain="azure.microsoft.com")
-            ),
-            TestData(
                 test_description="should raise InvalidArgumentValueError exception when namespace.domain has '_'",
                 namespace=Mock(domain="my_domain.com"),
+                expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when namespace.domain has is google..com",
+                namespace=Mock(domain="google..com"),
                 expected_exception=InvalidArgumentValueError
             )
         ]
@@ -276,3 +281,82 @@ class TestValidators(TestCase):
             else:
                 with self.assertRaises(tc.expected_exception, msg=tc.test_description):
                     validate_domain(tc.namespace)
+
+    def test_validate_pull_secret(self):
+        class TestData():
+            def __init__(self, test_description: str = None, namespace: Mock = None, expected_exception: Exception = None) -> None:
+                self.test_description = test_description
+                self.namespace = namespace
+                self.expected_exception = expected_exception
+
+        testcases: List[TestData] = [
+            TestData(
+                test_description="should not raise any exception when namespace.pull_secret is None",
+                namespace=Mock(pull_secret=None)
+            ),
+            TestData(
+                test_description="should not raise any exception when namespace.pull_secret is a valid JSON",
+                namespace=Mock(pull_secret='{"key":"value"}')
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when namespace.pull_secret is not a valid JSON beacuse is an empty string",
+                namespace=Mock(pull_secret=""),
+                expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when namespace.pull_secret is not a valid JSON because missing value",
+                namespace=Mock(pull_secret='{"key": }'),
+                expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when namespace.pull_secret is not a valid JSON because is a simple string",
+                namespace=Mock(pull_secret='a simple string'),
+                expected_exception=InvalidArgumentValueError
+            )
+        ]
+
+        for tc in testcases:
+            if tc.expected_exception is None:
+                validate_pull_secret(tc.namespace)
+            else:
+                with self.assertRaises(tc.expected_exception, msg=tc.test_description):
+                    validate_pull_secret(tc.namespace)
+
+    def test_validate_sdn(self):
+        class TestData():
+            def __init__(self, test_description: str = None, namespace: Mock = None, expected_exception: Exception = None) -> None:
+                self.test_description = test_description
+                self.namespace = namespace
+                self.expected_exception = expected_exception
+
+        testcases: List[TestData] = [
+            TestData(
+                test_description="should not raise any exception when namespace.software_defined_network is None",
+                namespace=Mock(software_defined_network=None)
+            ),
+            TestData(
+                test_description="should not raise any exception when namespace.software_defined_network is OVNKubernetes",
+                namespace=Mock(software_defined_network="OVNKubernetes")
+            ),
+            TestData(
+                test_description="should not raise any exception when namespace.software_defined_network is OpenshiftSDN",
+                namespace=Mock(software_defined_network="OpenshiftSDN")
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when namespace.software_defined_network is 'uknown', not one of the target values",
+                namespace=Mock(software_defined_network="uknown"),
+                expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when namespace.software_defined_network is an empty string",
+                namespace=Mock(software_defined_network=""),
+                expected_exception=InvalidArgumentValueError
+            )
+        ]
+
+        for tc in testcases:
+            if tc.expected_exception is None:
+                validate_sdn(tc.namespace)
+            else:
+                with self.assertRaises(tc.expected_exception, msg=tc.test_description):
+                    validate_sdn(tc.namespace)
