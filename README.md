@@ -1,6 +1,6 @@
 # Azure Red Hat OpenShift Resource Provider
 
-## Welcome!
+## Welcome to ARO!
 
 For information relating to the generally available Azure Red Hat OpenShift v4
 service, please see the following links:
