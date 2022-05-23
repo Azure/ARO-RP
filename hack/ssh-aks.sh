@@ -20,8 +20,10 @@ fi
 
 NODE_RESOURCEGROUP=$( az aks list -g "$RESOURCEGROUP" --query "[?contains(name, '$1')].nodeResourceGroup" -o tsv )
 if [[ $(grep -c . <<<"$NODE_RESOURCEGROUP") -ne 1 ]]; then
-	echo "Cluster with pattern ${1} not found in resource group ${RESOURCEGROUP}"
-	usage
+	echo "Cluster with pattern "${1}" not found in resource group ${RESOURCEGROUP}"
+	echo "The following AKS clusters are available:"
+	az aks list -g $RESOURCEGROUP -otable
+	exit 1
 fi
 
 echo "Node RG:   ${NODE_RESOURCEGROUP}"
