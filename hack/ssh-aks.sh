@@ -28,7 +28,7 @@ fi
 
 echo "Node RG:   ${NODE_RESOURCEGROUP}"
 
-NODE_VMSS=$( az vmss list -g "$NODE_RESOURCEGROUP" --query '[].name' -otsv )
+NODE_VMSS=$( az vmss list -g "$NODE_RESOURCEGROUP" --query "[?contains(name, 'system')].name" -otsv )
 if [[ $(grep -c . <<<"$NODE_VMSS") -ne 1 ]]; then
 	echo "VMSS not found in the node resource group ${NODE_RESOURCEGROUP}"
 	usage
