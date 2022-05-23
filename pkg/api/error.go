@@ -47,7 +47,7 @@ func (b *CloudErrorBody) String() string {
 	var details string
 
 	if len(b.Details) > 0 {
-		details = ", Details: "
+		details = " Details: "
 		for i, innerErr := range b.Details {
 			details += innerErr.String()
 			if i < len(b.Details)-1 {
@@ -56,7 +56,7 @@ func (b *CloudErrorBody) String() string {
 		}
 	}
 
-	return fmt.Sprintf("Code: %s, Target: %s, Message: %s%s", b.Code, b.Target, b.Message, details)
+	return fmt.Sprintf("%s: %s: %s%s", b.Code, b.Target, b.Message, details)
 }
 
 // CloudErrorCodes
