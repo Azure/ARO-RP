@@ -3,9 +3,8 @@
 
 from typing import Dict, List
 from unittest import TestCase
-from unittest import mock
 from unittest.mock import Mock, patch
-from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn, validate_subnet, validate_subnets
+from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn, validate_subnet, validate_subnets, validate_visibility, validate_vnet_resource_group_name
 from azure.cli.core.azclierror import InvalidArgumentValueError, RequiredArgumentMissingError, RequiredArgumentMissingError, CLIInternalError
 from azure.core.exceptions import ResourceNotFoundError
 
@@ -469,6 +468,16 @@ class TestValidators(TestCase):
                 get_mgmt_service_client_mock_return_value=Mock(**{"subnets.get.side_effect": ResourceNotFoundError("")}),
                 cmd=Mock(cli_ctx=None),
                 expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should not raise any exception",
+                namespace=Mock(key='192.168.0.0/28', vnet=False),
+                key='key',
+                is_valid_resource_id_mock_return_value=True,
+                parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "virtualnetworks", "last_child_num": 1, "child_type_1": "subnets", "resource_group": None, "name": None, "child_name_1": None},
+                get_subscription_id_mock_return_value="subscription",
+                get_mgmt_service_client_mock_return_value=Mock(**{"subnets.get.return_value": None}),
+                cmd=Mock(cli_ctx=None)
             )
         ]
 
@@ -499,6 +508,22 @@ class TestValidators(TestCase):
                 test_description="should raise InvalidArgumentValueError exception when resource group of master_parts is different than resource_group of worker_parts",
                 parse_resource_id_mock=[{"resource_group": "a"}, {"resource_group": "b"}],
                 expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when name of master_parts is different than name of worker_parts",
+                parse_resource_id_mock=[{"resource_group": "equal", "name": "something"}, {"resource_group": "equal", "name": "different"}],
+                expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when name of master_parts is different than name of worker_parts",
+                parse_resource_id_mock=[{"resource_group": "equal", "name": "something", "child_name_1": "should_not_be_equal"},
+                                        {"resource_group": "equal", "name": "something", "child_name_1": "should_not_be_equal"}],
+                expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should not raise any exception",
+                parse_resource_id_mock=[{"resource_group": "equal", "name": "something", "child_name_1": "a"},
+                                        {"resource_group": "equal", "name": "something", "child_name_1": "z"}]
             )
         ]
 
@@ -510,3 +535,79 @@ class TestValidators(TestCase):
             else:
                 with self.assertRaises(tc.expected_exception, msg=tc.test_description):
                     validate_subnets(None, None)
+
+    def test_validate_visibility(self):
+        class TestData():
+            def __init__(self, test_description: str = None, key: Mock = None, namespace: Mock = None, expected_exception: Exception = None) -> None:
+                self.test_description = test_description
+                self.key = key
+                self.namespace = namespace
+                self.expected_exception = expected_exception
+
+        testcases: List[TestData] = [
+            TestData(
+                test_description="should not raise any exception",
+                key="key",
+                namespace=Mock(key=None)
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception because visibility is not one of the expected values",
+                key="key",
+                namespace=Mock(key="super_private"),
+                expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should not raise any exception because visibility is private",
+                key="key",
+                namespace=Mock(key="private")
+            ),
+            TestData(
+                test_description="should not raise any exception because visibility is PRIVATE",
+                key="key",
+                namespace=Mock(key="PRIVATE"),
+            ),
+            TestData(
+                test_description="should not raise any exception because visibility is PUBLIC",
+                key="key",
+                namespace=Mock(key="PUBLIC"),
+            ),
+            TestData(
+                test_description="should not raise any exception because visibility is public",
+                key="key",
+                namespace=Mock(key="public")
+            )
+        ]
+
+        for tc in testcases:
+            validate_visibility_fn = validate_visibility(tc.key)
+
+            if tc.expected_exception is None:
+                validate_visibility_fn(tc.namespace)
+            else:
+                with self.assertRaises(tc.expected_exception, msg=tc.test_description):
+                    validate_visibility_fn(tc.namespace)
+
+    def test_validate_vnet_resource_group_name(self):
+        class TestData():
+            def __init__(self, test_description: str = None, namespace: Mock = None, expected_namespace_vnet_resource_group_name: str = None) -> None:
+                self.test_description = test_description
+                self.namespace = namespace
+                self.expected_namespace_vnet_resource_group_name = expected_namespace_vnet_resource_group_name
+
+        testcases: List[TestData] = [
+            TestData(
+                test_description="should not copy namespace.resource_group_name to namespace.vnet_resource_group_name because namespace.resource_group_name already has a value",
+                namespace=Mock(vnet_resource_group_name="hello", resource_group_name="this_will_not_be_copied"),
+                expected_namespace_vnet_resource_group_name="hello"
+            ),
+            TestData(
+                test_description="should copy resource_group_name field to vnet_resource_group_name because namespace.vnet_resource_group_name is None",
+                namespace=Mock(vnet_resource_group_name=None, resource_group_name="will_copy_this"),
+                expected_namespace_vnet_resource_group_name="will_copy_this"
+            )
+        ]
+
+        for tc in testcases:
+            validate_vnet_resource_group_name(tc.namespace)
+
+            self.assertEqual(tc.namespace.vnet_resource_group_name, tc.expected_namespace_vnet_resource_group_name)

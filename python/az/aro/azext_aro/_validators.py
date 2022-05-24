@@ -200,7 +200,9 @@ def validate_visibility(key):
         if visibility is None:
             return
         visibility = visibility.capitalize()
-        if visibility not in ['Private', 'Public']:
+
+        possible_visibilities = ['Private', 'Public']
+        if visibility not in possible_visibilities:
             raise InvalidArgumentValueError(f"Invalid --{key.replace('_', '-')} '{visibility}'.")
 
     return _validate_visibility
