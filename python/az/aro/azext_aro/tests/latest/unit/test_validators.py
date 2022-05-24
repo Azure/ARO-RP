@@ -4,8 +4,8 @@
 from typing import Dict, List
 from unittest import TestCase
 from unittest.mock import Mock, patch
-from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn
-from azure.cli.core.azclierror import InvalidArgumentValueError, RequiredArgumentMissingError
+from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn, validate_subnet
+from azure.cli.core.azclierror import InvalidArgumentValueError, RequiredArgumentMissingError, RequiredArgumentMissingError
 
 
 class TestValidators(TestCase):
@@ -360,3 +360,34 @@ class TestValidators(TestCase):
             else:
                 with self.assertRaises(tc.expected_exception, msg=tc.test_description):
                     validate_sdn(tc.namespace)
+
+    @patch('azext_aro._validators.is_valid_resource_id')
+    def test_validate_subnet(self, is_valid_resource_id_mock):
+        class TestData():
+            def __init__(self, test_description: str = None, namespace: Mock = None, key: str = None, is_valid_resource_id_return_value: bool = None, cmd: Mock = None, expected_exception: Exception = None) -> None:
+                self.test_description = test_description
+                self.namespace = namespace
+                self.key = key
+                self.is_valid_resource_id_return_value = is_valid_resource_id_return_value
+                self.cmd = cmd
+                self.expected_exception = expected_exception
+
+        testcases: List[TestData] = [
+            TestData(
+                test_description="should raise RequiredArgumentMissingError exception when not is_valid_resource_id(subnet) and not namespace.vnet",
+                namespace=Mock(key='192.168.0.0/28', vnet=False),
+                key='key',
+                is_valid_resource_id_return_value=False,
+                expected_exception=RequiredArgumentMissingError
+            )
+        ]
+
+        for tc in testcases:
+            is_valid_resource_id_mock.return_value = tc.is_valid_resource_id_return_value
+            validate_subnet_fn = validate_subnet(tc.key)
+
+            if tc.expected_exception is None:
+                validate_subnet_fn(tc.cmd, tc.namespace)
+            else:
+                with self.assertRaises(tc.expected_exception, msg=tc.test_description):
+                    validate_subnet_fn(tc.cmd, tc.namespace)
