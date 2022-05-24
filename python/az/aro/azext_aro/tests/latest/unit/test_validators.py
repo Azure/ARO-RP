@@ -5,7 +5,8 @@ from typing import Dict, List
 from unittest import TestCase
 from unittest.mock import Mock, patch
 from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn, validate_subnet
-from azure.cli.core.azclierror import InvalidArgumentValueError, RequiredArgumentMissingError, RequiredArgumentMissingError
+from azure.cli.core.azclierror import InvalidArgumentValueError, RequiredArgumentMissingError, RequiredArgumentMissingError, CLIInternalError
+from azure.core.exceptions import ResourceNotFoundError
 
 
 class TestValidators(TestCase):
@@ -361,29 +362,121 @@ class TestValidators(TestCase):
                 with self.assertRaises(tc.expected_exception, msg=tc.test_description):
                     validate_sdn(tc.namespace)
 
+    @patch('azext_aro._validators.get_mgmt_service_client')
+    @patch('azext_aro._validators.get_subscription_id')
+    @patch('azext_aro._validators.parse_resource_id')
     @patch('azext_aro._validators.is_valid_resource_id')
-    def test_validate_subnet(self, is_valid_resource_id_mock):
+    def test_validate_subnet(self, is_valid_resource_id_mock, parse_resource_id_mock, get_subscription_id_mock, get_mgmt_service_client_mock):
         class TestData():
-            def __init__(self, test_description: str = None, namespace: Mock = None, key: str = None, is_valid_resource_id_return_value: bool = None, cmd: Mock = None, expected_exception: Exception = None) -> None:
+            def __init__(self, test_description: str = None, namespace: Mock = None, key: str = None, is_valid_resource_id_mock_return_value: bool = None, parse_resource_id_mock_return_value: dict = None, get_subscription_id_mock_return_value: any = None, get_mgmt_service_client_mock_return_value: any = None, cmd: Mock = None, expected_exception: Exception = None) -> None:
                 self.test_description = test_description
                 self.namespace = namespace
                 self.key = key
-                self.is_valid_resource_id_return_value = is_valid_resource_id_return_value
+                self.is_valid_resource_id_mock_return_value = is_valid_resource_id_mock_return_value
+                self.parse_resource_id_mock_return_value = parse_resource_id_mock_return_value
+                self.get_subscription_id_mock_return_value = get_subscription_id_mock_return_value
+                self.get_mgmt_service_client_mock_return_value = get_mgmt_service_client_mock_return_value
                 self.cmd = cmd
                 self.expected_exception = expected_exception
 
         testcases: List[TestData] = [
             TestData(
-                test_description="should raise RequiredArgumentMissingError exception when not is_valid_resource_id(subnet) and not namespace.vnet",
+                test_description="should raise RequiredArgumentMissingError exception when subnet is not a valid resource id and namespace.vnet is False",
                 namespace=Mock(key='192.168.0.0/28', vnet=False),
                 key='key',
-                is_valid_resource_id_return_value=False,
+                is_valid_resource_id_mock_return_value=False,
                 expected_exception=RequiredArgumentMissingError
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when parts subscription is different than cluster_subscription",
+                namespace=Mock(key='192.168.0.0/28', vnet=False),
+                key='key',
+                is_valid_resource_id_mock_return_value=True,
+                parse_resource_id_mock_return_value={"subscription": "expected"},
+                get_subscription_id_mock_return_value="different than expected",
+                cmd=Mock(cli_ctx=None),
+                expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when parts namespace is different than expected namespace",
+                namespace=Mock(key='192.168.0.0/28', vnet=False),
+                key='key',
+                is_valid_resource_id_mock_return_value=True,
+                parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "something.different"},
+                get_subscription_id_mock_return_value="subscription",
+                cmd=Mock(cli_ctx=None),
+                expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when parts type is different than expected_parts",
+                namespace=Mock(key='192.168.0.0/28', vnet=False),
+                key='key',
+                is_valid_resource_id_mock_return_value=True,
+                parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "this_should_be_virtualnetworks"},
+                get_subscription_id_mock_return_value="subscription",
+                cmd=Mock(cli_ctx=None),
+                expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when subnet childs is different than expected childs",
+                namespace=Mock(key='192.168.0.0/28', vnet=False),
+                key='key',
+                is_valid_resource_id_mock_return_value=True,
+                parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "virtualnetworks", "last_child_num": 0},
+                get_subscription_id_mock_return_value="subscription",
+                cmd=Mock(cli_ctx=None),
+                expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when subnet has child namespace",
+                namespace=Mock(key='192.168.0.0/28', vnet=False),
+                key='key',
+                is_valid_resource_id_mock_return_value=True,
+                parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "virtualnetworks", "last_child_num": 1, "child_namespace_1": "something"},
+                get_subscription_id_mock_return_value="subscription",
+                cmd=Mock(cli_ctx=None),
+                expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when child type subnet do not equal subnets",
+                namespace=Mock(key='192.168.0.0/28', vnet=False),
+                key='key',
+                is_valid_resource_id_mock_return_value=True,
+                parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "virtualnetworks", "last_child_num": 1, "child_type_1": "this_should_be_subnets"},
+                get_subscription_id_mock_return_value="subscription",
+                cmd=Mock(cli_ctx=None),
+                expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when client.subnets.get raises CLIInternalError because client.subnets.get raises Exception exception",
+                namespace=Mock(key='192.168.0.0/28', vnet=False),
+                key='key',
+                is_valid_resource_id_mock_return_value=True,
+                parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "virtualnetworks", "last_child_num": 1, "child_type_1": "subnets"},
+                get_subscription_id_mock_return_value="subscription",
+                get_mgmt_service_client_mock_return_value=Mock(**{"subnets.get.side_effect": Exception}),
+                cmd=Mock(cli_ctx=None),
+                expected_exception=CLIInternalError
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when client.subnets.get raises ResourceNotFoundError exception",
+                namespace=Mock(key='192.168.0.0/28', vnet=False),
+                key='key',
+                is_valid_resource_id_mock_return_value=True,
+                parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "virtualnetworks", "last_child_num": 1, "child_type_1": "subnets", "resource_group": None, "name": None, "child_name_1": None},
+                get_subscription_id_mock_return_value="subscription",
+                get_mgmt_service_client_mock_return_value=Mock(**{"subnets.get.side_effect": ResourceNotFoundError("")}),
+                cmd=Mock(cli_ctx=None),
+                expected_exception=InvalidArgumentValueError
             )
         ]
 
         for tc in testcases:
-            is_valid_resource_id_mock.return_value = tc.is_valid_resource_id_return_value
+            is_valid_resource_id_mock.return_value = tc.is_valid_resource_id_mock_return_value
+            parse_resource_id_mock.return_value = tc.parse_resource_id_mock_return_value
+            get_subscription_id_mock.return_value = tc.get_subscription_id_mock_return_value
+            get_mgmt_service_client_mock.return_value = tc.get_mgmt_service_client_mock_return_value
+
             validate_subnet_fn = validate_subnet(tc.key)
 
             if tc.expected_exception is None:

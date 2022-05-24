@@ -141,15 +141,18 @@ def validate_subnet(key):
             raise InvalidArgumentValueError(
                 f"--{key.replace('_', '-')} subscription '{parts['subscription']}' must equal cluster subscription.")
 
-        if parts['namespace'].lower() != 'microsoft.network':
+        expected_namespace = 'microsoft.network'
+        if parts['namespace'].lower() != expected_namespace:
             raise InvalidArgumentValueError(
                 f"--{key.replace('_', '-')} namespace '{parts['namespace']}' must equal Microsoft.Network.")
 
-        if parts['type'].lower() != 'virtualnetworks':
+        expected_type = 'virtualnetworks'
+        if parts['type'].lower() != expected_type:
             raise InvalidArgumentValueError(
                 f"--{key.replace('_', '-')} type '{parts['type']}' must equal virtualNetworks.")
 
-        if parts['last_child_num'] != 1:
+        expected_last_child_num = 1
+        if parts['last_child_num'] != expected_last_child_num:
             raise InvalidArgumentValueError(f"--{key.replace('_', '-')} '{subnet}' must have one child.")
 
         if 'child_namespace_1' in parts:
