@@ -3,8 +3,9 @@
 
 from typing import Dict, List
 from unittest import TestCase
+from unittest import mock
 from unittest.mock import Mock, patch
-from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn, validate_subnet
+from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn, validate_subnet, validate_subnets
 from azure.cli.core.azclierror import InvalidArgumentValueError, RequiredArgumentMissingError, RequiredArgumentMissingError, CLIInternalError
 from azure.core.exceptions import ResourceNotFoundError
 
@@ -448,7 +449,7 @@ class TestValidators(TestCase):
                 expected_exception=InvalidArgumentValueError
             ),
             TestData(
-                test_description="should raise InvalidArgumentValueError exception when client.subnets.get raises CLIInternalError because client.subnets.get raises Exception exception",
+                test_description="should raise InvalidArgumentValueError exception when client.subnets.get raises CLIInternalError because client.subnets.get() raises Exception exception",
                 namespace=Mock(key='192.168.0.0/28', vnet=False),
                 key='key',
                 is_valid_resource_id_mock_return_value=True,
@@ -459,7 +460,7 @@ class TestValidators(TestCase):
                 expected_exception=CLIInternalError
             ),
             TestData(
-                test_description="should raise InvalidArgumentValueError exception when client.subnets.get raises ResourceNotFoundError exception",
+                test_description="should raise InvalidArgumentValueError exception when client.subnets.get() raises ResourceNotFoundError exception",
                 namespace=Mock(key='192.168.0.0/28', vnet=False),
                 key='key',
                 is_valid_resource_id_mock_return_value=True,
@@ -484,3 +485,28 @@ class TestValidators(TestCase):
             else:
                 with self.assertRaises(tc.expected_exception, msg=tc.test_description):
                     validate_subnet_fn(tc.cmd, tc.namespace)
+
+    @patch('azext_aro._validators.parse_resource_id')
+    def test_validate_subnets(self, parse_resource_id_mock):
+        class TestData():
+            def __init__(self, test_description: str = None, parse_resource_id_mock: any = None, expected_exception: Exception = None) -> None:
+                self.test_description = test_description
+                self.parse_resource_id_mock = parse_resource_id_mock
+                self.expected_exception = expected_exception
+
+        testcases: List[TestData] = [
+            TestData(
+                test_description="should raise InvalidArgumentValueError exception when resource group of master_parts is different than resource_group of worker_parts",
+                parse_resource_id_mock=[{"resource_group": "a"}, {"resource_group": "b"}],
+                expected_exception=InvalidArgumentValueError
+            )
+        ]
+
+        for tc in testcases:
+            parse_resource_id_mock.side_effect = tc.parse_resource_id_mock
+
+            if tc.expected_exception is None:
+                validate_subnets(None, None)
+            else:
+                with self.assertRaises(tc.expected_exception, msg=tc.test_description):
+                    validate_subnets(None, None)
