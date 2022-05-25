@@ -240,8 +240,12 @@ def validate_worker_count(namespace):
 def validate_worker_vm_disk_size_gb(namespace):
     if not namespace.worker_vm_disk_size_gb:
         return
-    if namespace.worker_vm_disk_size_gb < 128:
-        raise InvalidArgumentValueError('--worker-vm-disk-size-gb must be greater than or equal to 128.')
+
+    minimum_worker_vm_disk_size_gb = 128
+    if namespace.worker_vm_disk_size_gb < minimum_worker_vm_disk_size_gb:
+        error_msg = '--worker-vm-disk-size-gb must be greater than or equal to ' + str(minimum_worker_vm_disk_size_gb)
+
+        raise InvalidArgumentValueError(error_msg)
 
 
 def validate_refresh_cluster_credentials(namespace):
