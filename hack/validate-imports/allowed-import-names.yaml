@@ -1,96 +1,96 @@
 allowedImportNames:
   github.com/Azure/ARO-RP/pkg/frontend/middleware:
     - ""
-    - "frontendmiddleware"
+    - frontendmiddleware
   github.com/Azure/ARO-RP/pkg/metrics/statsd/cosmosdb:
-    - "dbmetrics"
+    - dbmetrics
   github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1:
-    - "arov1alpha1"
+    - arov1alpha1
   github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1:
-    - "aropreviewv1alpha1"
+    - aropreviewv1alpha1
   github.com/Azure/ARO-RP/pkg/operator/clientset/versioned:
-    - "aroclient"
+    - aroclient
   github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake:
-    - "arofake"
+    - arofake
+  github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault:
+    - keyvaultclient
+    - ""
   github.com/Azure/ARO-RP/pkg/util/dynamichelper/discovery:
-    - "utildiscovery"
+    - utildiscovery
   github.com/Azure/ARO-RP/pkg/util/namespace:
-    - "utilnamespace"
+    - utilnamespace
     - ""
   github.com/Azure/ARO-RP/pkg/util/recover:
-    - "utilrecover"
-    - ""
-  github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault:
-    - "keyvaultclient"
+    - utilrecover
     - ""
   github.com/Azure/ARO-RP/test/database:
-    - "testdatabase"
+    - testdatabase
   github.com/Azure/ARO-RP/test/util/dynamichelper:
-    - "testdynamichelper"
+    - testdynamichelper
   github.com/Azure/ARO-RP/test/util/log:
-    - "testlog"
+    - testlog
   github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac:
-    - "azgraphrbac"
+    - azgraphrbac
   github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault:
-    - "azkeyvault"
+    - azkeyvault
   github.com/Azure/azure-sdk-for-go/storage:
-    - "azstorage"
-  github.com/googleapis/gnostic/openapiv2:
-    - "openapi_v2"
-  github.com/openshift/console-operator/pkg/api:
-    - "consoleapi"
-  github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1:
-    - "machinev1beta1"
-  github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned:
-    - "maoclient"
-  github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake:
-    - "maofake"
-  github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1:
-    - "mcv1"
-  github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned:
-    - "mcoclient"
-  github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake:
-    - "mcofake"
-  github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1:
-    - "mcoclientv1"
-  k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake:
-    - "extensionsfake"
-  github.com/openshift/installer/pkg/asset/installconfig/azure:
-    - "icazure"
-  github.com/openshift/installer/pkg/types/azure:
-    - "azuretypes"
+    - azstorage
   github.com/coreos/stream-metadata-go/arch:
-    - "coreosarch"
+    - coreosarch
+  github.com/googleapis/gnostic/openapiv2:
+    - openapi_v2
+  github.com/openshift/console-operator/pkg/api:
+    - consoleapi
+  github.com/openshift/installer/pkg/asset/installconfig/azure:
+    - icazure
   github.com/openshift/installer/pkg/rhcos:
-    - "rhcospkg"
+    - rhcospkg
+  github.com/openshift/installer/pkg/types/azure:
+    - azuretypes
+  github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1:
+    - machinev1beta1
+  github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned:
+    - maoclient
+  github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake:
+    - maofake
+  github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1:
+    - mcv1
+  github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned:
+    - mcoclient
+  github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake:
+    - mcofake
+  github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1:
+    - mcoclientv1
   golang.org/x/crypto/ssh:
     - ""
-    - "cryptossh"
-  k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1:
-    - "extensionsv1beta1"
+    - cryptossh
   k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1:
-    - "extensionsv1"
+    - extensionsv1
+  k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1:
+    - extensionsv1beta1
   k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset:
-    - "extensionsclient"
+    - extensionsclient
+  k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake:
+    - extensionsfake
   k8s.io/apimachinery/pkg/api/errors:
-    - "kerrors"
-  k8s.io/apimachinery/pkg/runtime:
-    - "kruntime"
+    - kerrors
   k8s.io/apimachinery/pkg/apis/meta/v1:
-    - "metav1"
+    - metav1
+  k8s.io/apimachinery/pkg/runtime:
+    - kruntime
   k8s.io/apimachinery/pkg/runtime/serializer/json:
-    - "kjson"
+    - kjson
   k8s.io/apimachinery/pkg/util/runtime:
-    - "utilruntime"
+    - utilruntime
   k8s.io/apimachinery/pkg/version:
-    - "kversion"
+    - kversion
   k8s.io/client-go/testing:
-    - "ktesting"
+    - ktesting
   k8s.io/client-go/tools/clientcmd/api/v1:
-    - "clientcmdv1"
+    - clientcmdv1
   k8s.io/client-go/tools/metrics:
-    - "kmetrics"
+    - kmetrics
   sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1:
-    - "azureproviderv1beta1"
+    - azureproviderv1beta1
   sigs.k8s.io/controller-runtime:
-    - "ctrl"
+    - ctrl
