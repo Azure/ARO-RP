@@ -4,7 +4,7 @@
 from typing import Dict, List
 from unittest import TestCase
 from unittest.mock import Mock, patch
-from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn, validate_subnet, validate_subnets, validate_visibility, validate_vnet_resource_group_name, validate_worker_count
+from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn, validate_subnet, validate_subnets, validate_visibility, validate_vnet_resource_group_name, validate_worker_count, validate_worker_vm_disk_size_gb
 from azure.cli.core.azclierror import InvalidArgumentValueError, RequiredArgumentMissingError, RequiredArgumentMissingError, CLIInternalError
 from azure.core.exceptions import ResourceNotFoundError
 
@@ -641,3 +641,39 @@ class TestValidators(TestCase):
             else:
                 with self.assertRaises(tc.expected_exception, msg=tc.test_description):
                     validate_worker_count(tc.namespace)
+
+    def test_validate_worker_vm_disk_size_gb(self):
+        class TestData():
+            def __init__(self, test_description: str = None, namespace: Mock = None, expected_exception: Exception = None) -> None:
+                self.test_description = test_description
+                self.namespace = namespace
+                self.expected_exception = expected_exception
+
+        testcases: List[TestData] = [
+            TestData(
+                test_description="should not raise any Exception as worker_vm_disk_size_gb of namespace is None",
+                namespace=Mock(worker_vm_disk_size_gb=None)
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError Exception as worker_vm_disk_size_gb of namespace is less than minimum_worker_vm_disk_size_gb",
+                namespace=Mock(worker_vm_disk_size_gb=2),
+                expected_exception=InvalidArgumentValueError
+            ),
+            TestData(
+                test_description="should not raise any Exception as worker_vm_disk_size_gb of namespace is equal than minimum_worker_vm_disk_size_gb",
+                namespace=Mock(worker_vm_disk_size_gb=128),
+                expected_exception=None
+            ),
+            TestData(
+                test_description="should not raise any Exception as worker_vm_disk_size_gb of namespace is greater than minimum_worker_vm_disk_size_gb",
+                namespace=Mock(worker_vm_disk_size_gb=220),
+                expected_exception=None
+            ),
+        ]
+
+        for tc in testcases:
+            if tc.expected_exception is None:
+                validate_worker_vm_disk_size_gb(tc.namespace)
+            else:
+                with self.assertRaises(tc.expected_exception, msg=tc.test_description):
+                    validate_worker_vm_disk_size_gb(tc.namespace)
