@@ -45,8 +45,7 @@ func initValidator() importValidator {
 	allowed := importValidator{}
 	err := yaml.Unmarshal(allowedNamesYaml, &allowed)
 	if err != nil {
-		log.Println(err)
-		return importValidator{}
+		log.Fatalf("error while unmarshalling allowed import names. err: %s", err)
 	}
 	return allowed
 }
