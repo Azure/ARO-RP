@@ -248,11 +248,17 @@
                 "type": "SystemAssigned"
             },
             "properties": {
-                "servicePrincipalProfile": {
-                    "clientId": "msi"
-                },
+                "nodeResourceGroup" : "[concat(resourceGroup().name, '-aks')]",
                 "apiServerAccessProfile": {
                     "enablePrivateCluster": true
+                },
+                "addonProfiles": {
+                    "azureKeyvaultSecretsProvider": {
+                        "config": {
+                            "enableSecretRotation": "false"
+                        },
+                        "enabled": true
+                    }
                 },
                 "kubernetesVersion": "[parameters('kubernetesVersion')]",
                 "enableRBAC": "[parameters('enableRBAC')]",
@@ -295,57 +301,8 @@
                 },
                 "aadProfile": {
                     "managed": true,
-                    "enableAzureRBAC": true,
-                    "tenantId": "[subscription().tenantId]",
-                    "adminObjectIds": [
-                        "[parameters('adminObjectId')]"
-                    ]
+                    "enableAzureRBAC": true
                 }
-            }
-        },
-        {
-            "apiVersion": "2019-09-01",
-            "type": "Microsoft.KeyVault/vaults",
-            "name": "[concat(parameters('keyvaultPrefix'), '-aks')]",
-            "location": "[resourceGroup().location]",
-            "dependsOn": [
-                "[parameters('aksClusterName')]"
-            ],
-            "properties": {
-                "tenantId": "[subscription().tenantId]",
-                "sku": {
-                    "family": "A",
-                    "name": "standard"
-                },
-                "accessPolicies": [
-                    {
-                        "tenantId": "[subscription().tenantId]",
-                        "objectId": "[reference(resourceId('Microsoft.ContainerService/managedClusters/', parameters('aksClusterName')), '2020-06-01', 'Full').identity.principalId]",
-                        "permissions": {
-                            "secrets": [
-                                "get"
-                            ]
-                        }
-                    },
-                    {
-                        "tenantId": "[subscription().tenantId]",
-                        "objectId": "[parameters('adminObjectId')]",
-                        "permissions": {
-                            "secrets": [
-                                "get",
-                                "set",
-                                "list"
-                            ],
-                            "certificates": [
-                                "delete",
-                                "get",
-                                "import",
-                                "list"
-                            ]
-                        }
-                    }
-                ],
-                "enableSoftDelete": true
             }
         },
         {
@@ -372,6 +329,10 @@
             "name": "[concat('rp-pe-vnet-001/peering-', parameters('vnetName'))]",
             "apiVersion": "2020-08-01",
             "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]",
+                "[parameters('aksClusterName')]"
+            ],
             "properties": {
                 "allowVirtualNetworkAccess": true,
                 "allowForwardedTraffic": true,
@@ -431,11 +392,5 @@
                 }
             }
         }
-    ],
-    "outputs": {
-        "privateFQDN": {
-            "type": "string",
-            "value": "[reference(concat('Microsoft.ContainerService/managedClusters/', parameters('aksClusterName'))).privateFQDN]"
-        }
-    }
+    ]
 }
