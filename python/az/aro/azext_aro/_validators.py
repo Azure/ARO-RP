@@ -231,8 +231,10 @@ def validate_vnet_resource_group_name(namespace):
 def validate_worker_count(namespace):
     if not namespace.worker_count:
         return
-    if namespace.worker_count < 3:
-        raise InvalidArgumentValueError('--worker-count must be greater than or equal to 3.')
+
+    minimum_workers_count = 3
+    if namespace.worker_count < minimum_workers_count:
+        raise InvalidArgumentValueError('--worker-count must be greater than or equal to ' + str(minimum_workers_count))
 
 
 def validate_worker_vm_disk_size_gb(namespace):

@@ -4,7 +4,7 @@
 from typing import Dict, List
 from unittest import TestCase
 from unittest.mock import Mock, patch
-from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn, validate_subnet, validate_subnets, validate_visibility, validate_vnet_resource_group_name
+from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn, validate_subnet, validate_subnets, validate_visibility, validate_vnet_resource_group_name, validate_worker_count
 from azure.cli.core.azclierror import InvalidArgumentValueError, RequiredArgumentMissingError, RequiredArgumentMissingError, CLIInternalError
 from azure.core.exceptions import ResourceNotFoundError
 
@@ -611,3 +611,33 @@ class TestValidators(TestCase):
             validate_vnet_resource_group_name(tc.namespace)
 
             self.assertEqual(tc.namespace.vnet_resource_group_name, tc.expected_namespace_vnet_resource_group_name)
+
+    def test_validate_worker_count(self):
+        class TestData():
+            def __init__(self, test_description: str = None, namespace: Mock = None, expected_exception: Exception = None) -> None:
+                self.test_description = test_description
+                self.namespace = namespace
+                self.expected_exception = expected_exception
+
+        testcases: List[TestData] = [
+            TestData(
+                test_description="should not raise any Exception as worker count of namespace is None",
+                namespace=Mock(worker_count=None)
+            ),
+            TestData(
+                test_description="should not raise any Exception as worker count of namespace is 3",
+                namespace=Mock(worker_count=None)
+            ),
+            TestData(
+                test_description="should raise InvalidArgumentValueError Exception as worker count of namespace is less than minimum workers count",
+                namespace=Mock(worker_count=2),
+                expected_exception=InvalidArgumentValueError
+            )
+        ]
+
+        for tc in testcases:
+            if tc.expected_exception is None:
+                validate_worker_count(tc.namespace)
+            else:
+                with self.assertRaises(tc.expected_exception, msg=tc.test_description):
+                    validate_worker_count(tc.namespace)
