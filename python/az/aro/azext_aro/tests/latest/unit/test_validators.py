@@ -4,8 +4,14 @@
 from typing import Dict, List
 from unittest import TestCase
 from unittest.mock import Mock, patch
-from azext_aro._validators import validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn, validate_subnet, validate_subnets, validate_visibility, validate_vnet_resource_group_name, validate_worker_count, validate_worker_vm_disk_size_gb
-from azure.cli.core.azclierror import InvalidArgumentValueError, RequiredArgumentMissingError, RequiredArgumentMissingError, CLIInternalError
+from azext_aro._validators import (
+    validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group,
+    validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn, validate_subnet, validate_subnets,
+    validate_visibility, validate_vnet_resource_group_name, validate_worker_count, validate_worker_vm_disk_size_gb, validate_refresh_cluster_credentials
+)
+from azure.cli.core.azclierror import (
+    InvalidArgumentValueError, RequiredArgumentMissingError, RequiredArgumentMissingError, CLIInternalError
+)
 from azure.core.exceptions import ResourceNotFoundError
 
 
@@ -66,7 +72,7 @@ class TestValidators(TestCase):
 
         testcases: List[TestData] = [
             TestData(
-                test_description="should return None when namespace.client_id is None",
+                test_description="should not raise any Exception when namespace.client_id is None",
                 namespace=Mock(client_id=None)
             ),
             TestData(
@@ -85,7 +91,7 @@ class TestValidators(TestCase):
                 expected_exception=RequiredArgumentMissingError
             ),
             TestData(
-                test_description="should not raise exception when namespace.client_id is a valid input for creating a UUID and namespace.client_secret has a valid str representation",
+                test_description="should not raise any exception when namespace.client_id is a valid input for creating a UUID and namespace.client_secret has a valid str representation",
                 namespace=Mock(client_id="12345678123456781234567812345678", client_secret="12345")
             )
         ]
@@ -107,12 +113,12 @@ class TestValidators(TestCase):
 
         testcases: List[TestData] = [
             TestData(
-                test_description="should not raise exception when isCreate is false",
+                test_description="should not raise any exception when isCreate is false",
                 isCreate=False,
                 namespace=Mock(client_id=None)
             ),
             TestData(
-                test_description="should not raise exception when namespace.client_secret is None",
+                test_description="should not raise any exception when namespace.client_secret is None",
                 isCreate=True,
                 namespace=Mock(client_secret=None)
             ),
@@ -621,15 +627,15 @@ class TestValidators(TestCase):
 
         testcases: List[TestData] = [
             TestData(
-                test_description="should not raise any Exception as worker count of namespace is None",
+                test_description="should not raise any Exception because worker count of namespace is None",
                 namespace=Mock(worker_count=None)
             ),
             TestData(
-                test_description="should not raise any Exception as worker count of namespace is 3",
+                test_description="should not raise any Exception because worker count of namespace is 3",
                 namespace=Mock(worker_count=None)
             ),
             TestData(
-                test_description="should raise InvalidArgumentValueError Exception as worker count of namespace is less than minimum workers count",
+                test_description="should raise InvalidArgumentValueError Exception because worker count of namespace is less than minimum workers count",
                 namespace=Mock(worker_count=2),
                 expected_exception=InvalidArgumentValueError
             )
@@ -651,21 +657,21 @@ class TestValidators(TestCase):
 
         testcases: List[TestData] = [
             TestData(
-                test_description="should not raise any Exception as worker_vm_disk_size_gb of namespace is None",
+                test_description="should not raise any Exception because worker_vm_disk_size_gb of namespace is None",
                 namespace=Mock(worker_vm_disk_size_gb=None)
             ),
             TestData(
-                test_description="should raise InvalidArgumentValueError Exception as worker_vm_disk_size_gb of namespace is less than minimum_worker_vm_disk_size_gb",
+                test_description="should raise InvalidArgumentValueError Exception because worker_vm_disk_size_gb of namespace is less than minimum_worker_vm_disk_size_gb",
                 namespace=Mock(worker_vm_disk_size_gb=2),
                 expected_exception=InvalidArgumentValueError
             ),
             TestData(
-                test_description="should not raise any Exception as worker_vm_disk_size_gb of namespace is equal than minimum_worker_vm_disk_size_gb",
+                test_description="should not raise any Exception because worker_vm_disk_size_gb of namespace is equal than minimum_worker_vm_disk_size_gb",
                 namespace=Mock(worker_vm_disk_size_gb=128),
                 expected_exception=None
             ),
             TestData(
-                test_description="should not raise any Exception as worker_vm_disk_size_gb of namespace is greater than minimum_worker_vm_disk_size_gb",
+                test_description="should not raise any Exception because worker_vm_disk_size_gb of namespace is greater than minimum_worker_vm_disk_size_gb",
                 namespace=Mock(worker_vm_disk_size_gb=220),
                 expected_exception=None
             ),
@@ -677,3 +683,38 @@ class TestValidators(TestCase):
             else:
                 with self.assertRaises(tc.expected_exception, msg=tc.test_description):
                     validate_worker_vm_disk_size_gb(tc.namespace)
+
+    def test_validate_refresh_cluster_credentials(self):
+        class TestData():
+            def __init__(self, test_description: str = None, namespace: Mock = None, expected_exception: Exception = None) -> None:
+                self.test_description = test_description
+                self.namespace = namespace
+                self.expected_exception = expected_exception
+
+        testcases: List[TestData] = [
+            TestData(
+                test_description="should not raise any Exception because namespace.refresh_cluster_credentials is none",
+                namespace=Mock(refresh_cluster_credentials=None)
+            ),
+            TestData(
+                test_description="should raise RequiredArgumentMissingError Exception because namespace.client_secret is not None",
+                namespace=Mock(client_secret="secret_123"),
+                expected_exception=RequiredArgumentMissingError
+            ),
+            TestData(
+                test_description="should raise RequiredArgumentMissingError Exception because namespace.client_id is not None",
+                namespace=Mock(client_id="client_id_456"),
+                expected_exception=RequiredArgumentMissingError
+            ),
+            TestData(
+                test_description="should not raise any Exception because namespace.client_secret is None and namespace.client_id is None",
+                namespace=Mock(client_secret=None, client_id=None)
+            )
+        ]
+
+        for tc in testcases:
+            if tc.expected_exception is None:
+                validate_refresh_cluster_credentials(tc.namespace)
+            else:
+                with self.assertRaises(tc.expected_exception, msg=tc.test_description):
+                    validate_refresh_cluster_credentials(tc.namespace)
