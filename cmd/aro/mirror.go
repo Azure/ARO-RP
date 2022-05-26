@@ -155,6 +155,21 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
+	for _, ref := range []string{
+		// Managed Upgrade Operator
+		"quay.io/app-sre/managed-upgrade-operator:v0.1.831-986b967",
+
+		// Hive
+		"quay.io/app-sre/hive:2383a88",
+	} {
+		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
+		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthQuay)
+		if err != nil {
+			log.Errorf("%s: %s\n", ref, err)
+			errorOccurred = true
+		}
+	}
+
 	log.Print("done")
 
 	if errorOccurred {
