@@ -249,10 +249,11 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.Entry, stop func(), doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState, backendErr error) error {
 	var adminUpdateError *string
 	var failedProvisioningState api.ProvisioningState
+	initialProvisioningState := doc.OpenShiftCluster.Properties.ProvisioningState
 
-	if doc.OpenShiftCluster.Properties.ProvisioningState != api.ProvisioningStateAdminUpdating &&
+	if initialProvisioningState != api.ProvisioningStateAdminUpdating &&
 		provisioningState == api.ProvisioningStateFailed {
-		failedProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
+		failedProvisioningState = initialProvisioningState
 	}
 
 	// If cluster is in the non-terminal state we are still in the same
@@ -262,11 +263,11 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		if err != nil {
 			return err
 		}
-
+		ocb.asyncOperationResultLog(log, initialProvisioningState, backendErr)
 		ocb.emitMetrics(doc, provisioningState)
 	}
 
-	if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateAdminUpdating {
+	if initialProvisioningState == api.ProvisioningStateAdminUpdating {
 		provisioningState = doc.OpenShiftCluster.Properties.LastProvisioningState
 		failedProvisioningState = doc.OpenShiftCluster.Properties.FailedProvisioningState
 
@@ -283,6 +284,28 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 
 	_, err := ocb.dbOpenShiftClusters.EndLease(ctx, doc.Key, provisioningState, failedProvisioningState, adminUpdateError)
 	return err
+}
+
+func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, initialProvisioningState api.ProvisioningState, backendErr error) {
+	log = log.WithFields(logrus.Fields{
+		"resultType":    utillog.SuccessResultType,
+		"operationType": initialProvisioningState.String(),
+	})
+
+	if backendErr == nil {
+		log.Info("long running operation succeeded")
+		return
+	}
+
+	_, ok := backendErr.(*api.CloudError)
+	if ok {
+		log = log.WithField("resultType", utillog.UserErrorResultType)
+	} else {
+		log = log.WithField("resultType", utillog.ServerErrorResultType)
+	}
+
+	log = log.WithField("errorDetails", backendErr.Error())
+	log.Info("long running operation failed")
 }
 
 func (ocb *openShiftClusterBackend) emitMetrics(doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState) {
