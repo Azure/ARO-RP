@@ -19,7 +19,7 @@ require (
 	github.com/containers/image/v5 v5.21.0
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/coreos/go-systemd/v22 v22.3.2
-	github.com/coreos/ignition/v2 v2.13.0
+	github.com/coreos/ignition/v2 v2.14.0
 	github.com/coreos/stream-metadata-go v0.2.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible
