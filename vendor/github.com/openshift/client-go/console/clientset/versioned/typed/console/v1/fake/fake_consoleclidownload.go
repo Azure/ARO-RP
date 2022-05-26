@@ -83,7 +83,7 @@ func (c *FakeConsoleCLIDownloads) Update(ctx context.Context, consoleCLIDownload
 // Delete takes name of the consoleCLIDownload and deletes it. Returns an error if one occurs.
 func (c *FakeConsoleCLIDownloads) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(consoleclidownloadsResource, name), &consolev1.ConsoleCLIDownload{})
+		Invokes(testing.NewRootDeleteActionWithOptions(consoleclidownloadsResource, name, opts), &consolev1.ConsoleCLIDownload{})
 	return err
 }
 

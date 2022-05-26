@@ -231,6 +231,34 @@
             ]
         },
         {
+            "name": "imagecontentpolicies",
+            "singularName": "imagecontentpolicy",
+            "namespaced": false,
+            "kind": "ImageContentPolicy",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "4sS3ccaNRA4="
+        },
+        {
+            "name": "imagecontentpolicies/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ImageContentPolicy",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
             "name": "images",
             "singularName": "image",
             "namespaced": false,

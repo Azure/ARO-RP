@@ -83,7 +83,7 @@ func (c *FakeConsoleNotifications) Update(ctx context.Context, consoleNotificati
 // Delete takes name of the consoleNotification and deletes it. Returns an error if one occurs.
 func (c *FakeConsoleNotifications) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(consolenotificationsResource, name), &consolev1.ConsoleNotification{})
+		Invokes(testing.NewRootDeleteActionWithOptions(consolenotificationsResource, name, opts), &consolev1.ConsoleNotification{})
 	return err
 }
 

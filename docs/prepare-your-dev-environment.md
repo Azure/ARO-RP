@@ -3,7 +3,7 @@
 This document goes through the development dependencies one requires in order to build the RP code.
 
 ## Software Required
-1. Install [Go 1.16](https://golang.org/dl) or later, if you haven't already.
+1. Install [Go 1.17](https://golang.org/dl) or later, if you haven't already.
 
 1. Configure `GOPATH` as an OS environment variable in your shell (a requirement of some dependencies for `make generate`). If you want to keep the default path, you can add something like `GOPATH=$(go env GOPATH)` to your shell's profile/RC file.
 
