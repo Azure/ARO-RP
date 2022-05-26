@@ -328,24 +328,7 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel htop openssl-devel
-
-# go-toolset-1.17.X is only available for RHEL 8.6 so let's use the Google binaries to build the Microsoft Go BoringSSL code for the time being
-GO_BOOTSTRAP_VERSION=1.17.10
-curl -s https://dl.google.com/go/go${GO_BOOTSTRAP_VERSION}.linux-amd64.tar.gz | tar -xz -C /usr/local/
-ln -sf /usr/local/go/bin/go /usr/local/bin/go
-ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt
-
-# Fetch and build the Golang BoringSSL release for FIPS support
-MSFT_GO_FIPS_VERSION="v1.17.10-1-fips/go.20220510.5"
-mkdir -p /tmp/go-build
-wget -qO- https://github.com/microsoft/go/releases/download/${MSFT_GO_FIPS_VERSION}.src.tar.gz | tar xz -C /tmp/go-build
-pushd /tmp/go-build/go/src
-echo "go1.17.10-fips" > ../VERSION
-HOME=~/ GOROOT_BOOTSTRAP=/usr/local/go GOPATH=~/go/ ./make.bash
-popd
-mv /usr/local/go /usr/local/go-$GO_BOOTSTRAP_VERSION
-mv /tmp/go-build/go /usr/local/go
+yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel htop go-toolset-1.17.7-1.module+el8.6.0+14297+32a15e19
 
 # Suppress emulation output for podman instead of docker for az acr compatability
 mkdir -p /etc/containers/
