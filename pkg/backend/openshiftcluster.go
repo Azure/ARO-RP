@@ -293,7 +293,7 @@ func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, i
 	})
 
 	if backendErr == nil {
-		log.Info("Long running operation succeeded")
+		log.Info("long running operation succeeded")
 		return
 	}
 
@@ -305,7 +305,7 @@ func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, i
 	}
 
 	log = log.WithField("errorDetails", backendErr.Error())
-	log.Info("Long running operation failed")
+	log.Info("long running operation failed")
 }
 
 func (ocb *openShiftClusterBackend) emitMetrics(doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState) {
