@@ -79,5 +79,5 @@ func MdsdImage(acrDomain string) string {
 
 // MUOImage contains the location of the Managed Upgrade Operator container image
 func MUOImage(acrDomain string) string {
-	return acrDomain + "/managed-upgrade-operator:aro-b1"
+	return acrDomain + "/managed-upgrade-operator:aro-b4"
 }
