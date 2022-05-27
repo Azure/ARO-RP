@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the Apache License 2.0.
 
-from typing import Dict, List
+from typing import List
 from unittest.mock import Mock, patch
 from azext_aro._validators import (
     validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group,
@@ -34,316 +34,142 @@ def test_validate_cidr(test_description, dummyclass, attribute_to_get_from_objec
             validate_cidr_fn(dummyclass)
 
 
-def test_validate_client_id():
-    class TestData():
-        def __init__(self, test_description: str = None, namespace: Mock = None, expected_exception: Exception = None) -> None:
-            self.test_description = test_description
-            self.namespace = namespace
-            self.expected_exception = expected_exception
-
-    testcases: List[TestData] = [
-        TestData(
-            test_description="should not raise any Exception when namespace.client_id is None",
-            namespace=Mock(client_id=None)
-        ),
-        TestData(
-            test_description="should raise InvalidArgumentValueError when it can not create a UUID from namespace.client_id",
-            namespace=Mock(client_id="invalid_client_id"),
-            expected_exception=InvalidArgumentValueError
-        ),
-        TestData(
-            test_description="should raise RequiredArgumentMissingError when can not crate a string representation from namespace.client_secret because is None",
-            namespace=Mock(client_id="12345678123456781234567812345678", client_secret=None),
-            expected_exception=RequiredArgumentMissingError
-        ),
-        TestData(
-            test_description="should raise RequiredArgumentMissingError when can not crate a string representation from namespace.client_secret because it is an empty string",
-            namespace=Mock(client_id="12345678123456781234567812345678", client_secret=""),
-            expected_exception=RequiredArgumentMissingError
-        ),
-        TestData(
-            test_description="should not raise any exception when namespace.client_id is a valid input for creating a UUID and namespace.client_secret has a valid str representation",
-            namespace=Mock(client_id="12345678123456781234567812345678", client_secret="12345")
-        )
-    ]
-
-    for tc in testcases:
-        if tc.expected_exception is None:
-            validate_client_id(tc.namespace)
-        else:
-            with pytest.raises(tc.expected_exception):
-                validate_client_id(tc.namespace)
+test_validate_client_id_data = [
+    ("should not raise any Exception when namespace.client_id is None", Mock(client_id=None), None),
+    ("should raise InvalidArgumentValueError when it can not create a UUID from namespace.client_id", Mock(client_id="invalid_client_id"), InvalidArgumentValueError),
+    ("should raise RequiredArgumentMissingError when can not crate a string representation from namespace.client_secret because is None", Mock(client_id="12345678123456781234567812345678", client_secret=None), RequiredArgumentMissingError),
+    ("should raise RequiredArgumentMissingError when can not crate a string representation from namespace.client_secret because it is an empty string", Mock(client_id="12345678123456781234567812345678", client_secret=""), RequiredArgumentMissingError),
+    ("should not raise any exception when namespace.client_id is a valid input for creating a UUID and namespace.client_secret has a valid str representation", Mock(client_id="12345678123456781234567812345678", client_secret="12345"), None)
+]
 
 
-def test_validate_client_secret():
-    class TestData():
-        def __init__(self, test_description: str = None, isCreate: bool = None, namespace: Mock = None, expected_exception: Exception = None) -> None:
-            self.test_description = test_description
-            self.isCreate = isCreate
-            self.namespace = namespace
-            self.expected_exception = expected_exception
-
-    testcases: List[TestData] = [
-        TestData(
-            test_description="should not raise any exception when isCreate is false",
-            isCreate=False,
-            namespace=Mock(client_id=None)
-        ),
-        TestData(
-            test_description="should not raise any exception when namespace.client_secret is None",
-            isCreate=True,
-            namespace=Mock(client_secret=None)
-        ),
-        TestData(
-            test_description="should raise RequiredArgumentMissingError exception when namespace.client_id is None and client_secret is not None",
-            isCreate=True,
-            namespace=Mock(client_id=None, client_secret="123"),
-            expected_exception=RequiredArgumentMissingError
-        ),
-        TestData(
-            test_description="should raise RequiredArgumentMissingError exception when can not crate a string representation from namespace.client_id because it is empty",
-            isCreate=True,
-            namespace=Mock(client_id="", client_secret="123"),
-            expected_exception=RequiredArgumentMissingError
-        ),
-        TestData(
-            test_description="should raise RequiredArgumentMissingError exception when can not crate a string representation from namespace.client_id because it is None",
-            isCreate=True,
-            namespace=Mock(client_id=None, client_secret="123"),
-            expected_exception=RequiredArgumentMissingError
-        )
-    ]
-
-    for tc in testcases:
-        validate_client_secret_fn = validate_client_secret(tc.isCreate)
-        if tc.expected_exception is None:
-            validate_client_secret_fn(tc.namespace)
-        else:
-            with pytest.raises(tc.expected_exception):
-                validate_client_secret_fn(tc.namespace)
+@pytest.mark.parametrize("test_description, namespace, expected_exception", test_validate_client_id_data, ids=[i[0] for i in test_validate_client_id_data])
+def test_validate_client_id(test_description, namespace, expected_exception):
+    if expected_exception is None:
+        validate_client_id(namespace)
+    else:
+        with pytest.raises(expected_exception):
+            validate_client_id(namespace)
 
 
+test_validate_client_secret_data = [
+    ("should not raise any exception when isCreate is false", False, Mock(client_id=None), None),
+    ("should not raise any exception when namespace.client_secret is None", True, Mock(client_secret=None), None),
+    ("should raise RequiredArgumentMissingError exception when namespace.client_id is None and client_secret is not None", True, Mock(client_id=None, client_secret="123"), RequiredArgumentMissingError),
+    ("should raise RequiredArgumentMissingError exception when can not crate a string representation from namespace.client_id because it is empty", True, Mock(client_id="", client_secret="123"), RequiredArgumentMissingError),
+    ("should raise RequiredArgumentMissingError exception when can not crate a string representation from namespace.client_id because it is None", True, Mock(client_id=None, client_secret="123"), RequiredArgumentMissingError)
+]
+
+
+@pytest.mark.parametrize("test_description, isCreate, namespace, expected_exception", test_validate_client_secret_data, ids=[i[0] for i in test_validate_client_secret_data])
+def test_validate_client_secret(test_description, isCreate, namespace, expected_exception):
+    validate_client_secret_fn = validate_client_secret(isCreate)
+    if expected_exception is None:
+        validate_client_secret_fn(namespace)
+    else:
+        with pytest.raises(expected_exception):
+            validate_client_secret_fn(namespace)
+
+
+test_validate_cluster_resource_group_data = [
+    ("should not raise any exception when namespace.cluster_resource_group is None", None, None, Mock(cluster_resource_group=None), None),
+    ("should raise InvalidArgumentValueError exception when namespace.cluster_resource_group is not None and resource group exists in the client returned by get_mgmt_service_client", Mock(**{"resource_groups.check_existence.return_value": True}), Mock(cli_ctx=None), Mock(cluster_resource_group="some_resource_group"), InvalidArgumentValueError),
+    ("should not raise any exception when namespace.cluster_resource_group is not None and resource group does not exists in the client returned by get_mgmt_service_client", Mock(**{"resource_groups.check_existence.return_value": False}), Mock(cli_ctx=None), Mock(cluster_resource_group="some_resource_group"), None)
+]
+
+
+@pytest.mark.parametrize("test_description, client_mock, cmd_mock, namespace, expected_exception", test_validate_cluster_resource_group_data, ids=[i[0] for i in test_validate_cluster_resource_group_data])
 @patch('azext_aro._validators.get_mgmt_service_client')
-def test_validate_cluster_resource_group(get_mgmt_service_client_mock):
-    class TestData():
-        def __init__(self, test_description: str = None, client_mock: Mock = None, cmd_mock: Mock = None, namespace: Mock = None, expected_exception: Exception = None) -> None:
-            self.test_description = test_description
-            self.client_mock = client_mock
-            self.cmd_mock = cmd_mock
-            self.namespace = namespace
-            self.expected_exception = expected_exception
-
-    testcases: List[TestData] = [
-        TestData(
-            test_description="should not raise any exception when namespace.cluster_resource_group is None",
-            namespace=Mock(cluster_resource_group=None)
-        ),
-        TestData(
-            test_description="should raise InvalidArgumentValueError exception when namespace.cluster_resource_group is not None and resource group exists in the client returned by get_mgmt_service_client",
-            client_mock=Mock(**{"resource_groups.check_existence.return_value": True}),
-            cmd_mock=Mock(cli_ctx=None),
-            namespace=Mock(cluster_resource_group="some_resource_group"),
-            expected_exception=InvalidArgumentValueError
-        ),
-        TestData(
-            test_description="should not raise any exception when namespace.cluster_resource_group is not None and resource group does not exists in the client returned by get_mgmt_service_client",
-            client_mock=Mock(**{"resource_groups.check_existence.return_value": False}),
-            cmd_mock=Mock(cli_ctx=None),
-            namespace=Mock(cluster_resource_group="some_resource_group")
-        ),
-    ]
-
-    for tc in testcases:
-        get_mgmt_service_client_mock.return_value = tc.client_mock
-
-        if tc.expected_exception is None:
-            validate_cluster_resource_group(tc.cmd_mock, tc.namespace)
-        else:
-            with pytest.raises(tc.expected_exception):
-                validate_cluster_resource_group(tc.cmd_mock, tc.namespace)
+def test_validate_cluster_resource_group(get_mgmt_service_client_mock, test_description, client_mock, cmd_mock, namespace, expected_exception):
+    get_mgmt_service_client_mock.return_value = client_mock
+    if expected_exception is None:
+        validate_cluster_resource_group(cmd_mock, namespace)
+    else:
+        with pytest.raises(expected_exception):
+            validate_cluster_resource_group(cmd_mock, namespace)
 
 
+test_validate_disk_encryption_set_data = [
+    ("should not raise any exception when namespace.disk_encryption_set is None", None, Mock(disk_encryption_set=None), None, None, None, None),
+    ("should raise InvalidArgumentValueError exception when namespace.disk_encryption_set is not None and is_valid_resource_id(namespace.disk_encryption_set) returns False", None, Mock(disk_encryption_set="something different than None"), False, None, InvalidArgumentValueError, None),
+    ("should not raise any exception when compute_client.disk_encryption_sets.get() not raises CludError exception", Mock(cli_ctx=None), Mock(disk_encryption_set="something different than None"), True, Mock(), None, {"resource_group": None, "name": None})
+]
+
+
+@pytest.mark.parametrize("test_description, cmd_mock, namespace, is_valid_resource_id_return_value, compute_client_mock, expected_exception, parse_resource_id_mock_return_value", test_validate_disk_encryption_set_data, ids=[i[0] for i in test_validate_disk_encryption_set_data])
 @patch('azext_aro._validators.get_mgmt_service_client')
 @patch('azext_aro._validators.parse_resource_id')
 @patch('azext_aro._validators.is_valid_resource_id')
-def test_validate_disk_encryption_set(is_valid_resource_id_mock, parse_resource_id_mock, get_mgmt_service_client_mock):
-    class TestData():
-        def __init__(self, test_description: str = None, cmd_mock: Mock = None, namespace: Mock = None, is_valid_resource_id_return_value: bool = None, compute_client_mock: Mock = None, expected_exception: Exception = None, parse_resource_id_mock_return_value: Dict = None) -> None:
-            self.test_description = test_description
-            self.cmd_mock = cmd_mock
-            self.namespace = namespace
-            self.is_valid_resource_id_return_value = is_valid_resource_id_return_value
-            self.compute_client_mock = compute_client_mock
-            self.expected_exception = expected_exception
-            self.parse_resource_id_mock_return_value = parse_resource_id_mock_return_value
+def test_validate_disk_encryption_set(is_valid_resource_id_mock, parse_resource_id_mock, get_mgmt_service_client_mock, test_description, cmd_mock, namespace, is_valid_resource_id_return_value, compute_client_mock, expected_exception, parse_resource_id_mock_return_value):
+    is_valid_resource_id_mock.return_value = is_valid_resource_id_return_value
+    parse_resource_id_mock.return_value = parse_resource_id_mock_return_value
 
-    testcases: List[TestData] = [
-        TestData(
-            test_description="should not raise any exception when namespace.disk_encryption_set is None",
-            namespace=Mock(disk_encryption_set=None)
-        ),
-        TestData(
-            test_description="should raise InvalidArgumentValueError exception when namespace.disk_encryption_set is not None and is_valid_resource_id(namespace.disk_encryption_set) returns False",
-            namespace=Mock(disk_encryption_set="something different than None"),
-            is_valid_resource_id_return_value=False,
-            expected_exception=InvalidArgumentValueError,
-        ),
-        TestData(
-            test_description="should not raise any exception when compute_client.disk_encryption_sets.get() not raises CludError exception",
-            cmd_mock=Mock(cli_ctx=None),
-            namespace=Mock(disk_encryption_set="something different than None"),
-            is_valid_resource_id_return_value=True,
-            compute_client_mock=Mock(),
-            parse_resource_id_mock_return_value={"resource_group": None, "name": None}
-        )
-    ]
-    for tc in testcases:
-        is_valid_resource_id_mock.return_value = tc.is_valid_resource_id_return_value
-        parse_resource_id_mock.return_value = tc.parse_resource_id_mock_return_value
+    if compute_client_mock is not None:
+        compute_client_mock.get.return_value = None
+        get_mgmt_service_client_mock.return_value = compute_client_mock
 
-        if tc.compute_client_mock is not None:
-            tc.compute_client_mock.get.return_value = None
-            get_mgmt_service_client_mock.return_value = tc.compute_client_mock
-
-        if tc.expected_exception is None:
-            validate_disk_encryption_set(tc.cmd_mock, tc.namespace)
-        else:
-            with pytest.raises(tc.expected_exception):
-                validate_disk_encryption_set(tc.cmd_mock, tc.namespace)
+    if expected_exception is None:
+        validate_disk_encryption_set(cmd_mock, namespace)
+    else:
+        with pytest.raises(expected_exception):
+            validate_disk_encryption_set(cmd_mock, namespace)
 
 
-def test_validate_domain():
-    class TestData():
-        def __init__(self, test_description: str = None, namespace: Mock = None, expected_exception: Exception = None) -> None:
-            self.test_description = test_description
-            self.namespace = namespace
-            self.expected_exception = expected_exception
-
-    testcases: List[TestData] = [
-        TestData(
-            test_description="should not raise any exception when namespace.domain is None",
-            namespace=Mock(domain=None)
-        ),
-        TestData(
-            test_description="should not raise any exception when namespace.domain has '-'",
-            namespace=Mock(domain="my-domain.com")
-        ),
-        TestData(
-            test_description="should not raise any exception when namespace.domain is google.com.au",
-            namespace=Mock(domain="google.com.au")
-        ),
-        TestData(
-            test_description="should not raise any exception when namespace.domain is some.more.than.expected",
-            namespace=Mock(domain="some.more.than.expected")
-        ),
-        TestData(
-            test_description="should not raise any exception when namespace.domain is azure.microsoft.com",
-            namespace=Mock(domain="azure.microsoft.com")
-        ),
-        TestData(
-            test_description="should raise InvalidArgumentValueError exception when namespace.domain ends with '.'",
-            namespace=Mock(domain="google."),
-            expected_exception=InvalidArgumentValueError
-        ),
-        TestData(
-            test_description="should raise InvalidArgumentValueError exception when namespace.domain has '_'",
-            namespace=Mock(domain="my_domain.com"),
-            expected_exception=InvalidArgumentValueError
-        ),
-        TestData(
-            test_description="should raise InvalidArgumentValueError exception when namespace.domain has is google..com",
-            namespace=Mock(domain="google..com"),
-            expected_exception=InvalidArgumentValueError
-        )
-    ]
-
-    for tc in testcases:
-        if tc.expected_exception is None:
-            validate_domain(tc.namespace)
-        else:
-            with pytest.raises(tc.expected_exception):
-                validate_domain(tc.namespace)
+test_validate_domain_data = [
+    ("should not raise any exception when namespace.domain is None", Mock(domain=None), None),
+    ("should not raise any exception when namespace.domain has '-'", Mock(domain="my-domain.com"), None),
+    ("should not raise any exception when namespace.domain is google.com.au", Mock(domain="google.com.au"), None),
+    ("should not raise any exception when namespace.domain is some.more.than.expected", Mock(domain="some.more.than.expected"), None),
+    ("should not raise any exception when namespace.domain is azure.microsoft.com", Mock(domain="azure.microsoft.com"), None),
+    ("should raise InvalidArgumentValueError exception when namespace.domain ends with '.'", Mock(domain="google."), InvalidArgumentValueError),
+    ("should raise InvalidArgumentValueError exception when namespace.domain has '_'", Mock(domain="my_domain.com"), InvalidArgumentValueError),
+    ("should raise InvalidArgumentValueError exception when namespace.domain has is google..com", Mock(domain="google..com"), InvalidArgumentValueError)
+]
 
 
-def test_validate_pull_secret():
-    class TestData():
-        def __init__(self, test_description: str = None, namespace: Mock = None, expected_exception: Exception = None) -> None:
-            self.test_description = test_description
-            self.namespace = namespace
-            self.expected_exception = expected_exception
-
-    testcases: List[TestData] = [
-        TestData(
-            test_description="should not raise any exception when namespace.pull_secret is None",
-            namespace=Mock(pull_secret=None)
-        ),
-        TestData(
-            test_description="should not raise any exception when namespace.pull_secret is a valid JSON",
-            namespace=Mock(pull_secret='{"key":"value"}')
-        ),
-        TestData(
-            test_description="should raise InvalidArgumentValueError exception when namespace.pull_secret is not a valid JSON beacuse is an empty string",
-            namespace=Mock(pull_secret=""),
-            expected_exception=InvalidArgumentValueError
-        ),
-        TestData(
-            test_description="should raise InvalidArgumentValueError exception when namespace.pull_secret is not a valid JSON because missing value",
-            namespace=Mock(pull_secret='{"key": }'),
-            expected_exception=InvalidArgumentValueError
-        ),
-        TestData(
-            test_description="should raise InvalidArgumentValueError exception when namespace.pull_secret is not a valid JSON because is a simple string",
-            namespace=Mock(pull_secret='a simple string'),
-            expected_exception=InvalidArgumentValueError
-        )
-    ]
-
-    for tc in testcases:
-        if tc.expected_exception is None:
-            validate_pull_secret(tc.namespace)
-        else:
-            with pytest.raises(tc.expected_exception):
-                validate_pull_secret(tc.namespace)
+@pytest.mark.parametrize("test_description, namespace, expected_exception", test_validate_domain_data, ids=[i[0] for i in test_validate_domain_data])
+def test_validate_domain(test_description, namespace, expected_exception):
+    if expected_exception is None:
+        validate_domain(namespace)
+    else:
+        with pytest.raises(expected_exception):
+            validate_domain(namespace)
 
 
-def test_validate_sdn():
-    class TestData():
-        def __init__(self, test_description: str = None, namespace: Mock = None, expected_exception: Exception = None) -> None:
-            self.test_description = test_description
-            self.namespace = namespace
-            self.expected_exception = expected_exception
+test_validate_pull_secret_data = [
+    ("should not raise any exception when namespace.pull_secret is None", Mock(pull_secret=None), None),
+    ("should not raise any exception when namespace.pull_secret is a valid JSON", Mock(pull_secret='{"key":"value"}'), None),
+    ("should raise InvalidArgumentValueError exception when namespace.pull_secret is not a valid JSON beacuse is an empty string", Mock(pull_secret=""), InvalidArgumentValueError),
+    ("should raise InvalidArgumentValueError exception when namespace.pull_secret is not a valid JSON because missing value", Mock(pull_secret='{"key": }'), InvalidArgumentValueError),
+    ("should raise InvalidArgumentValueError exception when namespace.pull_secret is not a valid JSON because is a simple string", Mock(pull_secret='a simple string'), InvalidArgumentValueError)
+]
 
-    testcases: List[TestData] = [
-        TestData(
-            test_description="should not raise any exception when namespace.software_defined_network is None",
-            namespace=Mock(software_defined_network=None)
-        ),
-        TestData(
-            test_description="should not raise any exception when namespace.software_defined_network is OVNKubernetes",
-            namespace=Mock(software_defined_network="OVNKubernetes")
-        ),
-        TestData(
-            test_description="should not raise any exception when namespace.software_defined_network is OpenshiftSDN",
-            namespace=Mock(software_defined_network="OpenshiftSDN")
-        ),
-        TestData(
-            test_description="should raise InvalidArgumentValueError exception when namespace.software_defined_network is 'uknown', not one of the target values",
-            namespace=Mock(software_defined_network="uknown"),
-            expected_exception=InvalidArgumentValueError
-        ),
-        TestData(
-            test_description="should raise InvalidArgumentValueError exception when namespace.software_defined_network is an empty string",
-            namespace=Mock(software_defined_network=""),
-            expected_exception=InvalidArgumentValueError
-        )
-    ]
 
-    for tc in testcases:
-        if tc.expected_exception is None:
-            validate_sdn(tc.namespace)
-        else:
-            with pytest.raises(tc.expected_exception):
-                validate_sdn(tc.namespace)
+@pytest.mark.parametrize("test_description, namespace, expected_exception", test_validate_pull_secret_data, ids=[i[0] for i in test_validate_pull_secret_data])
+def test_validate_pull_secret(test_description, namespace, expected_exception):
+    if expected_exception is None:
+        validate_pull_secret(namespace)
+    else:
+        with pytest.raises(expected_exception):
+            validate_pull_secret(namespace)
+
+
+test_validate_sdn_data = [
+    ("should not raise any exception when namespace.software_defined_network is None", Mock(software_defined_network=None), None),
+    ("should not raise any exception when namespace.software_defined_network is OVNKubernetes", Mock(software_defined_network="OVNKubernetes"), None),
+    ("should not raise any exception when namespace.software_defined_network is OpenshiftSDN", Mock(software_defined_network="OpenshiftSDN"), None),
+    ("should raise InvalidArgumentValueError exception when namespace.software_defined_network is 'uknown', not one of the target values", Mock(software_defined_network="uknown"), InvalidArgumentValueError),
+    ("should raise InvalidArgumentValueError exception when namespace.software_defined_network is an empty string", Mock(software_defined_network=""), InvalidArgumentValueError)
+]
+
+
+@pytest.mark.parametrize("test_description, namespace, expected_exception", test_validate_sdn_data, ids=[i[0] for i in test_validate_sdn_data])
+def test_validate_sdn(test_description, namespace, expected_exception):
+    if expected_exception is None:
+        validate_sdn(namespace)
+    else:
+        with pytest.raises(expected_exception):
+            validate_sdn(namespace)
 
 
 @patch('azext_aro._validators.get_mgmt_service_client')
@@ -386,7 +212,8 @@ def test_validate_subnet(is_valid_resource_id_mock, parse_resource_id_mock, get_
             namespace=Mock(key='192.168.0.0/28', vnet=False),
             key='key',
             is_valid_resource_id_mock_return_value=True,
-            parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "something.different"},
+            parse_resource_id_mock_return_value={
+                "subscription": "subscription", "namespace": "something.different"},
             get_subscription_id_mock_return_value="subscription",
             cmd=Mock(cli_ctx=None),
             expected_exception=InvalidArgumentValueError
@@ -396,7 +223,8 @@ def test_validate_subnet(is_valid_resource_id_mock, parse_resource_id_mock, get_
             namespace=Mock(key='192.168.0.0/28', vnet=False),
             key='key',
             is_valid_resource_id_mock_return_value=True,
-            parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "this_should_be_virtualnetworks"},
+            parse_resource_id_mock_return_value={
+                "subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "this_should_be_virtualnetworks"},
             get_subscription_id_mock_return_value="subscription",
             cmd=Mock(cli_ctx=None),
             expected_exception=InvalidArgumentValueError
@@ -406,7 +234,8 @@ def test_validate_subnet(is_valid_resource_id_mock, parse_resource_id_mock, get_
             namespace=Mock(key='192.168.0.0/28', vnet=False),
             key='key',
             is_valid_resource_id_mock_return_value=True,
-            parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "virtualnetworks", "last_child_num": 0},
+            parse_resource_id_mock_return_value={
+                "subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "virtualnetworks", "last_child_num": 0},
             get_subscription_id_mock_return_value="subscription",
             cmd=Mock(cli_ctx=None),
             expected_exception=InvalidArgumentValueError
@@ -416,7 +245,8 @@ def test_validate_subnet(is_valid_resource_id_mock, parse_resource_id_mock, get_
             namespace=Mock(key='192.168.0.0/28', vnet=False),
             key='key',
             is_valid_resource_id_mock_return_value=True,
-            parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "virtualnetworks", "last_child_num": 1, "child_namespace_1": "something"},
+            parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK",
+                                                 "type": "virtualnetworks", "last_child_num": 1, "child_namespace_1": "something"},
             get_subscription_id_mock_return_value="subscription",
             cmd=Mock(cli_ctx=None),
             expected_exception=InvalidArgumentValueError
@@ -426,7 +256,8 @@ def test_validate_subnet(is_valid_resource_id_mock, parse_resource_id_mock, get_
             namespace=Mock(key='192.168.0.0/28', vnet=False),
             key='key',
             is_valid_resource_id_mock_return_value=True,
-            parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "virtualnetworks", "last_child_num": 1, "child_type_1": "this_should_be_subnets"},
+            parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK",
+                                                 "type": "virtualnetworks", "last_child_num": 1, "child_type_1": "this_should_be_subnets"},
             get_subscription_id_mock_return_value="subscription",
             cmd=Mock(cli_ctx=None),
             expected_exception=InvalidArgumentValueError
@@ -436,9 +267,11 @@ def test_validate_subnet(is_valid_resource_id_mock, parse_resource_id_mock, get_
             namespace=Mock(key='192.168.0.0/28', vnet=False),
             key='key',
             is_valid_resource_id_mock_return_value=True,
-            parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "virtualnetworks", "last_child_num": 1, "child_type_1": "subnets"},
+            parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK",
+                                                 "type": "virtualnetworks", "last_child_num": 1, "child_type_1": "subnets"},
             get_subscription_id_mock_return_value="subscription",
-            get_mgmt_service_client_mock_return_value=Mock(**{"subnets.get.side_effect": Exception}),
+            get_mgmt_service_client_mock_return_value=Mock(
+                **{"subnets.get.side_effect": Exception}),
             cmd=Mock(cli_ctx=None),
             expected_exception=CLIInternalError
         ),
@@ -447,9 +280,11 @@ def test_validate_subnet(is_valid_resource_id_mock, parse_resource_id_mock, get_
             namespace=Mock(key='192.168.0.0/28', vnet=False),
             key='key',
             is_valid_resource_id_mock_return_value=True,
-            parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "virtualnetworks", "last_child_num": 1, "child_type_1": "subnets", "resource_group": None, "name": None, "child_name_1": None},
+            parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "virtualnetworks",
+                                                 "last_child_num": 1, "child_type_1": "subnets", "resource_group": None, "name": None, "child_name_1": None},
             get_subscription_id_mock_return_value="subscription",
-            get_mgmt_service_client_mock_return_value=Mock(**{"subnets.get.side_effect": ResourceNotFoundError("")}),
+            get_mgmt_service_client_mock_return_value=Mock(
+                **{"subnets.get.side_effect": ResourceNotFoundError("")}),
             cmd=Mock(cli_ctx=None),
             expected_exception=InvalidArgumentValueError
         ),
@@ -458,9 +293,11 @@ def test_validate_subnet(is_valid_resource_id_mock, parse_resource_id_mock, get_
             namespace=Mock(key='192.168.0.0/28', vnet=False),
             key='key',
             is_valid_resource_id_mock_return_value=True,
-            parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "virtualnetworks", "last_child_num": 1, "child_type_1": "subnets", "resource_group": None, "name": None, "child_name_1": None},
+            parse_resource_id_mock_return_value={"subscription": "subscription", "namespace": "MICROSOFT.NETWORK", "type": "virtualnetworks",
+                                                 "last_child_num": 1, "child_type_1": "subnets", "resource_group": None, "name": None, "child_name_1": None},
             get_subscription_id_mock_return_value="subscription",
-            get_mgmt_service_client_mock_return_value=Mock(**{"subnets.get.return_value": None}),
+            get_mgmt_service_client_mock_return_value=Mock(
+                **{"subnets.get.return_value": None}),
             cmd=Mock(cli_ctx=None)
         )
     ]
@@ -491,12 +328,14 @@ def test_validate_subnets(parse_resource_id_mock):
     testcases: List[TestData] = [
         TestData(
             test_description="should raise InvalidArgumentValueError exception when resource group of master_parts is different than resource_group of worker_parts",
-            parse_resource_id_mock=[{"resource_group": "a"}, {"resource_group": "b"}],
+            parse_resource_id_mock=[
+                {"resource_group": "a"}, {"resource_group": "b"}],
             expected_exception=InvalidArgumentValueError
         ),
         TestData(
             test_description="should raise InvalidArgumentValueError exception when name of master_parts is different than name of worker_parts",
-            parse_resource_id_mock=[{"resource_group": "equal", "name": "something"}, {"resource_group": "equal", "name": "different"}],
+            parse_resource_id_mock=[{"resource_group": "equal", "name": "something"}, {
+                "resource_group": "equal", "name": "different"}],
             expected_exception=InvalidArgumentValueError
         ),
         TestData(
@@ -584,12 +423,14 @@ def test_validate_vnet_resource_group_name():
     testcases: List[TestData] = [
         TestData(
             test_description="should not copy namespace.resource_group_name to namespace.vnet_resource_group_name because namespace.resource_group_name already has a value",
-            namespace=Mock(vnet_resource_group_name="hello", resource_group_name="this_will_not_be_copied"),
+            namespace=Mock(vnet_resource_group_name="hello",
+                           resource_group_name="this_will_not_be_copied"),
             expected_namespace_vnet_resource_group_name="hello"
         ),
         TestData(
             test_description="should copy resource_group_name field to vnet_resource_group_name because namespace.vnet_resource_group_name is None",
-            namespace=Mock(vnet_resource_group_name=None, resource_group_name="will_copy_this"),
+            namespace=Mock(vnet_resource_group_name=None,
+                           resource_group_name="will_copy_this"),
             expected_namespace_vnet_resource_group_name="will_copy_this"
         )
     ]
@@ -597,7 +438,8 @@ def test_validate_vnet_resource_group_name():
     for tc in testcases:
         validate_vnet_resource_group_name(tc.namespace)
 
-        assert(tc.namespace.vnet_resource_group_name == tc.expected_namespace_vnet_resource_group_name)
+        assert(tc.namespace.vnet_resource_group_name ==
+               tc.expected_namespace_vnet_resource_group_name)
 
 
 def test_validate_worker_count():
