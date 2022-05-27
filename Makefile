@@ -176,11 +176,11 @@ test-python: pyenv az
 		azdev linter && \
 		azdev style && \
 		hack/format-yaml/format-yaml.py .pipelines && \
-		cd python/az/aro && python -m unittest discover azext_aro/tests/latest/unit
+		hack/unit-test-python.sh
 
-unit-test-python: pyenv az
-	. pyenv/bin/activate && \
-		cd python/az/aro && python -m unittest discover azext_aro/tests/latest/unit
+
+unit-test-python:
+	hack/unit-test-python.sh
 
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
