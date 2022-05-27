@@ -133,7 +133,6 @@ systemctl enable proxy.service
 							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
 								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
 							},
-							DiskSizeGB: to.Int32Ptr(200),
 						},
 					},
 					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
@@ -447,6 +446,7 @@ rm cron
 							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
 								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
 							},
+							DiskSizeGB: to.Int32Ptr(200),
 						},
 					},
 					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
