@@ -15,53 +15,23 @@ from azure.core.exceptions import ResourceNotFoundError
 
 import pytest
 
+test_validate_cidr_data = [
+    ("should not raise exception when valid IPv4 address", Mock(key='192.168.0.0/28'), "key", None),
+    ("should raise InvalidArgumentValueError when non valid IPv4 address due to beeing a simple string", Mock(key='this is an invalid network'), "key", InvalidArgumentValueError),
+    ("should raise InvalidArgumentValueError when non valid IPv4 address due to invalid network ID", Mock(key='192.168.0.0.0.0/28'), "key", InvalidArgumentValueError),
+    ("should raise InvalidArgumentValueError when non valid IPv4 address due to invalid hostID", Mock(key='192.168.0.0.0.0/2888'), "key", InvalidArgumentValueError),
+    ("should not raise exception when IPv4 address is None", Mock(key=None), "key", None)
+]
 
-def test_validate_cidr():
-    class TestData():
-        def __init__(self, test_description: str = None, dummyclass: Mock = None, attribute_to_get_from_object: str = None, expected_exception: Exception = None) -> None:
-            self.test_description = test_description
-            self.dummyclass = dummyclass
-            self.attribute_to_get_from_object = attribute_to_get_from_object
-            self.expected_exception = expected_exception
 
-    testcases: List[TestData] = [
-        TestData(
-            test_description="should not raise exception when valid IPv4 address",
-            dummyclass=Mock(key='192.168.0.0/28'),
-            attribute_to_get_from_object='key',
-        ),
-        TestData(
-            test_description="should raise InvalidArgumentValueError when non valid IPv4 address due to beeing a simple string",
-            dummyclass=Mock(key='this is an invalid network'),
-            attribute_to_get_from_object='key',
-            expected_exception=InvalidArgumentValueError
-        ),
-        TestData(
-            test_description="should raise InvalidArgumentValueError when non valid IPv4 address due to invalid network ID",
-            dummyclass=Mock(key='192.168.0.0.0.0/28'),
-            attribute_to_get_from_object='key',
-            expected_exception=InvalidArgumentValueError
-        ),
-        TestData(
-            test_description="should raise InvalidArgumentValueError when non valid IPv4 address due to invalid hostID",
-            dummyclass=Mock(key='192.168.0.0.0.0/2888'),
-            attribute_to_get_from_object='key',
-            expected_exception=InvalidArgumentValueError
-        ),
-        TestData(
-            test_description="should not raise exception when IPv4 address is None ",
-            dummyclass=Mock(key=None),
-            attribute_to_get_from_object='key'
-        )
-    ]
-
-    for tc in testcases:
-        validate_cidr_fn = validate_cidr(tc.attribute_to_get_from_object)
-        if tc.expected_exception is None:
-            validate_cidr_fn(tc.dummyclass)
-        else:
-            with pytest.raises(tc.expected_exception):
-                validate_cidr_fn(tc.dummyclass)
+@pytest.mark.parametrize("test_description, dummyclass, attribute_to_get_from_object, expected_exception", test_validate_cidr_data, ids=[i[0] for i in test_validate_cidr_data])
+def test_validate_cidr(test_description, dummyclass, attribute_to_get_from_object, expected_exception):
+    validate_cidr_fn = validate_cidr(attribute_to_get_from_object)
+    if expected_exception is None:
+        validate_cidr_fn(dummyclass)
+    else:
+        with pytest.raises(expected_exception):
+            validate_cidr_fn(dummyclass)
 
 
 def test_validate_client_id():
