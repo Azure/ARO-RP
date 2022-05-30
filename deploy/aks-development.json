@@ -237,6 +237,29 @@
             }
         },
         {
+          "comments": "User-Defined Managed Identity defined for the AKS cluster. Used to access the Virtual Network and other resources.",
+          "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+          "apiVersion": "2018-11-30",
+          "name": "[variables('aksClusterUserDefinedManagedIdentityName')]",
+          "location": "[resourceGroup().location]"
+        },
+        {
+          "type": "Microsoft.Authorization/roleAssignments",
+          "apiVersion": "2020-04-01-preview",
+          "name": "[variables('aksContributorRoleAssignmentName')]",
+          "dependsOn": [
+            "[variables('aksClusterUserDefinedManagedIdentityId')]",
+            "[variables('virtualNetworkId')]"
+          ],
+          "properties": {
+            "roleDefinitionId": "[variables('contributorRoleId')]",
+            "description": "Assign the cluster user-defined managed identity contributor role on the resource group.",
+            "principalId": "[reference(variables('aksClusterUserDefinedManagedIdentityName')).principalId]",
+            "principalType": "ServicePrincipal",
+            "scope": "[resourceGroup().id]"
+          }
+        },
+        {
             "apiVersion": "2022-03-01",
             "type": "Microsoft.ContainerService/managedClusters",
             "location": "[resourceGroup().location]",
@@ -245,7 +268,10 @@
                 "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
             ],
             "identity": {
-                "type": "SystemAssigned"
+              "type": "UserAssigned",
+              "userAssignedIdentities": {
+                "[variables('aksClusterUserDefinedManagedIdentityId')]": {}
+              }
             },
             "properties": {
                 "nodeResourceGroup" : "[concat(resourceGroup().name, '-aks')]",
