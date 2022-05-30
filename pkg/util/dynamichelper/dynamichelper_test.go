@@ -12,7 +12,6 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
-
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
