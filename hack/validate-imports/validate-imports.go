@@ -140,12 +140,6 @@ func acceptableNames(path string) []string {
 		return []string{"openapi_v2"}
 	case "github.com/openshift/console-operator/pkg/api":
 		return []string{"consoleapi"}
-	case "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1":
-		return []string{"machinev1beta1"}
-	case "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned":
-		return []string{"maoclient"}
-	case "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake":
-		return []string{"maofake"}
 	case "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1":
 		return []string{"mcv1"}
 	case "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned":

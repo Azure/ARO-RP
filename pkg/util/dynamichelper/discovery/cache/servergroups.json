@@ -86,10 +86,14 @@
         {
             "name": "autoscaling",
             "preferredVersion": {
-                "groupVersion": "autoscaling/v1",
-                "version": "v1"
+                "groupVersion": "autoscaling/v2",
+                "version": "v2"
             },
             "versions": [
+                {
+                    "groupVersion": "autoscaling/v2",
+                    "version": "v2"
+                },
                 {
                     "groupVersion": "autoscaling/v1",
                     "version": "v1"
@@ -283,10 +287,14 @@
         {
             "name": "flowcontrol.apiserver.k8s.io",
             "preferredVersion": {
-                "groupVersion": "flowcontrol.apiserver.k8s.io/v1beta1",
-                "version": "v1beta1"
+                "groupVersion": "flowcontrol.apiserver.k8s.io/v1beta2",
+                "version": "v1beta2"
             },
             "versions": [
+                {
+                    "groupVersion": "flowcontrol.apiserver.k8s.io/v1beta2",
+                    "version": "v1beta2"
+                },
                 {
                     "groupVersion": "flowcontrol.apiserver.k8s.io/v1beta1",
                     "version": "v1beta1"
@@ -506,6 +514,19 @@
                 {
                     "groupVersion": "autoscaling.openshift.io/v1beta1",
                     "version": "v1beta1"
+                }
+            ]
+        },
+        {
+            "name": "cloud.network.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "cloud.network.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "cloud.network.openshift.io/v1",
+                    "version": "v1"
                 }
             ]
         },

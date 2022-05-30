@@ -94,7 +94,7 @@ func (c *FakeConfigs) UpdateStatus(ctx context.Context, config *imageregistryv1.
 // Delete takes name of the config and deletes it. Returns an error if one occurs.
 func (c *FakeConfigs) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(configsResource, name), &imageregistryv1.Config{})
+		Invokes(testing.NewRootDeleteActionWithOptions(configsResource, name, opts), &imageregistryv1.Config{})
 	return err
 }
 

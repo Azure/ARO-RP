@@ -14,10 +14,10 @@ spec:
     - key: machine.openshift.io/cluster-api-machineset
       operator: Exists
   unhealthyConditions:
-  - type:    "Ready"
-    timeout: "300s" 
+  - type: "Ready"
+    timeout: "300s"
     status: "False"
-  - type:    "Ready"
-    timeout: "300s" 
+  - type: "Ready"
+    timeout: "300s"
     status: "Unknown"
   maxUnhealthy: "1"

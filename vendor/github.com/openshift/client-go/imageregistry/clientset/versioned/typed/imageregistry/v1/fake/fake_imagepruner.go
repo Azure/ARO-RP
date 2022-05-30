@@ -94,7 +94,7 @@ func (c *FakeImagePruners) UpdateStatus(ctx context.Context, imagePruner *imager
 // Delete takes name of the imagePruner and deletes it. Returns an error if one occurs.
 func (c *FakeImagePruners) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(imageprunersResource, name), &imageregistryv1.ImagePruner{})
+		Invokes(testing.NewRootDeleteActionWithOptions(imageprunersResource, name, opts), &imageregistryv1.ImagePruner{})
 	return err
 }
 

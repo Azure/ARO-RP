@@ -24,4 +24,3 @@ jobs:
       purgeCreatedTag: $(purgeCreatedTag)
       resourceGroupDeletePrefixes: $(resourceGroupDeletePrefixes)
       purgeTTL: $(purgeTTL)
-
