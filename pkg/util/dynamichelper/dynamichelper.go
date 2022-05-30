@@ -39,7 +39,7 @@ type dynamicHelper struct {
 	GVRResolver
 
 	log     *logrus.Entry
-	restcli *rest.RESTClient
+	restcli rest.Interface
 	delete  func(context.Context, *schema.GroupVersionResource, string, string) error
 }
 

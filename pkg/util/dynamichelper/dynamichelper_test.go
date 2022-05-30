@@ -10,9 +10,11 @@ import (
 	"testing"
 	"time"
 
-	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 
+	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	extensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -23,34 +25,35 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 )
 
 func TestEsureDeleted(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range []struct {
-		uname     string
-		grpkind   string
-		namespace string
-		name      string
-		wantErr   error
-		grpvr     *schema.GroupVersionResource
+		uname         string
+		grpkind       string
+		namespace     string
+		name          string
+		wantSomething error
+		gvr           *schema.GroupVersionResource
 	}{
 		{
-			uname:     "Test EnsureDeleted 1",
-			grpkind:   "configmap",
-			namespace: "test-namespace-1",
-			name:      "test-name-1",
-			wantErr:   errors.New("this is a new error"),
-			grpvr:     &schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"},
+			uname:         "Test with the groupkind configmap",
+			grpkind:       "configmap",
+			namespace:     "test-namespace-1",
+			name:          "test-name-1",
+			wantSomething: errors.New("this is a new error"),
+			gvr:           &schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"},
 		},
 		{
-			uname:     "Test EnsureDeleted 2",
-			grpkind:   "configmap",
-			namespace: "test-namespace-2",
-			name:      "test-name-2",
-			wantErr:   errors.New("This is another error"),
-			grpvr:     &schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"},
+			uname:         "Test with the groupkind ",
+			grpkind:       "baremetalhost.metal3.io",
+			namespace:     "test-namespace-2",
+			name:          "test-name-2",
+			wantSomething: errors.New("This is another error"),
+			gvr:           &schema.GroupVersionResource{Group: "metal3.io", Version: "v1alpha1", Resource: "baremetalhosts"},
 		},
 	} {
 		t.Run(tt.uname, func(t *testing.T) {
@@ -60,8 +63,8 @@ func TestEsureDeleted(t *testing.T) {
 			mockCore := mock_dynamichelper.NewMockGVRResolver(mockController)
 			mockCore.
 				EXPECT().
-				Resolve("configmap", "").
-				Return(nil, tt.wantErr).
+				Resolve(tt.grpkind, "").
+				Return(nil, tt.wantSomething).
 				AnyTimes()
 
 			dh := &dynamicHelper{GVRResolver: mockCore, delete: func(context.Context, *schema.GroupVersionResource, string, string) error {
@@ -70,7 +73,7 @@ func TestEsureDeleted(t *testing.T) {
 
 			err := dh.EnsureDeleted(ctx, tt.grpkind, tt.namespace, tt.name)
 
-			if !reflect.DeepEqual(err, tt.wantErr) {
+			if !reflect.DeepEqual(err, tt.wantSomething) {
 				t.Error(err)
 			}
 
@@ -78,17 +81,17 @@ func TestEsureDeleted(t *testing.T) {
 				return nil
 			}}
 
-			err = dh_2.delete(ctx, tt.grpvr, tt.namespace, tt.name)
+			err = dh_2.delete(ctx, tt.gvr, tt.namespace, tt.name)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			dh_3 := &dynamicHelper{GVRResolver: mockCore, delete: func(context.Context, *schema.GroupVersionResource, string, string) error {
-				return (tt.wantErr)
+				return (tt.wantSomething)
 			}}
 
-			err = dh_3.delete(ctx, tt.grpvr, tt.namespace, tt.name)
-			if !reflect.DeepEqual(err, tt.wantErr) {
+			err = dh_3.delete(ctx, tt.gvr, tt.namespace, tt.name)
+			if !reflect.DeepEqual(err, tt.wantSomething) {
 				t.Error(err)
 			}
 		})
