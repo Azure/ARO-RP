@@ -15,6 +15,13 @@
                 "description": "The name of the AKS Managed Cluster resource."
             }
         },
+        "aksClusterUserDefinedManagedIdentityName": {
+            "type": "string",
+            "defaultValue": "[concat(parameters('aksClusterName'), '-msi')]",
+            "metadata": {
+                "description": "User-Defined Managed Identity defined for the AKS cluster. Used to access the Virtual Network and other resources."
+            }
+        },
         "keyvaultPrefix": {
             "type": "string",
             "defaultValue": "[take(resourceGroup().name, 20)]",
@@ -167,6 +174,9 @@
     },
     "variables": {
         "vnetSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('vnetSubnetName'))]",
+        "contributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+        "aksClusterUserDefinedManagedIdentityId": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('aksClusterUserDefinedManagedIdentityName'))]",
+        "aksContributorRoleAssignmentName": "[guid(variables('aksClusterUserDefinedManagedIdentityId'), variables('contributorRoleId'), resourceGroup().id)]",
         "networkContributorRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '4d97b98b-1d4f-4787-a291-c67834d212e7')]"
     },
     "resources": [
@@ -225,6 +235,78 @@
             }
         },
         {
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "name": "[concat(parameters('vnetName'), '/peering-rp-pe-vnet-001')]",
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+            ],
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "name": "[concat('rp-pe-vnet-001/peering-', parameters('vnetName'))]",
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+            ],
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "name": "[concat(parameters('vnetName'), '/peering-rp-vnet')]",
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+            ],
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "name": "[concat('rp-vnet/peering-', parameters('vnetName'))]",
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+            ],
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+                }
+            }
+        },
+        {
             "name": "aks-vpn-pip",
             "type": "Microsoft.Network/publicIPAddresses",
             "location": "[resourceGroup().location]",
@@ -237,10 +319,9 @@
             }
         },
         {
-            "comments": "User-Defined Managed Identity defined for the AKS cluster. Used to access the Virtual Network and other resources.",
             "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
             "apiVersion": "2018-11-30",
-            "name": "[variables('aksClusterUserDefinedManagedIdentityName')]",
+            "name": "[parameters('aksClusterUserDefinedManagedIdentityName')]",
             "location": "[resourceGroup().location]"
         },
         {
@@ -249,12 +330,12 @@
             "name": "[variables('aksContributorRoleAssignmentName')]",
             "dependsOn": [
                 "[variables('aksClusterUserDefinedManagedIdentityId')]",
-                "[variables('virtualNetworkId')]"
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
             ],
             "properties": {
                 "roleDefinitionId": "[variables('contributorRoleId')]",
                 "description": "Assign the cluster user-defined managed identity contributor role on the resource group.",
-                "principalId": "[reference(variables('aksClusterUserDefinedManagedIdentityName')).principalId]",
+                "principalId": "[reference(parameters('aksClusterUserDefinedManagedIdentityName')).principalId]",
                 "principalType": "ServicePrincipal",
                 "scope": "[resourceGroup().id]"
             }
@@ -332,41 +413,53 @@
             }
         },
         {
-            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-            "name": "[concat(parameters('vnetName'), '/peering-rp-pe-vnet-001')]",
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2019-09-01",
+            "type": "Microsoft.KeyVault/vaults",
+            "name": "[concat(parameters('keyvaultPrefix'), '-aks')]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]",
+                "[variables('aksClusterUserDefinedManagedIdentityId')]",
                 "[parameters('aksClusterName')]"
             ],
             "properties": {
-                "allowVirtualNetworkAccess": true,
-                "allowForwardedTraffic": true,
-                "allowGatewayTransit": false,
-                "useRemoteGateways": false,
-                "remoteVirtualNetwork": {
-                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]"
-                }
-            }
-        },
-        {
-            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-            "name": "[concat('rp-pe-vnet-001/peering-', parameters('vnetName'))]",
-            "apiVersion": "2020-08-01",
-            "location": "[resourceGroup().location]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]",
-                "[parameters('aksClusterName')]"
-            ],
-            "properties": {
-                "allowVirtualNetworkAccess": true,
-                "allowForwardedTraffic": true,
-                "allowGatewayTransit": false,
-                "useRemoteGateways": false,
-                "remoteVirtualNetwork": {
-                    "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
-                }
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": [
+                    {
+                        "tenantId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('aksClusterUserDefinedManagedIdentityName'))).tenantId]",
+                        "objectId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('aksClusterUserDefinedManagedIdentityName'))).principalId]",
+                        "permissions": {
+                            "secrets": [
+                                "get",
+                                "list"
+                            ],
+                            "certificates": [
+                                "get"
+                            ]
+                        }
+                    },
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[parameters('adminObjectId')]",
+                        "permissions": {
+                            "secrets": [
+                                "get",
+                                "set",
+                                "list"
+                            ],
+                            "certificates": [
+                                "delete",
+                                "get",
+                                "import",
+                                "list"
+                            ]
+                        }
+                    }
+                ],
+                "enableSoftDelete": true
             }
         },
         {
