@@ -34,7 +34,7 @@ const (
 	controllerEnabled                = "rh.srep.muo.enabled"
 	controllerManaged                = "rh.srep.muo.managed"
 	controllerPullSpec               = "rh.srep.muo.deploy.pullspec"
-	controllerAllowOCM               = "rh.srep.muo.deploy.allowOCM"
+	controllerForceLocalOnly         = "rh.srep.muo.deploy.forceLocalOnly"
 	controllerOcmBaseURL             = "rh.srep.muo.deploy.ocmBaseUrl"
 	controllerOcmBaseURLDefaultValue = "https://api.openshift.com"
 
@@ -96,8 +96,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			Pullspec: pullSpec,
 		}
 
-		allowOCM := instance.Spec.OperatorFlags.GetSimpleBoolean(controllerAllowOCM)
-		if allowOCM {
+		disableOCM := instance.Spec.OperatorFlags.GetSimpleBoolean(controllerForceLocalOnly)
+		if !disableOCM {
 			useOCM := func() bool {
 				var userSecret *corev1.Secret
 
