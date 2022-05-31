@@ -156,30 +156,24 @@ func (m *manager) deployStorageTemplate(ctx context.Context) error {
 	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
 }
 
-func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.InstallConfig, image *releaseimage.Image) error {
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
-	infraID := m.doc.OpenShiftCluster.Properties.InfraID
-
-	exists, err := m.graph.Exists(ctx, resourceGroup, clusterStorageAccountName)
-	if err != nil || exists {
-		return err
-	}
-
+// applyInstallConfigCustomisations modifies the InstallConfig and creates
+// parent assets, then regenerates the InstallConfig for use for Ignition
+// generation, etc.
+func (m *manager) applyInstallConfigCustomisations(ctx context.Context, installConfig *installconfig.InstallConfig, image *releaseimage.Image) (graph.Graph, error) {
 	clusterID := &installconfig.ClusterID{
 		UUID:    m.doc.ID,
-		InfraID: infraID,
+		InfraID: m.doc.OpenShiftCluster.Properties.InfraID,
 	}
 
 	bootstrapLoggingConfig, err := bootstraplogging.GetConfig(m.env, m.doc)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	httpSecret := make([]byte, 64)
 	_, err = rand.Read(httpSecret)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	imageRegistryConfig := &bootkube.AROImageRegistryConfig{
@@ -205,7 +199,7 @@ func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.
 	for _, a := range targets.Cluster {
 		err = g.Resolve(a)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -213,8 +207,20 @@ func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.MTUSize == api.MTU3900 {
 		m.log.Printf("applying feature flag %s", api.FeatureFlagMTU3900)
 		if err = m.overrideEthernetMTU(g); err != nil {
-			return err
+			return nil, err
 		}
+	}
+
+	return g, nil
+}
+
+func (m *manager) persistGraph(ctx context.Context, g graph.Graph) error {
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+
+	exists, err := m.graph.Exists(ctx, resourceGroup, clusterStorageAccountName)
+	if err != nil || exists {
+		return err
 	}
 
 	// the graph is quite big, so we store it in a storage account instead of in cosmosdb
