@@ -7,9 +7,9 @@ import (
 	"context"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +42,7 @@ type Reconciler struct {
 
 	arocli           aroclient.Interface
 	kubernetescli    kubernetes.Interface
-	maocli           maoclient.Interface
+	maocli           machineclient.Interface
 	imageregistrycli imageregistryclient.Interface
 }
 
@@ -59,7 +59,7 @@ type reconcileManager struct {
 }
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, maocli maoclient.Interface, kubernetescli kubernetes.Interface, imageregistrycli imageregistryclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, maocli machineclient.Interface, kubernetescli kubernetes.Interface, imageregistrycli imageregistryclient.Interface) *Reconciler {
 	return &Reconciler{
 		log:              log,
 		arocli:           arocli,

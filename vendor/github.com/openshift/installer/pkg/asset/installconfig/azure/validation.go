@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	aznetwork "github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/network/mgmt/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/openshift/installer/pkg/types"
@@ -41,6 +43,13 @@ func Validate(client API, ic *types.InstallConfig) error {
 	allErrs = append(allErrs, validateNetworks(client, ic.Azure, ic.Networking.MachineNetwork, field.NewPath("platform").Child("azure"))...)
 	allErrs = append(allErrs, validateRegion(client, field.NewPath("platform").Child("azure").Child("region"), ic.Azure)...)
 	allErrs = append(allErrs, validateInstanceTypes(client, ic)...)
+	if ic.Azure.CloudName == aztypes.StackCloud && ic.Azure.ClusterOSImage != "" {
+		StorageEndpointSuffix, err := client.GetStorageEndpointSuffix(context.TODO())
+		if err != nil {
+			return err
+		}
+		allErrs = append(allErrs, validateAzureStackClusterOSImage(StorageEndpointSuffix, ic.Azure.ClusterOSImage, field.NewPath("platform").Child("azure"))...)
+	}
 	return allErrs.ToAggregate()
 }
 
@@ -60,14 +69,24 @@ func ValidateInstanceType(client API, fieldPath *field.Path, region, instanceTyp
 
 	for _, capability := range *typeMeta.Capabilities {
 
-		if strings.EqualFold(*capability.Name, "vCPUs") {
+		if strings.EqualFold(*capability.Name, "vCPUsAvailable") {
 			cpus, err := strconv.ParseFloat(*capability.Value, 0)
 			if err != nil {
 				return append(allErrs, field.InternalError(fieldPath, err))
 			}
 			if cpus < float64(req.minimumVCpus) {
-				errMsg := fmt.Sprintf("instance type does not meet minimum resource requirements of %d vCPUs", req.minimumVCpus)
+				errMsg := fmt.Sprintf("instance type does not meet minimum resource requirements of %d vCPUsAvailable", req.minimumVCpus)
 				allErrs = append(allErrs, field.Invalid(fieldPath.Child("type"), instanceType, errMsg))
+			}
+		} else if strings.EqualFold(*capability.Name, "HyperVGenerations") {
+			generations := sets.NewString()
+			for _, g := range strings.Split(to.String(capability.Value), ",") {
+				g = strings.TrimSpace(g)
+				g = strings.ToUpper(g)
+				generations.Insert(g)
+			}
+			if !generations.Has("V1") {
+				allErrs = append(allErrs, field.Invalid(fieldPath.Child("type"), instanceType, "only disks with HyperVGeneration V1 are supported"))
 			}
 		} else if strings.EqualFold(*capability.Name, "MemoryGB") {
 			memory, err := strconv.ParseFloat(*capability.Value, 0)
@@ -274,6 +293,9 @@ func ValidatePublicDNS(ic *types.InstallConfig, azureDNS *DNSConfig) error {
 func ValidateForProvisioning(client API, ic *types.InstallConfig) error {
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, validateResourceGroup(client, field.NewPath("platform").Child("azure"), ic.Azure)...)
+	if ic.Azure.CloudName == aztypes.StackCloud {
+		allErrs = append(allErrs, checkAzureStackClusterOSImageSet(ic.Azure.ClusterOSImage, field.NewPath("platform").Child("azure"))...)
+	}
 	return allErrs.ToAggregate()
 }
 
@@ -319,6 +341,27 @@ func validateResourceGroup(client API, fieldPath *field.Path, platform *aztypes.
 			}
 			allErrs = append(allErrs, field.Invalid(fieldPath.Child("resourceGroupName"), platform.ResourceGroupName, fmt.Sprintf("resource group must be empty but it has %d resources like %s ...", l, strings.Join(ids, ", "))))
 		}
+	}
+	return allErrs
+}
+
+func checkAzureStackClusterOSImageSet(ClusterOSImage string, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+	if ClusterOSImage == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("clusterOSImage"), "clusterOSImage must be set when installing on Azure Stack"))
+	}
+	return allErrs
+}
+
+func validateAzureStackClusterOSImage(StorageEndpointSuffix string, ClusterOSImage string, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+	imageParsedURL, err := url.Parse(ClusterOSImage)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("clusterOSImage"), ClusterOSImage, fmt.Errorf("clusterOSImage URL is invalid: %w", err).Error()))
+	}
+	// If the URL for the image isn't in the Azure Stack environment we can't use it.
+	if !strings.HasSuffix(imageParsedURL.Host, StorageEndpointSuffix) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("clusterOSImage"), ClusterOSImage, "clusterOSImage must be in the Azure Stack environment"))
 	}
 	return allErrs
 }

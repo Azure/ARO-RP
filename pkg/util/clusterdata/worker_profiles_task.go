@@ -9,12 +9,12 @@ import (
 	"sort"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
@@ -25,7 +25,7 @@ const (
 )
 
 func newWorkerProfilesEnricherTask(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster) (enricherTask, error) {
-	maocli, err := maoclient.NewForConfig(restConfig)
+	maocli, err := machineclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func newWorkerProfilesEnricherTask(log *logrus.Entry, restConfig *rest.Config, o
 
 type workerProfilesEnricherTask struct {
 	log    *logrus.Entry
-	maocli maoclient.Interface
+	maocli machineclient.Interface
 	oc     *api.OpenShiftCluster
 }
 
@@ -81,7 +81,7 @@ func (ef *workerProfilesEnricherTask) FetchData(ctx context.Context, callbacks c
 			continue
 		}
 
-		machineProviderSpec, ok := o.(*azureproviderv1beta1.AzureMachineProviderSpec)
+		machineProviderSpec, ok := o.(*machinev1beta1.AzureMachineProviderSpec)
 		if !ok {
 			// This should never happen: codecs uses scheme that has only one registered type
 			// and if something is wrong with the provider spec - decoding should fail

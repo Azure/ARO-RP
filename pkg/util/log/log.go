@@ -38,6 +38,14 @@ var (
 	RXTolerantSubResourceID = regexp.MustCompile(`(?i)^(?:/admin)?/subscriptions/([^/]+)(?:/resourceGroups/([^/]+)(?:/providers/([^/]+)/([^/]+)/([^/]+)(?:/([^/]+))?)?)?`)
 )
 
+type ResultType string
+
+const (
+	SuccessResultType     ResultType = "Success"
+	UserErrorResultType   ResultType = "UserError"
+	ServerErrorResultType ResultType = "InternalServerError"
+)
+
 func getBaseLogger() *logrus.Logger {
 	logger := logrus.New()
 

@@ -48,6 +48,13 @@ type IBMCloudMachineProviderSpec struct {
 	// Example: bx2-8x32 (8 vCPUs, 32 GB RAM)
 	Profile string `json:"profile"`
 
+	// A DedicatedHost is the name of the underlying provisioned host in your VPC on which the instance/s
+	// will be created with the defined Profile.
+	// A dedicated host provides a single tenancy ensuring only your Compute/VSI's are provisioned on it.
+	// Instances provisioned on a dedicated host adds another layer of protection while minimizing latency
+	// and maximizing performance between the instances provisioned on a single host.
+	DedicatedHost string `json:"dedicatedHost,omitempty"`
+
 	// Region of the virtual machine
 	Region string `json:"region"`
 

@@ -5,7 +5,7 @@ upstream OCP.
 
 ## Installer carry patches
 
-See https://github.com/openshift/installer/compare/release-4.9...jewzaam:release-4.9-azure.
+See https://github.com/openshift/installer/compare/release-4.10...jewzaam:release-4.10-azure.
 
 ## Installation differences
 

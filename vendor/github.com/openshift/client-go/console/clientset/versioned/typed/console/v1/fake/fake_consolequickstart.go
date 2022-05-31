@@ -83,7 +83,7 @@ func (c *FakeConsoleQuickStarts) Update(ctx context.Context, consoleQuickStart *
 // Delete takes name of the consoleQuickStart and deletes it. Returns an error if one occurs.
 func (c *FakeConsoleQuickStarts) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(consolequickstartsResource, name), &consolev1.ConsoleQuickStart{})
+		Invokes(testing.NewRootDeleteActionWithOptions(consolequickstartsResource, name, opts), &consolev1.ConsoleQuickStart{})
 	return err
 }
 
