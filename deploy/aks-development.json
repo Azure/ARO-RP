@@ -15,16 +15,9 @@
                 "description": "The name of the AKS Managed Cluster resource."
             }
         },
-        "aksClusterUserDefinedManagedIdentityName": {
-            "type": "string",
-            "defaultValue": "[concat(parameters('aksClusterName'), '-msi')]",
-            "metadata": {
-                "description": "User-Defined Managed Identity defined for the AKS cluster. Used to access the Virtual Network and other resources."
-            }
-        },
         "keyvaultPrefix": {
             "type": "string",
-            "defaultValue": "[take(resourceGroup().name, 20)]",
+            "defaultValue": "[concat(take(resourceGroup().name, 16), '-dev')]",
             "maxLength": 20
         },
         "dnsPrefix": {
@@ -37,7 +30,7 @@
         "agentCount": {
             "defaultValue": 3,
             "minValue": 1,
-            "maxValue": 100,
+            "maxValue": 20,
             "type": "int",
             "metadata": {
                 "description": "The number of agent nodes for the cluster. Production workloads have a recommended minimum of 3."
@@ -175,7 +168,8 @@
     "variables": {
         "vnetSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('vnetSubnetName'))]",
         "contributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
-        "aksClusterUserDefinedManagedIdentityId": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('aksClusterUserDefinedManagedIdentityName'))]",
+        "aksClusterUserDefinedManagedIdentityName": "[concat(parameters('aksClusterName'), '-msi')]",
+        "aksClusterUserDefinedManagedIdentityId": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('aksClusterUserDefinedManagedIdentityName'))]",
         "aksContributorRoleAssignmentName": "[guid(variables('aksClusterUserDefinedManagedIdentityId'), variables('contributorRoleId'), resourceGroup().id)]",
         "networkContributorRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '4d97b98b-1d4f-4787-a291-c67834d212e7')]"
     },
@@ -321,7 +315,7 @@
         {
             "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
             "apiVersion": "2018-11-30",
-            "name": "[parameters('aksClusterUserDefinedManagedIdentityName')]",
+            "name": "[variables('aksClusterUserDefinedManagedIdentityName')]",
             "location": "[resourceGroup().location]"
         },
         {
@@ -335,7 +329,7 @@
             "properties": {
                 "roleDefinitionId": "[variables('contributorRoleId')]",
                 "description": "Assign the cluster user-defined managed identity contributor role on the resource group.",
-                "principalId": "[reference(parameters('aksClusterUserDefinedManagedIdentityName')).principalId]",
+                "principalId": "[reference(variables('aksClusterUserDefinedManagedIdentityName')).principalId]",
                 "principalType": "ServicePrincipal",
                 "scope": "[resourceGroup().id]"
             }
@@ -429,8 +423,8 @@
                 },
                 "accessPolicies": [
                     {
-                        "tenantId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('aksClusterUserDefinedManagedIdentityName'))).tenantId]",
-                        "objectId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('aksClusterUserDefinedManagedIdentityName'))).principalId]",
+                        "tenantId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('aksClusterUserDefinedManagedIdentityName'))).tenantId]",
+                        "objectId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('aksClusterUserDefinedManagedIdentityName'))).principalId]",
                         "permissions": {
                             "secrets": [
                                 "get",
