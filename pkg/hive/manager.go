@@ -25,6 +25,7 @@ type ClusterManager interface {
 	// Something similar to this: https://github.com/Azure/ARO-RP/pull/2145#discussion_r897915283
 	// TODO: Replace Register with CreateOrUpdate and remove the comment above
 	Register(ctx context.Context, workloadCluster *WorkloadCluster) (*hivev1.ClusterDeployment, error)
+	Delete(ctx context.Context, namespace string) error
 	IsConnected(ctx context.Context, namespace string) (bool, string, error)
 }
 
@@ -94,6 +95,11 @@ func (hr *clusterManager) Register(ctx context.Context, workloadCluster *Workloa
 
 	cds := ClusterDeployment(namespace, workloadCluster.ClusterName, workloadCluster.ClusterID, workloadCluster.InfraID, workloadCluster.Location)
 	return hr.hiveClientset.HiveV1().ClusterDeployments(namespace).Create(ctx, cds, metav1.CreateOptions{})
+}
+
+func (hr *clusterManager) Delete(ctx context.Context, namespace string) error {
+	// Just deleting the namespace for now
+	return hr.kubernetescli.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
 }
 
 func (hr *clusterManager) IsConnected(ctx context.Context, namespace string) (bool, string, error) {

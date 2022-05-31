@@ -465,5 +465,12 @@ func (m *manager) Delete(ctx context.Context) error {
 		}
 	}
 
+	// Don't fail the deletion because of hive
+	// This should change when/if we start using hive for cluster deletion
+	err = m.deregisterClusterFromHive(ctx)
+	if err != nil {
+		m.log.Info(err)
+	}
+
 	return m.billing.Delete(ctx, m.doc)
 }
