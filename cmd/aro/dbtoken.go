@@ -57,7 +57,7 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	m := statsd.New(ctx, log.WithField("component", "dbtoken"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
+	m := statsd.New(ctx, log.WithField("component", "dbtoken"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
 	g, err := golang.NewMetrics(log.WithField("component", "dbtoken"), m)
 	if err != nil {

@@ -1,5 +1,21 @@
 
 
+
+#/bin/bash
+
+failedChecks=0
+while read var; do
+  [ -z "${!var}" ] && { echo "required $var is empty or not set."; let failedChecks=failedChecks+1; }
+done << EOF
+LOCATION
+RESOURCEGROUP
+USER
+EOF
+
+if [ $failedChecks -gt 0 ]; then
+  exit 1
+fi
+
 BASE=$( git rev-parse --show-toplevel)
 
 SOCKETPATH="$BASE/cmd/aro"
@@ -27,10 +43,6 @@ echo "MDMSOURCEENV  = $MDMSOURCEENVIRONMENT"
 echo "MDMSOURCEROLE  = $MDMSOURCEROLE"
 echo "MDMSOURCEROLEINSTANCE  = $MDMSOURCEROLEINSTANCE"
 
-cp $BASE/secrets/rp-metrics-int.pem /etc/mdm.pem
-
-
-
 
 podman run \
   --entrypoint /usr/sbin/MetricsExtension \
@@ -39,7 +51,7 @@ podman run \
   -d \
   --restart=always \
   -m 2g \
-  -v /etc/mdm.pem:/etc/mdm.pem \
+  -v $BASE/secrets/rp-metrics-int.pem:/etc/mdm.pem \
   -v $SOCKETPATH:/var/etw:z \
   $MDMIMAGE \
   -CertFile /etc/mdm.pem \
