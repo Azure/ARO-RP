@@ -36,6 +36,7 @@ type OpenShiftClusterProperties struct {
 	LastAdminUpdateError            string                  `json:"lastAdminUpdateError,omitempty"`
 	MaintenanceTask                 MaintenanceTask         `json:"maintenanceTask,omitempty" mutable:"true"`
 	OperatorFlags                   OperatorFlags           `json:"operatorFlags,omitempty" mutable:"true"`
+	OperatorVersion                 string                  `json:"operatorVersion,omitempty" mutable:"true"`
 	CreatedAt                       time.Time               `json:"createdAt,omitempty"`
 	CreatedBy                       string                  `json:"createdBy,omitempty"`
 	ProvisionedBy                   string                  `json:"provisionedBy,omitempty"`
