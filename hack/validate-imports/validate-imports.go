@@ -177,6 +177,8 @@ func acceptableNames(path string) []string {
 		return []string{"kjson"}
 	case "k8s.io/apimachinery/pkg/util/runtime":
 		return []string{"utilruntime"}
+	case "k8s.io/apimachinery/pkg/util/rand":
+		return []string{"utilrand"}
 	case "k8s.io/apimachinery/pkg/version":
 		return []string{"kversion"}
 	case "k8s.io/client-go/testing":

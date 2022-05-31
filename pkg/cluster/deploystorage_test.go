@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
@@ -15,11 +16,13 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
+	utilrand "k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 func TestCreateAndUpdateErrors(t *testing.T) {
@@ -178,6 +181,109 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestEnsureInfraID(t *testing.T) {
+	ctx := context.Background()
+	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
+
+	for _, tt := range []struct {
+		name          string
+		oc            *api.OpenShiftClusterDocument
+		wantedInfraID string
+		wantErr       string
+	}{
+		{
+			name: "infra ID not set",
+			oc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(resourceID),
+
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID:   resourceID,
+					Name: "FoobarCluster",
+
+					Properties: api.OpenShiftClusterProperties{
+						InfraID: "",
+					},
+				},
+			},
+			wantedInfraID: "foobarcluster-cbhtc",
+		},
+		{
+			name: "infra ID not set, very long name",
+			oc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(resourceID),
+
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID:   resourceID,
+					Name: "abcdefghijklmnopqrstuvwxyzabc",
+
+					Properties: api.OpenShiftClusterProperties{
+						InfraID: "",
+					},
+				},
+			},
+			wantedInfraID: "abcdefghijklmnopqrstu-cbhtc",
+		},
+		{
+			name: "infra ID set and left alone",
+			oc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(resourceID),
+
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID:   resourceID,
+					Name: "FoobarCluster",
+
+					Properties: api.OpenShiftClusterProperties{
+						InfraID: "infra",
+					},
+				},
+			},
+			wantedInfraID: "infra",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			dbOpenShiftClusters, _ := testdatabase.NewFakeOpenShiftClusters()
+
+			f := testdatabase.NewFixture().WithOpenShiftClusters(dbOpenShiftClusters)
+			f.AddOpenShiftClusterDocuments(tt.oc)
+
+			err := f.Create()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			doc, err := dbOpenShiftClusters.Get(ctx, strings.ToLower(resourceID))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			m := &manager{
+				db:  dbOpenShiftClusters,
+				doc: doc,
+			}
+
+			// hopefully setting a seed here means it passes consistently :)
+			utilrand.Seed(0)
+			err = m.ensureInfraID(ctx)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+
+			checkDoc, err := dbOpenShiftClusters.Get(ctx, strings.ToLower(resourceID))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if checkDoc.OpenShiftCluster.Properties.InfraID != tt.wantedInfraID {
+				t.Fatalf("%s != %s (wanted)", checkDoc.OpenShiftCluster.Properties.InfraID, tt.wantedInfraID)
 			}
 		})
 	}
