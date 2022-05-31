@@ -44,6 +44,7 @@ require (
 	github.com/openshift/client-go v0.0.0-20211209144617-7385dd6338e3
 	github.com/openshift/console-operator v0.0.0-20220407014945-45d37e70e0c2
 	github.com/openshift/hive v1.1.16
+	github.com/openshift/hive/apis v0.0.0
 	github.com/openshift/installer v0.16.1
 	github.com/openshift/library-go v0.0.0-20220405134141-226b07263a02
 	github.com/openshift/machine-config-operator v3.11.0+incompatible
@@ -259,7 +260,6 @@ require (
 	github.com/openshift/cluster-api-provider-ibmcloud v0.0.0-20211008100740-4d7907adbd6b // indirect
 	github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20191219173431-2336783d4603 // indirect
 	github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20211111151530-06177b773958 // indirect
-	github.com/openshift/hive/apis v0.0.0 // indirect
 	github.com/ovirt/go-ovirt v0.0.0-20210308100159-ac0bcbc88d7c // indirect
 	github.com/pascaldekloe/name v0.0.0-20180628100202-0fd16699aae1 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
