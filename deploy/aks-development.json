@@ -29,11 +29,23 @@
         },
         "agentCount": {
             "defaultValue": 3,
-            "minValue": 1,
-            "maxValue": 20,
             "type": "int",
             "metadata": {
-                "description": "The number of agent nodes for the cluster. Production workloads have a recommended minimum of 3."
+                "description": "The number of agent nodes for the cluster."
+            }
+        },
+        "agentMinCount": {
+            "defaultValue": 3,
+            "type": "int",
+            "metadata": {
+                "description": "The min number of agent nodes."
+            }
+        },
+        "agentMaxCount": {
+            "defaultValue": 10,
+            "type": "int",
+            "metadata": {
+                "description": "The max number of agent nodes."
             }
         },
         "agentVMSize": {
@@ -125,14 +137,28 @@
                 "description": "Subnet address prefix"
             }
         },
-        "vnetGatewaySubnetName": {
+        "podSubnetName": {
+            "defaultValue": "PodSubnet",
+            "type": "string",
+            "metadata": {
+                "description": "Specifies the name of the subnet hosting the pods of the AKS cluster."
+            }
+        },
+        "podSubnetPrefix": {
+            "defaultValue": "10.129.0.0/16",
+            "type": "string",
+            "metadata": {
+                "description": "Specifies the address prefix of the subnet hosting the pods of the AKS cluster."
+            }
+        },
+        "gatewaySubnetName": {
             "type": "string",
             "defaultValue": "GatewaySubnet",
             "metadata": {
                 "description": "Subnet name that will contain the App Service Environment"
             }
         },
-        "vnetGatewaySubnetPrefix": {
+        "gatewaySubnetPrefix": {
             "type": "string",
             "defaultValue": "10.128.0.0/24",
             "metadata": {
@@ -141,14 +167,14 @@
         },
         "serviceCidr": {
             "type": "string",
-            "defaultValue": "10.128.128.0/18",
+            "defaultValue": "10.130.0.0/16",
             "metadata": {
                 "description": "A CIDR notation IP range from which to assign service cluster IPs."
             }
         },
         "dnsServiceIP": {
             "type": "string",
-            "defaultValue": "10.128.128.10",
+            "defaultValue": "10.130.0.10",
             "metadata": {
                 "description": "Containers DNS server IP address."
             }
@@ -160,18 +186,82 @@
                 "description": "A CIDR notation IP for Docker bridge."
             }
         },
+        "nodePoolEnableAutoScaling": {
+            "defaultValue": true,
+            "type": "bool",
+            "metadata": {
+                "description": "boolean flag to turn on and off nodepool autoscaling"
+            }
+        },
+        "autoScalerProfileScanInterval": {
+            "type": "string",
+            "defaultValue": "10s",
+            "metadata": {
+                "description": "Specifies the scan interval of the auto-scaler of the AKS cluster."
+            }
+        },
+        "autoScalerProfileScaleDownDelayAfterAdd": {
+            "type": "string",
+            "defaultValue": "10m",
+            "metadata": {
+                "description": "Specifies the scale down delay after add of the auto-scaler of the AKS cluster."
+            }
+        },
+        "autoScalerProfileScaleDownDelayAfterDelete": {
+            "type": "string",
+            "defaultValue": "20s",
+            "metadata": {
+                "description": "Specifies the scale down delay after delete of the auto-scaler of the AKS cluster."
+            }
+        },
+        "autoScalerProfileScaleDownDelayAfterFailure": {
+            "type": "string",
+            "defaultValue": "3m",
+            "metadata": {
+                "description": "Specifies scale down delay after failure of the auto-scaler of the AKS cluster."
+            }
+        },
+        "autoScalerProfileScaleDownUnneededTime": {
+            "type": "string",
+            "defaultValue": "10m",
+            "metadata": {
+                "description": "Specifies the scale down unneeded time of the auto-scaler of the AKS cluster."
+            }
+        },
+        "autoScalerProfileScaleDownUnreadyTime": {
+            "type": "string",
+            "defaultValue": "20m",
+            "metadata": {
+                "description": "Specifies the scale down unready time of the auto-scaler of the AKS cluster."
+            }
+        },
+        "autoScalerProfileUtilizationThreshold": {
+            "type": "string",
+            "defaultValue": "0.5",
+            "metadata": {
+                "description": "Specifies the utilization threshold of the auto-scaler of the AKS cluster."
+            }
+        },
+        "autoScalerProfileMaxGracefulTerminationSec": {
+            "type": "string",
+            "defaultValue": "600",
+            "metadata": {
+                "description": "Specifies the max graceful termination time interval in seconds for the auto-scaler of the AKS cluster."
+            }
+        },
         "vpnCACertificate": {
             "type": "string",
             "defaultValue": ""
         }
     },
     "variables": {
+        "aksNsgId": "[resourceId('Microsoft.Network/networkSecurityGroups', 'aks-nsg')]",
         "vnetSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('vnetSubnetName'))]",
+        "podSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('podSubnetName'))]",
         "contributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
         "aksClusterUserDefinedManagedIdentityName": "[concat(parameters('aksClusterName'), '-msi')]",
         "aksClusterUserDefinedManagedIdentityId": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('aksClusterUserDefinedManagedIdentityName'))]",
-        "aksContributorRoleAssignmentName": "[guid(variables('aksClusterUserDefinedManagedIdentityId'), variables('contributorRoleId'), resourceGroup().id)]",
-        "networkContributorRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '4d97b98b-1d4f-4787-a291-c67834d212e7')]"
+        "aksContributorRoleAssignmentName": "[guid(variables('aksClusterUserDefinedManagedIdentityId'), variables('contributorRoleId'), resourceGroup().id)]"
     },
     "resources": [
         {
@@ -183,11 +273,11 @@
         },
         {
             "type": "Microsoft.Network/virtualNetworks",
-            "apiVersion": "2020-06-01",
+            "apiVersion": "2022-01-01",
             "location": "[resourceGroup().location]",
             "name": "[parameters('vnetName')]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityGroups', 'aks-nsg')]"
+                "[variables('aksNsgId')]"
             ],
             "properties": {
                 "addressSpace": {
@@ -201,7 +291,7 @@
                         "properties": {
                             "addressPrefix": "[parameters('subnetPrefix')]",
                             "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'aks-nsg')]"
+                                "id": "[variables('aksNsgId')]"
                             },
                             "serviceEndpoints": [
                                 {
@@ -220,9 +310,15 @@
                         }
                     },
                     {
-                        "name": "[parameters('vnetGatewaySubnetName')]",
+                        "name": "[parameters('podSubnetName')]",
                         "properties": {
-                            "addressPrefix": "[parameters('vnetGatewaySubnetPrefix')]"
+                            "addressPrefix": "[parameters('podSubnetPrefix')]"
+                        }
+                    },
+                    {
+                        "name": "[parameters('gatewaySubnetName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('gatewaySubnetPrefix')]"
                         }
                     }
                 ]
@@ -231,7 +327,7 @@
         {
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
             "name": "[concat(parameters('vnetName'), '/peering-rp-pe-vnet-001')]",
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
@@ -249,7 +345,7 @@
         {
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
             "name": "[concat('rp-pe-vnet-001/peering-', parameters('vnetName'))]",
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
@@ -267,7 +363,7 @@
         {
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
             "name": "[concat(parameters('vnetName'), '/peering-rp-vnet')]",
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
@@ -285,7 +381,7 @@
         {
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
             "name": "[concat('rp-vnet/peering-', parameters('vnetName'))]",
-            "apiVersion": "2020-08-01",
+            "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
@@ -328,7 +424,6 @@
             ],
             "properties": {
                 "roleDefinitionId": "[variables('contributorRoleId')]",
-                "description": "Assign the cluster user-defined managed identity contributor role on the resource group.",
                 "principalId": "[reference(variables('aksClusterUserDefinedManagedIdentityName')).principalId]",
                 "principalType": "ServicePrincipal",
                 "scope": "[resourceGroup().id]"
@@ -340,7 +435,8 @@
             "location": "[resourceGroup().location]",
             "name": "[parameters('aksClusterName')]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]",
+                "[variables('aksClusterUserDefinedManagedIdentityId')]"
             ],
             "identity": {
                 "type": "UserAssigned",
@@ -379,13 +475,18 @@
                         "name": "systempool",
                         "osType": "Linux",
                         "mode": "System",
+                        "orchestratorVersion": "[parameters('kubernetesVersion')]",
+                        "enableAutoScaling": "[parameters('nodePoolEnableAutoScaling')]",
                         "enableEncryptionAtHost": true,
                         "enableFIPS": true,
                         "OSDiskType": "Ephemeral",
                         "osDiskSizeGB": "[parameters('osDiskSizeGB')]",
                         "count": "[parameters('agentCount')]",
+                        "minCount": "[parameters('agentMinCount')]",
+                        "maxCount": "[parameters('agentMaxCount')]",
                         "vmSize": "[parameters('agentVMSize')]",
                         "vnetSubnetID": "[variables('vnetSubnetID')]",
+                        "podSubnetID": "[variables('podSubnetId')]",
                         "maxPods": "[parameters('maxPods')]",
                         "availabilityZones": [
                             "1",
@@ -403,6 +504,16 @@
                 "aadProfile": {
                     "managed": true,
                     "enableAzureRBAC": true
+                },
+                "autoScalerProfile": {
+                    "scan-interval": "[parameters('autoScalerProfileScanInterval')]",
+                    "scale-down-delay-after-add": "[parameters('autoScalerProfileScaleDownDelayAfterAdd')]",
+                    "scale-down-delay-after-delete": "[parameters('autoScalerProfileScaleDownDelayAfterDelete')]",
+                    "scale-down-delay-after-failure": "[parameters('autoScalerProfileScaleDownDelayAfterFailure')]",
+                    "scale-down-unneeded-time": "[parameters('autoScalerProfileScaleDownUnneededTime')]",
+                    "scale-down-unready-time": "[parameters('autoScalerProfileScaleDownUnreadyTime')]",
+                    "scale-down-utilization-threshold": "[parameters('autoScalerProfileUtilizationThreshold')]",
+                    "max-graceful-termination-sec": "[parameters('autoScalerProfileMaxGracefulTerminationSec')]"
                 }
             }
         },
@@ -471,7 +582,7 @@
                     {
                         "properties": {
                             "subnet": {
-                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('vnetGatewaySubnetName'))]"
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('gatewaySubnetName'))]"
                             },
                             "publicIPAddress": {
                                 "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'aks-vpn-pip')]"
