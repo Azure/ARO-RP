@@ -5,6 +5,8 @@ if [ -z "$RESOURCEGROUP" ]; then
     exit 1
 fi
 
+[ -f aks.kubeconfig ] && rm -f aks.kubeconfig
+
 if az aks get-credentials --admin -g "$RESOURCEGROUP" -n aro-aks-cluster --public-fqdn -f aks.kubeconfig 2>/dev/null; then
     chmod 600 aks.kubeconfig
 else
