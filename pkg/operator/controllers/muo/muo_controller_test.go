@@ -171,13 +171,13 @@ func TestMUOReconciler(t *testing.T) {
 				controllerPullSpec:       "wonderfulPullspec",
 			},
 			pullsecret: "{\"auths\": {\"" + pullSecretOCMKey + "\": {\"auth\": \"secret value\"}}}",
-			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
+			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
 					Pullspec:        "wonderfulPullspec",
 					EnableConnected: false,
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any()).Return(true, nil)
+				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 			},
 		},
 		{
