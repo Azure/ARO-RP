@@ -256,6 +256,8 @@
     },
     "variables": {
         "aksNsgId": "[resourceId('Microsoft.Network/networkSecurityGroups', 'aks-nsg')]",
+        "aksClusterId": "[resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName'))]",
+        "vnetId": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]",
         "vnetSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('vnetSubnetName'))]",
         "podSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('podSubnetName'))]",
         "contributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
@@ -312,7 +314,15 @@
                     {
                         "name": "[parameters('podSubnetName')]",
                         "properties": {
-                            "addressPrefix": "[parameters('podSubnetPrefix')]"
+                            "addressPrefix": "[parameters('podSubnetPrefix')]",
+                            "delegations": [
+                                {
+                                    "name": "AKS",
+                                    "properties": {
+                                        "serviceName": "Microsoft.ContainerService/managedClusters"
+                                    }
+                                }
+                            ]
                         }
                     },
                     {
@@ -330,7 +340,7 @@
             "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+                "[variables('vnetId')]"
             ],
             "properties": {
                 "allowVirtualNetworkAccess": true,
@@ -348,7 +358,7 @@
             "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+                "[variables('vnetId')]"
             ],
             "properties": {
                 "allowVirtualNetworkAccess": true,
@@ -356,7 +366,7 @@
                 "allowGatewayTransit": false,
                 "useRemoteGateways": false,
                 "remoteVirtualNetwork": {
-                    "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+                    "id": "[variables('vnetId')]"
                 }
             }
         },
@@ -366,7 +376,7 @@
             "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+                "[variables('vnetId')]"
             ],
             "properties": {
                 "allowVirtualNetworkAccess": true,
@@ -384,7 +394,7 @@
             "apiVersion": "2020-11-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+                "[variables('vnetId')]"
             ],
             "properties": {
                 "allowVirtualNetworkAccess": true,
@@ -392,7 +402,7 @@
                 "allowGatewayTransit": false,
                 "useRemoteGateways": false,
                 "remoteVirtualNetwork": {
-                    "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+                    "id": "[variables('vnetId')]"
                 }
             }
         },
@@ -420,7 +430,7 @@
             "name": "[variables('aksContributorRoleAssignmentName')]",
             "dependsOn": [
                 "[variables('aksClusterUserDefinedManagedIdentityId')]",
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+                "[variables('vnetId')]"
             ],
             "properties": {
                 "roleDefinitionId": "[variables('contributorRoleId')]",
@@ -435,7 +445,7 @@
             "location": "[resourceGroup().location]",
             "name": "[parameters('aksClusterName')]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]",
+                "[variables('vnetId')]",
                 "[variables('aksClusterUserDefinedManagedIdentityId')]"
             ],
             "identity": {
@@ -451,9 +461,6 @@
                 },
                 "addonProfiles": {
                     "azureKeyvaultSecretsProvider": {
-                        "config": {
-                            "enableSecretRotation": "false"
-                        },
                         "enabled": true
                     }
                 },
@@ -523,8 +530,7 @@
             "name": "[concat(parameters('keyvaultPrefix'), '-aks')]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[variables('aksClusterUserDefinedManagedIdentityId')]",
-                "[parameters('aksClusterName')]"
+                "[variables('aksClusterId')]"
             ],
             "properties": {
                 "tenantId": "[subscription().tenantId]",
@@ -534,8 +540,8 @@
                 },
                 "accessPolicies": [
                     {
-                        "tenantId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('aksClusterUserDefinedManagedIdentityName'))).tenantId]",
-                        "objectId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('aksClusterUserDefinedManagedIdentityName'))).principalId]",
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[reference(variables('aksClusterId'), '2020-12-01', 'Full').properties.addonProfiles.azureKeyvaultSecretsProvider.identity.objectId]",
                         "permissions": {
                             "secrets": [
                                 "get",
@@ -574,7 +580,7 @@
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/publicIPAddresses', 'aks-vpn-pip')]",
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]",
+                "[variables('vnetId')]",
                 "[parameters('aksClusterName')]"
             ],
             "properties": {

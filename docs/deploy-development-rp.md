@@ -256,6 +256,10 @@ To access the cluster for oc / kubectl or SSH'ing into the cluster you need to c
   hack/ssk-aks.sh aro-aks-cluster 2 # The third VM node in 'aro-aks-cluster'
   ```
 
+* Access via Azure Portal
+
+Due to the fact that the AKS cluster is private, you need to be connected to the VPN in order to view certain AKS cluster properties, because the UI interrogates k8s via the VPN. 
+
 ### Metrics
 
 To run fake metrics socket:
