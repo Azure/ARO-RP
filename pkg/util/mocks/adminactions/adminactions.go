@@ -81,6 +81,21 @@ func (mr *MockKubeActionsMockRecorder) KubeGet(arg0, arg1, arg2, arg3 interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeGet", reflect.TypeOf((*MockKubeActions)(nil).KubeGet), arg0, arg1, arg2, arg3)
 }
 
+// KubeGetPodLogs mocks base method.
+func (m *MockKubeActions) KubeGetPodLogs(arg0 context.Context, arg1, arg2, arg3 string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "KubeGetPodLogs", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// KubeGetPodLogs indicates an expected call of KubeGetPodLogs.
+func (mr *MockKubeActionsMockRecorder) KubeGetPodLogs(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeGetPodLogs", reflect.TypeOf((*MockKubeActions)(nil).KubeGetPodLogs), arg0, arg1, arg2, arg3)
+}
+
 // KubeList mocks base method.
 func (m *MockKubeActions) KubeList(arg0 context.Context, arg1, arg2 string) ([]byte, error) {
 	m.ctrl.T.Helper()
