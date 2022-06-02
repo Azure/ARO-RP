@@ -83,7 +83,7 @@ func (c *FakeConsoleLinks) Update(ctx context.Context, consoleLink *consolev1.Co
 // Delete takes name of the consoleLink and deletes it. Returns an error if one occurs.
 func (c *FakeConsoleLinks) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(consolelinksResource, name), &consolev1.ConsoleLink{})
+		Invokes(testing.NewRootDeleteActionWithOptions(consolelinksResource, name, opts), &consolev1.ConsoleLink{})
 	return err
 }
 

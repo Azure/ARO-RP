@@ -73,13 +73,13 @@ if nmcli device show br-ex; then
     #getting DNS search strings
     SEARCH_RAW=$(nmcli --get IP4.DOMAIN device show br-ex)
     #getting DNS servers
-    NAMESERVER_RAW=$(nmcli --get IP4.DNS device show br-ex)
+    NAMESERVER_RAW=$(nmcli --get IP4.DNS device show br-ex | tr -s " | " "\n")
     LOCAL_IPS_RAW=$(nmcli --get IP4.ADDRESS device show br-ex)
 else
     NETDEV=$(nmcli --get device connection show --active | head -n 1) #there should be only one active device
     echo "OVS SDN mode - br-ex not found, using device $NETDEV"
     SEARCH_RAW=$(nmcli --get IP4.DOMAIN device show $NETDEV)
-    NAMESERVER_RAW=$(nmcli --get IP4.DNS device show $NETDEV)
+    NAMESERVER_RAW=$(nmcli --get IP4.DNS device show $NETDEV | tr -s " | " "\n")
     LOCAL_IPS_RAW=$(nmcli --get IP4.ADDRESS device show $NETDEV)
 fi
 

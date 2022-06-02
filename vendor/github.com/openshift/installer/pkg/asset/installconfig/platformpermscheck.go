@@ -9,7 +9,7 @@ import (
 	"github.com/openshift/installer/pkg/asset"
 	awsconfig "github.com/openshift/installer/pkg/asset/installconfig/aws"
 	gcpconfig "github.com/openshift/installer/pkg/asset/installconfig/gcp"
-	"github.com/openshift/installer/pkg/types"
+	"github.com/openshift/installer/pkg/types/alibabacloud"
 	"github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
 	"github.com/openshift/installer/pkg/types/baremetal"
@@ -65,9 +65,6 @@ func (a *PlatformPermsCheck) Generate(dependencies asset.Parents) error {
 			} else {
 				permissionGroups = append(permissionGroups, awsconfig.PermissionDeleteNetworking)
 			}
-			if awsIncludesUserSuppliedInstanceRole(ic.Config) {
-				permissionGroups = append(permissionGroups, awsconfig.PermissionDeleteSharedInstanceRole)
-			}
 		}
 
 		ssn, err := ic.AWS.Session(ctx)
@@ -90,7 +87,7 @@ func (a *PlatformPermsCheck) Generate(dependencies asset.Parents) error {
 		}
 	case ibmcloud.Name:
 		// TODO: IBM[#90]: platformpermscheck
-	case azure.Name, baremetal.Name, libvirt.Name, none.Name, openstack.Name, ovirt.Name, vsphere.Name:
+	case azure.Name, baremetal.Name, libvirt.Name, none.Name, openstack.Name, ovirt.Name, vsphere.Name, alibabacloud.Name:
 		// no permissions to check
 	default:
 		err = fmt.Errorf("unknown platform type %q", platform)
@@ -101,22 +98,4 @@ func (a *PlatformPermsCheck) Generate(dependencies asset.Parents) error {
 // Name returns the human-friendly name of the asset.
 func (a *PlatformPermsCheck) Name() string {
 	return "Platform Permissions Check"
-}
-
-func awsIncludesUserSuppliedInstanceRole(installConfig *types.InstallConfig) bool {
-	mp := &aws.MachinePool{}
-	mp.Set(installConfig.Platform.AWS.DefaultMachinePlatform)
-	mp.Set(installConfig.ControlPlane.Platform.AWS)
-	if mp.IAMRole != "" {
-		return true
-	}
-	for _, c := range installConfig.Compute {
-		mp := &aws.MachinePool{}
-		mp.Set(installConfig.Platform.AWS.DefaultMachinePlatform)
-		mp.Set(c.Platform.AWS)
-		if mp.IAMRole != "" {
-			return true
-		}
-	}
-	return false
 }

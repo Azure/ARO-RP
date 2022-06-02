@@ -1,5 +1,9 @@
 package syntax
 
+import (
+	"fmt"
+)
+
 type ParseError struct {
 	Pos     Position
 	Message string
@@ -7,21 +11,17 @@ type ParseError struct {
 
 func (e ParseError) Error() string { return e.Message }
 
-func throw(pos Position, message string) {
-	panic(ParseError{Pos: pos, Message: message})
+func throwfPos(pos Position, format string, args ...interface{}) {
+	panic(ParseError{
+		Pos:     pos,
+		Message: fmt.Sprintf(format, args...),
+	})
 }
 
-func throwExpectedFound(pos Position, expected, found string) {
-	throw(pos, "expected '"+expected+"', found '"+found+"'")
-}
-
-func throwUnexpectedToken(pos Position, token string) {
-	throw(pos, "unexpected token: "+token)
-}
-
-func newPos(begin, end int) Position {
-	return Position{
-		Begin: uint16(begin),
-		End:   uint16(end),
+func throwErrorf(posBegin, posEnd int, format string, args ...interface{}) {
+	pos := Position{
+		Begin: uint16(posBegin),
+		End:   uint16(posEnd),
 	}
+	throwfPos(pos, format, args...)
 }

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: managed-upgrade-operator-config
-  namespace:  openshift-managed-upgrade-operator
+  namespace: openshift-managed-upgrade-operator
 data:
   config.yaml: |
     configManager:

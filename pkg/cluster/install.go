@@ -10,17 +10,18 @@ import (
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
-	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -128,12 +129,14 @@ func (m *manager) Install(ctx context.Context) error {
 	var (
 		installConfig *installconfig.InstallConfig
 		image         *releaseimage.Image
+		g             graph.Graph
 	)
 
 	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
 			steps.Action(m.ensureACRToken),
+			steps.Action(m.ensureInfraID),
 			steps.Action(m.generateSSHKey),
 			steps.Action(m.populateMTUSize),
 			steps.Action(func(ctx context.Context) error {
@@ -144,9 +147,6 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.createDNS),
 			steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
 			steps.Action(m.clusterSPObjectID),
-			steps.Action(func(ctx context.Context) error {
-				return m.ensureInfraID(ctx, installConfig)
-			}),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies)),
@@ -155,7 +155,14 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.createOrUpdateRouterIPEarly)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureGatewayCreate)),
 			steps.Action(func(ctx context.Context) error {
-				return m.ensureGraph(ctx, installConfig, image)
+				var err error
+				// Applies ARO-specific customisations to the InstallConfig
+				g, err = m.applyInstallConfigCustomisations(ctx, installConfig, image)
+				return err
+			}),
+			steps.Action(func(ctx context.Context) error {
+				// saves the graph to storage account
+				return m.persistGraph(ctx, g)
 			}),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGs)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
@@ -261,7 +268,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
-	m.maocli, err = maoclient.NewForConfig(restConfig)
+	m.maocli, err = machineclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}

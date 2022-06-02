@@ -174,8 +174,7 @@ lint-admin-portal:
 test-python: pyenv az
 	. pyenv/bin/activate && \
 		azdev linter && \
-		azdev style && \
-		hack/format-yaml/format-yaml.py .pipelines
+		azdev style 
 
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig

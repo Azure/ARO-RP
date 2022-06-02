@@ -139,12 +139,6 @@ func acceptableNames(path string) []string {
 		return []string{"openapi_v2"}
 	case "github.com/openshift/console-operator/pkg/api":
 		return []string{"consoleapi"}
-	case "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1":
-		return []string{"machinev1beta1"}
-	case "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned":
-		return []string{"maoclient"}
-	case "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake":
-		return []string{"maofake"}
 	case "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1":
 		return []string{"mcv1"}
 	case "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned":
@@ -163,6 +157,8 @@ func acceptableNames(path string) []string {
 		return []string{"coreosarch"}
 	case "github.com/openshift/installer/pkg/rhcos":
 		return []string{"rhcospkg"}
+	case "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1":
+		return []string{"monitoringv1"}
 	case "golang.org/x/crypto/ssh":
 		return []string{"", "cryptossh"}
 	case "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1":
@@ -181,6 +177,8 @@ func acceptableNames(path string) []string {
 		return []string{"kjson"}
 	case "k8s.io/apimachinery/pkg/util/runtime":
 		return []string{"utilruntime"}
+	case "k8s.io/apimachinery/pkg/util/rand":
+		return []string{"utilrand"}
 	case "k8s.io/apimachinery/pkg/version":
 		return []string{"kversion"}
 	case "k8s.io/client-go/testing":

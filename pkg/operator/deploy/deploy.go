@@ -78,8 +78,7 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli 
 	}, nil
 }
 
-func (o *operator) resources() ([]kruntime.Object, error) {
-	// first static resources from Assets
+func (o *operator) staticResources() ([]kruntime.Object, error) {
 	results := []kruntime.Object{}
 	for _, assetName := range AssetNames() {
 		b, err := Asset(assetName)
@@ -97,9 +96,18 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 			if d.Labels == nil {
 				d.Labels = map[string]string{}
 			}
-			d.Labels["version"] = version.GitCommit
+			var image string
+
+			if o.oc.Properties.OperatorVersion != "" {
+				image = fmt.Sprintf("%s/aro:%s", o.env.ACRDomain(), o.oc.Properties.OperatorVersion)
+				d.Labels["version"] = o.oc.Properties.OperatorVersion
+			} else {
+				image = o.env.AROOperatorImage()
+				d.Labels["version"] = version.GitCommit
+			}
+
 			for i := range d.Spec.Template.Spec.Containers {
-				d.Spec.Template.Spec.Containers[i].Image = o.env.AROOperatorImage()
+				d.Spec.Template.Spec.Containers[i].Image = image
 
 				if o.env.IsLocalDevelopmentMode() {
 					d.Spec.Template.Spec.Containers[i].Env = append(d.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
@@ -112,6 +120,16 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 
 		results = append(results, obj)
 	}
+	return results, nil
+}
+
+func (o *operator) resources() ([]kruntime.Object, error) {
+	// first static resources from Assets
+	results, err := o.staticResources()
+	if err != nil {
+		return nil, err
+	}
+
 	// then dynamic resources
 	key, cert := o.env.ClusterGenevaLoggingSecret()
 	gcsKeyBytes, err := utiltls.PrivateKeyAsBytes(key)

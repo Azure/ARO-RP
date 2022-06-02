@@ -8,7 +8,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
@@ -20,8 +22,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/openshift/installer/pkg/asset/targets"
 	"github.com/openshift/installer/pkg/asset/templates/content/bootkube"
-	"github.com/openshift/installer/pkg/types"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilrand "k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/bootstraplogging"
@@ -36,29 +37,14 @@ func (m *manager) createDNS(ctx context.Context) error {
 	return m.dns.Create(ctx, m.doc.OpenShiftCluster)
 }
 
-func (m *manager) ensureInfraID(ctx context.Context, installConfig *installconfig.InstallConfig) error {
+func (m *manager) ensureInfraID(ctx context.Context) (err error) {
 	if m.doc.OpenShiftCluster.Properties.InfraID != "" {
-		return nil
-	}
-
-	g := graph.Graph{}
-	g.Set(&installconfig.InstallConfig{
-		Config: &types.InstallConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: strings.ToLower(m.doc.OpenShiftCluster.Name),
-			},
-		},
-	})
-
-	err := g.Resolve(&installconfig.ClusterID{})
-	if err != nil {
 		return err
 	}
-
-	clusterID := g.Get(&installconfig.ClusterID{}).(*installconfig.ClusterID)
-
+	// generate an infra ID that is 27 characters long with 5 bytes of them random
+	infraID := generateInfraID(strings.ToLower(m.doc.OpenShiftCluster.Name), 27, 5)
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.InfraID = clusterID.InfraID
+		doc.OpenShiftCluster.Properties.InfraID = infraID
 		return nil
 	})
 	return err
@@ -170,30 +156,24 @@ func (m *manager) deployStorageTemplate(ctx context.Context) error {
 	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
 }
 
-func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.InstallConfig, image *releaseimage.Image) error {
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
-	infraID := m.doc.OpenShiftCluster.Properties.InfraID
-
-	exists, err := m.graph.Exists(ctx, resourceGroup, clusterStorageAccountName)
-	if err != nil || exists {
-		return err
-	}
-
+// applyInstallConfigCustomisations modifies the InstallConfig and creates
+// parent assets, then regenerates the InstallConfig for use for Ignition
+// generation, etc.
+func (m *manager) applyInstallConfigCustomisations(ctx context.Context, installConfig *installconfig.InstallConfig, image *releaseimage.Image) (graph.Graph, error) {
 	clusterID := &installconfig.ClusterID{
 		UUID:    m.doc.ID,
-		InfraID: infraID,
+		InfraID: m.doc.OpenShiftCluster.Properties.InfraID,
 	}
 
 	bootstrapLoggingConfig, err := bootstraplogging.GetConfig(m.env, m.doc)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	httpSecret := make([]byte, 64)
 	_, err = rand.Read(httpSecret)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	imageRegistryConfig := &bootkube.AROImageRegistryConfig{
@@ -219,7 +199,7 @@ func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.
 	for _, a := range targets.Cluster {
 		err = g.Resolve(a)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -227,8 +207,20 @@ func (m *manager) ensureGraph(ctx context.Context, installConfig *installconfig.
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.MTUSize == api.MTU3900 {
 		m.log.Printf("applying feature flag %s", api.FeatureFlagMTU3900)
 		if err = m.overrideEthernetMTU(g); err != nil {
-			return err
+			return nil, err
 		}
+	}
+
+	return g, nil
+}
+
+func (m *manager) persistGraph(ctx context.Context, g graph.Graph) error {
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+
+	exists, err := m.graph.Exists(ctx, resourceGroup, clusterStorageAccountName)
+	if err != nil || exists {
+		return err
 	}
 
 	// the graph is quite big, so we store it in a storage account instead of in cosmosdb
@@ -300,4 +292,30 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 	s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies = to.StringPtr("Disabled")
 
 	return m.subnet.CreateOrUpdate(ctx, m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID, s)
+}
+
+// generateInfraID take base and returns a ID that
+// - is of length maxLen
+// - contains randomLen random bytes
+// - only contains `alphanum` or `-`
+// see openshift/installer/pkg/asset/installconfig/clusterid.go for original implementation
+func generateInfraID(base string, maxLen int, randomLen int) string {
+	maxBaseLen := maxLen - (randomLen + 1)
+
+	// replace all characters that are not `alphanum` or `-` with `-`
+	re := regexp.MustCompile("[^A-Za-z0-9-]")
+	base = re.ReplaceAllString(base, "-")
+
+	// replace all multiple dashes in a sequence with single one.
+	re = regexp.MustCompile(`-{2,}`)
+	base = re.ReplaceAllString(base, "-")
+
+	// truncate to maxBaseLen
+	if len(base) > maxBaseLen {
+		base = base[:maxBaseLen]
+	}
+	base = strings.TrimRight(base, "-")
+
+	// add random chars to the end to randomize
+	return fmt.Sprintf("%s-%s", base, utilrand.String(randomLen))
 }

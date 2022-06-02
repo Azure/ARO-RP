@@ -30,6 +30,34 @@
                 "patch",
                 "update"
             ]
+        },
+        {
+            "name": "projecthelmchartrepositories",
+            "singularName": "projecthelmchartrepository",
+            "namespaced": true,
+            "kind": "ProjectHelmChartRepository",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "u99qLV2ifAE="
+        },
+        {
+            "name": "projecthelmchartrepositories/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "ProjectHelmChartRepository",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
         }
     ]
 }

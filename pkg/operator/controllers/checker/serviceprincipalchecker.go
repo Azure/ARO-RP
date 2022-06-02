@@ -7,7 +7,7 @@ import (
 	"context"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
-	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -27,12 +27,12 @@ type ServicePrincipalChecker struct {
 
 	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
-	maocli        maoclient.Interface
+	maocli        machineclient.Interface
 
 	role string
 }
 
-func NewServicePrincipalChecker(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli maoclient.Interface, role string) *ServicePrincipalChecker {
+func NewServicePrincipalChecker(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli machineclient.Interface, role string) *ServicePrincipalChecker {
 	return &ServicePrincipalChecker{
 		log:           log,
 		arocli:        arocli,
