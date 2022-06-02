@@ -2348,6 +2348,7 @@ github.com/proglottis/gpgme v0.1.1/go.mod h1:fPbW/EZ0LvwQtH8Hy7eixhp1eF3G39dtx7G
 github.com/prometheus-community/prom-label-proxy v0.2.0/go.mod h1:XdjyZg7LCbCC5FADHtpgNp6kQ0W9beXVGfmcvndMj5Y=
 github.com/prometheus-operator/prometheus-operator v0.48.1/go.mod h1:lXJz0R74XkhfLwsw5mIeLPJZOVIQp6kQyMyMjOU+MWY=
 github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.44.1/go.mod h1:3WYi4xqXxGGXWDdQIITnLNmuDzO5n6wYva9spVhR4fg=
+github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.48.1 h1:OGC7+ktZ6h8xI99VB6i8iuiXecdhUmwto9vbGzoVMac=
 github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.48.1/go.mod h1:3WYi4xqXxGGXWDdQIITnLNmuDzO5n6wYva9spVhR4fg=
 github.com/prometheus-operator/prometheus-operator/pkg/client v0.48.1/go.mod h1:k4BrWlVQQsvBiTcDnKEMgyh/euRxyxgrHdur/ZX/sdA=
 github.com/prometheus/alertmanager v0.20.0/go.mod h1:9g2i48FAyZW6BtbsnvHtMHQXl2aVtrORKwKVCQ+nbrg=

@@ -52,10 +52,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		if err != nil {
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}
+
+		err = r.dh.EnsureDeleted(ctx, "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert")
+		if err != nil {
+			return reconcile.Result{RequeueAfter: time.Hour}, err
+		}
 		return reconcile.Result{}, nil
 	}
 
 	var resources []kruntime.Object
+
 	// this loop prevents us from hard coding resource strings
 	// and ensures all static resources are accounted for.
 	for _, assetName := range AssetNames() {

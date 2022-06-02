@@ -21,6 +21,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -128,12 +129,14 @@ func (m *manager) Install(ctx context.Context) error {
 	var (
 		installConfig *installconfig.InstallConfig
 		image         *releaseimage.Image
+		g             graph.Graph
 	)
 
 	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
 			steps.Action(m.ensureACRToken),
+			steps.Action(m.ensureInfraID),
 			steps.Action(m.generateSSHKey),
 			steps.Action(m.populateMTUSize),
 			steps.Action(func(ctx context.Context) error {
@@ -144,9 +147,6 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.createDNS),
 			steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
 			steps.Action(m.clusterSPObjectID),
-			steps.Action(func(ctx context.Context) error {
-				return m.ensureInfraID(ctx, installConfig)
-			}),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies)),
@@ -155,7 +155,14 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.createOrUpdateRouterIPEarly)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureGatewayCreate)),
 			steps.Action(func(ctx context.Context) error {
-				return m.ensureGraph(ctx, installConfig, image)
+				var err error
+				// Applies ARO-specific customisations to the InstallConfig
+				g, err = m.applyInstallConfigCustomisations(ctx, installConfig, image)
+				return err
+			}),
+			steps.Action(func(ctx context.Context) error {
+				// saves the graph to storage account
+				return m.persistGraph(ctx, g)
 			}),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGs)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),

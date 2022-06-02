@@ -48,6 +48,7 @@ require (
 	github.com/openshift/machine-config-operator v3.11.0+incompatible
 	github.com/pires/go-proxyproto v0.6.2
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.48.1
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/common v0.33.0
 	github.com/sirupsen/logrus v1.8.1

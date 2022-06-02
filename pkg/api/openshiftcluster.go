@@ -98,7 +98,8 @@ type OpenShiftClusterProperties struct {
 	MaintenanceTask         MaintenanceTask     `json:"maintenanceTask,omitempty"`
 
 	// Operator feature/option flags
-	OperatorFlags OperatorFlags `json:"operatorFlags,omitempty"`
+	OperatorFlags   OperatorFlags `json:"operatorFlags,omitempty"`
+	OperatorVersion string        `json:"operatorVersion,omitempty"`
 
 	CreatedAt time.Time `json:"createdAt,omitempty"`
 
