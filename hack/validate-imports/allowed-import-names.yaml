@@ -17,6 +17,8 @@ allowedImportNames:
     - ""
   github.com/Azure/ARO-RP/pkg/util/dynamichelper/discovery:
     - utildiscovery
+  github.com/Azure/ARO-RP/pkg/util/embed:
+    - utilembed
   github.com/Azure/ARO-RP/pkg/util/namespace:
     - utilnamespace
     - ""
@@ -61,6 +63,8 @@ allowedImportNames:
     - mcofake
   github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1:
     - mcoclientv1
+  github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1:
+    - monitoringv1
   golang.org/x/crypto/ssh:
     - ""
     - cryptossh
@@ -80,6 +84,8 @@ allowedImportNames:
     - kruntime
   k8s.io/apimachinery/pkg/runtime/serializer/json:
     - kjson
+  k8s.io/apimachinery/pkg/util/rand:
+    - utilrand
   k8s.io/apimachinery/pkg/util/runtime:
     - utilruntime
   k8s.io/apimachinery/pkg/version:
