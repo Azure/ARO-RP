@@ -176,6 +176,14 @@
   curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/upgrade"
   ```
 
+* Get container logs from an OpenShift pod in a cluster
+  ```bash
+  NAMESPACE=<namespace-name>
+  POD=<pod-name>
+  CONTAINER=<container-name>
+  curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/kubernetespodlogs?podname=$POD&namespace=$NAMESPACE&container=$CONTAINER"
+  ```
+
 ## Debugging
 
 * SSH to the bootstrap node:
