@@ -371,7 +371,7 @@ def test_validate_vnet_resource_group_name(test_description, namespace, expected
 
 test_validate_worker_count_data = [
     ("should not raise any Exception because worker count of namespace is None", Mock(worker_count=None), None),
-    ("should not raise any Exception because worker count of namespace is 3", Mock(worker_count=None), None),
+    ("should not raise any Exception because worker count of namespace is 3", Mock(worker_count=3), None),
     ("should raise InvalidArgumentValueError Exception because worker count of namespace is less than minimum workers count", Mock(worker_count=2), InvalidArgumentValueError)
 ]
 
