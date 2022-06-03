@@ -5,6 +5,7 @@ package machinehealthcheck
 
 import (
 	"context"
+	_ "embed"
 	"strings"
 	"time"
 
@@ -23,6 +24,12 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
+
+//go:embed staticresources/machinehealthcheck.yaml
+var machinehealthcheckYaml []byte
+
+//go:embed staticresources/mhcremediationalert.yaml
+var mhcremediationalertYaml []byte
 
 const (
 	ControllerName string = "MachineHealthCheck"
@@ -67,15 +74,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	var resources []kruntime.Object
 
-	// this loop prevents us from hard coding resource strings
-	// and ensures all static resources are accounted for.
-	for _, assetName := range AssetNames() {
-		b, err := Asset(assetName)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		resource, _, err := scheme.Codecs.UniversalDeserializer().Decode(b, nil, nil)
+	for _, asset := range [][]byte{machinehealthcheckYaml, mhcremediationalertYaml} {
+		resource, _, err := scheme.Codecs.UniversalDeserializer().Decode(asset, nil, nil)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
