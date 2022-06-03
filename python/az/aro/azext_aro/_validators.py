@@ -82,7 +82,7 @@ def validate_disk_encryption_set(cmd, namespace):
                                                 disk_encryption_set_name=desid['name'])
     except CloudError as err:
         raise InvalidArgumentValueError(
-            f"Invald --disk-encryption-set, error when getting '{namespace.disk_encryption_set}':"
+            f"Invalid --disk-encryption-set, error when getting '{namespace.disk_encryption_set}':"
             f" {str(err)}") from err
 
 
@@ -165,7 +165,7 @@ def validate_subnet(key):
             cmd.cli_ctx, ResourceType.MGMT_NETWORK)
         try:
             client.subnets.get(parts['resource_group'],
-                               parts['name'], parts['child_name_1'])        
+                               parts['name'], parts['child_name_1'])
         except Exception as err:
             if isinstance(err, ResourceNotFoundError):
                 raise InvalidArgumentValueError(
@@ -193,6 +193,7 @@ def validate_subnets(master_subnet, worker_subnet):
             f"--master-subnet name '{master_parts['child_name_1']}'"
             f" must not equal --worker-subnet name '{worker_parts['child_name_1']}'.")
 
+
 def validate_visibility(key):
     def _validate_visibility(namespace):
         visibility = getattr(namespace, key)
@@ -205,6 +206,7 @@ def validate_visibility(key):
             raise InvalidArgumentValueError(f"Invalid --{key.replace('_', '-')} '{visibility}'.")
 
     return _validate_visibility
+
 
 def validate_vnet(cmd, namespace):
     validate_vnet_resource_group_name(namespace)
