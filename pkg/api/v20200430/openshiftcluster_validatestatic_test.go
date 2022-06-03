@@ -10,15 +10,19 @@ import (
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/gofrs/uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	apiValidate "github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/validate"
 )
 
 type validateTest struct {
 	name                string
+	clusterName         *string
+	location            *string
 	current             func(oc *OpenShiftCluster)
 	modify              func(oc *OpenShiftCluster)
 	requireD2sV3Workers bool
@@ -34,15 +38,18 @@ const (
 
 var (
 	subscriptionID = "00000000-0000-0000-0000-000000000000"
-	id             = fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName", subscriptionID)
 )
 
-func validOpenShiftCluster() *OpenShiftCluster {
+func getResourceID(clusterName string) string {
+	return fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/%s", subscriptionID, clusterName)
+}
+
+func validOpenShiftCluster(name, location string) *OpenShiftCluster {
 	oc := &OpenShiftCluster{
-		ID:       id,
-		Name:     "resourceName",
+		ID:       getResourceID(name),
+		Name:     name,
 		Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
-		Location: "location",
+		Location: location,
 		Tags: Tags{
 			"key": "value",
 		},
@@ -100,22 +107,31 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 	t.Run(string(mode), func(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
+				// default values if not set
+				if tt.location == nil {
+					tt.location = to.StringPtr("location")
+				}
+
+				if tt.clusterName == nil {
+					tt.clusterName = to.StringPtr("resourceName")
+				}
+
 				v := &openShiftClusterStaticValidator{
-					location:            "location",
+					location:            *tt.location,
 					domain:              "location.aroapp.io",
 					requireD2sV3Workers: tt.requireD2sV3Workers,
-					resourceID:          id,
+					resourceID:          getResourceID(*tt.clusterName),
 					r: azure.Resource{
 						SubscriptionID: subscriptionID,
 						ResourceGroup:  "resourceGroup",
 						Provider:       "Microsoft.RedHatOpenShift",
 						ResourceType:   "openshiftClusters",
-						ResourceName:   "resourceName",
+						ResourceName:   *tt.clusterName,
 					},
 				}
 
 				validOCForTest := func() *OpenShiftCluster {
-					oc := validOpenShiftCluster()
+					oc := validOpenShiftCluster(*tt.clusterName, *tt.location)
 					if tt.current != nil {
 						tt.current(oc)
 					}
@@ -160,7 +176,11 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 }
 
 func TestOpenShiftClusterStaticValidate(t *testing.T) {
-	tests := []*validateTest{
+	clusterName19 := "19characters-aaaaaa"
+	clusterName30 := "thisis30characterslong-aaaaaa"
+	nonZonalRegion := "australiasoutheast"
+
+	commonTests := []*validateTest{
 		{
 			name: "valid",
 		},
@@ -192,10 +212,38 @@ func TestOpenShiftClusterStaticValidate(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: location: The provided location 'invalid' is invalid.",
 		},
+		{
+			name:        "valid - zonal regions can exceed max cluster name length",
+			clusterName: &clusterName30,
+		},
 	}
 
-	runTests(t, testModeCreate, tests)
-	runTests(t, testModeUpdate, tests)
+	createTests := []*validateTest{
+		{
+			name:        "invalid - non-zonal regions cannot exceed max cluster name length on cluster create",
+			clusterName: &clusterName30,
+			location:    &nonZonalRegion,
+			wantErr:     fmt.Sprintf("400: InvalidParameter: name: The provided cluster name '%s' exceeds the maximum cluster name length of '%d'.", clusterName30, apiValidate.MaxClusterNameLength),
+		},
+		{
+			name:        "valid - non-zonal region less than max cluster name length",
+			clusterName: &clusterName19,
+			location:    &nonZonalRegion,
+		},
+	}
+
+	updateTests := []*validateTest{
+		{
+			name:        "valid - existing cluster names > max cluster name length still work on cluster update",
+			clusterName: &clusterName30,
+			location:    &nonZonalRegion,
+		},
+	}
+
+	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, commonTests)
+	runTests(t, testModeCreate, createTests)
+	runTests(t, testModeUpdate, updateTests)
 }
 
 func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
