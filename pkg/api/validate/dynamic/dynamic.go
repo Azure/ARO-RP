@@ -389,6 +389,10 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 			}
 		}
 
+		if ss.SubnetPropertiesFormat.ProvisioningState != "Succeeded" {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is not in a Succeeded state", s.ID)
+		}
+		 
 		_, net, err := net.ParseCIDR(*ss.AddressPrefix)
 		if err != nil {
 			return err

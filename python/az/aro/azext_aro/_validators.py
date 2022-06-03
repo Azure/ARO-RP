@@ -165,11 +165,11 @@ def validate_subnet(key):
             cmd.cli_ctx, ResourceType.MGMT_NETWORK)
         try:
             client.subnets.get(parts['resource_group'],
-                               parts['name'], parts['child_name_1'])
+                               parts['name'], parts['child_name_1'])        
         except Exception as err:
             if isinstance(err, ResourceNotFoundError):
                 raise InvalidArgumentValueError(
-                    f"Invald --{key.replace('_', '-')}, error when getting '{subnet}': {str(err)}") from err
+                    f"Invalid --{key.replace('_', '-')}, error when getting '{subnet}': {str(err)}") from err
             raise CLIInternalError(f"Unexpected error when getting subnet '{subnet}': {str(err)}") from err
 
     return _validate_subnet
@@ -193,7 +193,6 @@ def validate_subnets(master_subnet, worker_subnet):
             f"--master-subnet name '{master_parts['child_name_1']}'"
             f" must not equal --worker-subnet name '{worker_parts['child_name_1']}'.")
 
-
 def validate_visibility(key):
     def _validate_visibility(namespace):
         visibility = getattr(namespace, key)
@@ -206,7 +205,6 @@ def validate_visibility(key):
             raise InvalidArgumentValueError(f"Invalid --{key.replace('_', '-')} '{visibility}'.")
 
     return _validate_visibility
-
 
 def validate_vnet(cmd, namespace):
     validate_vnet_resource_group_name(namespace)
