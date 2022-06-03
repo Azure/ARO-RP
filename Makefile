@@ -175,7 +175,6 @@ test-python: pyenv az
 	. pyenv/bin/activate && \
 		azdev linter && \
 		azdev style && \
-		hack/format-yaml/format-yaml.py .pipelines && \
 		hack/unit-test-python.sh
 
 
