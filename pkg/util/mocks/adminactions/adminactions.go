@@ -12,6 +12,7 @@ import (
 	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	gomock "github.com/golang/mock/gomock"
 	logrus "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/certificates/v1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -137,6 +138,48 @@ func (m *MockKubeActions) KubeList(arg0 context.Context, arg1, arg2 string) ([]b
 func (mr *MockKubeActionsMockRecorder) KubeList(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeList", reflect.TypeOf((*MockKubeActions)(nil).KubeList), arg0, arg1, arg2)
+}
+
+// RunCertificateApprovalUpdate mocks base method.
+func (m *MockKubeActions) RunCertificateApprovalUpdate(arg0 context.Context, arg1 *v1.CertificateSigningRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RunCertificateApprovalUpdate", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RunCertificateApprovalUpdate indicates an expected call of RunCertificateApprovalUpdate.
+func (mr *MockKubeActionsMockRecorder) RunCertificateApprovalUpdate(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunCertificateApprovalUpdate", reflect.TypeOf((*MockKubeActions)(nil).RunCertificateApprovalUpdate), arg0, arg1)
+}
+
+// RunCertificateApprove mocks base method.
+func (m *MockKubeActions) RunCertificateApprove(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RunCertificateApprove", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RunCertificateApprove indicates an expected call of RunCertificateApprove.
+func (mr *MockKubeActionsMockRecorder) RunCertificateApprove(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunCertificateApprove", reflect.TypeOf((*MockKubeActions)(nil).RunCertificateApprove), arg0, arg1)
+}
+
+// RunCertificateMassApprove mocks base method.
+func (m *MockKubeActions) RunCertificateMassApprove(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RunCertificateMassApprove", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RunCertificateMassApprove indicates an expected call of RunCertificateMassApprove.
+func (mr *MockKubeActionsMockRecorder) RunCertificateMassApprove(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunCertificateMassApprove", reflect.TypeOf((*MockKubeActions)(nil).RunCertificateMassApprove), arg0)
 }
 
 // Upgrade mocks base method.

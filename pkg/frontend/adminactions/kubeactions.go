@@ -10,6 +10,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +32,9 @@ type KubeActions interface {
 	KubeDelete(ctx context.Context, groupKind, namespace, name string, force bool) error
 	CordonNode(ctx context.Context, nodeName string, unschedulable bool) error
 	DrainNode(ctx context.Context, nodeName string) error
+	RunCertificateApprove(ctx context.Context, csrName string) error
+	RunCertificateMassApprove(ctx context.Context) error
+	RunCertificateApprovalUpdate(ctx context.Context, csr *certificatesv1.CertificateSigningRequest) error
 	Upgrade(ctx context.Context, upgradeY bool) error
 	KubeGetPodLogs(ctx context.Context, namespace, name, containerName string) ([]byte, error)
 }
