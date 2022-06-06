@@ -147,6 +147,8 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.updateAPIIPEarly)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.createOrUpdateRouterIPEarly)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureGatewayCreate)),
+			steps.Action(m.createAPIServerPrivateEndpoint),
+			steps.Action(m.createCertificates),
 
 			// Run installer. For M5/M6 we will persist the graph inside the
 			// installer code since it's easier, but in the future, this data
@@ -155,8 +157,6 @@ func (m *manager) Install(ctx context.Context) error {
 
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
 			steps.Action(m.ensureBillingRecord),
-			steps.Action(m.createAPIServerPrivateEndpoint),
-			steps.Action(m.createCertificates),
 			steps.Action(m.initializeKubernetesClients),
 			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 			steps.Condition(m.apiServersReady, 30*time.Minute, true),
