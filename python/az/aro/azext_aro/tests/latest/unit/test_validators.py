@@ -118,7 +118,6 @@ def test_validate_disk_encryption_set(is_valid_resource_id_mock, parse_resource_
 test_validate_domain_data = [
     ("should not raise any exception when namespace.domain is None", Mock(domain=None), None),
     ("should not raise any exception when namespace.domain has '-'", Mock(domain="my-domain.com"), None),
-    ("should not raise any exception when namespace.domain is google.com.au", Mock(domain="google.com.au"), None),
     ("should not raise any exception when namespace.domain is some.more.than.expected", Mock(domain="some.more.than.expected"), None),
     ("should not raise any exception when namespace.domain is azure.microsoft.com", Mock(domain="azure.microsoft.com"), None),
     ("should raise InvalidArgumentValueError exception when namespace.domain ends with '.'", Mock(domain="google."), InvalidArgumentValueError),
