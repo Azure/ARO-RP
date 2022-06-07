@@ -27,6 +27,17 @@
                 "description": "Optional DNS prefix to use with hosted Kubernetes API server FQDN."
             }
         },
+        "availabilityZones": {
+            "defaultValue": [
+                "1",
+                "2",
+                "3"
+            ],
+            "type": "array",
+            "metadata": {
+                "description": "Specifies the availability zones for the system node pool."
+            }
+        },
         "agentCount": {
             "defaultValue": 3,
             "type": "int",
@@ -65,7 +76,7 @@
             }
         },
         "maxPods": {
-            "defaultValue": 30,
+            "defaultValue": 100,
             "type": "int",
             "metadata": {
                 "description": "Maximum number of pods that can run on a node."
@@ -256,14 +267,15 @@
     },
     "variables": {
         "aksNsgId": "[resourceId('Microsoft.Network/networkSecurityGroups', 'aks-nsg')]",
+        "aksPodNsgId": "[resourceId('Microsoft.Network/networkSecurityGroups', 'aks-pod-nsg')]",
         "aksClusterId": "[resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName'))]",
         "vnetId": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]",
         "vnetSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('vnetSubnetName'))]",
         "podSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('podSubnetName'))]",
-        "contributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+        "networkContributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions/', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
         "aksClusterUserDefinedManagedIdentityName": "[concat(parameters('aksClusterName'), '-msi')]",
         "aksClusterUserDefinedManagedIdentityId": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('aksClusterUserDefinedManagedIdentityName'))]",
-        "aksContributorRoleAssignmentName": "[guid(variables('aksClusterUserDefinedManagedIdentityId'), variables('contributorRoleId'), resourceGroup().id)]"
+        "aksNetworkContributorRoleAssignmentName": "[guid(variables('aksClusterUserDefinedManagedIdentityId'), variables('networkContributorRoleId'), variables('vnetSubnetId'))]"
     },
     "resources": [
         {
@@ -271,7 +283,14 @@
             "name": "aks-nsg",
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01"
+            "apiVersion": "2021-04-01"
+        },
+        {
+            "properties": {},
+            "name": "aks-pod-nsg",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2021-04-01"
         },
         {
             "type": "Microsoft.Network/virtualNetworks",
@@ -279,7 +298,8 @@
             "location": "[resourceGroup().location]",
             "name": "[parameters('vnetName')]",
             "dependsOn": [
-                "[variables('aksNsgId')]"
+                "[variables('aksNsgId')]",
+                "[variables('aksPodNsgId')]"
             ],
             "properties": {
                 "addressSpace": {
@@ -315,6 +335,9 @@
                         "name": "[parameters('podSubnetName')]",
                         "properties": {
                             "addressPrefix": "[parameters('podSubnetPrefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[variables('aksPodNsgId')]"
+                            },
                             "delegations": [
                                 {
                                     "name": "AKS",
@@ -337,7 +360,7 @@
         {
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
             "name": "[concat(parameters('vnetName'), '/peering-rp-pe-vnet-001')]",
-            "apiVersion": "2020-11-01",
+            "apiVersion": "2021-12-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[variables('vnetId')]"
@@ -355,7 +378,7 @@
         {
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
             "name": "[concat('rp-pe-vnet-001/peering-', parameters('vnetName'))]",
-            "apiVersion": "2020-11-01",
+            "apiVersion": "2021-12-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[variables('vnetId')]"
@@ -373,7 +396,7 @@
         {
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
             "name": "[concat(parameters('vnetName'), '/peering-rp-vnet')]",
-            "apiVersion": "2020-11-01",
+            "apiVersion": "2021-12-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[variables('vnetId')]"
@@ -391,7 +414,7 @@
         {
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
             "name": "[concat('rp-vnet/peering-', parameters('vnetName'))]",
-            "apiVersion": "2020-11-01",
+            "apiVersion": "2021-12-01",
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[variables('vnetId')]"
@@ -426,17 +449,17 @@
         },
         {
             "type": "Microsoft.Authorization/roleAssignments",
-            "apiVersion": "2020-04-01-preview",
-            "name": "[variables('aksContributorRoleAssignmentName')]",
+            "apiVersion": "2020-10-01-preview",
+            "name": "[variables('aksNetworkContributorRoleAssignmentName')]",
+            "scope": "[variables('vnetSubnetId')]",
             "dependsOn": [
                 "[variables('aksClusterUserDefinedManagedIdentityId')]",
                 "[variables('vnetId')]"
             ],
             "properties": {
-                "roleDefinitionId": "[variables('contributorRoleId')]",
+                "roleDefinitionId": "[variables('networkContributorRoleId')]",
                 "principalId": "[reference(variables('aksClusterUserDefinedManagedIdentityName')).principalId]",
-                "principalType": "ServicePrincipal",
-                "scope": "[resourceGroup().id]"
+                "principalType": "ServicePrincipal"
             }
         },
         {
@@ -495,11 +518,7 @@
                         "vnetSubnetID": "[variables('vnetSubnetID')]",
                         "podSubnetID": "[variables('podSubnetId')]",
                         "maxPods": "[parameters('maxPods')]",
-                        "availabilityZones": [
-                            "1",
-                            "2",
-                            "3"
-                        ]
+                        "availabilityZones": "[parameters('availabilityZones')]"
                     }
                 ],
                 "networkProfile": {
