@@ -19,7 +19,7 @@ test_validate_cidr_data = [
     ("should not raise exception when valid IPv4 address", Mock(key='192.168.0.0/28'), "key", None),
     ("should raise InvalidArgumentValueError when non valid IPv4 address due to beeing a simple string", Mock(key='this is an invalid network'), "key", InvalidArgumentValueError),
     ("should raise InvalidArgumentValueError when non valid IPv4 address due to invalid network ID", Mock(key='192.168.0.0.0.0/28'), "key", InvalidArgumentValueError),
-    ("should raise InvalidArgumentValueError when non valid IPv4 address due to invalid hostID", Mock(key='192.168.0.0.0.0/2888'), "key", InvalidArgumentValueError),
+    ("should raise InvalidArgumentValueError when non valid IPv4 address due to invalid range of 2888", Mock(key='192.168.0.0/2888'), "key", InvalidArgumentValueError),
     ("should not raise exception when IPv4 address is None", Mock(key=None), "key", None)
 ]
 
