@@ -8,6 +8,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"math"
+	"net/url"
 	"os"
 	"os/exec"
 	"time"
@@ -98,6 +99,13 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 	wd := WebDriver(nil)
 
 	var err error
+
+	time.Sleep(time.Second * 10)
+
+	_, err = url.ParseRequestURI("https://localhost:4444")
+	if err != nil {
+		panic(err)
+	}
 
 	for i := 1; i < 5; i++ {
 		wd, err = NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
