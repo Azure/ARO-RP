@@ -172,7 +172,7 @@ unit-test-go:
 	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverprofile=cover.out ./...
 
 lint-go:
-	go run ./vendor/github.com/golangci/golangci-lint/cmd/golangci-lint run
+	hack/lint-go.sh
 
 lint-admin-portal:
 	docker build -f Dockerfile.portal_lint . -t linter
