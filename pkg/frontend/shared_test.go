@@ -75,6 +75,8 @@ type testInfra struct {
 	billingDatabase           database.Billing
 	subscriptionsClient       *cosmosdb.FakeSubscriptionDocumentClient
 	subscriptionsDatabase     database.Subscriptions
+	openShiftVersionsClient   *cosmosdb.FakeOpenShiftVersionDocumentClient
+	openShiftVersionsDatabase database.OpenShiftVersions
 }
 
 func newTestInfra(t *testing.T) *testInfra {
@@ -156,6 +158,12 @@ func (ti *testInfra) WithSubscriptions() *testInfra {
 func (ti *testInfra) WithAsyncOperations() *testInfra {
 	ti.asyncOperationsDatabase, ti.asyncOperationsClient = testdatabase.NewFakeAsyncOperations()
 	ti.fixture.WithAsyncOperations(ti.asyncOperationsDatabase)
+	return ti
+}
+
+func (ti *testInfra) WithOpenShiftVersions() *testInfra {
+	ti.openShiftVersionsDatabase, ti.openShiftVersionsClient = testdatabase.NewFakeOpenShiftVersions()
+	ti.fixture.WithOpenShiftVersions(ti.openShiftVersionsDatabase)
 	return ti
 }
 
