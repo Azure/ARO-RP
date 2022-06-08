@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"os"
+	"time"
 
 	. "github.com/onsi/ginkgo"                           //nolint
 	. "github.com/onsi/gomega"                           //nolint
@@ -12,7 +13,7 @@ import (
 	. "github.com/tebeka/selenium"                       //nolint
 )
 
-var _ = Describe("Admin Portal E2E Testing", func() {
+var _ = FDescribe("Admin Portal E2E Testing", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 	var wdPoint *WebDriver
 	var wd WebDriver
@@ -60,7 +61,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		Expect(text.Text()).To(Equal("Showing 0 items"))
 	})
 
-	FIt("Should be able to populate cluster info panel correctly", func() {
+	It("Should be able to populate cluster info panel correctly", func() {
 		err := wd.Wait(ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))
 		if err != nil {
 			panic(err)
@@ -81,7 +82,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 			panic(err)
 		}
 
-		err = wd.Wait(ElementIsLocated(ByCSSSelector, "span.css-287"))
+		err = wd.WaitWithTimeout(ElementIsLocated(ByCSSSelector, "span.css-287"), time.Minute)
 		if err != nil {
 			panic(err)
 		}
