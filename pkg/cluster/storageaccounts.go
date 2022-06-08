@@ -70,16 +70,12 @@ func (m *manager) enableServiceEndpoints(ctx context.Context) error {
 	return nil
 }
 
-func (m *manager) isWorkerProfileAvailable() bool {
-	return len(m.doc.OpenShiftCluster.Properties.WorkerProfiles) == 0
-}
-
 // migrateStorageAccounts redeploys storage accounts with firewall rules preventing external access
 // The encryption flag is set to false/disabled for legacy storage accounts.
 func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	if m.isWorkerProfileAvailable() {
-		m.log.Error("Unable to create storage resource due to missing worker profiles.")
+	if len(m.doc.OpenShiftCluster.Properties.WorkerProfiles) == 0 {
+		m.log.Error("Skipping migrateStorageAccounts due to missing WorkerProfiles.")
 		return nil
 	}
 	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
