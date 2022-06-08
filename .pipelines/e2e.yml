@@ -53,6 +53,6 @@ jobs:
 
       export CI=true
       make test-e2e
-  - publish: $(System.DefaultWorkingDirectory)/*.png
+  - publish: $(Build.SourcesDirectory)/*.png
     artifact: Screenshots
   - template: ./templates/template-az-cli-logout.yml

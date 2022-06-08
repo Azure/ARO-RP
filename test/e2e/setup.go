@@ -4,13 +4,16 @@ package e2e
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"encoding/gob"
 	"fmt"
+	"image/png"
 	"math"
 	"net/url"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo"     //nolint
@@ -82,6 +85,38 @@ func skipIfNotInDevelopmentEnv() {
 	if !_env.IsLocalDevelopmentMode() {
 		Skip("skipping tests in non-development environment")
 	}
+}
+
+func TakeScreenshot(wd WebDriver, e error) {
+	log.Info("Taking Screenshot")
+	imageBytes, err := wd.Screenshot()
+	if err != nil {
+		panic(err)
+	}
+
+	imageData, err := png.Decode(bytes.NewReader(imageBytes))
+	if err != nil {
+		panic(err)
+	}
+
+	errorString := strings.ReplaceAll(e.Error(), " ", "_")
+
+	image, err := os.Create("./" + errorString + ".png")
+	if err != nil {
+		panic(err)
+	}
+
+	err = png.Encode(image, imageData)
+	if err != nil {
+		panic(err)
+	}
+
+	err = image.Close()
+	if err != nil {
+		panic(err)
+	}
+
+	panic(e)
 }
 
 func adminPortalSessionSetup() (string, *WebDriver) {

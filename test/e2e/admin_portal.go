@@ -4,8 +4,6 @@ package e2e
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
-	"image/png"
 	"os"
 	"time"
 
@@ -14,35 +12,6 @@ import (
 	. "github.com/serge1peshcoff/selenium-go-conditions" //nolint
 	. "github.com/tebeka/selenium"                       //nolint
 )
-
-func takeScreenshot(wd WebDriver, e error) {
-	imageBytes, err := wd.Screenshot()
-	if err != nil {
-		panic(err)
-	}
-
-	imageData, err := png.Decode(bytes.NewReader(imageBytes))
-	if err != nil {
-		panic(err)
-	}
-
-	image, err := os.Create("./" + e.Error() + ".png")
-	if err != nil {
-		panic(err)
-	}
-
-	err = png.Encode(image, imageData)
-	if err != nil {
-		panic(err)
-	}
-
-	err = image.Close()
-	if err != nil {
-		panic(err)
-	}
-
-	panic(e)
-}
 
 var _ = FDescribe("Admin Portal E2E Testing", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
@@ -64,12 +33,12 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 	It("Should be able to populate cluster data correctly", func() {
 		err := wd.Wait(ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		cluster, err := wd.FindElement(ByCSSSelector, "div[data-automation-key='name']")
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		Expect(cluster.Text()).To(Equal(os.Getenv("CLUSTER")))
@@ -80,7 +49,7 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 
 		filter, err := wd.FindElement(ByCSSSelector, "input[placeholder='Filter on resource ID']")
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		// Set filter so it doesn't match cluster name
@@ -89,7 +58,7 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 		wd.Wait(ElementIsLocated(ByCSSSelector, "span.itemsCount-162"))
 		text, err := wd.FindElement(ByCSSSelector, "span.itemsCount-162")
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		Expect(text.Text()).To(Equal("Showing 0 items"))
@@ -98,43 +67,43 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 	It("Should be able to populate cluster info panel correctly", func() {
 		err := wd.Wait(ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		cluster, err := wd.FindElement(ByCSSSelector, "div[data-automation-key='name']")
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		err = cluster.Click()
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		err = wd.Wait(ElementIsLocated(ByCSSSelector, "div.css-113"))
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		err = wd.WaitWithTimeout(ElementIsLocated(ByCSSSelector, "div.css-244"), 2*time.Minute)
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		err = wd.WaitWithTimeout(ElementIsLocated(ByCSSSelector, "span.css-287"), 2*time.Minute)
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		panelFields, err := wd.FindElements(ByCSSSelector, "span.css-287")
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 		var filteredPanelFields []string
 		for _, panelField := range panelFields {
 			panelText, err := panelField.Text()
 			if err != nil {
-				takeScreenshot(wd, err)
+				TakeScreenshot(wd, err)
 			}
 
 			if panelText != ":" {
@@ -146,7 +115,7 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 
 		panelValues, err := wd.FindElements(ByCSSSelector, "span.css-290")
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		Expect(len(panelValues)).To(Equal(len(filteredPanelFields)))
@@ -154,7 +123,7 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 		for _, panelValue := range panelValues {
 			panelValueText, err := panelValue.Text()
 			if err != nil {
-				takeScreenshot(wd, err)
+				TakeScreenshot(wd, err)
 			}
 
 			Expect(panelValueText).To(Not(BeNil()))
@@ -166,14 +135,14 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 
 		button, err := wd.FindElement(ByCSSSelector, "button[aria-label='Copy Resource ID']")
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		button.Click()
 
 		filter, err := wd.FindElement(ByCSSSelector, "input[placeholder='Filter on resource ID']")
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		// Paste clipboard
@@ -183,7 +152,7 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 		resourceId, err := filter.GetAttribute("value")
 
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		Expect(resourceId).To(ContainSubstring("/providers/Microsoft.RedHatOpenShift/openShiftClusters/" + os.Getenv("CLUSTER")))
@@ -194,7 +163,7 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 
 		button, err := wd.FindElement(ByCSSSelector, "button[aria-label='SSH']")
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		button.Click()
@@ -204,7 +173,7 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 		wd.Wait(ElementIsLocated(ByID, "Dropdown55"))
 		sshDropdown, err := wd.FindElement(ByID, "Dropdown55")
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		sshDropdown.Click()
@@ -212,7 +181,7 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 		wd.Wait(ElementIsLocated(ByID, "Dropdown55-list0"))
 		machine, err := wd.FindElement(ByID, "Dropdown55-list0")
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		machine.Click()
@@ -220,7 +189,7 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 		wd.Wait(ElementIsLocated(ByID, "id__56"))
 		requestBtn, err := wd.FindElement(ByID, "id__56")
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		requestBtn.Click()
@@ -230,12 +199,12 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 		// Test fails if these labels aren't present
 		err = wd.Wait(ElementIsLocated(ByID, "TextFieldLabel72"))
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 
 		err = wd.Wait(ElementIsLocated(ByID, "TextFieldLabel80"))
 		if err != nil {
-			takeScreenshot(wd, err)
+			TakeScreenshot(wd, err)
 		}
 	})
 })
