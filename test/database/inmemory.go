@@ -59,3 +59,9 @@ func NewFakeGateway() (db database.Gateway, client *cosmosdb.FakeGatewayDocument
 	db = database.NewGatewayWithProvidedClient(client)
 	return db, client
 }
+
+func NewFakeOpenShiftVersions() (db database.OpenShiftVersions, client *cosmosdb.FakeOpenShiftVersionDocumentClient) {
+	client = cosmosdb.NewFakeOpenShiftVersionDocumentClient(jsonHandle)
+	db = database.NewOpenShiftVersionsWithProvidedClient(client)
+	return db, client
+}
