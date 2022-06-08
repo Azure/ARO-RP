@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -88,7 +89,7 @@ func skipIfNotInDevelopmentEnv() {
 }
 
 func TakeScreenshot(wd WebDriver, e error) {
-	log.Info("Taking Screenshot")
+	log.Info("Taking Screenshot and saving page source")
 	imageBytes, err := wd.Screenshot()
 	if err != nil {
 		panic(err)
@@ -99,9 +100,31 @@ func TakeScreenshot(wd WebDriver, e error) {
 		panic(err)
 	}
 
+	sourceString, err := wd.PageSource()
+	if err != nil {
+		panic(err)
+	}
+
 	errorString := strings.ReplaceAll(e.Error(), " ", "_")
 
-	image, err := os.Create("./" + errorString + ".png")
+	imagePath := "./" + errorString + ".png"
+	sourcePath := "./" + errorString + ".html"
+
+	imageAbsPath, err := filepath.Abs(imagePath)
+	if err != nil {
+		panic(err)
+	}
+	sourceAbsPath, err := filepath.Abs(sourcePath)
+	if err != nil {
+		panic(err)
+	}
+
+	image, err := os.Create(imageAbsPath)
+	if err != nil {
+		panic(err)
+	}
+
+	source, err := os.Create(sourceAbsPath)
 	if err != nil {
 		panic(err)
 	}
@@ -111,10 +134,23 @@ func TakeScreenshot(wd WebDriver, e error) {
 		panic(err)
 	}
 
+	_, err = source.WriteString(sourceString)
+	if err != nil {
+		panic(err)
+	}
+
 	err = image.Close()
 	if err != nil {
 		panic(err)
 	}
+
+	err = source.Close()
+	if err != nil {
+		panic(err)
+	}
+
+	log.Infof("Screenshot saved to %s", imageAbsPath)
+	log.Infof("Page Source saved to %s", sourceAbsPath)
 
 	panic(e)
 }
