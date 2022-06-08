@@ -82,7 +82,12 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 			panic(err)
 		}
 
-		err = wd.WaitWithTimeout(ElementIsLocated(ByCSSSelector, "span.css-287"), time.Minute)
+		err = wd.WaitWithTimeout(ElementIsLocated(ByCSSSelector, "div.css-244"), 2*time.Minute)
+		if err != nil {
+			panic(err)
+		}
+
+		err = wd.WaitWithTimeout(ElementIsLocated(ByCSSSelector, "span.css-287"), 2*time.Minute)
 		if err != nil {
 			panic(err)
 		}
