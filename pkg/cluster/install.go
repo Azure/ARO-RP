@@ -83,8 +83,6 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Action(m.configureIngressCertificate),
 			steps.Action(m.populateRegistryStorageAccountName),
 			steps.Action(m.ensureMTUSize),
-			steps.Action(m.populateCreatedAt), // TODO(mikalai): Remove after a round of admin updates
-
 		)
 	}
 
