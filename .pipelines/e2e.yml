@@ -42,9 +42,6 @@ jobs:
       az account set -s $AZURE_SUBSCRIPTION_ID
 
       set -x
-
-      export PRIVATE_CLUSTER=true
-
       . ./hack/e2e/run-rp-and-e2e.sh
       trap 'set +e; kill_rp; clean_e2e_db' EXIT
 
@@ -55,8 +52,7 @@ jobs:
       register_sub
 
       export CI=true
-
       make test-e2e
-
-
+  - publish: $(System.DefaultWorkingDirectory)/*.png
+    artifact: Screenshots
   - template: ./templates/template-az-cli-logout.yml
