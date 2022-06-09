@@ -68,6 +68,18 @@ deploy_env_dev() {
             "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
 }
 
+deploy_aks_dev() {
+    echo "########## Deploying aks-development in RG $RESOURCEGROUP ##########"
+    az deployment group create \
+        -g "$RESOURCEGROUP" \
+        -n aks-development \
+        --template-file deploy/aks-development.json \
+        --parameters \
+            "adminObjectId=$ADMIN_OBJECT_ID" \
+            "sshRSAPublicKey=$(<secrets/proxy_id_rsa.pub)" \
+            "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
+}
+
 deploy_env_dev_override() {
     echo "########## Deploying env-development in RG $RESOURCEGROUP ##########"
     az deployment group create \
