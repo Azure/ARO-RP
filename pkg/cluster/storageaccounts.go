@@ -75,7 +75,7 @@ func (m *manager) enableServiceEndpoints(ctx context.Context) error {
 func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	if len(m.doc.OpenShiftCluster.Properties.WorkerProfiles) == 0 {
-		m.log.Error("Skipping migrateStorageAccounts due to missing WorkerProfiles.")
+		m.log.Error("skipping migrateStorageAccounts due to missing WorkerProfiles.")
 		return nil
 	}
 	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
