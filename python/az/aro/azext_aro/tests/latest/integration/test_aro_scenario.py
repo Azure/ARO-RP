@@ -2,8 +2,7 @@
 # Licensed under the Apache License 2.0.
 
 import os
-import unittest
-import mock
+from unittest import mock
 
 from azure_devtools.scenario_tests import AllowLargeResponse
 from azure.cli.testsdk import ResourceGroupPreparer
