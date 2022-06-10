@@ -225,7 +225,11 @@ func (m *manager) startInstallation(ctx context.Context) error {
 	var err error
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		if doc.OpenShiftCluster.Properties.Install == nil {
-			doc.OpenShiftCluster.Properties.Install = &api.Install{}
+			// set the install time which is used for the SAS token with which
+			// the bootstrap node retrieves its ignition payload
+			doc.OpenShiftCluster.Properties.Install = &api.Install{
+				Now: time.Now().UTC(),
+			}
 		}
 		return nil
 	})

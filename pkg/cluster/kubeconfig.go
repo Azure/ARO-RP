@@ -115,16 +115,6 @@ func (m *manager) generateKubeconfigs(ctx context.Context) error {
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		// used for the SAS token with which the bootstrap node retrieves its
-		// ignition payload
-		var t time.Time
-		if doc.OpenShiftCluster.Properties.Install.Now == t {
-			// Only set this if it hasn't been set already, since it is used to
-			// create values for signedStart and signedExpiry in
-			// deployResourceTemplate, and if these are not stable a
-			// redeployment will fail.
-			doc.OpenShiftCluster.Properties.Install.Now = time.Now().UTC()
-		}
 		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminInternalClient.File.Data
 		doc.OpenShiftCluster.Properties.AROServiceKubeconfig = aroServiceInternalClient.File.Data
 		doc.OpenShiftCluster.Properties.AROSREKubeconfig = aroSREInternalClient.File.Data
