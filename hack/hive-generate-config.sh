@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # For now we'll use the quay hive image, but this will change to an ACR once the quay.io -> ACR mirroring is setup
+# Note: semi-scientific way to get the latest image: `podman search --list-tags --limit 10000 quay.io/app-sre/hive | tail -n1`
 HIVE_IMAGE="quay.io/app-sre/hive:86bd8fc"
 
 # This is the commit sha that the above image was built from and ensures we use the correct configs for the release
