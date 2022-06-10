@@ -14,18 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// +k8s:deepcopy-gen=package
-// +k8s:protobuf-gen=package
-// +k8s:openapi-gen=true
-// +k8s:prerelease-lifecycle-gen=true
+package apis
 
-<<<<<<< HEAD:vendor/k8s.io/api/flowcontrol/v1beta2/doc.go
-// +groupName=flowcontrol.apiserver.k8s.io
-=======
 import (
 	"github.com/openshift/cluster-api-provider-baremetal/pkg/apis/baremetal/v1alpha1"
 )
->>>>>>> 1c4e98933 (Vendor installer release 4.10):vendor/github.com/openshift/cluster-api-provider-baremetal/pkg/apis/addtoscheme_baremetal_v1alpha1.go
 
-// Package v1beta2 holds api types of version v1alpha1 for group "flowcontrol.apiserver.k8s.io".
-package v1beta2 // import "k8s.io/api/flowcontrol/v1beta2"
+func init() {
+	// Register the types with the Scheme so the components can map objects to GroupVersionKinds and back
+	AddToSchemes = append(AddToSchemes, v1alpha1.SchemeBuilder.AddToScheme)
+}

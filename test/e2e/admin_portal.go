@@ -13,7 +13,7 @@ import (
 	. "github.com/tebeka/selenium"                       //nolint
 )
 
-var _ = FDescribe("Admin Portal E2E Testing", func() {
+var _ = Describe("Admin Portal E2E Testing", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 	var wdPoint *WebDriver
 	var wd WebDriver
@@ -65,6 +65,7 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 	})
 
 	It("Should be able to populate cluster info panel correctly", func() {
+		const CLUSTER_INFO_HEADINGS = 17
 		err := wd.Wait(ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))
 		if err != nil {
 			TakeScreenshot(wd, err)
@@ -90,43 +91,47 @@ var _ = FDescribe("Admin Portal E2E Testing", func() {
 			TakeScreenshot(wd, err)
 		}
 
-		err = wd.WaitWithTimeout(ElementIsLocated(ByCSSSelector, "span.css-287"), 2*time.Minute)
+		err = wd.WaitWithTimeout(ElementIsLocated(ByCSSSelector, "div.css-244 > div > div > span"), 2*time.Minute)
 		if err != nil {
 			TakeScreenshot(wd, err)
 		}
 
-		panelFields, err := wd.FindElements(ByCSSSelector, "span.css-287")
+		panelSpans, err := wd.FindElements(ByCSSSelector, "div.css-244 > div > div > span")
 		if err != nil {
 			TakeScreenshot(wd, err)
 		}
-		var filteredPanelFields []string
+
+		Expect(len(panelSpans)).To(Equal(CLUSTER_INFO_HEADINGS * 3))
+
+		panelFields := panelSpans[0 : CLUSTER_INFO_HEADINGS-1]
+		panelColons := panelSpans[CLUSTER_INFO_HEADINGS : CLUSTER_INFO_HEADINGS*2-1]
+		panelValues := panelSpans[CLUSTER_INFO_HEADINGS*2 : len(panelSpans)-1]
+
 		for _, panelField := range panelFields {
 			panelText, err := panelField.Text()
 			if err != nil {
 				TakeScreenshot(wd, err)
 			}
 
-			if panelText != ":" {
-				filteredPanelFields = append(filteredPanelFields, panelText)
-			}
+			Expect(panelText).To(Not(Equal("")))
 		}
 
-		Expect(panelFields).ShouldNot(BeEmpty())
-
-		panelValues, err := wd.FindElements(ByCSSSelector, "span.css-290")
-		if err != nil {
-			TakeScreenshot(wd, err)
-		}
-
-		Expect(len(panelValues)).To(Equal(len(filteredPanelFields)))
-
-		for _, panelValue := range panelValues {
-			panelValueText, err := panelValue.Text()
+		for _, panelField := range panelColons {
+			panelText, err := panelField.Text()
 			if err != nil {
 				TakeScreenshot(wd, err)
 			}
 
-			Expect(panelValueText).To(Not(BeNil()))
+			Expect(panelText).To(Equal(":"))
+		}
+
+		for _, panelField := range panelValues {
+			panelText, err := panelField.Text()
+			if err != nil {
+				TakeScreenshot(wd, err)
+			}
+
+			Expect(panelText).To(Not(Equal("")))
 		}
 	})
 

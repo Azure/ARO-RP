@@ -5,8 +5,6 @@ package cluster
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,15 +16,9 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/openshift/installer/pkg/asset/installconfig"
-	"github.com/openshift/installer/pkg/asset/releaseimage"
-	"github.com/openshift/installer/pkg/asset/targets"
-	"github.com/openshift/installer/pkg/asset/templates/content/bootkube"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/bootstraplogging"
-	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -154,77 +146,6 @@ func (m *manager) deployStorageTemplate(ctx context.Context) error {
 	}
 
 	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
-}
-
-// applyInstallConfigCustomisations modifies the InstallConfig and creates
-// parent assets, then regenerates the InstallConfig for use for Ignition
-// generation, etc.
-func (m *manager) applyInstallConfigCustomisations(ctx context.Context, installConfig *installconfig.InstallConfig, image *releaseimage.Image) (graph.Graph, error) {
-	clusterID := &installconfig.ClusterID{
-		UUID:    m.doc.ID,
-		InfraID: m.doc.OpenShiftCluster.Properties.InfraID,
-	}
-
-	bootstrapLoggingConfig, err := bootstraplogging.GetConfig(m.env, m.doc)
-	if err != nil {
-		return nil, err
-	}
-
-	httpSecret := make([]byte, 64)
-	_, err = rand.Read(httpSecret)
-	if err != nil {
-		return nil, err
-	}
-
-	imageRegistryConfig := &bootkube.AROImageRegistryConfig{
-		AccountName:   m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName,
-		ContainerName: "image-registry",
-		HTTPSecret:    hex.EncodeToString(httpSecret),
-	}
-
-	dnsConfig := &bootkube.ARODNSConfig{
-		APIIntIP:  m.doc.OpenShiftCluster.Properties.APIServerProfile.IntIP,
-		IngressIP: m.doc.OpenShiftCluster.Properties.IngressProfiles[0].IP,
-	}
-
-	if m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
-		dnsConfig.GatewayPrivateEndpointIP = m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP
-		dnsConfig.GatewayDomains = append(m.env.GatewayDomains(), m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName+".blob."+m.env.Environment().StorageEndpointSuffix)
-	}
-
-	g := graph.Graph{}
-	g.Set(installConfig, image, clusterID, bootstrapLoggingConfig, dnsConfig, imageRegistryConfig)
-
-	m.log.Print("resolving graph")
-	for _, a := range targets.Cluster {
-		err = g.Resolve(a)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Handle MTU3900 feature flag
-	if m.doc.OpenShiftCluster.Properties.NetworkProfile.MTUSize == api.MTU3900 {
-		m.log.Printf("applying feature flag %s", api.FeatureFlagMTU3900)
-		if err = m.overrideEthernetMTU(g); err != nil {
-			return nil, err
-		}
-	}
-
-	return g, nil
-}
-
-func (m *manager) persistGraph(ctx context.Context, g graph.Graph) error {
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
-
-	exists, err := m.graph.Exists(ctx, resourceGroup, clusterStorageAccountName)
-	if err != nil || exists {
-		return err
-	}
-
-	// the graph is quite big, so we store it in a storage account instead of in cosmosdb
-	return m.graph.Save(ctx, resourceGroup, clusterStorageAccountName, g)
 }
 
 func (m *manager) attachNSGs(ctx context.Context) error {

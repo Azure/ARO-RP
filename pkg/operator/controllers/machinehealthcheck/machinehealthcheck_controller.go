@@ -5,19 +5,31 @@ package machinehealthcheck
 
 import (
 	"context"
+	_ "embed"
+	"strings"
 	"time"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
+
+//go:embed staticresources/machinehealthcheck.yaml
+var machinehealthcheckYaml []byte
+
+//go:embed staticresources/mhcremediationalert.yaml
+var mhcremediationalertYaml []byte
 
 const (
 	ControllerName string = "MachineHealthCheck"
@@ -62,15 +74,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	var resources []kruntime.Object
 
-	// this loop prevents us from hard coding resource strings
-	// and ensures all static resources are accounted for.
-	for _, assetName := range AssetNames() {
-		b, err := Asset(assetName)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		resource, _, err := scheme.Codecs.UniversalDeserializer().Decode(b, nil, nil)
+	for _, asset := range [][]byte{machinehealthcheckYaml, mhcremediationalertYaml} {
+		resource, _, err := scheme.Codecs.UniversalDeserializer().Decode(asset, nil, nil)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -101,8 +106,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 // SetupWithManager will manage only our MHC resource with our specific controller name
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return strings.EqualFold(arov1alpha1.SingletonClusterName, o.GetName())
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&machinev1beta1.MachineHealthCheck{}).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		Named(ControllerName).
+		Owns(&machinev1beta1.MachineHealthCheck{}).
+		Owns(&monitoringv1.PrometheusRule{}).
 		Complete(r)
 }

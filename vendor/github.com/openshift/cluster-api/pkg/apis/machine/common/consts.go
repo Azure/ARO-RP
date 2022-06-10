@@ -15,15 +15,6 @@ limitations under the License.
 */
 
 package common
-<<<<<<< HEAD:vendor/github.com/openshift/cluster-api/pkg/apis/machine/common/consts.go
-
-const (
-	// PausedAnnotation is an annotation that can be applied to MachineHealthCheck objects to prevent the MHC controller
-	// from processing it.
-	PausedAnnotation = "cluster.x-k8s.io/paused"
-)
-=======
->>>>>>> 1c4e98933 (Vendor installer release 4.10):vendor/github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1/consts.go
 
 // Constants aren't automatically generated for unversioned packages.
 // Instead share the same constant for all versioned packages

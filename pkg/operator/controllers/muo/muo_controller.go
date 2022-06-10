@@ -18,8 +18,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
@@ -160,12 +162,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 // SetupWithManager setup our manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	pullSecretPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return (o.GetName() == pullSecretName.Name && o.GetNamespace() == pullSecretName.Namespace)
+	})
+
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
 	})
 
-	builder := ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate))
+	muoBuilder := ctrl.NewControllerManagedBy(mgr).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
+		Watches(
+			&source.Kind{Type: &corev1.Secret{}},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(pullSecretPredicate),
+		)
 
 	resources, err := r.deployer.Template(&config.MUODeploymentConfig{}, staticFiles)
 	if err != nil {
@@ -175,11 +186,11 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	for _, i := range resources {
 		o, ok := i.(client.Object)
 		if ok {
-			builder.Owns(o)
+			muoBuilder.Owns(o)
 		}
 	}
 
-	return builder.
+	return muoBuilder.
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}, predicate.LabelChangedPredicate{})).
 		Named(ControllerName).
 		Complete(r)

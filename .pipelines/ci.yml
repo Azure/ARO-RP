@@ -48,12 +48,6 @@ jobs:
 
   - script: |
       set -xe
-      make validate-go
-      [[ -z "$(git status -s)" ]]
-    displayName: 🕵️ Validate Golang code
-
-  - script: |
-      set -xe
       make build-all
       [[ -z "$(git status -s)" ]]
     displayName: 🕵️ Build Golang code

@@ -53,15 +53,4 @@ jobs:
 
       export CI=true
       make test-e2e
-  - task: CopyFiles@2
-    condition: succeededOrFailed()
-    inputs:
-      contents: $(Build.SourcesDirectory)/*.png
-      targetFolder: $(Build.ArtifactStagingDirectory)
-
-  - task: PublishBuildArtifacts@1
-    condition: succeededOrFailed()
-    inputs:
-      pathToPublish: $(Build.ArtifactStagingDirectory)
-      artifactName: Screenshots
   - template: ./templates/template-az-cli-logout.yml
