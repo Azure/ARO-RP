@@ -8,6 +8,12 @@
                 "description": "The AAD admin group's object ID."
             }
         },
+        "dnsZone": {
+            "type": "string",
+            "metadata": {
+                "description": "DNS zone to put the Kubernetes API FQDN CNAME record into."
+            }
+        },
         "aksClusterName": {
             "type": "string",
             "defaultValue": "aro-aks-cluster",
@@ -541,6 +547,21 @@
                     "scale-down-utilization-threshold": "[parameters('autoScalerProfileUtilizationThreshold')]",
                     "max-graceful-termination-sec": "[parameters('autoScalerProfileMaxGracefulTerminationSec')]"
                 }
+            }
+        },
+        {
+            "type": "Microsoft.Network/dnszones/CNAME",
+            "apiVersion": "2018-05-01",
+            "name": "[concat(parameters('dnsZone'), '/api.aks')]",
+            "dependsOn": [
+                "[parameters('aksClusterName')]"
+            ],
+            "properties": {
+                "TTL": 300,
+                "CNAMERecord": {
+                    "cname": "[reference(variables('aksClusterId')).fqdn]"
+                },
+                "targetResource": {}
             }
         },
         {
