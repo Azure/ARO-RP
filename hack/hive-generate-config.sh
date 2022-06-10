@@ -9,7 +9,7 @@ HIVE_IMAGE_COMMIT_HASH=86bd8fc5a
 
 HIVE_OPERATOR_NS="hive"
 
-# This version is specified in the hive repo and is the only hard dependancy fro this script
+# This version is specified in the hive repo and is the only hard dependency for this script
 # https://github.com/openshift/hive/blob/master/vendor/github.com/openshift/build-machinery-go/make/targets/openshift/kustomize.mk#L7
 KUSTOMIZE_VERSION=4.1.3
 KUSTOMIZE=$( which kustomize 2>/dev/null )
