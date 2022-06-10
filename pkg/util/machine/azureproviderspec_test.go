@@ -21,6 +21,13 @@ import (
 	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 )
 
+type testData struct {
+	name         string
+	machineType  MachineType
+	providerSpec []byte
+	wantErr      string
+}
+
 var machineAzureProviderSpec = &machinev1beta1.AzureMachineProviderSpec{
 	Image: machinev1beta1.Image{
 		Publisher: "azureopenshift",
@@ -95,12 +102,7 @@ func TestUnmarshalAzureProviderSpec(t *testing.T) {
 	machineProviderSpecBytes := marshalAzureMachineProviderSpec(t, machineAzureProviderSpec)
 	azProviderSpecBytes := marshalAzureMachineProviderSpec(t, azAzureProviderSpec)
 
-	for _, tt := range []struct {
-		name         string
-		machineType  MachineType
-		providerSpec []byte
-		wantErr      string
-	}{
+	for _, tt := range []testData{
 		{
 			name:         "valid - machine.openshift.io provider spec",
 			providerSpec: machineProviderSpecBytes,
@@ -113,7 +115,7 @@ func TestUnmarshalAzureProviderSpec(t *testing.T) {
 			name:         "fail - azureproviderconfig.openshift.io invalid json",
 			providerSpec: []byte("azureproviderconfig.openshift.io"),
 			machineType:  MachineSet,
-			wantErr:      fmt.Sprintf("%s %s: failed to unmarshal the 'azureproviderconfig.openshift.io' provider spec: %q", MachineSet, machineName, "invalid character 'a' looking for beginning of value"),
+			wantErr:      fmt.Sprintf("%s %s: failed to unmarshal the \"azureproviderconfig.openshift.io\" provider spec: %q", MachineSet, machineName, "invalid character 'a' looking for beginning of value"),
 		},
 		{
 			name:         "fail - unable to decode type",
