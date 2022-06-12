@@ -39,7 +39,7 @@ if [ ! -f go.mod ] || [ ! -d ".git" ]; then
 	exit 1
 fi
 
-if [ ! -f "./hack/hive-config/hive-deployment.yaml" ] || [ ! -d "././hack/hive-config/crds" ] ; then
+if [ ! -f "./hack/hive-config/hive-deployment.yaml" ] || [ ! -d "./hack/hive-config/crds" ] ; then
 	echo "hive config is missing, generating config, please rerun this script afterwards"
 	./hack/hive-generate-config.sh
 	if [ $? -ne 0 ]; then

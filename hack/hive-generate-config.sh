@@ -75,7 +75,7 @@ set -e
 trap cleanup EXIT
 
 if [ ! -f go.mod ] || [ ! -d ".git" ]; then
-	echo "this script must by run from the repo root directory"
+	echo "this script must by run from the repo's root directory"
 	exit 1
 fi
 if [[ ! "$TMPDIR" || ! -d "$TMPDIR" ]]; then

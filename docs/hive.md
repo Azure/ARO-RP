@@ -6,7 +6,7 @@ Replace the HIVE_IMAGE define with the latest version of the Hive image in the h
 
 ## Generating config
 
-In order to generate config for a dev environment you need to ensure you have the correct `LOCATION` set in your env file. Once this is done you can simple run the config generation script.
+In order to generate config for a dev environment you need to ensure you have the correct `LOCATION` set in your env file. Once this is done you can simply run the config generation script.
 
 ```bash
 # source your environment file
