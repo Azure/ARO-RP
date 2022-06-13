@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: test-webhooks
+  name: docker-login-test-deployment
+  labels:
+    app: docker-login-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: docker-login-test
+  template:
+    metadata:
+      labels:
+        app: docker-login-test
+    spec:
+      containers:
+      - image: quay.io/rh_ee_jfacchet/docker-login-test:latest
+        name: hook
+        ports:
+        - containerPort: 8080
+    volumeMounts:
+    - name: pullsecretvalidationcert
+      readOnly: true
+      mountPath: "/etc/certificates"
+
+
