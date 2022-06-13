@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/go-toolset:1.16.12 AS builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.17.7 AS builder
 ARG MUOVERSION
 ENV DOWNLOAD_URL=https://github.com/openshift/managed-upgrade-operator/archive/${MUOVERSION}.tar.gz
 ENV GOOS=linux \
