@@ -11,7 +11,7 @@ function download_tmp_kubectl {
 	curl -sLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 	if [ $? -ne 0 ]; then
 		echo ": error downloading kubectl"
-		exit
+		exit 1
 	fi
 	chmod 755 kubectl
 	KUBECTL="$(pwd)/kubectl"
@@ -27,7 +27,7 @@ function verify_tools {
 
 	if [ $( $KUBECTL get nodes 2>/dev/null | wc -l ) -eq 0 ]; then
 		echo "unable to connect to the cluster"
-		exit
+		exit 1
 	fi
 }
 

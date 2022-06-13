@@ -28,7 +28,7 @@ function verify_kustomize {
 	curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/kustomize/v${KUSTOMIZE_VERSION}/hack/install_kustomize.sh" | bash -s "$KUSTOMIZE_VERSION" "$TMPDIR"
 	if [ $? -ne 0 ]; then
 		echo "error downloading kustomize"
-		exit
+		exit 1
 	fi
 	KUSTOMIZE="${TMPDIR}/kustomize"
 }
@@ -38,7 +38,7 @@ function hive_repo_clone {
 	CLONE_ERROR=$(git clone https://github.com/openshift/hive.git "$TMPDIR" 2>/dev/null )
 	if [ $? -ne 0 ]; then
 		echo ": error cloning the hive repo: ${CLONE_ERROR}"
-		exit
+		exit 1
 	fi
 	echo ", done."
 }
@@ -47,7 +47,7 @@ function hive_repo_hash_checkout {
 	git reset --hard $HIVE_IMAGE_COMMIT_HASH
 	if [ $? -ne 0 ] || [[ $( git rev-parse --short=${#HIVE_IMAGE_COMMIT_HASH} HEAD ) != ${HIVE_IMAGE_COMMIT_HASH} ]]; then
 		echo "error resetting the hive repo to the correct git hash '${HIVE_IMAGE_COMMIT_HASH}'"
-		exit
+		exit 1
 	fi
 }
 
