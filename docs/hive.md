@@ -27,7 +27,7 @@ make aks.config
 
 Set KUBECONFIG to the aks.kubeconfig file, for example:
 ```bash
-export KUBECONFIG="$(pwd)/aks.kubeconfig"
+export KUBECONFIG="$PWD/aks.kubeconfig"
 ```
 
 Installing then simply requires the running of the install script.
