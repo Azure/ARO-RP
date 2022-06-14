@@ -12,7 +12,7 @@ To Run Go tests with coverage:
 
 ```bash
 # first navigate to your directory with the code you'd like to see coverage on
-t="/tmp/go-cover.$$.tmp" 
+t="/tmp/go-cover.$$.tmp"
 go test -coverprofile=$t $@ && go tool cover -html=$t && unlink $t
 ```
 
@@ -22,7 +22,7 @@ To run python client and `az aro` CLI tests:
 make test-python
 ```
 
-To run Go linting tasks (requires [golanglint-ci](https://golangci-lint.run/usage/install/) to be installed):
+To run Go linting tasks:
 
 ```bash
 make lint-go

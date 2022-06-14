@@ -22,8 +22,6 @@ This document goes through the development dependencies one requires in order to
     sudo touch /etc/containers/nodocker
     ```
 
-1. Install [golangci-lint](https://golangci-lint.run/) and [yamllint](https://yamllint.readthedocs.io/en/stable/quickstart.html#installing-yamllint) (optional but your code is required to comply to pass the CI)
-
 ### Fedora Packages
 1. Install the `gpgme-devel`, `libassuan-devel`, and `openssl` packages.
     > `sudo dnf install -y gpgme-devel libassuan-devel openssl`
