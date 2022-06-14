@@ -87,6 +87,9 @@ EOF
 
 systemctl enable proxy.service
 
+# We need to manually set PasswordAuthentication to true in order for VMSS Jit access to work
+sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+
 (sleep 30; reboot) &
 `))
 
