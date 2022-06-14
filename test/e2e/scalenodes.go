@@ -21,7 +21,6 @@ import (
 
 const (
 	machineSetsNamespace = "openshift-machine-api"
-	minSupportedReplicas = 2
 )
 
 var _ = Describe("Scale nodes", func() {
@@ -122,24 +121,5 @@ func waitForScale(name string) error {
 
 		return machineset.Status.ObservedGeneration == machineset.Generation &&
 			machineset.Status.AvailableReplicas == *machineset.Spec.Replicas, nil
-	})
-}
-
-func waitForMachines() error {
-	return wait.PollImmediate(1*time.Second, 30*time.Minute, func() (bool, error) {
-		machines, err := clients.MachineAPI.MachineV1beta1().Machines(machineSetsNamespace).List(context.Background(), metav1.ListOptions{})
-		if err != nil {
-			log.Warn(err)
-			return false, nil
-		}
-
-		// Wait for all machines to be in Running phase before continuing
-		for _, m := range machines.Items {
-			if *m.Status.Phase != "Running" {
-				return false, nil
-			}
-		}
-
-		return true, nil
 	})
 }
