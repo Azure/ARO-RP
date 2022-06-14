@@ -52,7 +52,7 @@ func TestDeleteNic(t *testing.T) {
 			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
 				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Failed
 				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
-				networkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, gomock.Any()).Return(nil)
+				networkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic).Return(nil)
 				networkInterfaces.EXPECT().DeleteAndWait(gomock.Any(), clusterRG, nicName).Return(nil)
 			},
 		},
@@ -61,7 +61,7 @@ func TestDeleteNic(t *testing.T) {
 			mocks: func(networkInterfaces *mock_network.MockInterfacesClient) {
 				nic.InterfacePropertiesFormat.ProvisioningState = mgmtnetwork.Failed
 				networkInterfaces.EXPECT().Get(gomock.Any(), clusterRG, nicName, "").Return(nic, nil)
-				networkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, gomock.Any()).Return(fmt.Errorf("Failed to update"))
+				networkInterfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRG, nicName, nic).Return(fmt.Errorf("Failed to update"))
 			},
 			wantErr: "Failed to update",
 		},
