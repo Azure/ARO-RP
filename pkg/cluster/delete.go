@@ -54,7 +54,7 @@ func (m *manager) deleteNic(ctx context.Context, nicName string) error {
 
 	if nic.ProvisioningState == mgmtnetwork.Failed {
 		m.log.Printf("NIC '%s' is in a Failed provisioning state, attempting to reconcile prior to deletion.", *nic.ID)
-		err := m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, mgmtnetwork.Interface{})
+		err := m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, nic)
 		if err != nil {
 			return err
 		}
