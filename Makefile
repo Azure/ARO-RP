@@ -185,6 +185,9 @@ test-python: pyenv az
 		hack/unit-test-python.sh
 
 
+shared-cluster-login: 
+	oc login ${SHARED_CLUSTER_API} -u kubeadmin -p ${SHARED_CLUSTER_KUBEADMIN_PASSWORD}
+
 unit-test-python:
 	hack/unit-test-python.sh
 
