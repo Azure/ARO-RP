@@ -240,6 +240,12 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodGet).HandlerFunc(f.listAdminOpenShiftClusterResources).Name("listAdminOpenShiftClusterResources")
 
 	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/resourcesscoped").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.listAdminOpenShiftClusterResourcesScoped).Name("listAdminOpenShiftClusterResourcesScoped")
+
+	s = r.
 		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/serialconsole").
 		Subrouter()
 

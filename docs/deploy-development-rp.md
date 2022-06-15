@@ -171,6 +171,12 @@
   curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/resources"
   ```
 
+* List scoped cluster Azure Resources of a dev cluster
+  ```bash
+  RESOURCETYPE="Microsoft.Compute/virtualMachines"
+  curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/resourcesscoped?resourceType=$RESOURCETYPE" --header "Content-Type: application/json" -d "{}"
+  ```
+
 * Perform Cluster Upgrade on a dev cluster
   ```bash
   curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/upgrade"

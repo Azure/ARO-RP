@@ -23,6 +23,7 @@ import (
 // AzureActions contains those actions which rely solely on Azure clients, not using any k8s clients
 type AzureActions interface {
 	ResourcesList(ctx context.Context) ([]byte, error)
+	ResourcesListScoped(ctx context.Context, resourceType string) ([]byte, error)
 	NICReconcileFailedState(ctx context.Context, nicName string) error
 	VMRedeployAndWait(ctx context.Context, vmName string) error
 	VMStartAndWait(ctx context.Context, vmName string) error

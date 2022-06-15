@@ -177,6 +177,21 @@ func (mr *MockAzureActionsMockRecorder) ResourcesList(arg0 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourcesList", reflect.TypeOf((*MockAzureActions)(nil).ResourcesList), arg0)
 }
 
+// ResourcesListScoped mocks base method.
+func (m *MockAzureActions) ResourcesListScoped(arg0 context.Context, arg1 string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResourcesListScoped", arg0, arg1)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ResourcesListScoped indicates an expected call of ResourcesListScoped.
+func (mr *MockAzureActionsMockRecorder) ResourcesListScoped(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourcesListScoped", reflect.TypeOf((*MockAzureActions)(nil).ResourcesListScoped), arg0, arg1)
+}
+
 // VMRedeployAndWait mocks base method.
 func (m *MockAzureActions) VMRedeployAndWait(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
