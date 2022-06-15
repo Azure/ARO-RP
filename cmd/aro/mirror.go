@@ -146,6 +146,11 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.redhat.io/rhel8/support-tools:latest",
 		"registry.redhat.io/openshift4/ose-tools-rhel7:latest",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:latest",
+		"registry.access.redhat.com/ubi7/ubi-minimal:latest",
+		"registry.access.redhat.com/ubi8/ubi-minimal:latest",
+		"registry.access.redhat.com/ubi8/nodejs-14:latest",
+		"registry.access.redhat.com/ubi7/go-toolset:1.16.12",
+		"registry.access.redhat.com/ubi8/go-toolset:1.17.7",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
 		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthRedhat)
