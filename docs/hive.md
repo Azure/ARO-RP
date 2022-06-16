@@ -19,7 +19,7 @@ This will download the latest source, reset to the hash specified in HIVE_IMAGE_
 
 ## Installing
 
-Ensure you have the latest AKS kubefig:
+Ensure you have the latest AKS kubeconfig:
 ```bash
 # get the AKS kubeconfig
 make aks.kubeconfig
