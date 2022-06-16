@@ -2,11 +2,11 @@
 
 ## Version
 
-Replace the HIVE_IMAGE define with the latest version of the Hive image in the hack/hive-generate-config.sh file and update the HIVE_IMAGE_COMMIT_HASH define to the commit sha the image was built from. This ensures we use the correct config files for the version we are using.
+Update the HIVE_IMAGE_COMMIT_HASH in `hack/hive-generate-config.sh` with the latest commit sha of the Hive image you are deploying. The commit sha is used to specify the image tag and also used during config generation to checkout the correct version of the config files. The config files are subsequently used by the `hack/hive-dev-install.sh` script during iunstallation or during config updates.
 
 ## Generating config
 
-In order to generate config for a dev environment you need to ensure you have the correct `LOCATION` set in your env file. Once this is done you can simply run the config generation script.
+In order to generate config for a dev environment you need to ensure you have the correct `LOCATION` is set in your env file. Once this is done you can simply run the config generation script.
 
 ```bash
 # source your environment file
@@ -15,7 +15,7 @@ In order to generate config for a dev environment you need to ensure you have th
 ./hack/hive-generate-config.sh
 ```
 
-This will download the latest source, reset to the hash specified in HIVE_IMAGE_COMMIT_HASH and build the config using kustomise.
+This will download the latest source, reset to the hash specified in HIVE_IMAGE_COMMIT_HASH, and build the config using kustomise.
 
 ## Installing
 
