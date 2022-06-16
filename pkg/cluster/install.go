@@ -14,14 +14,12 @@ import (
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
-	"github.com/openshift/installer/pkg/asset/installconfig"
-	"github.com/openshift/installer/pkg/asset/releaseimage"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/cluster/graph"
+	"github.com/Azure/ARO-RP/pkg/installer"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -122,14 +120,14 @@ func (m *manager) Update(ctx context.Context) error {
 	return m.runSteps(ctx, steps)
 }
 
+// callInstaller initialises and calls the Installer code. This will later be replaced with a call into Hive.
+func (m *manager) callInstaller(ctx context.Context) error {
+	i := installer.NewInstaller(m.log, m.env, m.doc, m.subscriptionDoc, m.fpAuthorizer, m.deployments, m.graph)
+	return i.Install(ctx)
+}
+
 // Install installs an ARO cluster
 func (m *manager) Install(ctx context.Context) error {
-	var (
-		installConfig *installconfig.InstallConfig
-		image         *releaseimage.Image
-		g             graph.Graph
-	)
-
 	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
@@ -137,11 +135,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.ensureInfraID),
 			steps.Action(m.generateSSHKey),
 			steps.Action(m.populateMTUSize),
-			steps.Action(func(ctx context.Context) error {
-				var err error
-				installConfig, image, err = m.generateInstallConfig(ctx)
-				return err
-			}),
+
 			steps.Action(m.createDNS),
 			steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
 			steps.Action(m.clusterSPObjectID),
@@ -149,28 +143,22 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.deployStorageTemplate)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGs)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.updateAPIIPEarly)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.createOrUpdateRouterIPEarly)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureGatewayCreate)),
-			steps.Action(func(ctx context.Context) error {
-				var err error
-				// Applies ARO-specific customisations to the InstallConfig
-				g, err = m.applyInstallConfigCustomisations(ctx, installConfig, image)
-				return err
-			}),
-			steps.Action(func(ctx context.Context) error {
-				// saves the graph to storage account
-				return m.persistGraph(ctx, g)
-			}),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGs)),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
-			steps.Action(m.ensureBillingRecord),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.deployResourceTemplate)),
 			steps.Action(m.createAPIServerPrivateEndpoint),
 			steps.Action(m.createCertificates),
+
+			// Run installer. For M5/M6 we will persist the graph inside the
+			// installer code since it's easier, but in the future, this data
+			// should be collected from Hive's outputs where needed.
+			steps.Action(m.callInstaller),
+
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
+			steps.Action(m.ensureBillingRecord),
 			steps.Action(m.initializeKubernetesClients),
 			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
-			steps.Condition(m.bootstrapConfigMapReady, 30*time.Minute, true),
 			steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Action(m.ensureAROOperator),
 			steps.Action(m.incrInstallPhase),
