@@ -112,6 +112,10 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.clusterSPObjectID),
 		// credentials rotation flow steps
 		steps.Action(m.createOrUpdateClusterServicePrincipalRBAC),
+		steps.Action(m.startVMs),
+		steps.Condition(m.apiServersReady, 30*time.Minute, true),
+		steps.Action(m.configureAPIServerCertificate),
+		steps.Action(m.configureIngressCertificate),
 		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.updateOpenShiftSecret),
 		steps.Action(m.updateAROSecret),
