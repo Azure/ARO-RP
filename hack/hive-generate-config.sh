@@ -1,11 +1,11 @@
 #!/bin/bash
 
+# This is the commit sha that the image was built from and ensures we use the correct configs for the release
+HIVE_IMAGE_COMMIT_HASH="2383a88"
+
 # For now we'll use the quay hive image, but this will change to an ACR once the quay.io -> ACR mirroring is setup
 # Note: semi-scientific way to get the latest image: `podman search --list-tags --limit 10000 quay.io/app-sre/hive | tail -n1`
-HIVE_IMAGE="quay.io/app-sre/hive:86bd8fc"
-
-# This is the commit sha that the above image was built from and ensures we use the correct configs for the release
-HIVE_IMAGE_COMMIT_HASH=86bd8fc5a
+HIVE_IMAGE="quay.io/app-sre/hive:${HIVE_IMAGE_COMMIT_HASH}"
 
 HIVE_OPERATOR_NS="hive"
 
@@ -44,6 +44,8 @@ function hive_repo_clone {
 }
 
 function hive_repo_hash_checkout {
+	# go into $TMPDIR and checkout the commit the image was built with
+	pushd $TMPDIR >& /dev/null
 	git reset --hard $HIVE_IMAGE_COMMIT_HASH
 	if [ $? -ne 0 ] || [[ $( git rev-parse --short=${#HIVE_IMAGE_COMMIT_HASH} HEAD ) != ${HIVE_IMAGE_COMMIT_HASH} ]]; then
 		echo "error resetting the hive repo to the correct git hash '${HIVE_IMAGE_COMMIT_HASH}'"
@@ -61,8 +63,9 @@ function generate_hive_config {
 	popd >& /dev/null
 
 	$KUSTOMIZE build overlays/deploy > hive-deployment.yaml
-	popd >& /dev/null
 
+	# return to the repo directory to copy the generated config from $TMPDIR
+	popd >& /dev/null
 	mv "$TMPDIR/hive-deployment.yaml" ./hack/hive-config/
 
 	if [ -d ./hack/hive-config/crds ]; then
@@ -84,10 +87,7 @@ if [[ ! "$TMPDIR" || ! -d "$TMPDIR" ]]; then
 fi
 
 hive_repo_clone
-
-pushd $TMPDIR >& /dev/null
 hive_repo_hash_checkout
-
 verify_kustomize
 generate_hive_config
 
