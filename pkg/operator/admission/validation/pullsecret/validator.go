@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -15,6 +14,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/sirupsen/logrus"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -34,7 +34,7 @@ func unmarshalRequestToSecret(request *admissionv1.AdmissionRequest) (corev1.Sec
 	return secret, json.Unmarshal(request.Object.Raw, &secret)
 }
 
-func (client ociRegClient) validateSecret(review admissionv1.AdmissionReview) error {
+func (client ociRegClient) validateSecret(log *logrus.Entry, review admissionv1.AdmissionReview) error {
 	secret, err := unmarshalRequestToSecret(review.Request)
 	if err != nil {
 		return err
@@ -45,21 +45,21 @@ func (client ociRegClient) validateSecret(review admissionv1.AdmissionReview) er
 		return nil
 	}
 
-	errs := []error{}
+	credentials := ""
 	if v, ok := secret.Data[".dockerconfigjson"]; ok {
-		errs = client.validate(string(v))
+		credentials = string(v)
 	} else if v, ok := secret.Data[".dockercfg"]; ok {
-		errs = client.validate(string(v))
+		credentials = string(v)
 	} else {
-		return errors.New("the pullsecret did not have a dockerconfigjson or dockercfg field")
+		return fmt.Errorf("%s did not have a dockerconfigjson or dockercfg field", review.Request.Name)
 	}
 
-	// errors := validate(client.httpClient, string(secret.Data[".dockerconfigjson"]), nil)
-	if len(errs) == 0 {
-		return nil
+	errs := client.validate(log, credentials)
+	if len(errs) != 0 {
+		return fmt.Errorf("some credentials in the pull secret were not valid")
 	}
 
-	return fmt.Errorf("some credentials in the pull secret were not valid")
+	return nil
 }
 
 type requestDoer interface {
@@ -70,6 +70,7 @@ type ociRegClient struct {
 	httpClient requestDoer
 	ctx        context.Context
 	required   map[string]bool
+	log        *logrus.Entry
 }
 
 func decodeResponse(body io.Reader) (string, error) {
@@ -83,22 +84,16 @@ func decodeResponse(body io.Reader) (string, error) {
 	return response.Token, err
 }
 
-func (client ociRegClient) validate(b64 string) []error {
-	log.Println("decoding the json auth file")
+func (client ociRegClient) validate(log *logrus.Entry, b64 string) []error {
 	authsStruct := jsonToAuthStruct([]byte(b64))
 	errs := client.validateCredentials(&authsStruct)
-	if len(errs) != 0 {
-		log.Println("some credentials were not valid")
-		for _, v := range errs {
-			log.Println(v)
-		}
-		return errs
+	for _, v := range errs {
+		log.Println(v)
 	}
-	log.Println("success")
-	return nil
+	return errs
 }
 
-func (client ociRegClient) fetchAuthURL(url string) (string, string, error) {
+func (client ociRegClient) fetchAuthURL(log *logrus.Entry, url string) (string, string, error) {
 	//ping the service to get the auth url back
 	log.Printf("pinging https://%s/v2 to retrieve authentication endpoint", url)
 	req, err := http.NewRequestWithContext(client.ctx, http.MethodGet, "https://"+url+"/v2", nil)
@@ -108,7 +103,6 @@ func (client ociRegClient) fetchAuthURL(url string) (string, string, error) {
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
-		log.Println(err)
 		return "", "", err
 	}
 
@@ -150,7 +144,7 @@ func extractValuesFromAuthHeader(header string) (string, string, error) {
 	return bearerRealm, service, nil
 }
 
-func (client ociRegClient) getToken(bearerRealm, serviceName, user, password string) (string, error) {
+func (client ociRegClient) getToken(log *logrus.Entry, bearerRealm, serviceName, user, password string) (string, error) {
 	//	req, _ := http.NewRequest(http.MethodGet, "https://quay.io/v2/auth?account=rh_ee_jfacchet&scope=repository%3Arh_ee_jfacchet%2Fmyfirstrepo%3Apull&service=quay.io", nil)
 	req, _ := http.NewRequestWithContext(client.ctx, http.MethodGet, bearerRealm, nil)
 	query := req.URL.Query()
@@ -227,16 +221,16 @@ func (client ociRegClient) validateCredentials(authsStruct *authsStruct) []error
 	results := make(chan error)
 	defer close(results)
 
-	errors := make([]error, 0)
 	for k := range authsStruct.Auths {
 		// some urls may need to be ignored.
 		if !client.required[k] {
 			continue
 		}
 		expectedResults++
-		go client.validateCredential(*authsStruct, k, results)
-		//		fmt.Println(k, v)
+		go client.validateCredential(client.log, *authsStruct, k, results)
 	}
+
+	errors := make([]error, 0)
 	for i := 0; i < expectedResults; i++ {
 		routineResult := <-results
 		if routineResult != nil {
@@ -248,21 +242,23 @@ func (client ociRegClient) validateCredentials(authsStruct *authsStruct) []error
 
 //validateCredential checks if the credentials in authStruct are valid for service.
 //if there is any error it writes it to the channel
-func (client ociRegClient) validateCredential(authsStruct authsStruct, service string, results chan error) {
+func (client ociRegClient) validateCredential(log *logrus.Entry, authsStruct authsStruct, service string, results chan error) {
 	user, password, err := userPasswordFromB64(authsStruct.Auths[service].Auth)
 	if err != nil {
 		results <- err
 		return
 	}
 
-	bearerRealm, serviceName, err := client.fetchAuthURL(service)
+	bearerRealm, serviceName, err := client.fetchAuthURL(client.log, service)
 	if err != nil {
+		log.Printf("error while fetching auth url: %s\n", err.Error())
 		results <- err
 		return
 	}
 
-	_, err = client.getToken(bearerRealm, serviceName, user, password)
+	_, err = client.getToken(client.log, bearerRealm, serviceName, user, password)
 	if err != nil {
+		log.Printf("error while getting the token: %s", err.Error())
 		results <- err
 		return
 	}

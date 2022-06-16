@@ -7,13 +7,14 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
-	"log"
 	"net/http"
 	"time"
 
-	"github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	"github.com/sirupsen/logrus"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -23,41 +24,43 @@ import (
 //go:embed manifests
 var assets embed.FS
 
-func Deploy(ctx context.Context, cluster *v1alpha1.Cluster, kubernetescli kubernetes.Interface, dh dynamichelper.Interface) {
-
+func Deploy(ctx context.Context, arocli aroclient.Interface, kubernetescli kubernetes.Interface, dh dynamichelper.Interface) error {
+	aroCluster, err := arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
 	dep := deployer.NewDeployer(kubernetescli, dh, assets, "manifests")
-	dep.CreateOrUpdate(ctx, cluster, nil)
+	return dep.CreateOrUpdate(context.Background(), aroCluster, nil)
 }
 
-func StartValidator() {
+func StartValidator(ctx context.Context, log *logrus.Entry, certPath, keyPath string) error {
 	c := ociRegClient{
 		httpClient: &http.Client{Timeout: time.Second * 3},
-		ctx:        context.Background(),
+		ctx:        ctx,
 		required:   map[string]bool{"quay.io": true},
+		log:        log,
 	}
 	http.HandleFunc("/", c.handleRequest)
-	log.Fatal(http.ListenAndServeTLS(":8080", "example.crt", "example.key", nil))
+	return http.ListenAndServeTLS(":8080", certPath, keyPath, nil)
 }
 
 func (client ociRegClient) handleRequest(w http.ResponseWriter, req *http.Request) {
 	review, err := unmarshalReview(req.Body)
-	var responseReview admissionv1.AdmissionReview
 	encoder := json.NewEncoder(w)
-
-	defer encoder.Encode(responseReview)
 
 	if err != nil {
 		w.WriteHeader(400)
 		w.Write([]byte("no review in request"))
+		client.log.Println("no review in request")
 		return
-		//		responseReview = createResponse(review.Request.UID, false, 400, "could not unmarshall the review")
 	}
-	err = client.validateSecret(review)
+	err = client.validateSecret(client.log, review)
 	if err != nil {
-		responseReview = createResponse(review.Request.UID, false, 400, "some credentials in the pull secret were not valid")
+		client.log.Printf("rejected pullsecret for id %s. err: %s", review.Request.UID, err.Error())
+		encoder.Encode(createResponse(review.Request.UID, false, 400, "the pullsecret could not be validated"))
 		return
 	}
-	responseReview = createSuccessResponse(review.Request.UID)
+	encoder.Encode(createSuccessResponse(review.Request.UID))
 }
 
 // most fields are used for failure. For success, prefer createSuccessResponse

@@ -21,6 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
+	pullsecretHook "github.com/Azure/ARO-RP/pkg/operator/admission/validation/pullsecret"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/alertwebhook"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/autosizednodes"
@@ -220,6 +221,10 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		if err = (machinehealthcheck.NewReconciler(
 			arocli, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machinehealthcheck.ControllerName, err)
+		}
+
+		if err = pullsecretHook.Deploy(ctx, arocli, kubernetescli, dh); err != nil {
+			return fmt.Errorf("unable to create pullsecret admission hook: %v", err)
 		}
 	}
 

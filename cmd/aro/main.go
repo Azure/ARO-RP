@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/ARO-RP/pkg/operator/admission/validation/pullsecret"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -79,6 +80,10 @@ func main() {
 	case "operator":
 		checkArgs(2)
 		err = operator(ctx, log)
+	case "admissionhooks":
+		checkArgs(1)
+		err = pullsecret.StartValidator(ctx, log, "/etc/certificates/tls.crt", "/etc/certificates/tls.key")
+
 	default:
 		usage()
 		os.Exit(2)

@@ -8,55 +8,19 @@ webhooks:
 - name: "verifypullsecret.redhat.com"
   namespaceSelector:
     matchExpressions:
-    - key: webhooktest
+    - key: validate-pullsecret
       operator: In
-      values: ["webhooktest"]
+      values: ["true"]
   rules:
   - apiGroups:   [""]
     apiVersions: ["v1"]
-    operations:  ["CREATE"]
+    operations:  ["CREATE","UPDATE"]
     resources:   ["secrets"]
     scope:       "Namespaced"
   clientConfig:
     service:
       namespace: "test-webhooks"
-      name: "docker-login-test"
-        #    caBundle: |
-        #      LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZnRENDQTJpZ0F3SUJBZ0lVUWdzS2tnK1lr
-        #      dHVsT0tHOCtCY1k1R3Btdmxjd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0xqRXNNQ29HQTFVRUF3d2pa
-        #      RzlqYTJWeUxXeHZaMmx1TFhSbGMzUXVkR1Z6ZEMxM1pXSm9iMjlyY3k1egpkbU13SGhjTk1qSXdO
-        #      VEF6TVRVd01qTTBXaGNOTXpJd05ETXdNVFV3TWpNMFdqQXVNU3d3S2dZRFZRUUREQ05rCmIyTnJa
-        #      WEl0Ykc5bmFXNHRkR1Z6ZEM1MFpYTjBMWGRsWW1odmIydHpMbk4yWXpDQ0FpSXdEUVlKS29aSWh2
-        #      Y04KQVFFQkJRQURnZ0lQQURDQ0Fnb0NnZ0lCQU45NXRQK3pZY0lrQTE1RG1xb3lnVVBKYVoxcjZP
-        #      aFZISzhaZlV0YwpIcGZGc0VpYjJQZkhYa0pxWFNJeTF0SWxaSjNIeVo5cWlrQk1rSnlkRnZXTTRp
-        #      NHMrL0R5VVUxajVwa3ZGenBXCnRnTk9sK0N3bkJpNjNCSlV4WE8yL0hwVWc5WmE4NXJjeE9IN0dZ
-        #      UVl1cDEyOCtrUmg5NktKUEdmeWRWMEVnV2gKc0V0QkI3d0grbW9xSnY1WE5UaEZvSndyblh6RVp6
-        #      R21zMERHNHZQUStEVnc0N2xEU3VxSlNLQXVwZXlnWjB4ZwpnQzB6T1lndU1aSGluRmIxcndWS1Vs
-        #      TWhibVkrc3RSc1JiVEorQnJFRDhIbkZTRzljVUM3NzdoRjBVanBWUTY1CmprMThndGZFNWhMTGVM
-        #      WXRSZGVpK0YvU0RneTVKakVFR0xNampqNWRoeG5QcTNOSEtyNUZRa3JoSDlJeE9EalcKV0VKcEs0
-        #      S1NyL3d1UHowRUdId0ZNUS9EQmI0KzNMYW0wVjNtNStuTkVEVDBJSHNzWlBoSW9CRzE2NXBweWVo
-        #      ZwptTVkrTVBZMFBZYThPSk9lbTRiSnhoUGxKYzhUbjRJSDljWDN1WmU5eUJEbzZFK0phTEpMQUxM
-        #      b1oxMW9raFErCjdrcXRabit3M0pnKzBBelhPTGxBNEVhZzVMMzZTM3E0cHFuNHRQdDZlTHlkMG1X
-        #      cEM2MjJGWFVORjFyZ3RRTHQKWmJ2S2hyZjV1ODlUMkdmTEtUbmZmeXRmd2RremdoUWdPcjdHY0x1
-        #      RmJ1cklucExMdHVDM3ZydDk4amlRU3h4RwpROGxZT3JtTlJTMVp2T0NEVzFvbm1wUjEyTDNkNFlh
-        #      RFFURFVQaWMzYlc1andSMHVUUDFhV1BJYSsrclhickszCkJ4bVJBZ01CQUFHamdaVXdnWkl3SFFZ
-        #      RFZSME9CQllFRkZWMFJoSHNtVnpCcXVmVUx5b0Q3ZkNMMnhmd01COEcKQTFVZEl3UVlNQmFBRkZW
-        #      MFJoSHNtVnpCcXVmVUx5b0Q3ZkNMMnhmd01BOEdBMVVkRXdFQi93UUZNQU1CQWY4dwpQd1lEVlIw
-        #      UkJEZ3dOb0lKYkc5allXeG9iM04wZ2lOa2IyTnJaWEl0Ykc5bmFXNHRkR1Z6ZEM1MFpYTjBMWGRs
-        #      ClltaHZiMnR6TG5OMlk0Y0VDZ0FBQVRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQWdFQWtBdzJhS0Fk
-        #      Qld2YzZicTkKalgxdTZENjBxMEdKN1dQYm5QUEpYUSsrdTEzOEpwWis2Nm0wbHNpMmgzN3pCN0Y5
-        #      aXA4OWdFSW0zbmliRFhmQQo5TFZRVE9oVi9VaGgzWldnbDBJRDc4eXc4bURDakd2U2JMWHdlbVlD
-        #      ckYrVHdvbWFCNkl3bzFUM1VJcEdLSkxFCkFVVUs4d3BWMmhYSmVHTFUwcHRIaHkzZThzRlRkd2Z0
-        #      c1U4S1JIa1FDaEpjUVpHUyt1SzdGV0lSRDBaR2h4OG4KN2RsZEhHem8vaXlNUzFNME8vaTNYd2FO
-        #      bG1OL3RFNm1WR2lDY3FvZWpSNGpjaTd0TnUwVVpWblM4RjFHa3ZxcQpyczJRK0REZ2xSV2JNMk02
-        #      MytOL2wyYnZ6OWFHK0VSZkorUHA1MjVFVE9zQ0tLaC9WQ3RHZ2NBR09ubGt4YlVhClhRNmF5cnNZ
-        #      ZXN1QWdQNjZvRDVPRC80aG1MRGpCMVUyS0dSTGJ6dHcrdkE4ZGREYlVNV0F1Z293SndKUzV2RUcK
-        #      ZnlCNnZvYnhqczg2NmIzZ2NGMFdBdmhlNmtnZkpDSkFTdnkwQWF2TE5DcSt6YlJLR1ZXWHB3R0VG
-        #      aUg0ejdqOApiUEFoc0xDazRZTjA4ZDloUnorbWhXN3lJK2VwbzVOUVI1bSs1am9IeFgxUkR2bUo1
-        #      YzJlMlIxcDVlenBBZDBvCnBQVXM5bzFNUVNvdGN6Qms5eElZbVFTeHVIWkZWNUh1Z2RyenpFbWVh
-        #      NmFZZmk5eGVJbzJFdFg4RmNQSzQxQXcKSEoydmYySEJDbVhxdDJncDFEOWJTNjM0MDdjb05IOFI0
-        #      dXpIalQwaHNyU1ZOY1hXS1F2NHcvMUN6OEIxS1VJMgpmeWVvcFZNbFJodEN5SUZWc29rWkVGOWUy
-        #      NUk9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+      name: "pullsecret-validation"
   admissionReviewVersions: ["v1"]
   sideEffects: None
   timeoutSeconds: 5
