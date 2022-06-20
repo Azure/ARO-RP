@@ -133,7 +133,8 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
 			steps.Action(m.ensureACRToken),
 			steps.Action(m.ensureInfraID),
-			steps.Action(m.generateSSHKey),
+			steps.Action(m.ensureSSHKey),
+			steps.Action(m.ensureStorageSuffix),
 			steps.Action(m.populateMTUSize),
 
 			steps.Action(m.createDNS),

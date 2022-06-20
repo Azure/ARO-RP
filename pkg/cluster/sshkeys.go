@@ -14,9 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 )
 
-func (m *manager) generateSSHKey(ctx context.Context) error {
-	var err error
-
+func (m *manager) ensureSSHKey(ctx context.Context) error {
 	sshKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return err
@@ -26,17 +24,6 @@ func (m *manager) generateSSHKey(ctx context.Context) error {
 		if doc.OpenShiftCluster.Properties.SSHKey == nil {
 			doc.OpenShiftCluster.Properties.SSHKey = x509.MarshalPKCS1PrivateKey(sshKey)
 		}
-
-		if doc.OpenShiftCluster.Properties.StorageSuffix == "" {
-			doc.OpenShiftCluster.Properties.StorageSuffix, err = randomLowerCaseAlphanumericStringWithNoVowels(5)
-			if err != nil {
-				return err
-			}
-
-			doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName = "imageregistry" + doc.OpenShiftCluster.Properties.StorageSuffix
-		}
-
-		doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName = "imageregistry" + doc.OpenShiftCluster.Properties.StorageSuffix
 
 		return nil
 	}
