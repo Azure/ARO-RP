@@ -13,8 +13,7 @@ import (
 func (m *manager) ensureStorageSuffix(ctx context.Context) error {
 	var err error
 
-	var f database.OpenShiftClusterDocumentMutator
-	f = func(doc *api.OpenShiftClusterDocument) error {
+	var f database.OpenShiftClusterDocumentMutator = func(doc *api.OpenShiftClusterDocument) error {
 		if doc.OpenShiftCluster.Properties.StorageSuffix == "" {
 			doc.OpenShiftCluster.Properties.StorageSuffix, err = randomLowerCaseAlphanumericStringWithNoVowels(5)
 			if err != nil {

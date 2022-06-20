@@ -20,8 +20,7 @@ func (m *manager) ensureSSHKey(ctx context.Context) error {
 		return err
 	}
 
-	var f database.OpenShiftClusterDocumentMutator
-	f = func(doc *api.OpenShiftClusterDocument) error {
+	var f database.OpenShiftClusterDocumentMutator = func(doc *api.OpenShiftClusterDocument) error {
 		if doc.OpenShiftCluster.Properties.SSHKey == nil {
 			doc.OpenShiftCluster.Properties.SSHKey = x509.MarshalPKCS1PrivateKey(sshKey)
 		}
