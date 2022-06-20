@@ -25,6 +25,8 @@ const (
 	OpenshiftClustersResourceGroupQuery = `SELECT * FROM OpenShiftClusters doc WHERE doc.clusterResourceGroupIdKey = @resourceGroupID`
 )
 
+type OpenShiftDocumentMutator func(*api.OpenShiftClusterDocument) error
+
 type openShiftClusters struct {
 	c     cosmosdb.OpenShiftClusterDocumentClient
 	collc cosmosdb.CollectionClient

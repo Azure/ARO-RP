@@ -11,17 +11,19 @@ import (
 	"math/big"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 )
 
 func (m *manager) generateSSHKey(ctx context.Context) error {
 	var err error
-	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		if doc.OpenShiftCluster.Properties.SSHKey == nil {
-			sshKey, err := rsa.GenerateKey(rand.Reader, 2048)
-			if err != nil {
-				return err
-			}
 
+	sshKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return err
+	}
+
+	var f database.OpenShiftDocumentMutator = func(doc *api.OpenShiftClusterDocument) error {
+		if doc.OpenShiftCluster.Properties.SSHKey == nil {
 			doc.OpenShiftCluster.Properties.SSHKey = x509.MarshalPKCS1PrivateKey(sshKey)
 		}
 
@@ -37,7 +39,9 @@ func (m *manager) generateSSHKey(ctx context.Context) error {
 		doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName = "imageregistry" + doc.OpenShiftCluster.Properties.StorageSuffix
 
 		return nil
-	})
+	}
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, f)
 	return err
 }
 
