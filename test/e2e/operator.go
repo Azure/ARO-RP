@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/ghodss/yaml"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -261,9 +262,14 @@ var _ = Describe("ARO Operator - RBAC", func() {
 
 var _ = Describe("ARO Operator - Conditions", func() {
 	Specify("Cluster check conditions should not be failing", func() {
+		// Save the last got conditions so that we can print them in the case of
+		// the test failing
+		var lastConditions []operatorv1.OperatorCondition
+
 		clusterOperatorConditionsValid := func() (bool, error) {
 			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(context.Background(), "cluster", metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
+			lastConditions = co.Status.Conditions
 
 			valid := true
 			for _, condition := range arov1alpha1.ClusterChecksTypes() {
@@ -275,7 +281,7 @@ var _ = Describe("ARO Operator - Conditions", func() {
 		}
 
 		err := wait.PollImmediate(30*time.Second, 15*time.Minute, clusterOperatorConditionsValid)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred(), "last conditions: %v", lastConditions)
 	})
 })
 
