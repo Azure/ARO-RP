@@ -8,6 +8,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 )
 
 var jsonHandle *codec.JsonHandle
@@ -21,10 +22,11 @@ func init() {
 }
 
 func NewFakeOpenShiftClusters() (db database.OpenShiftClusters, client *cosmosdb.FakeOpenShiftClusterDocumentClient) {
+	uuid := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.CLUSTERS)
 	coll := &fakeCollectionClient{}
 	client = cosmosdb.NewFakeOpenShiftClusterDocumentClient(jsonHandle)
 	injectOpenShiftClusters(client)
-	db = database.NewOpenShiftClustersWithProvidedClient(client, coll, "")
+	db = database.NewOpenShiftClustersWithProvidedClient(client, coll, "", uuid)
 	return db, client
 }
 
@@ -43,20 +45,23 @@ func NewFakeBilling() (db database.Billing, client *cosmosdb.FakeBillingDocument
 }
 
 func NewFakeAsyncOperations() (db database.AsyncOperations, client *cosmosdb.FakeAsyncOperationDocumentClient) {
+	uuid := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.ASYNCOPERATIONS)
 	client = cosmosdb.NewFakeAsyncOperationDocumentClient(jsonHandle)
-	db = database.NewAsyncOperationsWithProvidedClient(client)
+	db = database.NewAsyncOperationsWithProvidedClient(client, uuid)
 	return db, client
 }
 
 func NewFakePortal() (db database.Portal, client *cosmosdb.FakePortalDocumentClient) {
+	uuid := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.PORTAL)
 	client = cosmosdb.NewFakePortalDocumentClient(jsonHandle)
-	db = database.NewPortalWithProvidedClient(client)
+	db = database.NewPortalWithProvidedClient(client, uuid)
 	return db, client
 }
 
 func NewFakeGateway() (db database.Gateway, client *cosmosdb.FakeGatewayDocumentClient) {
+	uuid := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.GATEWAY)
 	client = cosmosdb.NewFakeGatewayDocumentClient(jsonHandle)
-	db = database.NewGatewayWithProvidedClient(client)
+	db = database.NewGatewayWithProvidedClient(client, uuid)
 	return db, client
 }
 

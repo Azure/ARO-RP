@@ -8,12 +8,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gofrs/uuid"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
 type gateway struct {
-	c cosmosdb.GatewayDocumentClient
+	c             cosmosdb.GatewayDocumentClient
+	uuidGenerator uuid.Generator
 }
 
 type Gateway interface {
@@ -22,6 +25,7 @@ type Gateway interface {
 	Delete(context.Context, *api.GatewayDocument) error
 	Get(context.Context, string) (*api.GatewayDocument, error)
 	Patch(context.Context, string, func(*api.GatewayDocument) error) (*api.GatewayDocument, error)
+	NextUUID() string
 }
 
 func NewGateway(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (Gateway, error) {
@@ -33,13 +37,18 @@ func NewGateway(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.Databa
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	documentClient := cosmosdb.NewGatewayDocumentClient(collc, collGateway)
-	return NewGatewayWithProvidedClient(documentClient), nil
+	return NewGatewayWithProvidedClient(documentClient, uuid.DefaultGenerator), nil
 }
 
-func NewGatewayWithProvidedClient(client cosmosdb.GatewayDocumentClient) Gateway {
+func NewGatewayWithProvidedClient(client cosmosdb.GatewayDocumentClient, uuidGenerator uuid.Generator) Gateway {
 	return &gateway{
-		c: client,
+		c:             client,
+		uuidGenerator: uuidGenerator,
 	}
+}
+
+func (c *gateway) NextUUID() string {
+	return uuid.Must(c.uuidGenerator.NewV4()).String()
 }
 
 func (c *gateway) ChangeFeed() cosmosdb.GatewayDocumentIterator {

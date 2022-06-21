@@ -9,12 +9,15 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gofrs/uuid"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
 type asyncOperations struct {
-	c cosmosdb.AsyncOperationDocumentClient
+	c             cosmosdb.AsyncOperationDocumentClient
+	uuidGenerator uuid.Generator
 }
 
 // AsyncOperations is the database interface for AsyncOperationDocuments
@@ -22,6 +25,7 @@ type AsyncOperations interface {
 	Create(context.Context, *api.AsyncOperationDocument) (*api.AsyncOperationDocument, error)
 	Get(context.Context, string) (*api.AsyncOperationDocument, error)
 	Patch(context.Context, string, func(*api.AsyncOperationDocument) error) (*api.AsyncOperationDocument, error)
+	NextUUID() string
 }
 
 // NewAsyncOperations returns a new AsyncOperations
@@ -33,13 +37,18 @@ func NewAsyncOperations(ctx context.Context, isLocalDevelopmentMode bool, dbc co
 
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 	client := cosmosdb.NewAsyncOperationDocumentClient(collc, collAsyncOperations)
-	return NewAsyncOperationsWithProvidedClient(client), nil
+	return NewAsyncOperationsWithProvidedClient(client, uuid.DefaultGenerator), nil
 }
 
-func NewAsyncOperationsWithProvidedClient(client cosmosdb.AsyncOperationDocumentClient) AsyncOperations {
+func NewAsyncOperationsWithProvidedClient(client cosmosdb.AsyncOperationDocumentClient, uuidGenerator uuid.Generator) AsyncOperations {
 	return &asyncOperations{
-		c: client,
+		c:             client,
+		uuidGenerator: uuidGenerator,
 	}
+}
+
+func (c *asyncOperations) NextUUID() string {
+	return uuid.Must(c.uuidGenerator.NewV4()).String()
 }
 
 func (c *asyncOperations) Create(ctx context.Context, doc *api.AsyncOperationDocument) (*api.AsyncOperationDocument, error) {
