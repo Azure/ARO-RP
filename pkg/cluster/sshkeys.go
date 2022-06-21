@@ -15,12 +15,12 @@ import (
 
 func (m *manager) ensureSSHKey(ctx context.Context) error {
 	var err error
-	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, sshKeyMutatorFn)
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, mutateSSHKey)
 
 	return err
 }
 
-func sshKeyMutatorFn(doc *api.OpenShiftClusterDocument) error {
+func mutateSSHKey(doc *api.OpenShiftClusterDocument) error {
 	if doc.OpenShiftCluster.Properties.SSHKey != nil {
 		return nil
 	}
