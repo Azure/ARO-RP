@@ -13,13 +13,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-func (m *manager) ensureSSHKey(ctx context.Context) error {
-	var err error
-	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, mutateSSHKey)
-
-	return err
-}
-
 func mutateSSHKey(doc *api.OpenShiftClusterDocument) error {
 	if doc.OpenShiftCluster.Properties.SSHKey != nil {
 		return nil
@@ -33,6 +26,13 @@ func mutateSSHKey(doc *api.OpenShiftClusterDocument) error {
 	doc.OpenShiftCluster.Properties.SSHKey = x509.MarshalPKCS1PrivateKey(sshKey)
 
 	return nil
+}
+
+func (m *manager) ensureSSHKey(ctx context.Context) error {
+	updatedDoc, err := m.db.PatchWithLease(ctx, m.doc.Key, mutateSSHKey)
+	m.doc = updatedDoc
+
+	return err
 }
 
 func randomLowerCaseAlphanumericStringWithNoVowels(n int) (string, error) {

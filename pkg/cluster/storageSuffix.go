@@ -9,28 +9,32 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-func openShiftClusterDocumentMutatorFn(doc *api.OpenShiftClusterDocument) error {
-	const ImageRegistry = "imageregistry"
-
-	if doc.OpenShiftCluster.Properties.StorageSuffix == "" {
-		var err error
-
-		doc.OpenShiftCluster.Properties.StorageSuffix, err = randomLowerCaseAlphanumericStringWithNoVowels(5)
-		if err != nil {
-			return err
-		}
-
-		doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName = ImageRegistry + doc.OpenShiftCluster.Properties.StorageSuffix
+func setDocStorageSuffix(doc *api.OpenShiftClusterDocument) error {
+	isDocStorageSuffixValid := doc.OpenShiftCluster.Properties.StorageSuffix != ""
+	if isDocStorageSuffixValid {
+		return nil
 	}
 
-	doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName = ImageRegistry + doc.OpenShiftCluster.Properties.StorageSuffix
+	storageSuffix, err := randomLowerCaseAlphanumericStringWithNoVowels(5)
+	doc.OpenShiftCluster.Properties.StorageSuffix = storageSuffix
+
+	return err
+}
+
+func mutateStorageSuffix(doc *api.OpenShiftClusterDocument) error {
+	err := setDocStorageSuffix(doc)
+	if err != nil {
+		return err
+	}
+
+	doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName = "imageregistry" + doc.OpenShiftCluster.Properties.StorageSuffix
 
 	return nil
 }
 
 func (m *manager) ensureStorageSuffix(ctx context.Context) error {
-	var err error
+	updatedDoc, err := m.db.PatchWithLease(ctx, m.doc.Key, mutateStorageSuffix)
+	m.doc = updatedDoc
 
-	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, openShiftClusterDocumentMutatorFn)
 	return err
 }
