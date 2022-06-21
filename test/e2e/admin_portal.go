@@ -4,6 +4,7 @@ package e2e
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"os"
 	"time"
 
@@ -13,12 +14,13 @@ import (
 	. "github.com/tebeka/selenium"                       //nolint
 )
 
-var _ = Describe("Admin Portal E2E Testing", func() {
+var _ = FDescribe("Admin Portal E2E Testing", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 	var wdPoint *WebDriver
 	var wd WebDriver
 	var host string
 	JustBeforeEach(func() {
+		setupSelenium(context.Background())
 		host, wdPoint = adminPortalSessionSetup()
 		wd = *wdPoint
 		wd.Get(host + "/v2")
@@ -29,6 +31,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		if wd != nil {
 			wd.Quit()
 		}
+		adminPortalSessionTearDown()
 	})
 	It("Should be able to populate cluster data correctly", func() {
 		err := wd.Wait(ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))

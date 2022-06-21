@@ -4,13 +4,22 @@ package e2e
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"fmt"
+	"image/png"
+	"math"
+	"net/url"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo"     //nolint
+	. "github.com/onsi/gomega"     //nolint
+	. "github.com/tebeka/selenium" //nolint
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -34,6 +43,7 @@ import (
 	redhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-04-01/redhatopenshift"
 	redhatopenshift20220904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-09-04/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
@@ -75,6 +85,164 @@ var (
 func skipIfNotInDevelopmentEnv() {
 	if !_env.IsLocalDevelopmentMode() {
 		Skip("skipping tests in non-development environment")
+	}
+}
+
+func TakeScreenshot(wd WebDriver, e error) {
+	log.Info("Taking Screenshot and saving page source")
+	imageBytes, err := wd.Screenshot()
+	if err != nil {
+		panic(err)
+	}
+
+	imageData, err := png.Decode(bytes.NewReader(imageBytes))
+	if err != nil {
+		panic(err)
+	}
+
+	sourceString, err := wd.PageSource()
+	if err != nil {
+		panic(err)
+	}
+
+	errorString := strings.ReplaceAll(e.Error(), " ", "_")
+
+	imagePath := "./" + errorString + ".png"
+	sourcePath := "./" + errorString + ".html"
+
+	imageAbsPath, err := filepath.Abs(imagePath)
+	if err != nil {
+		panic(err)
+	}
+	sourceAbsPath, err := filepath.Abs(sourcePath)
+	if err != nil {
+		panic(err)
+	}
+
+	image, err := os.Create(imageAbsPath)
+	if err != nil {
+		panic(err)
+	}
+
+	source, err := os.Create(sourceAbsPath)
+	if err != nil {
+		panic(err)
+	}
+
+	err = png.Encode(image, imageData)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = source.WriteString(sourceString)
+	if err != nil {
+		panic(err)
+	}
+
+	err = image.Close()
+	if err != nil {
+		panic(err)
+	}
+
+	err = source.Close()
+	if err != nil {
+		panic(err)
+	}
+
+	log.Infof("Screenshot saved to %s", imageAbsPath)
+	log.Infof("Page Source saved to %s", sourceAbsPath)
+
+	panic(e)
+}
+
+func adminPortalSessionSetup() (string, *WebDriver) {
+	const (
+		port = 4444
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	os.Setenv("SE_SESSION_REQUEST_TIMEOUT", "9000")
+
+	caps := Capabilities{
+		"browserName":         "MicrosoftEdge",
+		"acceptInsecureCerts": true,
+	}
+	wd := WebDriver(nil)
+
+	var err error
+
+	time.Sleep(time.Second * 10)
+
+	cmd := exec.CommandContext(context.Background(), "docker", "ps")
+
+	output, err := cmd.CombinedOutput()
+	log.Infof("Selenium process output : %s\n", output)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = url.ParseRequestURI("https://localhost:4444")
+	if err != nil {
+		panic(err)
+	}
+
+	for i := 1; i < 5; i++ {
+		wd, err = NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
+		if wd != nil || ctx.Err() != nil {
+			break
+		}
+		time.Sleep(time.Second * 1)
+	}
+
+	if err != nil {
+		panic(err)
+	}
+
+	log := utillog.GetLogger()
+
+	gob.Register(time.Time{})
+
+	// Navigate to the simple playground interface.
+	host, isNotLocal := os.LookupEnv("PORTAL_HOSTNAME")
+	if !isNotLocal {
+		host = "https://localhost:8444"
+	}
+	if err := wd.Get(host + "/api/info"); err != nil {
+		log.Infof("Could not get to %s. With error : %s", host, err.Error())
+	}
+	cmd = exec.Command("go", "run", "./hack/portalauth", "-username", "test", "-groups", "$AZURE_PORTAL_ELEVATED_GROUP_IDS", "2>", "/dev/null")
+	output, err = cmd.Output()
+
+	if err != nil {
+		log.Fatalf("Error occurred creating session cookie\n Output: %s\n Error: %s\n", output, err)
+	}
+
+	os.Setenv("SESSION", string(output))
+
+	log.Infof("Session Output : %s\n", os.Getenv("SESSION"))
+
+	cookie := &Cookie{
+		Name:   "session",
+		Value:  os.Getenv("SESSION"),
+		Expiry: math.MaxUint32,
+	}
+
+	if err := wd.AddCookie(cookie); err != nil {
+		panic(err)
+	}
+	return host, &wd
+}
+
+func adminPortalSessionTearDown() {
+	log.Infof("Stopping Selenium Grid")
+	cmd := exec.Command("docker", "rm", "--force", "selenium-edge-standalone")
+
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		log.Fatalf("Error occurred stopping selenium grid\n Output: %s\n Error: %s\n", output, err)
 	}
 }
 
@@ -162,6 +330,31 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		Project:       projectcli,
 		ConfigClient:  configcli,
 	}, nil
+}
+
+func setupSelenium(ctx context.Context) error {
+	log.Infof("Starting Selenium Grid")
+	cmd := exec.CommandContext(ctx, "docker", "pull", "selenium/standalone-edge:latest")
+
+	output, err := cmd.CombinedOutput()
+
+	log.Infof("Selenium Image Pull Output : %s\n", output)
+
+	if err != nil {
+		log.Fatalf("Error occurred pulling selenium image\n Output: %s\n Error: %s\n", output, err)
+	}
+
+	cmd = exec.CommandContext(ctx, "docker", "run", "-d", "-p", "4444:4444", "--name", "selenium-edge-standalone", "--network=host", "--shm-size=2g", "selenium/standalone-edge:latest")
+
+	output, err = cmd.CombinedOutput()
+
+	log.Infof("Selenium Container Run Output : %s\n", output)
+
+	if err != nil {
+		log.Fatalf("Error occurred starting selenium grid\n Output: %s\n Error: %s\n", output, err)
+	}
+
+	return err
 }
 
 func setup(ctx context.Context) error {
