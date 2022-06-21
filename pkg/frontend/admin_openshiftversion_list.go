@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"path/filepath"
+	"sort"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -34,6 +36,8 @@ func (f *frontend) getAdminOpenShiftVersions(w http.ResponseWriter, r *http.Requ
 			vers = append(vers, doc.OpenShiftVersion)
 		}
 	}
+
+	sort.Slice(vers, func(i, j int) bool { return semver.New(vers[i].Version).LessThan(*semver.New(vers[j].Version)) })
 
 	b, err := json.MarshalIndent(converter.ToExternalList(vers), "", "    ")
 	adminReply(log, w, nil, b, err)

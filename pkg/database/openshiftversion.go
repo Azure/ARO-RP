@@ -10,10 +10,12 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type openShiftVersions struct {
-	c cosmosdb.OpenShiftVersionDocumentClient
+	c    cosmosdb.OpenShiftVersionDocumentClient
+	uuid uuid.Generator
 }
 
 type OpenShiftVersions interface {
@@ -22,6 +24,7 @@ type OpenShiftVersions interface {
 	Get(context.Context, string) (*api.OpenShiftVersionDocument, error)
 	Patch(context.Context, string, func(*api.OpenShiftVersionDocument) error) (*api.OpenShiftVersionDocument, error)
 	ListAll(context.Context) (*api.OpenShiftVersionDocuments, error)
+	NewUUID() string
 }
 
 func NewOpenShiftVersions(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (OpenShiftVersions, error) {
@@ -33,12 +36,13 @@ func NewOpenShiftVersions(ctx context.Context, isDevelopmentMode bool, dbc cosmo
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	documentClient := cosmosdb.NewOpenShiftVersionDocumentClient(collc, collOpenShiftVersion)
-	return NewOpenShiftVersionsWithProvidedClient(documentClient), nil
+	return NewOpenShiftVersionsWithProvidedClient(documentClient, uuid.DefaultGenerator), nil
 }
 
-func NewOpenShiftVersionsWithProvidedClient(client cosmosdb.OpenShiftVersionDocumentClient) OpenShiftVersions {
+func NewOpenShiftVersionsWithProvidedClient(client cosmosdb.OpenShiftVersionDocumentClient, uuid uuid.Generator) OpenShiftVersions {
 	return &openShiftVersions{
-		c: client,
+		c:    client,
+		uuid: uuid,
 	}
 }
 
@@ -97,4 +101,8 @@ func (c *openShiftVersions) update(ctx context.Context, doc *api.OpenShiftVersio
 
 func (c *openShiftVersions) ListAll(ctx context.Context) (*api.OpenShiftVersionDocuments, error) {
 	return c.c.ListAll(ctx, nil)
+}
+
+func (c *openShiftVersions) NewUUID() string {
+	return c.uuid.Generate()
 }

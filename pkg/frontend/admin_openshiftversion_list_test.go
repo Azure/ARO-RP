@@ -5,98 +5,86 @@ package frontend
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
+	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 func TestOpenShiftVersionList(t *testing.T) {
-	mockSubID := "00000000-0000-0000-0000-000000000000"
-	mockTenantID := "00000000-0000-0000-0000-000000000000"
 	ctx := context.Background()
 
 	type test struct {
 		name           string
-		resourceID     string
 		fixture        func(f *testdatabase.Fixture)
 		wantStatusCode int
-		wantResponse   []byte
+		wantResponse   *admin.OpenShiftVersionList
 		wantError      string
 	}
 
 	for _, tt := range []*test{
 		{
-			name:       "happy path",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name:           "empty",
+			fixture:        func(f *testdatabase.Fixture) {},
+			wantStatusCode: http.StatusOK,
+			wantResponse: &admin.OpenShiftVersionList{
+				OpenShiftVersions: []*admin.OpenShiftVersion{},
+			},
+		},
+		{
+			name: "happy path",
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
-							},
+				f.AddOpenShiftVersionDocuments(
+					&api.OpenShiftVersionDocument{
+						OpenShiftVersion: &api.OpenShiftVersion{
+							Version:           "4.10.0",
+							Enabled:           true,
+							OpenShiftPullspec: "a:a/b",
 						},
 					},
-				})
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: mockTenantID,
+					&api.OpenShiftVersionDocument{
+						OpenShiftVersion: &api.OpenShiftVersion{
+							Version:           "4.9.9",
+							Enabled:           true,
+							OpenShiftPullspec: "a:a/b",
+							InstallerPullspec: "b:b/c",
 						},
 					},
-				})
+					&api.OpenShiftVersionDocument{
+						OpenShiftVersion: &api.OpenShiftVersion{
+							Version:           "4.10.1",
+							Enabled:           false,
+							OpenShiftPullspec: "a:a/b",
+							InstallerPullspec: "b:b/c",
+						},
+					},
+				)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse:   []byte(`["Standard_D8s_v9001"]` + "\n"),
-		},
-		{
-			name:       "cluster not found",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
-			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: mockTenantID,
-						},
+			wantResponse: &admin.OpenShiftVersionList{
+				OpenShiftVersions: []*admin.OpenShiftVersion{
+					{
+						Version:           "4.9.9",
+						Enabled:           true,
+						OpenShiftPullspec: "a:a/b",
+						InstallerPullspec: "b:b/c",
 					},
-				})
-			},
-			wantStatusCode: http.StatusNotFound,
-			wantError:      `404: ResourceNotFound: : The Resource 'openshiftclusters/resourcename' under resource group 'resourcegroup' was not found.`,
-		},
-		{
-			name:       "subscription doc not found",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
-			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
-							},
-						},
+					{
+						Version:           "4.10.0",
+						Enabled:           true,
+						OpenShiftPullspec: "a:a/b",
 					},
-				})
+					{
+						Version:           "4.10.1",
+						Enabled:           false,
+						OpenShiftPullspec: "a:a/b",
+						InstallerPullspec: "b:b/c",
+					},
+				},
 			},
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      fmt.Sprintf(`400: InvalidSubscriptionState: : Request is not allowed in unregistered subscription '%s'.`, mockSubID),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -108,9 +96,7 @@ func TestOpenShiftVersionList(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, nil, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
-				return a, nil
-			}, nil)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, nil, nil, nil, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
 
 			if err != nil {
 				t.Fatal(err)
@@ -118,8 +104,7 @@ func TestOpenShiftVersionList(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			resp, b, err := ti.request(http.MethodGet,
-				fmt.Sprintf("https://server/admin%s/skus", tt.resourceID),
+			resp, b, err := ti.request(http.MethodGet, "https://server/admin/versions",
 				nil, nil)
 			if err != nil {
 				t.Fatal(err)
