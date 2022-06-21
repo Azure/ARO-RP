@@ -316,6 +316,13 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterDrainNode).Name("postAdminOpenShiftClusterDrainNode")
 
+	s = r.
+		Path("/admin/versions").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.getAdminOpenShiftVersions).Name("getAdminOpenShiftVersions")
+	s.Methods(http.MethodPut).HandlerFunc(f.putAdminOpenShiftVersion).Name("putAdminOpenShiftVersions")
+
 	// Operations
 	s = r.
 		Path("/providers/{resourceProviderNamespace}/operations").
