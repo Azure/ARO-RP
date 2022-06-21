@@ -76,6 +76,7 @@ const (
 	CloudErrorCodePropertyChangeNotAllowed           = "PropertyChangeNotAllowed"
 	CloudErrorCodeRequestNotAllowed                  = "RequestNotAllowed"
 	CloudErrorCodeResourceGroupNotFound              = "ResourceGroupNotFound"
+	CloudErrorCodeClusterResourceGroupAlreadyExists  = "ClusterResourceGroupAlreadyExists"
 	CloudErrorCodeResourceNotFound                   = "ResourceNotFound"
 	CloudErrorCodeUnsupportedMediaType               = "UnsupportedMediaType"
 	CloudErrorCodeInvalidLinkedVNet                  = "InvalidLinkedVNet"

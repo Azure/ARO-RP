@@ -41,6 +41,20 @@ func (m *manager) ensureInfraID(ctx context.Context) (err error) {
 	return err
 }
 
+func (m *manager) checkClusterResourceGroupAlreadyExists(ctx context.Context) error {
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	clusterResourceGroupExistenceResult, err := m.resourceGroups.CheckExistence(ctx, resourceGroup)
+	if err != nil {
+		return err
+	}
+
+	if clusterResourceGroupExistenceResult.StatusCode != 404 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeClusterResourceGroupAlreadyExists, "", "Cluster-resource-group '%s' resource group must not exist.", resourceGroup)
+	}
+	return nil
+}
+
 func (m *manager) ensureResourceGroup(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 

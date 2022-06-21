@@ -168,6 +168,21 @@ func (m *MockResourceGroupsClient) EXPECT() *MockResourceGroupsClientMockRecorde
 	return m.recorder
 }
 
+// CheckExistence mocks base method.
+func (m *MockResourceGroupsClient) CheckExistence(arg0 context.Context, arg1 string) (autorest.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckExistence", arg0, arg1)
+	ret0, _ := ret[0].(autorest.Response)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CheckExistence indicates an expected call of CheckExistence.
+func (mr *MockResourceGroupsClientMockRecorder) CheckExistence(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckExistence", reflect.TypeOf((*MockResourceGroupsClient)(nil).CheckExistence), arg0, arg1)
+}
+
 // CreateOrUpdate mocks base method.
 func (m *MockResourceGroupsClient) CreateOrUpdate(arg0 context.Context, arg1 string, arg2 features.ResourceGroup) (features.ResourceGroup, error) {
 	m.ctrl.T.Helper()

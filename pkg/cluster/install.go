@@ -180,6 +180,7 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.createDNS),
 		steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
 		steps.Action(m.clusterSPObjectID),
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.checkClusterResourceGroupAlreadyExists)),
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies)),

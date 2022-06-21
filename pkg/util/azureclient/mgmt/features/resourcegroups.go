@@ -18,6 +18,7 @@ type ResourceGroupsClient interface {
 	Get(ctx context.Context, resourceGroupName string) (result mgmtfeatures.ResourceGroup, err error)
 	CreateOrUpdate(ctx context.Context, resourceGroupName string, parameters mgmtfeatures.ResourceGroup) (result mgmtfeatures.ResourceGroup, err error)
 	Delete(ctx context.Context, resourceGroupName string) (result mgmtfeatures.ResourceGroupsDeleteFuture, err error)
+	CheckExistence(ctx context.Context, resourceGroupName string) (result autorest.Response, err error)
 	ResourceGroupsClientAddons
 }
 
