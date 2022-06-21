@@ -193,6 +193,9 @@ func (f *Fixture) Create() error {
 	}
 
 	for _, i := range f.openShiftVersionDocuments {
+		if i.ID == "" {
+			i.ID = uuid.Must(uuid.NewV4()).String()
+		}
 		_, err := f.openShiftVersionsDatabase.Create(ctx, i)
 		if err != nil {
 			return err
