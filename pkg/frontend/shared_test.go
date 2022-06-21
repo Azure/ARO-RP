@@ -31,6 +31,7 @@ import (
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/clusterdata"
+	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	"github.com/Azure/ARO-RP/test/util/listener"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -162,8 +163,9 @@ func (ti *testInfra) WithAsyncOperations() *testInfra {
 }
 
 func (ti *testInfra) WithOpenShiftVersions() *testInfra {
-	ti.openShiftVersionsDatabase, ti.openShiftVersionsClient = testdatabase.NewFakeOpenShiftVersions()
-	ti.fixture.WithOpenShiftVersions(ti.openShiftVersionsDatabase)
+	uuid := deterministicuuid.NewTestUUIDGenerator(7)
+	ti.openShiftVersionsDatabase, ti.openShiftVersionsClient = testdatabase.NewFakeOpenShiftVersions(uuid)
+	ti.fixture.WithOpenShiftVersions(ti.openShiftVersionsDatabase, uuid)
 	return ti
 }
 
