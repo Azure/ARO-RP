@@ -11,25 +11,28 @@ import (
 	"math/big"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/database"
 )
 
 func (m *manager) ensureSSHKey(ctx context.Context) error {
+	var err error
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, sshKeyMutatorFn)
+
+	return err
+}
+
+func sshKeyMutatorFn(doc *api.OpenShiftClusterDocument) error {
+	if doc.OpenShiftCluster.Properties.SSHKey != nil {
+		return nil
+	}
+
 	sshKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return err
 	}
 
-	var f database.OpenShiftClusterDocumentMutator = func(doc *api.OpenShiftClusterDocument) error {
-		if doc.OpenShiftCluster.Properties.SSHKey == nil {
-			doc.OpenShiftCluster.Properties.SSHKey = x509.MarshalPKCS1PrivateKey(sshKey)
-		}
+	doc.OpenShiftCluster.Properties.SSHKey = x509.MarshalPKCS1PrivateKey(sshKey)
 
-		return nil
-	}
-
-	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, f)
-	return err
+	return nil
 }
 
 func randomLowerCaseAlphanumericStringWithNoVowels(n int) (string, error) {
