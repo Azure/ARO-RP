@@ -99,6 +99,12 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 		workerZones = []string{""}
 	}
 
+	// Standard_D8s_v3 is only available in one zone in centraluseuap, so we need a non-zonal install in that region
+	if strings.EqualFold(m.doc.OpenShiftCluster.Location, "centraluseuap") {
+		workerZones = []string{""}
+		masterZones = []string{""}
+	}
+
 	SoftwareDefinedNetwork := string(api.SoftwareDefinedNetworkOpenShiftSDN)
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork != "" {
 		SoftwareDefinedNetwork = string(m.doc.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork)
