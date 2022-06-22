@@ -42,7 +42,6 @@ func (m *manager) adminUpdate() []steps.Step {
 	// don't require a running cluster
 	toRun := []steps.Step{
 		steps.Action(m.initializeKubernetesClients), // must be first
-		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
 		steps.Action(m.ensureBillingRecord),         // belt and braces
 		steps.Action(m.ensureDefaults),
 		steps.Action(m.fixupClusterSPObjectID),
@@ -87,6 +86,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	// Update the ARO Operator
 	if isEverything || isOperator {
 		toRun = append(toRun,
+			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 			steps.Action(m.ensureAROOperator),
 			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
 		)
