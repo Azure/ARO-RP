@@ -36,7 +36,7 @@ jobs:
               azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
           - script: |
               set -e
-              trap 'set +e; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af ; rm -rf ~/.docker/config.json' EXIT
+              trap 'set +e; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af ; rm -rf ~/.docker/config.json; rm -rf /run/user/$(id -u $USERNAME)/containers/auth.json' EXIT
 
               export TAG=${{ parameters.imageTag }}
               export RP_IMAGE_ACR=${{ parameters.rpImageAcr }}
