@@ -17,11 +17,13 @@ steps:
     export AZURE_CLIENT_SECRET=$(jq -r .clientSecret <devops-spn.json)
     export AZURE_TENANT_ID=$(jq -r .tenantId <devops-spn.json)
 
+    export AZURE_ACR_NAME=$(jq -r .acrNamePull <devops-spn.json)
+    export AZURE_ACR_SECRET=$(jq -r .acrSecretPull <devops-spn.json)
 
     # TODO: read RP config and derive $IMAGE from it. This would also need the
     # AZURE_CLIENT_ID identity to be able to pull from non-INT ACR.
     export IMAGE=arointsvc.azurecr.io/aro
-    docker login $IMAGE -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET
+    docker login $IMAGE -u $AZURE_ACR_NAME -p $AZURE_ACR_SECRET
 
     set -x
 
