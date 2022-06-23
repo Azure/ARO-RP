@@ -780,6 +780,29 @@
         {
             "properties": {
                 "resource": {
+                    "id": "OpenShiftVersions",
+                    "partitionKey": {
+                        "paths": [
+                            "/id"
+                        ],
+                        "kind": "Hash"
+                    },
+                    "defaultTtl": 604800
+                },
+                "options": {}
+            },
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/OpenShiftVersions')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2021-01-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ]
+        },
+        {
+            "properties": {
+                "resource": {
                     "id": "Billing",
                     "partitionKey": {
                         "paths": [
