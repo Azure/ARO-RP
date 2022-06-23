@@ -10,9 +10,11 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
+	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -79,14 +81,23 @@ func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 		return nil
 	}
 	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
-	registryStorageAccountName := m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName
+
+	imageRegistryStorageAccountName, err := m.imageRegistryStorageAccountName()
+	if err != nil {
+		return err
+	}
+
+	err = validateImageRegistryStorageAccountName(imageRegistryStorageAccountName)
+	if err != nil {
+		return err
+	}
 
 	t := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
 		Resources: []*arm.Resource{
 			m.storageAccount(clusterStorageAccountName, m.doc.OpenShiftCluster.Location, false),
-			m.storageAccount(registryStorageAccountName, m.doc.OpenShiftCluster.Location, false),
+			m.storageAccount(imageRegistryStorageAccountName, m.doc.OpenShiftCluster.Location, false),
 		},
 	}
 
@@ -94,18 +105,69 @@ func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 }
 
 func (m *manager) populateRegistryStorageAccountName(ctx context.Context) error {
-	if m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName != "" {
-		return nil
-	}
-
-	rc, err := m.imageregistrycli.ImageregistryV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
+	imageRegistryStorageAccountName, err := m.imageRegistryStorageAccountName()
 	if err != nil {
 		return err
 	}
 
-	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName = rc.Spec.Storage.Azure.AccountName
+	if imageRegistryStorageAccountName != "" {
 		return nil
-	})
+	}
+
+	registryConfig, err := m.imageregistrycli.ImageregistryV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	accountNameMutator := getAccountNameMutator(ctx, registryConfig)
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, accountNameMutator)
 	return err
+}
+
+// getAccountNameMutator returns a database.OpenShiftClusterDocumentMutator function
+// that is responsible for mutating the image registry storage account name of an *api.OpenShiftClusterDocument
+func getAccountNameMutator(ctx context.Context, registryConfig *imageregistryv1.Config) database.OpenShiftClusterDocumentMutator {
+	return func(doc *api.OpenShiftClusterDocument) error {
+		if doc == nil {
+			return fmt.Errorf("OpenShift cluster document is nil")
+		}
+
+		if doc.OpenShiftCluster == nil {
+			return fmt.Errorf("OpenShiftCluster info from OpenShift cluster document is nil")
+		}
+
+		imageRegistryStorageAccountName, err := getAccountName(registryConfig)
+		if err != nil {
+			return err
+		}
+
+		err = validateImageRegistryStorageAccountName(imageRegistryStorageAccountName)
+		if err != nil {
+			return err
+		}
+
+		doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName = imageRegistryStorageAccountName
+		return nil
+	}
+}
+
+func getAccountName(registryConfig *imageregistryv1.Config) (string, error) {
+	if registryConfig == nil {
+		return "", fmt.Errorf("image registry config is nil")
+	}
+
+	if registryConfig.Spec.Storage.Azure == nil {
+		return "", fmt.Errorf("azure storage field is nil in image registry config")
+	}
+
+	return registryConfig.Spec.Storage.Azure.AccountName, nil
+}
+
+func validateImageRegistryStorageAccountName(imageRegistryStorageAccountName string) error {
+	if imageRegistryStorageAccountName == "" {
+		return fmt.Errorf("the cluster's image registry name is empty")
+	}
+
+	return nil
 }

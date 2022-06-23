@@ -236,12 +236,22 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 		return errors.New("private endpoint connection not found")
 	}
 
+	imageRegistryStorageAccountName, err := m.imageRegistryStorageAccountName()
+	if err != nil {
+		return err
+	}
+
+	err = validateImageRegistryStorageAccountName(imageRegistryStorageAccountName)
+	if err != nil {
+		return err
+	}
+
 	_, err = m.dbGateway.Create(ctx, &api.GatewayDocument{
 		ID: linkIdentifier,
 		Gateway: &api.Gateway{
 			ID:                              m.doc.OpenShiftCluster.ID,
 			StorageSuffix:                   m.doc.OpenShiftCluster.Properties.StorageSuffix,
-			ImageRegistryStorageAccountName: m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName,
+			ImageRegistryStorageAccountName: imageRegistryStorageAccountName,
 		},
 	})
 
@@ -257,7 +267,7 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 			return err
 		}
 		if !strings.EqualFold(gwyDoc.ID, m.doc.OpenShiftCluster.ID) ||
-			!strings.EqualFold(gwyDoc.Gateway.ImageRegistryStorageAccountName, m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName) ||
+			!strings.EqualFold(gwyDoc.Gateway.ImageRegistryStorageAccountName, imageRegistryStorageAccountName) ||
 			!strings.EqualFold(gwyDoc.Gateway.StorageSuffix, m.doc.OpenShiftCluster.Properties.StorageSuffix) {
 			return errors.New("gateway record already exists for a different cluster")
 		}

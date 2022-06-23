@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
@@ -38,8 +39,13 @@ func (m *manager) applyInstallConfigCustomisations(ctx context.Context, installC
 		return nil, err
 	}
 
+	accountName := m.oc.Properties.ImageRegistryStorageAccountName
+	if accountName == "" {
+		return nil, fmt.Errorf("installer manager's storage account name of image registry config is empty")
+	}
+
 	imageRegistryConfig := &bootkube.AROImageRegistryConfig{
-		AccountName:   m.oc.Properties.ImageRegistryStorageAccountName,
+		AccountName:   accountName,
 		ContainerName: "image-registry",
 		HTTPSecret:    hex.EncodeToString(httpSecret),
 	}
@@ -51,7 +57,7 @@ func (m *manager) applyInstallConfigCustomisations(ctx context.Context, installC
 
 	if m.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
 		dnsConfig.GatewayPrivateEndpointIP = m.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP
-		dnsConfig.GatewayDomains = append(m.env.GatewayDomains(), m.oc.Properties.ImageRegistryStorageAccountName+".blob."+m.env.Environment().StorageEndpointSuffix)
+		dnsConfig.GatewayDomains = append(m.env.GatewayDomains(), accountName+".blob."+m.env.Environment().StorageEndpointSuffix)
 	}
 
 	g := graph.Graph{}

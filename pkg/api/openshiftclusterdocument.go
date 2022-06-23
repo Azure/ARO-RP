@@ -1,5 +1,7 @@
 package api
 
+import "fmt"
+
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
@@ -49,4 +51,12 @@ type OpenShiftClusterDocument struct {
 
 func (c *OpenShiftClusterDocument) String() string {
 	return encodeJSON(c)
+}
+
+func (doc *OpenShiftClusterDocument) ImageRegistryStorageAccountName() (string, error) {
+	if doc.OpenShiftCluster == nil {
+		return "", fmt.Errorf("OpenShiftCluster info from OpenShift cluster document is nil")
+	}
+
+	return doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, nil
 }

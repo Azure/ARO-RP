@@ -109,12 +109,22 @@ func (m *manager) deployStorageTemplate(ctx context.Context) error {
 	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 	azureRegion := strings.ToLower(m.doc.OpenShiftCluster.Location) // Used in k8s object names, so must pass DNS-1123 validation
 
+	imageRegistryStorageAccountName, err := m.imageRegistryStorageAccountName()
+	if err != nil {
+		return err
+	}
+
+	err = validateImageRegistryStorageAccountName(imageRegistryStorageAccountName)
+	if err != nil {
+		return err
+	}
+
 	resources := []*arm.Resource{
 		m.storageAccount(clusterStorageAccountName, azureRegion, true),
 		m.storageAccountBlobContainer(clusterStorageAccountName, "ignition"),
 		m.storageAccountBlobContainer(clusterStorageAccountName, "aro"),
-		m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, azureRegion, true),
-		m.storageAccountBlobContainer(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, "image-registry"),
+		m.storageAccount(imageRegistryStorageAccountName, azureRegion, true),
+		m.storageAccountBlobContainer(imageRegistryStorageAccountName, "image-registry"),
 		m.clusterNSG(infraID, azureRegion),
 		m.clusterServicePrincipalRBAC(),
 		m.networkPrivateLinkService(azureRegion),
@@ -146,6 +156,14 @@ func (m *manager) deployStorageTemplate(ctx context.Context) error {
 	}
 
 	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
+}
+
+func (m *manager) imageRegistryStorageAccountName() (string, error) {
+	if m.doc == nil {
+		return "", fmt.Errorf("OpenShift cluster document is nil")
+	}
+
+	return m.doc.ImageRegistryStorageAccountName()
 }
 
 func (m *manager) attachNSGs(ctx context.Context) error {

@@ -244,8 +244,13 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 		},
 	}
 
+	accountName := o.oc.Properties.ImageRegistryStorageAccountName
+	if accountName == "" {
+		return nil, fmt.Errorf("deploy operator's storage account name of image registry config is empty")
+	}
+
 	if o.oc.Properties.FeatureProfile.GatewayEnabled && o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
-		cluster.Spec.GatewayDomains = append(o.env.GatewayDomains(), o.oc.Properties.ImageRegistryStorageAccountName+".blob."+o.env.Environment().StorageEndpointSuffix)
+		cluster.Spec.GatewayDomains = append(o.env.GatewayDomains(), accountName+".blob."+o.env.Environment().StorageEndpointSuffix)
 	} else {
 		// covers the case of an admin-disable, we need to update dnsmasq on each node
 		cluster.Spec.GatewayDomains = make([]string, 0)
