@@ -184,7 +184,6 @@ lint-go:
 	hack/lint-go.sh
 
 lint-admin-portal:
-	echo $(REGISTRY)
 	docker build --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.portal_lint . -t linter
 	docker run -it --rm localhost/linter ./src --ext .ts
 
