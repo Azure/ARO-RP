@@ -1,4 +1,5 @@
-FROM registry.access.redhat.com/ubi8/go-toolset:1.16.12 AS builder
+ARG REGISTRY
+FROM ${REGISTRY}/ubi8/go-toolset:1.16.12 AS builder
 ARG MUOVERSION
 ENV DOWNLOAD_URL=https://github.com/openshift/managed-upgrade-operator/archive/${MUOVERSION}.tar.gz
 ENV GOOS=linux \
@@ -12,7 +13,7 @@ RUN curl -Lq $DOWNLOAD_URL | tar -xz --strip-components=1
 RUN go build -gcflags="all=-trimpath=/go/" -asmflags="all=-trimpath=/go/" -tags mandate_fips -o build/_output/bin/managed-upgrade-operator ./cmd/manager
 
 #### Runtime container
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM ${REGISTRY}/ubi8/ubi-minimal:latest
 
 ENV USER_UID=1001 \
     USER_NAME=managed-upgrade-operator
