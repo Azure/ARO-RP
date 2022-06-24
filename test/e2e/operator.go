@@ -25,7 +25,6 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/machineset"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
@@ -275,61 +274,6 @@ var _ = Describe("ARO Operator - Conditions", func() {
 		}
 
 		err := wait.PollImmediate(30*time.Second, 15*time.Minute, clusterOperatorConditionsValid)
-		Expect(err).NotTo(HaveOccurred())
-	})
-})
-
-var _ = Describe("ARO Operator - MachineSet Controller", func() {
-	Specify("operator should maintain at least two worker replicas", func() {
-		ctx := context.Background()
-
-		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-
-		if !instance.Spec.OperatorFlags.GetSimpleBoolean(machineset.ControllerEnabled) {
-			Skip("MachineSet Controller is not enabled, skipping this test")
-		}
-
-		mss, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(mss.Items).NotTo(BeEmpty())
-
-		// Zero all machinesets, wait for reconcile
-		for _, object := range mss.Items {
-			err = scale(object.Name, 0)
-			Expect(err).NotTo(HaveOccurred())
-		}
-
-		for _, object := range mss.Items {
-			err = waitForScale(object.Name)
-			Expect(err).NotTo(HaveOccurred())
-		}
-
-		// Re-count and assert that operator added back replicas
-		modifiedMachineSets, err := clients.MachineAPI.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{})
-		Expect(err).NotTo(HaveOccurred())
-
-		replicaCount := 0
-		for _, machineset := range modifiedMachineSets.Items {
-			if machineset.Spec.Replicas != nil {
-				replicaCount += int(*machineset.Spec.Replicas)
-			}
-		}
-		Expect(replicaCount).To(BeEquivalentTo(minSupportedReplicas))
-
-		// Scale back to previous state
-		for _, ms := range mss.Items {
-			err = scale(ms.Name, *ms.Spec.Replicas)
-			Expect(err).NotTo(HaveOccurred())
-		}
-
-		for _, ms := range mss.Items {
-			err = waitForScale(ms.Name)
-			Expect(err).NotTo(HaveOccurred())
-		}
-
-		// Wait for old machine objects to delete
-		err = waitForMachines()
 		Expect(err).NotTo(HaveOccurred())
 	})
 })
