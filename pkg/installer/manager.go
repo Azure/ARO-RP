@@ -20,9 +20,13 @@ type manager struct {
 	log *logrus.Entry
 	env env.Interface
 
-	doc             *api.OpenShiftClusterDocument
-	subscriptionDoc *api.SubscriptionDocument
-	fpAuthorizer    refreshable.Authorizer
+	// clusterUUID is the UUID of the OpenShiftClusterDocument that contained
+	// this OpenShiftCluster. It should be used where a unique ID for this
+	// cluster is required.
+	clusterUUID  string
+	oc           *api.OpenShiftCluster
+	sub          *api.Subscription
+	fpAuthorizer refreshable.Authorizer
 
 	deployments features.DeploymentsClient
 
@@ -35,14 +39,15 @@ type Interface interface {
 	Install(ctx context.Context) error
 }
 
-func NewInstaller(log *logrus.Entry, _env env.Interface, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, fpAuthorizer refreshable.Authorizer, deployments features.DeploymentsClient, g graph.Manager) Interface {
+func NewInstaller(log *logrus.Entry, _env env.Interface, clusterUUID string, oc *api.OpenShiftCluster, subscription *api.Subscription, fpAuthorizer refreshable.Authorizer, deployments features.DeploymentsClient, g graph.Manager) Interface {
 	return &manager{
-		log:             log,
-		env:             _env,
-		doc:             doc,
-		subscriptionDoc: subscriptionDoc,
-		fpAuthorizer:    fpAuthorizer,
-		deployments:     deployments,
-		graph:           g,
+		log:          log,
+		env:          _env,
+		clusterUUID:  clusterUUID,
+		oc:           oc,
+		sub:          subscription,
+		fpAuthorizer: fpAuthorizer,
+		deployments:  deployments,
+		graph:        g,
 	}
 }

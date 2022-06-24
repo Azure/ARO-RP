@@ -122,7 +122,7 @@ func (m *manager) Update(ctx context.Context) error {
 
 // callInstaller initialises and calls the Installer code. This will later be replaced with a call into Hive.
 func (m *manager) callInstaller(ctx context.Context) error {
-	i := installer.NewInstaller(m.log, m.env, m.doc, m.subscriptionDoc, m.fpAuthorizer, m.deployments, m.graph)
+	i := installer.NewInstaller(m.log, m.env, m.doc.ID, m.doc.OpenShiftCluster, m.subscriptionDoc.Subscription, m.fpAuthorizer, m.deployments, m.graph)
 	return i.Install(ctx)
 }
 

@@ -32,9 +32,9 @@ import (
 )
 
 func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.InstallConfig, *releaseimage.Image, error) {
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	resourceGroup := stringutils.LastTokenByte(m.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	pullSecret, err := pullsecret.Build(m.doc.OpenShiftCluster, string(m.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret))
+	pullSecret, err := pullsecret.Build(m.oc, string(m.oc.Properties.ClusterProfile.PullSecret))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -46,17 +46,17 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 		}
 	}
 
-	r, err := azure.ParseResourceID(m.doc.OpenShiftCluster.ID)
+	r, err := azure.ParseResourceID(m.oc.ID)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	_, masterSubnetName, err := subnet.Split(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+	_, masterSubnetName, err := subnet.Split(m.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	vnetID, workerSubnetName, err := subnet.Split(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID)
+	vnetID, workerSubnetName, err := subnet.Split(m.oc.Properties.WorkerProfiles[0].SubnetID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -66,7 +66,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 		return nil, nil, err
 	}
 
-	privateKey, err := x509.ParsePKCS1PrivateKey(m.doc.OpenShiftCluster.Properties.SSHKey)
+	privateKey, err := x509.ParsePKCS1PrivateKey(m.oc.Properties.SSHKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -76,12 +76,12 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 		return nil, nil, err
 	}
 
-	domain := m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain
+	domain := m.oc.Properties.ClusterProfile.Domain
 	if !strings.ContainsRune(domain, '.') {
 		domain += "." + m.env.Domain()
 	}
 
-	masterSKU, err := m.env.VMSku(string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize))
+	masterSKU, err := m.env.VMSku(string(m.oc.Properties.MasterProfile.VMSize))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -90,7 +90,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 		masterZones = []string{""}
 	}
 
-	workerSKU, err := m.env.VMSku(string(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize))
+	workerSKU, err := m.env.VMSku(string(m.oc.Properties.WorkerProfiles[0].VMSize))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -100,8 +100,8 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 	}
 
 	SoftwareDefinedNetwork := string(api.SoftwareDefinedNetworkOpenShiftSDN)
-	if m.doc.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork != "" {
-		SoftwareDefinedNetwork = string(m.doc.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork)
+	if m.oc.Properties.NetworkProfile.SoftwareDefinedNetwork != "" {
+		SoftwareDefinedNetwork = string(m.oc.Properties.NetworkProfile.SoftwareDefinedNetwork)
 	}
 
 	installConfig := &installconfig.InstallConfig{
@@ -123,12 +123,12 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 				NetworkType: SoftwareDefinedNetwork,
 				ClusterNetwork: []types.ClusterNetworkEntry{
 					{
-						CIDR:       *ipnet.MustParseCIDR(m.doc.OpenShiftCluster.Properties.NetworkProfile.PodCIDR),
+						CIDR:       *ipnet.MustParseCIDR(m.oc.Properties.NetworkProfile.PodCIDR),
 						HostPrefix: 23,
 					},
 				},
 				ServiceNetwork: []ipnet.IPNet{
-					*ipnet.MustParseCIDR(m.doc.OpenShiftCluster.Properties.NetworkProfile.ServiceCIDR),
+					*ipnet.MustParseCIDR(m.oc.Properties.NetworkProfile.ServiceCIDR),
 				},
 			},
 			ControlPlane: &types.MachinePool{
@@ -137,10 +137,10 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 				Platform: types.MachinePoolPlatform{
 					Azure: &azuretypes.MachinePool{
 						Zones:            masterZones,
-						InstanceType:     string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize),
-						EncryptionAtHost: m.doc.OpenShiftCluster.Properties.MasterProfile.EncryptionAtHost == api.EncryptionAtHostEnabled,
+						InstanceType:     string(m.oc.Properties.MasterProfile.VMSize),
+						EncryptionAtHost: m.oc.Properties.MasterProfile.EncryptionAtHost == api.EncryptionAtHostEnabled,
 						OSDisk: azuretypes.OSDisk{
-							DiskEncryptionSetID: m.doc.OpenShiftCluster.Properties.MasterProfile.DiskEncryptionSetID,
+							DiskEncryptionSetID: m.oc.Properties.MasterProfile.DiskEncryptionSetID,
 							DiskSizeGB:          1024,
 						},
 					},
@@ -150,16 +150,16 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 			},
 			Compute: []types.MachinePool{
 				{
-					Name:     m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].Name,
-					Replicas: to.Int64Ptr(int64(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].Count)),
+					Name:     m.oc.Properties.WorkerProfiles[0].Name,
+					Replicas: to.Int64Ptr(int64(m.oc.Properties.WorkerProfiles[0].Count)),
 					Platform: types.MachinePoolPlatform{
 						Azure: &azuretypes.MachinePool{
 							Zones:            workerZones,
-							InstanceType:     string(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize),
-							EncryptionAtHost: m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].EncryptionAtHost == api.EncryptionAtHostEnabled,
+							InstanceType:     string(m.oc.Properties.WorkerProfiles[0].VMSize),
+							EncryptionAtHost: m.oc.Properties.WorkerProfiles[0].EncryptionAtHost == api.EncryptionAtHostEnabled,
 							OSDisk: azuretypes.OSDisk{
-								DiskEncryptionSetID: m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskEncryptionSetID,
-								DiskSizeGB:          int32(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB),
+								DiskEncryptionSetID: m.oc.Properties.WorkerProfiles[0].DiskEncryptionSetID,
+								DiskSizeGB:          int32(m.oc.Properties.WorkerProfiles[0].DiskSizeGB),
 							},
 						},
 					},
@@ -169,7 +169,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 			},
 			Platform: types.Platform{
 				Azure: &azuretypes.Platform{
-					Region:                   strings.ToLower(m.doc.OpenShiftCluster.Location), // Used in k8s object names, so must pass DNS-1123 validation
+					Region:                   strings.ToLower(m.oc.Location), // Used in k8s object names, so must pass DNS-1123 validation
 					NetworkResourceGroupName: vnetr.ResourceGroup,
 					VirtualNetwork:           vnetr.ResourceName,
 					ControlPlaneSubnet:       masterSubnetName,
@@ -180,7 +180,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 				},
 			},
 			PullSecret: pullSecret,
-			FIPS:       m.doc.OpenShiftCluster.Properties.ClusterProfile.FipsValidatedModules == api.FipsValidatedModulesEnabled,
+			FIPS:       m.oc.Properties.ClusterProfile.FipsValidatedModules == api.FipsValidatedModulesEnabled,
 			ImageContentSources: []types.ImageContentSource{
 				{
 					Source: "quay.io/openshift-release-dev/ocp-release",
@@ -207,15 +207,15 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 			azuretypes.CloudEnvironment(m.env.Environment().Name),
 			m.env.Environment().ResourceManagerEndpoint,
 			&icazure.Credentials{
-				TenantID:       m.subscriptionDoc.Subscription.Properties.TenantID,
-				ClientID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID,
-				ClientSecret:   string(m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret),
+				TenantID:       m.sub.Properties.TenantID,
+				ClientID:       m.oc.Properties.ServicePrincipalProfile.ClientID,
+				ClientSecret:   string(m.oc.Properties.ServicePrincipalProfile.ClientSecret),
 				SubscriptionID: r.SubscriptionID,
 			},
 		),
 	}
 
-	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPrivate {
+	if m.oc.Properties.IngressProfiles[0].Visibility == api.VisibilityPrivate {
 		installConfig.Config.Publish = types.InternalPublishingStrategy
 	}
 
@@ -225,10 +225,10 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 	}
 
 	image := &releaseimage.Image{}
-	if m.doc.OpenShiftCluster.Properties.ClusterProfile.Version == version.InstallStream.Version.String() {
+	if m.oc.Properties.ClusterProfile.Version == version.InstallStream.Version.String() {
 		image.PullSpec = version.InstallStream.PullSpec
 	} else {
-		return nil, nil, fmt.Errorf("unimplemented version %q", m.doc.OpenShiftCluster.Properties.ClusterProfile.Version)
+		return nil, nil, fmt.Errorf("unimplemented version %q", m.oc.Properties.ClusterProfile.Version)
 	}
 
 	err = validation.ValidateInstallConfig(installConfig.Config).ToAggregate()
