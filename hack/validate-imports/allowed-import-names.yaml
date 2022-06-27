@@ -106,3 +106,5 @@ allowedImportNames:
     - azureproviderv1beta1
   sigs.k8s.io/controller-runtime:
     - ctrl
+  github.com/Azure/ARO-RP/pkg/hive/clientset/versioned:
+    - hiveclient

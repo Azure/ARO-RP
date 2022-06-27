@@ -179,6 +179,7 @@ func importedAs(spec *ast.ImportSpec) string {
 func validateImports(path string, fset *token.FileSet, f *ast.File) []error {
 	for _, prefix := range []string{
 		"pkg/client/",
+		"pkg/hive/clientset",
 		"pkg/database/cosmosdb/zz_generated_",
 		"pkg/operator/apis",
 		"pkg/operator/clientset",
