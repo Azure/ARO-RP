@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
@@ -56,6 +57,7 @@ type manager struct {
 	subscriptionDoc   *api.SubscriptionDocument
 	fpAuthorizer      refreshable.Authorizer
 	localFpAuthorizer refreshable.Authorizer
+	me                metrics.Emitter
 
 	spApplications        graphrbac.ApplicationsClient
 	disks                 compute.DisksClient
@@ -97,7 +99,7 @@ type manager struct {
 
 // New returns a cluster manager
 func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, dbGateway database.Gateway, aead encryption.AEAD,
-	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (Interface, error) {
+	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, metics metrics.Emitter) (Interface, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -130,6 +132,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		subscriptionDoc:   subscriptionDoc,
 		fpAuthorizer:      fpAuthorizer,
 		localFpAuthorizer: localFPAuthorizer,
+		me:                metics,
 
 		disks:                 compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		virtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),

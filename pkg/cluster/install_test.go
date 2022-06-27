@@ -8,6 +8,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/onsi/gomega"
@@ -29,6 +30,23 @@ import (
 )
 
 func failingFunc(context.Context) error { return errors.New("oh no!") }
+
+func normalFunc(context.Context) error {
+	time.Sleep(1 * time.Second)
+	return nil
+}
+
+type fakeMetricsEmitter struct {
+	Topic      string
+	IntallTime int64
+}
+
+func (e *fakeMetricsEmitter) EmitGauge(topic string, value int64, dims map[string]string) {
+	e.Topic = topic
+	e.IntallTime = value
+}
+
+func (e *fakeMetricsEmitter) EmitFloat(topic string, value float64, dims map[string]string) {}
 
 var clusterOperator = &configv1.ClusterOperator{
 	ObjectMeta: metav1.ObjectMeta{
@@ -207,5 +225,51 @@ func TestUpdateProvisionedBy(t *testing.T) {
 	}
 	if updatedClusterDoc.OpenShiftCluster.Properties.ProvisionedBy != version.GitCommit {
 		t.Error("version was not added")
+	}
+}
+
+func TestInstallationTimeMetrics(t *testing.T) {
+	_, log := testlog.New()
+	fm := &fakeMetricsEmitter{}
+
+	for _, tt := range []struct {
+		name  string
+		steps []steps.Step
+	}{
+		{
+			name: "Failed step run will not generate any install time metrics",
+			steps: []steps.Step{
+				steps.Action(normalFunc),
+				steps.Action(failingFunc),
+			},
+		},
+		{
+			name: "Succeeded step run will generate a valid install time metrics",
+			steps: []steps.Step{
+				steps.Action(normalFunc),
+				steps.Action(normalFunc),
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			m := &manager{
+				log: log,
+				me:  fm,
+			}
+			err := m.runSteps(ctx, tt.steps)
+			if err != nil {
+				if fm.Topic != "" || fm.IntallTime != 0 {
+					t.Error("fake metrics obj should be empty when run steps failed")
+				}
+			} else {
+				if fm.Topic != "backend.openshiftcluster.installtime" {
+					t.Error("wrong metrics topic")
+				}
+				if fm.IntallTime < 2 {
+					t.Error("wrong metrics value")
+				}
+			}
+		})
 	}
 }

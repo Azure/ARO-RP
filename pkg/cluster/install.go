@@ -201,9 +201,12 @@ func (m *manager) Install(ctx context.Context) error {
 }
 
 func (m *manager) runSteps(ctx context.Context, s []steps.Step) error {
+	startTime := time.Now()
 	err := steps.Run(ctx, m.log, 10*time.Second, s)
 	if err != nil {
 		m.gatherFailureLogs(ctx)
+	} else {
+		m.me.EmitGauge("backend.openshiftcluster.installtime", int64(time.Since(startTime).Seconds()), nil)
 	}
 	return err
 }
