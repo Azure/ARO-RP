@@ -1,3 +1,4 @@
+//go:build tools
 // +build tools
 
 package main
@@ -14,6 +15,7 @@ import (
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	_ "github.com/jewzaam/go-cosmosdb/cmd/gencosmosdb"
 	_ "github.com/jstemmer/go-junit-report"
+	_ "github.com/openshift/hive/apis"
 	_ "golang.org/x/tools/cmd/goimports"
 	_ "gotest.tools/gotestsum"
 	_ "k8s.io/code-generator/cmd/client-gen"

@@ -2238,6 +2238,8 @@ github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20211215231458-35ce9aaf
 github.com/openshift/cluster-autoscaler-operator v0.0.0-20190521201101-62768a6ba480/go.mod h1:/XmV44Fh28Vo3Ye93qFrxAbcFJ/Uy+7LPD+jGjmfJYc=
 github.com/openshift/console-operator v0.0.0-20220318130441-e44516b9c315 h1:zmwv8TgbOgZ5QoaPhLdOivqg706Z+VyuPs703jNMdrE=
 github.com/openshift/console-operator v0.0.0-20220318130441-e44516b9c315/go.mod h1:jCX07P5qFcuJrzd0xO5caxLjvSscehiaq6We/hGlcW8=
+github.com/openshift/hive/apis v0.0.0-20220624202239-6ac23a86d03b h1:Yp2lPfVdD/36XcmyQtjRq00Y4E6pG//IK9XWHoSqTm8=
+github.com/openshift/hive/apis v0.0.0-20220624202239-6ac23a86d03b/go.mod h1:7eGhXKAIeoft4GgBz98swaNRMHNNr6O6Np9GbXxzLOQ=
 github.com/openshift/library-go v0.0.0-20220303081124-fb4e7a2872f0 h1:hiwAdZ5ishMe4qtUejv+CuBWra18cjZMHVFlVPOZnw0=
 github.com/openshift/library-go v0.0.0-20220303081124-fb4e7a2872f0/go.mod h1:6AmNM4N4nHftckybV/U7bQW+5AvK5TW81ndSI6KEidw=
 github.com/openshift/machine-api-operator v0.2.1-0.20220124104622-668c5b52b104/go.mod h1:1j0Au43h8Sn2B81FxOudqcmKnzvMNEH+vfg5y1g2xAk=

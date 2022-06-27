@@ -40,9 +40,10 @@ require (
 	github.com/jstemmer/go-junit-report v0.9.1
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
-	github.com/openshift/api v0.0.0-20220124143425-d74727069f6f
+	github.com/openshift/api v0.0.0-20220427141643-6e7069f2fba2
 	github.com/openshift/client-go v0.0.0-20211209144617-7385dd6338e3
 	github.com/openshift/console-operator v0.0.0-20220407014945-45d37e70e0c2
+	github.com/openshift/hive/apis v0.0.0-20220624202239-6ac23a86d03b
 	github.com/openshift/installer v0.16.1
 	github.com/openshift/library-go v0.0.0-20220405134141-226b07263a02
 	github.com/openshift/machine-config-operator v3.11.0+incompatible
