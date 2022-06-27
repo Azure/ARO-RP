@@ -56,16 +56,16 @@ require (
 	github.com/stretchr/testify v1.7.1
 	github.com/ugorji/go/codec v1.2.7
 	golang.org/x/crypto v0.0.0-20220331220935-ae2d96664a29
-	golang.org/x/net v0.0.0-20220403103023-749bd193bc2b
+	golang.org/x/net v0.0.0-20220624214902-1bab6f366d9e
 	golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/tools v0.1.10
+	golang.org/x/tools v0.1.11
 	gotest.tools/gotestsum v1.6.4
 	k8s.io/api v0.23.5
 	k8s.io/apiextensions-apiserver v0.23.5
 	k8s.io/apimachinery v0.23.5
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/code-generator v0.23.2
+	k8s.io/code-generator v0.24.2
 	k8s.io/kubectl v0.23.5
 	k8s.io/kubernetes v1.23.5
 	sigs.k8s.io/cluster-api-provider-azure v1.2.1
@@ -93,8 +93,6 @@ require (
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/OpenPeeDeeP/depguard v1.0.1 // indirect
-	github.com/PuerkitoBio/purell v1.1.1 // indirect
-	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
 	github.com/alexkohler/prealloc v1.0.0 // indirect
@@ -143,7 +141,7 @@ require (
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-openapi/errors v0.20.2 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
-	github.com/go-openapi/jsonreference v0.19.6 // indirect
+	github.com/go-openapi/jsonreference v0.20.0 // indirect
 	github.com/go-openapi/strfmt v0.21.2 // indirect
 	github.com/go-openapi/swag v0.21.1 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
@@ -315,12 +313,12 @@ require (
 	go.mozilla.org/pkcs7 v0.0.0-20210826202110-33d05740a352 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd // indirect
-	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
-	golang.org/x/sys v0.0.0-20220406163625-3f8b81556e12 // indirect
+	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
+	golang.org/x/sys v0.0.0-20220624220833-87e55d714810 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20220224211638-0e9765cccd65 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/api v0.74.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
@@ -338,10 +336,10 @@ require (
 	k8s.io/apiserver v0.23.5 // indirect
 	k8s.io/cli-runtime v0.23.5 // indirect
 	k8s.io/component-base v0.23.5 // indirect
-	k8s.io/gengo v0.0.0-20210813121822-485abfe95c7c // indirect
+	k8s.io/gengo v0.0.0-20220613173612-397b4ae3bce7 // indirect
 	k8s.io/klog v1.0.0 // indirect
-	k8s.io/klog/v2 v2.60.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20220401212409-b28bf2818661 // indirect
+	k8s.io/klog/v2 v2.70.0 // indirect
+	k8s.io/kube-openapi v0.0.0-20220621154418-c39d0f63fac8 // indirect
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9 // indirect
 	mvdan.cc/gofumpt v0.1.1 // indirect
 	mvdan.cc/interfacer v0.0.0-20180901003855-c20040233aed // indirect
