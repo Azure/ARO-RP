@@ -161,6 +161,13 @@ func (g *generator) rpVnet() *arm.Resource {
 				Locations: &[]string{"*"},
 			},
 		}
+	} else {
+		subnet.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+			{
+				Service:   to.StringPtr("Microsoft.Storage"),
+				Locations: &[]string{"*"},
+			},
+		}
 	}
 
 	return g.virtualNetwork("rp-vnet", "10.0.0.0/24", &[]mgmtnetwork.Subnet{subnet}, nil, []string{"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"})
