@@ -1,0 +1,17 @@
+FROM registry.access.redhat.com/ubi8/go-toolset:1.17.7 
+
+USER root
+RUN mkdir -p /root/go/src/github.com/Azure/ARO-RP 
+WORKDIR /root/go/src/github.com/Azure/ARO-RP 
+ENV GOPATH=/root/go
+
+ADD . .
+ADD .git .git
+
+RUN make generate
+RUN hack/git-utils/isClean.sh
+RUN make build-all
+RUN hack/git-utils/isClean.sh
+RUN make unit-test-go
+RUN hack/git-utils/isClean.sh
+
