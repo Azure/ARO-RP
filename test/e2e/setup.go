@@ -175,14 +175,6 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 
 	time.Sleep(time.Second * 10)
 
-	cmd := exec.CommandContext(context.Background(), "docker", "ps")
-
-	output, err := cmd.CombinedOutput()
-	log.Infof("Selenium process output : %s\n", output)
-	if err != nil {
-		panic(err)
-	}
-
 	_, err = url.ParseRequestURI("https://localhost:4444")
 	if err != nil {
 		panic(err)
@@ -212,8 +204,8 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 	if err := wd.Get(host + "/api/info"); err != nil {
 		log.Infof("Could not get to %s. With error : %s", host, err.Error())
 	}
-	cmd = exec.Command("go", "run", "./hack/portalauth", "-username", "test", "-groups", "$AZURE_PORTAL_ELEVATED_GROUP_IDS", "2>", "/dev/null")
-	output, err = cmd.Output()
+	cmd := exec.Command("go", "run", "./hack/portalauth", "-username", "test", "-groups", "$AZURE_PORTAL_ELEVATED_GROUP_IDS", "2>", "/dev/null")
+	output, err := cmd.Output()
 
 	if err != nil {
 		log.Fatalf("Error occurred creating session cookie\n Output: %s\n Error: %s\n", output, err)
@@ -400,6 +392,8 @@ func setup(ctx context.Context) error {
 		return err
 	}
 
+	setupSelenium(ctx)
+
 	return nil
 }
 
@@ -416,6 +410,8 @@ func done(ctx context.Context) error {
 			return err
 		}
 	}
+
+	adminPortalSessionTearDown()
 
 	return nil
 }
