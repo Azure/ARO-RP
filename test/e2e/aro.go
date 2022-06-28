@@ -29,7 +29,7 @@ var _ = Describe("Verify Attributes of ARO Cluster", func() {
 	// acrDomainList should contain acrDomain verifier
 	acrDomainList := []string{"arointsvc.azurecr.io", "arointsvc.azurecr.us", "arosvc.azurecr.io", "arosvc.azurecr.us"}
 	azEnvironmentList := []string{azureclient.PublicCloud.Environment.Name, azureclient.USGovernmentCloud.Environment.Name}
-	It("should be possible to definitely confirm cluster is ARO", func() {
+	It("should be possible to definitively confirm cluster is ARO", func() {
 		// Get cluster object
 		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(context.Background(), "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
