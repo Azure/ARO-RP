@@ -23,7 +23,7 @@ const (
 	mSsh = "99-master-ssh"
 )
 
-// The high level idea of these tests is to definitevily say that a cluster is an ARO cluster.
+// The high level idea of these tests is to definitively say that a cluster is an ARO cluster.
 var _ = Describe("Verify Attributes of ARO Cluster", func() {
 	ctx := context.Background()
 	// acrDomainList should contain acrDomain verifier
