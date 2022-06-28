@@ -164,7 +164,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 									Privileged: to.BoolPtr(true),
 								},
 								Lifecycle: &corev1.Lifecycle{
-									PreStop: &corev1.Handler{
+									PreStop: &corev1.LifecycleHandler{
 										Exec: &corev1.ExecAction{
 											Command: []string{
 												"/bin/bash",

@@ -38,14 +38,26 @@ func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
 		availableRP = version.GitCommit
 	}
 
+	actualVersion := actualVersion(cv)
+	actualMinorVersion := ""
+	if len(actualVersion) > 0 {
+		parsedVersion, err := version.ParseVersion(actualVersion)
+		if err != nil {
+			return err
+		}
+		actualMinorVersion = parsedVersion.MinorVersion()
+	}
+
 	mon.emitGauge("cluster.versions", 1, map[string]string{
-		"actualVersion":                        actualVersion(cv),
+		"actualVersion":                        actualVersion,
 		"desiredVersion":                       desiredVersion(cv),
 		"provisionedByResourceProviderVersion": mon.oc.Properties.ProvisionedBy,              // last successful Put or Patch
 		"resourceProviderVersion":              version.GitCommit,                            // RP version currently running
 		"operatorVersion":                      operatorVersion,                              // operator version in the cluster
 		"availableVersion":                     availableVersion(cv, version.UpgradeStreams), // current available version for upgrade from stream
 		"availableRP":                          availableRP,                                  // current RP version available for document update, empty when none
+		"latestGaMinorVersion":                 version.InstallStream.Version.MinorVersion(), // Latest GA in ARO Minor version
+		"actualMinorVersion":                   actualMinorVersion,                           // Minor version, empty if actual version is not in expected form
 	})
 
 	return nil

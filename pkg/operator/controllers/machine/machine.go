@@ -7,13 +7,12 @@ import (
 	"context"
 	"fmt"
 
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
-	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
+	utilmachine "github.com/Azure/ARO-RP/pkg/util/machine"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -38,16 +37,9 @@ func (r *Reconciler) machineValid(ctx context.Context, machine *machinev1beta1.M
 		return []error{fmt.Errorf("machine %s: provider spec missing", machine.Name)}
 	}
 
-	o, _, err := scheme.Codecs.UniversalDeserializer().Decode(machine.Spec.ProviderSpec.Value.Raw, nil, nil)
+	machineProviderSpec, err := utilmachine.UnmarshalAzureProviderSpec(machine.Name, utilmachine.Machine, machine.Spec.ProviderSpec.Value.Raw)
 	if err != nil {
-		return []error{err}
-	}
-
-	machineProviderSpec, ok := o.(*azureproviderv1beta1.AzureMachineProviderSpec)
-	if !ok {
-		// This should never happen: codecs uses scheme that has only one registered type
-		// and if something is wrong with the provider spec - decoding should fail
-		return []error{fmt.Errorf("machine %s: failed to read provider spec: %T", machine.Name, o)}
+		errs = append(errs, err)
 	}
 
 	// Validate VM size in machine provider spec

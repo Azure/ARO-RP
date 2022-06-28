@@ -83,7 +83,7 @@ func (c *FakeConsolePlugins) Update(ctx context.Context, consolePlugin *v1alpha1
 // Delete takes name of the consolePlugin and deletes it. Returns an error if one occurs.
 func (c *FakeConsolePlugins) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(consolepluginsResource, name), &v1alpha1.ConsolePlugin{})
+		Invokes(testing.NewRootDeleteActionWithOptions(consolepluginsResource, name, opts), &v1alpha1.ConsolePlugin{})
 	return err
 }
 

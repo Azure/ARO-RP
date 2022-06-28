@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
@@ -24,7 +25,11 @@ func (m *manager) enableServiceEndpoints(ctx context.Context) error {
 	}
 
 	for _, wp := range m.doc.OpenShiftCluster.Properties.WorkerProfiles {
-		subnets = append(subnets, wp.SubnetID)
+		if len(wp.SubnetID) > 0 {
+			subnets = append(subnets, wp.SubnetID)
+		} else {
+			return fmt.Errorf("WorkerProfile '%s' has no SubnetID; check that the corresponding MachineSet is valid", wp.Name)
+		}
 	}
 
 	for _, subnetId := range subnets {
@@ -69,6 +74,10 @@ func (m *manager) enableServiceEndpoints(ctx context.Context) error {
 // The encryption flag is set to false/disabled for legacy storage accounts.
 func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	if len(m.doc.OpenShiftCluster.Properties.WorkerProfiles) == 0 {
+		m.log.Error("skipping migrateStorageAccounts due to missing WorkerProfiles.")
+		return nil
+	}
 	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 	registryStorageAccountName := m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName
 
@@ -81,7 +90,7 @@ func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 		},
 	}
 
-	return m.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
+	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
 }
 
 func (m *manager) populateRegistryStorageAccountName(ctx context.Context) error {

@@ -57,13 +57,7 @@ func AddFromGraph(min *version.Version) ([]Node, error) {
 	}
 
 	releases := make([]Node, 0, len(g.Nodes))
-loop:
 	for _, node := range g.Nodes {
-		switch node.Version {
-		case "4.3.20":
-			continue loop
-		}
-
 		vsn, err := version.ParseVersion(node.Version)
 		if err != nil {
 			return nil, err

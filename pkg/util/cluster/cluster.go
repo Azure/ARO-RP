@@ -27,8 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/v20210901preview"
-	mgmtredhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2021-09-01-preview/redhatopenshift"
+	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
+	mgmtredhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-04-01/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -178,10 +178,10 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	var kvName string
-	if len(vnetResourceGroup) > 15 {
+	if len(vnetResourceGroup) > 10 {
 		// keyvault names need to have a maximum length of 24,
 		// so we need to cut off some chars if the resource group name is too long
-		kvName = vnetResourceGroup[:15] + generator.SharedKeyVaultNameSuffix
+		kvName = vnetResourceGroup[:10] + generator.SharedKeyVaultNameSuffix
 	} else {
 		kvName = vnetResourceGroup + generator.SharedKeyVaultNameSuffix
 	}
@@ -195,7 +195,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		}
 
 		if result.NameAvailable != nil && !*result.NameAvailable {
-			return fmt.Errorf("Could not generate unique key vault name: %v", result.Reason)
+			return fmt.Errorf("could not generate unique key vault name: %v", result.Reason)
 		}
 	}
 
@@ -399,8 +399,9 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 	oc := api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
 			ClusterProfile: api.ClusterProfile{
-				Domain:          strings.ToLower(clusterName),
-				ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.env.SubscriptionID(), "aro-"+clusterName),
+				Domain:               strings.ToLower(clusterName),
+				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.env.SubscriptionID(), "aro-"+clusterName),
+				FipsValidatedModules: api.FipsValidatedModulesEnabled,
 			},
 			ServicePrincipalProfile: api.ServicePrincipalProfile{
 				ClientID:     clientID,
@@ -450,19 +451,19 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 	}
 
-	ext := api.APIs[v20210901preview.APIVersion].OpenShiftClusterConverter().ToExternal(&oc)
+	ext := api.APIs[v20220401.APIVersion].OpenShiftClusterConverter().ToExternal(&oc)
 	data, err := json.Marshal(ext)
 	if err != nil {
 		return err
 	}
 
-	ocExt := mgmtredhatopenshift20210901preview.OpenShiftCluster{}
+	ocExt := mgmtredhatopenshift20220401.OpenShiftCluster{}
 	err = json.Unmarshal(data, &ocExt)
 	if err != nil {
 		return err
 	}
 
-	return c.openshiftclustersv20210901preview.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
+	return c.openshiftclustersv20220401.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
 }
 
 func (c *Cluster) registerSubscription(ctx context.Context) error {
@@ -473,10 +474,6 @@ func (c *Cluster) registerSubscription(ctx context.Context) error {
 			RegisteredFeatures: []api.RegisteredFeatureProfile{
 				{
 					Name:  "Microsoft.RedHatOpenShift/RedHatEngineering",
-					State: "Registered",
-				},
-				{
-					Name:  "Microsoft.RedHatOpenShift/FIPS",
 					State: "Registered",
 				},
 			},

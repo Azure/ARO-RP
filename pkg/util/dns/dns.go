@@ -111,7 +111,7 @@ func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftClu
 			TTL: to.Int64Ptr(300),
 			ARecords: &[]mgmtdns.ARecord{
 				{
-					Ipv4Address: to.StringPtr(routerIP),
+					Ipv4Address: &routerIP,
 				},
 			},
 		},
@@ -158,7 +158,7 @@ func (m *manager) createOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, 
 	rs := mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			Metadata: map[string]*string{
-				resourceID: to.StringPtr(oc.ID),
+				resourceID: &oc.ID,
 			},
 			TTL: to.Int64Ptr(300),
 		},
@@ -167,7 +167,7 @@ func (m *manager) createOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, 
 	if ip != "" {
 		rs.ARecords = &[]mgmtdns.ARecord{
 			{
-				Ipv4Address: to.StringPtr(ip),
+				Ipv4Address: &ip,
 			},
 		}
 	}

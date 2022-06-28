@@ -9,6 +9,7 @@ import (
 	http "net/http"
 	reflect "reflect"
 
+	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	gomock "github.com/golang/mock/gomock"
 	logrus "github.com/sirupsen/logrus"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -78,6 +79,21 @@ func (m *MockKubeActions) KubeGet(arg0 context.Context, arg1, arg2, arg3 string)
 func (mr *MockKubeActionsMockRecorder) KubeGet(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeGet", reflect.TypeOf((*MockKubeActions)(nil).KubeGet), arg0, arg1, arg2, arg3)
+}
+
+// KubeGetPodLogs mocks base method.
+func (m *MockKubeActions) KubeGetPodLogs(arg0 context.Context, arg1, arg2, arg3 string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "KubeGetPodLogs", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// KubeGetPodLogs indicates an expected call of KubeGetPodLogs.
+func (mr *MockKubeActionsMockRecorder) KubeGetPodLogs(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeGetPodLogs", reflect.TypeOf((*MockKubeActions)(nil).KubeGetPodLogs), arg0, arg1, arg2, arg3)
 }
 
 // KubeList mocks base method.
@@ -175,6 +191,20 @@ func (mr *MockAzureActionsMockRecorder) VMRedeployAndWait(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMRedeployAndWait", reflect.TypeOf((*MockAzureActions)(nil).VMRedeployAndWait), arg0, arg1)
 }
 
+// VMResize mocks base method.
+func (m *MockAzureActions) VMResize(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VMResize", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VMResize indicates an expected call of VMResize.
+func (mr *MockAzureActionsMockRecorder) VMResize(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMResize", reflect.TypeOf((*MockAzureActions)(nil).VMResize), arg0, arg1, arg2)
+}
+
 // VMSerialConsole mocks base method.
 func (m *MockAzureActions) VMSerialConsole(arg0 context.Context, arg1 http.ResponseWriter, arg2 *logrus.Entry, arg3 string) error {
 	m.ctrl.T.Helper()
@@ -187,4 +217,47 @@ func (m *MockAzureActions) VMSerialConsole(arg0 context.Context, arg1 http.Respo
 func (mr *MockAzureActionsMockRecorder) VMSerialConsole(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSerialConsole", reflect.TypeOf((*MockAzureActions)(nil).VMSerialConsole), arg0, arg1, arg2, arg3)
+}
+
+// VMSizeList mocks base method.
+func (m *MockAzureActions) VMSizeList(arg0 context.Context) ([]compute.ResourceSku, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VMSizeList", arg0)
+	ret0, _ := ret[0].([]compute.ResourceSku)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// VMSizeList indicates an expected call of VMSizeList.
+func (mr *MockAzureActionsMockRecorder) VMSizeList(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSizeList", reflect.TypeOf((*MockAzureActions)(nil).VMSizeList), arg0)
+}
+
+// VMStartAndWait mocks base method.
+func (m *MockAzureActions) VMStartAndWait(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VMStartAndWait", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VMStartAndWait indicates an expected call of VMStartAndWait.
+func (mr *MockAzureActionsMockRecorder) VMStartAndWait(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMStartAndWait", reflect.TypeOf((*MockAzureActions)(nil).VMStartAndWait), arg0, arg1)
+}
+
+// VMStopAndWait mocks base method.
+func (m *MockAzureActions) VMStopAndWait(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VMStopAndWait", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VMStopAndWait indicates an expected call of VMStopAndWait.
+func (mr *MockAzureActionsMockRecorder) VMStopAndWait(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMStopAndWait", reflect.TypeOf((*MockAzureActions)(nil).VMStopAndWait), arg0, arg1)
 }

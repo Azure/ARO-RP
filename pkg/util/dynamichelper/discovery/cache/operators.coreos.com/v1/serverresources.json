@@ -4,6 +4,37 @@
     "groupVersion": "operators.coreos.com/v1",
     "resources": [
         {
+            "name": "olmconfigs",
+            "singularName": "olmconfig",
+            "namespaced": false,
+            "kind": "OLMConfig",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "categories": [
+                "olm"
+            ],
+            "storageVersionHash": "rV2ESbqnZdM="
+        },
+        {
+            "name": "olmconfigs/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "OLMConfig",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
             "name": "operatorconditions",
             "singularName": "operatorcondition",
             "namespaced": true,

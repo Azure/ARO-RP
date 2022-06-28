@@ -60,7 +60,7 @@ func TestReconciler(t *testing.T) {
 			wantErr: "",
 		},
 		{
-			name: "Managed Feature Flag is false: ensure mhc is deleted",
+			name: "Managed Feature Flag is false: ensure mhc and its alert are deleted",
 			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
@@ -74,6 +74,7 @@ func TestReconciler(t *testing.T) {
 			}),
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
 				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(1)
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Times(1)
 			},
 			wantErr: "",
 		},
@@ -94,6 +95,26 @@ func TestReconciler(t *testing.T) {
 				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Return(errors.New("Could not delete mhc"))
 			},
 			wantErr:          "Could not delete mhc",
+			wantRequeueAfter: time.Hour,
+		},
+		{
+			name: "Managed Feature Flag is false: mhc deletes but mhc alert fails to delete, an error is returned",
+			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						enabled: strconv.FormatBool(true),
+						managed: strconv.FormatBool(false),
+					},
+				},
+			}),
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(1)
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(errors.New("Could not delete mhc alert"))
+			},
+			wantErr:          "Could not delete mhc alert",
 			wantRequeueAfter: time.Hour,
 		},
 		{
@@ -142,10 +163,7 @@ func TestReconciler(t *testing.T) {
 			tt.mocks(mdh)
 
 			ctx := context.Background()
-			r := &Reconciler{
-				arocli: tt.arocli,
-				dh:     mdh,
-			}
+			r := NewReconciler(tt.arocli, mdh)
 			request := ctrl.Request{}
 			request.Name = "cluster"
 

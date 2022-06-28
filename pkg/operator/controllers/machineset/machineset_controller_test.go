@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	maofake "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,7 +69,7 @@ func TestReconciler(t *testing.T) {
 		name           string
 		objectName     string
 		machinesets    []kruntime.Object
-		mocks          func(maocli *maofake.Clientset)
+		mocks          func(maocli *machinefake.Clientset)
 		wantReplicas   int32
 		featureFlag    bool
 		assertReplicas bool
@@ -149,7 +149,7 @@ func TestReconciler(t *testing.T) {
 			name:        "machineset-0 not found",
 			objectName:  "aro-fake-machineset-0",
 			machinesets: fakeMachineSets(2, 0, 0),
-			mocks: func(maocli *maofake.Clientset) {
+			mocks: func(maocli *machinefake.Clientset) {
 				maocli.PrependReactor("get", "machinesets", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					return true, nil, &kerrors.StatusError{ErrStatus: metav1.Status{
 						Message: "machineset-0 not found",
@@ -165,7 +165,7 @@ func TestReconciler(t *testing.T) {
 			name:        "get machinesets failed with error",
 			objectName:  "aro-fake-machineset-0",
 			machinesets: fakeMachineSets(1, 0, 0),
-			mocks: func(maocli *maofake.Clientset) {
+			mocks: func(maocli *machinefake.Clientset) {
 				maocli.PrependReactor("get", "machinesets", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					return true, nil, errors.New("fake error")
 				})
@@ -178,7 +178,7 @@ func TestReconciler(t *testing.T) {
 			name:        "machineset-0 can't be updated",
 			objectName:  "aro-fake-machineset-0",
 			machinesets: fakeMachineSets(1, 0, 0),
-			mocks: func(maocli *maofake.Clientset) {
+			mocks: func(maocli *machinefake.Clientset) {
 				maocli.PrependReactor("update", "machinesets", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					return true, nil, errors.New("fake error from update")
 				})
@@ -201,7 +201,7 @@ func TestReconciler(t *testing.T) {
 				},
 			}
 
-			maocli := maofake.NewSimpleClientset(tt.machinesets...)
+			maocli := machinefake.NewSimpleClientset(tt.machinesets...)
 
 			if tt.mocks != nil {
 				tt.mocks(maocli)

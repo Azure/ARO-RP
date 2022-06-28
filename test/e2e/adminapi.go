@@ -70,6 +70,14 @@ func adminRequest(ctx context.Context, method, path string, params url.Values, i
 
 	if out != nil && resp.Header.Get("Content-Type") == "application/json" {
 		return resp, json.NewDecoder(resp.Body).Decode(&out)
+	} else if out != nil && resp.Header.Get("Content-Type") == "text/plain" {
+		strOut := out.(*string)
+		p, err := ioutil.ReadAll(resp.Body)
+		if err == nil {
+			*strOut = string(p)
+		}
+
+		return resp, err
 	}
 
 	return resp, nil

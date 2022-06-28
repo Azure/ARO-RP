@@ -27,7 +27,7 @@ locations.
    Set SECRET_SA_ACCOUNT_NAME to the name of the storage account:
 
    ```bash
-   SECRET_SA_ACCOUNT_NAME=rharosecrets
+   SECRET_SA_ACCOUNT_NAME=rharosecretsdev
    ```
 
 1. You will need an AAD object (this could be your AAD user, or an AAD group of
@@ -45,7 +45,7 @@ locations.
    PULL_SECRET=...
    ```
 
-1. Install [Go 1.16](https://golang.org/dl) or later, if you haven't already.
+1. Install [Go 1.17](https://golang.org/dl) or later, if you haven't already.
 
 1. Install the [Azure
    CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), if you
@@ -88,9 +88,9 @@ locations.
    ```
 
    ```bash
+   > __NOTE:__: for macos change the -w0 option for base64 to -b0
    AZURE_ARM_CLIENT_ID="$(az ad app create \
      --display-name aro-v4-arm-shared \
-     --identifier-uris "https://$(uuidgen)/" \
      --query appId \
      -o tsv)"
    az ad app credential reset \
@@ -117,9 +117,9 @@ locations.
    Now create the application:
 
    ```bash
+   > __NOTE:__: for macos change the -w0 option for base64 to -b0
    AZURE_FP_CLIENT_ID="$(az ad app create \
      --display-name aro-v4-fp-shared \
-     --identifier-uris "https://$(uuidgen)/" \
      --query appId \
      -o tsv)"
    az ad app credential reset \
@@ -141,7 +141,6 @@ locations.
    AZURE_RP_CLIENT_ID="$(az ad app create \
      --display-name aro-v4-rp-shared \
      --end-date '2299-12-31T11:59:59+00:00' \
-     --identifier-uris "https://$(uuidgen)/" \
      --key-type password \
      --password "$AZURE_RP_CLIENT_SECRET" \
      --query appId \
@@ -162,7 +161,6 @@ locations.
    AZURE_GATEWAY_CLIENT_ID="$(az ad app create \
      --display-name aro-v4-gateway-shared \
      --end-date '2299-12-31T11:59:59+00:00' \
-     --identifier-uris "https://$(uuidgen)/" \
      --key-type password \
      --password "$AZURE_GATEWAY_CLIENT_SECRET" \
      --query appId \
@@ -177,7 +175,6 @@ locations.
    AZURE_CLIENT_ID="$(az ad app create \
      --display-name aro-v4-tooling-shared \
      --end-date '2299-12-31T11:59:59+00:00' \
-     --identifier-uris "https://$(uuidgen)/" \
      --key-type password \
      --password "$AZURE_CLIENT_SECRET" \
      --query appId \
@@ -194,26 +191,26 @@ locations.
 
    * Go into the Azure Portal
    * Go to Azure Active Directory
-   * Navigate to the `aro-v4-tooling-shared` app page
+   * Navigate to the `aro-v4-tooling-shared` app registration page
    * Click 'API permissions' in the left side pane
-   * Click 'Microsoft Graph'
    * Click 'Add a permission'.
+   * Click 'Microsoft Graph'
    * Select 'Application permissions'
    * Search for 'Application' and select `Application.ReadWrite.OwnedBy`
    * Click 'Add permissions'
    * This request will need to be approved by a tenant administrator. If you are one, you can click the `Grant admin consent for <name>` button to the right of the `Add a permission` button on the app page
 
-1. Set up the RP role definitions and subscription role assignments in your
-   Azure subscription. This mimics the RBAC that ARM sets up.  With at least
-   `User Access Administrator` permissions on your subscription, do:
+1. Set up the RP role definitions and subscription role assignments in your Azure subscription. The usage of "uuidgen" for fpRoleDefinitionId is simply there to keep from interfering with any linked resources and to create the role net new. This mimics the RBAC that ARM sets up. With at least `User Access Administrator` permissions on your subscription, do:
 
    ```bash
+   LOCATION=<YOUR-REGION>
    az deployment sub create \
      -l $LOCATION \
      --template-file deploy/rbac-development.json \
      --parameters \
        "armServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_ARM_CLIENT_ID'" --query '[].objectId' -o tsv)" \
        "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
+       "fpRoleDefinitionId"="$(uuidgen)" \
        "devServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)" \
      >/dev/null
    ```
@@ -230,9 +227,9 @@ locations.
    ```
 
    ```bash
+   > __NOTE:__: for macos change the -w0 option for base64 to -b0
    AZURE_PORTAL_CLIENT_ID="$(az ad app create \
      --display-name aro-v4-portal-shared \
-     --identifier-uris "https://$(uuidgen)/" \
      --reply-urls "https://localhost:8444/callback" \
      --query appId \
      -o tsv)"
@@ -240,8 +237,6 @@ locations.
      --id "$AZURE_PORTAL_CLIENT_ID" \
      --cert "$(base64 -w0 <secrets/portal-client.crt)" >/dev/null
    ```
-
-   TODO: more steps are needed to configure aro-v4-portal-shared.
 
 1. Create an AAD application which will fake up the dbtoken client.
 
@@ -255,6 +250,7 @@ locations.
 
    OBJ_ID="$(az ad app show --id $AZURE_DBTOKEN_CLIENT_ID --query objectId)"
 
+   > __NOTE:__: the graph API requires this to be done from a managed machine
    az rest --method PATCH \
       --uri https://graph.microsoft.com/v1.0/applications/$OBJ_ID/ \
       --body '{"api":{"requestedAccessTokenVersion": 2}}'
@@ -372,13 +368,13 @@ az ad app credential reset \
 
 5. The RP makes API calls to kubernetes cluster via a proxy VMSS agent. For the agent to get the updated certificates, this vm needs to be redeployed. Proxy VM is currently deployed by the `deploy_env_dev` function in `deploy-shared-env.sh`. It makes use of `env-development.json`
 
-6. Run `[rharosecrets|aroe2esecrets] make secrets-update` to upload it to your
+6. Run `[rharosecretsdev|aroe2esecrets] make secrets-update` to upload it to your
 storage account so other people on your team can access it via `make secrets`
 
 # Environment file
 
 1. Choose the resource group prefix.  The resource group location will be
-   appended to the prefix to make the resource group name.
+   The resource group location will be appended to the prefix to make the resource group name. If a v4-prefixed environment exists in the subscription already, use a unique prefix.
 
    ```bash
    RESOURCEGROUP_PREFIX=v4
@@ -480,7 +476,7 @@ each of the bash functions below.
    import_certs_secrets
    ```
 
-   Note: in production, three additional keys/certificates (rp-mdm, rp-mdsd, and
+   > __NOTE:__: in production, three additional keys/certificates (rp-mdm, rp-mdsd, and
    cluster-mdsd) are also required in the $KEYVAULT_PREFIX-svc key vault.  These
    are client certificates for RP metric and log forwarding (respectively) to
    Geneva.
@@ -512,10 +508,12 @@ each of the bash functions below.
         --file secrets/cluster-logging-int.pem
    ```
 
-   Note: in development, if you don't have valid certs for these, you can just
+   > __NOTE:__: in development, if you don't have valid certs for these, you can just
    upload `localhost.pem` as a placeholder for each of these. This will avoid an
    error stemming from them not existing, but it will result in logging pods
-   crash looping in any clusters you make.
+   crash looping in any clusters you make. Additionally, no gateway resources are 
+   created in development so you should not need to execute the cert import statement
+   for the "-gwy" keyvault.
 
 1. In pre-production (int, e2e) certain certificates are provisioned via keyvault
 integration. These should be rotated and generated in the keyvault itself:
@@ -546,4 +544,4 @@ Development value: secrets/cluster-logging-int.pem
 ## Append Resource Group to Subscription Cleaner DenyList
 
 * We have subscription pruning that takes place routinely and need to add our resource group for the shared rp environment to the `denylist` of the cleaner:
-	* [https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29](https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29) 
+   * [https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29](https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29) 

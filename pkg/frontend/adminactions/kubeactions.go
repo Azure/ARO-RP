@@ -9,10 +9,12 @@ import (
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -27,6 +29,7 @@ type KubeActions interface {
 	KubeCreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
 	KubeDelete(ctx context.Context, groupKind, namespace, name string) error
 	Upgrade(ctx context.Context, upgradeY bool) error
+	KubeGetPodLogs(ctx context.Context, namespace, name, containerName string) ([]byte, error)
 }
 
 type kubeActions struct {
@@ -37,6 +40,7 @@ type kubeActions struct {
 
 	dyn       dynamic.Interface
 	configcli configclient.Interface
+	kubecli   kubernetes.Interface
 }
 
 // NewKubeActions returns a kubeActions
@@ -61,6 +65,11 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 		return nil, err
 	}
 
+	kubecli, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	return &kubeActions{
 		log: log,
 		oc:  oc,
@@ -69,7 +78,14 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 
 		dyn:       dyn,
 		configcli: configcli,
+		kubecli:   kubecli,
 	}, nil
+}
+
+func (k *kubeActions) KubeGetPodLogs(ctx context.Context, namespace, podName, containerName string) ([]byte, error) {
+	var limit int64 = 52428800
+	opts := corev1.PodLogOptions{Container: containerName, LimitBytes: &limit}
+	return k.kubecli.CoreV1().Pods(namespace).GetLogs(podName, &opts).Do(ctx).Raw()
 }
 
 func (k *kubeActions) KubeGet(ctx context.Context, groupKind, namespace, name string) ([]byte, error) {

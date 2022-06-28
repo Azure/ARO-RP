@@ -98,7 +98,8 @@ type OpenShiftClusterProperties struct {
 	MaintenanceTask         MaintenanceTask     `json:"maintenanceTask,omitempty"`
 
 	// Operator feature/option flags
-	OperatorFlags OperatorFlags `json:"operatorFlags,omitempty"`
+	OperatorFlags   OperatorFlags `json:"operatorFlags,omitempty"`
+	OperatorVersion string        `json:"operatorVersion,omitempty"`
 
 	CreatedAt time.Time `json:"createdAt,omitempty"`
 
@@ -234,6 +235,15 @@ const (
 	SoftwareDefinedNetworkOpenShiftSDN  SoftwareDefinedNetwork = "OpenShiftSDN"
 )
 
+// MTUSize represents the MTU size of a cluster
+type MTUSize int
+
+// MTUSize constants
+const (
+	MTU1500 MTUSize = 1500
+	MTU3900 MTUSize = 3900
+)
+
 // NetworkProfile represents a network profile
 type NetworkProfile struct {
 	MissingFields
@@ -241,6 +251,7 @@ type NetworkProfile struct {
 	PodCIDR                string                 `json:"podCidr,omitempty"`
 	ServiceCIDR            string                 `json:"serviceCidr,omitempty"`
 	SoftwareDefinedNetwork SoftwareDefinedNetwork `json:"softwareDefinedNetwork,omitempty"`
+	MTUSize                MTUSize                `json:"mtuSize,omitempty"`
 
 	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
 	GatewayPrivateEndpointIP   string `json:"gatewayPrivateEndpointIp,omitempty"`
@@ -284,12 +295,18 @@ const (
 	VMSizeStandardD16sV3 VMSize = "Standard_D16s_v3"
 	VMSizeStandardD32sV3 VMSize = "Standard_D32s_v3"
 
-	VMSizeStandardE4sV3   VMSize = "Standard_E4s_v3"
-	VMSizeStandardE8sV3   VMSize = "Standard_E8s_v3"
-	VMSizeStandardE16sV3  VMSize = "Standard_E16s_v3"
-	VMSizeStandardE32sV3  VMSize = "Standard_E32s_v3"
-	VMSizeStandardE64isV3 VMSize = "Standard_E64is_v3"
-	VMSizeStandardE64iV3  VMSize = "Standard_E64i_v3"
+	VMSizeStandardE4sV3     VMSize = "Standard_E4s_v3"
+	VMSizeStandardE8sV3     VMSize = "Standard_E8s_v3"
+	VMSizeStandardE16sV3    VMSize = "Standard_E16s_v3"
+	VMSizeStandardE32sV3    VMSize = "Standard_E32s_v3"
+	VMSizeStandardE64isV3   VMSize = "Standard_E64is_v3"
+	VMSizeStandardE64iV3    VMSize = "Standard_E64i_v3"
+	VMSizeStandardE80isV4   VMSize = "Standard_E80is_v4"
+	VMSizeStandardE80idsV4  VMSize = "Standard_E80ids_v4"
+	VMSizeStandardE104iV5   VMSize = "Standard_E104i_v5"
+	VMSizeStandardE104isV5  VMSize = "Standard_E104is_v5"
+	VMSizeStandardE104idV5  VMSize = "Standard_E104id_v5"
+	VMSizeStandardE104idsV5 VMSize = "Standard_E104ids_v5"
 
 	VMSizeStandardF4sV2  VMSize = "Standard_F4s_v2"
 	VMSizeStandardF8sV2  VMSize = "Standard_F8s_v2"
