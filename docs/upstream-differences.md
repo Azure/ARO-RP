@@ -5,7 +5,7 @@ upstream OCP.
 
 ## Installer carry patches
 
-See https://github.com/openshift/installer/compare/release-4.9...jewzaam:release-4.9-azure.
+See https://github.com/openshift/installer/compare/release-4.10...jewzaam:release-4.10-azure.
 
 ## Installation differences
 
@@ -88,3 +88,5 @@ Once installer fork is ready:
 1. After this point, you should be able to create a dev cluster using the RP and it should use the new release.
 1. `make discoverycache`.
     * This command requires a running cluster with the new version.
+1. The list of the hard-coded namespaces in `pkg/util/namespace/namespace.go` needs to be updated regularly as every
+   minor version of upstream OCP introduces a new namespace or two.

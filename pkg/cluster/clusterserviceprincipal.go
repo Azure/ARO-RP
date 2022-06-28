@@ -66,7 +66,7 @@ func (m *manager) createOrUpdateClusterServicePrincipalRBAC(ctx context.Context)
 			ContentVersion: "1.0.0.0",
 			Resources:      []*arm.Resource{m.clusterServicePrincipalRBAC()},
 		}
-		err = m.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
+		err = arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
 		if err != nil {
 			return err
 		}

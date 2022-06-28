@@ -23,21 +23,49 @@ func TestValidateVMSku(t *testing.T) {
 		name                  string
 		restrictions          mgmtcompute.ResourceSkuRestrictionsReasonCode
 		restrictionLocation   *[]string
+		restrictedZones       []string
 		targetLocation        string
 		workerProfile1Sku     string
 		workerProfile2Sku     string
 		masterProfileSku      string
 		availableSku          string
+		availableSku2         string
 		restrictedSku         string
 		resourceSkusClientErr error
 		wantErr               string
 	}{
 		{
-			name:              "worker and master sku are valid",
+			name:              "worker and master skus are valid",
 			workerProfile1Sku: "Standard_D4s_v2",
 			workerProfile2Sku: "Standard_D4s_v2",
 			masterProfileSku:  "Standard_D4s_v2",
 			availableSku:      "Standard_D4s_v2",
+		},
+		{
+			name:              "worker and master skus are distinct, both valid",
+			workerProfile1Sku: "Standard_E104i_v5",
+			workerProfile2Sku: "Standard_E104i_v5",
+			masterProfileSku:  "Standard_D4s_v2",
+			availableSku:      "Standard_E104i_v5",
+			availableSku2:     "Standard_D4s_v2",
+		},
+		{
+			name:              "worker and master skus are distinct, one invalid",
+			workerProfile1Sku: "Standard_E104i_v5",
+			workerProfile2Sku: "Standard_E104i_v5",
+			masterProfileSku:  "Standard_D4s_v2",
+			availableSku:      "Standard_E104i_v5",
+			availableSku2:     "Standard_E104i_v5",
+			wantErr:           "400: InvalidParameter: properties.masterProfile.VMSize: The selected SKU 'Standard_D4s_v2' is unavailable in region 'eastus'",
+		},
+		{
+			name:              "worker and master skus are distinct, both invalid",
+			workerProfile1Sku: "Standard_E104i_v5",
+			workerProfile2Sku: "Standard_E104i_v5",
+			masterProfileSku:  "Standard_D4s_v2",
+			availableSku:      "Standard_L8s_v2",
+			availableSku2:     "Standard_L16s_v2",
+			wantErr:           "400: InvalidParameter: properties.masterProfile.VMSize: The selected SKU 'Standard_D4s_v2' is unavailable in region 'eastus'",
 		},
 		{
 			name:                  "unable to retrieve skus information",
@@ -96,10 +124,28 @@ func TestValidateVMSku(t *testing.T) {
 			restrictedSku:     "Standard_L80",
 			wantErr:           "400: InvalidParameter: properties.masterProfile.VMSize: The selected SKU 'Standard_L80' is restricted in region 'eastus' for selected subscription",
 		},
+		{
+			name:         "sku is restricted in a single zone",
+			restrictions: mgmtcompute.NotAvailableForSubscription,
+			restrictionLocation: &[]string{
+				"eastus",
+			},
+			restrictedZones:   []string{"3"},
+			workerProfile1Sku: "Standard_D4s_v2",
+			workerProfile2Sku: "Standard_D4s_v2",
+			masterProfileSku:  "Standard_L80",
+			availableSku:      "Standard_D4s_v2",
+			restrictedSku:     "Standard_L80",
+			wantErr:           "400: InvalidParameter: properties.masterProfile.VMSize: The selected SKU 'Standard_L80' is restricted in region 'eastus' for selected subscription",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.targetLocation == "" {
 				tt.targetLocation = "eastus"
+			}
+
+			if tt.restrictedZones == nil {
+				tt.restrictedZones = []string{"1", "2", "3"}
 			}
 
 			controller := gomock.NewController(t)
@@ -133,10 +179,20 @@ func TestValidateVMSku(t *testing.T) {
 					ResourceType: to.StringPtr("virtualMachines"),
 				},
 				{
+					Name:      &tt.availableSku2,
+					Locations: &[]string{"eastus"},
+					LocationInfo: &[]mgmtcompute.ResourceSkuLocationInfo{
+						{Zones: &[]string{"1, 2, 3"}},
+					},
+					Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{},
+					Capabilities: &[]mgmtcompute.ResourceSkuCapabilities{},
+					ResourceType: to.StringPtr("virtualMachines"),
+				},
+				{
 					Name:      &tt.restrictedSku,
 					Locations: &[]string{tt.targetLocation},
 					LocationInfo: &[]mgmtcompute.ResourceSkuLocationInfo{
-						{Zones: &[]string{"1, 2, 3"}},
+						{Zones: &tt.restrictedZones},
 					},
 					Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{
 						{

@@ -1,7 +1,10 @@
 run:
-  timeout: 5m
+  timeout: 10m
   skip-dirs:
     - vendor/portal
+    - vendor
+  skip-dirs-use-default: true
+  modules-download-mode: vendor
 
 issues:
   exclude-rules:
@@ -13,14 +16,13 @@ issues:
   exclude-use-default: false
 
 linters-settings:
-  gofmt:
-    simplify: false
-  
   stylecheck:
-    # added additional checks for comments in Go. 
+    # added additional checks for comments in Go.
     # Refer https://staticcheck.io/docs/options#checks for details
-    checks: ["all", "-ST1000", "ST1020", "ST1021", "ST1022"]
-
+    checks: ["all", "-ST1000", "-ST1003", "-ST1016", "-ST1020", "-ST1021", "-ST1022"]
+    dot-import-whitelist:
+      - github.com/onsi/ginkgo
+      - github.com/onsi/gomega
 
 linters:
   disable-all: true
@@ -31,7 +33,5 @@ linters:
     - gosimple
     - govet
     - staticcheck
-    # TODO: Enable the stylecheck linter in a follow-up PR as it requires changes in a lot of files
-    # - stylecheck  
     - whitespace
-
+    - stylecheck

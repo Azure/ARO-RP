@@ -27,6 +27,7 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 			LastAdminUpdateError:    oc.Properties.LastAdminUpdateError,
 			MaintenanceTask:         MaintenanceTask(oc.Properties.MaintenanceTask),
 			OperatorFlags:           OperatorFlags(oc.Properties.OperatorFlags),
+			OperatorVersion:         oc.Properties.OperatorVersion,
 			CreatedAt:               oc.Properties.CreatedAt,
 			CreatedBy:               oc.Properties.CreatedBy,
 			ProvisionedBy:           oc.Properties.ProvisionedBy,
@@ -50,6 +51,7 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				SoftwareDefinedNetwork:     SoftwareDefinedNetwork(oc.Properties.NetworkProfile.SoftwareDefinedNetwork),
 				PodCIDR:                    oc.Properties.NetworkProfile.PodCIDR,
 				ServiceCIDR:                oc.Properties.NetworkProfile.ServiceCIDR,
+				MTUSize:                    MTUSize(oc.Properties.NetworkProfile.MTUSize),
 				APIServerPrivateEndpointIP: oc.Properties.NetworkProfile.APIServerPrivateEndpointIP,
 				GatewayPrivateEndpointIP:   oc.Properties.NetworkProfile.GatewayPrivateEndpointIP,
 				GatewayPrivateLinkID:       oc.Properties.NetworkProfile.GatewayPrivateLinkID,
@@ -173,6 +175,7 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.LastAdminUpdateError = oc.Properties.LastAdminUpdateError
 	out.Properties.MaintenanceTask = api.MaintenanceTask(oc.Properties.MaintenanceTask)
 	out.Properties.OperatorFlags = api.OperatorFlags(oc.Properties.OperatorFlags)
+	out.Properties.OperatorVersion = oc.Properties.OperatorVersion
 	out.Properties.CreatedBy = oc.Properties.CreatedBy
 	out.Properties.ProvisionedBy = oc.Properties.ProvisionedBy
 	out.Properties.ClusterProfile.Domain = oc.Properties.ClusterProfile.Domain
@@ -185,6 +188,7 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.ServicePrincipalProfile.SPObjectID = oc.Properties.ServicePrincipalProfile.SPObjectID
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
+	out.Properties.NetworkProfile.MTUSize = api.MTUSize(oc.Properties.NetworkProfile.MTUSize)
 	out.Properties.NetworkProfile.SoftwareDefinedNetwork = api.SoftwareDefinedNetwork(oc.Properties.NetworkProfile.SoftwareDefinedNetwork)
 	out.Properties.NetworkProfile.APIServerPrivateEndpointIP = oc.Properties.NetworkProfile.APIServerPrivateEndpointIP
 	out.Properties.NetworkProfile.GatewayPrivateEndpointIP = oc.Properties.NetworkProfile.GatewayPrivateEndpointIP

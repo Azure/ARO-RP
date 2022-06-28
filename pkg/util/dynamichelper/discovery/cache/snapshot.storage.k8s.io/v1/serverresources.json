@@ -18,7 +18,11 @@
                 "update",
                 "watch"
             ],
-            "storageVersionHash": "Auz1oPjhi6Y="
+            "shortNames": [
+                "vsclass",
+                "vsclasses"
+            ],
+            "storageVersionHash": "agjrTDFWe0I="
         },
         {
             "name": "volumesnapshotcontents",
@@ -35,7 +39,11 @@
                 "update",
                 "watch"
             ],
-            "storageVersionHash": "nRPzLkINbss="
+            "shortNames": [
+                "vsc",
+                "vscs"
+            ],
+            "storageVersionHash": "ksBm2JR3lFg="
         },
         {
             "name": "volumesnapshotcontents/status",
@@ -63,7 +71,10 @@
                 "update",
                 "watch"
             ],
-            "storageVersionHash": "TSKmYoNn2SQ="
+            "shortNames": [
+                "vs"
+            ],
+            "storageVersionHash": "CBkCoNN1OpA="
         },
         {
             "name": "volumesnapshots/status",

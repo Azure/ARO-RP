@@ -5,6 +5,7 @@ package muo
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"strings"
 	"time"
@@ -17,12 +18,15 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
+	"github.com/Azure/ARO-RP/pkg/util/deployer"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -34,12 +38,15 @@ const (
 	controllerEnabled                = "rh.srep.muo.enabled"
 	controllerManaged                = "rh.srep.muo.managed"
 	controllerPullSpec               = "rh.srep.muo.deploy.pullspec"
-	controllerAllowOCM               = "rh.srep.muo.deploy.allowOCM"
+	controllerForceLocalOnly         = "rh.srep.muo.deploy.forceLocalOnly"
 	controllerOcmBaseURL             = "rh.srep.muo.deploy.ocmBaseUrl"
 	controllerOcmBaseURLDefaultValue = "https://api.openshift.com"
 
-	pullSecretOCMKey = "cloud.redhat.com"
+	pullSecretOCMKey = "cloud.openshift.com"
 )
+
+//go:embed staticresources
+var staticFiles embed.FS
 
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
 
@@ -52,7 +59,7 @@ type MUODeploymentConfig struct {
 type Reconciler struct {
 	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
-	deployer      Deployer
+	deployer      deployer.Deployer
 
 	readinessPollTime time.Duration
 	readinessTimeout  time.Duration
@@ -62,7 +69,7 @@ func NewReconciler(arocli aroclient.Interface, kubernetescli kubernetes.Interfac
 	return &Reconciler{
 		arocli:        arocli,
 		kubernetescli: kubernetescli,
-		deployer:      newDeployer(kubernetescli, dh),
+		deployer:      deployer.NewDeployer(kubernetescli, dh, staticFiles, "staticresources"),
 
 		readinessPollTime: 10 * time.Second,
 		readinessTimeout:  5 * time.Minute,
@@ -96,8 +103,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			Pullspec: pullSpec,
 		}
 
-		allowOCM := instance.Spec.OperatorFlags.GetSimpleBoolean(controllerAllowOCM)
-		if allowOCM {
+		disableOCM := instance.Spec.OperatorFlags.GetSimpleBoolean(controllerForceLocalOnly)
+		if !disableOCM {
 			useOCM := func() bool {
 				var userSecret *corev1.Secret
 
@@ -138,13 +145,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		defer cancel()
 
 		err := wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
-			return r.deployer.IsReady(ctx)
+			return r.deployer.IsReady(ctx, "openshift-managed-upgrade-operator", "managed-upgrade-operator")
 		}, timeoutCtx.Done())
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("Managed Upgrade Operator deployment timed out on Ready: %w", err)
+			return reconcile.Result{}, fmt.Errorf("managed Upgrade Operator deployment timed out on Ready: %w", err)
 		}
 	} else if strings.EqualFold(managed, "false") {
-		err := r.deployer.Remove(ctx)
+		err := r.deployer.Remove(ctx, config.MUODeploymentConfig{})
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -155,14 +162,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 // SetupWithManager setup our manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	pullSecretPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return (o.GetName() == pullSecretName.Name && o.GetNamespace() == pullSecretName.Namespace)
+	})
+
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
 	})
 
-	builder := ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate))
+	muoBuilder := ctrl.NewControllerManagedBy(mgr).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
+		Watches(
+			&source.Kind{Type: &corev1.Secret{}},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(pullSecretPredicate),
+		)
 
-	resources, err := r.deployer.Resources(&config.MUODeploymentConfig{})
+	resources, err := r.deployer.Template(&config.MUODeploymentConfig{}, staticFiles)
 	if err != nil {
 		return err
 	}
@@ -170,11 +186,11 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	for _, i := range resources {
 		o, ok := i.(client.Object)
 		if ok {
-			builder.Owns(o)
+			muoBuilder.Owns(o)
 		}
 	}
 
-	return builder.
+	return muoBuilder.
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}, predicate.LabelChangedPredicate{})).
 		Named(ControllerName).
 		Complete(r)

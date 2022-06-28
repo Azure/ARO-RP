@@ -21,7 +21,7 @@ jobs:
     - template: ../vars.yml
     pool:
       name: ARO-CI
-      demands: go-1.16
+      demands: go-1.17
     environment: ${{ parameters.environment }}
     strategy:
       runOnce:
@@ -36,7 +36,7 @@ jobs:
               azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
           - script: |
               set -e
-              trap 'set +e; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af ; rm -rf ~/.docker/config.json' EXIT
+              trap 'set +e; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af ; rm -rf ~/.docker/config.json; rm -rf /run/user/$(id -u $USERNAME)/containers/auth.json' EXIT
 
               export TAG=${{ parameters.imageTag }}
               export RP_IMAGE_ACR=${{ parameters.rpImageAcr }}
@@ -87,7 +87,17 @@ jobs:
     - script: |
         # Pass variables between tasks: https://medium.com/microsoftazure/how-to-pass-variables-in-azure-pipelines-yaml-tasks-5c81c5d31763
         echo "##vso[task.setvariable variable=REGION]${{ location }}"
-        CLUSTER="v4-e2e-V$BUILD_BUILDID-${{ location }}"
+        # TODO: Remove this hack after AvailabilitySet name too long bug is fixed.
+        LOCATION=${{ location }}
+        NONZONAL_REGIONS="australiacentral australiacentral2 australiasoutheast brazilsoutheast canadaeast japanwest northcentralus norwaywest southindia switzerlandwest uaenorth ukwest westcentralus westus"
+        if echo $NONZONAL_REGIONS | grep -wq $LOCATION
+        then
+            CLUSTER=$(head -c 19 <<< "v4-e2e-V$BUILD_BUILDID-$LOCATION")
+        else
+            CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+        fi
+        # TODO: Uncomment next line after above hack is removed.
+        # CLUSTER="v4-e2e-V$BUILD_BUILDID-${{ location }}"
         echo "##vso[task.setvariable variable=CLUSTER]$CLUSTER"
         CLUSTER_RESOURCEGROUP="v4-e2e-V$BUILD_BUILDID-${{ location }}"
         echo "##vso[task.setvariable variable=CLUSTER_RESOURCEGROUP]$CLUSTER_RESOURCEGROUP"

@@ -77,7 +77,7 @@ func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.Open
 var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9.]{0,255}$`)
 
 func validateAdminKubernetesObjectsNonCustomer(method, groupKind, namespace, name string) error {
-	if !utilnamespace.IsOpenShift(namespace) {
+	if !utilnamespace.IsOpenShiftNamespace(namespace) {
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to the provided namespace '%s' is forbidden.", namespace)
 	}
 
@@ -119,6 +119,25 @@ func validateAdminVMName(vmName string) error {
 	return nil
 }
 
+func validateAdminKubernetesPodLogs(namespace, podName, containerName string) error {
+	if podName == "" || !rxKubernetesString.MatchString(podName) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided pod name '%s' is invalid.", podName)
+	}
+
+	if namespace == "" || !rxKubernetesString.MatchString(namespace) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided namespace '%s' is invalid.", namespace)
+	}
+	// Checking if the namespace is an OpenShift namespace not a customer workload namespace.
+	if !utilnamespace.IsOpenShiftNamespace(namespace) {
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to the provided namespace '%s' is forbidden.", namespace)
+	}
+
+	if containerName == "" || !rxKubernetesString.MatchString(containerName) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided container name '%s' is invalid.", containerName)
+	}
+	return nil
+}
+
 // Azure resource name rules:
 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/resource-name-rules#microsoftnetwork
 var rxNetworkInterfaceName = regexp.MustCompile(`^[a-zA-Z0-9].*\w$`)
@@ -127,6 +146,12 @@ func validateNetworkInterfaceName(nicName string) error {
 	if nicName == "" || !rxNetworkInterfaceName.MatchString(nicName) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided nicName '%s' is invalid.", nicName)
 	}
+	return nil
+}
 
+func validateAdminVMSize(vmSize string) error {
+	if vmSize == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmSize '%s' is invalid.", vmSize)
+	}
 	return nil
 }

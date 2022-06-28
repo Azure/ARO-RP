@@ -211,6 +211,20 @@ func (mr *MockVirtualMachinesClientMockRecorder) StartAndWait(arg0, arg1, arg2 i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).StartAndWait), arg0, arg1, arg2)
 }
 
+// StopAndWait mocks base method.
+func (m *MockVirtualMachinesClient) StopAndWait(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StopAndWait", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StopAndWait indicates an expected call of StopAndWait.
+func (mr *MockVirtualMachinesClientMockRecorder) StopAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).StopAndWait), arg0, arg1, arg2)
+}
+
 // MockUsageClient is a mock of UsageClient interface.
 type MockUsageClient struct {
 	ctrl     *gomock.Controller

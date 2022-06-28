@@ -15,6 +15,7 @@ import (
 	configaws "github.com/openshift/installer/pkg/asset/installconfig/aws"
 	"github.com/openshift/installer/pkg/rhcos"
 	"github.com/openshift/installer/pkg/types"
+	"github.com/openshift/installer/pkg/types/alibabacloud"
 	"github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
 	"github.com/openshift/installer/pkg/types/baremetal"
@@ -39,7 +40,7 @@ func (i *Image) Name() string {
 	return "Image"
 }
 
-// Dependencies returns no dependencies.
+// Dependencies returns dependencies used by the RHCOS asset.
 func (i *Image) Dependencies() []asset.Asset {
 	return []asset.Asset{
 		&installconfig.InstallConfig{},
@@ -126,6 +127,9 @@ func osImage(config *types.InstallConfig) (string, error) {
 		return "", fmt.Errorf("%s: No openstack build found", st.FormatPrefix(archName))
 	case azure.Name:
 		ext := streamArch.RHELCoreOSExtensions
+		if config.Platform.Azure.CloudName == azure.StackCloud {
+			return config.Platform.Azure.ClusterOSImage, nil
+		}
 		if ext == nil {
 			return "", fmt.Errorf("%s: No azure build found", st.FormatPrefix(archName))
 		}
@@ -139,14 +143,8 @@ func osImage(config *types.InstallConfig) (string, error) {
 		if oi := config.Platform.BareMetal.ClusterOSImage; oi != "" {
 			return oi, nil
 		}
-
-		// Note that baremetal IPI currently uses the OpenStack image
-		// because this contains the necessary ironic config drive
-		// ignition support, which isn't enabled in the UPI BM images
-		if a, ok := streamArch.Artifacts["openstack"]; ok {
-			return rhcos.FindArtifactURL(a)
-		}
-		return "", fmt.Errorf("%s: No openstack build found", st.FormatPrefix(archName))
+		// Use image from release payload
+		return "", nil
 	case vsphere.Name:
 		// Check for image URL override
 		if config.Platform.VSphere.ClusterOSImage != "" {
@@ -157,6 +155,12 @@ func osImage(config *types.InstallConfig) (string, error) {
 			return rhcos.FindArtifactURL(a)
 		}
 		return "", fmt.Errorf("%s: No vmware build found", st.FormatPrefix(archName))
+	case alibabacloud.Name:
+		osimage, err := st.GetAliyunImage(archName, config.Platform.AlibabaCloud.Region)
+		if err != nil {
+			return "", err
+		}
+		return osimage, nil
 	case none.Name:
 		return "", nil
 	default:

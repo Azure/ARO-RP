@@ -13,8 +13,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
-	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
@@ -53,7 +53,7 @@ type clientSet struct {
 
 	RestConfig    *rest.Config
 	Kubernetes    kubernetes.Interface
-	MachineAPI    maoclient.Interface
+	MachineAPI    machineclient.Interface
 	MachineConfig mcoclient.Interface
 	AROClusters   aroclient.Interface
 	Project       projectclient.Interface
@@ -108,7 +108,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	machineapicli, err := maoclient.NewForConfig(restconfig)
+	machineapicli, err := machineclient.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
 	}

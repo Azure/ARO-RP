@@ -17,16 +17,20 @@ func (g *gateway) emitMetrics() {
 	defer t.Stop()
 
 	for range t.C {
-		g.m.EmitGauge("gateway.connections.open", atomic.LoadInt64(&g.httpConnections), map[string]string{
-			"protocol": "http",
-		})
+		g._emitMetrics()
+	}
+}
 
-		g.m.EmitGauge("gateway.connections.open", atomic.LoadInt64(&g.httpsConnections), map[string]string{
-			"protocol": "https",
-		})
+func (g *gateway) _emitMetrics() {
+	g.m.EmitGauge("gateway.connections.open", atomic.LoadInt64(&g.httpConnections), map[string]string{
+		"protocol": "http",
+	})
 
-		if lastChangefeed, ok := g.lastChangefeed.Load().(time.Time); ok {
-			g.m.EmitGauge("gateway.lastchangefeed", lastChangefeed.Unix(), nil)
-		}
+	g.m.EmitGauge("gateway.connections.open", atomic.LoadInt64(&g.httpsConnections), map[string]string{
+		"protocol": "https",
+	})
+
+	if lastChangefeed, ok := g.lastChangefeed.Load().(time.Time); ok {
+		g.m.EmitGauge("gateway.lastchangefeed", lastChangefeed.Unix(), nil)
 	}
 }

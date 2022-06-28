@@ -78,21 +78,21 @@ func (n *nsgFlowLogsFeature) Enable(ctx context.Context, instance *aropreviewv1a
 func (n *nsgFlowLogsFeature) newFlowLog(instance *aropreviewv1alpha1.PreviewFeature, nsgID string) *mgmtnetwork.FlowLog {
 	// build a request as described here https://docs.microsoft.com/en-us/azure/network-watcher/network-watcher-nsg-flow-logging-rest#enable-network-security-group-flow-logs
 	return &mgmtnetwork.FlowLog{
-		Location: to.StringPtr(n.location),
+		Location: &n.location,
 		FlowLogPropertiesFormat: &mgmtnetwork.FlowLogPropertiesFormat{
-			TargetResourceID: to.StringPtr(nsgID),
+			TargetResourceID: &nsgID,
 			Enabled:          to.BoolPtr(true),
 			Format: &mgmtnetwork.FlowLogFormatParameters{
 				Type:    mgmtnetwork.JSON,
 				Version: to.Int32Ptr(int32(instance.Spec.NSGFlowLogs.Version)),
 			},
 			RetentionPolicy: &mgmtnetwork.RetentionPolicyParameters{
-				Days: to.Int32Ptr(instance.Spec.NSGFlowLogs.RetentionDays),
+				Days: &instance.Spec.NSGFlowLogs.RetentionDays,
 			},
-			StorageID: to.StringPtr(instance.Spec.NSGFlowLogs.StorageAccountResourceID),
+			StorageID: &instance.Spec.NSGFlowLogs.StorageAccountResourceID,
 			FlowAnalyticsConfiguration: &mgmtnetwork.TrafficAnalyticsProperties{
 				NetworkWatcherFlowAnalyticsConfiguration: &mgmtnetwork.TrafficAnalyticsConfigurationProperties{
-					WorkspaceID:              to.StringPtr(instance.Spec.NSGFlowLogs.TrafficAnalyticsLogAnalyticsWorkspaceID),
+					WorkspaceID:              &instance.Spec.NSGFlowLogs.TrafficAnalyticsLogAnalyticsWorkspaceID,
 					TrafficAnalyticsInterval: to.Int32Ptr(int32(instance.Spec.NSGFlowLogs.TrafficAnalyticsInterval.Truncate(time.Minute).Minutes())),
 				},
 			},

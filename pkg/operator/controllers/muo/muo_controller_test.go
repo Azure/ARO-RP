@@ -18,13 +18,13 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
-	mock_muo "github.com/Azure/ARO-RP/pkg/operator/mocks/muo"
+	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
 )
 
 func TestMUOReconciler(t *testing.T) {
 	tests := []struct {
 		name  string
-		mocks func(*mock_muo.MockDeployer, *arov1alpha1.Cluster)
+		mocks func(*mock_deployer.MockDeployer, *arov1alpha1.Cluster)
 		flags arov1alpha1.OperatorFlags
 		// connected MUO -- cluster pullsecret
 		pullsecret string
@@ -46,12 +46,13 @@ func TestMUOReconciler(t *testing.T) {
 				controllerManaged:  "true",
 				controllerPullSpec: "wonderfulPullspec",
 			},
-			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
+			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
-					Pullspec: "wonderfulPullspec",
+					Pullspec:        "wonderfulPullspec",
+					EnableConnected: false,
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any()).Return(true, nil)
+				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 			},
 		},
 		{
@@ -60,104 +61,123 @@ func TestMUOReconciler(t *testing.T) {
 				controllerEnabled: "true",
 				controllerManaged: "true",
 			},
-			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
+			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
-					Pullspec: "acrtest.example.com/managed-upgrade-operator:aro-b1",
+					Pullspec:        "acrtest.example.com/managed-upgrade-operator:aro-b4",
+					EnableConnected: false,
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any()).Return(true, nil)
+				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 			},
 		},
 		{
 			name: "managed, OCM allowed but pull secret entirely missing",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "true",
-				controllerManaged:  "true",
-				controllerAllowOCM: "true",
-				controllerPullSpec: "wonderfulPullspec",
+				controllerEnabled:        "true",
+				controllerManaged:        "true",
+				controllerForceLocalOnly: "false",
+				controllerPullSpec:       "wonderfulPullspec",
 			},
-			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
+			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
 					Pullspec:        "wonderfulPullspec",
 					EnableConnected: false,
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any()).Return(true, nil)
+				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 			},
 		},
 		{
 			name: "managed, OCM allowed but empty pullsecret",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "true",
-				controllerManaged:  "true",
-				controllerAllowOCM: "true",
-				controllerPullSpec: "wonderfulPullspec",
+				controllerEnabled:        "true",
+				controllerManaged:        "true",
+				controllerForceLocalOnly: "false",
+				controllerPullSpec:       "wonderfulPullspec",
 			},
 			pullsecret: "{\"auths\": {}}",
-			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
+			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
 					Pullspec:        "wonderfulPullspec",
 					EnableConnected: false,
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any()).Return(true, nil)
+				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 			},
 		},
 		{
 			name: "managed, OCM allowed but mangled pullsecret",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "true",
-				controllerManaged:  "true",
-				controllerAllowOCM: "true",
-				controllerPullSpec: "wonderfulPullspec",
+				controllerEnabled:        "true",
+				controllerManaged:        "true",
+				controllerForceLocalOnly: "false",
+				controllerPullSpec:       "wonderfulPullspec",
 			},
 			pullsecret: "i'm a little json, short and stout",
-			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
+			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
 					Pullspec:        "wonderfulPullspec",
 					EnableConnected: false,
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any()).Return(true, nil)
+				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 			},
 		},
 		{
 			name: "managed, OCM connected mode",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "true",
-				controllerManaged:  "true",
-				controllerAllowOCM: "true",
-				controllerPullSpec: "wonderfulPullspec",
+				controllerEnabled:        "true",
+				controllerManaged:        "true",
+				controllerForceLocalOnly: "false",
+				controllerPullSpec:       "wonderfulPullspec",
 			},
 			pullsecret: "{\"auths\": {\"" + pullSecretOCMKey + "\": {\"auth\": \"secret value\"}}}",
-			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
+			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
 					Pullspec:        "wonderfulPullspec",
 					EnableConnected: true,
 					OCMBaseURL:      "https://api.openshift.com",
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any()).Return(true, nil)
+				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 			},
 		},
 		{
 			name: "managed, OCM connected mode, custom OCM URL",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:    "true",
-				controllerManaged:    "true",
-				controllerAllowOCM:   "true",
-				controllerOcmBaseURL: "https://example.com",
-				controllerPullSpec:   "wonderfulPullspec",
+				controllerEnabled:        "true",
+				controllerManaged:        "true",
+				controllerForceLocalOnly: "false",
+				controllerOcmBaseURL:     "https://example.com",
+				controllerPullSpec:       "wonderfulPullspec",
 			},
 			pullsecret: "{\"auths\": {\"" + pullSecretOCMKey + "\": {\"auth\": \"secret value\"}}}",
-			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
+			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
 					Pullspec:        "wonderfulPullspec",
 					EnableConnected: true,
 					OCMBaseURL:      "https://example.com",
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any()).Return(true, nil)
+				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+			},
+		},
+		{
+			name: "managed, pull secret exists, OCM disabled",
+			flags: arov1alpha1.OperatorFlags{
+				controllerEnabled:        "true",
+				controllerManaged:        "true",
+				controllerForceLocalOnly: "true",
+				controllerPullSpec:       "wonderfulPullspec",
+			},
+			pullsecret: "{\"auths\": {\"" + pullSecretOCMKey + "\": {\"auth\": \"secret value\"}}}",
+			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
+				expectedConfig := &config.MUODeploymentConfig{
+					Pullspec:        "wonderfulPullspec",
+					EnableConnected: false,
+				}
+				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
+				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 			},
 		},
 		{
@@ -167,14 +187,15 @@ func TestMUOReconciler(t *testing.T) {
 				controllerManaged:  "true",
 				controllerPullSpec: "wonderfulPullspec",
 			},
-			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
+			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
-					Pullspec: "wonderfulPullspec",
+					Pullspec:        "wonderfulPullspec",
+					EnableConnected: false,
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any()).Return(false, nil)
+				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
 			},
-			wantErr: "Managed Upgrade Operator deployment timed out on Ready: timed out waiting for the condition",
+			wantErr: "managed Upgrade Operator deployment timed out on Ready: timed out waiting for the condition",
 		},
 		{
 			name: "managed, CreateOrUpdate() fails",
@@ -183,7 +204,7 @@ func TestMUOReconciler(t *testing.T) {
 				controllerManaged:  "true",
 				controllerPullSpec: "wonderfulPullspec",
 			},
-			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
+			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, gomock.AssignableToTypeOf(&config.MUODeploymentConfig{})).Return(errors.New("failed ensure"))
 			},
 			wantErr: "failed ensure",
@@ -195,8 +216,8 @@ func TestMUOReconciler(t *testing.T) {
 				controllerManaged:  "false",
 				controllerPullSpec: "wonderfulPullspec",
 			},
-			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
-				md.EXPECT().Remove(gomock.Any()).Return(nil)
+			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
+				md.EXPECT().Remove(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 		{
@@ -206,8 +227,8 @@ func TestMUOReconciler(t *testing.T) {
 				controllerManaged:  "false",
 				controllerPullSpec: "wonderfulPullspec",
 			},
-			mocks: func(md *mock_muo.MockDeployer, cluster *arov1alpha1.Cluster) {
-				md.EXPECT().Remove(gomock.Any()).Return(errors.New("failed delete"))
+			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
+				md.EXPECT().Remove(gomock.Any(), gomock.Any()).Return(errors.New("failed delete"))
 			},
 			wantErr: "failed delete",
 		},
@@ -236,7 +257,7 @@ func TestMUOReconciler(t *testing.T) {
 			}
 			arocli := arofake.NewSimpleClientset(cluster)
 			kubecli := fake.NewSimpleClientset()
-			deployer := mock_muo.NewMockDeployer(controller)
+			deployer := mock_deployer.NewMockDeployer(controller)
 
 			if tt.pullsecret != "" {
 				_, err := kubecli.CoreV1().Secrets(pullSecretName.Namespace).Create(context.Background(),
@@ -265,12 +286,12 @@ func TestMUOReconciler(t *testing.T) {
 				readinessPollTime: 1 * time.Second,
 			}
 			_, err := r.Reconcile(context.Background(), reconcile.Request{})
+			if err != nil && err.Error() != tt.wantErr {
+				t.Errorf("got error '%v', wanted error '%v'", err, tt.wantErr)
+			}
+
 			if err == nil && tt.wantErr != "" {
-				t.Error(err)
-			} else if err != nil {
-				if err.Error() != tt.wantErr {
-					t.Errorf("wanted '%v', got '%v'", tt.wantErr, err)
-				}
+				t.Errorf("did not get an error, but wanted error '%v'", tt.wantErr)
 			}
 		})
 	}
