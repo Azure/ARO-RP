@@ -25,6 +25,7 @@ nodeDrain:
   timeOut: 45
 scale:
   timeOut: 30
+upgradeType: ARO
 upgradeWindow:
   delayTrigger: 30
   timeOut: 120
