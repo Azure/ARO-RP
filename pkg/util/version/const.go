@@ -81,5 +81,5 @@ func MdsdImage(acrDomain string) string {
 
 // MUOImage contains the location of the Managed Upgrade Operator container image
 func MUOImage(acrDomain string) string {
-	return acrDomain + "quay.io/app-sre/managed-upgrade-operator@sha256:46619fb764c4b39cb20d7d09761cb675a71c8972594e26ebc8fb558c3dbe3529"
+	return acrDomain + "/managed-upgrade-operator:aro-b4"
 }
