@@ -1,7 +1,7 @@
 configManager:
   localConfigName: managed-upgrade-config
   source: LOCAL
-  watchInterval: 1
+  watchInterval: 15
 healthCheck:
   ignoredCriticals:
   - PrometheusRuleFailures
