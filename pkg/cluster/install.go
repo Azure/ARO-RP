@@ -206,7 +206,7 @@ func (m *manager) runSteps(ctx context.Context, s []steps.Step) error {
 	if err != nil {
 		m.gatherFailureLogs(ctx)
 	} else {
-		m.me.EmitGauge("backend.openshiftcluster.installtime", int64(time.Since(startTime).Seconds()), nil)
+		m.metricsEmitter.EmitGauge("backend.openshiftcluster.installtime", int64(time.Since(startTime).Seconds()), nil)
 	}
 	return err
 }

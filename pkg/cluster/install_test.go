@@ -37,13 +37,13 @@ func normalFunc(context.Context) error {
 }
 
 type fakeMetricsEmitter struct {
-	Topic      string
-	IntallTime int64
+	Topic       string
+	InstallTime int64
 }
 
 func (e *fakeMetricsEmitter) EmitGauge(topic string, value int64, dims map[string]string) {
 	e.Topic = topic
-	e.IntallTime = value
+	e.InstallTime = value
 }
 
 func (e *fakeMetricsEmitter) EmitFloat(topic string, value float64, dims map[string]string) {}
@@ -254,19 +254,19 @@ func TestInstallationTimeMetrics(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			m := &manager{
-				log: log,
-				me:  fm,
+				log:            log,
+				metricsEmitter: fm,
 			}
 			err := m.runSteps(ctx, tt.steps)
 			if err != nil {
-				if fm.Topic != "" || fm.IntallTime != 0 {
+				if fm.Topic != "" || fm.InstallTime != 0 {
 					t.Error("fake metrics obj should be empty when run steps failed")
 				}
 			} else {
 				if fm.Topic != "backend.openshiftcluster.installtime" {
 					t.Error("wrong metrics topic")
 				}
-				if fm.IntallTime < 2 {
+				if fm.InstallTime < 2 {
 					t.Error("wrong metrics value")
 				}
 			}
