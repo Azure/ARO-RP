@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
@@ -39,6 +40,9 @@ type Monitor struct {
 	m          metrics.Emitter
 	arocli     aroclient.Interface
 
+	// hiveClusterManager hive.ClusterManager
+	hiveClusterManager hive.ClusterManager
+
 	// access below only via the helper functions in cache.go
 	cache struct {
 		cos   *configv1.ClusterOperatorList
@@ -48,7 +52,7 @@ type Monitor struct {
 	}
 }
 
-func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hourlyRun bool) (*Monitor, error) {
+func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hiveClusterManager hive.ClusterManager, hourlyRun bool) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -93,13 +97,14 @@ func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config,
 		oc:   oc,
 		dims: dims,
 
-		restconfig: restConfig,
-		cli:        cli,
-		configcli:  configcli,
-		maocli:     maocli,
-		mcocli:     mcocli,
-		arocli:     arocli,
-		m:          m,
+		restconfig:         restConfig,
+		cli:                cli,
+		configcli:          configcli,
+		maocli:             maocli,
+		mcocli:             mcocli,
+		arocli:             arocli,
+		m:                  m,
+		hiveClusterManager: hiveClusterManager,
 	}, nil
 }
 
@@ -125,7 +130,6 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	if statusCode != http.StatusOK {
 		return
 	}
-
 	for _, f := range []func(context.Context) error{
 		mon.emitAroOperatorHeartbeat,
 		mon.emitAroOperatorConditions,
@@ -143,6 +147,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitStatefulsetStatuses,
 		mon.emitJobConditions,
 		mon.emitSummary,
+		mon.emitHiveRegistrationStatus,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 	} {
 		err = f(ctx)

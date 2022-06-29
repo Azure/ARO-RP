@@ -14,6 +14,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
@@ -114,7 +115,21 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm)
+	hiveRestConfig, err := hive.HiveRestConfig()
+	if err != nil {
+		log.Error(err) // Don't fail because of hive
+	}
+
+	// TODO: always set hive once we have it everywhere in prod and dev
+	var hr hive.ClusterManager
+	if hiveRestConfig != nil {
+		hr, err = hive.NewClusterManagerFromConfig(hiveRestConfig)
+		if err != nil {
+			return err
+		}
+	}
+
+	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm, hr)
 
 	return mon.Run(ctx)
 }

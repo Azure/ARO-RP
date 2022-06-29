@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
@@ -42,13 +43,15 @@ type monitor struct {
 	lastBucketlist atomic.Value //time.Time
 	lastChangefeed atomic.Value //time.Time
 	startTime      time.Time
+
+	hiveClusterManager hive.ClusterManager
 }
 
 type Runnable interface {
 	Run(context.Context) error
 }
 
-func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Emitter) Runnable {
+func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Emitter, hiveClusterManager hive.ClusterManager) Runnable {
 	return &monitor{
 		baseLog: log,
 		dialer:  dialer,
@@ -66,6 +69,8 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Moni
 		buckets:     map[int]struct{}{},
 
 		startTime: time.Now(),
+
+		hiveClusterManager: hiveClusterManager,
 	}
 }
 
