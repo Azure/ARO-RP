@@ -78,7 +78,7 @@
 
 ## Preparation to Create Cluster:
 
-1. Update the Address Space of "rp-vnet" to allow for creation of a new VPN. You should be able to do this at: https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/<subscription-id>/resourceGroups/<aro-shared-rp-rg>/providers/Microsoft.Network/virtualNetworks/rp-vnet/addressSpace. See the table below for what we did.
+1. Update the Address Space of "rp-vnet" to allow for creation of a new VPN. You should be able to do this at: `https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/<subscription-id>/resourceGroups/<aro-shared-rp-rg>/providers/Microsoft.Network/virtualNetworks/rp-vnet/addressSpace`. See the table below for what we did.
 
 | Address Space | Address Range         | Address Count |
 | ------------- | --------------------- | ------------- |
@@ -93,20 +93,16 @@ You can simply copy the info from the dev-vpn at: `https://ms.portal.azure.com/#
 4. Connect to the "rp-vnet" VPN created above. You can use openvpn or the azure vpn client, both have worked fine in our testing. 
 5. Go to Point-to-Site Configuration for "rp-vnet" (`https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/<subscription-id>/resourceGroups/<aro-shared-rp-rg>/providers/Microsoft.Network/virtualNetworkGateways/rp-vnet/pointtositeconfiguration`) and download the VPN Client Certificate to your local environment. You can extract the zip file anywhere you would like, but we put it under the "secrets" folder because that is where the ARO-RP secrets reside.
 6. If using openvpn:
-```
-  1. Copy the last two certificates ("P2S client certificate" and "P2S client certificate private key") from ./secrets/vpn-eastus.ovpn file to ./secrets/vpn-rp-eastus.ovpn. You can overwrite the placeholders for those certificates at the bottom in the ./secrets/vpn-rp-eastus.ovpn file.
+    1. Copy the last two certificates ("P2S client certificate" and "P2S client certificate private key") from ./secrets/vpn-eastus.ovpn file to ./secrets/vpn-rp-eastus.ovpn. You can overwrite the placeholders for those certificates at the bottom in the ./secrets/vpn-rp-eastus.ovpn file.
 
-  2. Execute openvpn secrets/vpn-rp-eastus.ovpn. You may need sudo depending on your environment.
-```
+    2. Execute openvpn secrets/vpn-rp-eastus.ovpn. You may need sudo depending on your environment.
+  > __NOTE:__ the azure vpn client for windows appears to require extra efforts; this is only for MacOS atm
 7. If using Azure VPN Client
-> __NOTE:__ the azure vpn client for windows appears to require extra efforts; this is only for MacOS atm
-```
-  1. Click the 'import' button in the vpn list, you will be prompted with an "open file dialog".
-  2. Select the file: ./secrets/rp-vnet/AzureVPN/azurevpnconfig.xml. The data will be filled into the import screen with the exception of "Client Certificate Public Key Data" and "Private Key".
-  3. Copy the "P2S client certificate" into the "Client Certificate Public Key Data" field and "P2S client certificate private key" into the "Private Key" field.
-  4. Click "Save" and you should see your newly created VPN connection in the VPN list on the left.
-  5. Click the new VPN connection and click "Connect".
-```
+    1. Click the 'import' button in the vpn list, you will be prompted with an "open file dialog".
+    2. Select the file: ./secrets/rp-vnet/AzureVPN/azurevpnconfig.xml. The data will be filled into the import screen with the exception of "Client Certificate Public Key Data" and "Private Key".
+    3. Copy the "P2S client certificate" into the "Client Certificate Public Key Data" field and "P2S client certificate private key" into the "Private Key" field.
+    4. Click "Save" and you should see your newly created VPN connection in the VPN list on the left.
+    5. Click the new VPN connection and click "Connect".
 8. Use nmap to execute the following command: nmap -p 443 -sT 10.x.x.x -Pn. You can get this IP at: `https://ms.portal.azure.com/#blade/Microsoft_Azure_Compute/VirtualMachineInstancesMenuBlade/Networking/instanceId/subscriptions/<subscription-id>/resourceGroups/<aro-shared-rp-rg>/providers/Microsoft.Compute/virtualMachineScaleSets/dev-proxy-vmss/virtualMachines/0`. Look for "NIC Private IP", ours during setup became 10.0.0.4. This is the internal ip of the Proxy VM.
 9. Confirm the nmap output looks like this: (if it does not then your VPN is not connected correctly; kill anything using port 443 and connect again)
 ```bash
@@ -185,23 +181,6 @@ cdp-cfs-eleven-bljdk-worker-eastus3-fd646   Ready    worker   177m   v1.22.3+4dd
 ```
 
 ## Available RP endpoints not exposed via `az aro`
-   OR use the create utility:
-
-   ```bash
-   CLUSTER=<cluster-name> go run ./hack/cluster create
-   ```
-
-   Later the cluster can be deleted as follows:
-
-   ```bash
-   CLUSTER=<cluster-name> go run ./hack/cluster delete
-   ```
-
-   [1]: https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster
-
-1. The following additional RP endpoints are available but not exposed via `az
-   aro`:
-
    * Delete a subscription, cascading deletion to all its clusters:
 
      ```bash
