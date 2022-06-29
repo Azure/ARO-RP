@@ -5,6 +5,7 @@ metadata:
   namespace: openshift-managed-upgrade-operator
 data:
   config.yaml: |
+    upgradeType: ARO
     configManager:
       source: {{ if .EnableConnected }}OCM{{ else }}LOCAL{{ end }}
       {{ if .EnableConnected }}ocmBaseUrl: {{.OCMBaseURL}}{{end}}
