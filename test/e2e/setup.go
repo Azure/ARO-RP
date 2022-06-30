@@ -160,9 +160,6 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 		port = 4444
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	os.Setenv("SE_SESSION_REQUEST_TIMEOUT", "9000")
 
 	caps := Capabilities{
@@ -180,13 +177,7 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 		panic(err)
 	}
 
-	for i := 1; i < 5; i++ {
-		wd, err = NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
-		if wd != nil || ctx.Err() != nil {
-			break
-		}
-		time.Sleep(time.Second * 1)
-	}
+	wd, err = NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
 
 	if err != nil {
 		panic(err)
@@ -197,8 +188,8 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 	gob.Register(time.Time{})
 
 	// Navigate to the simple playground interface.
-	host, isNotLocal := os.LookupEnv("PORTAL_HOSTNAME")
-	if !isNotLocal {
+	host, exists := os.LookupEnv("PORTAL_HOSTNAME")
+	if !exists {
 		host = "https://localhost:8444"
 	}
 	if err := wd.Get(host + "/api/info"); err != nil {
@@ -230,9 +221,7 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 func adminPortalSessionTearDown() {
 	log.Infof("Stopping Selenium Grid")
 	cmd := exec.Command("docker", "rm", "--force", "selenium-edge-standalone")
-
 	output, err := cmd.CombinedOutput()
-
 	if err != nil {
 		log.Fatalf("Error occurred stopping selenium grid\n Output: %s\n Error: %s\n", output, err)
 	}
@@ -327,24 +316,20 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 func setupSelenium(ctx context.Context) error {
 	log.Infof("Starting Selenium Grid")
 	cmd := exec.CommandContext(ctx, "docker", "pull", "selenium/standalone-edge:latest")
-
 	output, err := cmd.CombinedOutput()
-
-	log.Infof("Selenium Image Pull Output : %s\n", output)
-
 	if err != nil {
 		log.Fatalf("Error occurred pulling selenium image\n Output: %s\n Error: %s\n", output, err)
 	}
 
+	log.Infof("Selenium Image Pull Output : %s\n", output)
+
 	cmd = exec.CommandContext(ctx, "docker", "run", "-d", "-p", "4444:4444", "--name", "selenium-edge-standalone", "--network=host", "--shm-size=2g", "selenium/standalone-edge:latest")
-
 	output, err = cmd.CombinedOutput()
-
-	log.Infof("Selenium Container Run Output : %s\n", output)
-
 	if err != nil {
 		log.Fatalf("Error occurred starting selenium grid\n Output: %s\n Error: %s\n", output, err)
 	}
+
+	log.Infof("Selenium Container Run Output : %s\n", output)
 
 	return err
 }
