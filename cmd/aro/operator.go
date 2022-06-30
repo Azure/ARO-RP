@@ -29,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/imageconfig"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machine"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machinehealthcheck"
@@ -220,6 +221,9 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		if err = (machinehealthcheck.NewReconciler(
 			arocli, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machinehealthcheck.ControllerName, err)
+		}
+		if err = (guardrails.NewReconciler(arocli, kubernetescli, dh)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", guardrails.ControllerName, err)
 		}
 	}
 

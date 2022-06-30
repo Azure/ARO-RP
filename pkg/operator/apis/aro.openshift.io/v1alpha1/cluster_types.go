@@ -24,12 +24,13 @@ const (
 	ServicePrincipalValid       = "ServicePrincipalValid"
 
 	ManagedUpgradeOperatorStatus = "ManagedUpgradeOperatorStatus"
+	GuardRailsStatus             = "GuardRailsStatus"
 )
 
 // AllConditionTypes is a operator conditions currently in use, any condition not in this list is not
 // added to the operator.status.conditions list
 func AllConditionTypes() []string {
-	return []string{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid, ServicePrincipalValid, ManagedUpgradeOperatorStatus}
+	return []string{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid, ServicePrincipalValid, ManagedUpgradeOperatorStatus, GuardRailsStatus}
 }
 
 // ClusterChecksTypes represents checks performed on the cluster to verify basic functionality

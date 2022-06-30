@@ -83,3 +83,8 @@ func MdsdImage(acrDomain string) string {
 func MUOImage(acrDomain string) string {
 	return acrDomain + "/managed-upgrade-operator:aro-b4"
 }
+
+// GateKeeperImage contains the location of the GateKeeper container image
+func GateKeeperImage(acrDomain string) string {
+	return "quay.io/jeyuan/gatekeeper" // temporarily put here, change to the given location once decided
+}
