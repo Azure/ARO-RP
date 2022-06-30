@@ -1,0 +1,33 @@
+steps:
+- task: Bash@3
+  displayName: ⚙️ Make ARO Installer
+  inputs:
+    targetType: inline
+    script: |
+      export GOPATH=$(Agent.TempDirectory)
+      export TAG=$(git describe --exact-match 2>/dev/null)
+      export COMMIT=$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty)
+      if [ -z "$TAG" ];
+      then
+        export VERSION=${COMMIT}
+      else
+        export VERSION=${TAG}
+      fi
+      echo "Version: ${VERSION}"
+      echo "##vso[task.setvariable variable=releasetag;isOutput=true]${VERSION}"
+      mkdir -p $(Agent.TempDirectory)/src/github.com/Azure/
+      cp -rd $(Build.SourcesDirectory) $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
+      cd $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
+      make aro-installer
+      mkdir -p $(ob_outputDirectory)
+      cp aro-installer $(ob_outputDirectory)/aro-installer
+    workingDirectory: $(Build.SourcesDirectory)
+  name: buildaroinstaller
+- task: Bash@3
+  displayName: 🕵️ Validate FIPS
+  inputs:
+    targetType: inline
+    script: |
+      export GOPATH=$(Agent.TempDirectory)
+      make validate-fips
+    workingDirectory: $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
