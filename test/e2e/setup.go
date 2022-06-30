@@ -178,7 +178,12 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 		panic(err)
 	}
 
-	wd, err = NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
+	for i := 0; i < 5; i++ {
+		wd, err = NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
+		if wd != nil {
+			break
+		}
+	}
 
 	if err != nil {
 		panic(err)
