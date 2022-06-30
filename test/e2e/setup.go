@@ -89,6 +89,7 @@ func skipIfNotInDevelopmentEnv() {
 }
 
 func TakeScreenshot(wd WebDriver, e error) {
+	log.Infof("Error : %s", e.Error())
 	log.Info("Taking Screenshot and saving page source")
 	imageBytes, err := wd.Screenshot()
 	if err != nil {
