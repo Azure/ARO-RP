@@ -41,7 +41,6 @@ func TestAdminUpdateSteps(t *testing.T) {
 			},
 			shouldRunSteps: []string{
 				"[Action initializeKubernetesClients-fm]",
-				"[Action initializeOperatorDeployer-fm]",
 				"[Action ensureBillingRecord-fm]",
 				"[Action ensureDefaults-fm]",
 				"[Action fixupClusterSPObjectID-fm]",
@@ -63,7 +62,6 @@ func TestAdminUpdateSteps(t *testing.T) {
 			},
 			shouldRunSteps: []string{
 				"[Action initializeKubernetesClients-fm]",
-				"[Action initializeOperatorDeployer-fm]",
 				"[Action ensureBillingRecord-fm]",
 				"[Action ensureDefaults-fm]",
 				"[Action fixupClusterSPObjectID-fm]",
@@ -147,7 +145,6 @@ func TestAdminUpdateSteps(t *testing.T) {
 			},
 			shouldRunSteps: []string{
 				"[Action initializeKubernetesClients-fm]",
-				"[Action initializeOperatorDeployer-fm]",
 				"[Action ensureBillingRecord-fm]",
 				"[Action ensureDefaults-fm]",
 				"[Action fixupClusterSPObjectID-fm]",
