@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 )
 
 // KubeManager interface interact with kubernetes layer to extract required information
@@ -70,7 +70,7 @@ func (m *kubeManager) List(ctx context.Context) ([]Subnet, error) {
 }
 
 func (m *kubeManager) getDescriptorFromProviderSpec(providerSpec *kruntime.RawExtension) (*Subnet, error) {
-	var spec azureproviderv1beta1.AzureMachineProviderSpec
+	var spec machinev1beta1.AzureMachineProviderSpec
 	err := json.Unmarshal(providerSpec.Raw, &spec)
 	if err != nil {
 		return nil, err

@@ -67,7 +67,6 @@ require (
 	k8s.io/code-generator v0.23.2
 	k8s.io/kubectl v0.23.5
 	k8s.io/kubernetes v1.23.5
-	sigs.k8s.io/cluster-api-provider-azure v1.2.1
 	sigs.k8s.io/controller-runtime v0.11.2
 	sigs.k8s.io/controller-tools v0.7.0
 )
