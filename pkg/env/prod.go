@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -369,4 +370,18 @@ func (p *prod) VMSku(vmSize string) (*mgmtcompute.ResourceSku, error) {
 
 func (p *prod) LiveConfig() liveconfig.Manager {
 	return p.liveConfig
+}
+
+func (p *prod) FPNewClientCertificateCredential(tenantID string) (*azidentity.ClientCertificateCredential, error) {
+	fpPrivateKey, fpCertificates := p.fpCertificateRefresher.GetCertificates()
+
+	credential, err := azidentity.NewClientCertificateCredential(tenantID, p.fpClientID, fpCertificates, fpPrivateKey, &azidentity.ClientCertificateCredentialOptions{
+		AuthorityHost: p.Environment().AuthorityHost,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return credential, nil
 }
