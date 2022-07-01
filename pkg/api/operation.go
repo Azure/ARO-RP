@@ -120,6 +120,16 @@ var OperationOpenShiftClusterListAdminCredentials = Operation{
 	Origin: "user,system",
 }
 
+var OperationOpenShiftClusterGetDetectors = Operation{
+	Name: "Microsoft.RedHatOpenShift/openShiftClusters/detectors/read",
+	Display: Display{
+		Provider:  "Azure Red Hat OpenShift",
+		Resource:  "openShiftClusters",
+		Operation: "Get OpenShift Cluster Detector",
+	},
+	Origin: "user,system",
+}
+
 var OperationListInstallVersions = Operation{
 	Name: "Microsoft.RedHatOpenShift/locations/listInstallVersions/read",
 	Display: Display{
