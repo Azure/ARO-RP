@@ -784,6 +784,7 @@ func TestValidateSubnets(t *testing.T) {
 		modifyOC  func(*api.OpenShiftCluster)
 		vnetMocks func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
 		wantErr   string
+		tags      map[string]*string
 	}{
 		{
 			name: "pass",
@@ -819,7 +820,21 @@ func TestValidateSubnets(t *testing.T) {
 			},
 		},
 		{
-			name: "fail: subnet does not exist on vnet",
+			name: "pass: provisioning state creating: subnet has NSG created by NRMS",
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.ProvisioningState = api.ProvisioningStateCreating
+			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			tags: map[string]*string{
+				"NRMS-Info": to.StringPtr("http://aka.ms/nrms"),
+			},
+		},
+		{
+			name: "fail: subnet doe not exist on vnet",
 			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnet.Subnets = nil
 				vnetClient.EXPECT().
@@ -913,6 +928,7 @@ func TestValidateSubnets(t *testing.T) {
 					},
 				},
 			}
+
 			vnet := mgmtnetwork.VirtualNetwork{
 				ID: &vnetID,
 				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
@@ -922,7 +938,8 @@ func TestValidateSubnets(t *testing.T) {
 							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 								AddressPrefix: to.StringPtr("10.0.0.0/24"),
 								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-									ID: &masterNSGv1,
+									ID:   &masterNSGv1,
+									Tags: tt.tags,
 								},
 								ProvisioningState: mgmtnetwork.Succeeded,
 							},

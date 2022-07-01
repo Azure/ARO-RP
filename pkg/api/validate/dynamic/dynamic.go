@@ -436,7 +436,9 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 
 		if oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
 			if ss.SubnetPropertiesFormat != nil &&
-				ss.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
+				ss.SubnetPropertiesFormat.NetworkSecurityGroup != nil &&
+				// TODO CM - remove this when NRMS policies are no longer blocking e2e installs
+				!createdByNRMS(ss.SubnetPropertiesFormat.NetworkSecurityGroup.Tags) {
 				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must not have a network security group attached.", s.ID)
 			}
 		} else {
@@ -520,4 +522,14 @@ func uniqueSubnetSlice(slice []Subnet) []Subnet {
 		}
 	}
 	return list
+}
+
+func createdByNRMS(tags map[string]*string) bool {
+	for k := range tags {
+		if k == "NRMS-Info" || k == "NRMS-Version" {
+			return true
+		}
+	}
+
+	return false
 }
