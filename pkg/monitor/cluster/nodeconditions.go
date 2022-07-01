@@ -8,10 +8,10 @@ import (
 	"encoding/json"
 	"strconv"
 
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 )
 
 var nodeConditionsExpected = map[corev1.NodeConditionType]corev1.ConditionStatus{
@@ -79,7 +79,7 @@ func (mon *Monitor) getSpotInstances(ctx context.Context) map[string]struct{} {
 	}
 
 	for _, machine := range machines.Items {
-		var spec azureproviderv1beta1.AzureMachineProviderSpec
+		var spec machinev1beta1.AzureMachineProviderSpec
 		err = json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &spec)
 		if err != nil {
 			mon.log.Error(err)

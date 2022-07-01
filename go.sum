@@ -2241,7 +2241,6 @@ github.com/openshift/cluster-api v0.0.0-20191129101638-b09907ac6668/go.mod h1:T1
 github.com/openshift/cluster-api-actuator-pkg v0.0.0-20190614215203-42228d06a2ca/go.mod h1:KNPaA64x3Ok7z538kvS2acwC5fEwvPfF0RdTx2geQEE=
 github.com/openshift/cluster-api-provider-aws v0.2.1-0.20210121023454-5ffc5f422a80 h1:fFHoy/1QCLUcfo/NceEM8jGY2Tafl1BmyLa7tReN328=
 github.com/openshift/cluster-api-provider-aws v0.2.1-0.20210121023454-5ffc5f422a80/go.mod h1:JV7aXj/LZ8B4MwIQdhGxpTO2PCG8+7UKFd6FaOZCSzA=
-github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20210626224711-5d94c794092f h1:rQwvVLPZfM5o0USkVY6mrAyJwzMUkhjn9Wz2D5vX81k=
 github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20210626224711-5d94c794092f/go.mod h1:GR+ocB8I+Z7JTSBdO+DMu/diBfH66lRlRpnc1KWysUM=
 github.com/openshift/cluster-api-provider-baremetal v0.0.0-20210924143856-c2d3ece4da38/go.mod h1:TyotVVwHJhqcDfX/0MkCjLOh7y6+RshdurRIboZ0/Hk=
 github.com/openshift/cluster-api-provider-baremetal v0.0.0-20220218121658-fc0acaaec338 h1:9jfYbey2XKqdJLh4sqJ1g2j+/qJDF2gGTz5fUgHpdr8=
