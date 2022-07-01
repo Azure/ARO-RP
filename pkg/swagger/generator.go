@@ -10,11 +10,13 @@ import (
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/api/v20210901preview"
 	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
+	"github.com/Azure/ARO-RP/pkg/api/v20220620preview"
 )
 
 const apiv20200430Path = "github.com/Azure/ARO-RP/pkg/api/v20200430"
 const apiv20210901previewPath = "github.com/Azure/ARO-RP/pkg/api/v20210901preview"
 const apiv20220401Path = "github.com/Azure/ARO-RP/pkg/api/v20220401"
+const apiv20220620previewPath = "github.com/Azure/ARO-RP/pkg/api/v20220620preview"
 
 type generator struct {
 	exampleOpenShiftClusterPutParameter            func() interface{}
@@ -67,6 +69,22 @@ var apis = map[string]*generator{
 		exampleOpenShiftClusterCredentialsResponse:     v20220401.ExampleOpenShiftClusterCredentialsResponse,
 		exampleOpenShiftClusterListResponse:            v20220401.ExampleOpenShiftClusterListResponse,
 		exampleOpenShiftClusterAdminKubeconfigResponse: v20220401.ExampleOpenShiftClusterAdminKubeconfigResponse,
+		exampleOperationListResponse:                   api.ExampleOperationListResponse,
+
+		xmsEnum:            []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},
+		xmsSecretList:      []string{"kubeconfig", "kubeadminPassword"},
+		xmsIdentifiers:     []string{},
+		commonTypesVersion: "v2",
+		systemData:         true,
+		kubeConfig:         true,
+	},
+	apiv20220620previewPath: {
+		exampleOpenShiftClusterPutParameter:            v20220620preview.ExampleOpenShiftClusterPutParameter,
+		exampleOpenShiftClusterPatchParameter:          v20220620preview.ExampleOpenShiftClusterPatchParameter,
+		exampleOpenShiftClusterResponse:                v20220620preview.ExampleOpenShiftClusterResponse,
+		exampleOpenShiftClusterCredentialsResponse:     v20220620preview.ExampleOpenShiftClusterCredentialsResponse,
+		exampleOpenShiftClusterListResponse:            v20220620preview.ExampleOpenShiftClusterListResponse,
+		exampleOpenShiftClusterAdminKubeconfigResponse: v20220620preview.ExampleOpenShiftClusterAdminKubeconfigResponse,
 		exampleOperationListResponse:                   api.ExampleOperationListResponse,
 
 		xmsEnum:            []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},

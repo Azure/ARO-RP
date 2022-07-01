@@ -20,6 +20,7 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	_ "github.com/Azure/ARO-RP/pkg/api/v20210901preview"
 	_ "github.com/Azure/ARO-RP/pkg/api/v20220401"
+	_ "github.com/Azure/ARO-RP/pkg/api/v20220620preview"
 	"github.com/Azure/ARO-RP/pkg/backend"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
