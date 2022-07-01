@@ -153,14 +153,32 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	c.log.Infof("creating AAD application")
-	appID, appSecret, err := c.createApplication(ctx, "aro-"+clusterName)
-	if err != nil {
-		return err
+	// This is for our CFS scenario where we do not have permissions to allow the RP to create it's own AAD application
+	// when doing a cluster deployment. We have discussed alternatives with RH but they do not want to be able to bypass this
+	// via a setting at development time and would prefer we get consent or maintain our own branch (which we will do for the time being).
+	// Please don't push this back to master.
+	appID := ""
+	appSecret := ""
+	spID := ""
+
+	if env.IsLocalDevelopmentMode() {
+		appID = os.Getenv("AZURE_CLIENT_ID")
+		appSecret = os.Getenv("AZURE_CLIENT_SECRET")
+		spID = os.Getenv("AZURE_SERVICE_PRINCIPAL_ID")
+	} else {
+		appID, appSecret, err = c.createApplication(ctx, "aro-"+clusterName)
+		if err != nil {
+			return err
+		}
+
+		spID, err = c.createServicePrincipal(ctx, appID)
+		if err != nil {
+			return err
+		}
 	}
 
-	spID, err := c.createServicePrincipal(ctx, appID)
-	if err != nil {
-		return err
+	if appID == "" || appSecret == "" {
+		return fmt.Errorf("AAD application id and secret must be set")
 	}
 
 	visibility := api.VisibilityPublic
@@ -229,19 +247,19 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	// TODO: ick
-	if os.Getenv("NO_INTERNET") != "" {
-		parameters["routes"] = &arm.ParametersParameter{
-			Value: []mgmtnetwork.Route{
-				{
-					RoutePropertiesFormat: &mgmtnetwork.RoutePropertiesFormat{
-						AddressPrefix: to.StringPtr("0.0.0.0/0"),
-						NextHopType:   mgmtnetwork.RouteNextHopTypeNone,
-					},
-					Name: to.StringPtr("blackhole"),
-				},
-			},
-		}
-	}
+	// if os.Getenv("NO_INTERNET") != "" {
+	// 	parameters["routes"] = &arm.ParametersParameter{
+	// 		Value: []mgmtnetwork.Route{
+	// 			{
+	// 				RoutePropertiesFormat: &mgmtnetwork.RoutePropertiesFormat{
+	// 					AddressPrefix: to.StringPtr("0.0.0.0/0"),
+	// 					NextHopType:   mgmtnetwork.RouteNextHopTypeNone,
+	// 				},
+	// 				Name: to.StringPtr("blackhole"),
+	// 			},
+	// 		},
+	// 	}
+	// }
 
 	armctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
