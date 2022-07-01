@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/sirupsen/logrus"
 
@@ -97,4 +98,18 @@ func (d *dev) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, e
 	}
 
 	return refreshable.NewAuthorizer(sp), nil
+}
+
+func (d *dev) FPNewClientCertificateCredential(tenantID string) (*azidentity.ClientCertificateCredential, error) {
+	fpPrivateKey, fpCertificates := d.fpCertificateRefresher.GetCertificates()
+
+	credential, err := azidentity.NewClientCertificateCredential(tenantID, d.fpClientID, fpCertificates, fpPrivateKey, &azidentity.ClientCertificateCredentialOptions{
+		AuthorityHost: d.Environment().AuthorityHost,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return credential, nil
 }

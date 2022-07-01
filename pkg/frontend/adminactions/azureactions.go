@@ -5,6 +5,7 @@ package adminactions
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -13,6 +14,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/applens"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -30,6 +32,8 @@ type AzureActions interface {
 	VMSizeList(ctx context.Context) ([]mgmtcompute.ResourceSku, error)
 	VMResize(ctx context.Context, vmName string, vmSize string) error
 	VMSerialConsole(ctx context.Context, w http.ResponseWriter, log *logrus.Entry, vmName string) error
+	AppLensGetDetector(ctx context.Context, detectorId string) ([]byte, error)
+	AppLensListDetectors(ctx context.Context) ([]byte, error)
 }
 
 type azureActions struct {
@@ -45,6 +49,7 @@ type azureActions struct {
 	routeTables        network.RouteTablesClient
 	storageAccounts    storage.AccountsClient
 	networkInterfaces  network.InterfacesClient
+	appLens            applens.AppLensClient
 }
 
 // NewAzureActions returns an azureActions
@@ -52,6 +57,11 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 	subscriptionDoc *api.SubscriptionDocument) (AzureActions, error) {
 	fpAuth, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID,
 		env.Environment().ResourceManagerEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	fpClientCertCred, err := env.FPNewClientCertificateCredential(subscriptionDoc.Subscription.Properties.TenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +79,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		routeTables:        network.NewRouteTablesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		networkInterfaces:  network.NewInterfacesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		appLens:            applens.NewAppLensClient(env.Environment(), fpClientCertCred),
 	}, nil
 }
 
@@ -109,4 +120,21 @@ func (a *azureActions) VMResize(ctx context.Context, vmName string, size string)
 
 	vm.HardwareProfile.VMSize = mgmtcompute.VirtualMachineSizeTypes(size)
 	return a.virtualMachines.CreateOrUpdateAndWait(ctx, clusterRGName, vmName, vm)
+}
+
+func (a *azureActions) AppLensGetDetector(ctx context.Context, detectorId string) ([]byte, error) {
+	resp, err := a.appLens.GetDetector(ctx, &applens.GetDetectorOptions{ResourceID: a.oc.ID, DetectorID: detectorId})
+
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(resp.Body)
+}
+
+func (a *azureActions) AppLensListDetectors(ctx context.Context) ([]byte, error) {
+	resp, err := a.appLens.ListDetectors(ctx, &applens.ListDetectorsOptions{ResourceID: a.oc.ID})
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(resp.Body)
 }

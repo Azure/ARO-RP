@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest/azure"
 )
 
@@ -16,6 +17,9 @@ type AROEnvironment struct {
 	ActualCloudName          string
 	GenevaMonitoringEndpoint string
 	AppSuffix                string
+	AppLensEndpoint          string
+	AppLensScope             string
+	azidentity.AuthorityHost
 }
 
 var (
@@ -25,6 +29,9 @@ var (
 		ActualCloudName:          "AzureCloud",
 		GenevaMonitoringEndpoint: "https://gcs.prod.monitoring.core.windows.net/",
 		AppSuffix:                "aro.azure.com",
+		AppLensEndpoint:          "https://diag-runtimehost-staging.azurefd.net/api/invoke",
+		AppLensScope:             "b9a1efcd-32ee-4330-834c-c04eb00f4b33",
+		AuthorityHost:            azidentity.AzurePublicCloud,
 	}
 
 	// USGovernmentCloud contains additional ARO information for the US Gov cloud environment.
@@ -33,6 +40,9 @@ var (
 		ActualCloudName:          "AzureUSGovernment",
 		GenevaMonitoringEndpoint: "https://gcs.monitoring.core.usgovcloudapi.net/",
 		AppSuffix:                "aro.azure.us",
+		AppLensEndpoint:          "https://diag-runtimehost-prod-bn1-001.azurewebsites.us/api/invoke",
+		AppLensScope:             "https://microsoft.onmicrosoft.com/runtimehost",
+		AuthorityHost:            azidentity.AzureGovernment,
 	}
 )
 

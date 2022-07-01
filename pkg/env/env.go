@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/sirupsen/logrus"
 
@@ -81,6 +82,7 @@ type Interface interface {
 	Domain() string
 	FeatureIsSet(Feature) bool
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
+	FPNewClientCertificateCredential(string) (*azidentity.ClientCertificateCredential, error)
 	FPClientID() string
 	Listen() (net.Listener, error)
 	GatewayDomains() []string

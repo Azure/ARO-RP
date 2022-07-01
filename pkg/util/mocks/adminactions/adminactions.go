@@ -204,6 +204,36 @@ func (m *MockAzureActions) EXPECT() *MockAzureActionsMockRecorder {
 	return m.recorder
 }
 
+// AppLensGetDetector mocks base method.
+func (m *MockAzureActions) AppLensGetDetector(arg0 context.Context, arg1 string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AppLensGetDetector", arg0, arg1)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AppLensGetDetector indicates an expected call of AppLensGetDetector.
+func (mr *MockAzureActionsMockRecorder) AppLensGetDetector(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppLensGetDetector", reflect.TypeOf((*MockAzureActions)(nil).AppLensGetDetector), arg0, arg1)
+}
+
+// AppLensListDetectors mocks base method.
+func (m *MockAzureActions) AppLensListDetectors(arg0 context.Context) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AppLensListDetectors", arg0)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AppLensListDetectors indicates an expected call of AppLensListDetectors.
+func (mr *MockAzureActionsMockRecorder) AppLensListDetectors(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppLensListDetectors", reflect.TypeOf((*MockAzureActions)(nil).AppLensListDetectors), arg0)
+}
+
 // NICReconcileFailedState mocks base method.
 func (m *MockAzureActions) NICReconcileFailedState(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
