@@ -5,13 +5,12 @@ package dynamichelper
 
 import (
 	"context"
-	"errors"
+	"net/http"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/golang/mock/gomock"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -21,77 +20,84 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/cli-runtime/pkg/resource"
+	"k8s.io/client-go/rest/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 )
+
+type mockGVRResolver struct{}
+
+func (gvr mockGVRResolver) Refresh() error {
+	return nil
+}
+
+func (gvr mockGVRResolver) Resolve(groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
+	return &schema.GroupVersionResource{Group: "metal3.io", Version: "v1alpha1", Resource: "configmap"}, nil
+}
 
 func TestEsureDeleted(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range []struct {
-		uname         string
-		grpkind       string
-		namespace     string
-		name          string
-		wantSomething error
-		gvr           *schema.GroupVersionResource
+		uname   string
+		grpkind string
 	}{
 		{
-			uname:         "Test with the groupkind configmap",
-			grpkind:       "configmap",
-			namespace:     "test-namespace-1",
-			name:          "test-name-1",
-			wantSomething: errors.New("this is a new error"),
-			gvr:           &schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"},
+			uname:   "Test with the groupkind configmap",
+			grpkind: "configmap",
 		},
 		{
-			uname:         "Test with the groupkind ",
-			grpkind:       "baremetalhost.metal3.io",
-			namespace:     "test-namespace-2",
-			name:          "test-name-2",
-			wantSomething: errors.New("This is another error"),
-			gvr:           &schema.GroupVersionResource{Group: "metal3.io", Version: "v1alpha1", Resource: "baremetalhosts"},
+			uname:   "Test with the groupkind baremetalhost",
+			grpkind: "baremetalhost.metal3.io",
 		},
 	} {
 		t.Run(tt.uname, func(t *testing.T) {
-			mockController := gomock.NewController(t)
-			defer mockController.Finish()
+			mockGVRResolver := mockGVRResolver{}
 
-			mockCore := mock_dynamichelper.NewMockGVRResolver(mockController)
-			mockCore.
-				EXPECT().
-				Resolve(tt.grpkind, "").
-				Return(nil, tt.wantSomething).
-				AnyTimes()
-
-			dh := &dynamicHelper{GVRResolver: mockCore, delete: func(context.Context, *schema.GroupVersionResource, string, string) error {
-				return nil
-			}}
-
-			err := dh.EnsureDeleted(ctx, tt.grpkind, tt.namespace, tt.name)
-
-			if !reflect.DeepEqual(err, tt.wantSomething) {
-				t.Error(err)
+			mockRestCLI := &fake.RESTClient{
+				GroupVersion:         schema.GroupVersion{Group: "testgroup", Version: "v1"},
+				NegotiatedSerializer: resource.UnstructuredPlusDefaultContentConfig().NegotiatedSerializer,
+				Client: fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+					switch req.Method {
+					case "DELETE":
+						switch req.URL.Path {
+						case "/apis/metal3.io/v1alpha1/namespaces/test-ns-1/configmap/test-name-1":
+							return &http.Response{StatusCode: http.StatusNotFound}, nil
+						case "/apis/metal3.io/v1alpha1/namespaces/test-ns-2/configmap/test-name-2":
+							return &http.Response{StatusCode: http.StatusInternalServerError}, nil
+						case "/apis/metal3.io/v1alpha1/namespaces/test-ns-3/configmap/test-name-3":
+							return &http.Response{StatusCode: http.StatusOK}, nil
+						default:
+							t.Fatalf("unexpected path: %#v\n%#v", req.URL, req)
+							return nil, nil
+						}
+					default:
+						t.Fatalf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
+						return nil, nil
+					}
+				}),
 			}
 
-			dh_2 := &dynamicHelper{delete: func(context.Context, *schema.GroupVersionResource, string, string) error {
-				return nil
-			}}
+			dh := &dynamicHelper{
+				GVRResolver: mockGVRResolver,
+				restcli:     mockRestCLI,
+			}
 
-			err = dh_2.delete(ctx, tt.gvr, tt.namespace, tt.name)
+			err := dh.EnsureDeleted(ctx, tt.grpkind, "test-ns-1", "test-name-1")
 			if err != nil {
-				t.Fatal(err)
+				t.Errorf("no error should be bounced for status not found, but got: %v", err)
 			}
 
-			dh_3 := &dynamicHelper{GVRResolver: mockCore, delete: func(context.Context, *schema.GroupVersionResource, string, string) error {
-				return (tt.wantSomething)
-			}}
+			err = dh.EnsureDeleted(ctx, tt.grpkind, "test-ns-2", "test-name-2")
+			if err == nil {
+				t.Errorf("function should handle failure response (non-404) correctly")
+			}
 
-			err = dh_3.delete(ctx, tt.gvr, tt.namespace, tt.name)
-			if !reflect.DeepEqual(err, tt.wantSomething) {
-				t.Error(err)
+			err = dh.EnsureDeleted(ctx, tt.grpkind, "test-ns-3", "test-name-3")
+			if err != nil {
+				t.Errorf("function should handle success response correctly")
 			}
 		})
 	}

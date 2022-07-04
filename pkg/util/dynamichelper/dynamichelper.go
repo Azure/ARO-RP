@@ -40,11 +40,6 @@ type dynamicHelper struct {
 
 	log     *logrus.Entry
 	restcli rest.Interface
-	delete  func(context.Context, *schema.GroupVersionResource, string, string) error
-}
-
-func (dh *dynamicHelper) deleteUsingRestCli(ctx context.Context, gvr *schema.GroupVersionResource, namespace, name string) error {
-	return dh.restcli.Delete().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Error()
 }
 
 func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
@@ -67,8 +62,6 @@ func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 		return nil, err
 	}
 
-	dh.delete = dh.deleteUsingRestCli
-
 	return dh, nil
 }
 
@@ -78,9 +71,7 @@ func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace
 		return err
 	}
 
-	err = dh.delete(ctx, gvr, namespace, name)
-
-	//err = dh.restcli.Delete().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Error()
+	err = dh.restcli.Delete().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Error()
 	if kerrors.IsNotFound(err) {
 		err = nil
 	}
