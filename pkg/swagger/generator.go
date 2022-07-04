@@ -25,14 +25,16 @@ type generator struct {
 	exampleOpenShiftClusterCredentialsResponse     func() interface{}
 	exampleOpenShiftClusterAdminKubeconfigResponse func() interface{}
 	exampleOpenShiftClusterListResponse            func() interface{}
+	exampleInstallOpenShiftVersions                func() interface{}
 	exampleOperationListResponse                   func() interface{}
 
-	systemData         bool
-	kubeConfig         bool
-	xmsEnum            []string
-	xmsSecretList      []string
-	xmsIdentifiers     []string
-	commonTypesVersion string
+	systemData                  bool
+	kubeConfig                  bool
+	installableOpenShiftVersion bool
+	xmsEnum                     []string
+	xmsSecretList               []string
+	xmsIdentifiers              []string
+	commonTypesVersion          string
 }
 
 var apis = map[string]*generator{
@@ -85,14 +87,16 @@ var apis = map[string]*generator{
 		exampleOpenShiftClusterCredentialsResponse:     v20220904.ExampleOpenShiftClusterCredentialsResponse,
 		exampleOpenShiftClusterListResponse:            v20220904.ExampleOpenShiftClusterListResponse,
 		exampleOpenShiftClusterAdminKubeconfigResponse: v20220904.ExampleOpenShiftClusterAdminKubeconfigResponse,
+		exampleInstallOpenShiftVersions:                v20220904.ExampleInstallOpenShiftVersionsResponse,
 		exampleOperationListResponse:                   api.ExampleOperationListResponse,
 
-		xmsEnum:            []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},
-		xmsSecretList:      []string{"kubeconfig", "kubeadminPassword"},
-		xmsIdentifiers:     []string{},
-		commonTypesVersion: "v2",
-		systemData:         true,
-		kubeConfig:         true,
+		xmsEnum:                     []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},
+		xmsSecretList:               []string{"kubeconfig", "kubeadminPassword"},
+		xmsIdentifiers:              []string{},
+		commonTypesVersion:          "v2",
+		systemData:                  true,
+		installableOpenShiftVersion: true,
+		kubeConfig:                  true,
 	},
 }
 

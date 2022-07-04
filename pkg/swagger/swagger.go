@@ -89,10 +89,28 @@ func Run(api, outputDir string) error {
 		},
 	}
 
+	// for installaOpenShiftVerions
+	if g.installableOpenShiftVersion {
+		s.Paths["/providers/Microsoft.RedHatOpenShift/listinstallopenshiftversions"] = &PathItem{
+			Get: &Operation{
+				Tags:        []string{"InstallOpenShiftVersions"},
+				Summary:     "Lists all OpenShift versions available to install.",
+				Description: "The operation returns the installable OpenShift versions as strings.",
+				OperationID: "List_Installable_OpenShift_Versions",
+				Parameters:  g.populateParameters(0, "InstallOpenShiftVersions", "Install OpenShift Versions"),
+				Responses:   g.populateResponses("InstallOpenShiftVersions", false, http.StatusOK),
+			},
+		}
+	}
+
 	populateExamples(s.Paths)
 	names := []string{"OpenShiftClusterList", "OpenShiftClusterCredentials"}
 	if g.kubeConfig {
 		names = append(names, "OpenShiftClusterAdminKubeconfig")
+	}
+
+	if g.installableOpenShiftVersion {
+		names = append(names, "InstallOpenShiftVersions")
 	}
 
 	err = define(s.Definitions, api, g.xmsEnum, g.xmsSecretList, g.xmsIdentifiers, names...)

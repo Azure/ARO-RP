@@ -581,6 +581,8 @@ type OpenShiftClusterUpdate struct {
 	Tags map[string]*string `json:"tags"`
 	// OpenShiftClusterProperties - The cluster properties.
 	*OpenShiftClusterProperties `json:"properties,omitempty"`
+	// InstallVersion - The cluster install version.
+	InstallVersion *string `json:"installVersion,omitempty"`
 	// SystemData - READ-ONLY; The system meta data relating to this resource.
 	SystemData *SystemData `json:"systemData,omitempty"`
 }
@@ -593,6 +595,9 @@ func (oscu OpenShiftClusterUpdate) MarshalJSON() ([]byte, error) {
 	}
 	if oscu.OpenShiftClusterProperties != nil {
 		objectMap["properties"] = oscu.OpenShiftClusterProperties
+	}
+	if oscu.InstallVersion != nil {
+		objectMap["installVersion"] = oscu.InstallVersion
 	}
 	return json.Marshal(objectMap)
 }
@@ -623,6 +628,15 @@ func (oscu *OpenShiftClusterUpdate) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				oscu.OpenShiftClusterProperties = &openShiftClusterProperties
+			}
+		case "installVersion":
+			if v != nil {
+				var installVersion string
+				err = json.Unmarshal(*v, &installVersion)
+				if err != nil {
+					return err
+				}
+				oscu.InstallVersion = &installVersion
 			}
 		case "systemData":
 			if v != nil {
@@ -847,6 +861,12 @@ type ServicePrincipalProfile struct {
 	ClientID *string `json:"clientId,omitempty"`
 	// ClientSecret - The client secret used for the cluster.
 	ClientSecret *string `json:"clientSecret,omitempty"`
+}
+
+// SetObject ...
+type SetObject struct {
+	autorest.Response `json:"-"`
+	Value             interface{} `json:"value,omitempty"`
 }
 
 // SystemData metadata pertaining to creation and last modification of the resource.
