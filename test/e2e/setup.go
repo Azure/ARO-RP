@@ -169,16 +169,16 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 	}
 	wd := WebDriver(nil)
 
-	var err error
-
-	_, err = url.ParseRequestURI("https://localhost:4444")
+	_, err := url.ParseRequestURI("https://localhost:4444")
 	if err != nil {
 		panic(err)
 	}
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 10; i++ {
 		wd, err = NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
+		time.Sleep(time.Second)
 		if wd != nil {
+			err = nil
 			break
 		}
 	}
