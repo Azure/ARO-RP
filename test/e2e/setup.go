@@ -171,8 +171,6 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 
 	var err error
 
-	time.Sleep(time.Second * 10)
-
 	_, err = url.ParseRequestURI("https://localhost:4444")
 	if err != nil {
 		panic(err)
