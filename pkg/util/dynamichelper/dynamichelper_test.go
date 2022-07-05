@@ -40,66 +40,50 @@ func (gvr mockGVRResolver) Resolve(groupKind, optionalVersion string) (*schema.G
 func TestEsureDeleted(t *testing.T) {
 	ctx := context.Background()
 
-	for _, tt := range []struct {
-		uname   string
-		grpkind string
-	}{
-		{
-			uname:   "Test with the groupkind configmap",
-			grpkind: "configmap",
-		},
-		{
-			uname:   "Test with the groupkind baremetalhost",
-			grpkind: "baremetalhost.metal3.io",
-		},
-	} {
-		t.Run(tt.uname, func(t *testing.T) {
-			mockGVRResolver := mockGVRResolver{}
+	mockGVRResolver := mockGVRResolver{}
 
-			mockRestCLI := &fake.RESTClient{
-				GroupVersion:         schema.GroupVersion{Group: "testgroup", Version: "v1"},
-				NegotiatedSerializer: resource.UnstructuredPlusDefaultContentConfig().NegotiatedSerializer,
-				Client: fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
-					switch req.Method {
-					case "DELETE":
-						switch req.URL.Path {
-						case "/apis/metal3.io/v1alpha1/namespaces/test-ns-1/configmap/test-name-1":
-							return &http.Response{StatusCode: http.StatusNotFound}, nil
-						case "/apis/metal3.io/v1alpha1/namespaces/test-ns-2/configmap/test-name-2":
-							return &http.Response{StatusCode: http.StatusInternalServerError}, nil
-						case "/apis/metal3.io/v1alpha1/namespaces/test-ns-3/configmap/test-name-3":
-							return &http.Response{StatusCode: http.StatusOK}, nil
-						default:
-							t.Fatalf("unexpected path: %#v\n%#v", req.URL, req)
-							return nil, nil
-						}
-					default:
-						t.Fatalf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
-						return nil, nil
-					}
-				}),
+	mockRestCLI := &fake.RESTClient{
+		GroupVersion:         schema.GroupVersion{Group: "testgroup", Version: "v1"},
+		NegotiatedSerializer: resource.UnstructuredPlusDefaultContentConfig().NegotiatedSerializer,
+		Client: fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+			switch req.Method {
+			case "DELETE":
+				switch req.URL.Path {
+				case "/apis/metal3.io/v1alpha1/namespaces/test-ns-1/configmap/test-name-1":
+					return &http.Response{StatusCode: http.StatusNotFound}, nil
+				case "/apis/metal3.io/v1alpha1/namespaces/test-ns-2/configmap/test-name-2":
+					return &http.Response{StatusCode: http.StatusInternalServerError}, nil
+				case "/apis/metal3.io/v1alpha1/namespaces/test-ns-3/configmap/test-name-3":
+					return &http.Response{StatusCode: http.StatusOK}, nil
+				default:
+					t.Fatalf("unexpected path: %#v\n%#v", req.URL, req)
+					return nil, nil
+				}
+			default:
+				t.Fatalf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
+				return nil, nil
 			}
+		}),
+	}
 
-			dh := &dynamicHelper{
-				GVRResolver: mockGVRResolver,
-				restcli:     mockRestCLI,
-			}
+	dh := &dynamicHelper{
+		GVRResolver: mockGVRResolver,
+		restcli:     mockRestCLI,
+	}
 
-			err := dh.EnsureDeleted(ctx, tt.grpkind, "test-ns-1", "test-name-1")
-			if err != nil {
-				t.Errorf("no error should be bounced for status not found, but got: %v", err)
-			}
+	err := dh.EnsureDeleted(ctx, "configmap", "test-ns-1", "test-name-1")
+	if err != nil {
+		t.Errorf("no error should be bounced for status not found, but got: %v", err)
+	}
 
-			err = dh.EnsureDeleted(ctx, tt.grpkind, "test-ns-2", "test-name-2")
-			if err == nil {
-				t.Errorf("function should handle failure response (non-404) correctly")
-			}
+	err = dh.EnsureDeleted(ctx, "configmap", "test-ns-2", "test-name-2")
+	if err == nil {
+		t.Errorf("function should handle failure response (non-404) correctly")
+	}
 
-			err = dh.EnsureDeleted(ctx, tt.grpkind, "test-ns-3", "test-name-3")
-			if err != nil {
-				t.Errorf("function should handle success response correctly")
-			}
-		})
+	err = dh.EnsureDeleted(ctx, "configmap", "test-ns-3", "test-name-3")
+	if err != nil {
+		t.Errorf("function should handle success response correctly")
 	}
 }
 
