@@ -23,11 +23,11 @@ import (
 // generation, etc.
 func (m *manager) applyInstallConfigCustomisations(ctx context.Context, installConfig *installconfig.InstallConfig, image *releaseimage.Image) (graph.Graph, error) {
 	clusterID := &installconfig.ClusterID{
-		UUID:    m.doc.ID,
-		InfraID: m.doc.OpenShiftCluster.Properties.InfraID,
+		UUID:    m.clusterUUID,
+		InfraID: m.oc.Properties.InfraID,
 	}
 
-	bootstrapLoggingConfig, err := bootstraplogging.GetConfig(m.env, m.doc)
+	bootstrapLoggingConfig, err := bootstraplogging.GetConfig(m.env, m.oc)
 	if err != nil {
 		return nil, err
 	}
@@ -39,19 +39,19 @@ func (m *manager) applyInstallConfigCustomisations(ctx context.Context, installC
 	}
 
 	imageRegistryConfig := &bootkube.AROImageRegistryConfig{
-		AccountName:   m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName,
+		AccountName:   m.oc.Properties.ImageRegistryStorageAccountName,
 		ContainerName: "image-registry",
 		HTTPSecret:    hex.EncodeToString(httpSecret),
 	}
 
 	dnsConfig := &bootkube.ARODNSConfig{
-		APIIntIP:  m.doc.OpenShiftCluster.Properties.APIServerProfile.IntIP,
-		IngressIP: m.doc.OpenShiftCluster.Properties.IngressProfiles[0].IP,
+		APIIntIP:  m.oc.Properties.APIServerProfile.IntIP,
+		IngressIP: m.oc.Properties.IngressProfiles[0].IP,
 	}
 
-	if m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
-		dnsConfig.GatewayPrivateEndpointIP = m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateEndpointIP
-		dnsConfig.GatewayDomains = append(m.env.GatewayDomains(), m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName+".blob."+m.env.Environment().StorageEndpointSuffix)
+	if m.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
+		dnsConfig.GatewayPrivateEndpointIP = m.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP
+		dnsConfig.GatewayDomains = append(m.env.GatewayDomains(), m.oc.Properties.ImageRegistryStorageAccountName+".blob."+m.env.Environment().StorageEndpointSuffix)
 	}
 
 	g := graph.Graph{}
@@ -66,7 +66,7 @@ func (m *manager) applyInstallConfigCustomisations(ctx context.Context, installC
 	}
 
 	// Handle MTU3900 feature flag
-	if m.doc.OpenShiftCluster.Properties.NetworkProfile.MTUSize == api.MTU3900 {
+	if m.oc.Properties.NetworkProfile.MTUSize == api.MTU3900 {
 		m.log.Printf("applying feature flag %s", api.FeatureFlagMTU3900)
 		if err = m.overrideEthernetMTU(g); err != nil {
 			return nil, err
