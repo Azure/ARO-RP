@@ -12,6 +12,7 @@ import (
 	consoleclient "github.com/openshift/client-go/console/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
@@ -105,6 +106,10 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 	imageregistrycli, err := imageregistryclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+	operatorcli, err := operatorclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
@@ -225,7 +230,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 
 	if err = (checker.NewReconciler(
 		log.WithField("controller", checker.ControllerName),
-		arocli, kubernetescli, maocli, role)).SetupWithManager(mgr); err != nil {
+		arocli, kubernetescli, maocli, operatorcli, configcli, role)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller %s: %v", checker.ControllerName, err)
 	}
 

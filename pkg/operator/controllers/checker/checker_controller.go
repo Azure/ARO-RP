@@ -7,7 +7,9 @@ import (
 	"context"
 	"time"
 
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -37,12 +39,14 @@ type Reconciler struct {
 	arocli   aroclient.Interface
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli machineclient.Interface, role string) *Reconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, machinecli machineclient.Interface, operatorcli operatorclient.Interface, configcli configclient.Interface, role string) *Reconciler {
 	checkers := []Checker{NewInternetChecker(log, arocli, role)}
 
 	if role == operator.RoleMaster {
 		checkers = append(checkers,
-			NewServicePrincipalChecker(log, arocli, kubernetescli, maocli, role),
+			NewServicePrincipalChecker(log, arocli, kubernetescli, machinecli, role),
+			NewIngressCertificateChecker(log, arocli, operatorcli, configcli, role),
+			NewClusterDNSChecker(log, arocli, operatorcli, role),
 		)
 	}
 

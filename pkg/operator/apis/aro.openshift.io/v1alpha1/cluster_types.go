@@ -24,17 +24,34 @@ const (
 	ServicePrincipalValid       = "ServicePrincipalValid"
 
 	ManagedUpgradeOperatorStatus = "ManagedUpgradeOperatorStatus"
+
+	// advisor checks
+	DefaultIngressCertificate = "DefaultIngressCertificate"
+	DefaultClusterDNS         = "DefaultClusterDNS"
 )
 
 // AllConditionTypes is a operator conditions currently in use, any condition not in this list is not
 // added to the operator.status.conditions list
 func AllConditionTypes() []string {
-	return []string{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid, ServicePrincipalValid, ManagedUpgradeOperatorStatus}
+	return []string{
+		InternetReachableFromMaster,
+		InternetReachableFromWorker,
+		MachineValid,
+		ServicePrincipalValid,
+		ManagedUpgradeOperatorStatus,
+		DefaultIngressCertificate,
+		DefaultClusterDNS,
+	}
 }
 
 // ClusterChecksTypes represents checks performed on the cluster to verify basic functionality
 func ClusterChecksTypes() []string {
-	return []string{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid, ServicePrincipalValid}
+	return []string{
+		InternetReachableFromMaster,
+		InternetReachableFromWorker,
+		MachineValid,
+		ServicePrincipalValid,
+	}
 }
 
 type GenevaLoggingSpec struct {
