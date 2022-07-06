@@ -22,10 +22,11 @@ var ErrWantRefresh = errors.New("want refresh")
 // `authorizer` if the step returns an Azure AuthenticationError and rerun it.
 // The step will be retried until `retryTimeout` is hit. Any other error will be
 // returned directly.
-func AuthorizationRefreshingAction(authorizer refreshable.Authorizer, step Step) Step {
+func AuthorizationRefreshingAction(authorizer refreshable.Authorizer, step Step, metricsTopic ...string) Step {
 	return authorizationRefreshingActionStep{
-		step:       step,
-		authorizer: authorizer,
+		step:         step,
+		authorizer:   authorizer,
+		metricsTopic: metricsTopic,
 	}
 }
 
@@ -34,6 +35,7 @@ type authorizationRefreshingActionStep struct {
 	authorizer   refreshable.Authorizer
 	retryTimeout time.Duration
 	pollInterval time.Duration
+	metricsTopic []string
 }
 
 func (s authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.Entry) error {
@@ -84,6 +86,14 @@ func (s authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.
 		return true, err
 	}, timeoutCtx.Done())
 }
+
 func (s authorizationRefreshingActionStep) String() string {
 	return fmt.Sprintf("[AuthorizationRefreshingAction %s]", s.step)
+}
+
+func (s authorizationRefreshingActionStep) MetricsTopic() string {
+	if len(s.metricsTopic) > 0 {
+		return fmt.Sprintf("refreshing_action.%s", s.metricsTopic[0])
+	}
+	return ""
 }

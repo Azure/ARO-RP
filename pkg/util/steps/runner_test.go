@@ -328,7 +328,7 @@ func TestStepRunner(t *testing.T) {
 			h, log := testlog.New()
 			steps := tt.steps(controller)
 
-			err := Run(ctx, log, 25*time.Millisecond, steps)
+			_, err := Run(ctx, log, 25*time.Millisecond, steps, true)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -337,6 +337,41 @@ func TestStepRunner(t *testing.T) {
 			err = testlog.AssertLoggingOutput(h, tt.wantEntries)
 			if err != nil {
 				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestStepMetricsTopicNaming(t *testing.T) {
+	for _, tt := range []struct {
+		desc string
+		step Step
+		want string
+	}{
+		{
+			desc: "test action step naming",
+			step: Action(successfulFunc, "successful_action"),
+			want: "action.success",
+		},
+		{
+			desc: "test condition step naming",
+			step: Condition(alwaysTrueCondition, 1*time.Millisecond, true, "always_true"),
+			want: "condition.always_true",
+		},
+		{
+			desc: "test refreshing action step naming",
+			step: AuthorizationRefreshingAction(nil, Action(successfulFunc, "success"), "successful_refreshing"),
+			want: "refreshing_action.success_refreshing",
+		},
+		{
+			desc: "test without topic param",
+			step: AuthorizationRefreshingAction(nil, Action(successfulFunc)),
+			want: "",
+		},
+	} {
+		t.Run(tt.desc, func(t *testing.T) {
+			if got := tt.step.MetricsTopic(); got != tt.want {
+				t.Errorf("incorrect step nameing, want: %s, got: %s", tt.want, got)
 			}
 		})
 	}

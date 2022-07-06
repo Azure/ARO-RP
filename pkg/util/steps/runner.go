@@ -21,19 +21,29 @@ func friendlyName(f interface{}) string {
 type Step interface {
 	run(ctx context.Context, log *logrus.Entry) error
 	String() string
+	MetricsTopic() string
 }
 
 // Run executes the provided steps in order until one fails or all steps
 // are completed. Errors from failed steps are returned directly.
-func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, steps []Step) error {
+// time cost for each step run will be recorded for metrics usage
+func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, steps []Step, metricsDryrun bool) (map[string]int64, error) {
+	stepTimeRun := make(map[string]int64)
 	for _, step := range steps {
 		log.Infof("running step %s", step)
+		startTime := time.Now()
 		err := step.run(ctx, log)
 
 		if err != nil {
 			log.Errorf("step %s encountered error: %s", step, err.Error())
-			return err
+			return nil, err
 		}
+		if metricsDryrun {
+			stepTimeRun[step.MetricsTopic()] = 2
+		} else {
+			stepTimeRun[step.MetricsTopic()] = int64(time.Since(startTime).Seconds())
+		}
+
 	}
-	return nil
+	return stepTimeRun, nil
 }

@@ -31,19 +31,23 @@ import (
 
 func failingFunc(context.Context) error { return errors.New("oh no!") }
 
-func normalFunc(context.Context) error {
-	time.Sleep(1 * time.Second)
-	return nil
-}
+func successfulActionStep(context.Context) error { return nil }
+
+func successfulConditionStep(context.Context) (bool, error) { return true, nil }
 
 type fakeMetricsEmitter struct {
-	Topic       string
-	InstallTime int64
+	Metrics map[string]int64
+}
+
+func newfakeMetricsEmitter() *fakeMetricsEmitter {
+	m := make(map[string]int64)
+	return &fakeMetricsEmitter{
+		Metrics: m,
+	}
 }
 
 func (e *fakeMetricsEmitter) EmitGauge(topic string, value int64, dims map[string]string) {
-	e.Topic = topic
-	e.InstallTime = value
+	e.Metrics[topic] = value
 }
 
 func (e *fakeMetricsEmitter) EmitFloat(topic string, value float64, dims map[string]string) {}
@@ -170,7 +174,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				operatorcli:   tt.operatorcli,
 			}
 
-			err := m.runSteps(ctx, tt.steps)
+			err := m.runSteps(ctx, tt.steps, true)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -230,24 +234,32 @@ func TestUpdateProvisionedBy(t *testing.T) {
 
 func TestInstallationTimeMetrics(t *testing.T) {
 	_, log := testlog.New()
-	fm := &fakeMetricsEmitter{}
+	fm := newfakeMetricsEmitter()
 
 	for _, tt := range []struct {
-		name  string
-		steps []steps.Step
+		name          string
+		steps         []steps.Step
+		wantedMetrics map[string]int64
 	}{
 		{
 			name: "Failed step run will not generate any install time metrics",
 			steps: []steps.Step{
-				steps.Action(normalFunc),
-				steps.Action(failingFunc),
+				steps.Action(successfulActionStep, ""),
+				steps.Action(failingFunc, ""),
 			},
 		},
 		{
 			name: "Succeeded step run will generate a valid install time metrics",
 			steps: []steps.Step{
-				steps.Action(normalFunc),
-				steps.Action(normalFunc),
+				steps.Action(successfulActionStep, "init_install_phase"),
+				steps.Condition(successfulConditionStep, 30*time.Minute, true, "check_api_server"),
+				steps.AuthorizationRefreshingAction(nil, steps.Action(successfulActionStep), "generate_kubeconfigs"),
+			},
+			wantedMetrics: map[string]int64{
+				"backend.openshiftcluster.installtime.total":                                  6,
+				"backend.openshiftcluster.installtime.action.init_install_phase":              2,
+				"backend.openshiftcluster.installtime.condition.check_api_server":             2,
+				"backend.openshiftcluster.installtime.refreshing_action.generate_kubeconfigs": 2,
 			},
 		},
 	} {
@@ -257,17 +269,19 @@ func TestInstallationTimeMetrics(t *testing.T) {
 				log:            log,
 				metricsEmitter: fm,
 			}
-			err := m.runSteps(ctx, tt.steps)
+			err := m.runSteps(ctx, tt.steps, true)
 			if err != nil {
-				if fm.Topic != "" || fm.InstallTime != 0 {
+				if len(fm.Metrics) != 0 {
 					t.Error("fake metrics obj should be empty when run steps failed")
 				}
 			} else {
-				if fm.Topic != "backend.openshiftcluster.installtime" {
-					t.Error("wrong metrics topic")
-				}
-				if fm.InstallTime < 2 {
-					t.Error("wrong metrics value")
+				if tt.wantedMetrics != nil {
+					for k, v := range tt.wantedMetrics {
+						time, ok := fm.Metrics[k]
+						if !ok || time != v {
+							t.Error("incorrect fake metrics obj")
+						}
+					}
 				}
 			}
 		})
