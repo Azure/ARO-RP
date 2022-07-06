@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 func (f *frontend) getAsyncOperationsStatus(w http.ResponseWriter, r *http.Request) {
@@ -34,6 +35,14 @@ func (f *frontend) _getAsyncOperationsStatus(ctx context.Context, r *http.Reques
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The entity was not found.")
 	case err != nil:
 		return nil, err
+	}
+
+	resource, err := azure.ParseResourceID(asyncdoc.OpenShiftClusterKey)
+	switch {
+	case err != nil:
+		return nil, err
+	case resource.SubscriptionID != vars["subscriptionId"]:
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The entity was not found.")
 	}
 
 	doc, err := f.dbOpenShiftClusters.Get(ctx, asyncdoc.OpenShiftClusterKey)
