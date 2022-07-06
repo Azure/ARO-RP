@@ -19,6 +19,7 @@ import (
 	appsv1defaults "k8s.io/kubernetes/pkg/apis/apps/v1"
 	corev1defaults "k8s.io/kubernetes/pkg/apis/core/v1"
 	rbacv1defaults "k8s.io/kubernetes/pkg/apis/rbac/v1"
+	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
@@ -43,4 +44,6 @@ func init() {
 	utilruntime.Must(monitoringv1.AddToScheme(scheme.Scheme))
 	// AzureMachineProviderSpec is not registered by default
 	scheme.Scheme.AddKnownTypes(machinev1beta1.GroupVersion, &machinev1beta1.AzureMachineProviderSpec{})
+	// Need it for backward compatibility
+	scheme.Scheme.AddKnownTypes(azureproviderv1beta1.SchemeGroupVersion, &machinev1beta1.AzureMachineProviderSpec{})
 }

@@ -104,6 +104,8 @@ allowedImportNames:
     - clientcmdv1
   k8s.io/client-go/tools/metrics:
     - kmetrics
+  sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1:
+    - azureproviderv1beta1
   sigs.k8s.io/controller-runtime:
     - ctrl
   github.com/openshift/hive/pkg/client/clientset/versioned:
