@@ -234,7 +234,6 @@ func (m *manager) runSteps(ctx context.Context, s []steps.Step, metricsDryrun bo
 			totalInstallTime += duration
 		}
 		m.metricsEmitter.EmitGauge("backend.openshiftcluster.installtime.total", totalInstallTime, nil)
-
 	}
 	return err
 }

@@ -43,7 +43,6 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 		} else {
 			stepTimeRun[step.MetricsTopic()] = int64(time.Since(startTime).Seconds())
 		}
-
 	}
 	return stepTimeRun, nil
 }
