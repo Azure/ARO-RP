@@ -38,11 +38,12 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 			log.Errorf("step %s encountered error: %s", step, err.Error())
 			return nil, err
 		}
+
+		endTime := time.Now()
 		if metricsDryrun {
-			stepTimeRun[step.MetricsTopic()] = 2
-		} else {
-			stepTimeRun[step.MetricsTopic()] = int64(time.Since(startTime).Seconds())
+			endTime = startTime.Add(2 * time.Second)
 		}
+		stepTimeRun[step.MetricsTopic()] = int64(endTime.Sub(startTime).Seconds())
 	}
 	return stepTimeRun, nil
 }
