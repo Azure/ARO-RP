@@ -147,7 +147,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 
 	visibility := api.VisibilityPublic
 
-	if os.Getenv("NO_INTERNET") != "" {
+	if os.Getenv("PRIVATE_CLUSTER") != "" || os.Getenv("NO_INTERNET") != "" {
 		visibility = api.VisibilityPrivate
 	}
 
