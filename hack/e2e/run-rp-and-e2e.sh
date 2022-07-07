@@ -89,13 +89,13 @@ if [ -z "${LOCAL_E2E}" ] ; then
 fi
 
 if [ -z "${CLUSTER}" ] ; then
-    echo "CLUSTER is not set , aborting"
-    exit 1
+    echo "CLUSTER is not set, aborting"
+    return 1
 fi
 
 if [ -z "${DATABASE_NAME}" ] ; then
-    echo "DATABASE_NAME is not set , aborting"
-    exit 1
+    echo "DATABASE_NAME is not set, aborting"
+    return 1
 fi
 
 echo "######################################"
@@ -117,11 +117,11 @@ echo
 echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
 echo "######################################"
 
-[ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; exit 128 )
-[ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set; please validate your ./secrets/env"; exit 128 )
-[ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set; please validate your ./secrets/env"; exit 128 )
-[ "$DATABASE_ACCOUNT_NAME" ] || ( echo ">> DATABASE_ACCOUNT_NAME is not set; please validate your ./secrets/env"; exit 128 )
-[ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set; please validate your ./secrets/env"; exit 128 )
-[ "$AZURE_SUBSCRIPTION_ID" ] || ( echo ">> AZURE_SUBSCRIPTION_ID is not set; please validate your ./secrets/env"; exit 128 )
+[ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; return 128 )
+[ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set; please validate your ./secrets/env"; return 128 )
+[ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set; please validate your ./secrets/env"; return 128 )
+[ "$DATABASE_ACCOUNT_NAME" ] || ( echo ">> DATABASE_ACCOUNT_NAME is not set; please validate your ./secrets/env"; return 128 )
+[ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set; please validate your ./secrets/env"; return 128 )
+[ "$AZURE_SUBSCRIPTION_ID" ] || ( echo ">> AZURE_SUBSCRIPTION_ID is not set; please validate your ./secrets/env"; return 128 )
 
 az account set -s $AZURE_SUBSCRIPTION_ID >/dev/null
