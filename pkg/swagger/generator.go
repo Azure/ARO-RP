@@ -10,11 +10,13 @@ import (
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/api/v20210901preview"
 	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
+	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
 )
 
 const apiv20200430Path = "github.com/Azure/ARO-RP/pkg/api/v20200430"
 const apiv20210901previewPath = "github.com/Azure/ARO-RP/pkg/api/v20210901preview"
 const apiv20220401Path = "github.com/Azure/ARO-RP/pkg/api/v20220401"
+const apiv20220904Path = "github.com/Azure/ARO-RP/pkg/api/v20220904"
 
 type generator struct {
 	exampleOpenShiftClusterPutParameter            func() interface{}
@@ -67,6 +69,22 @@ var apis = map[string]*generator{
 		exampleOpenShiftClusterCredentialsResponse:     v20220401.ExampleOpenShiftClusterCredentialsResponse,
 		exampleOpenShiftClusterListResponse:            v20220401.ExampleOpenShiftClusterListResponse,
 		exampleOpenShiftClusterAdminKubeconfigResponse: v20220401.ExampleOpenShiftClusterAdminKubeconfigResponse,
+		exampleOperationListResponse:                   api.ExampleOperationListResponse,
+
+		xmsEnum:            []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},
+		xmsSecretList:      []string{"kubeconfig", "kubeadminPassword"},
+		xmsIdentifiers:     []string{},
+		commonTypesVersion: "v2",
+		systemData:         true,
+		kubeConfig:         true,
+	},
+	apiv20220904Path: {
+		exampleOpenShiftClusterPutParameter:            v20220904.ExampleOpenShiftClusterPutParameter,
+		exampleOpenShiftClusterPatchParameter:          v20220904.ExampleOpenShiftClusterPatchParameter,
+		exampleOpenShiftClusterResponse:                v20220904.ExampleOpenShiftClusterResponse,
+		exampleOpenShiftClusterCredentialsResponse:     v20220904.ExampleOpenShiftClusterCredentialsResponse,
+		exampleOpenShiftClusterListResponse:            v20220904.ExampleOpenShiftClusterListResponse,
+		exampleOpenShiftClusterAdminKubeconfigResponse: v20220904.ExampleOpenShiftClusterAdminKubeconfigResponse,
 		exampleOperationListResponse:                   api.ExampleOperationListResponse,
 
 		xmsEnum:            []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},

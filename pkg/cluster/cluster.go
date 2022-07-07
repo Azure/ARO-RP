@@ -17,11 +17,13 @@ import (
 	"github.com/sirupsen/logrus"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
@@ -94,12 +96,14 @@ type manager struct {
 	arocli           aroclient.Interface
 	imageregistrycli imageregistryclient.Interface
 
+	hiveClusterManager hive.ClusterManager
+
 	aroOperatorDeployer deploy.Operator
 }
 
 // New returns a cluster manager
 func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, dbGateway database.Gateway, aead encryption.AEAD,
-	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, metricsEmitter metrics.Emitter) (Interface, error) {
+	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, hiveConfig *rest.Config, metricsEmitter metrics.Emitter) (Interface, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -121,6 +125,15 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	}
 
 	storage := storage.NewManager(_env, r.SubscriptionID, fpAuthorizer)
+
+	// TODO: always set hive once we have it everywhere in prod and dev
+	var hr hive.ClusterManager
+	if hiveConfig != nil {
+		hr, err = hive.NewClusterManagerFromConfig(hiveConfig)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return &manager{
 		log:                   log,
@@ -155,5 +168,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		storage: storage,
 		subnet:  subnet.NewManager(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		graph:   graph.NewManager(log, aead, storage),
+
+		hiveClusterManager: hr,
 	}, nil
 }

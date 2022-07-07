@@ -12,8 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// friendlyName returns a "friendly" stringified name of the given func.
-func friendlyName(f interface{}) string {
+// FriendlyName returns a "friendly" stringified name of the given func.
+func FriendlyName(f interface{}) string {
 	return runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
 }
 

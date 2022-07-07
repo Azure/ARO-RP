@@ -351,7 +351,7 @@ func TestStepMetricsTopicNaming(t *testing.T) {
 		{
 			desc: "test action step naming",
 			step: Action(successfulFunc, "successful_action"),
-			want: "action.success",
+			want: "action.successful_action",
 		},
 		{
 			desc: "test condition step naming",
@@ -361,7 +361,7 @@ func TestStepMetricsTopicNaming(t *testing.T) {
 		{
 			desc: "test refreshing action step naming",
 			step: AuthorizationRefreshingAction(nil, Action(successfulFunc, "success"), "successful_refreshing"),
-			want: "refreshing_action.success_refreshing",
+			want: "refreshing_action.successful_refreshing",
 		},
 		{
 			desc: "test without topic param",

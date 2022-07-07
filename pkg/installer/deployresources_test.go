@@ -20,7 +20,6 @@ func TestZones(t *testing.T) {
 		region     string
 		replicas   int64
 		wantMaster *[]string
-		wantWorker *[]string
 		wantErr    string
 	}{
 		{
@@ -34,7 +33,6 @@ func TestZones(t *testing.T) {
 			wantMaster: &[]string{
 				"1",
 			},
-			wantWorker: &[]string{"1"},
 		},
 		{
 			name:  "2 zones, 3 replicas",
@@ -43,23 +41,11 @@ func TestZones(t *testing.T) {
 				"1",
 				"2",
 			},
-			wantWorker: &[]string{
-				"1",
-				"2",
-			},
-		},
-		{
-			name:       "centraluseuap",
-			zones:      []string{"1", "2"},
-			region:     "centraluseuap",
-			wantMaster: &[]string{"2"},
-			wantWorker: &[]string{"2"},
 		},
 		{
 			name:       "3 zones, 3 replicas",
 			zones:      []string{"1", "2", "3"},
 			wantMaster: &[]string{"[copyIndex(1)]"},
-			wantWorker: &[]string{"[copyIndex(1)]"},
 		},
 		{
 			name:    "4 zones, 3 replicas",
@@ -104,9 +90,6 @@ func TestZones(t *testing.T) {
 			}
 			if !reflect.DeepEqual(tt.wantMaster, zones) {
 				t.Errorf("Expected master %v, got master %v", tt.wantMaster, zones)
-			}
-			if !reflect.DeepEqual(tt.wantWorker, zones) {
-				t.Errorf("Expected worker %v, got worker %v", tt.wantWorker, zones)
 			}
 		})
 	}

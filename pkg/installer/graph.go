@@ -11,8 +11,8 @@ import (
 )
 
 func (m *manager) persistGraph(ctx context.Context, g graph.Graph) error {
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+	resourceGroup := stringutils.LastTokenByte(m.oc.Properties.ClusterProfile.ResourceGroupID, '/')
+	clusterStorageAccountName := "cluster" + m.oc.Properties.StorageSuffix
 
 	exists, err := m.graph.Exists(ctx, resourceGroup, clusterStorageAccountName)
 	if err != nil || exists {

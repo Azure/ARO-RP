@@ -17,8 +17,8 @@ import (
 )
 
 func (m *manager) deployResourceTemplate(ctx context.Context) error {
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+	resourceGroup := stringutils.LastTokenByte(m.oc.Properties.ClusterProfile.ResourceGroupID, '/')
+	account := "cluster" + m.oc.Properties.StorageSuffix
 
 	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
 	if err != nil {
@@ -55,8 +55,8 @@ func (m *manager) deployResourceTemplate(ctx context.Context) error {
 	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "resources", t, map[string]interface{}{
 		"sas": map[string]interface{}{
 			"value": map[string]interface{}{
-				"signedStart":         m.doc.OpenShiftCluster.Properties.Install.Now.Format(time.RFC3339),
-				"signedExpiry":        m.doc.OpenShiftCluster.Properties.Install.Now.Add(24 * time.Hour).Format(time.RFC3339),
+				"signedStart":         m.oc.Properties.Install.Now.Format(time.RFC3339),
+				"signedExpiry":        m.oc.Properties.Install.Now.Add(24 * time.Hour).Format(time.RFC3339),
 				"signedPermission":    "rl",
 				"signedResourceTypes": "o",
 				"signedServices":      "b",
@@ -72,16 +72,11 @@ func (m *manager) deployResourceTemplate(ctx context.Context) error {
 func zones(installConfig *installconfig.InstallConfig) (zones *[]string, err error) {
 	zoneCount := len(installConfig.Config.ControlPlane.Platform.Azure.Zones)
 	replicas := int(*installConfig.Config.ControlPlane.Replicas)
-	region := installConfig.Config.Azure.Region
 
 	if zoneCount > replicas || replicas > 3 {
 		err = fmt.Errorf("cluster creation with %d zone(s) and %d replica(s) is unsupported", zoneCount, replicas)
 	} else if reflect.DeepEqual(installConfig.Config.ControlPlane.Platform.Azure.Zones, []string{""}) {
 		return
-	} else if region == "centraluseuap" {
-		// hack - centraluseuap has no compute available in zone 1, deployment must occur in zone 2 only.
-		zones = &[]string{"2"}
-		installConfig.Config.Azure.DefaultMachinePlatform.Zones = []string{"2"}
 	} else if zoneCount <= 2 {
 		zones = &installConfig.Config.ControlPlane.Platform.Azure.Zones
 	} else {

@@ -36,7 +36,7 @@ func (s actionStep) run(ctx context.Context, log *logrus.Entry) error {
 }
 
 func (s actionStep) String() string {
-	return fmt.Sprintf("[Action %s]", friendlyName(s.f))
+	return fmt.Sprintf("[Action %s]", FriendlyName(s.f))
 }
 
 func (s actionStep) MetricsTopic() string {

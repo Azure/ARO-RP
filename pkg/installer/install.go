@@ -55,8 +55,8 @@ func (m *manager) Install(ctx context.Context) error {
 // initializeKubernetesClients initializes clients using the Installer-generated
 // kubeconfig.
 func (m *manager) initializeKubernetesClients(ctx context.Context) error {
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
+	resourceGroup := stringutils.LastTokenByte(m.oc.Properties.ClusterProfile.ResourceGroupID, '/')
+	account := "cluster" + m.oc.Properties.StorageSuffix
 
 	// Load the installer's generated kubeconfig from the graph
 	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
@@ -74,7 +74,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	// k8s.io/client-go/transport/cache.go, k8s caches our transport, and it
 	// can't tell if data in the restconfig.Dial closure has changed.  We don't
 	// want it to cache a transport that can never work.
-	if m.doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP == "" {
+	if m.oc.Properties.NetworkProfile.APIServerPrivateEndpointIP == "" {
 		return errors.New("privateEndpointIP is empty")
 	}
 
@@ -87,7 +87,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	r.Dial = restconfig.DialContext(m.env, m.doc.OpenShiftCluster)
+	r.Dial = restconfig.DialContext(m.env, m.oc)
 
 	m.kubernetescli, err = kubernetes.NewForConfig(r)
 	return err

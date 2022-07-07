@@ -598,7 +598,7 @@ func TestValidateSubnets(t *testing.T) {
 			},
 		},
 		{
-			name: "fail: subnet doe not exist on vnet",
+			name: "fail: subnet does not exist on vnet",
 			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnet.Subnets = nil
 				vnetClient.EXPECT().
@@ -606,6 +606,25 @@ func TestValidateSubnets(t *testing.T) {
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
+		},
+		{
+			name: "pass: subnet provisioning state is succeeded",
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				(*vnet.Subnets)[0].ProvisioningState = mgmtnetwork.Succeeded
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+		},
+		{
+			name: "fail: subnet provisioning state is not succeeded",
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				(*vnet.Subnets)[0].ProvisioningState = mgmtnetwork.Failed
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is not in a Succeeded state",
 		},
 		{
 			name: "fail: provisioning state creating: subnet has NSG",
@@ -684,6 +703,7 @@ func TestValidateSubnets(t *testing.T) {
 								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 									ID: &masterNSGv1,
 								},
+								ProvisioningState: mgmtnetwork.Succeeded,
 							},
 						},
 					},

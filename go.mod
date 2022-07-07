@@ -40,9 +40,11 @@ require (
 	github.com/jstemmer/go-junit-report v0.9.1
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
-	github.com/openshift/api v0.0.0-20220124143425-d74727069f6f
+	github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible
 	github.com/openshift/client-go v0.0.0-20211209144617-7385dd6338e3
 	github.com/openshift/console-operator v0.0.0-20220407014945-45d37e70e0c2
+	github.com/openshift/hive v1.1.16
+	github.com/openshift/hive/apis v0.0.0
 	github.com/openshift/installer v0.16.1
 	github.com/openshift/library-go v0.0.0-20220405134141-226b07263a02
 	github.com/openshift/machine-config-operator v3.11.0+incompatible
@@ -103,7 +105,6 @@ require (
 	github.com/ashanbrown/forbidigo v1.2.0 // indirect
 	github.com/ashanbrown/makezero v0.0.0-20210520155254-b6261585ddde // indirect
 	github.com/aws/aws-sdk-go v1.43.34 // indirect
-	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bkielbasa/cyclop v1.2.0 // indirect
 	github.com/bombsimon/wsl/v3 v3.3.0 // indirect
@@ -190,7 +191,6 @@ require (
 	github.com/h2non/filetype v1.1.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-hclog v0.16.1 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
@@ -255,7 +255,7 @@ require (
 	github.com/opencontainers/runc v1.1.1 // indirect
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417 // indirect
 	github.com/openshift/cloud-credential-operator v0.0.0-20220316185125-ed0612946f4b // indirect
-	github.com/openshift/cluster-api v0.0.0-20190805113604-f8de78af80fc // indirect
+	github.com/openshift/cluster-api v0.0.0-20191129101638-b09907ac6668 // indirect
 	github.com/openshift/cluster-api-provider-baremetal v0.0.0-20220218121658-fc0acaaec338 // indirect
 	github.com/openshift/cluster-api-provider-ibmcloud v0.0.0-20211008100740-4d7907adbd6b // indirect
 	github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20191219173431-2336783d4603 // indirect
@@ -550,6 +550,7 @@ replace (
 	github.com/openshift/cluster-api-provider-libvirt => github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20191219173431-2336783d4603
 	github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20211215231458-35ce9aafee1f
 	github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20220318130441-e44516b9c315
+	github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20220624202239-6ac23a86d03b
 	github.com/openshift/installer => github.com/jewzaam/installer-aro v0.9.0-master.0.20220524230743-7e2aa7a0cc1a
 	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20220303081124-fb4e7a2872f0
 	github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20220124104622-668c5b52b104
