@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
@@ -14,7 +15,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
-	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 func (f *frontend) getAsyncOperationsStatus(w http.ResponseWriter, r *http.Request) {

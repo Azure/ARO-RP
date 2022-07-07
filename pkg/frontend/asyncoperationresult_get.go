@@ -8,13 +8,13 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
-	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 func (f *frontend) getAsyncOperationResult(w http.ResponseWriter, r *http.Request) {
