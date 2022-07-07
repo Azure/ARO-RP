@@ -8,6 +8,7 @@ import (
 	consolev1 "github.com/openshift/api/console/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	securityv1 "github.com/openshift/api/security/v1"
+	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -49,4 +50,5 @@ func init() {
 	// In order to guarantee backward compatibility, we need to add this type to the scheme
 	// under both API Groups
 	scheme.Scheme.AddKnownTypes(azureproviderv1beta1.SchemeGroupVersion, &machinev1beta1.AzureMachineProviderSpec{})
+	utilruntime.Must(hivev1.AddToScheme(scheme.Scheme))
 }
