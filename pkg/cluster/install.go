@@ -19,7 +19,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/installer"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
@@ -129,10 +128,6 @@ func (m *manager) callInstaller(ctx context.Context) error {
 
 // Install installs an ARO cluster
 func (m *manager) Install(ctx context.Context) error {
-	var (
-		workloadCluster *hive.WorkloadCluster
-	)
-
 	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
@@ -189,25 +184,8 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.configureIngressCertificate),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute, true),
 			steps.Action(m.configureDefaultStorageClass),
-			steps.Action(func(ctx context.Context) error {
-				var err error
-				workloadCluster, err = m.collectDataForHive(ctx)
-				if err != nil {
-					m.hiveClusterManager = nil
-					m.log.Infof("collectDataForHive: %s", err)
-				}
-				return nil // don't fail because of hive
-			}),
-			steps.Action(func(ctx context.Context) error {
-				err := m.registerWithHive(ctx, workloadCluster)
-				if err != nil {
-					m.hiveClusterManager = nil
-					m.log.Infof("registerWithHive: %s", err)
-				}
-				return nil // don't fail because of hive
-			}),
-			steps.Condition(m.verifyRegistration, 2*time.Minute, false), // don't fail because of hive
-
+			steps.Action(m.hiveCreateNamespace),
+			steps.Action(m.hiveEnsureResources),
 			steps.Action(m.finishInstallation),
 		},
 	}
