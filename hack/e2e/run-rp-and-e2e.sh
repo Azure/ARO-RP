@@ -72,19 +72,9 @@ clean_e2e_db(){
 
 
 # if LOCAL_E2E is set, set the value with the local test names
-# If it it not set, it defaults to the build ID
-if [ -z "${LOCAL_E2E}" ] ; then
-    # TODO: Remove this hack after AvailabilitySet name too long bug is fixed.
-    NONZONAL_REGIONS="australiacentral australiacentral2 australiasoutheast brazilsoutheast canadaeast japanwest northcentralus norwaywest southindia switzerlandwest uaenorth ukwest westcentralus westus"
-
-    if echo $NONZONAL_REGIONS | grep -wq $LOCATION
-    then
-        export CLUSTER=$(head -c 19 <<< "v4-e2e-V$BUILD_BUILDID-$LOCATION")
-    else
-        export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-    fi
-    # TODO: uncomment after above hack is removed.
-    # export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+# If it it not set, it defaults to the build ID 
+if [ -z "${LOCAL_E2E}" ] ; then 
+    export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
     export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
 fi
 
