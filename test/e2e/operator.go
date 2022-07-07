@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/ghodss/yaml"
+	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
@@ -417,5 +419,110 @@ var _ = Describe("ARO Operator - MHC Deployment", func() {
 
 		err := wait.PollImmediate(30*time.Second, 10*time.Minute, mhcIsDeployed)
 		Expect(err).NotTo(HaveOccurred())
+	})
+})
+
+var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
+	const (
+		imageconfigFlag  = "aro.imageconfig.enabled"
+		optionalRegistry = "quay.io"
+		timeout          = 5 * time.Minute
+	)
+	ctx := context.Background()
+
+	var requiredRegistries []string
+	var imageconfig *configv1.Image
+
+	getLocationRegistries := func(acrDomain, acrDnsSuffix, location string) []string {
+		regionalAcr := fmt.Sprintf("arosvc.%s.data.%s", location, acrDnsSuffix)
+		requiredRegistries := []string{acrDomain, regionalAcr}
+		return requiredRegistries
+	}
+
+	sliceEqual := func(a, b []string) bool {
+		if len(a) != len(b) {
+			return false
+		}
+		sort.Strings(a)
+		sort.Strings(b)
+
+		for idx, entry := range b {
+			if a[idx] != entry {
+				return false
+			}
+		}
+		return true
+	}
+
+	verifyLists := func(expectedAllowlist, expectedBlocklist []string) (bool, error) {
+		// have to do this because using declaration assignment in following line results in pre-declared imageconfig var not being used
+		var err error
+		imageconfig, err = clients.ConfigClient.ConfigV1().Images().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		allowList := imageconfig.Spec.RegistrySources.AllowedRegistries
+		blockList := imageconfig.Spec.RegistrySources.BlockedRegistries
+
+		return sliceEqual(allowList, expectedAllowlist) && sliceEqual(blockList, expectedBlocklist), nil
+	}
+
+	BeforeEach(func() {
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		if !instance.Spec.OperatorFlags.GetSimpleBoolean(imageconfigFlag) {
+			Skip("ImageConfig Controller is not enabled, skipping test")
+		}
+
+		imageconfig, err = clients.ConfigClient.ConfigV1().Images().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		requiredRegistries = getLocationRegistries(instance.Spec.ACRDomain, "azurecr.io", instance.Spec.Location)
+	})
+
+	AfterEach(func() {
+		imageconfig.Spec.RegistrySources.AllowedRegistries = nil
+		imageconfig.Spec.RegistrySources.BlockedRegistries = nil
+
+		_, err := clients.ConfigClient.ConfigV1().Images().Update(ctx, imageconfig, metav1.UpdateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(func(g Gomega) {
+			g.Expect(verifyLists(nil, nil)).To(BeTrue())
+		}).WithTimeout(timeout).Should(Succeed())
+	})
+
+	It("should have empty allow and block lists by default", func() {
+		allowList := imageconfig.Spec.RegistrySources.AllowedRegistries
+		blockList := imageconfig.Spec.RegistrySources.BlockedRegistries
+
+		Expect(allowList).To(BeEmpty())
+		Expect(blockList).To(BeEmpty())
+	})
+
+	It("should add registries to the allow list", func() {
+
+		expectedAllowlist := append(requiredRegistries, optionalRegistry)
+
+		imageconfig.Spec.RegistrySources.AllowedRegistries = append(imageconfig.Spec.RegistrySources.AllowedRegistries, optionalRegistry)
+
+		_, err := clients.ConfigClient.ConfigV1().Images().Update(ctx, imageconfig, metav1.UpdateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(func(g Gomega) {
+			g.Expect(verifyLists(expectedAllowlist, nil)).To(BeTrue())
+		}).WithTimeout(timeout).Should(Succeed())
+	})
+
+	It("should add optional registries to the block list and skip required registries", func() {
+		expectedBlocklist := []string{optionalRegistry}
+
+		imageconfig.Spec.RegistrySources.BlockedRegistries = append(imageconfig.Spec.RegistrySources.BlockedRegistries, optionalRegistry, requiredRegistries[0])
+
+		_, err := clients.ConfigClient.ConfigV1().Images().Update(ctx, imageconfig, metav1.UpdateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(func(g Gomega) {
+			g.Expect(verifyLists(nil, expectedBlocklist)).To(BeTrue())
+		}).WithTimeout(timeout).Should(Succeed())
 	})
 })
