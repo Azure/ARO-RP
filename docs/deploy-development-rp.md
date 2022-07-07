@@ -157,8 +157,14 @@
 
 * Get SerialConsole logs of a VM of dev cluster
   ```bash
-  VMNAME="aro-cluster-qplnw-master-0"
+  VMNAME="aro-cluster-xxxx-master-0"
   curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/serialconsole?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
+  ```
+
+* Redeploy a node of a dev cluster
+  ```bash
+  VMNAME="aro-cluster-xxxx-master-0"
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/redeployvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
   ```
 
 * List Clusters of a local-rp
