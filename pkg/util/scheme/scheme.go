@@ -44,6 +44,9 @@ func init() {
 	utilruntime.Must(monitoringv1.AddToScheme(scheme.Scheme))
 	// AzureMachineProviderSpec is not registered by default
 	scheme.Scheme.AddKnownTypes(machinev1beta1.GroupVersion, &machinev1beta1.AzureMachineProviderSpec{})
-	// Need it for backward compatibility
+	// AzureMachineProviderSpec type has been deleted from sigs.k8s.io/cluster-api-provider-azure.
+	// Now it is located in github.com/openshift/api and has another API Group.
+	// In order to guarantee backward compatibility, we need to add this type to the scheme
+	// under both API Groups
 	scheme.Scheme.AddKnownTypes(azureproviderv1beta1.SchemeGroupVersion, &machinev1beta1.AzureMachineProviderSpec{})
 }
