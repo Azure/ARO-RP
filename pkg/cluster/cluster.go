@@ -101,7 +101,7 @@ type manager struct {
 
 // New returns a cluster manager
 func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, dbGateway database.Gateway, aead encryption.AEAD,
-	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, hiveConfig *rest.Config) (Interface, error) {
+	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, hiveRestConfig *rest.Config) (Interface, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -124,10 +124,10 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 
 	storage := storage.NewManager(_env, r.SubscriptionID, fpAuthorizer)
 
-	// TODO: always set hive once we have it everywhere in prod and dev
+	// TODO(hive): always set hiveClusterManager once we have Hive everywhere in prod and dev
 	var hr hive.ClusterManager
-	if hiveConfig != nil {
-		hr, err = hive.NewClusterManagerFromConfig(hiveConfig)
+	if hiveRestConfig != nil {
+		hr, err = hive.NewClusterManagerFromConfig(log, hiveRestConfig)
 		if err != nil {
 			return nil, err
 		}

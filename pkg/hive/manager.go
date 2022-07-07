@@ -10,43 +10,46 @@ import (
 	"github.com/gofrs/uuid"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
+
+	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
 type ClusterManager interface {
-	// We need to keep cluster SP updated with Hive, so we not only need to be able to create,
-	// but also be able to update resources.
-	// See relevant work item: https://msazure.visualstudio.com/AzureRedHatOpenShift/_workitems/edit/14895480
-	// We might be able to do do this by using dynamic client.
-	// Something similar to this: https://github.com/Azure/ARO-RP/pull/2145#discussion_r897915283
-	// TODO: Replace Register with CreateOrUpdate and remove the comment above
-	Register(ctx context.Context, workloadCluster *WorkloadCluster) (*hivev1.ClusterDeployment, error)
+	CreateNamespace(ctx context.Context) (*corev1.Namespace, error)
+	CreateOrUpdate(ctx context.Context, parameters *CreateOrUpdateParameters) error
 	Delete(ctx context.Context, namespace string) error
 	IsConnected(ctx context.Context, namespace string) (bool, string, error)
 }
 
-// WorkloadCluster represents all data in hive pertaining to a single ARO cluster
-type WorkloadCluster struct {
-	SubscriptionID    string `json:"subscription,omitempty"`
-	ClusterName       string `json:"name,omitempty"`
-	ResourceGroupName string `json:"resourceGroup,omitempty"`
-	Location          string `json:"location,omitempty"`
-	InfraID           string `json:"infraId,omitempty"`
-	ClusterID         string `json:"clusterID,omitempty"`
-	KubeConfig        string `json:"kubeconfig,omitempty"`
-	ServicePrincipal  string `json:"serviceprincipal,omitempty"`
+// CreateOrUpdateParameters represents all data in hive pertaining to a single ARO cluster.
+// CreateOrUpdate must not receive any data which requires an API call to the customer cluster
+// as the intention of this is to be able to reconcile hive resources from CosmosDB -> Hive
+// and this process should work even if the customer cluster is not responding for any reason.
+type CreateOrUpdateParameters struct {
+	Namespace        string
+	ClusterName      string
+	Location         string
+	InfraID          string
+	ClusterID        string
+	KubeConfig       string
+	ServicePrincipal string
 }
 
 type clusterManager struct {
 	hiveClientset *hiveclient.Clientset
 	kubernetescli *kubernetes.Clientset
+
+	dh dynamichelper.Interface
 }
 
-func NewClusterManagerFromConfig(restConfig *rest.Config) (ClusterManager, error) {
+func NewClusterManagerFromConfig(log *logrus.Entry, restConfig *rest.Config) (ClusterManager, error) {
 	hiveclientset, err := hiveclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
@@ -57,44 +60,63 @@ func NewClusterManagerFromConfig(restConfig *rest.Config) (ClusterManager, error
 		return nil, err
 	}
 
-	return newClusterManager(hiveclientset, kubernetescli), nil
+	dh, err := dynamichelper.New(log, restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return newClusterManager(log, hiveclientset, kubernetescli, dh), nil
 }
 
-func newClusterManager(hiveClientset *hiveclient.Clientset, kubernetescli *kubernetes.Clientset) ClusterManager {
+func newClusterManager(log *logrus.Entry, hiveClientset *hiveclient.Clientset, kubernetescli *kubernetes.Clientset, dh dynamichelper.Interface) ClusterManager {
 	return &clusterManager{
 		hiveClientset: hiveClientset,
 		kubernetescli: kubernetescli,
+
+		dh: dh,
 	}
 }
 
-func (hr *clusterManager) Register(ctx context.Context, workloadCluster *WorkloadCluster) (*hivev1.ClusterDeployment, error) {
-	var namespace string
-
+func (hr *clusterManager) CreateNamespace(ctx context.Context) (*corev1.Namespace, error) {
+	var namespaceName string
+	var namespace *corev1.Namespace
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		namespace = "aro-" + uuid.Must(uuid.NewV4()).String()
-		csn := ClusterNamespace(namespace)
-		_, err := hr.kubernetescli.CoreV1().Namespaces().Create(ctx, csn, metav1.CreateOptions{})
+		namespaceName = "aro-" + uuid.Must(uuid.NewV4()).String()
+		namespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: namespaceName,
+			},
+		}
+
+		var err error // Don't shadow namespace variable
+		namespace, err = hr.kubernetescli.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
 		return err
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	kubesecret := KubeAdminSecret(namespace, []byte(workloadCluster.KubeConfig))
+	return namespace, nil
+}
 
-	_, err = hr.kubernetescli.CoreV1().Secrets(namespace).Create(ctx, kubesecret, metav1.CreateOptions{})
-	if err != nil {
-		return nil, err
+func (hr *clusterManager) CreateOrUpdate(ctx context.Context, parameters *CreateOrUpdateParameters) error {
+	resources := []kruntime.Object{
+		kubeAdminSecret(parameters.Namespace, []byte(parameters.KubeConfig)),
+		servicePrincipalSecret(parameters.Namespace, []byte(parameters.ServicePrincipal)),
+		clusterDeployment(parameters.Namespace, parameters.ClusterName, parameters.ClusterID, parameters.InfraID, parameters.Location),
 	}
 
-	spsecret := ServicePrincipalSecret(namespace, []byte(workloadCluster.ServicePrincipal))
-	_, err = hr.kubernetescli.CoreV1().Secrets(namespace).Create(ctx, spsecret, metav1.CreateOptions{})
+	err := dynamichelper.Prepare(resources)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	cds := ClusterDeployment(namespace, workloadCluster.ClusterName, workloadCluster.ClusterID, workloadCluster.InfraID, workloadCluster.Location)
-	return hr.hiveClientset.HiveV1().ClusterDeployments(namespace).Create(ctx, cds, metav1.CreateOptions{})
+	err = hr.dh.Ensure(ctx, resources...)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (hr *clusterManager) Delete(ctx context.Context, namespace string) error {
