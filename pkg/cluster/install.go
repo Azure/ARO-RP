@@ -92,6 +92,14 @@ func (m *manager) adminUpdate() []steps.Step {
 		)
 	}
 
+	// Hive cluster adoption and reconciliation
+	if isEverything {
+		toRun = append(toRun,
+			steps.Action(m.hiveCreateNamespace),
+			steps.Action(m.hiveEnsureResources),
+		)
+	}
+
 	// We don't run this on an operator-only deploy as PUCM scripts then cannot
 	// determine if the cluster has been fully admin-updated
 	if isEverything {
@@ -115,6 +123,10 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.updateOpenShiftSecret),
 		steps.Action(m.updateAROSecret),
+		// Hive reconciliation: we mostly need it to make sure that
+		// hive has the latest credentials after rotation.
+		steps.Action(m.hiveCreateNamespace),
+		steps.Action(m.hiveEnsureResources),
 	}
 
 	return m.runSteps(ctx, steps)
