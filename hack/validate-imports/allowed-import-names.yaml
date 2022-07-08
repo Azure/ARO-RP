@@ -47,8 +47,6 @@ allowedImportNames:
     - coreosarch
   github.com/googleapis/gnostic/openapiv2:
     - openapi_v2
-  github.com/openshift/api/machine/v1beta1:
-    - machinev1beta1
   github.com/openshift/console-operator/pkg/api:
     - consoleapi
   github.com/openshift/installer/pkg/asset/installconfig/azure:
