@@ -45,6 +45,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(
 					&api.OpenShiftClusterDocument{
+						ID:  "00000000-0000-0000-0000-000000000002",
 						Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName1")),
 						OpenShiftCluster: &api.OpenShiftCluster{
 							ID:   testdatabase.GetResourcePath(mockSubID, "resourceName1"),
@@ -61,6 +62,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 						},
 					},
 					&api.OpenShiftClusterDocument{
+						ID:  "00000000-0000-0000-0000-000000000003",
 						Key: strings.ToLower(testdatabase.GetResourcePath(otherMockSubID, "resourceName2")),
 						OpenShiftCluster: &api.OpenShiftCluster{
 							ID:   testdatabase.GetResourcePath(otherMockSubID, "resourceName2"),
@@ -85,11 +87,17 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName1"),
 						Name: "resourceName1",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: admin.OpenShiftClusterProperties{
+							ClusterID: "00000000-0000-0000-0000-000000000002",
+						},
 					},
 					{
 						ID:   testdatabase.GetResourcePath(otherMockSubID, "resourceName2"),
 						Name: "resourceName2",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: admin.OpenShiftClusterProperties{
+							ClusterID: "00000000-0000-0000-0000-000000000003",
+						},
 					},
 				},
 			},
