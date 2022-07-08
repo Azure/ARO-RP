@@ -140,6 +140,29 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 			},
 		},
 		{
+			name: "operation exists in db, but no subscription match",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
+					ID:                  mockOpID,
+					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath("33333333-3333-3333-3333-333333333333", "resource1")),
+					AsyncOperation: &api.AsyncOperation{
+						ID:                       "fakeoppath",
+						Name:                     mockOpID,
+						InitialProvisioningState: api.ProvisioningStateCreating,
+						ProvisioningState:        api.ProvisioningStateFailed,
+						StartTime:                mockOpStartTime,
+						EndTime:                  &mockOpEndTime,
+						Error: &api.CloudErrorBody{
+							Code:    api.CloudErrorCodeInternalServerError,
+							Message: "Some error.",
+						},
+					},
+				})
+			},
+			wantStatusCode: http.StatusNotFound,
+			wantError:      `404: NotFound: : The entity was not found.`,
+		},
+		{
 			name:           "internal error",
 			dbError:        &cosmosdb.Error{Code: "500", Message: "blorb"},
 			wantStatusCode: http.StatusInternalServerError,
