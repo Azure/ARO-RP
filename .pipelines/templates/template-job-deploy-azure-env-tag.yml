@@ -87,17 +87,7 @@ jobs:
     - script: |
         # Pass variables between tasks: https://medium.com/microsoftazure/how-to-pass-variables-in-azure-pipelines-yaml-tasks-5c81c5d31763
         echo "##vso[task.setvariable variable=REGION]${{ location }}"
-        # TODO: Remove this hack after AvailabilitySet name too long bug is fixed.
-        LOCATION=${{ location }}
-        NONZONAL_REGIONS="australiacentral australiacentral2 australiasoutheast brazilsoutheast canadaeast japanwest northcentralus norwaywest southindia switzerlandwest uaenorth ukwest westcentralus westus"
-        if echo $NONZONAL_REGIONS | grep -wq $LOCATION
-        then
-            CLUSTER=$(head -c 19 <<< "v4-e2e-V$BUILD_BUILDID-$LOCATION")
-        else
-            CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-        fi
-        # TODO: Uncomment next line after above hack is removed.
-        # CLUSTER="v4-e2e-V$BUILD_BUILDID-${{ location }}"
+        CLUSTER="v4-e2e-V$BUILD_BUILDID-${{ location }}"
         echo "##vso[task.setvariable variable=CLUSTER]$CLUSTER"
         CLUSTER_RESOURCEGROUP="v4-e2e-V$BUILD_BUILDID-${{ location }}"
         echo "##vso[task.setvariable variable=CLUSTER_RESOURCEGROUP]$CLUSTER_RESOURCEGROUP"

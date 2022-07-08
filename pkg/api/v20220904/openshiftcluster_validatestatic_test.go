@@ -15,7 +15,6 @@ import (
 	"github.com/gofrs/uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	apiValidate "github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/validate"
 )
@@ -193,10 +192,6 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 }
 
 func TestOpenShiftClusterStaticValidate(t *testing.T) {
-	clusterName19 := "19characters-aaaaaa"
-	clusterName30 := "thisis30characterslong-aaaaaa"
-	nonZonalRegion := "australiasoutheast"
-
 	commonTests := []*validateTest{
 		{
 			name: "valid",
@@ -229,38 +224,10 @@ func TestOpenShiftClusterStaticValidate(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: location: The provided location 'invalid' is invalid.",
 		},
-		{
-			name:        "valid - zonal regions can exceed max cluster name length",
-			clusterName: &clusterName30,
-		},
-	}
-
-	createTests := []*validateTest{
-		{
-			name:        "invalid - non-zonal regions cannot exceed max cluster name length on cluster create",
-			clusterName: &clusterName30,
-			location:    &nonZonalRegion,
-			wantErr:     fmt.Sprintf("400: InvalidParameter: name: The provided cluster name '%s' exceeds the maximum cluster name length of '%d'.", clusterName30, apiValidate.MaxClusterNameLength),
-		},
-		{
-			name:        "valid - non-zonal region less than max cluster name length",
-			clusterName: &clusterName19,
-			location:    &nonZonalRegion,
-		},
-	}
-
-	updateTests := []*validateTest{
-		{
-			name:        "valid - existing cluster names > max cluster name length still work on cluster update",
-			clusterName: &clusterName30,
-			location:    &nonZonalRegion,
-		},
 	}
 
 	runTests(t, testModeCreate, commonTests)
 	runTests(t, testModeUpdate, commonTests)
-	runTests(t, testModeCreate, createTests)
-	runTests(t, testModeUpdate, updateTests)
 }
 
 func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {

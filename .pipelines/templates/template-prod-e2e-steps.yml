@@ -35,14 +35,6 @@ steps:
       export AZURE_FP_CLIENT_ID=f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875
       export AZURE_FP_SERVICE_PRINCIPAL_ID=50c17c64-bc11-4fdd-a339-0ecd396bf911
     fi
-    # TODO: Remove this after AvailabilitySet name too long bug is fixed.
-    NONZONAL_REGIONS="australiacentral australiacentral2 australiasoutheast brazilsoutheast canadaeast japanwest northcentralus norwaywest southindia switzerlandwest uaenorth ukwest westcentralus westus"
-    if echo $NONZONAL_REGIONS | grep -wq $LOCATION
-    then
-        CLUSTER=$(head -c 19 <<< "v4-e2e-V$BUILD_BUILDID-$LOCATION")
-    else
-        CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-    fi
     # TODO: remove --env RESOURCEGROUP after next RP deployment.
 
     # TODO: e2e.test arguments need to move inside the container somehow.  Maybe
@@ -58,7 +50,7 @@ steps:
       --env AZURE_SUBSCRIPTION_ID \
       --env LOCATION \
       --env RESOURCEGROUP="v4-e2e-V$BUILD_BUILDID-$LOCATION" \
-      --env CLUSTER="$CLUSTER" \
+      --env CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION" \
       --entrypoint e2e.test \
       "$IMAGE:$VERSION" \
       -test.timeout 180m -test.v -ginkgo.v
