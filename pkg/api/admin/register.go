@@ -15,6 +15,9 @@ func init() {
 		OpenShiftClusterConverter: func() api.OpenShiftClusterConverter {
 			return &openShiftClusterConverter{}
 		},
+		OpenShiftClusterDocumentConverter: func() api.OpenShiftClusterDocumentConverter {
+			return &openShiftClusterDocumentConverter{}
+		},
 		OpenShiftClusterStaticValidator: func(string, string, bool, string) api.OpenShiftClusterStaticValidator {
 			return &openShiftClusterStaticValidator{}
 		},

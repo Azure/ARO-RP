@@ -20,6 +20,9 @@ func init() {
 		OpenShiftClusterConverter: func() api.OpenShiftClusterConverter {
 			return &openShiftClusterConverter{}
 		},
+		OpenShiftClusterDocumentConverter: func() api.OpenShiftClusterDocumentConverter {
+			return &openShiftClusterDocumentConverter{}
+		},
 		OpenShiftClusterStaticValidator: func(location, domain string, requireD2sV3Workers bool, resourceID string) api.OpenShiftClusterStaticValidator {
 			return &openShiftClusterStaticValidator{
 				location:            location,
