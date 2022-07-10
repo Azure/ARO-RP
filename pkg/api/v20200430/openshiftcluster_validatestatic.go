@@ -71,13 +71,6 @@ func (sv *openShiftClusterStaticValidator) validate(oc *OpenShiftCluster, isCrea
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "location", "The provided location '%s' is invalid.", oc.Location)
 	}
 
-	// TODO: remove the VM name validation after https://bugzilla.redhat.com/show_bug.cgi?id=2093044 is resolved
-	if isCreate {
-		if !validate.OpenShiftClusterNameLength(oc.Name, oc.Location) {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "name", "The provided cluster name '%s' exceeds the maximum cluster name length of '%d'.", oc.Name, validate.MaxClusterNameLength)
-		}
-	}
-
 	return sv.validateProperties("properties", &oc.Properties, isCreate)
 }
 

@@ -16,15 +16,7 @@ const (
 	servicePrincipalSecretname = "serviceprincipal-secret"
 )
 
-func ClusterNamespace(namespace string) *corev1.Namespace {
-	return &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace,
-		},
-	}
-}
-
-func KubeAdminSecret(namespace string, kubeConfig []byte) *corev1.Secret {
+func kubeAdminSecret(namespace string, kubeConfig []byte) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubesecretName,
@@ -37,7 +29,7 @@ func KubeAdminSecret(namespace string, kubeConfig []byte) *corev1.Secret {
 	}
 }
 
-func ServicePrincipalSecret(namespace string, secret []byte) *corev1.Secret {
+func servicePrincipalSecret(namespace string, secret []byte) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      servicePrincipalSecretname,
@@ -50,9 +42,8 @@ func ServicePrincipalSecret(namespace string, secret []byte) *corev1.Secret {
 	}
 }
 
-func ClusterDeployment(namespace string, clusterName string, clusterID string, infraID string, location string) *hivev1.ClusterDeployment {
+func clusterDeployment(namespace string, clusterName string, clusterID string, infraID string, location string) *hivev1.ClusterDeployment {
 	return &hivev1.ClusterDeployment{
-
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      clusterDeploymentName,
 			Namespace: namespace,

@@ -1,7 +1,4 @@
 allowedImportNames:
-  github.com/Azure/ARO-RP/pkg/api/validate:
-    - ""
-    - apiValidate
   github.com/Azure/ARO-RP/pkg/frontend/middleware:
     - ""
     - frontendmiddleware

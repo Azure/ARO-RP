@@ -19,7 +19,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/installer"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
@@ -97,6 +96,14 @@ func (m *manager) adminUpdate() []steps.Step {
 		)
 	}
 
+	// Hive cluster adoption and reconciliation
+	if isEverything {
+		toRun = append(toRun,
+			steps.Action(m.hiveCreateNamespace),
+			steps.Action(m.hiveEnsureResources),
+		)
+	}
+
 	// We don't run this on an operator-only deploy as PUCM scripts then cannot
 	// determine if the cluster has been fully admin-updated
 	if isEverything {
@@ -120,6 +127,10 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.updateOpenShiftSecret),
 		steps.Action(m.updateAROSecret),
+		// Hive reconciliation: we mostly need it to make sure that
+		// hive has the latest credentials after rotation.
+		steps.Action(m.hiveCreateNamespace),
+		steps.Action(m.hiveEnsureResources),
 	}
 
 	return m.runSteps(ctx, steps, currentTime)
@@ -133,10 +144,6 @@ func (m *manager) callInstaller(ctx context.Context) error {
 
 // Install installs an ARO cluster
 func (m *manager) Install(ctx context.Context) error {
-	var (
-		workloadCluster *hive.WorkloadCluster
-	)
-
 	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources), "validate_resources"),
@@ -193,24 +200,8 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.configureIngressCertificate, "configure_ingress_certificate"),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute, true, "check_ingress_controller"),
 			steps.Action(m.configureDefaultStorageClass, "configure_default_storage_class"),
-			steps.Action(func(ctx context.Context) error {
-				var err error
-				workloadCluster, err = m.collectDataForHive(ctx)
-				if err != nil {
-					m.hiveClusterManager = nil
-					m.log.Infof("collectDataForHive: %s", err)
-				}
-				return nil // don't fail because of hive
-			}, "collect_data_for_hive"),
-			steps.Action(func(ctx context.Context) error {
-				err := m.registerWithHive(ctx, workloadCluster)
-				if err != nil {
-					m.hiveClusterManager = nil
-					m.log.Infof("registerWithHive: %s", err)
-				}
-				return nil // don't fail because of hive
-			}, "register_with_hive"),
-			steps.Condition(m.verifyRegistration, 2*time.Minute, false, "check_hive_registration"),
+			steps.Action(m.hiveCreateNamespace, "create_hive_namespace"),
+			steps.Action(m.hiveEnsureResources, "ensure_hive_resources"),
 			steps.Action(m.finishInstallation, "finish_installation"),
 		},
 	}
