@@ -27,10 +27,11 @@ type Step interface {
 // Run executes the provided steps in order until one fails or all steps
 // are completed. Errors from failed steps are returned directly.
 // time cost for each step run will be recorded for metrics usage
-func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, steps []Step, metricsDryrun bool) (map[string]int64, error) {
+func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, steps []Step, currentTime func() time.Time) (map[string]int64, error) {
 	stepTimeRun := make(map[string]int64)
 	for _, step := range steps {
 		log.Infof("running step %s", step)
+
 		startTime := time.Now()
 		err := step.run(ctx, log)
 
@@ -39,11 +40,8 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 			return nil, err
 		}
 
-		endTime := time.Now()
-		if metricsDryrun {
-			endTime = startTime.Add(2 * time.Second)
-		}
-		stepTimeRun[step.MetricsTopic()] = int64(endTime.Sub(startTime).Seconds())
+		currentTime := currentTime()
+		stepTimeRun[step.MetricsTopic()] = int64(currentTime.Sub(startTime).Seconds())
 	}
 	return stepTimeRun, nil
 }

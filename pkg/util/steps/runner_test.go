@@ -41,6 +41,10 @@ func timingOutCondition(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
+func currentTimeFunc() time.Time {
+	return time.Now()
+}
+
 func TestStepRunner(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
@@ -328,7 +332,7 @@ func TestStepRunner(t *testing.T) {
 			h, log := testlog.New()
 			steps := tt.steps(controller)
 
-			_, err := Run(ctx, log, 25*time.Millisecond, steps, true)
+			_, err := Run(ctx, log, 25*time.Millisecond, steps, currentTimeFunc)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

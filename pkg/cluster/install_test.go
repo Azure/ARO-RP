@@ -174,7 +174,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				operatorcli:   tt.operatorcli,
 			}
 
-			err := m.runSteps(ctx, tt.steps, true)
+			err := m.runSteps(ctx, tt.steps, func() time.Time { return time.Now() })
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -269,7 +269,8 @@ func TestInstallationTimeMetrics(t *testing.T) {
 				log:            log,
 				metricsEmitter: fm,
 			}
-			err := m.runSteps(ctx, tt.steps, true)
+
+			err := m.runSteps(ctx, tt.steps, func() time.Time { return time.Now().Add(2 * time.Second) })
 			if err != nil {
 				if len(fm.Metrics) != 0 {
 					t.Error("fake metrics obj should be empty when run steps failed")
@@ -279,7 +280,7 @@ func TestInstallationTimeMetrics(t *testing.T) {
 					for k, v := range tt.wantedMetrics {
 						time, ok := fm.Metrics[k]
 						if !ok || time != v {
-							t.Error("incorrect fake metrics obj")
+							t.Errorf("incorrect fake metrics obj, want: %d, got: %d", v, time)
 						}
 					}
 				}
