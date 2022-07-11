@@ -629,7 +629,7 @@
       "properties": {
         "softwareDefinedNetwork": {
           "$ref": "#/definitions/SoftwareDefinedNetwork",
-          "description": "The Software Defined Network (SDN) type to use when installing the cluster."
+          "description": "The SDN type used for OpenShift/Kubernetes Pods."
         },
         "podCidr": {
           "description": "The CIDR used for OpenShift/Kubernetes Pods.",
@@ -839,7 +839,7 @@
       }
     },
     "SoftwareDefinedNetwork": {
-      "description": "SoftwareDefinedNetwork constants.",
+      "description": "SoftwareDefinedNetwork is a choice of network used for Pods.",
       "enum": [
         "OVNKubernetes",
         "OpenShiftSDN"
