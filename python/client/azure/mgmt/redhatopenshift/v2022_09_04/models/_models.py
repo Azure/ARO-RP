@@ -299,8 +299,8 @@ class MasterProfile(msrest.serialization.Model):
 class NetworkProfile(msrest.serialization.Model):
     """NetworkProfile represents a network profile.
 
-    :ivar software_defined_network: The Software Defined Network (SDN) type to use when installing
-     the cluster. Possible values include: "OVNKubernetes", "OpenShiftSDN".
+    :ivar software_defined_network: The SDN type used for OpenShift/Kubernetes Pods. Possible
+     values include: "OVNKubernetes", "OpenShiftSDN".
     :vartype software_defined_network: str or
      ~azure.mgmt.redhatopenshift.v2022_09_04.models.SoftwareDefinedNetwork
     :ivar pod_cidr: The CIDR used for OpenShift/Kubernetes Pods.
@@ -320,8 +320,8 @@ class NetworkProfile(msrest.serialization.Model):
         **kwargs
     ):
         """
-        :keyword software_defined_network: The Software Defined Network (SDN) type to use when
-         installing the cluster. Possible values include: "OVNKubernetes", "OpenShiftSDN".
+        :keyword software_defined_network: The SDN type used for OpenShift/Kubernetes Pods. Possible
+         values include: "OVNKubernetes", "OpenShiftSDN".
         :paramtype software_defined_network: str or
          ~azure.mgmt.redhatopenshift.v2022_09_04.models.SoftwareDefinedNetwork
         :keyword pod_cidr: The CIDR used for OpenShift/Kubernetes Pods.

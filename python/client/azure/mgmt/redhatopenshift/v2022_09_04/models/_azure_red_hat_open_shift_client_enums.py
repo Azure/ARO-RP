@@ -54,7 +54,7 @@ class ProvisioningState(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     UPDATING = "Updating"
 
 class SoftwareDefinedNetwork(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
-    """SoftwareDefinedNetwork constants.
+    """SoftwareDefinedNetwork is a choice of network used for Pods.
     """
 
     OVN_KUBERNETES = "OVNKubernetes"
