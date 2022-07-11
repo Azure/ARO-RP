@@ -229,15 +229,7 @@
                         "computerNamePrefix": "[concat('gateway-', parameters('vmssName'), '-')]",
                         "adminUsername": "cloud-user",
                         "linuxConfiguration": {
-                            "disablePasswordAuthentication": true,
-                            "ssh": {
-                                "publicKeys": [
-                                    {
-                                        "path": "/home/cloud-user/.ssh/authorized_keys",
-                                        "keyData": "[parameters('sshPublicKey')]"
-                                    }
-                                ]
-                            }
+                            "disablePasswordAuthentication": true
                         }
                     },
                     "storageProfile": {

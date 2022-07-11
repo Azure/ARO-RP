@@ -677,14 +677,6 @@ restorecon -RF /var/log/*
 						AdminUsername:      to.StringPtr("cloud-user"),
 						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
 							DisablePasswordAuthentication: to.BoolPtr(true),
-							SSH: &mgmtcompute.SSHConfiguration{
-								PublicKeys: &[]mgmtcompute.SSHPublicKey{
-									{
-										Path:    to.StringPtr("/home/cloud-user/.ssh/authorized_keys"),
-										KeyData: to.StringPtr("[parameters('sshPublicKey')]"),
-									},
-								},
-							},
 						},
 					},
 					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
