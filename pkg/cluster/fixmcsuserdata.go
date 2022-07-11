@@ -78,7 +78,7 @@ func (m *manager) enumerateUserDataSecrets(ctx context.Context) map[corev1.Secre
 }
 
 func getUserDataSecretReference(objMeta *metav1.ObjectMeta, spec *machinev1beta1.MachineSpec) (*corev1.SecretReference, error) {
-	if spec.ProviderSpec.Value == nil {
+	if spec.ProviderSpec.Value == nil || objMeta == nil {
 		return nil, nil
 	}
 
