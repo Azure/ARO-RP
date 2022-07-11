@@ -262,7 +262,7 @@ func TestGetUserDataSecretReference(t *testing.T) {
 				ProviderSpec: machinev1beta1.ProviderSpec{
 					Value: &kruntime.RawExtension{
 						Raw: []byte(`{
-								"apiVersion": "apiversion.openshift.io/unknown",
+								"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
 								"kind": "AzureMachineProviderSpec"
 							}`),
 					},
