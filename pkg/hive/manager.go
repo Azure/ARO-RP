@@ -12,6 +12,7 @@ import (
 	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -120,8 +121,12 @@ func (hr *clusterManager) CreateOrUpdate(ctx context.Context, parameters *Create
 }
 
 func (hr *clusterManager) Delete(ctx context.Context, namespace string) error {
-	// Just deleting the namespace for now
-	return hr.kubernetescli.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
+	err := hr.kubernetescli.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
+	if err != nil && kerrors.IsNotFound(err) {
+		return nil
+	}
+
+	return err
 }
 
 func (hr *clusterManager) IsConnected(ctx context.Context, namespace string) (bool, string, error) {
