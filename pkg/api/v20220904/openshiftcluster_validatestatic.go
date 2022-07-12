@@ -193,6 +193,10 @@ func (sv *openShiftClusterStaticValidator) validateServicePrincipalProfile(path 
 }
 
 func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile) error {
+	if np.SoftwareDefinedNetwork != SoftwareDefinedNetwork(api.SoftwareDefinedNetworkOVNKubernetes) &&
+		np.SoftwareDefinedNetwork != SoftwareDefinedNetwork(api.SoftwareDefinedNetworkOpenShiftSDN) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".SoftwareDefinedNetwork", "The provided SoftwareDefinedNetwork '%s' is invalid.", np.SoftwareDefinedNetwork)
+	}
 	_, pod, err := net.ParseCIDR(np.PodCIDR)
 	if err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".podCidr", "The provided pod CIDR '%s' is invalid: '%s'.", np.PodCIDR, err)
