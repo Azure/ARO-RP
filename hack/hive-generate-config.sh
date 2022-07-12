@@ -1,11 +1,13 @@
 #!/bin/bash
 
+HIVE_REPO="${HIVE_REPO:=https://github.com/openshift/hive.git}"
+
 # This is the commit sha that the image was built from and ensures we use the correct configs for the release
-HIVE_IMAGE_COMMIT_HASH="c63c9b0"
+HIVE_IMAGE_COMMIT_HASH="${HIVE_IMAGE_COMMIT_HASH:=c63c9b0}"
 
 # For now we'll use the quay hive image, but this will change to an ACR once the quay.io -> ACR mirroring is setup
 # Note: semi-scientific way to get the latest image: `podman search --list-tags --limit 10000 quay.io/app-sre/hive | tail -n1`
-HIVE_IMAGE="quay.io/app-sre/hive:${HIVE_IMAGE_COMMIT_HASH}"
+HIVE_IMAGE="${HIVE_IMAGE:=quay.io/app-sre/hive:${HIVE_IMAGE_COMMIT_HASH}}"
 
 HIVE_OPERATOR_NS="hive"
 
@@ -35,7 +37,7 @@ function verify_kustomize {
 
 function hive_repo_clone {
 	echo -n "Cloning hive repo into tmp for config generation"
-	CLONE_ERROR=$(git clone https://github.com/openshift/hive.git "$TMPDIR" 2>/dev/null )
+	CLONE_ERROR=$(git clone $HIVE_REPO "$TMPDIR" 2>/dev/null )
 	if [ $? -ne 0 ]; then
 		echo ": error cloning the hive repo: ${CLONE_ERROR}"
 		exit 1

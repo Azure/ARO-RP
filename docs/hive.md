@@ -35,3 +35,36 @@ Installing then simply requires the running of the install script.
 ```bash
 ./hack/hive-dev-install.sh
 ```
+
+
+## Testing own hive build
+
+1. Create a fork of `github.com/openshift/hive` on github
+    1. Make your changes and push into your fork.
+1. Build and push a custom Hive image:
+    ```bash
+    # From a hive repo checkout with your changes
+    export IMG="quay.io/{username}/hive:latest"
+    GOOS=linux GOARCH=amd64 make build image-hive-fedora-dev docker-push
+    ```
+1. Make sure that your image is public so AKS can pull it
+1. Set environment variables like shown in the example below:
+    ```bash
+    export HIVE_REPO=https://github.com/m1kola/hive.git # Point to your fork
+    export HIVE_IMAGE_COMMIT_HASH=c63c9b0               # Commit hash from your fork
+    export HIVE_IMAGE=$IMG                              # Point to your image as previously set in $IMG
+    ```
+1. Run the following commands:
+    ```bash
+    source ./env
+
+    make aks.kubeconfig
+    export KUBECONFIG="$PWD/aks.kubeconfig"
+
+    ./hack/hive-generate-config.sh
+    ./hack/hive-dev-install.sh
+    ```
+1. Restart pods to make sure that hive is running the latest version:
+    ```bash
+    oc delete pods -n hive --all
+    ```
