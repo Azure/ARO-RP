@@ -13,6 +13,7 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/to"
 
+	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
@@ -30,13 +31,13 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 
 	deploymentName := "rp-production-" + d.version
 
-	b, err := Asset(generator.FileRPProduction)
+	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProduction)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
