@@ -1,7 +1,7 @@
 configManager:
   localConfigName: managed-upgrade-config
   source: LOCAL
-  watchInterval: 1
+  watchInterval: 15
 healthCheck:
   ignoredCriticals:
   - PrometheusRuleFailures
@@ -25,6 +25,7 @@ nodeDrain:
   timeOut: 45
 scale:
   timeOut: 30
+upgradeType: ARO
 upgradeWindow:
   delayTrigger: 30
   timeOut: 120
