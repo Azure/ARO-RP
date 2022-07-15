@@ -123,7 +123,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	// TODO: always set hive once we have it everywhere in prod and dev
 	var hr hive.ClusterManager
 	if hiveRestConfig != nil {
-		hr, err = hive.NewClusterManagerFromConfig(hiveRestConfig)
+		hr, err = hive.NewClusterManagerFromConfig(log, hiveRestConfig)
 		if err != nil {
 			return err
 		}
