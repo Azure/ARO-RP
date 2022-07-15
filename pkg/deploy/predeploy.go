@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 
+	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -156,13 +157,13 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gatewayServicePrincipalID string) error {
 	deploymentName := "rp-global-" + d.config.Location
 
-	b, err := Asset(generator.FileRPProductionGlobal)
+	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionGlobal)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
@@ -205,13 +206,13 @@ func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gat
 func (d *deployer) deployRPGlobalACRReplication(ctx context.Context) error {
 	deploymentName := "rp-global-acr-replication-" + d.config.Location
 
-	b, err := Asset(generator.FileRPProductionGlobalACRReplication)
+	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionGlobalACRReplication)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
@@ -234,13 +235,13 @@ func (d *deployer) deployRPGlobalACRReplication(ctx context.Context) error {
 func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 	deploymentName := "rp-global-subscription-" + d.config.Location
 
-	b, err := Asset(generator.FileRPProductionGlobalSubscription)
+	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionGlobalSubscription)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
@@ -274,13 +275,13 @@ func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 func (d *deployer) deployRPSubscription(ctx context.Context) error {
 	deploymentName := "rp-production-subscription-" + d.config.Location
 
-	b, err := Asset(generator.FileRPProductionSubscription)
+	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionSubscription)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
@@ -297,13 +298,13 @@ func (d *deployer) deployRPSubscription(ctx context.Context) error {
 func (d *deployer) deployManagedIdentity(ctx context.Context, resourceGroupName, deploymentFile string) error {
 	deploymentName := strings.TrimSuffix(deploymentFile, ".json")
 
-	b, err := Asset(deploymentFile)
+	asset, err := assets.EmbeddedFiles.ReadFile(deploymentFile)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
@@ -320,13 +321,13 @@ func (d *deployer) deployManagedIdentity(ctx context.Context, resourceGroupName,
 func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deploymentFile, spIDName, spID string, isCreate bool) error {
 	deploymentName := strings.TrimSuffix(deploymentFile, ".json")
 
-	b, err := Asset(deploymentFile)
+	asset, err := assets.EmbeddedFiles.ReadFile(deploymentFile)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}

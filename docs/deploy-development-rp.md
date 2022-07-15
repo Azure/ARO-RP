@@ -69,7 +69,7 @@
    az deployment group create \
      -g "$RESOURCEGROUP" \
      -n "databases-development-$USER" \
-     --template-file deploy/databases-development.json \
+     --template-file pkg/deploy/assets/databases-development.json \
      --parameters \
        "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
        "databaseName=$DATABASE_NAME" \
@@ -260,7 +260,7 @@ To access the cluster for oc / kubectl or SSH'ing into the cluster you need to c
 
 * Access via Azure Portal
 
-Due to the fact that the AKS cluster is private, you need to be connected to the VPN in order to view certain AKS cluster properties, because the UI interrogates k8s via the VPN. 
+Due to the fact that the AKS cluster is private, you need to be connected to the VPN in order to view certain AKS cluster properties, because the UI interrogates k8s via the VPN.
 
 ### Metrics
 

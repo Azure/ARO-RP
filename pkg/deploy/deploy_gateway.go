@@ -9,6 +9,7 @@ import (
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 
+	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
@@ -26,13 +27,13 @@ func (d *deployer) DeployGateway(ctx context.Context) error {
 
 	deploymentName := "gateway-production-" + d.version
 
-	b, err := Asset(generator.FileGatewayProduction)
+	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileGatewayProduction)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
