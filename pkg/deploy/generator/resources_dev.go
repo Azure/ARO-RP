@@ -87,6 +87,13 @@ EOF
 
 systemctl enable proxy.service
 
+cat >/etc/cron.weekly/yumupdate <<'EOF'
+#!/bin/bash
+
+yum update -y
+EOF
+chmod +x /etc/cron.weekly/yumupdate
+
 (sleep 30; reboot) &
 `))
 
@@ -356,6 +363,13 @@ go-1.17=true
 GOLANG_FIPS=1
 XDG_RUNTIME_DIR=/run/user/1000
 EOF
+
+cat >/etc/cron.weekly/yumupdate <<'EOF'
+#!/bin/bash
+
+yum update -y
+EOF
+chmod +x /etc/cron.weekly/yumupdate
 
 cat >/etc/cron.hourly/tmpwatch <<'EOF'
 #!/bin/bash
