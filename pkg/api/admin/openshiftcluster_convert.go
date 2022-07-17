@@ -27,6 +27,7 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 			LastAdminUpdateError:    oc.Properties.LastAdminUpdateError,
 			MaintenanceTask:         MaintenanceTask(oc.Properties.MaintenanceTask),
 			OperatorFlags:           OperatorFlags(oc.Properties.OperatorFlags),
+			OperatorVersion:         oc.Properties.OperatorVersion,
 			CreatedAt:               oc.Properties.CreatedAt,
 			CreatedBy:               oc.Properties.CreatedBy,
 			ProvisionedBy:           oc.Properties.ProvisionedBy,
@@ -121,6 +122,9 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 		}
 	}
 
+	out.Properties.HiveProfile = HiveProfile{
+		Namespace: oc.Properties.HiveProfile.Namespace,
+	}
 	out.SystemData = SystemData{
 		CreatedBy:          oc.SystemData.CreatedBy,
 		CreatedAt:          oc.SystemData.CreatedAt,
@@ -168,12 +172,14 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	}
 	out.Properties.ArchitectureVersion = api.ArchitectureVersion(oc.Properties.ArchitectureVersion)
 	out.Properties.InfraID = oc.Properties.InfraID
+	out.Properties.HiveProfile.Namespace = oc.Properties.HiveProfile.Namespace
 	out.Properties.ProvisioningState = api.ProvisioningState(oc.Properties.ProvisioningState)
 	out.Properties.LastProvisioningState = api.ProvisioningState(oc.Properties.LastProvisioningState)
 	out.Properties.FailedProvisioningState = api.ProvisioningState(oc.Properties.FailedProvisioningState)
 	out.Properties.LastAdminUpdateError = oc.Properties.LastAdminUpdateError
 	out.Properties.MaintenanceTask = api.MaintenanceTask(oc.Properties.MaintenanceTask)
 	out.Properties.OperatorFlags = api.OperatorFlags(oc.Properties.OperatorFlags)
+	out.Properties.OperatorVersion = oc.Properties.OperatorVersion
 	out.Properties.CreatedBy = oc.Properties.CreatedBy
 	out.Properties.ProvisionedBy = oc.Properties.ProvisionedBy
 	out.Properties.ClusterProfile.Domain = oc.Properties.ClusterProfile.Domain

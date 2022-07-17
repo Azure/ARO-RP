@@ -4,14 +4,16 @@ package deploy
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
+	"embed"
 	"errors"
 	"fmt"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/sirupsen/logrus"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -39,6 +41,9 @@ import (
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
+
+//go:embed staticresources
+var embeddedFiles embed.FS
 
 type Operator interface {
 	CreateOrUpdate(context.Context) error
@@ -78,40 +83,86 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli 
 	}, nil
 }
 
+type deploymentData struct {
+	Image              string
+	Version            string
+	GitCommit          string
+	IsLocalDevelopment bool
+	HasVersion         bool
+}
+
+func templateManifests(data deploymentData) ([][]byte, error) {
+	templatesRoot, err := template.ParseFS(embeddedFiles, "staticresources/*.yaml")
+	if err != nil {
+		return nil, err
+	}
+	templatesMaster, err := template.ParseFS(embeddedFiles, "staticresources/master/*")
+	if err != nil {
+		return nil, err
+	}
+	templatesWorker, err := template.ParseFS(embeddedFiles, "staticresources/worker/*")
+	if err != nil {
+		return nil, err
+	}
+
+	templatedFiles := make([][]byte, 0)
+	templatesArray := []*template.Template{templatesMaster, templatesRoot, templatesWorker}
+
+	for _, templates := range templatesArray {
+		for _, templ := range templates.Templates() {
+			buff := &bytes.Buffer{}
+			if err := templ.Execute(buff, data); err != nil {
+				return nil, err
+			}
+			templatedFiles = append(templatedFiles, buff.Bytes())
+		}
+	}
+	return templatedFiles, nil
+}
+
+func (o *operator) createDeploymentData() deploymentData {
+	image := o.env.AROOperatorImage()
+	hasVersion := false
+	if o.oc.Properties.OperatorVersion != "" {
+		image = fmt.Sprintf("%s/aro", o.env.ACRDomain())
+		hasVersion = true
+	}
+
+	return deploymentData{
+		IsLocalDevelopment: o.env.IsLocalDevelopmentMode(),
+		Image:              image,
+		Version:            o.oc.Properties.OperatorVersion,
+		GitCommit:          version.GitCommit,
+		HasVersion:         hasVersion,
+	}
+}
+
+func (o *operator) createObjects() ([]kruntime.Object, error) {
+	deploymentData := o.createDeploymentData()
+	templated, err := templateManifests(deploymentData)
+	if err != nil {
+		return nil, err
+	}
+	objects := make([]kruntime.Object, 0, len(templated))
+	for _, v := range templated {
+		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(v, nil, nil)
+		if err != nil {
+			return nil, err
+		}
+		objects = append(objects, obj)
+	}
+
+	return objects, nil
+}
+
 func (o *operator) resources() ([]kruntime.Object, error) {
 	// first static resources from Assets
-	results := []kruntime.Object{}
-	for _, assetName := range AssetNames() {
-		b, err := Asset(assetName)
-		if err != nil {
-			return nil, err
-		}
 
-		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(b, nil, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		// set the image for the deployments
-		if d, ok := obj.(*appsv1.Deployment); ok {
-			if d.Labels == nil {
-				d.Labels = map[string]string{}
-			}
-			d.Labels["version"] = version.GitCommit
-			for i := range d.Spec.Template.Spec.Containers {
-				d.Spec.Template.Spec.Containers[i].Image = o.env.AROOperatorImage()
-
-				if o.env.IsLocalDevelopmentMode() {
-					d.Spec.Template.Spec.Containers[i].Env = append(d.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
-						Name:  "RP_MODE",
-						Value: "development",
-					})
-				}
-			}
-		}
-
-		results = append(results, obj)
+	results, err := o.createObjects()
+	if err != nil {
+		return nil, err
 	}
+
 	// then dynamic resources
 	key, cert := o.env.ClusterGenevaLoggingSecret()
 	gcsKeyBytes, err := utiltls.PrivateKeyAsBytes(key)

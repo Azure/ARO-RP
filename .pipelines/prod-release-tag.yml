@@ -45,6 +45,8 @@ stages:
       rpMode: ''
       aroVersionStorageAccount: $(aro-version-storage-account)
       locations:
+      - australiacentral
+      - australiacentral2
       - australiaeast
       - australiasoutheast
       - centralindia
@@ -107,6 +109,7 @@ stages:
       - northeurope
       - norwayeast
       - norwaywest
+      - swedencentral
       - switzerlandnorth
       - switzerlandwest
       - westeurope

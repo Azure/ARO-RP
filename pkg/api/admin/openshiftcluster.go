@@ -36,6 +36,7 @@ type OpenShiftClusterProperties struct {
 	LastAdminUpdateError            string                  `json:"lastAdminUpdateError,omitempty"`
 	MaintenanceTask                 MaintenanceTask         `json:"maintenanceTask,omitempty" mutable:"true"`
 	OperatorFlags                   OperatorFlags           `json:"operatorFlags,omitempty" mutable:"true"`
+	OperatorVersion                 string                  `json:"operatorVersion,omitempty" mutable:"true"`
 	CreatedAt                       time.Time               `json:"createdAt,omitempty"`
 	CreatedBy                       string                  `json:"createdBy,omitempty"`
 	ProvisionedBy                   string                  `json:"provisionedBy,omitempty"`
@@ -53,6 +54,7 @@ type OpenShiftClusterProperties struct {
 	RegistryProfiles                []RegistryProfile       `json:"registryProfiles,omitempty"`
 	ImageRegistryStorageAccountName string                  `json:"imageRegistryStorageAccountName,omitempty"`
 	InfraID                         string                  `json:"infraId,omitempty"`
+	HiveProfile                     HiveProfile             `json:"hiveProfile,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.
@@ -293,4 +295,8 @@ type SystemData struct {
 	LastModifiedBy     string        `json:"lastModifiedBy,omitempty"`
 	LastModifiedByType CreatedByType `json:"lastModifiedByType,omitempty"`
 	LastModifiedAt     *time.Time    `json:"lastModifiedAt,omitempty"`
+}
+
+type HiveProfile struct {
+	Namespace string `json:"namespace,omitempty"`
 }

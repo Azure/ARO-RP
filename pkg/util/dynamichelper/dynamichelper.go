@@ -39,7 +39,7 @@ type dynamicHelper struct {
 	GVRResolver
 
 	log     *logrus.Entry
-	restcli *rest.RESTClient
+	restcli rest.Interface
 }
 
 func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {

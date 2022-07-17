@@ -4,6 +4,8 @@ package dynamichelper
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+	"net/http"
 	"reflect"
 	"testing"
 	"time"
@@ -18,10 +20,72 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/cli-runtime/pkg/resource"
+	"k8s.io/client-go/rest/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
+
+type mockGVRResolver struct{}
+
+func (gvr mockGVRResolver) Refresh() error {
+	return nil
+}
+
+func (gvr mockGVRResolver) Resolve(groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
+	return &schema.GroupVersionResource{Group: "metal3.io", Version: "v1alpha1", Resource: "configmap"}, nil
+}
+
+func TestEsureDeleted(t *testing.T) {
+	ctx := context.Background()
+
+	mockGVRResolver := mockGVRResolver{}
+
+	mockRestCLI := &fake.RESTClient{
+		GroupVersion:         schema.GroupVersion{Group: "testgroup", Version: "v1"},
+		NegotiatedSerializer: resource.UnstructuredPlusDefaultContentConfig().NegotiatedSerializer,
+		Client: fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+			switch req.Method {
+			case "DELETE":
+				switch req.URL.Path {
+				case "/apis/metal3.io/v1alpha1/namespaces/test-ns-1/configmap/test-name-1":
+					return &http.Response{StatusCode: http.StatusNotFound}, nil
+				case "/apis/metal3.io/v1alpha1/namespaces/test-ns-2/configmap/test-name-2":
+					return &http.Response{StatusCode: http.StatusInternalServerError}, nil
+				case "/apis/metal3.io/v1alpha1/namespaces/test-ns-3/configmap/test-name-3":
+					return &http.Response{StatusCode: http.StatusOK}, nil
+				default:
+					t.Fatalf("unexpected path: %#v\n%#v", req.URL, req)
+					return nil, nil
+				}
+			default:
+				t.Fatalf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
+				return nil, nil
+			}
+		}),
+	}
+
+	dh := &dynamicHelper{
+		GVRResolver: mockGVRResolver,
+		restcli:     mockRestCLI,
+	}
+
+	err := dh.EnsureDeleted(ctx, "configmap", "test-ns-1", "test-name-1")
+	if err != nil {
+		t.Errorf("no error should be bounced for status not found, but got: %v", err)
+	}
+
+	err = dh.EnsureDeleted(ctx, "configmap", "test-ns-2", "test-name-2")
+	if err == nil {
+		t.Errorf("function should handle failure response (non-404) correctly")
+	}
+
+	err = dh.EnsureDeleted(ctx, "configmap", "test-ns-3", "test-name-3")
+	if err != nil {
+		t.Errorf("function should handle success response correctly")
+	}
+}
 
 func TestMerge(t *testing.T) {
 	serviceInternalTrafficPolicy := corev1.ServiceInternalTrafficPolicyCluster

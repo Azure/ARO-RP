@@ -15,8 +15,8 @@ import (
 
 // GetConfig prepares a bootstraplogging.Config object based on
 // the environment
-func GetConfig(env env.Interface, doc *api.OpenShiftClusterDocument) (*bootstraplogging.Config, error) {
-	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
+func GetConfig(env env.Interface, oc *api.OpenShiftCluster) (*bootstraplogging.Config, error) {
+	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func GetConfig(env env.Interface, doc *api.OpenShiftClusterDocument) (*bootstrap
 		Environment:       env.ClusterGenevaLoggingEnvironment(),
 		ConfigVersion:     env.ClusterGenevaLoggingConfigVersion(),
 		Region:            env.Location(),
-		ResourceID:        doc.OpenShiftCluster.ID,
+		ResourceID:        oc.ID,
 		SubscriptionID:    r.SubscriptionID,
 		ResourceName:      r.ResourceName,
 		ResourceGroupName: r.ResourceGroup,

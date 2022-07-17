@@ -281,8 +281,8 @@ func (s *ssh) newChannel(ctx context.Context, accessLog *logrus.Entry, nc crypto
 	defer recover.Panic(s.log)
 
 	ch2, rs2, err := downstreamConn.OpenChannel(nc.ChannelType(), nc.ExtraData())
-	if err, ok := err.(*cryptossh.OpenChannelError); ok {
-		return nc.Reject(err.Reason, err.Message)
+	if errAsOpenChannel, ok := err.(*cryptossh.OpenChannelError); ok {
+		return nc.Reject(errAsOpenChannel.Reason, errAsOpenChannel.Message)
 	} else if err != nil {
 		return err
 	}

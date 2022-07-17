@@ -220,6 +220,12 @@ func getValidMachine(name, diskSize, imagePublisher, vmSize, offer string, isMas
 		labels = map[string]string{"machine.openshift.io/cluster-api-machine-role": "master"}
 	}
 
+	// To check that we support both API versions of AzureMachineProviderSpec
+	apiVersion := "azureproviderconfig.openshift.io/v1beta1"
+	if isMaster {
+		apiVersion = "machine.openshift.io/v1beta1"
+	}
+
 	return &machinev1beta1.Machine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -230,7 +236,7 @@ func getValidMachine(name, diskSize, imagePublisher, vmSize, offer string, isMas
 			ProviderSpec: machinev1beta1.ProviderSpec{
 				Value: &kruntime.RawExtension{
 					Raw: []byte(fmt.Sprintf(`{
-"apiVersion": "machine.openshift.io/v1beta1",
+"apiVersion": "%v",
 "kind": "AzureMachineProviderSpec",
 "osDisk": {
 "diskSizeGB": %v
@@ -240,7 +246,7 @@ func getValidMachine(name, diskSize, imagePublisher, vmSize, offer string, isMas
 "offer": "%v"
 },
 "vmSize": "%v"
-}`, diskSize, imagePublisher, offer, vmSize))},
+}`, apiVersion, diskSize, imagePublisher, offer, vmSize))},
 			},
 		},
 	}

@@ -29,5 +29,5 @@ func (s actionStep) run(ctx context.Context, log *logrus.Entry) error {
 	return s.f(ctx)
 }
 func (s actionStep) String() string {
-	return fmt.Sprintf("[Action %s]", friendlyName(s.f))
+	return fmt.Sprintf("[Action %s]", FriendlyName(s.f))
 }

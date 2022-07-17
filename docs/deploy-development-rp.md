@@ -69,7 +69,7 @@
    az deployment group create \
      -g "$RESOURCEGROUP" \
      -n "databases-development-$USER" \
-     --template-file deploy/databases-development.json \
+     --template-file pkg/deploy/assets/databases-development.json \
      --parameters \
        "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
        "databaseName=$DATABASE_NAME" \
@@ -99,14 +99,16 @@
    OR use the create utility:
 
    ```bash
-   CLUSTER=cluster go run ./hack/cluster create
+   CLUSTER=<cluster-name> go run ./hack/cluster create
    ```
 
    Later the cluster can be deleted as follows:
 
    ```bash
-   CLUSTER=cluster go run ./hack/cluster delete
+   CLUSTER=<cluster-name> go run ./hack/cluster delete
    ```
+
+   By default, a public cluster will be created. In order to create a private cluster, set the `PRIVATE_CLUSTER` environment variable to `true` prior to creation. Internet access from the cluster can also be restricted by setting the `NO_INTERNET` environment variable to `true`.
 
    [1]: https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster
 
@@ -176,7 +178,15 @@
   curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/upgrade"
   ```
 
-## Debugging
+* Get container logs from an OpenShift pod in a cluster
+  ```bash
+  NAMESPACE=<namespace-name>
+  POD=<pod-name>
+  CONTAINER=<container-name>
+  curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/kubernetespodlogs?podname=$POD&namespace=$NAMESPACE&container=$CONTAINER"
+  ```
+
+## Debugging OpenShift Cluster
 
 * SSH to the bootstrap node:
 > __NOTE:__ If you have a password-based `sudo` command, you must first authenticate before running `sudo` in the background
@@ -215,6 +225,42 @@
    CLUSTER=cluster hack/ssh-agent.sh 2s5rb  # worker aro-dev-abc123-worker-eastus1-2s5rb
    CLUSTER=cluster hack/ssh-agent.sh bootstrap # the bootstrap node used to provision cluster
    ```
+
+# Debugging AKS Cluster
+
+* Connect to the VPN:
+
+To access the cluster for oc / kubectl or SSH'ing into the cluster you need to connect to the VPN first.
+> __NOTE:__ If you have a password-based `sudo` command, you must first authenticate before running `sudo` in the background
+  ```bash
+  sudo openvpn secrets/vpn-aks-$LOCATION.ovpn &
+  ```
+
+* Access the cluster via API (oc / kubectl):
+
+  ```bash
+  make aks.kubeconfig
+  export KUBECONFIG=aks.kubeconfig
+
+  $ oc get nodes
+  NAME                                 STATUS   ROLES   AGE   VERSION
+  aks-systempool-99744725-vmss000000   Ready    agent   9h    v1.23.5
+  aks-systempool-99744725-vmss000001   Ready    agent   9h    v1.23.5
+  aks-systempool-99744725-vmss000002   Ready    agent   9h    v1.23.5
+  ```
+
+* "SSH" into a cluster node:
+
+  * Run the ssh-aks.sh script, specifying the cluster name and the node number of the VM you are trying to ssh to.
+  ```
+  hack/ssk-aks.sh aro-aks-cluster 0 # The first VM node in 'aro-aks-cluster'
+  hack/ssk-aks.sh aro-aks-cluster 1 # The second VM node in 'aro-aks-cluster'
+  hack/ssk-aks.sh aro-aks-cluster 2 # The third VM node in 'aro-aks-cluster'
+  ```
+
+* Access via Azure Portal
+
+Due to the fact that the AKS cluster is private, you need to be connected to the VPN in order to view certain AKS cluster properties, because the UI interrogates k8s via the VPN.
 
 ### Metrics
 

@@ -98,7 +98,8 @@ type OpenShiftClusterProperties struct {
 	MaintenanceTask         MaintenanceTask     `json:"maintenanceTask,omitempty"`
 
 	// Operator feature/option flags
-	OperatorFlags OperatorFlags `json:"operatorFlags,omitempty"`
+	OperatorFlags   OperatorFlags `json:"operatorFlags,omitempty"`
+	OperatorVersion string        `json:"operatorVersion,omitempty"`
 
 	CreatedAt time.Time `json:"createdAt,omitempty"`
 
@@ -135,6 +136,7 @@ type OpenShiftClusterProperties struct {
 
 	InfraID string      `json:"infraId,omitempty"`
 	SSHKey  SecureBytes `json:"sshKey,omitempty"`
+
 	// AdminKubeconfig is installer generated kubeconfig. It is 10 year config,
 	// and should never be returned to the user.
 	AdminKubeconfig SecureBytes `json:"adminKubeconfig,omitempty"`
@@ -149,6 +151,8 @@ type OpenShiftClusterProperties struct {
 	UserAdminKubeconfig SecureBytes `json:"userAdminKubeconfig,omitempty"`
 
 	RegistryProfiles []*RegistryProfile `json:"registryProfiles,omitempty"`
+
+	HiveProfile HiveProfile `json:"hiveProfile,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state
@@ -405,3 +409,10 @@ const (
 	// ArchitectureVersionV2: 4.5: 1 load balancer, 1 NSG
 	ArchitectureVersionV2
 )
+
+// HiveProfile represents the hive related data of a cluster
+type HiveProfile struct {
+	MissingFields
+
+	Namespace string `json:"namespace,omitempty"`
+}

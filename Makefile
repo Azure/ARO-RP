@@ -20,6 +20,17 @@ else
 	VERSION = $(TAG)
 endif
 
+# default to registry.access.redhat.com for build images on local builds and CI builds without $RP_IMAGE_ACR set.
+ifeq ($(RP_IMAGE_ACR),arointsvc)
+	REGISTRY = arointsvc.azurecr.io
+else ifeq ($(RP_IMAGE_ACR),arosvc)
+	REGISTRY = arosvc.azurecr.io
+else ifeq ($(RP_IMAGE_ACR),)
+	REGISTRY = registry.access.redhat.com
+else
+	REGISTRY = $(RP_IMAGE_ACR)
+endif
+
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 
 build-all:
@@ -45,7 +56,7 @@ clean:
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 client: generate
-	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01
+	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
@@ -64,23 +75,21 @@ generate:
 	go generate ./...
 
 image-aro: aro e2e.test
-	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
+	docker pull $(REGISTRY)/ubi8/ubi-minimal
+	docker build --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
 
 image-aro-multistage:
-	docker build --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) .
+	docker build --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
 
 image-autorest:
-	docker build --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" \
-	  -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
+	docker build --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
 
 image-fluentbit:
-	docker build --network=host --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) \
-	  -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
+	docker build --network=host --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
 
 image-proxy: proxy
-	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build --no-cache -f Dockerfile.proxy -t ${RP_IMAGE_ACR}.azurecr.io/proxy:latest .
+	docker pull $(REGISTRY)/ubi8/ubi-minimal
+	docker build --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) .
 
 publish-image-aro: image-aro
 	docker push $(ARO_IMAGE)
@@ -155,8 +164,15 @@ validate-go:
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
-	go vet ./...
+	go vet -tags containers_image_openpgp ./...
 	go test -tags e2e -run ^$$ ./test/e2e/...
+
+validate-go-action:
+	go run ./hack/licenses -validate -ignored-go vendor,pkg/client,.git -ignored-python python/client,vendor,.git
+	go run ./hack/validate-imports cmd hack pkg test
+	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
+	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
+	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
 
 validate-fips:
 	hack/fips/validate-fips.sh
@@ -165,23 +181,33 @@ unit-test-go:
 	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverprofile=cover.out ./...
 
 lint-go:
-	go run ./vendor/github.com/golangci/golangci-lint/cmd/golangci-lint run
+	hack/lint-go.sh
 
 lint-admin-portal:
-	docker build -f Dockerfile.portal_lint . -t linter
+	docker build --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.portal_lint . -t linter
 	docker run -it --rm localhost/linter ./src --ext .ts
 
 test-python: pyenv az
 	. pyenv/bin/activate && \
 		azdev linter && \
 		azdev style && \
-		hack/format-yaml/format-yaml.py .pipelines
+		hack/unit-test-python.sh
+
+
+shared-cluster-login: 
+	oc login ${SHARED_CLUSTER_API} -u kubeadmin -p ${SHARED_CLUSTER_KUBEADMIN_PASSWORD}
+
+unit-test-python:
+	hack/unit-test-python.sh
 
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
+
+aks.kubeconfig:
+	hack/get-admin-aks-kubeconfig.sh
 
 vendor:
 	# See comments in the script for background on why we need it
 	hack/update-go-module-dependencies.sh
 
-.PHONY: admin.kubeconfig aro az clean client deploy dev-config.yaml discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy lint-go runlocal-rp proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go  unit-test-go coverage-go validate-fips
+.PHONY: admin.kubeconfig aks.kubeconfig aro az clean client deploy dev-config.yaml discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy lint-go runlocal-rp proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go  unit-test-go coverage-go validate-fips

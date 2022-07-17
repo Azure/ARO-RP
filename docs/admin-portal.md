@@ -21,6 +21,8 @@ You will require Node.js and `npm`. These instructions were tested with the vers
 
 1. Run `make build-portal` from the main directory. This will install the dependencies and kick off the Webpack build, placing the results in `portal/v2/build/`.
 
+  > __NOTE:__ Due to security compliance requirements, the `make build-portal` target pulls from `arointsvc.azurecr.io`. You can either authenticate to this registry using `az acr login --name arointsvc` to pull the image, or modify the $RP_IMAGE_ACR environment variable to point the builds at `registry.access.redhat.com` instead.
+        
 1. Run `make generate`. This will regenerate the golang file containing the portal content to be served.
 
 1. Commit the results of `build-portal` and `generate`.

@@ -61,7 +61,8 @@ End to end tests are run using ginkgo. You can run subsets of tests or ignore so
 # source your environment file
 . ./secrets/env
 
-# set the LOCAL_E2E env if you are testing locally
+# set the CLUSTER and LOCAL_E2E env if you are testing locally
+export CLUSTER=<cluster-name>
 export LOCAL_E2E="true"
 
 # source the e2e helper file

@@ -58,8 +58,10 @@
 
     1. Push the ARO and Fluentbit images to your ACR
 
-        __NOTE:__ If running this step from a VM separate from your workstation, ensure the commit tag used to build the image matches the commit tag where `make deploy` is run.
-
+        > If running this step from a VM separate from your workstation, ensure the commit tag used to build the image matches the commit tag where `make deploy` is run.
+ 
+        > Due to security compliance requirements, `make publish-image-*` targets pull from `arointsvc.azurecr.io`. You can either authenticate to this registry using `az acr login --name arointsvc` to pull the image, or modify the $RP_IMAGE_ACR environment variable locally to point to `registry.access.redhat.com` instead.
+        
         ```bash
         make publish-image-aro-multistage
         make publish-image-fluentbit

@@ -20,7 +20,7 @@ jobs:
   condition: startsWith(variables['build.sourceBranch'], 'refs/tags/v2')
   pool:
     name: ARO-CI
-    demands: go-1.16
+    demands: go-1.17
 
   steps:
   - template: ./templates/template-checkout.yml
@@ -37,8 +37,14 @@ jobs:
       ## set the variable
       echo "##vso[task.setvariable variable=TAG]${TAG}"
   - script: |
+      USERNAME=`echo "$(aro-v4-ci-pd-pull)" | base64 -d | cut -d':' -f1`
+      PASSWORD=`echo "$(aro-v4-ci-pd-pull)" | base64 -d | cut -d':' -f2-`
+
       az acr login --name "${{variables.rpIntImageAcr}}"
       az acr import \
+        --force \
         --name "${{variables.rpIntImageAcr}}" \
-        --source "${{variables.rpProdImageAcr}}.azurecr.io/aro:${TAG}"
+        --source "${{variables.rpProdImageAcr}}.azurecr.io/aro:${TAG}" \
+        --username "$USERNAME" \
+        --password "$PASSWORD"
   - template: ./templates/template-az-cli-logout.yml

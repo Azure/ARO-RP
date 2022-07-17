@@ -4,17 +4,12 @@ package log
 // Licensed under the Apache License 2.0.
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
-	"testing"
 
-	"github.com/go-test/deep"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
-
-	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 )
 
 // New creates a logging hook and entry suitable for passing to functions and
@@ -23,16 +18,6 @@ func New() (*test.Hook, *logrus.Entry) {
 	logger, h := test.NewNullLogger()
 	log := logrus.NewEntry(logger)
 	return h, log
-}
-
-// NewAudit creates a logging hook and entry suitable for testing the IFXAudit
-// feature.
-func NewAudit() (*test.Hook, *logrus.Entry) {
-	logger, h := test.NewNullLogger()
-	logger.AddHook(&audit.PayloadHook{
-		Payload: &audit.Payload{},
-	})
-	return h, logrus.NewEntry(logger)
 }
 
 // AssertLoggingOutput compares the logs on `h` with the expected entries in
@@ -78,37 +63,4 @@ func AssertLoggingOutput(h *test.Hook, expected []map[string]types.GomegaMatcher
 	}
 
 	return nil
-}
-
-// AssertAuditPayload compares the audit payloads in `h` with the given expected
-// payloads
-func AssertAuditPayloads(t *testing.T, h *test.Hook, expected []*audit.Payload) {
-	actualEntries := []*audit.Payload{}
-
-	for _, entry := range h.AllEntries() {
-		raw, ok := entry.Data[audit.MetadataPayload].(string)
-		if !ok {
-			t.Error("audit payload type cast failed")
-			return
-		}
-
-		var actual audit.Payload
-		if err := json.Unmarshal([]byte(raw), &actual); err != nil {
-			t.Errorf("fail to unmarshal payload: %s", err)
-			continue
-		}
-		actualEntries = append(actualEntries, &actual)
-	}
-
-	if len(expected) == 0 && len(actualEntries) == 0 {
-		return
-	}
-
-	r := deep.Equal(expected, actualEntries)
-	if len(r) != 0 {
-		t.Error("log differences -- expected - actual:")
-		for _, entry := range r {
-			t.Error(entry)
-		}
-	}
 }

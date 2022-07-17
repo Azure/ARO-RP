@@ -206,7 +206,7 @@ locations.
    LOCATION=<YOUR-REGION>
    az deployment sub create \
      -l $LOCATION \
-     --template-file deploy/rbac-development.json \
+     --template-file pkg/deploy/assets/rbac-development.json \
      --parameters \
        "armServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_ARM_CLIENT_ID'" --query '[].objectId' -o tsv)" \
        "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
@@ -352,7 +352,7 @@ Variable                 | Certificate Client | Subscription Type  | AAD App Nam
 # Import firstparty.pem to keyvault v4-eastus-svc
 az keyvault certificate import --vault-name <kv_name>  --name rp-firstparty --file firstparty.pem
 
-# Rotate certificates for SPs ARM, FP, and PORTAL (wherever applicable) 
+# Rotate certificates for SPs ARM, FP, and PORTAL (wherever applicable)
 az ad app credential reset \
    --id "$AZURE_ARM_CLIENT_ID" \
    --cert "$(base64 -w0 <secrets/arm.crt)" >/dev/null
@@ -511,7 +511,7 @@ each of the bash functions below.
    > __NOTE:__: in development, if you don't have valid certs for these, you can just
    upload `localhost.pem` as a placeholder for each of these. This will avoid an
    error stemming from them not existing, but it will result in logging pods
-   crash looping in any clusters you make. Additionally, no gateway resources are 
+   crash looping in any clusters you make. Additionally, no gateway resources are
    created in development so you should not need to execute the cert import statement
    for the "-gwy" keyvault.
 
@@ -544,4 +544,4 @@ Development value: secrets/cluster-logging-int.pem
 ## Append Resource Group to Subscription Cleaner DenyList
 
 * We have subscription pruning that takes place routinely and need to add our resource group for the shared rp environment to the `denylist` of the cleaner:
-   * [https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29](https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29) 
+   * [https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29](https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29)

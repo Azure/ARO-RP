@@ -87,6 +87,13 @@ EOF
 
 systemctl enable proxy.service
 
+cat >/etc/cron.weekly/yumupdate <<'EOF'
+#!/bin/bash
+
+yum update -y
+EOF
+chmod +x /etc/cron.weekly/yumupdate
+
 (sleep 30; reboot) &
 `))
 
@@ -328,7 +335,7 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel go-toolset-1.16.12-1.module+el8.5.0+13637+960c7771
+yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel htop go-toolset-1.17.7-1.module+el8.6.0+14297+32a15e19 openvpn
 
 # Suppress emulation output for podman instead of docker for az acr compatability
 mkdir -p /etc/containers/
@@ -337,7 +344,7 @@ touch /etc/containers/nodocker
 VSTS_AGENT_VERSION=2.193.1
 mkdir /home/cloud-user/agent
 pushd /home/cloud-user/agent
-curl https://vstsagentpackage.azureedge.net/agent/${VSTS_AGENT_VERSION}/vsts-agent-linux-x64-${VSTS_AGENT_VERSION}.tar.gz | tar -xz
+curl -s https://vstsagentpackage.azureedge.net/agent/${VSTS_AGENT_VERSION}/vsts-agent-linux-x64-${VSTS_AGENT_VERSION}.tar.gz | tar -xz
 chown -R cloud-user:cloud-user .
 
 ./bin/installdependencies.sh
@@ -349,12 +356,20 @@ cat >/home/cloud-user/agent/.path <<'EOF'
 /usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/cloud-user/.local/bin:/home/cloud-user/bin
 EOF
 
-# HACK for XDG_RUNTIME_DIR: https://github.com/containers/podman/issues/427
+# Set the agent's "System capabilities" for tests (go-1.17 and GOLANG_FIPS) in the agent's .env file
+# and add a HACK for XDG_RUNTIME_DIR: https://github.com/containers/podman/issues/427
 cat >/home/cloud-user/agent/.env <<'EOF'
-go-1.16=true
+go-1.17=true
 GOLANG_FIPS=1
 XDG_RUNTIME_DIR=/run/user/1000
 EOF
+
+cat >/etc/cron.weekly/yumupdate <<'EOF'
+#!/bin/bash
+
+yum update -y
+EOF
+chmod +x /etc/cron.weekly/yumupdate
 
 cat >/etc/cron.hourly/tmpwatch <<'EOF'
 #!/bin/bash
@@ -445,6 +460,7 @@ rm cron
 							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
 								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
 							},
+							DiskSizeGB: to.Int32Ptr(200),
 						},
 					},
 					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
