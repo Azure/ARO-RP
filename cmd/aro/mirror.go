@@ -162,7 +162,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 	for _, ref := range []string{
 		// Managed Upgrade Operator
-		"quay.io/app-sre/managed-upgrade-operator:v0.1.831-986b967",
+		"quay.io/app-sre/managed-upgrade-operator:v0.1.856-eebbe07",
 
 		// Hive
 		"quay.io/app-sre/hive:2383a88",
