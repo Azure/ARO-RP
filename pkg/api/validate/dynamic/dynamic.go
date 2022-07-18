@@ -6,6 +6,7 @@ package dynamic
 import (
 	"context"
 	"fmt"
+	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 	"net"
 	"net/http"
 	"strings"
@@ -40,7 +41,7 @@ type Subnet struct {
 }
 
 type ServicePrincipalValidator interface {
-	ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string) error
+	ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string, azureClaimHelper azureclaim.AzureClaim, getServicePrincipalToken GetTokenWrapper) error
 }
 
 // Dynamic validate in the operator context.

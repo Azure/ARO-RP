@@ -6,7 +6,7 @@ package validate
 import (
 	"context"
 	"fmt"
-
+	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -86,7 +86,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	// SP validation
-	err = spDynamic.ValidateServicePrincipal(ctx, spp.ClientID, string(spp.ClientSecret), dv.subscriptionDoc.Subscription.Properties.TenantID)
+	err = spDynamic.ValidateServicePrincipal(ctx, spp.ClientID, string(spp.ClientSecret), dv.subscriptionDoc.Subscription.Properties.TenantID, azureclaim.AzureClaim{}, dynamic.GetServicePrincipalToken)
 	if err != nil {
 		return err
 	}

@@ -5,6 +5,8 @@ package dynamic
 
 import (
 	"context"
+	"github.com/Azure/go-autorest/autorest/adal"
+	"github.com/sirupsen/logrus"
 	"net/http"
 
 	"github.com/form3tech-oss/jwt-go"
@@ -14,27 +16,33 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 )
 
-func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string) error {
-	// TODO: once aad.GetToken is mockable, write a unit test for this function
+type (
+	GetTokenWrapper func(ctx context.Context, l *logrus.Entry, clientID, clientSecret, tenantID, ActiveDirectoryEndpoint, GraphEndpoint string) (*adal.ServicePrincipalToken, error) // Allows us to mock the getToken function
+)
+
+func GetServicePrincipalToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, tenantID, ActiveDirectoryEndpoint, GraphEndpoint string) (*adal.ServicePrincipalToken, error) {
+	return aad.GetToken(ctx, log, clientID, clientSecret, tenantID, ActiveDirectoryEndpoint, GraphEndpoint)
+}
+
+// ValidateServicePrincipal ensures the provided service principal does not have Application.ReadWrite.OwnedBy permission.
+func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string, azClaim azureclaim.AzureClaim, tokenWrapper GetTokenWrapper) error {
 	dv.log.Print("ValidateServicePrincipal")
 
-	token, err := aad.GetToken(ctx, dv.log, clientID, clientSecret, tenantID, dv.azEnv.ActiveDirectoryEndpoint, dv.azEnv.GraphEndpoint)
+	token, err := tokenWrapper(ctx, dv.log, clientID, clientSecret, tenantID, dv.azEnv.ActiveDirectoryEndpoint, dv.azEnv.GraphEndpoint)
 	if err != nil {
 		return err
 	}
 
 	p := &jwt.Parser{}
-	c := &azureclaim.AzureClaim{}
-	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
+	_, _, err = p.ParseUnverified(token.OAuthToken(), &azClaim)
 	if err != nil {
 		return err
 	}
 
-	for _, role := range c.Roles {
+	for _, role := range azClaim.Roles {
 		if role == "Application.ReadWrite.OwnedBy" {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal must not have the Application.ReadWrite.OwnedBy permission.")
 		}
 	}
-
 	return nil
 }
