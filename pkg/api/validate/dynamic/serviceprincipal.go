@@ -8,9 +8,8 @@ import (
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/sirupsen/logrus"
-
 	"github.com/form3tech-oss/jwt-go"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
