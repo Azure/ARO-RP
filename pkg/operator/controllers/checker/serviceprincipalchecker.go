@@ -5,6 +5,7 @@ package checker
 
 import (
 	"context"
+
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 
 	operatorv1 "github.com/openshift/api/operator/v1"

@@ -3,18 +3,20 @@ package dynamic
 import (
 	"context"
 	"errors"
+	"net/http"
+	"testing"
+
+	"github.com/Azure/go-autorest/autorest/adal"
+	"github.com/golang/mock/gomock"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
-	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"net/http"
-	"testing"
 )
 
 func TestValidateServicePrincipal(t *testing.T) {

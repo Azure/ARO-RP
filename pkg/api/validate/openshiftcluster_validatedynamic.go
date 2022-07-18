@@ -6,8 +6,10 @@ package validate
 import (
 	"context"
 	"fmt"
-	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
+
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate/dynamic"

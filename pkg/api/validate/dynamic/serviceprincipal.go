@@ -5,9 +5,10 @@ package dynamic
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/sirupsen/logrus"
-	"net/http"
 
 	"github.com/form3tech-oss/jwt-go"
 

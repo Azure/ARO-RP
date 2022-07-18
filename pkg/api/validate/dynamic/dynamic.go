@@ -6,11 +6,12 @@ package dynamic
 import (
 	"context"
 	"fmt"
-	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 	"net"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest"
