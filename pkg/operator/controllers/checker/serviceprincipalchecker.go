@@ -5,6 +5,7 @@ package checker
 
 import (
 	"context"
+	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
@@ -79,7 +80,7 @@ func (r *ServicePrincipalChecker) Check(ctx context.Context) error {
 		return err
 	}
 
-	err = spDynamic.ValidateServicePrincipal(ctx, string(azCred.ClientID), string(azCred.ClientSecret), string(azCred.TenantID))
+	err = spDynamic.ValidateServicePrincipal(ctx, string(azCred.ClientID), string(azCred.ClientSecret), string(azCred.TenantID), azureclaim.AzureClaim{}, dynamic.GetServicePrincipalToken)
 	if err != nil {
 		updateFailedCondition(cond, err)
 	}
