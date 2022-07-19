@@ -18,5 +18,8 @@ func init() {
 		OpenShiftClusterStaticValidator: func(string, string, bool, string) api.OpenShiftClusterStaticValidator {
 			return &openShiftClusterStaticValidator{}
 		},
+		OpenShiftVersionConverter: func() api.OpenShiftVersionConverter {
+			return &openShiftVersionConverter{}
+		},
 	}
 }

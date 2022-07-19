@@ -19,6 +19,7 @@ type Fixture struct {
 	asyncOperationDocuments   []*api.AsyncOperationDocument
 	portalDocuments           []*api.PortalDocument
 	gatewayDocuments          []*api.GatewayDocument
+	openShiftVersionDocuments []*api.OpenShiftVersionDocument
 
 	openShiftClustersDatabase database.OpenShiftClusters
 	billingDatabase           database.Billing
@@ -26,6 +27,7 @@ type Fixture struct {
 	asyncOperationsDatabase   database.AsyncOperations
 	portalDatabase            database.Portal
 	gatewayDatabase           database.Gateway
+	openShiftVersionsDatabase database.OpenShiftVersions
 }
 
 func NewFixture() *Fixture {
@@ -59,6 +61,11 @@ func (f *Fixture) WithPortal(db database.Portal) *Fixture {
 
 func (f *Fixture) WithGateway(db database.Gateway) *Fixture {
 	f.gatewayDatabase = db
+	return f
+}
+
+func (f *Fixture) WithOpenShiftVersions(db database.OpenShiftVersions) *Fixture {
+	f.openShiftVersionsDatabase = db
 	return f
 }
 
@@ -128,6 +135,17 @@ func (f *Fixture) AddGatewayDocuments(docs ...*api.GatewayDocument) {
 	}
 }
 
+func (f *Fixture) AddOpenShiftVersionDocuments(docs ...*api.OpenShiftVersionDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.openShiftVersionDocuments = append(f.openShiftVersionDocuments, docCopy.(*api.OpenShiftVersionDocument))
+	}
+}
+
 func (f *Fixture) Create() error {
 	ctx := context.Background()
 
@@ -171,6 +189,13 @@ func (f *Fixture) Create() error {
 
 	for _, i := range f.gatewayDocuments {
 		_, err := f.gatewayDatabase.Create(ctx, i)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, i := range f.openShiftVersionDocuments {
+		_, err := f.openShiftVersionsDatabase.Create(ctx, i)
 		if err != nil {
 			return err
 		}
