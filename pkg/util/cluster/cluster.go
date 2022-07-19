@@ -343,22 +343,34 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 	var errs errors
 
 	oc, err := c.openshiftclustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
-	if err == nil {
-		err = c.deleteRoleAssignments(ctx, vnetResourceGroup, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
-		if err != nil {
-			errs = append(errs, err)
-		}
 
-		err = c.deleteApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
-		if err != nil {
-			errs = append(errs, err)
-		}
+	if env.IsLocalDevelopmentMode() {
+		// for local dev the AAD application is setup via the ./docs/prepare-a-shared-rp-development-environment.md instructions
+		if err == nil {
 
-		c.log.Print("deleting cluster")
-		err = c.openshiftclustersv20200430.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
-		if err != nil {
-			errs = append(errs, err)
+			c.log.Print("deleting cluster")
+			err = c.openshiftclustersv20200430.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
+			if err != nil {
+				errs = append(errs, err)
+			}
 		}
+	} else {
+		if err == nil {
+			err = c.deleteRoleAssignments(ctx, vnetResourceGroup, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
+			if err != nil {
+				errs = append(errs, err)
+			}
+
+			err = c.deleteApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
+			if err != nil {
+				errs = append(errs, err)
+			}
+
+			c.log.Print("deleting cluster")
+			err = c.openshiftclustersv20200430.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
+			if err != nil {
+				errs = append(errs, err)
+			}
 	}
 
 	if c.ci {
