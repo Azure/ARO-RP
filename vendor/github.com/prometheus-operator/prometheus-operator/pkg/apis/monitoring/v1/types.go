@@ -15,6 +15,9 @@
 package v1
 
 import (
+	"fmt"
+	"strings"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -167,11 +170,11 @@ type PrometheusSpec struct {
 	LogLevel string `json:"logLevel,omitempty"`
 	// Log format for Prometheus to be configured with.
 	LogFormat string `json:"logFormat,omitempty"`
-	// Interval between consecutive scrapes.
+	// Interval between consecutive scrapes. Default: `1m`
 	ScrapeInterval string `json:"scrapeInterval,omitempty"`
 	// Number of seconds to wait for target to respond before erroring.
 	ScrapeTimeout string `json:"scrapeTimeout,omitempty"`
-	// Interval between consecutive evaluations.
+	// Interval between consecutive evaluations. Default: `1m`
 	EvaluationInterval string `json:"evaluationInterval,omitempty"`
 	// /--rules.*/ command-line arguments.
 	Rules Rules `json:"rules,omitempty"`
@@ -269,9 +272,12 @@ type PrometheusSpec struct {
 	// InitContainers allows adding initContainers to the pod definition. Those can be used to e.g.
 	// fetch secrets for injection into the Prometheus configuration from external sources. Any errors
 	// during the execution of an initContainer will lead to a restart of the Pod. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
-	// Using initContainers for any use case other then secret fetching is entirely outside the scope
-	// of what the maintainers will support and by doing so, you accept that this behaviour may break
-	// at any time without notice.
+	// InitContainers described here modify an operator
+	// generated init containers if they share the same name and modifications are
+	// done via a strategic merge patch. The current init container name is:
+	// `init-config-reloader`. Overriding init containers is entirely outside the
+	// scope of what the maintainers will support and by doing so, you accept that
+	// this behaviour may break at any time without notice.
 	InitContainers []v1.Container `json:"initContainers,omitempty"`
 	// AdditionalScrapeConfigs allows specifying a key of a Secret containing
 	// additional Prometheus scrape configurations. Scrape configurations
@@ -341,9 +347,15 @@ type PrometheusSpec struct {
 	// the podmonitor and servicemonitor configs, and they will only discover endpoints
 	// within their current namespace.  Defaults to false.
 	IgnoreNamespaceSelectors bool `json:"ignoreNamespaceSelectors,omitempty"`
-	// EnforcedNamespaceLabel enforces adding a namespace label of origin for each alert
-	// and metric that is user created. The label value will always be the namespace of the object that is
-	// being created.
+	// EnforcedNamespaceLabel If set, a label will be added to
+	//
+	// 1. all user-metrics (created by `ServiceMonitor`, `PodMonitor` and `ProbeConfig` object) and
+	// 2. in all `PrometheusRule` objects (except the ones excluded in `prometheusRulesExcludedFromEnforce`) to
+	//    * alerting & recording rules and
+	//    * the metrics used in their expressions (`expr`).
+	//
+	// Label name is this field's value.
+	// Label value is the namespace of the created object (mentioned above).
 	EnforcedNamespaceLabel string `json:"enforcedNamespaceLabel,omitempty"`
 	// PrometheusRulesExcludedFromEnforce - list of prometheus rules to be excluded from enforcing
 	// of adding namespace labels. Works only if enforcedNamespaceLabel set to true.
@@ -366,13 +378,29 @@ type PrometheusSpec struct {
 	// AllowOverlappingBlocks enables vertical compaction and vertical query merge in Prometheus.
 	// This is still experimental in Prometheus so it may change in any upcoming release.
 	AllowOverlappingBlocks bool `json:"allowOverlappingBlocks,omitempty"`
-	// EnforcedTargetLimit defines a global limit on the number of scraped targets.
-	// This overrides any TargetLimit set per ServiceMonitor or/and PodMonitor.
-	// It is meant to be used by admins to
-	// enforce the TargetLimit to keep overall number of targets under
-	// the desired limit.
-	// Note that if TargetLimit is higher that value will be taken instead.
+	// EnforcedTargetLimit defines a global limit on the number of scraped
+	// targets.  This overrides any TargetLimit set per ServiceMonitor or/and
+	// PodMonitor.  It is meant to be used by admins to enforce the TargetLimit
+	// to keep the overall number of targets under the desired limit.
+	// Note that if TargetLimit is lower, that value will be taken instead,
+	// except if either value is zero, in which case the non-zero value will be
+	// used.  If both values are zero, no limit is enforced.
 	EnforcedTargetLimit *uint64 `json:"enforcedTargetLimit,omitempty"`
+	// Per-scrape limit on number of labels that will be accepted for a sample. If
+	// more than this number of labels are present post metric-relabeling, the
+	// entire scrape will be treated as failed. 0 means no limit.
+	// Only valid in Prometheus versions 2.27.0 and newer.
+	EnforcedLabelLimit *uint64 `json:"enforcedLabelLimit,omitempty"`
+	// Per-scrape limit on length of labels name that will be accepted for a sample.
+	// If a label name is longer than this number post metric-relabeling, the entire
+	// scrape will be treated as failed. 0 means no limit.
+	// Only valid in Prometheus versions 2.27.0 and newer.
+	EnforcedLabelNameLengthLimit *uint64 `json:"enforcedLabelNameLengthLimit,omitempty"`
+	// Per-scrape limit on length of labels value that will be accepted for a sample.
+	// If a label value is longer than this number post metric-relabeling, the
+	// entire scrape will be treated as failed. 0 means no limit.
+	// Only valid in Prometheus versions 2.27.0 and newer.
+	EnforcedLabelValueLengthLimit *uint64 `json:"enforcedLabelValueLengthLimit,omitempty"`
 }
 
 // PrometheusRuleExcludeConfig enables users to configure excluded PrometheusRule names and their namespaces
@@ -503,7 +531,77 @@ type QuerySpec struct {
 // +k8s:openapi-gen=true
 type WebSpec struct {
 	// The prometheus web page title
-	PageTitle *string `json:"pageTitle,omitempty"`
+	PageTitle *string       `json:"pageTitle,omitempty"`
+	TLSConfig *WebTLSConfig `json:"tlsConfig,omitempty"`
+}
+
+// WebTLSConfig defines the TLS parameters for HTTPS.
+// +k8s:openapi-gen=true
+type WebTLSConfig struct {
+	// Secret containing the TLS key for the server.
+	KeySecret v1.SecretKeySelector `json:"keySecret"`
+	// Contains the TLS certificate for the server.
+	Cert SecretOrConfigMap `json:"cert"`
+	// Server policy for client authentication. Maps to ClientAuth Policies.
+	// For more detail on clientAuth options:
+	// https://golang.org/pkg/crypto/tls/#ClientAuthType
+	ClientAuthType string `json:"clientAuthType,omitempty"`
+	// Contains the CA certificate for client certificate authentication to the server.
+	ClientCA SecretOrConfigMap `json:"client_ca,omitempty"`
+	// Minimum TLS version that is acceptable. Defaults to TLS12.
+	MinVersion string `json:"minVersion,omitempty"`
+	// Maximum TLS version that is acceptable. Defaults to TLS13.
+	MaxVersion string `json:"maxVersion,omitempty"`
+	// List of supported cipher suites for TLS versions up to TLS 1.2. If empty,
+	// Go default cipher suites are used. Available cipher suites are documented
+	// in the go documentation: https://golang.org/pkg/crypto/tls/#pkg-constants
+	CipherSuites []string `json:"cipherSuites,omitempty"`
+	// Controls whether the server selects the
+	// client's most preferred cipher suite, or the server's most preferred
+	// cipher suite. If true then the server's preference, as expressed in
+	// the order of elements in cipherSuites, is used.
+	PreferServerCipherSuites *bool `json:"preferServerCipherSuites,omitempty"`
+	// Elliptic curves that will be used in an ECDHE handshake, in preference
+	// order. Available curves are documented in the go documentation:
+	// https://golang.org/pkg/crypto/tls/#CurveID
+	CurvePreferences []string `json:"curvePreferences,omitempty"`
+}
+
+// WebTLSConfigError is returned by WebTLSConfig.Validate() on
+// semantically invalid configurations.
+// +k8s:openapi-gen=false
+type WebTLSConfigError struct {
+	err string
+}
+
+func (e *WebTLSConfigError) Error() string {
+	return e.err
+}
+
+func (c *WebTLSConfig) Validate() error {
+	if c == nil {
+		return nil
+	}
+
+	if c.ClientCA != (SecretOrConfigMap{}) {
+		if err := c.ClientCA.Validate(); err != nil {
+			msg := fmt.Sprintf("invalid web tls config: %s", err.Error())
+			return &WebTLSConfigError{msg}
+		}
+	}
+
+	if c.Cert == (SecretOrConfigMap{}) {
+		return &WebTLSConfigError{"invalid web tls config: cert must be defined"}
+	} else if err := c.Cert.Validate(); err != nil {
+		msg := fmt.Sprintf("invalid web tls config: %s", err.Error())
+		return &WebTLSConfigError{msg}
+	}
+
+	if c.KeySecret == (v1.SecretKeySelector{}) {
+		return &WebTLSConfigError{"invalid web tls config: key must be defined"}
+	}
+
+	return nil
 }
 
 // ThanosSpec defines parameters for a Prometheus server within a Thanos deployment.
@@ -558,6 +656,8 @@ type ThanosSpec struct {
 	LogFormat string `json:"logFormat,omitempty"`
 	// MinTime for Thanos sidecar to be configured with. Option can be a constant time in RFC3339 format or time duration relative to current time, such as -1d or 2h45m. Valid duration units are ms, s, m, h, d, w, y.
 	MinTime string `json:"minTime,omitempty"`
+	// ReadyTimeout is the maximum time Thanos sidecar will wait for Prometheus to start. Eg 10m
+	ReadyTimeout string `json:"readyTimeout,omitempty"`
 }
 
 // RemoteWriteSpec defines the remote_write configuration for prometheus.
@@ -569,6 +669,8 @@ type RemoteWriteSpec struct {
 	// name is used in metrics and logging in order to differentiate queues.
 	// Only valid in Prometheus versions 2.15.0 and newer.
 	Name string `json:"name,omitempty"`
+	// Enables sending of exemplars over remote write. Note that exemplar-storage itself must be enabled using the enableFeature option for exemplars to be scraped in the first place.  Only valid in Prometheus versions 2.27.0 and newer.
+	SendExemplars *bool `json:"sendExemplars,omitempty"`
 	// Timeout for requests to the remote write endpoint.
 	RemoteTimeout string `json:"remoteTimeout,omitempty"`
 	// Custom HTTP headers to be sent along with each remote write request.
@@ -577,12 +679,16 @@ type RemoteWriteSpec struct {
 	Headers map[string]string `json:"headers,omitempty"`
 	// The list of remote write relabel configurations.
 	WriteRelabelConfigs []RelabelConfig `json:"writeRelabelConfigs,omitempty"`
-	//BasicAuth for the URL.
+	// OAuth2 for the URL. Only valid in Prometheus versions 2.27.0 and newer.
+	OAuth2 *OAuth2 `json:"oauth2,omitempty"`
+	// BasicAuth for the URL.
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty"`
 	// Bearer token for remote write.
 	BearerToken string `json:"bearerToken,omitempty"`
 	// File to read bearer token for remote write.
 	BearerTokenFile string `json:"bearerTokenFile,omitempty"`
+	// Authorization section for remote write
+	Authorization *Authorization `json:"authorization,omitempty"`
 	// TLS Config to use for remote write.
 	TLSConfig *TLSConfig `json:"tlsConfig,omitempty"`
 	// Optional ProxyURL
@@ -634,10 +740,14 @@ type RemoteReadSpec struct {
 	ReadRecent bool `json:"readRecent,omitempty"`
 	// BasicAuth for the URL.
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty"`
+	// OAuth2 for the URL. Only valid in Prometheus versions 2.27.0 and newer.
+	OAuth2 *OAuth2 `json:"oauth2,omitempty"`
 	// Bearer token for remote read.
 	BearerToken string `json:"bearerToken,omitempty"`
 	// File to read bearer token for remote read.
 	BearerTokenFile string `json:"bearerTokenFile,omitempty"`
+	// Authorization section for remote read
+	Authorization *Authorization `json:"authorization,omitempty"`
 	// TLS Config to use for remote read.
 	TLSConfig *TLSConfig `json:"tlsConfig,omitempty"`
 	// Optional ProxyURL
@@ -684,6 +794,8 @@ type APIServerConfig struct {
 	BearerTokenFile string `json:"bearerTokenFile,omitempty"`
 	// TLS Config to use for accessing apiserver.
 	TLSConfig *TLSConfig `json:"tlsConfig,omitempty"`
+	// Authorization section for accessing apiserver
+	Authorization *Authorization `json:"authorization,omitempty"`
 }
 
 // AlertmanagerEndpoints defines a selection of a single Endpoints object
@@ -705,6 +817,8 @@ type AlertmanagerEndpoints struct {
 	// BearerTokenFile to read from filesystem to use when authenticating to
 	// Alertmanager.
 	BearerTokenFile string `json:"bearerTokenFile,omitempty"`
+	// Authorization section for this alertmanager endpoint
+	Authorization *SafeAuthorization `json:"authorization,omitempty"`
 	// Version of the Alertmanager API that Prometheus uses to send alerts. It
 	// can be "v1" or "v2".
 	APIVersion string `json:"apiVersion,omitempty"`
@@ -727,22 +841,35 @@ type ServiceMonitor struct {
 // ServiceMonitorSpec contains specification parameters for a ServiceMonitor.
 // +k8s:openapi-gen=true
 type ServiceMonitorSpec struct {
-	// The label to use to retrieve the job name from.
+	// Chooses the label of the Kubernetes `Endpoints`.
+	// Its value will be used for the `job`-label's value of the created metrics.
+	//
+	// Default & fallback value: the name of the respective Kubernetes `Endpoint`.
 	JobLabel string `json:"jobLabel,omitempty"`
-	// TargetLabels transfers labels on the Kubernetes Service onto the target.
+	// TargetLabels transfers labels from the Kubernetes `Service` onto the created metrics.
+	// All labels set in `selector.matchLabels` are automatically transferred.
 	TargetLabels []string `json:"targetLabels,omitempty"`
-	// PodTargetLabels transfers labels on the Kubernetes Pod onto the target.
+	// PodTargetLabels transfers labels on the Kubernetes `Pod` onto the created metrics.
 	PodTargetLabels []string `json:"podTargetLabels,omitempty"`
 	// A list of endpoints allowed as part of this ServiceMonitor.
 	Endpoints []Endpoint `json:"endpoints"`
 	// Selector to select Endpoints objects.
 	Selector metav1.LabelSelector `json:"selector"`
-	// Selector to select which namespaces the Endpoints objects are discovered from.
+	// Selector to select which namespaces the Kubernetes Endpoints objects are discovered from.
 	NamespaceSelector NamespaceSelector `json:"namespaceSelector,omitempty"`
 	// SampleLimit defines per-scrape limit on number of scraped samples that will be accepted.
 	SampleLimit uint64 `json:"sampleLimit,omitempty"`
 	// TargetLimit defines a limit on the number of scraped targets that will be accepted.
 	TargetLimit uint64 `json:"targetLimit,omitempty"`
+	// Per-scrape limit on number of labels that will be accepted for a sample.
+	// Only valid in Prometheus versions 2.27.0 and newer.
+	LabelLimit uint64 `json:"labelLimit,omitempty"`
+	// Per-scrape limit on length of labels name that will be accepted for a sample.
+	// Only valid in Prometheus versions 2.27.0 and newer.
+	LabelNameLengthLimit uint64 `json:"labelNameLengthLimit,omitempty"`
+	// Per-scrape limit on length of labels value that will be accepted for a sample.
+	// Only valid in Prometheus versions 2.27.0 and newer.
+	LabelValueLengthLimit uint64 `json:"labelValueLengthLimit,omitempty"`
 }
 
 // Endpoint defines a scrapeable endpoint serving Prometheus metrics.
@@ -770,6 +897,8 @@ type Endpoint struct {
 	// needs to be in the same namespace as the service monitor and accessible by
 	// the Prometheus Operator.
 	BearerTokenSecret v1.SecretKeySelector `json:"bearerTokenSecret,omitempty"`
+	// Authorization section for this endpoint
+	Authorization *SafeAuthorization `json:"authorization,omitempty"`
 	// HonorLabels chooses the metric's labels on collisions with target labels.
 	HonorLabels bool `json:"honorLabels,omitempty"`
 	// HonorTimestamps controls whether Prometheus respects the timestamps present in scraped data.
@@ -777,6 +906,8 @@ type Endpoint struct {
 	// BasicAuth allow an endpoint to authenticate over basic authentication
 	// More info: https://prometheus.io/docs/operating/configuration/#endpoints
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty"`
+	// OAuth2 for the URL. Only valid in Prometheus versions 2.27.0 and newer.
+	OAuth2 *OAuth2 `json:"oauth2,omitempty"`
 	// MetricRelabelConfigs to apply to samples before ingestion.
 	MetricRelabelConfigs []*RelabelConfig `json:"metricRelabelings,omitempty"`
 	// RelabelConfigs to apply to samples before scraping.
@@ -816,6 +947,15 @@ type PodMonitorSpec struct {
 	SampleLimit uint64 `json:"sampleLimit,omitempty"`
 	// TargetLimit defines a limit on the number of scraped targets that will be accepted.
 	TargetLimit uint64 `json:"targetLimit,omitempty"`
+	// Per-scrape limit on number of labels that will be accepted for a sample.
+	// Only valid in Prometheus versions 2.27.0 and newer.
+	LabelLimit uint64 `json:"labelLimit,omitempty"`
+	// Per-scrape limit on length of labels name that will be accepted for a sample.
+	// Only valid in Prometheus versions 2.27.0 and newer.
+	LabelNameLengthLimit uint64 `json:"labelNameLengthLimit,omitempty"`
+	// Per-scrape limit on length of labels value that will be accepted for a sample.
+	// Only valid in Prometheus versions 2.27.0 and newer.
+	LabelValueLengthLimit uint64 `json:"labelValueLengthLimit,omitempty"`
 }
 
 // PodMetricsEndpoint defines a scrapeable endpoint of a Kubernetes Pod serving Prometheus metrics.
@@ -848,6 +988,10 @@ type PodMetricsEndpoint struct {
 	// BasicAuth allow an endpoint to authenticate over basic authentication.
 	// More info: https://prometheus.io/docs/operating/configuration/#endpoint
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty"`
+	// OAuth2 for the URL. Only valid in Prometheus versions 2.27.0 and newer.
+	OAuth2 *OAuth2 `json:"oauth2,omitempty"`
+	// Authorization section for this endpoint
+	Authorization *SafeAuthorization `json:"authorization,omitempty"`
 	// MetricRelabelConfigs to apply to samples before ingestion.
 	MetricRelabelConfigs []*RelabelConfig `json:"metricRelabelings,omitempty"`
 	// RelabelConfigs to apply to samples before scraping.
@@ -904,6 +1048,23 @@ type ProbeSpec struct {
 	// BasicAuth allow an endpoint to authenticate over basic authentication.
 	// More info: https://prometheus.io/docs/operating/configuration/#endpoint
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty"`
+	// OAuth2 for the URL. Only valid in Prometheus versions 2.27.0 and newer.
+	OAuth2 *OAuth2 `json:"oauth2,omitempty"`
+	// Authorization section for this endpoint
+	Authorization *SafeAuthorization `json:"authorization,omitempty"`
+	// SampleLimit defines per-scrape limit on number of scraped samples that will be accepted.
+	SampleLimit uint64 `json:"sampleLimit,omitempty"`
+	// TargetLimit defines a limit on the number of scraped targets that will be accepted.
+	TargetLimit uint64 `json:"targetLimit,omitempty"`
+	// Per-scrape limit on number of labels that will be accepted for a sample.
+	// Only valid in Prometheus versions 2.27.0 and newer.
+	LabelLimit uint64 `json:"labelLimit,omitempty"`
+	// Per-scrape limit on length of labels name that will be accepted for a sample.
+	// Only valid in Prometheus versions 2.27.0 and newer.
+	LabelNameLengthLimit uint64 `json:"labelNameLengthLimit,omitempty"`
+	// Per-scrape limit on length of labels value that will be accepted for a sample.
+	// Only valid in Prometheus versions 2.27.0 and newer.
+	LabelValueLengthLimit uint64 `json:"labelValueLengthLimit,omitempty"`
 }
 
 // ProbeTargets defines a set of static and dynamically discovered targets for the prober.
@@ -951,6 +1112,51 @@ type ProberSpec struct {
 	// Path to collect metrics from.
 	// Defaults to `/probe`.
 	Path string `json:"path,omitempty"`
+	// Optional ProxyURL.
+	ProxyURL string `json:"proxyUrl,omitempty"`
+}
+
+// OAuth2 allows an endpoint to authenticate with OAuth2.
+// More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#oauth2
+// +k8s:openapi-gen=true
+type OAuth2 struct {
+	// The secret or configmap containing the OAuth2 client id
+	ClientID SecretOrConfigMap `json:"clientId"`
+	// The secret containing the OAuth2 client secret
+	ClientSecret v1.SecretKeySelector `json:"clientSecret"`
+	// The URL to fetch the token from
+	// +kubebuilder:validation:MinLength=1
+	TokenURL string `json:"tokenUrl"`
+	// OAuth2 scopes used for the token request
+	Scopes []string `json:"scopes,omitempty"`
+	// Parameters to append to the token URL
+	EndpointParams map[string]string `json:"endpointParams,omitempty"`
+}
+
+type OAuth2ValidationError struct {
+	err string
+}
+
+func (e *OAuth2ValidationError) Error() string {
+	return e.err
+}
+
+func (o *OAuth2) Validate() error {
+	if o.TokenURL == "" {
+		return &OAuth2ValidationError{err: "OAuth2 token url must be specified"}
+	}
+
+	if o.ClientID == (SecretOrConfigMap{}) {
+		return &OAuth2ValidationError{err: "OAuth2 client id must be specified"}
+	}
+
+	if err := o.ClientID.Validate(); err != nil {
+		return &OAuth2ValidationError{
+			err: fmt.Sprintf("invalid OAuth2 client id: %s", err.Error()),
+		}
+	}
+
+	return nil
 }
 
 // BasicAuth allow an endpoint to authenticate over basic authentication
@@ -1141,6 +1347,7 @@ type PrometheusRuleList struct {
 // PrometheusRule defines recording and alerting rules for a Prometheus instance
 // +genclient
 // +k8s:openapi-gen=true
+// +kubebuilder:resource:categories="prometheus-operator"
 type PrometheusRule struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -1170,7 +1377,8 @@ type RuleGroup struct {
 	PartialResponseStrategy string `json:"partial_response_strategy,omitempty"`
 }
 
-// Rule describes an alerting or recording rule.
+// Rule describes an alerting or recording rule
+// See Prometheus documentation: [alerting](https://www.prometheus.io/docs/prometheus/latest/configuration/alerting_rules/) or [recording](https://www.prometheus.io/docs/prometheus/latest/configuration/recording_rules/#recording-rules) rule
 // +k8s:openapi-gen=true
 type Rule struct {
 	Record      string             `json:"record,omitempty"`
@@ -1481,4 +1689,56 @@ func (l *PrometheusRuleList) DeepCopyObject() runtime.Object {
 // +k8s:openapi-gen=true
 type ProbeTLSConfig struct {
 	SafeTLSConfig `json:",inline"`
+}
+
+// SafeAuthorization specifies a subset of the Authorization struct, that is
+// safe for use in Endpoints (no CrendetialsFile field)
+// +k8s:openapi-gen=true
+type SafeAuthorization struct {
+	// Set the authentication type. Defaults to Bearer, Basic will cause an
+	// error
+	Type string `json:"type,omitempty"`
+	// The secret's key that contains the credentials of the request
+	Credentials *v1.SecretKeySelector `json:"credentials,omitempty"`
+}
+
+// Validate semantically validates the given Authorization section.
+func (c *SafeAuthorization) Validate() error {
+	if strings.ToLower(strings.TrimSpace(c.Type)) == "basic" {
+		return &AuthorizationValidationError{`Authorization type cannot be set to "basic", use "basic_auth" instead`}
+	}
+	if c.Credentials == nil {
+		return &AuthorizationValidationError{"Authorization credentials are required"}
+	}
+	return nil
+}
+
+// Authorization contains optional `Authorization` header configuration.
+// This section is only understood by versions of Prometheus >= 2.26.0.
+type Authorization struct {
+	SafeAuthorization `json:",inline"`
+	// File to read a secret from, mutually exclusive with Credentials (from SafeAuthorization)
+	CredentialsFile string `json:"credentialsFile,omitempty"`
+}
+
+// Validate semantically validates the given Authorization section.
+func (c *Authorization) Validate() error {
+	if c.Credentials != nil && c.CredentialsFile != "" {
+		return &AuthorizationValidationError{"Authorization can not specify both Credentials and CredentialsFile"}
+	}
+	if strings.ToLower(strings.TrimSpace(c.Type)) == "basic" {
+		return &AuthorizationValidationError{"Authorization type cannot be set to \"basic\", use \"basic_auth\" instead"}
+	}
+	return nil
+}
+
+// AuthorizationValidationError is returned by Authorization.Validate()
+// on semantically invalid configurations.
+// +k8s:openapi-gen=false
+type AuthorizationValidationError struct {
+	err string
+}
+
+func (e *AuthorizationValidationError) Error() string {
+	return e.err
 }
