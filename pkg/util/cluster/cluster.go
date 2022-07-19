@@ -155,7 +155,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		}
 	}
 
-	if (appID == "" || appSecret == "") {
+	if appID == "" || appSecret == "" {
 		return fmt.Errorf("AAD application id and secret must be set")
 	}
 
@@ -371,6 +371,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			if err != nil {
 				errs = append(errs, err)
 			}
+		}
 	}
 
 	if c.ci {
