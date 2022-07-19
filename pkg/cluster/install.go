@@ -155,7 +155,7 @@ func (m *manager) Install(ctx context.Context) error {
 
 			steps.Action(m.createDNS, "create_dns"),
 			steps.Action(m.initializeClusterSPClients, "initialize_cluster_sp_clients"), // must run before clusterSPObjectID
-			steps.Action(m.clusterSPObjectID, "cluster_sp_objectid"),
+			steps.Action(m.clusterSPObjectID, "cluster_sp_object_id"),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup), "ensure_resource_group"),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints), "enable_service_endpoints"),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies), "set_master_subnet_policies"),
