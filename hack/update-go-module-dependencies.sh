@@ -29,6 +29,10 @@ for x in vendor/github.com/openshift/*; do
 	case $x in
 		# Review the list of special cases on each release.
 
+		# Do not update Hive: it is not part of OCP
+		vendor/github.com/openshift/hive)
+			;;
+
 		# Replace the installer with our own fork below in this script.
 		vendor/github.com/openshift/installer)
 			;;
@@ -64,5 +68,5 @@ go mod edit -replace github.com/openshift/installer=$(go list -mod=mod -m github
 
 go get -u ./...
 
-go mod tidy
+go mod tidy -compat=1.17
 go mod vendor
