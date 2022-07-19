@@ -41,7 +41,9 @@ jobs:
 
       az account set -s $AZURE_SUBSCRIPTION_ID
 
-      openvpn secrets/$VPN &
+      openvpn --verb 4 --config secrets/vpnconfig_cert.ovpn &
+
+      sleep 10
 
       set -x
 
@@ -56,6 +58,10 @@ jobs:
       validate_rp_running
       register_sub
 
-      export CI=true
+      go run ./hack/cluster create
+
       make test-e2e
+
+      go run ./hack/cluster delete
+
   - template: ./templates/template-az-cli-logout.yml
