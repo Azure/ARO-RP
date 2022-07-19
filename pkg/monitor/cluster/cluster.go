@@ -6,8 +6,6 @@ package cluster
 import (
 	"context"
 	"net/http"
-	"reflect"
-	"runtime"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	configv1 "github.com/openshift/api/config/v1"
@@ -120,8 +118,8 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
 	if err != nil {
 		errs = append(errs, err)
-		mon.log.Printf("%s: %s", runtime.FuncForPC(reflect.ValueOf(mon.emitAPIServerHealthzCode).Pointer()).Name(), err)
-		mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": runtime.FuncForPC(reflect.ValueOf(mon.emitAPIServerHealthzCode).Pointer()).Name()})
+		mon.log.Printf("%s: %s", steps.FriendlyName(mon.emitAPIServerHealthzCode), err)
+		mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": steps.FriendlyName(mon.emitAPIServerHealthzCode)})
 	}
 	if statusCode != http.StatusOK {
 		return
@@ -150,7 +148,6 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		if err != nil {
 			errs = append(errs, err)
 			friendlyFuncName := steps.FriendlyName(f)
-
 			mon.log.Printf("%s: %s", friendlyFuncName, err)
 			mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
 			// keep going
