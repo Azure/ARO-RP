@@ -4,15 +4,16 @@ package deploy
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"embed"
 	"errors"
 	"fmt"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/sirupsen/logrus"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -33,7 +34,6 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
-	utilembed "github.com/Azure/ARO-RP/pkg/util/embed"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -83,49 +83,82 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli 
 	}, nil
 }
 
-func (o *operator) staticResources() ([]kruntime.Object, error) {
-	results := []kruntime.Object{}
-	for _, fileBytes := range utilembed.ReadDirRecursive(embeddedFiles, "staticresources") {
-		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(fileBytes, nil, nil)
+type deploymentData struct {
+	Image              string
+	Version            string
+	GitCommit          string
+	IsLocalDevelopment bool
+	HasVersion         bool
+}
+
+func templateManifests(data deploymentData) ([][]byte, error) {
+	templatesRoot, err := template.ParseFS(embeddedFiles, "staticresources/*.yaml")
+	if err != nil {
+		return nil, err
+	}
+	templatesMaster, err := template.ParseFS(embeddedFiles, "staticresources/master/*")
+	if err != nil {
+		return nil, err
+	}
+	templatesWorker, err := template.ParseFS(embeddedFiles, "staticresources/worker/*")
+	if err != nil {
+		return nil, err
+	}
+
+	templatedFiles := make([][]byte, 0)
+	templatesArray := []*template.Template{templatesMaster, templatesRoot, templatesWorker}
+
+	for _, templates := range templatesArray {
+		for _, templ := range templates.Templates() {
+			buff := &bytes.Buffer{}
+			if err := templ.Execute(buff, data); err != nil {
+				return nil, err
+			}
+			templatedFiles = append(templatedFiles, buff.Bytes())
+		}
+	}
+	return templatedFiles, nil
+}
+
+func (o *operator) createDeploymentData() deploymentData {
+	image := o.env.AROOperatorImage()
+	hasVersion := false
+	if o.oc.Properties.OperatorVersion != "" {
+		image = fmt.Sprintf("%s/aro", o.env.ACRDomain())
+		hasVersion = true
+	}
+
+	return deploymentData{
+		IsLocalDevelopment: o.env.IsLocalDevelopmentMode(),
+		Image:              image,
+		Version:            o.oc.Properties.OperatorVersion,
+		GitCommit:          version.GitCommit,
+		HasVersion:         hasVersion,
+	}
+}
+
+func (o *operator) createObjects() ([]kruntime.Object, error) {
+	deploymentData := o.createDeploymentData()
+	templated, err := templateManifests(deploymentData)
+	if err != nil {
+		return nil, err
+	}
+	objects := make([]kruntime.Object, 0, len(templated))
+	for _, v := range templated {
+		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(v, nil, nil)
 		if err != nil {
 			return nil, err
 		}
-
-		// set the image for the deployments
-		if d, ok := obj.(*appsv1.Deployment); ok {
-			if d.Labels == nil {
-				d.Labels = map[string]string{}
-			}
-			var image string
-
-			if o.oc.Properties.OperatorVersion != "" {
-				image = fmt.Sprintf("%s/aro:%s", o.env.ACRDomain(), o.oc.Properties.OperatorVersion)
-				d.Labels["version"] = o.oc.Properties.OperatorVersion
-			} else {
-				image = o.env.AROOperatorImage()
-				d.Labels["version"] = version.GitCommit
-			}
-
-			for i := range d.Spec.Template.Spec.Containers {
-				d.Spec.Template.Spec.Containers[i].Image = image
-
-				if o.env.IsLocalDevelopmentMode() {
-					d.Spec.Template.Spec.Containers[i].Env = append(d.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
-						Name:  "RP_MODE",
-						Value: "development",
-					})
-				}
-			}
-		}
-
-		results = append(results, obj)
+		objects = append(objects, obj)
 	}
-	return results, nil
+
+	return objects, nil
 }
 
 func (o *operator) resources() ([]kruntime.Object, error) {
 	// first static resources from Assets
-	results, err := o.staticResources()
+
+	results, err := o.createObjects()
 	if err != nil {
 		return nil, err
 	}
@@ -211,10 +244,12 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 		},
 	}
 
-	// TODO (BV): reenable gateway once we fix bugs
-	// if o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
-	// 	cluster.Spec.GatewayDomains = append(o.env.GatewayDomains(), o.oc.Properties.ImageRegistryStorageAccountName+".blob."+o.env.Environment().StorageEndpointSuffix)
-	// }
+	if o.oc.Properties.FeatureProfile.GatewayEnabled && o.oc.Properties.NetworkProfile.GatewayPrivateEndpointIP != "" {
+		cluster.Spec.GatewayDomains = append(o.env.GatewayDomains(), o.oc.Properties.ImageRegistryStorageAccountName+".blob."+o.env.Environment().StorageEndpointSuffix)
+	} else {
+		// covers the case of an admin-disable, we need to update dnsmasq on each node
+		cluster.Spec.GatewayDomains = make([]string, 0)
+	}
 
 	// create a secret here for genevalogging, later we will copy it to
 	// the genevalogging namespace.

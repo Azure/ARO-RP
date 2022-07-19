@@ -118,6 +118,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	// Update the ARO Operator
 	if isEverything || isOperator {
 		toRun = append(toRun,
+			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 			steps.Action(m.ensureAROOperator),
 			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
 			steps.Action(m.ensureAROOperatorRunningDesiredVersion),
@@ -165,7 +166,8 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
 			steps.Action(m.ensureACRToken),
 			steps.Action(m.ensureInfraID),
-			steps.Action(m.generateSSHKey),
+			steps.Action(m.ensureSSHKey),
+			steps.Action(m.ensureStorageSuffix),
 			steps.Action(m.populateMTUSize),
 
 			steps.Action(m.createDNS),

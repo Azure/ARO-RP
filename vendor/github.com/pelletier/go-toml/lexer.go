@@ -554,7 +554,7 @@ func (l *tomlLexer) lexComma() tomlLexStateFn {
 // Parse the key and emits its value without escape sequences.
 // bare keys, basic string keys and literal string keys are supported.
 func (l *tomlLexer) lexKey() tomlLexStateFn {
-	growingString := ""
+	var sb strings.Builder
 
 	for r := l.peek(); isKeyChar(r) || r == '\n' || r == '\r'; r = l.peek() {
 		if r == '"' {
@@ -563,7 +563,9 @@ func (l *tomlLexer) lexKey() tomlLexStateFn {
 			if err != nil {
 				return l.errorf(err.Error())
 			}
-			growingString += "\"" + str + "\""
+			sb.WriteString("\"")
+			sb.WriteString(str)
+			sb.WriteString("\"")
 			l.next()
 			continue
 		} else if r == '\'' {
@@ -572,41 +574,45 @@ func (l *tomlLexer) lexKey() tomlLexStateFn {
 			if err != nil {
 				return l.errorf(err.Error())
 			}
-			growingString += "'" + str + "'"
+			sb.WriteString("'")
+			sb.WriteString(str)
+			sb.WriteString("'")
 			l.next()
 			continue
 		} else if r == '\n' {
 			return l.errorf("keys cannot contain new lines")
 		} else if isSpace(r) {
-			str := " "
+			var str strings.Builder
+			str.WriteString(" ")
+
 			// skip trailing whitespace
 			l.next()
 			for r = l.peek(); isSpace(r); r = l.peek() {
-				str += string(r)
+				str.WriteRune(r)
 				l.next()
 			}
 			// break loop if not a dot
 			if r != '.' {
 				break
 			}
-			str += "."
+			str.WriteString(".")
 			// skip trailing whitespace after dot
 			l.next()
 			for r = l.peek(); isSpace(r); r = l.peek() {
-				str += string(r)
+				str.WriteRune(r)
 				l.next()
 			}
-			growingString += str
+			sb.WriteString(str.String())
 			continue
 		} else if r == '.' {
 			// skip
 		} else if !isValidBareChar(r) {
 			return l.errorf("keys cannot contain %c character", r)
 		}
-		growingString += string(r)
+		sb.WriteRune(r)
 		l.next()
 	}
-	l.emitWithValue(tokenKey, growingString)
+	l.emitWithValue(tokenKey, sb.String())
 	return l.lexVoid
 }
 
@@ -631,7 +637,7 @@ func (l *tomlLexer) lexLeftBracket() tomlLexStateFn {
 }
 
 func (l *tomlLexer) lexLiteralStringAsString(terminator string, discardLeadingNewLine bool) (string, error) {
-	growingString := ""
+	var sb strings.Builder
 
 	if discardLeadingNewLine {
 		if l.follow("\r\n") {
@@ -645,14 +651,14 @@ func (l *tomlLexer) lexLiteralStringAsString(terminator string, discardLeadingNe
 	// find end of string
 	for {
 		if l.follow(terminator) {
-			return growingString, nil
+			return sb.String(), nil
 		}
 
 		next := l.peek()
 		if next == eof {
 			break
 		}
-		growingString += string(l.next())
+		sb.WriteRune(l.next())
 	}
 
 	return "", errors.New("unclosed string")
@@ -686,7 +692,7 @@ func (l *tomlLexer) lexLiteralString() tomlLexStateFn {
 // Terminator is the substring indicating the end of the token.
 // The resulting string does not include the terminator.
 func (l *tomlLexer) lexStringAsString(terminator string, discardLeadingNewLine, acceptNewLines bool) (string, error) {
-	growingString := ""
+	var sb strings.Builder
 
 	if discardLeadingNewLine {
 		if l.follow("\r\n") {
@@ -699,7 +705,7 @@ func (l *tomlLexer) lexStringAsString(terminator string, discardLeadingNewLine, 
 
 	for {
 		if l.follow(terminator) {
-			return growingString, nil
+			return sb.String(), nil
 		}
 
 		if l.follow("\\") {
@@ -717,61 +723,61 @@ func (l *tomlLexer) lexStringAsString(terminator string, discardLeadingNewLine, 
 					l.next()
 				}
 			case '"':
-				growingString += "\""
+				sb.WriteString("\"")
 				l.next()
 			case 'n':
-				growingString += "\n"
+				sb.WriteString("\n")
 				l.next()
 			case 'b':
-				growingString += "\b"
+				sb.WriteString("\b")
 				l.next()
 			case 'f':
-				growingString += "\f"
+				sb.WriteString("\f")
 				l.next()
 			case '/':
-				growingString += "/"
+				sb.WriteString("/")
 				l.next()
 			case 't':
-				growingString += "\t"
+				sb.WriteString("\t")
 				l.next()
 			case 'r':
-				growingString += "\r"
+				sb.WriteString("\r")
 				l.next()
 			case '\\':
-				growingString += "\\"
+				sb.WriteString("\\")
 				l.next()
 			case 'u':
 				l.next()
-				code := ""
+				var code strings.Builder
 				for i := 0; i < 4; i++ {
 					c := l.peek()
 					if !isHexDigit(c) {
 						return "", errors.New("unfinished unicode escape")
 					}
 					l.next()
-					code = code + string(c)
+					code.WriteRune(c)
 				}
-				intcode, err := strconv.ParseInt(code, 16, 32)
+				intcode, err := strconv.ParseInt(code.String(), 16, 32)
 				if err != nil {
-					return "", errors.New("invalid unicode escape: \\u" + code)
+					return "", errors.New("invalid unicode escape: \\u" + code.String())
 				}
-				growingString += string(rune(intcode))
+				sb.WriteRune(rune(intcode))
 			case 'U':
 				l.next()
-				code := ""
+				var code strings.Builder
 				for i := 0; i < 8; i++ {
 					c := l.peek()
 					if !isHexDigit(c) {
 						return "", errors.New("unfinished unicode escape")
 					}
 					l.next()
-					code = code + string(c)
+					code.WriteRune(c)
 				}
-				intcode, err := strconv.ParseInt(code, 16, 64)
+				intcode, err := strconv.ParseInt(code.String(), 16, 64)
 				if err != nil {
-					return "", errors.New("invalid unicode escape: \\U" + code)
+					return "", errors.New("invalid unicode escape: \\U" + code.String())
 				}
-				growingString += string(rune(intcode))
+				sb.WriteRune(rune(intcode))
 			default:
 				return "", errors.New("invalid escape sequence: \\" + string(l.peek()))
 			}
@@ -782,7 +788,7 @@ func (l *tomlLexer) lexStringAsString(terminator string, discardLeadingNewLine, 
 				return "", fmt.Errorf("unescaped control character %U", r)
 			}
 			l.next()
-			growingString += string(r)
+			sb.WriteRune(r)
 		}
 
 		if l.peek() == eof {
