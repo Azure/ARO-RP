@@ -8,6 +8,9 @@
         "azureCloudName": {
             "value": ""
         },
+        "azureSecPackQualysUrl": {
+            "value": ""
+        },
         "azureSecPackVSATenantId": {
             "value": ""
         },

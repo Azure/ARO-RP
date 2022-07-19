@@ -35,6 +35,7 @@ type Configuration struct {
 	ACRLocationOverride                *string       `json:"acrLocationOverride,omitempty"`
 	ACRResourceID                      *string       `json:"acrResourceId,omitempty" value:"required"`
 	AzureCloudName                     *string       `json:"azureCloudName,omitempty" value:"required"`
+	AzureSecPackQualysUrl              *string       `json:"azureSecPackQualysUrl,omitempty"`
 	AzureSecPackVSATenantId            *string       `json:"azureSecPackVSATenantId,omitempty"`
 	RPVersionStorageAccountName        *string       `json:"rpVersionStorageAccountName,omitempty" value:"required"`
 	ACRReplicaDisabled                 *bool         `json:"acrReplicaDisabled,omitempty"`
@@ -88,11 +89,11 @@ type Configuration struct {
 	RPMDSDNamespace                    *string       `json:"rpMdsdNamespace,omitempty" value:"required"`
 	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty" value:"required"`
 	RPParentDomainName                 *string       `json:"rpParentDomainName,omitempty" value:"required"`
-	SubscriptionResourceGroupName      *string       `json:"subscriptionResourceGroupName,omitempty" value:"required"`
-	SubscriptionResourceGroupLocation  *string       `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
 	RPVMSSCapacity                     *int          `json:"rpVmssCapacity,omitempty"`
 	SSHPublicKey                       *string       `json:"sshPublicKey,omitempty" value:"required"`
 	StorageAccountDomain               *string       `json:"storageAccountDomain,omitempty" value:"required"`
+	SubscriptionResourceGroupName      *string       `json:"subscriptionResourceGroupName,omitempty" value:"required"`
+	SubscriptionResourceGroupLocation  *string       `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
 	VMSize                             *string       `json:"vmSize,omitempty" value:"required"`
 	VMSSCleanupEnabled                 *bool         `json:"vmssCleanupEnabled,omitempty"`
 }
