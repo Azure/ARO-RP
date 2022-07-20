@@ -52,7 +52,7 @@ jobs:
       export PRIVATE_CLUSTER=true
 
       . ./hack/e2e/run-rp-and-e2e.sh
-      trap 'set +e; kill_rp; clean_e2e_db' EXIT
+      trap 'set +e; kill_rp; clean_e2e_db; kill $vpnpid' EXIT
 
       deploy_e2e_db
 
