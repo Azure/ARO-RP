@@ -347,7 +347,6 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 	if env.IsLocalDevelopmentMode() {
 		// for local dev the AAD application is setup via the ./docs/prepare-a-shared-rp-development-environment.md instructions
 		if err == nil {
-
 			c.log.Print("deleting cluster")
 			err = c.openshiftclustersv20200430.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
 			if err != nil {

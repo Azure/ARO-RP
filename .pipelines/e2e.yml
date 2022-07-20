@@ -41,7 +41,7 @@ jobs:
 
       az account set -s $AZURE_SUBSCRIPTION_ID
 
-      openvpn --verb 4 --config secrets/vpnconfig_cert.ovpn &
+      sudo openvpn --config secrets/$VPN --daemon
 
       sleep 10
 
