@@ -11,6 +11,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -19,7 +20,6 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
@@ -40,7 +40,7 @@ type Monitor struct {
 	m          metrics.Emitter
 	arocli     aroclient.Interface
 
-	hiveClusterManager hive.ClusterManager
+	hiveclientset hiveclient.Interface
 
 	// access below only via the helper functions in cache.go
 	cache struct {
@@ -51,7 +51,7 @@ type Monitor struct {
 	}
 }
 
-func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hiveClusterManager hive.ClusterManager, hourlyRun bool) (*Monitor, error) {
+func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -89,6 +89,16 @@ func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config,
 		return nil, err
 	}
 
+	var hiveclientset *hiveclient.Clientset
+	if hiveRestConfig != nil {
+		var err error
+		hiveclientset, err = hiveclient.NewForConfig(hiveRestConfig)
+		if err != nil {
+			// TODO(hive): Update to fail once we have Hive everywhere in prod and dev
+			log.Error(err)
+		}
+	}
+
 	return &Monitor{
 		log:       log,
 		hourlyRun: hourlyRun,
@@ -96,14 +106,14 @@ func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config,
 		oc:   oc,
 		dims: dims,
 
-		restconfig:         restConfig,
-		cli:                cli,
-		configcli:          configcli,
-		maocli:             maocli,
-		mcocli:             mcocli,
-		arocli:             arocli,
-		m:                  m,
-		hiveClusterManager: hiveClusterManager,
+		restconfig:    restConfig,
+		cli:           cli,
+		configcli:     configcli,
+		maocli:        maocli,
+		mcocli:        mcocli,
+		arocli:        arocli,
+		m:             m,
+		hiveclientset: hiveclientset,
 	}, nil
 }
 

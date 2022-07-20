@@ -16,7 +16,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
@@ -45,7 +44,7 @@ type monitor struct {
 	lastChangefeed atomic.Value //time.Time
 	startTime      time.Time
 
-	hiveClusterManager hive.ClusterManager
+	hiveRestConfig *rest.Config
 }
 
 type Runnable interface {
@@ -53,16 +52,6 @@ type Runnable interface {
 }
 
 func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Emitter, hiveRestConfig *rest.Config) Runnable {
-	var hr hive.ClusterManager
-	if hiveRestConfig != nil {
-		var err error
-		hr, err = hive.NewClusterManagerFromConfig(log, hiveRestConfig)
-		if err != nil {
-			// TODO(hive): Update to fail once we have Hive everywhere in prod and dev
-			log.Error(err)
-		}
-	}
-
 	return &monitor{
 		baseLog: log,
 		dialer:  dialer,
@@ -81,7 +70,7 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Moni
 
 		startTime: time.Now(),
 
-		hiveClusterManager: hr,
+		hiveRestConfig: hiveRestConfig,
 	}
 }
 
