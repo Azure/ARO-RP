@@ -34,13 +34,14 @@ type ClusterManager interface {
 // as the intention of this is to be able to reconcile hive resources from CosmosDB -> Hive
 // and this process should work even if the customer cluster is not responding for any reason.
 type CreateOrUpdateParameters struct {
-	Namespace        string
-	ClusterName      string
-	Location         string
-	InfraID          string
-	ClusterID        string
-	KubeConfig       string
-	ServicePrincipal string
+	Namespace                  string
+	ClusterName                string
+	Location                   string
+	InfraID                    string
+	ClusterID                  string
+	KubeConfig                 string
+	ServicePrincipal           string
+	APIServerPrivateEndpointIP string
 }
 
 type clusterManager struct {
@@ -104,7 +105,7 @@ func (hr *clusterManager) CreateOrUpdate(ctx context.Context, parameters *Create
 	resources := []kruntime.Object{
 		kubeAdminSecret(parameters.Namespace, []byte(parameters.KubeConfig)),
 		servicePrincipalSecret(parameters.Namespace, []byte(parameters.ServicePrincipal)),
-		clusterDeployment(parameters.Namespace, parameters.ClusterName, parameters.ClusterID, parameters.InfraID, parameters.Location),
+		clusterDeployment(parameters.Namespace, parameters.ClusterName, parameters.ClusterID, parameters.InfraID, parameters.Location, parameters.APIServerPrivateEndpointIP),
 	}
 
 	err := dynamichelper.Prepare(resources)
