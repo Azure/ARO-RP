@@ -17,6 +17,7 @@ type actionFunction func(context.Context) error
 
 // Action returns a Step which will execute the action function `f`. Errors from
 // `f` are returned directly.
+// The metricsTopic parameter is optional and only the first element is considered if present.
 func Action(f actionFunction, metricsTopic ...string) Step {
 	return actionStep{
 		f:            f,
