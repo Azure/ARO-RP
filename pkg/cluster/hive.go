@@ -78,7 +78,6 @@ func (m *manager) hiveDeleteResources(ctx context.Context) error {
 	return m.hiveClusterManager.Delete(ctx, namespace)
 }
 
-// TODO(hive): Consider moving somewhere like pkg/hive/util.go
 func collectDataForHive(subscriptionDoc *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) (*hive.CreateOrUpdateParameters, error) {
 	// TODO(hive): When hive support first party principles we'll need to send both first party and cluster service principles
 	clusterSP := azure.Credentials{
@@ -94,12 +93,13 @@ func collectDataForHive(subscriptionDoc *api.SubscriptionDocument, doc *api.Open
 	}
 
 	return &hive.CreateOrUpdateParameters{
-		Namespace:        doc.OpenShiftCluster.Properties.HiveProfile.Namespace,
-		ClusterName:      doc.OpenShiftCluster.Name,
-		Location:         doc.OpenShiftCluster.Location,
-		InfraID:          doc.OpenShiftCluster.Properties.InfraID,
-		ClusterID:        doc.ID,
-		KubeConfig:       string(doc.OpenShiftCluster.Properties.AROServiceKubeconfig),
-		ServicePrincipal: string(clusterSPBytes),
+		Namespace:                  doc.OpenShiftCluster.Properties.HiveProfile.Namespace,
+		ClusterName:                doc.OpenShiftCluster.Name,
+		Location:                   doc.OpenShiftCluster.Location,
+		InfraID:                    doc.OpenShiftCluster.Properties.InfraID,
+		ClusterID:                  doc.ID,
+		KubeConfig:                 string(doc.OpenShiftCluster.Properties.AROServiceKubeconfig),
+		ServicePrincipal:           string(clusterSPBytes),
+		APIServerPrivateEndpointIP: doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
 	}, nil
 }
