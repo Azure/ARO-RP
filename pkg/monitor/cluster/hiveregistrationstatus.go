@@ -5,56 +5,45 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	hivev1 "github.com/openshift/hive/apis/hive/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
-type hiveRegistrationState struct {
-	isReachable        bool
-	notReachableReason string
+var clusterDeploymentConditionsExpected = map[hivev1.ClusterDeploymentConditionType]corev1.ConditionStatus{
+	hivev1.ClusterReadyCondition: corev1.ConditionTrue,
+	hivev1.UnreachableCondition:  corev1.ConditionFalse,
 }
 
 func (mon *Monitor) emitHiveRegistrationStatus(ctx context.Context) error {
 	if mon.hiveClusterManager == nil {
+		// TODO(hive): remove this if once we have Hive everywhere
+		mon.log.Info("skipping: no hive cluster manager")
 		return nil
 	}
 
-	state, err := mon.hiveRegistrationState(ctx)
+	if mon.oc.Properties.HiveProfile.Namespace == "" {
+		mon.emitGauge("hive.condition.NoNamespace", 1, map[string]string{
+			"reason": "NoNamespaceInClusterDocument",
+		})
+		return nil
+	}
+
+	cd, err := mon.hiveClusterManager.ClusterDeployment(ctx, mon.oc.Properties.HiveProfile.Namespace)
 	if err != nil {
 		return err
 	}
 
-	if !state.isReachable {
-		mon.emitGauge("hive.registration.isUnreachable", 1, map[string]string{
-			"reason": state.notReachableReason,
-		})
-	}
-
-	return nil
-}
-
-func (mon *Monitor) hiveRegistrationState(ctx context.Context) (hiveRegistrationState, error) {
-	state := hiveRegistrationState{
-		isReachable:        false,
-		notReachableReason: "",
-	}
-
-	if mon.oc.Properties.HiveProfile.Namespace == "" {
-		state.notReachableReason = "no namespace in cluster document"
-		return state, nil
-	}
-
-	isConnected, reason, err := mon.hiveClusterManager.IsConnected(ctx, mon.oc.Properties.HiveProfile.Namespace)
-	if err != nil {
-		if kerrors.IsNotFound(err) {
-			state.notReachableReason = "cluster not registered"
-			return state, nil
+	for _, condition := range cd.Status.Conditions {
+		if expectedState, ok := clusterDeploymentConditionsExpected[condition.Type]; ok {
+			if condition.Status != expectedState {
+				name := fmt.Sprintf("hive.condition.%s", condition.Type)
+				mon.emitGauge(name, 1, map[string]string{
+					"reason": condition.Reason,
+				})
+			}
 		}
-		return state, err
 	}
-
-	state.isReachable = isConnected
-	state.notReachableReason = reason
-
-	return state, nil
+	return nil
 }

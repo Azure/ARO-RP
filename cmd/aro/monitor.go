@@ -117,19 +117,11 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 
 	hiveRestConfig, err := hive.HiveRestConfig()
 	if err != nil {
-		log.Error(err) // Don't fail because of hive
+		log.Error(err)
+		// TODO(hive): Update to fail once we have Hive everywhere in prod and dev
 	}
 
-	// TODO: always set hive once we have it everywhere in prod and dev
-	var hr hive.ClusterManager
-	if hiveRestConfig != nil {
-		hr, err = hive.NewClusterManagerFromConfig(log, hiveRestConfig)
-		if err != nil {
-			return err
-		}
-	}
-
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm, hr)
+	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm, hiveRestConfig)
 
 	return mon.Run(ctx)
 }

@@ -40,7 +40,6 @@ type Monitor struct {
 	m          metrics.Emitter
 	arocli     aroclient.Interface
 
-	// hiveClusterManager hive.ClusterManager
 	hiveClusterManager hive.ClusterManager
 
 	// access below only via the helper functions in cache.go

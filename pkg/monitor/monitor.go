@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -51,7 +52,17 @@ type Runnable interface {
 	Run(context.Context) error
 }
 
-func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Emitter, hiveClusterManager hive.ClusterManager) Runnable {
+func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Emitter, hiveRestConfig *rest.Config) Runnable {
+	var hr hive.ClusterManager
+	if hiveRestConfig != nil {
+		var err error
+		hr, err = hive.NewClusterManagerFromConfig(log, hiveRestConfig)
+		if err != nil {
+			// TODO(hive): Update to fail once we have Hive everywhere in prod and dev
+			log.Error(err)
+		}
+	}
+
 	return &monitor{
 		baseLog: log,
 		dialer:  dialer,
@@ -70,7 +81,7 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Moni
 
 		startTime: time.Now(),
 
-		hiveClusterManager: hiveClusterManager,
+		hiveClusterManager: hr,
 	}
 }
 
