@@ -118,8 +118,9 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
 	if err != nil {
 		errs = append(errs, err)
-		mon.log.Printf("%s: %s", steps.FriendlyName(mon.emitAPIServerHealthzCode), err)
-		mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": steps.FriendlyName(mon.emitAPIServerHealthzCode)})
+		friendlyFuncName := steps.FriendlyName(mon.emitAPIServerHealthzCode)
+		mon.log.Printf("%s: %s", friendlyFuncName, err)
+		mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
 	}
 	if statusCode != http.StatusOK {
 		return
