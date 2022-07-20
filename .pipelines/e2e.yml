@@ -43,6 +43,8 @@ jobs:
 
       sudo openvpn --config secrets/$VPN --daemon
 
+      export vpnpid=$!
+
       sleep 10
 
       set -x
@@ -63,5 +65,7 @@ jobs:
       make test-e2e
 
       go run ./hack/cluster delete
+
+      kill $vpnpid
 
   - template: ./templates/template-az-cli-logout.yml
