@@ -41,9 +41,7 @@ jobs:
 
       az account set -s $AZURE_SUBSCRIPTION_ID
 
-      sudo openvpn --config secrets/$VPN --daemon
-
-      export vpnpid=$!
+      sudo openvpn --config secrets/$VPN --daemon --writepid vpnpid
 
       sleep 10
 
@@ -52,7 +50,7 @@ jobs:
       export PRIVATE_CLUSTER=true
 
       . ./hack/e2e/run-rp-and-e2e.sh
-      trap 'set +e; kill_rp; clean_e2e_db; kill $vpnpid' EXIT
+      trap 'set +e; kill_rp; clean_e2e_db; kill_vpn' EXIT
 
       deploy_e2e_db
 
@@ -66,6 +64,6 @@ jobs:
 
       go run ./hack/cluster delete
 
-      kill $vpnpid
+      kill_vpn
 
   - template: ./templates/template-az-cli-logout.yml

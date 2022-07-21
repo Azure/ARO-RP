@@ -67,6 +67,11 @@ clean_e2e_db(){
         --resource-group $RESOURCEGROUP >/dev/null
 }
 
+kill_vpn() {
+    while read pid; do sudo kill $pid; done < vpnpid
+}
+
+
 # TODO: CLUSTER and is also recalculated in multiple places
 # in the billing pipelines :-(
 
