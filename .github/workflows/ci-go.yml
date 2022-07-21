@@ -6,12 +6,9 @@ on:
       - v*
     branches:
       - master
-      - main
   pull_request:
 permissions:
   contents: read
-  # Optional: allow read access to pull request. Use with `only-new-issues` option.
-  # pull-requests: read
 
 jobs:
   ci-from-docker:
@@ -19,13 +16,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: build from docker
-        uses: docker/build-push-action@v3
+      - name: build from buildah
+        uses: redhat-actions/buildah-build@v2
         with:
+          image: test-image
+          tags: ${{ github.sha }}
           context: .
-          push: false
-          file: "./Dockerfile.ci"
+          containerfiles: ./Dockerfile.ci
