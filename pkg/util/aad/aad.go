@@ -43,12 +43,11 @@ func GetToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, te
 	// NOTE: Do not override err with the error returned by
 	// wait.PollImmediateUntil. Doing this will not propagate the latest error
 	// to the user in case when wait exceeds the timeout
-	errServicePrincipal := api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal credentials are invalid.")
 	_ = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		var done bool
 		done, err = authorizer.RefreshWithContext(ctx, log)
 		if err != nil {
-			err = errServicePrincipal
+			err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal credentials are invalid.")
 		}
 		if !done || err != nil {
 			return false, err
@@ -58,7 +57,7 @@ func GetToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, te
 		claims := jwt.MapClaims{}
 		_, _, err = p.ParseUnverified(authorizer.OAuthToken(), claims)
 		if err != nil {
-			err = errServicePrincipal
+			err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalToken, "properties.servicePrincipalProfile", "The provided service principal generated an invalid token.")
 			return false, err
 		}
 
