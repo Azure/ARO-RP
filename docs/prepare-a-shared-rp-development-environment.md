@@ -35,7 +35,7 @@ locations.
    development environment key vault(s).  Set ADMIN_OBJECT_ID to the object ID.
 
    ```bash
-   ADMIN_OBJECT_ID="$(az ad group show -g 'ARO v4 RP Engineering' --query objectId -o tsv)"
+   ADMIN_OBJECT_ID="$(az ad group show -g 'ARO v4 RP Engineering' --query id -o tsv)"
    ```
 
 1. You will need the ARO RP-specific pull secret (ask one of the
@@ -208,10 +208,10 @@ locations.
      -l $LOCATION \
      --template-file pkg/deploy/assets/rbac-development.json \
      --parameters \
-       "armServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_ARM_CLIENT_ID'" --query '[].objectId' -o tsv)" \
-       "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
+       "armServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_ARM_CLIENT_ID'" --query '[].id' -o tsv)" \
+       "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)" \
        "fpRoleDefinitionId"="$(uuidgen)" \
-       "devServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)" \
+       "devServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].id' -o tsv)" \
      >/dev/null
    ```
 
@@ -248,7 +248,7 @@ locations.
       --query appId \
       -o tsv)"
 
-   OBJ_ID="$(az ad app show --id $AZURE_DBTOKEN_CLIENT_ID --query objectId)"
+   OBJ_ID="$(az ad app show --id $AZURE_DBTOKEN_CLIENT_ID --query id)"
 
    > __NOTE:__: the graph API requires this to be done from a managed machine
    az rest --method PATCH \
@@ -395,18 +395,18 @@ storage account so other people on your team can access it via `make secrets`
    export AZURE_SUBSCRIPTION_ID='$AZURE_SUBSCRIPTION_ID'
    export AZURE_ARM_CLIENT_ID='$AZURE_ARM_CLIENT_ID'
    export AZURE_FP_CLIENT_ID='$AZURE_FP_CLIENT_ID'
-   export AZURE_FP_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)'
+   export AZURE_FP_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)'
    export AZURE_DBTOKEN_CLIENT_ID='$AZURE_DBTOKEN_CLIENT_ID'
    export AZURE_PORTAL_CLIENT_ID='$AZURE_PORTAL_CLIENT_ID'
    export AZURE_PORTAL_ACCESS_GROUP_IDS='$ADMIN_OBJECT_ID'
    export AZURE_PORTAL_ELEVATED_GROUP_IDS='$ADMIN_OBJECT_ID'
    export AZURE_CLIENT_ID='$AZURE_CLIENT_ID'
-   export AZURE_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)'
+   export AZURE_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].id' -o tsv)'
    export AZURE_CLIENT_SECRET='$AZURE_CLIENT_SECRET'
    export AZURE_RP_CLIENT_ID='$AZURE_RP_CLIENT_ID'
    export AZURE_RP_CLIENT_SECRET='$AZURE_RP_CLIENT_SECRET'
    export AZURE_GATEWAY_CLIENT_ID='$AZURE_GATEWAY_CLIENT_ID'
-   export AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_GATEWAY_CLIENT_ID'" --query '[].objectId' -o tsv)'
+   export AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_GATEWAY_CLIENT_ID'" --query '[].id' -o tsv)'
    export AZURE_GATEWAY_CLIENT_SECRET='$AZURE_GATEWAY_CLIENT_SECRET'
    export RESOURCEGROUP="$RESOURCEGROUP_PREFIX-\$LOCATION"
    export PROXY_HOSTNAME="vm0.$PROXY_DOMAIN_NAME_LABEL.\$LOCATION.cloudapp.azure.com"
