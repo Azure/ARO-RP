@@ -226,6 +226,7 @@ rules:
   - infrastructures
   - ingresses
   - networks
+  - nodes
   - oauths
   - operatorhubs
   - projects
@@ -500,6 +501,14 @@ rules:
   verbs:
   - get
   - list
+- apiGroups:
+  - performance.openshift.io
+  resources:
+  - performanceprofiles
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - policy
   resources:

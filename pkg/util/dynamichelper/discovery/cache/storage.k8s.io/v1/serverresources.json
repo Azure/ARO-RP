@@ -38,6 +38,23 @@
             "storageVersionHash": "Pe62DkZtjuo="
         },
         {
+            "name": "csistoragecapacities",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "CSIStorageCapacity",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "4as6MA/kOg0="
+        },
+        {
             "name": "storageclasses",
             "singularName": "",
             "namespaced": false,
