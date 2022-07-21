@@ -39,7 +39,7 @@ func (mon *Monitor) emitHiveRegistrationStatus(ctx context.Context) error {
 	for _, condition := range cd.Status.Conditions {
 		if expectedState, ok := clusterDeploymentConditionsExpected[condition.Type]; ok {
 			if condition.Status != expectedState {
-				mon.emitGauge("hive.conditions", 1, map[string]string{
+				mon.emitGauge("hive.clusterdeployment.conditions", 1, map[string]string{
 					"type":   string(condition.Type),
 					"reason": condition.Reason,
 				})
