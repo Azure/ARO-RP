@@ -35,7 +35,7 @@ locations.
    development environment key vault(s).  Set ADMIN_OBJECT_ID to the object ID.
 
    ```bash
-   ADMIN_OBJECT_ID="$(az ad group show -g 'ARO v4 RP Engineering' --query id -o tsv)"
+   ADMIN_OBJECT_ID="$(az ad group show -g 'aro-engineering' --query id -o tsv)"
    ```
 
 1. You will need the ARO RP-specific pull secret (ask one of the
