@@ -1,0 +1,5 @@
+name: "ARO CodeQL config"
+
+# Skip the vendor directory as codeqlv2 analysis falls over
+paths-ignore:
+- 'vendor/**'
