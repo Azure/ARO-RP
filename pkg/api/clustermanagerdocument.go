@@ -6,9 +6,9 @@ package api
 // OpenShiftClusterManagerConfigurationDocument represents OpenShift cluster manager configuration documents.
 // pkg/database/cosmosdb requires its definition.
 type OpenShiftClusterManagerConfigurationDocuments struct {
-	Count                                            int                                                `json:"_count,omitempty"`
-	ResourceID                                       string                                             `json:"_rid,omitempty"`
-	OpenShiftClusterManagementConfigurationDocuments []*OpenShiftClusterManagementConfigurationDocument `json:"Documents,omitempty"`
+	Count                                         int                                             `json:"_count,omitempty"`
+	ResourceID                                    string                                          `json:"_rid,omitempty"`
+	OpenShiftClusterManagerConfigurationDocuments []*OpenShiftClusterManagerConfigurationDocument `json:"Documents,omitempty"`
 }
 
 // String returns a JSON representation of the OpenShiftClusterManagerConfigurationDocuments struct.
@@ -16,7 +16,7 @@ func (c *OpenShiftClusterManagerConfigurationDocuments) String() string {
 	return encodeJSON(c)
 }
 
-// OpenShiftClusterManagementConfigurationDocument represents an OpenShift cluster manager configuration document.
+// OpenShiftClusterManagerConfigurationDocument represents an OpenShift cluster manager configuration document.
 // pkg/database/cosmosdb requires its definition.
 type OpenShiftClusterManagerConfigurationDocument struct {
 	MissingFields
@@ -31,5 +31,5 @@ type OpenShiftClusterManagerConfigurationDocument struct {
 	LSN         int                    `json:"_lsn,omitempty"`
 	Metadata    map[string]interface{} `json:"_metadata,omitempty"`
 
-	OpenShiftClusterManagementConfiguration *OpenShiftClusterManagementConfiguration `json:"openShiftClusterManagementConfiguration,omitempty"`
+	//OpenShiftClusterManagerConfiguration *OpenShiftClusterManagerConfiguration `json:"openShiftClusterManagerConfiguration,omitempty"`
 }
