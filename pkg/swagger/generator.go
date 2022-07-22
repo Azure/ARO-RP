@@ -19,6 +19,10 @@ const apiv20220401Path = "github.com/Azure/ARO-RP/pkg/api/v20220401"
 const apiv20220904Path = "github.com/Azure/ARO-RP/pkg/api/v20220904"
 
 type generator struct {
+	exampleSyncSetPutParameter                     func() interface{}
+	exampleSyncSetPatchParameter                   func() interface{}
+	exampleSyncSetResponse                         func() interface{}
+	exampleSyncSetListResponse                     func() interface{}
 	exampleOpenShiftClusterPutParameter            func() interface{}
 	exampleOpenShiftClusterPatchParameter          func() interface{}
 	exampleOpenShiftClusterResponse                func() interface{}
@@ -31,6 +35,7 @@ type generator struct {
 	systemData         bool
 	kubeConfig         bool
 	installVersionList bool
+	clusterManager     bool
 	xmsEnum            []string
 	xmsSecretList      []string
 	xmsIdentifiers     []string
@@ -81,6 +86,10 @@ var apis = map[string]*generator{
 		kubeConfig:         true,
 	},
 	apiv20220904Path: {
+		exampleSyncSetPutParameter:                     v20220904.ExampleSyncSetPutParameter,
+		exampleSyncSetPatchParameter:                   v20220904.ExampleSyncSetPatchParameter,
+		exampleSyncSetResponse:                         v20220904.ExampleSyncSetResponse,
+		exampleSyncSetListResponse:                     v20220904.ExampleSyncSetListResponse,
 		exampleOpenShiftClusterPutParameter:            v20220904.ExampleOpenShiftClusterPutParameter,
 		exampleOpenShiftClusterPatchParameter:          v20220904.ExampleOpenShiftClusterPatchParameter,
 		exampleOpenShiftClusterResponse:                v20220904.ExampleOpenShiftClusterResponse,
@@ -95,6 +104,7 @@ var apis = map[string]*generator{
 		xmsIdentifiers:     []string{},
 		commonTypesVersion: "v3",
 		systemData:         true,
+		clusterManager:     true,
 		installVersionList: true,
 		kubeConfig:         true,
 	},

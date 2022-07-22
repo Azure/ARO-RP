@@ -5,6 +5,7 @@ package swagger
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -34,7 +35,9 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 			}{
 				Responses: Responses{},
 			}
-
+			for _, v := range op.Schemes {
+				fmt.Println("scheme: ", v)
+			}
 			for _, param := range op.Parameters {
 				switch param := param.(type) {
 				case Reference:
@@ -59,6 +62,11 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 							Name:      "location",
 							Parameter: "location",
 						})
+					case "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ClusterParameter":
+						example.Parameters = append(example.Parameters, NameParameter{
+							Name:      "cluster",
+							Parameter: "cluster",
+						})
 					}
 				case Parameter:
 					switch param.Name {
@@ -66,6 +74,10 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 						example.Parameters = append(example.Parameters, NameParameter{
 							Name:      param.Name,
 							Parameter: "resourceName",
+						})
+						example.Parameters = append(example.Parameters, NameParameter{
+							Name:      "syncSetResourceName",
+							Parameter: "syncSetResourceName",
 						})
 					case "parameters":
 						switch param.Schema.Ref {
@@ -78,6 +90,16 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 							example.Parameters = append(example.Parameters, NameParameter{
 								Name:      param.Name,
 								Parameter: g.exampleOpenShiftClusterPatchParameter(),
+							})
+						case "#/definitions/Configuration":
+							example.Parameters = append(example.Parameters, NameParameter{
+								Name:      param.Name,
+								Parameter: g.exampleSyncSetPutParameter,
+							})
+						case "#/definitions/Syncset":
+							example.Parameters = append(example.Parameters, NameParameter{
+								Name:      param.Name,
+								Parameter: g.exampleSyncSetPutParameter,
 							})
 						}
 					}
@@ -94,6 +116,10 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 				var body interface{}
 				if response.Schema != nil {
 					switch response.Schema.Ref {
+					case "#/definitions/SyncSet":
+						body = g.exampleSyncSetResponse()
+					case "#/definitions/SyncSetList":
+						body = g.exampleSyncSetListResponse()
 					case "#/definitions/OpenShiftCluster":
 						body = g.exampleOpenShiftClusterResponse()
 					case "#/definitions/OpenShiftClusterCredentials":

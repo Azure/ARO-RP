@@ -74,6 +74,8 @@ type testInfra struct {
 	asyncOperationsDatabase   database.AsyncOperations
 	billingClient             *cosmosdb.FakeBillingDocumentClient
 	billingDatabase           database.Billing
+	clusterManagerClient      *cosmosdb.FakeClusterManagerConfigurationDocumentClient
+	clusterManagerDatabase    database.ClusterManagerConfigurations
 	subscriptionsClient       *cosmosdb.FakeSubscriptionDocumentClient
 	subscriptionsDatabase     database.Subscriptions
 	openShiftVersionsClient   *cosmosdb.FakeOpenShiftVersionDocumentClient
@@ -166,6 +168,12 @@ func (ti *testInfra) WithOpenShiftVersions() *testInfra {
 	uuid := deterministicuuid.NewTestUUIDGenerator(7)
 	ti.openShiftVersionsDatabase, ti.openShiftVersionsClient = testdatabase.NewFakeOpenShiftVersions(uuid)
 	ti.fixture.WithOpenShiftVersions(ti.openShiftVersionsDatabase, uuid)
+	return ti
+}
+
+func (ti *testInfra) WithClusterManagerConfigurations() *testInfra {
+	ti.clusterManagerDatabase, ti.clusterManagerClient = testdatabase.NewFakeClusterManager()
+	ti.fixture.WithClusterManagerConfigurations(ti.clusterManagerDatabase)
 	return ti
 }
 

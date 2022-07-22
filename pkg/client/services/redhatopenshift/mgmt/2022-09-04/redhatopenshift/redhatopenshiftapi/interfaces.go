@@ -31,25 +31,34 @@ type OperationsClientAPI interface {
 
 var _ OperationsClientAPI = (*redhatopenshift.OperationsClient)(nil)
 
-// ListClientAPI contains the set of methods on the ListClient type.
-type ListClientAPI interface {
-	Versions(ctx context.Context, location string) (result redhatopenshift.ListString, err error)
+// InstallVersionsClientAPI contains the set of methods on the InstallVersionsClient type.
+type InstallVersionsClientAPI interface {
+	List(ctx context.Context, location string) (result redhatopenshift.ListString, err error)
 }
 
-var _ ListClientAPI = (*redhatopenshift.ListClient)(nil)
+var _ InstallVersionsClientAPI = (*redhatopenshift.InstallVersionsClient)(nil)
 
 // OpenShiftClustersClientAPI contains the set of methods on the OpenShiftClustersClient type.
 type OpenShiftClustersClientAPI interface {
 	CreateOrUpdate(ctx context.Context, resourceGroupName string, resourceName string, parameters redhatopenshift.OpenShiftCluster) (result redhatopenshift.OpenShiftClustersCreateOrUpdateFuture, err error)
 	Delete(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.OpenShiftClustersDeleteFuture, err error)
 	Get(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.OpenShiftCluster, err error)
+	List(ctx context.Context) (result redhatopenshift.OpenShiftClusterListPage, err error)
+	ListComplete(ctx context.Context) (result redhatopenshift.OpenShiftClusterListIterator, err error)
 	ListAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.OpenShiftClusterAdminKubeconfig, err error)
 	ListByResourceGroup(ctx context.Context, resourceGroupName string) (result redhatopenshift.OpenShiftClusterListPage, err error)
 	ListByResourceGroupComplete(ctx context.Context, resourceGroupName string) (result redhatopenshift.OpenShiftClusterListIterator, err error)
 	ListCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.OpenShiftClusterCredentials, err error)
-	ListMethod(ctx context.Context) (result redhatopenshift.OpenShiftClusterListPage, err error)
-	ListMethodComplete(ctx context.Context) (result redhatopenshift.OpenShiftClusterListIterator, err error)
 	Update(ctx context.Context, resourceGroupName string, resourceName string, parameters redhatopenshift.OpenShiftClusterUpdate) (result redhatopenshift.OpenShiftClustersUpdateFuture, err error)
 }
 
 var _ OpenShiftClustersClientAPI = (*redhatopenshift.OpenShiftClustersClient)(nil)
+
+// SyncSetsClientAPI contains the set of methods on the SyncSetsClient type.
+type SyncSetsClientAPI interface {
+	Get(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (result redhatopenshift.SyncSet, err error)
+	List(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.SyncSetListPage, err error)
+	ListComplete(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.SyncSetListIterator, err error)
+}
+
+var _ SyncSetsClientAPI = (*redhatopenshift.SyncSetsClient)(nil)

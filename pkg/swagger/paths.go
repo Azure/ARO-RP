@@ -20,6 +20,10 @@ import (
 // n==4 action on resource expecting input payload
 // n==5 patch action on resource expecting input payload
 // n==6 list across subscription and location
+// n==7 action on child resource not expecting input payload
+// n==8 action on child resource expecting input payload
+// n==9 patch action on resource expecting input payload
+// n==10 list child resources belonging to a parent resource
 
 func (g *generator) populateParameters(n int, typ, friendlyName string) (s []interface{}) {
 	s = []interface{}{
@@ -27,17 +31,17 @@ func (g *generator) populateParameters(n int, typ, friendlyName string) (s []int
 			Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ApiVersionParameter",
 		},
 	}
-
 	if n > 0 {
 		s = append(s, Reference{
 			Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/SubscriptionIdParameter",
 		})
-		if n == 6 {
-			s = append(s, Reference{
-				Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/LocationParameter",
-			})
-			return
-		}
+	}
+
+	if n == 6 {
+		s = append(s, Reference{
+			Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/LocationParameter",
+		})
+		return
 	}
 
 	if n > 1 {
@@ -56,7 +60,18 @@ func (g *generator) populateParameters(n int, typ, friendlyName string) (s []int
 		})
 	}
 
-	if n > 3 {
+	if n == 7 {
+		s = append(s, Parameter{
+			Name:        "syncSetResourceName",
+			In:          "path",
+			Description: "The name of the " + friendlyName + " resource.",
+			Required:    true,
+			Type:        "string",
+		})
+		return
+	}
+
+	if n > 3 && n != 10 {
 		s = append(s, Parameter{
 			Name:        "parameters",
 			In:          "body",
@@ -68,10 +83,9 @@ func (g *generator) populateParameters(n int, typ, friendlyName string) (s []int
 		})
 	}
 
-	if n > 4 {
+	if n > 4 && friendlyName != "SyncSet" {
 		s[len(s)-1].(Parameter).Schema.Ref += "Update"
 	}
-
 	return
 }
 
@@ -105,8 +119,60 @@ func (g *generator) populateResponses(typ string, isDelete bool, statusCodes ...
 	return
 }
 
+// populateChildResourcePaths populates the paths for a child resource of a top level ARM resource
+func (g *generator) populateChildResourcePaths(ps Paths, resourceProviderNamespace string, resourceType string, childResourceType string, friendlyName string) {
+	titleCaser := cases.Title(language.Und, cases.NoLower)
+	ps["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/"+resourceProviderNamespace+"/"+resourceType+"/{resourceName}/"+childResourceType+"s"] = &PathItem{
+		Get: &Operation{
+			Tags:        []string{titleCaser.String(childResourceType) + "s"},
+			Summary:     "Lists " + friendlyName + "s that belong to that Azure Red Hat OpenShift Cluster.",
+			Description: "The operation returns properties of each " + friendlyName + ".",
+			OperationID: titleCaser.String(childResourceType) + "s_List",
+			Parameters:  g.populateParameters(10, titleCaser.String(childResourceType), friendlyName),
+			Responses:   g.populateResponses(titleCaser.String(childResourceType)+"List", false, http.StatusOK),
+			Pageable: &Pageable{
+				NextLinkName: "nextLink",
+			},
+		},
+	}
+	ps["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}"] = &PathItem{
+		Get: &Operation{
+			Tags:        []string{titleCaser.String(childResourceType) + "s"},
+			Summary:     "Gets a " + friendlyName + " with the specified subscription, resource group and resource name.",
+			Description: "The operation returns properties of a " + friendlyName + ".",
+			OperationID: titleCaser.String(childResourceType) + "s_Get",
+			Parameters:  g.populateParameters(7, titleCaser.String(childResourceType), friendlyName),
+			Responses:   g.populateResponses(titleCaser.String(childResourceType), false, http.StatusOK),
+		},
+		// Put: &Operation{
+		// 	Tags:        []string{titleCaser.String(childResourceType) + "s"},
+		// 	Summary:     "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
+		// 	Description: "The operation returns properties of a " + friendlyName + ".",
+		// 	OperationID: titleCaser.String(childResourceType) + "s_CreateOrUpdate",
+		// 	Parameters:  g.populateParameters(4, titleCaser.String(childResourceType), friendlyName),
+		// 	Responses:   g.populateResponses(titleCaser.String(childResourceType), false, http.StatusOK, http.StatusCreated),
+		// },
+		// Delete: &Operation{
+		// 	Tags:        []string{titleCaser.String(childResourceType) + "s"},
+		// 	Summary:     "Deletes a " + friendlyName + " with the specified subscription, resource group and resource name.",
+		// 	Description: "The operation returns nothing.",
+		// 	OperationID: titleCaser.String(childResourceType) + "s_Delete",
+		// 	Parameters:  g.populateParameters(3, titleCaser.String(childResourceType), friendlyName),
+		// 	Responses:   g.populateResponses(titleCaser.String(childResourceType), true, http.StatusAccepted, http.StatusNoContent),
+		// },
+		// Patch: &Operation{
+		// 	Tags:        []string{titleCaser.String(childResourceType) + "s"},
+		// 	Summary:     "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
+		// 	Description: "The operation returns properties of a " + friendlyName + ".",
+		// 	OperationID: titleCaser.String(childResourceType) + "s_Update",
+		// 	Parameters:  g.populateParameters(5, titleCaser.String(childResourceType), friendlyName),
+		// 	Responses:   g.populateResponses(titleCaser.String(childResourceType), false, http.StatusOK, http.StatusCreated),
+		// },
+	}
+}
+
 // populateTopLevelPaths populates the paths for a top level ARM resource
-func (g *generator) populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName string) (ps Paths) {
+func (g *generator) populateTopLevelPaths(resourceProviderNamespace string, resourceType string, friendlyName string) (ps Paths) {
 	titleCaser := cases.Title(language.Und, cases.NoLower)
 	ps = Paths{}
 
@@ -185,7 +251,6 @@ func populateExamples(ps Paths) {
 			if op == nil {
 				continue
 			}
-
 			op.Examples = map[string]Reference{
 				op.Summary: {
 					Ref: "./examples/" + op.OperationID + ".json",

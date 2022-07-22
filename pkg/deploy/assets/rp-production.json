@@ -818,6 +818,28 @@
         {
             "properties": {
                 "resource": {
+                    "id": "ClusterManagerConfigurations",
+                    "partitionKey": {
+                        "paths": [
+                            "/partitionKey"
+                        ],
+                        "kind": "Hash"
+                    }
+                },
+                "options": {}
+            },
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/ClusterManagerConfigurations')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2021-01-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ]
+        },
+        {
+            "properties": {
+                "resource": {
                     "id": "Billing",
                     "partitionKey": {
                         "paths": [
@@ -960,6 +982,15 @@
                             "/id"
                         ],
                         "kind": "Hash"
+                    },
+                    "uniqueKeyPolicy": {
+                        "uniqueKeys": [
+                            {
+                                "paths": [
+                                    "/key"
+                                ]
+                            }
+                        ]
                     }
                 },
                 "options": {}

@@ -1,0 +1,39 @@
+{
+    "apiVersion": "hive.openshift.io/v1",
+    "kind": "MachinePool",
+    "metadata": {
+        "creationTimestamp": "2022-08-16T14:17:10Z",
+        "generation": 1,
+        "labels": {
+            "api.openshift.com/id": "1u4lhakk4ar41bi3vgn0b7v9hk93dg4m"
+        },
+        "name": "oadler-full-worker",
+        "namespace": "uhc-staging-1u4lhakk4ar41bi3vgn0b7v9hk93dg4m",
+        "resourceVersion": "1205855122",
+        "uid": "28a4de99-dc5f-4a9a-9f50-94a7dd47c712"
+    },
+    "spec": {
+        "clusterDeploymentRef": {
+            "name": "oadler-full"
+        },
+        "name": "worker",
+        "platform": {
+            "aws": {
+                "rootVolume": {
+                    "iops": 0,
+                    "size": 300,
+                    "type": "gp3"
+                },
+                "type": "m5.xlarge",
+                "zones": [
+                    "us-east-1a"
+                ]
+            }
+        },
+        "replicas": 2
+    },
+    "status": {
+        "conditions": [
+        ]
+    }
+}
