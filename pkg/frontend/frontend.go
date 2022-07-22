@@ -49,10 +49,11 @@ type frontend struct {
 	baseLog  *logrus.Entry
 	env      env.Interface
 
-	dbAsyncOperations   database.AsyncOperations
-	dbOpenShiftClusters database.OpenShiftClusters
-	dbSubscriptions     database.Subscriptions
-	dbOpenShiftVersions database.OpenShiftVersions
+	dbAsyncOperations             database.AsyncOperations
+	dbClusterManagerConfiguration database.ClusterManagerConfigurations
+	dbOpenShiftClusters           database.OpenShiftClusters
+	dbSubscriptions               database.Subscriptions
+	dbOpenShiftVersions           database.OpenShiftVersions
 
 	apis map[string]*api.Version
 	m    metrics.Emitter
@@ -72,8 +73,8 @@ type frontend struct {
 	ready     atomic.Value
 
 	// these helps us to test and mock easier
-	now                func() time.Time
-	systemDataEnricher func(*api.OpenShiftClusterDocument, *api.SystemData)
+	now                          func() time.Time
+	systemDataClusterDocEnricher func(*api.OpenShiftClusterDocument, *api.SystemData)
 }
 
 // Runnable represents a runnable object
@@ -87,6 +88,7 @@ func NewFrontend(ctx context.Context,
 	baseLog *logrus.Entry,
 	_env env.Interface,
 	dbAsyncOperations database.AsyncOperations,
+	dbClusterManagerConfiguration database.ClusterManagerConfigurations,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbSubscriptions database.Subscriptions,
 	dbOpenShiftVersions database.OpenShiftVersions,
@@ -97,26 +99,27 @@ func NewFrontend(ctx context.Context,
 	azureActionsFactory azureActionsFactory,
 	ocEnricherFactory ocEnricherFactory) (Runnable, error) {
 	f := &frontend{
-		auditLog:            auditLog,
-		baseLog:             baseLog,
-		env:                 _env,
-		dbAsyncOperations:   dbAsyncOperations,
-		dbOpenShiftClusters: dbOpenShiftClusters,
-		dbSubscriptions:     dbSubscriptions,
-		dbOpenShiftVersions: dbOpenShiftVersions,
-		apis:                apis,
-		m:                   m,
-		aead:                aead,
-		kubeActionsFactory:  kubeActionsFactory,
-		azureActionsFactory: azureActionsFactory,
-		ocEnricherFactory:   ocEnricherFactory,
+		auditLog:                      auditLog,
+		baseLog:                       baseLog,
+		env:                           _env,
+		dbAsyncOperations:             dbAsyncOperations,
+		dbClusterManagerConfiguration: dbClusterManagerConfiguration,
+		dbOpenShiftClusters:           dbOpenShiftClusters,
+		dbSubscriptions:               dbSubscriptions,
+		dbOpenShiftVersions:           dbOpenShiftVersions,
+		apis:                          apis,
+		m:                             m,
+		aead:                          aead,
+		kubeActionsFactory:            kubeActionsFactory,
+		azureActionsFactory:           azureActionsFactory,
+		ocEnricherFactory:             ocEnricherFactory,
 
 		bucketAllocator: &bucket.Random{},
 
 		startTime: time.Now(),
 
-		now:                time.Now,
-		systemDataEnricher: enrichSystemData,
+		now:                          time.Now,
+		systemDataClusterDocEnricher: enrichClusterSystemData,
 	}
 
 	l, err := f.env.Listen()
@@ -178,6 +181,16 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftCluster).Name("getOpenShiftCluster")
 	s.Methods(http.MethodPatch).HandlerFunc(f.putOrPatchOpenShiftCluster).Name("putOrPatchOpenShiftCluster")
 	s.Methods(http.MethodPut).HandlerFunc(f.putOrPatchOpenShiftCluster).Name("putOrPatchOpenShiftCluster")
+
+	s = r.
+		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/{ocmResourceType}/{ocmResourceName}").
+		Queries("api-version", "{api-version}").
+		Subrouter()
+
+	s.Methods(http.MethodDelete).HandlerFunc(f.deleteClusterManagerConfiguration).Name("deleteClusterManagerConfiguration")
+	s.Methods(http.MethodGet).HandlerFunc(f.getClusterManagerConfiguration).Name("getClusterManagerConfiguration")
+	s.Methods(http.MethodPatch).HandlerFunc(f.putOrPatchClusterManagerConfiguration).Name("putOrPatchClusterManagerConfiguration")
+	s.Methods(http.MethodPut).HandlerFunc(f.putOrPatchClusterManagerConfiguration).Name("putOrPatchClusterManagerConfiguration")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}").

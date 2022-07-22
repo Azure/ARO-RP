@@ -60,7 +60,7 @@
         ],
         "summary": "Lists all OpenShift versions available to install in the specified location.",
         "description": "The operation returns the installable OpenShift versions as strings.",
-        "operationId": "List_Install_Versions",
+        "operationId": "InstallVersions_List",
         "parameters": [
           {
             "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/ApiVersionParameter"
@@ -88,7 +88,7 @@
         },
         "x-ms-examples": {
           "Lists all OpenShift versions available to install in the specified location.": {
-            "$ref": "./examples/List_Install_Versions.json"
+            "$ref": "./examples/InstallVersions_List.json"
           }
         }
       }
@@ -126,6 +126,56 @@
         "x-ms-examples": {
           "Lists OpenShift clusters in the specified subscription.": {
             "$ref": "./examples/OpenShiftClusters_List.json"
+          }
+        },
+        "x-ms-pageable": {
+          "nextLinkName": "nextLink"
+        }
+      }
+    },
+    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftCluster/{resourceName}/syncSets": {
+      "get": {
+        "tags": [
+          "SyncSets"
+        ],
+        "summary": "Lists SyncSets that belong to that Azure Red Hat OpenShift Cluster.",
+        "description": "The operation returns properties of each SyncSet.",
+        "operationId": "SyncSets_List",
+        "parameters": [
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/SubscriptionIdParameter"
+          },
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/ResourceGroupNameParameter"
+          },
+          {
+            "name": "resourceName",
+            "in": "path",
+            "description": "The name of the SyncSet resource.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SyncSetList"
+            }
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        },
+        "x-ms-examples": {
+          "Lists SyncSets that belong to that Azure Red Hat OpenShift Cluster.": {
+            "$ref": "./examples/SyncSets_List.json"
           }
         },
         "x-ms-pageable": {
@@ -481,6 +531,60 @@
         "x-ms-examples": {
           "Lists credentials of an OpenShift cluster with the specified subscription, resource group and resource name.": {
             "$ref": "./examples/OpenShiftClusters_ListCredentials.json"
+          }
+        }
+      }
+    },
+    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}": {
+      "get": {
+        "tags": [
+          "SyncSets"
+        ],
+        "summary": "Gets a SyncSet with the specified subscription, resource group and resource name.",
+        "description": "The operation returns properties of a SyncSet.",
+        "operationId": "SyncSets_Get",
+        "parameters": [
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/SubscriptionIdParameter"
+          },
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/ResourceGroupNameParameter"
+          },
+          {
+            "name": "resourceName",
+            "in": "path",
+            "description": "The name of the SyncSet resource.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "syncSetResourceName",
+            "in": "path",
+            "description": "The name of the SyncSet resource.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SyncSet"
+            }
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        },
+        "x-ms-examples": {
+          "Gets a SyncSet with the specified subscription, resource group and resource name.": {
+            "$ref": "./examples/SyncSets_Get.json"
           }
         }
       }
@@ -886,6 +990,101 @@
         },
         "clientSecret": {
           "description": "The client secret used for the cluster.",
+          "type": "string"
+        }
+      }
+    },
+    "SyncSet": {
+      "description": "SyncSet represents a SyncSet for an Azure Red Hat OpenShift Cluster.",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "../../../../../common-types/resource-management/v3/types.json#/definitions/ProxyResource"
+        }
+      ],
+      "properties": {
+        "properties": {
+          "$ref": "#/definitions/SyncSetProperties",
+          "description": "The Syncsets properties",
+          "x-ms-client-flatten": true
+        }
+      }
+    },
+    "SyncSetList": {
+      "description": "SyncSetList represents a list of SyncSets",
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SyncSet"
+          },
+          "x-ms-identifiers": []
+        },
+        "nextLink": {
+          "description": "The link used to get the next page of operations.",
+          "type": "string"
+        }
+      }
+    },
+    "SyncSetProperties": {
+      "description": "SyncSetProperties represents the properties of a SyncSet",
+      "type": "object",
+      "properties": {
+        "clusterResourceId": {
+          "description": "The parent Azure Red Hat OpenShift resourceID.",
+          "type": "string"
+        },
+        "apiVersion": {
+          "description": "APIVersion for the SyncSet.",
+          "type": "string"
+        },
+        "kind": {
+          "description": "SyncSet kind.",
+          "type": "string"
+        },
+        "metadata": {
+          "description": "Metadata for the SyncSet.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "spec": {
+          "$ref": "#/definitions/SyncSetSpec",
+          "description": "The SyncSet Specification."
+        },
+        "clusterDeploymentRefs": {
+          "description": "ClusterDeploymentRefs map SyncSets to a Hive Cluster Deployment."
+        },
+        "resources": {
+          "description": "Resources represents the SyncSets configuration.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "description": "The status of the object.",
+          "type": "string"
+        }
+      }
+    },
+    "SyncSetSpec": {
+      "type": "object",
+      "properties": {
+        "clusterDeploymentRefs": {
+          "description": "ClusterDeploymentRefs map SyncSets to a Hive Cluster Deployment."
+        },
+        "resources": {
+          "description": "Resources represents the SyncSets configuration.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "status": {
+          "description": "The status of the object.",
           "type": "string"
         }
       }

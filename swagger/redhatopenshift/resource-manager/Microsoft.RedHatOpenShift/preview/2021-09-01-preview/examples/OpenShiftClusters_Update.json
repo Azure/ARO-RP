@@ -4,6 +4,7 @@
     "subscriptionId": "subscriptionId",
     "resourceGroupName": "resourceGroup",
     "resourceName": "resourceName",
+    "syncSetResourceName": "syncSetResourceName",
     "parameters": {
       "tags": {
         "key": "value"
@@ -70,7 +71,7 @@
           "provisioningState": "Succeeded",
           "clusterProfile": {
             "domain": "cluster.location.aroapp.io",
-            "version": "4.3.0",
+            "version": "4.11.0",
             "resourceGroupId": "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup"
           },
           "consoleProfile": {
@@ -132,7 +133,7 @@
           "provisioningState": "Succeeded",
           "clusterProfile": {
             "domain": "cluster.location.aroapp.io",
-            "version": "4.3.0",
+            "version": "4.11.0",
             "resourceGroupId": "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup"
           },
           "consoleProfile": {

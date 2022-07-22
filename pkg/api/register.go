@@ -3,6 +3,14 @@ package api
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
+type ClusterManagerConfigurationConverter interface {
+	ToExternal(*ClusterManagerConfiguration) (interface{}, error)
+	ToExternalList([]*ClusterManagerConfiguration, string) (interface{}, error)
+	ToInternal(interface{}, *ClusterManagerConfiguration) error
+}
+type ClusterManagerConfigurationStaticValidator interface {
+	Static(interface{}, *ClusterManagerConfiguration) error
+}
 type OpenShiftClusterConverter interface {
 	ToExternal(*OpenShiftCluster) interface{}
 	ToExternalList([]*OpenShiftCluster, string) interface{}
@@ -37,14 +45,16 @@ type OpenShiftVersionStaticValidator interface {
 
 // Version is a set of endpoints implemented by each API version
 type Version struct {
-	OpenShiftClusterConverter                OpenShiftClusterConverter
-	OpenShiftClusterStaticValidator          OpenShiftClusterStaticValidator
-	OpenShiftClusterCredentialsConverter     OpenShiftClusterCredentialsConverter
-	OpenShiftClusterAdminKubeconfigConverter OpenShiftClusterAdminKubeconfigConverter
-	OpenShiftVersionConverter                OpenShiftVersionConverter
-	OpenShiftVersionStaticValidator          OpenShiftVersionStaticValidator
-	InstallVersionsConverter                 InstallVersionsConverter
-	OperationList                            OperationList
+	ClusterManagerConfigurationConverter       ClusterManagerConfigurationConverter
+	ClusterManagerConfigurationStaticValidator ClusterManagerConfigurationStaticValidator
+	OpenShiftClusterConverter                  OpenShiftClusterConverter
+	OpenShiftClusterStaticValidator            OpenShiftClusterStaticValidator
+	OpenShiftClusterCredentialsConverter       OpenShiftClusterCredentialsConverter
+	OpenShiftClusterAdminKubeconfigConverter   OpenShiftClusterAdminKubeconfigConverter
+	OpenShiftVersionConverter                  OpenShiftVersionConverter
+	OpenShiftVersionStaticValidator            OpenShiftVersionStaticValidator
+	InstallVersionsConverter                   InstallVersionsConverter
+	OperationList                              OperationList
 }
 
 // APIs is the map of registered API versions

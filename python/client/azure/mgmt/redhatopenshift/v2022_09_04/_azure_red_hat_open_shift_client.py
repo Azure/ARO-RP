@@ -23,7 +23,7 @@ from azure.mgmt.core import ARMPipelineClient
 
 from . import models
 from ._configuration import AzureRedHatOpenShiftClientConfiguration
-from .operations import ListOperations, OpenShiftClustersOperations, Operations
+from .operations import InstallVersionsOperations, OpenShiftClustersOperations, Operations, SyncSetsOperations
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import,ungrouped-imports
@@ -37,11 +37,14 @@ class AzureRedHatOpenShiftClient(object):
 
     :ivar operations: Operations operations
     :vartype operations: azure.mgmt.redhatopenshift.v2022_09_04.operations.Operations
-    :ivar list: ListOperations operations
-    :vartype list: azure.mgmt.redhatopenshift.v2022_09_04.operations.ListOperations
+    :ivar install_versions: InstallVersionsOperations operations
+    :vartype install_versions:
+     azure.mgmt.redhatopenshift.v2022_09_04.operations.InstallVersionsOperations
     :ivar open_shift_clusters: OpenShiftClustersOperations operations
     :vartype open_shift_clusters:
      azure.mgmt.redhatopenshift.v2022_09_04.operations.OpenShiftClustersOperations
+    :ivar sync_sets: SyncSetsOperations operations
+    :vartype sync_sets: azure.mgmt.redhatopenshift.v2022_09_04.operations.SyncSetsOperations
     :param credential: Credential needed for the client to connect to Azure.
     :type credential: ~azure.core.credentials.TokenCredential
     :param subscription_id: The ID of the target subscription.
@@ -71,8 +74,9 @@ class AzureRedHatOpenShiftClient(object):
         self._deserialize = Deserializer(client_models)
         self._serialize.client_side_validation = False
         self.operations = Operations(self._client, self._config, self._serialize, self._deserialize)
-        self.list = ListOperations(self._client, self._config, self._serialize, self._deserialize)
+        self.install_versions = InstallVersionsOperations(self._client, self._config, self._serialize, self._deserialize)
         self.open_shift_clusters = OpenShiftClustersOperations(self._client, self._config, self._serialize, self._deserialize)
+        self.sync_sets = SyncSetsOperations(self._client, self._config, self._serialize, self._deserialize)
 
 
     def _send_request(

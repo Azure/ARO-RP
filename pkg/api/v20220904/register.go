@@ -22,6 +22,7 @@ func init() {
 		OpenShiftClusterCredentialsConverter:     openShiftClusterCredentialsConverter{},
 		OpenShiftClusterAdminKubeconfigConverter: openShiftClusterAdminKubeconfigConverter{},
 		InstallVersionsConverter:                 installVersionsConverter{},
+		ClusterManagerConfigurationConverter:     clusterManagerConfigurationConverter{},
 		OperationList: api.OperationList{
 			Operations: []api.Operation{
 				api.OperationResultsRead,
@@ -33,6 +34,9 @@ func init() {
 				api.OperationOpenShiftClusterListCredentials,
 				api.OperationOpenShiftClusterListAdminCredentials,
 				api.OperationListInstallVersions,
+				api.OperationSyncSetsRead,
+				api.OperationSyncSetsWrite,
+				api.OperationSyncSetsDelete,
 			},
 		},
 	}

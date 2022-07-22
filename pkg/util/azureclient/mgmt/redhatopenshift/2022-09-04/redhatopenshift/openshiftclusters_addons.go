@@ -36,7 +36,7 @@ func (c *openShiftClustersClient) DeleteAndWait(ctx context.Context, resourceGro
 }
 
 func (c *openShiftClustersClient) List(ctx context.Context) (clusters []mgmtredhatopenshift20220904.OpenShiftCluster, err error) {
-	page, err := c.OpenShiftClustersClient.ListMethod(ctx)
+	page, err := c.OpenShiftClustersClient.List(ctx)
 	if err != nil {
 		return nil, err
 	}

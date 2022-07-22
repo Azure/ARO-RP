@@ -3,7 +3,8 @@
     "api-version": "2020-04-30",
     "subscriptionId": "subscriptionId",
     "resourceGroupName": "resourceGroup",
-    "resourceName": "resourceName"
+    "resourceName": "resourceName",
+    "syncSetResourceName": "syncSetResourceName"
   },
   "responses": {
     "200": {
@@ -19,7 +20,7 @@
           "provisioningState": "Succeeded",
           "clusterProfile": {
             "domain": "cluster.location.aroapp.io",
-            "version": "4.3.0",
+            "version": "4.11.0",
             "resourceGroupId": "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup"
           },
           "consoleProfile": {
