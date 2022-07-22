@@ -3,22 +3,22 @@ package api
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// OpenShiftClusterManagerConfigurationDocument represents OpenShift cluster manager configuration documents.
+// ClusterManagerConfigurationDocument represents OpenShift cluster manager configuration documents.
 // pkg/database/cosmosdb requires its definition.
-type OpenShiftClusterManagerConfigurationDocuments struct {
-	Count                                         int                                             `json:"_count,omitempty"`
-	ResourceID                                    string                                          `json:"_rid,omitempty"`
-	OpenShiftClusterManagerConfigurationDocuments []*OpenShiftClusterManagerConfigurationDocument `json:"Documents,omitempty"`
+type ClusterManagerConfigurationDocuments struct {
+	Count                                int                                    `json:"_count,omitempty"`
+	ResourceID                           string                                 `json:"_rid,omitempty"`
+	ClusterManagerConfigurationDocuments []*ClusterManagerConfigurationDocument `json:"Documents,omitempty"`
 }
 
 // String returns a JSON representation of the OpenShiftClusterManagerConfigurationDocuments struct.
-func (c *OpenShiftClusterManagerConfigurationDocuments) String() string {
+func (c *ClusterManagerConfigurationDocuments) String() string {
 	return encodeJSON(c)
 }
 
 // OpenShiftClusterManagerConfigurationDocument represents an OpenShift cluster manager configuration document.
 // pkg/database/cosmosdb requires its definition.
-type OpenShiftClusterManagerConfigurationDocument struct {
+type ClusterManagerConfigurationDocument struct {
 	MissingFields
 
 	ID          string                 `json:"id,omitempty"`
@@ -31,5 +31,20 @@ type OpenShiftClusterManagerConfigurationDocument struct {
 	LSN         int                    `json:"_lsn,omitempty"`
 	Metadata    map[string]interface{} `json:"_metadata,omitempty"`
 
-	//OpenShiftClusterManagerConfiguration *OpenShiftClusterManagerConfiguration `json:"openShiftClusterManagerConfiguration,omitempty"`
+	Key          string `json:"key,omitempty"`
+	PartitionKey string `json:"partitionKey,omitempty" deep:"-"`
+	Deleting     bool   `json:"deleting,omitempty"` // https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
+
+	ClusterManagerConfiguration *ClusterManagerConfiguration `json:"clusterManagerConfiguration,omitempty"`
+
+	SyncIdentityProvider *SyncIdentityProvider `json:"syncIdentityProvider,omitempty"`
+	SyncSet              *SyncSet              `json:"syncSet,omitempty"`
+	MachinePool          *MachinePool          `json:"machinePool,omitempty"`
+
+	CorrelationData *CorrelationData `json:"correlationData,omitempty" deep:"-"`
+}
+
+// String returns a JSON representation of the OpenShiftClusterManagerConfigurationDocument struct.
+func (c *ClusterManagerConfigurationDocument) String() string {
+	return encodeJSON(c)
 }

@@ -1,0 +1,40 @@
+{
+  "parameters": {
+    "api-version": "2022-09-04",
+    "subscriptionId": "subscriptionId",
+    "resourceGroupName": "resourceGroup",
+    "resourceName": "resourceName",
+    "syncSetResourceName": "syncSetResourceName"
+  },
+  "responses": {
+    "200": {
+      "body": {
+        "value": [
+          {
+            "id": "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/resourceName/syncSets/mySyncSet",
+            "name": "mySyncSet",
+            "properties": {
+              "clusterResourceId": "/subscriptions/subscriptionid/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
+              "apiVersion": "hive.openshift.io/v1",
+              "kind": "SyncSet",
+              "metadata": {
+                "name": "sample",
+                "namespace": "aro-f60ae8a2-bca1-4987-9056-f2f6a1837caa"
+              },
+              "spec": {},
+              "clusterDeploymentRefs": [
+                "uhc-staging-1u4lhakk4ar41bi3vgn0b7v9hk93dg4m",
+                "aro-f60ae8a2-bca1-4987-9056-f2f6a1837caa"
+              ],
+              "resources": {
+                "name": "worker",
+                "platform": "azure",
+                "replicas": "2"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

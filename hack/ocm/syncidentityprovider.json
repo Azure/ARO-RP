@@ -1,0 +1,36 @@
+{
+    "apiVersion": "hive.openshift.io/v1",
+    "kind": "SyncIdentityProvider",
+    "metadata": {
+        "creationTimestamp": "2022-08-25T19:15:28Z",
+        "generation": 4,
+        "labels": {
+            "api.openshift.com/id": "1ua35jp6or0hbv455nm2h3d0hhdkdbj2",
+            "api.openshift.com/name": "abyrne-hcp2"
+        },
+        "name": "abyrne-hcp2",
+        "namespace": "uhc-staging-1ua35jp6or0hbv455nm2h3d0hhdkdbj2",
+        "resourceVersion": "1221948462",
+        "uid": "ae015d32-8ff3-441c-9770-123bbc69853d"
+    },
+    "spec": {
+        "clusterDeploymentRefs": [
+            {
+                "name": "abyrne-hcp2"
+            }
+        ],
+        "identityProviders": [
+            {
+                "htpasswd": {
+                    "fileData": {
+                        "name": "htpasswd-secret"
+                    }
+                },
+                "mappingMethod": "claim",
+                "name": "HTPasswd",
+                "type": "HTPasswd"
+            }
+        ]
+    },
+    "status": {}
+}

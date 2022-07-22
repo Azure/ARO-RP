@@ -129,3 +129,31 @@ var OperationListInstallVersions = Operation{
 	},
 	Origin: "user,system",
 }
+
+var OperationSyncSetsRead = Operation{
+	Name: "Microsoft.RedHatOpenShift/openShiftClusters/syncSets/read",
+	Display: Display{
+		Provider:  "Azure Red Hat OpenShift",
+		Resource:  "syncSets",
+		Operation: "Read OpenShift cluster sync set",
+	},
+	Origin: "user,system",
+}
+var OperationSyncSetsWrite = Operation{
+	Name: "Microsoft.RedHatOpenShift/openShiftClusters/syncSets/write",
+	Display: Display{
+		Provider:  "Azure Red Hat OpenShift",
+		Resource:  "syncSets",
+		Operation: "Write OpenShift cluster sync set",
+	},
+	Origin: "user,system",
+}
+var OperationSyncSetsDelete = Operation{
+	Name: "Microsoft.RedHatOpenShift/openShiftClusters/syncSets/delete",
+	Display: Display{
+		Provider:  "Azure Red Hat OpenShift",
+		Resource:  "syncSets",
+		Operation: "Delete OpenShift cluster syncset delete",
+	},
+	Origin: "user,system",
+}

@@ -95,11 +95,15 @@ func Run(api, outputDir string) error {
 				Tags:        []string{"InstallVersions"},
 				Summary:     "Lists all OpenShift versions available to install in the specified location.",
 				Description: "The operation returns the installable OpenShift versions as strings.",
-				OperationID: "List_Install_Versions",
+				OperationID: "InstallVersions_List",
 				Parameters:  g.populateParameters(6, "InstallVersions", "Install Versions"),
 				Responses:   g.populateResponses("InstallVersions", false, http.StatusOK),
 			},
 		}
+	}
+
+	if g.clusterManager {
+		g.populateChildResourcePaths(s.Paths, "Microsoft.RedHatOpenShift", "openShiftCluster", "syncSet", "SyncSet")
 	}
 
 	populateExamples(s.Paths)
@@ -110,6 +114,10 @@ func Run(api, outputDir string) error {
 
 	if g.installVersionList {
 		names = append(names, "InstallVersions")
+	}
+
+	if g.clusterManager {
+		names = append(names, "SyncSet", "SyncSetList")
 	}
 
 	err = define(s.Definitions, api, g.xmsEnum, g.xmsSecretList, g.xmsIdentifiers, names...)
@@ -161,6 +169,20 @@ func Run(api, outputDir string) error {
 			}
 		}
 		s.Definitions[azureResource].Properties = properties
+
+		if _, ok := s.Definitions["SyncSet"]; ok {
+			properties = nil
+			for _, property := range s.Definitions["SyncSet"].Properties {
+				if property.Name == "properties" {
+					if property.Schema == nil {
+						property.Schema = &Schema{}
+					}
+					property.Schema.ClientFlatten = true
+					properties = append(properties, property)
+				}
+			}
+			s.Definitions["SyncSet"].Properties = properties
+		}
 
 		if g.systemData {
 			s.defineSystemData([]string{azureResource, azureResource + "Update"}, g.commonTypesVersion)

@@ -18,6 +18,7 @@ const (
 	PORTAL
 	GATEWAY
 	OPENSHIFT_VERSIONS
+	CLUSTERMANAGER
 )
 
 type gen struct {

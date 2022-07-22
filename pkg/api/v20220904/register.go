@@ -33,6 +33,9 @@ func init() {
 				api.OperationOpenShiftClusterListCredentials,
 				api.OperationOpenShiftClusterListAdminCredentials,
 				api.OperationListInstallVersions,
+				api.OperationSyncSetsRead,
+				api.OperationSyncSetsWrite,
+				api.OperationSyncSetsDelete,
 			},
 		},
 	}

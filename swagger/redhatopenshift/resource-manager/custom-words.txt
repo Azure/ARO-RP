@@ -1,0 +1,10 @@
+openshiftcluster
+openshiftclusters
+listinstallversion
+listinstallversions
+syncset
+syncsets
+machinepool
+machinepools
+syncidentityprovider
+syncidentityproviders

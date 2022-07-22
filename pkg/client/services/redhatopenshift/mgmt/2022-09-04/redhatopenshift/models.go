@@ -861,6 +861,323 @@ type ServicePrincipalProfile struct {
 	ClientSecret *string `json:"clientSecret,omitempty"`
 }
 
+// SyncSet syncSet represents a SyncSet for an Azure Red Hat OpenShift Cluster.
+type SyncSet struct {
+	autorest.Response `json:"-"`
+	// SyncSetProperties - The Syncsets properties
+	*SyncSetProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
+	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Azure Resource Manager metadata containing createdBy and modifiedBy information.
+	SystemData *SystemData `json:"systemData,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for SyncSet.
+func (ss SyncSet) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ss.SyncSetProperties != nil {
+		objectMap["properties"] = ss.SyncSetProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for SyncSet struct.
+func (ss *SyncSet) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var syncSetProperties SyncSetProperties
+				err = json.Unmarshal(*v, &syncSetProperties)
+				if err != nil {
+					return err
+				}
+				ss.SyncSetProperties = &syncSetProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				ss.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				ss.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				ss.Type = &typeVar
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				ss.SystemData = &systemData
+			}
+		}
+	}
+
+	return nil
+}
+
+// SyncSetList syncSetList represents a list of SyncSets
+type SyncSetList struct {
+	autorest.Response `json:"-"`
+	Value             *[]SyncSet `json:"value,omitempty"`
+	// NextLink - The link used to get the next page of operations.
+	NextLink *string `json:"nextLink,omitempty"`
+}
+
+// SyncSetListIterator provides access to a complete listing of SyncSet values.
+type SyncSetListIterator struct {
+	i    int
+	page SyncSetListPage
+}
+
+// NextWithContext advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+func (iter *SyncSetListIterator) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/SyncSetListIterator.NextWithContext")
+		defer func() {
+			sc := -1
+			if iter.Response().Response.Response != nil {
+				sc = iter.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	iter.i++
+	if iter.i < len(iter.page.Values()) {
+		return nil
+	}
+	err = iter.page.NextWithContext(ctx)
+	if err != nil {
+		iter.i--
+		return err
+	}
+	iter.i = 0
+	return nil
+}
+
+// Next advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (iter *SyncSetListIterator) Next() error {
+	return iter.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the enumeration should be started or is not yet complete.
+func (iter SyncSetListIterator) NotDone() bool {
+	return iter.page.NotDone() && iter.i < len(iter.page.Values())
+}
+
+// Response returns the raw server response from the last page request.
+func (iter SyncSetListIterator) Response() SyncSetList {
+	return iter.page.Response()
+}
+
+// Value returns the current value or a zero-initialized value if the
+// iterator has advanced beyond the end of the collection.
+func (iter SyncSetListIterator) Value() SyncSet {
+	if !iter.page.NotDone() {
+		return SyncSet{}
+	}
+	return iter.page.Values()[iter.i]
+}
+
+// Creates a new instance of the SyncSetListIterator type.
+func NewSyncSetListIterator(page SyncSetListPage) SyncSetListIterator {
+	return SyncSetListIterator{page: page}
+}
+
+// IsEmpty returns true if the ListResult contains no values.
+func (ssl SyncSetList) IsEmpty() bool {
+	return ssl.Value == nil || len(*ssl.Value) == 0
+}
+
+// hasNextLink returns true if the NextLink is not empty.
+func (ssl SyncSetList) hasNextLink() bool {
+	return ssl.NextLink != nil && len(*ssl.NextLink) != 0
+}
+
+// syncSetListPreparer prepares a request to retrieve the next set of results.
+// It returns nil if no more results exist.
+func (ssl SyncSetList) syncSetListPreparer(ctx context.Context) (*http.Request, error) {
+	if !ssl.hasNextLink() {
+		return nil, nil
+	}
+	return autorest.Prepare((&http.Request{}).WithContext(ctx),
+		autorest.AsJSON(),
+		autorest.AsGet(),
+		autorest.WithBaseURL(to.String(ssl.NextLink)))
+}
+
+// SyncSetListPage contains a page of SyncSet values.
+type SyncSetListPage struct {
+	fn  func(context.Context, SyncSetList) (SyncSetList, error)
+	ssl SyncSetList
+}
+
+// NextWithContext advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+func (page *SyncSetListPage) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/SyncSetListPage.NextWithContext")
+		defer func() {
+			sc := -1
+			if page.Response().Response.Response != nil {
+				sc = page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	for {
+		next, err := page.fn(ctx, page.ssl)
+		if err != nil {
+			return err
+		}
+		page.ssl = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
+	}
+	return nil
+}
+
+// Next advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (page *SyncSetListPage) Next() error {
+	return page.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the page enumeration should be started or is not yet complete.
+func (page SyncSetListPage) NotDone() bool {
+	return !page.ssl.IsEmpty()
+}
+
+// Response returns the raw server response from the last page request.
+func (page SyncSetListPage) Response() SyncSetList {
+	return page.ssl
+}
+
+// Values returns the slice of values for the current page or nil if there are no values.
+func (page SyncSetListPage) Values() []SyncSet {
+	if page.ssl.IsEmpty() {
+		return nil
+	}
+	return *page.ssl.Value
+}
+
+// Creates a new instance of the SyncSetListPage type.
+func NewSyncSetListPage(cur SyncSetList, getNextPage func(context.Context, SyncSetList) (SyncSetList, error)) SyncSetListPage {
+	return SyncSetListPage{
+		fn:  getNextPage,
+		ssl: cur,
+	}
+}
+
+// SyncSetProperties syncSetProperties represents the properties of a SyncSet
+type SyncSetProperties struct {
+	// ClusterResourceID - The parent Azure Red Hat OpenShift resourceID.
+	ClusterResourceID *string `json:"clusterResourceId,omitempty"`
+	// APIVersion - APIVersion for the SyncSet.
+	APIVersion *string `json:"apiVersion,omitempty"`
+	// Kind - SyncSet kind.
+	Kind *string `json:"kind,omitempty"`
+	// Metadata - Metadata for the SyncSet.
+	Metadata map[string]*string `json:"metadata"`
+	// Spec - The SyncSet Specification.
+	Spec *SyncSetSpec `json:"spec,omitempty"`
+	// ClusterDeploymentRefs - ClusterDeploymentRefs map SyncSets to a Hive Cluster Deployment.
+	ClusterDeploymentRefs interface{} `json:"clusterDeploymentRefs,omitempty"`
+	// Resources - Resources represents the SyncSets configuration.
+	Resources map[string]*string `json:"resources"`
+	// Status - The status of the object.
+	Status *string `json:"status,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for SyncSetProperties.
+func (ssp SyncSetProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ssp.ClusterResourceID != nil {
+		objectMap["clusterResourceId"] = ssp.ClusterResourceID
+	}
+	if ssp.APIVersion != nil {
+		objectMap["apiVersion"] = ssp.APIVersion
+	}
+	if ssp.Kind != nil {
+		objectMap["kind"] = ssp.Kind
+	}
+	if ssp.Metadata != nil {
+		objectMap["metadata"] = ssp.Metadata
+	}
+	if ssp.Spec != nil {
+		objectMap["spec"] = ssp.Spec
+	}
+	if ssp.ClusterDeploymentRefs != nil {
+		objectMap["clusterDeploymentRefs"] = ssp.ClusterDeploymentRefs
+	}
+	if ssp.Resources != nil {
+		objectMap["resources"] = ssp.Resources
+	}
+	if ssp.Status != nil {
+		objectMap["status"] = ssp.Status
+	}
+	return json.Marshal(objectMap)
+}
+
+// SyncSetSpec ...
+type SyncSetSpec struct {
+	// ClusterDeploymentRefs - ClusterDeploymentRefs map SyncSets to a Hive Cluster Deployment.
+	ClusterDeploymentRefs interface{} `json:"clusterDeploymentRefs,omitempty"`
+	// Resources - Resources represents the SyncSets configuration.
+	Resources map[string]interface{} `json:"resources"`
+	// Status - The status of the object.
+	Status *string `json:"status,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for SyncSetSpec.
+func (sss SyncSetSpec) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if sss.ClusterDeploymentRefs != nil {
+		objectMap["clusterDeploymentRefs"] = sss.ClusterDeploymentRefs
+	}
+	if sss.Resources != nil {
+		objectMap["resources"] = sss.Resources
+	}
+	if sss.Status != nil {
+		objectMap["status"] = sss.Status
+	}
+	return json.Marshal(objectMap)
+}
+
 // SystemData metadata pertaining to creation and last modification of the resource.
 type SystemData struct {
 	// CreatedBy - The identity that created the resource.

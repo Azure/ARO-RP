@@ -30,8 +30,12 @@ try:
     from ._models_py3 import OpenShiftClusterUpdate
     from ._models_py3 import Operation
     from ._models_py3 import OperationList
+    from ._models_py3 import ProxyResource
     from ._models_py3 import Resource
     from ._models_py3 import ServicePrincipalProfile
+    from ._models_py3 import SyncSet
+    from ._models_py3 import SyncSetList
+    from ._models_py3 import SyncSetSpec
     from ._models_py3 import SystemData
     from ._models_py3 import TrackedResource
     from ._models_py3 import WorkerProfile
@@ -51,8 +55,12 @@ except (SyntaxError, ImportError):
     from ._models import OpenShiftClusterUpdate  # type: ignore
     from ._models import Operation  # type: ignore
     from ._models import OperationList  # type: ignore
+    from ._models import ProxyResource  # type: ignore
     from ._models import Resource  # type: ignore
     from ._models import ServicePrincipalProfile  # type: ignore
+    from ._models import SyncSet  # type: ignore
+    from ._models import SyncSetList  # type: ignore
+    from ._models import SyncSetSpec  # type: ignore
     from ._models import SystemData  # type: ignore
     from ._models import TrackedResource  # type: ignore
     from ._models import WorkerProfile  # type: ignore
@@ -81,8 +89,12 @@ __all__ = [
     'OpenShiftClusterUpdate',
     'Operation',
     'OperationList',
+    'ProxyResource',
     'Resource',
     'ServicePrincipalProfile',
+    'SyncSet',
+    'SyncSetList',
+    'SyncSetSpec',
     'SystemData',
     'TrackedResource',
     'WorkerProfile',
