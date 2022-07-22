@@ -55,8 +55,8 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		// Set filter so it doesn't match cluster name
 		filter.SendKeys("Incorrect Cluster")
 
-		wd.Wait(ElementIsLocated(ByCSSSelector, "span.itemsCount-162"))
-		text, err := wd.FindElement(ByCSSSelector, "span.itemsCount-162")
+		wd.Wait(ElementIsLocated(ByID, "ClusterCount"))
+		text, err := wd.FindElement(ByCSSSelector, "ClusterCount")
 		if err != nil {
 			TakeScreenshot(wd, err)
 		}
@@ -81,22 +81,12 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 			TakeScreenshot(wd, err)
 		}
 
-		err = wd.Wait(ElementIsLocated(ByCSSSelector, "div.css-113"))
+		err = wd.WaitWithTimeout(ElementIsLocated(ByID, "ClusterDetailCell"), 2*time.Minute)
 		if err != nil {
 			TakeScreenshot(wd, err)
 		}
 
-		err = wd.WaitWithTimeout(ElementIsLocated(ByCSSSelector, "div.css-244"), 2*time.Minute)
-		if err != nil {
-			TakeScreenshot(wd, err)
-		}
-
-		err = wd.WaitWithTimeout(ElementIsLocated(ByCSSSelector, "div.css-244 > div > div > span"), 2*time.Minute)
-		if err != nil {
-			TakeScreenshot(wd, err)
-		}
-
-		panelSpans, err := wd.FindElements(ByCSSSelector, "div.css-244 > div > div > span")
+		panelSpans, err := wd.FindElements(ByID, "ClusterDetailCell")
 		if err != nil {
 			TakeScreenshot(wd, err)
 		}
@@ -173,41 +163,34 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 
 		button.Click()
 
-		wd.Wait(ElementIsLocated(ByID, "ModalFocusTrapZone25"))
+		wd.Wait(ElementIsLocated(ByID, "sshModal"))
 
-		wd.Wait(ElementIsLocated(ByID, "Dropdown55"))
-		sshDropdown, err := wd.FindElement(ByID, "Dropdown55")
+		wd.Wait(ElementIsLocated(ByCSSSelector, "sshDropdown"))
+		sshDropdown, err := wd.FindElement(ByCSSSelector, "sshDropdown")
 		if err != nil {
 			TakeScreenshot(wd, err)
 		}
 
 		sshDropdown.Click()
 
-		wd.Wait(ElementIsLocated(ByID, "Dropdown55-list0"))
-		machine, err := wd.FindElement(ByID, "Dropdown55-list0")
+		wd.Wait(ElementIsLocated(ByID, "sshDropdown-list0"))
+		machine, err := wd.FindElement(ByID, "sshDropdown-list0")
 		if err != nil {
 			TakeScreenshot(wd, err)
 		}
 
 		machine.Click()
 
-		wd.Wait(ElementIsLocated(ByID, "id__56"))
-		requestBtn, err := wd.FindElement(ByID, "id__56")
+		wd.Wait(ElementIsLocated(ByID, "sshButton"))
+		requestBtn, err := wd.FindElement(ByID, "sshButton")
 		if err != nil {
 			TakeScreenshot(wd, err)
 		}
 
 		requestBtn.Click()
 
-		wd.Wait(ElementIsLocated(ByID, "title24"))
-
 		// Test fails if these labels aren't present
-		err = wd.Wait(ElementIsLocated(ByID, "TextFieldLabel72"))
-		if err != nil {
-			TakeScreenshot(wd, err)
-		}
-
-		err = wd.Wait(ElementIsLocated(ByID, "TextFieldLabel80"))
+		err = wd.Wait(ElementIsLocated(ByID, "sshCommand"))
 		if err != nil {
 			TakeScreenshot(wd, err)
 		}
