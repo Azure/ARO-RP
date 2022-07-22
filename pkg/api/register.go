@@ -3,6 +3,10 @@ package api
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
+type ClusterManagerConverter interface {
+	ToExternal(*ClusterManagerConfiguration) interface{}
+}
+
 type OpenShiftClusterConverter interface {
 	ToExternal(*OpenShiftCluster) interface{}
 	ToExternalList([]*OpenShiftCluster, string) interface{}

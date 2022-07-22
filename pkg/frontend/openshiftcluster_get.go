@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -16,6 +17,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
+
+// hard coding this here for now, will likely extract to RP Config
+const allowedClientId = "myClientId"
 
 func (f *frontend) getOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -36,6 +40,8 @@ func (f *frontend) _getOpenShiftCluster(ctx context.Context, log *logrus.Entry, 
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
 	case err != nil:
 		return nil, err
+	case !validateClientId(doc):
+		return nil, api.NewCloudError(http.StatusUnauthorized, api.CloudErrorCodeForbidden, "", "The client is not authorized to access the resource.")
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -48,4 +54,18 @@ func (f *frontend) _getOpenShiftCluster(ctx context.Context, log *logrus.Entry, 
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
 	return json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")
+}
+
+// validateClientId verifies that the lastModifiedBy is the allowedClientId
+func validateClientId(doc *api.OpenShiftClusterDocument) bool {
+	if doc.OpenShiftCluster.SystemData == (api.SystemData{}) {
+		return false
+	}
+	if !strings.EqualFold(string(doc.OpenShiftCluster.SystemData.LastModifiedByType), "Application") {
+		return false
+	}
+	if strings.EqualFold(string(doc.OpenShiftCluster.SystemData.LastModifiedBy), allowedClientId) {
+		return true
+	}
+	return false
 }
