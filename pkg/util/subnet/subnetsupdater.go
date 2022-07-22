@@ -10,6 +10,8 @@ import (
 )
 
 type Updater interface {
+	// AddEndpointsToSubnets adds the endpoints that either are missing in subnets
+	// or aren't in succeded state in the subnets
 	AddEndpointsToSubnets(endpoints []string, subnets []*mgmtnetwork.Subnet) (updatedSubnets []*mgmtnetwork.Subnet)
 }
 
@@ -26,12 +28,13 @@ func (um *UpdaterManager) AddEndpointsToSubnets(endpoints []string, subnets []*m
 	return updatedSubnets
 }
 
+// addEndpointsToSubnet adds the endpoints that either are missing in subnet
+// or aren't in succeded state in the subnet
 func addEndpointsToSubnet(endpoints []string, subnet *mgmtnetwork.Subnet) (subnetChanged bool) {
 	for _, endpoint := range endpoints {
 		endpointFound, serviceEndpointPtr := subnetContainsEndpoint(subnet, endpoint)
-		endpointSucceded := serviceEndpointPtr != nil && serviceEndpointPtr.ProvisioningState == mgmtnetwork.Succeeded
 
-		if !endpointFound || !endpointSucceded {
+		if !endpointFound || serviceEndpointPtr.ProvisioningState != mgmtnetwork.Succeeded {
 			addEndpointToSubnet(endpoint, subnet)
 			subnetChanged = true
 		}
