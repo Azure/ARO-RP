@@ -9,10 +9,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gofrs/uuid"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type asyncOperations struct {
@@ -48,7 +47,7 @@ func NewAsyncOperationsWithProvidedClient(client cosmosdb.AsyncOperationDocument
 }
 
 func (c *asyncOperations) NextUUID() string {
-	return uuid.Must(c.uuidGenerator.NewV4()).String()
+	return c.uuidGenerator.Generate()
 }
 
 func (c *asyncOperations) Create(ctx context.Context, doc *api.AsyncOperationDocument) (*api.AsyncOperationDocument, error) {

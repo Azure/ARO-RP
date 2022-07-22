@@ -6,7 +6,6 @@ package hive
 import (
 	"context"
 
-	"github.com/gofrs/uuid"
 	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +17,7 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type ClusterManager interface {
@@ -80,7 +80,7 @@ func (hr *clusterManager) CreateNamespace(ctx context.Context) (*corev1.Namespac
 	var namespaceName string
 	var namespace *corev1.Namespace
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		namespaceName = "aro-" + uuid.Must(uuid.NewV4()).String()
+		namespaceName = "aro-" + uuid.DefaultGenerator.Generate()
 		namespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: namespaceName,

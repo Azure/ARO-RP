@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
@@ -26,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 var rxValidPermission = regexp.MustCompile("^[a-z]{1,20}$")
@@ -146,7 +146,7 @@ func (s *server) authenticate(h http.Handler) http.Handler {
 			return
 		}
 
-		if _, err := uuid.FromString(token.Subject()); err != nil {
+		if valid := uuid.IsValid(token.Subject()); !valid {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 			return
 		}

@@ -9,10 +9,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gofrs/uuid"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type portals struct {
@@ -49,7 +48,7 @@ func NewPortalWithProvidedClient(client cosmosdb.PortalDocumentClient, uuidGener
 }
 
 func (c *portals) NextUUID() string {
-	return uuid.Must(c.uuidGenerator.NewV4()).String()
+	return c.uuidGenerator.Generate()
 }
 
 func (c *portals) Create(ctx context.Context, doc *api.PortalDocument) (*api.PortalDocument, error) {

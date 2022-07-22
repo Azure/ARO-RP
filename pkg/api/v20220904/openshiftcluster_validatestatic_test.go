@@ -12,9 +12,9 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/gofrs/uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/validate"
 )
@@ -892,7 +892,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		{
 			name: "clientId change",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ServicePrincipalProfile.ClientID = uuid.Must(uuid.NewV4()).String()
+				oc.Properties.ServicePrincipalProfile.ClientID = uuid.DefaultGenerator.Generate()
 			},
 		},
 		{
