@@ -7,8 +7,6 @@ import (
 	"context"
 	"fmt"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
@@ -20,7 +18,7 @@ func (m *manager) enableServiceEndpoints(ctx context.Context) error {
 		return err
 	}
 
-	subnets, err := m.getAllSubnets(ctx, subnetIds)
+	subnets, err := m.subnet.GetAll(ctx, subnetIds)
 	if err != nil {
 		return err
 	}
@@ -47,24 +45,6 @@ func (m *manager) getSubnetIds() ([]string, error) {
 			return nil, fmt.Errorf("WorkerProfile '%s' has no SubnetID; check that the corresponding MachineSet is valid", wp.Name)
 		}
 		subnets = append(subnets, wp.SubnetID)
-	}
-	return subnets, nil
-}
-
-func (m *manager) getAllSubnets(ctx context.Context, subnetIds []string) ([]*mgmtnetwork.Subnet, error) {
-	if len(subnetIds) == 0 {
-		return nil, nil
-	}
-
-	subnets := make([]*mgmtnetwork.Subnet, len(subnetIds))
-
-	for i, subnetId := range subnetIds {
-		subnet, err := m.subnet.Get(ctx, subnetId)
-		if err != nil {
-			return nil, err
-		}
-
-		subnets[i] = subnet
 	}
 	return subnets, nil
 }

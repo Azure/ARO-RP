@@ -26,6 +26,7 @@ type Subnet struct {
 
 type Manager interface {
 	Get(ctx context.Context, subnetID string) (*mgmtnetwork.Subnet, error)
+	GetAll(ctx context.Context, subnetIds []string) ([]*mgmtnetwork.Subnet, error)
 	GetHighestFreeIP(ctx context.Context, subnetID string) (string, error)
 	CreateOrUpdate(ctx context.Context, subnetID string, subnet *mgmtnetwork.Subnet) error
 }
@@ -119,6 +120,24 @@ func (m *manager) CreateOrUpdate(ctx context.Context, subnetID string, subnet *m
 	}
 
 	return m.subnets.CreateOrUpdateAndWait(ctx, r.ResourceGroup, r.ResourceName, subnetName, *subnet)
+}
+
+func (m *manager) GetAll(ctx context.Context, subnetIds []string) ([]*mgmtnetwork.Subnet, error) {
+	if len(subnetIds) == 0 {
+		return nil, nil
+	}
+
+	subnets := make([]*mgmtnetwork.Subnet, len(subnetIds))
+
+	for i, subnetId := range subnetIds {
+		subnet, err := m.Get(ctx, subnetId)
+		if err != nil {
+			return nil, err
+		}
+
+		subnets[i] = subnet
+	}
+	return subnets, nil
 }
 
 // Split splits the given subnetID into a vnetID and subnetName

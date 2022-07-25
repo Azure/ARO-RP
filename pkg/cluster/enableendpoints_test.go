@@ -63,13 +63,14 @@ func TestEnableServiceEndpoints(t *testing.T) {
 					},
 				}
 
+				subnetIds := []string{tt.oc.Properties.MasterProfile.SubnetID}
 				endpoints := []string{"Microsoft.ContainerRegistry", "Microsoft.Storage"}
 				subnets := []*mgmtnetwork.Subnet{subnet}
 
 				subnetManagerMock.
 					EXPECT().
-					Get(gomock.Any(), tt.oc.Properties.MasterProfile.SubnetID).
-					Return(subnet, nil)
+					GetAll(gomock.Any(), subnetIds).
+					Return(subnets, nil)
 
 				subnetsUpdaterMock.
 					EXPECT().
@@ -137,13 +138,8 @@ func TestEnableServiceEndpoints(t *testing.T) {
 
 				subnetManagerMock.
 					EXPECT().
-					Get(gomock.Any(), subnetIds[0]).
-					Return(subnet, nil)
-
-				subnetManagerMock.
-					EXPECT().
-					Get(gomock.Any(), subnetIds[1]).
-					Return(secondSubnet, nil)
+					GetAll(gomock.Any(), subnetIds).
+					Return(subnets, nil)
 
 				subnetsUpdaterMock.
 					EXPECT().
@@ -246,15 +242,12 @@ func TestEnableServiceEndpoints(t *testing.T) {
 
 				endpoints := []string{"Microsoft.ContainerRegistry", "Microsoft.Storage"}
 
-				subnetManagerMock.
-					EXPECT().
-					Get(gomock.Any(), subnetIdMaster).
-					Return(initialSubnet1, nil)
+				subnetIds := []string{tt.oc.Properties.MasterProfile.SubnetID, tt.oc.Properties.WorkerProfiles[0].SubnetID}
 
 				subnetManagerMock.
 					EXPECT().
-					Get(gomock.Any(), subnetIdWorker).
-					Return(initialSubnet2, nil)
+					GetAll(gomock.Any(), subnetIds).
+					Return(initialSubnets, nil)
 
 				subnetsUpdaterMock.
 					EXPECT().
