@@ -117,7 +117,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 
 	hiveRestConfig, err := hive.HiveRestConfig()
 	if err != nil {
-		log.Error(err)
+		log.Info(err)
 		// TODO(hive): Update to fail once we have Hive everywhere in prod and dev
 	}
 

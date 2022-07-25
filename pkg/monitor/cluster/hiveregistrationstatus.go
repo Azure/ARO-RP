@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/hive"
+	"github.com/Azure/ARO-RP/pkg/util/interfaces"
 )
 
 var clusterDeploymentConditionsExpected = map[hivev1.ClusterDeploymentConditionType]corev1.ConditionStatus{
@@ -21,7 +22,7 @@ var clusterDeploymentConditionsExpected = map[hivev1.ClusterDeploymentConditionT
 }
 
 func (mon *Monitor) emitHiveRegistrationStatus(ctx context.Context) error {
-	if mon.hiveclientset == nil {
+	if interfaces.IsNil(mon.hiveclientset) {
 		// TODO(hive): remove this if once we have Hive everywhere
 		mon.log.Info("skipping: no hive cluster manager")
 		return nil
