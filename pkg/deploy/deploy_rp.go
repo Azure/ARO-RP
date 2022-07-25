@@ -42,6 +42,7 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		return err
 	}
 
+	// Special cases where the config isn't marshalled into the ARM template parameters cleanly
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
 	parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
 		Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.AdminAPICABundle)),
@@ -75,9 +76,6 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	}
 	parameters.Parameters["azureCloudName"] = &arm.ParametersParameter{
 		Value: d.env.Environment().ActualCloudName,
-	}
-	parameters.Parameters["fluentbitImage"] = &arm.ParametersParameter{
-		Value: *d.config.Configuration.FluentbitImage,
 	}
 
 	err = d.deploy(ctx, d.config.RPResourceGroupName, deploymentName, rpVMSSPrefix+d.version,
