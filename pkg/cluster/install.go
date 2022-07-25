@@ -98,6 +98,8 @@ func (m *manager) adminUpdate() []steps.Step {
 		toRun = append(toRun,
 			steps.Action(m.hiveCreateNamespace),
 			steps.Action(m.hiveEnsureResources),
+			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+			steps.Action(m.hiveResetCorrelationData),
 		)
 	}
 
@@ -128,6 +130,8 @@ func (m *manager) Update(ctx context.Context) error {
 		// hive has the latest credentials after rotation.
 		steps.Action(m.hiveCreateNamespace),
 		steps.Action(m.hiveEnsureResources),
+		steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+		steps.Action(m.hiveResetCorrelationData),
 	}
 
 	return m.runSteps(ctx, steps)
@@ -170,6 +174,8 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.callInstaller),
 			steps.Action(m.hiveCreateNamespace),
 			steps.Action(m.hiveEnsureResources),
+			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+			steps.Action(m.hiveResetCorrelationData),
 
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
 			steps.Action(m.ensureBillingRecord),

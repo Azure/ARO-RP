@@ -6,6 +6,7 @@ package hive
 import (
 	"context"
 
+	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
@@ -25,6 +27,8 @@ type ClusterManager interface {
 	CreateNamespace(ctx context.Context) (*corev1.Namespace, error)
 	CreateOrUpdate(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) error
 	Delete(ctx context.Context, namespace string) error
+	IsClusterDeploymentReady(ctx context.Context, namespace string) (bool, error)
+	ResetCorrelationData(ctx context.Context, namespace string) error
 }
 
 type clusterManager struct {
@@ -115,4 +119,33 @@ func (hr *clusterManager) Delete(ctx context.Context, namespace string) error {
 	}
 
 	return err
+}
+
+func (hr *clusterManager) IsClusterDeploymentReady(ctx context.Context, namespace string) (bool, error) {
+	cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
+	if err == nil {
+		for _, cond := range cd.Status.Conditions {
+			if cond.Type == hivev1.ClusterReadyCondition && cond.Status == corev1.ConditionTrue {
+				return true, nil
+			}
+		}
+	}
+	return false, err
+}
+
+func (hr *clusterManager) ResetCorrelationData(ctx context.Context, namespace string) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		err = utillog.ResetHiveCorrelationData(cd)
+		if err != nil {
+			return err
+		}
+
+		_, err = hr.hiveClientset.HiveV1().ClusterDeployments(namespace).Update(ctx, cd, metav1.UpdateOptions{})
+		return err
+	})
 }
