@@ -32,7 +32,7 @@ func TestEnableServiceEndpoints(t *testing.T) {
 	type test struct {
 		name          string
 		oc            *api.OpenShiftCluster
-		setMocks      func(subnetManagerMock *mock_subnet.MockManager, subnetsUpdaterMock *mock_subnet.MockUpdater, tt test)
+		setMocks      func(subnetManagerMock *mock_subnet.MockManager, subnetsUpdaterMock *mock_subnet.MockEndpointsAdder, tt test)
 		expectedError string
 	}
 
@@ -44,7 +44,7 @@ func TestEnableServiceEndpoints(t *testing.T) {
 					MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
 				},
 			},
-			setMocks: func(subnetManagerMock *mock_subnet.MockManager, subnetsUpdaterMock *mock_subnet.MockUpdater, tt test) {
+			setMocks: func(subnetManagerMock *mock_subnet.MockManager, subnetsUpdaterMock *mock_subnet.MockEndpointsAdder, tt test) {
 				subnet := &mgmtnetwork.Subnet{
 					ID: to.StringPtr(subnetIdMaster),
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
@@ -93,7 +93,7 @@ func TestEnableServiceEndpoints(t *testing.T) {
 					},
 				},
 			},
-			setMocks: func(subnetManagerMock *mock_subnet.MockManager, subnetsUpdaterMock *mock_subnet.MockUpdater, tt test) {
+			setMocks: func(subnetManagerMock *mock_subnet.MockManager, subnetsUpdaterMock *mock_subnet.MockEndpointsAdder, tt test) {
 				subnetIds := []string{tt.oc.Properties.MasterProfile.SubnetID, tt.oc.Properties.WorkerProfiles[0].SubnetID}
 
 				subnet := &mgmtnetwork.Subnet{
@@ -167,7 +167,7 @@ func TestEnableServiceEndpoints(t *testing.T) {
 					},
 				},
 			},
-			setMocks: func(subnetManagerMock *mock_subnet.MockManager, subnetsUpdaterMock *mock_subnet.MockUpdater, tt test) {
+			setMocks: func(subnetManagerMock *mock_subnet.MockManager, subnetsUpdaterMock *mock_subnet.MockEndpointsAdder, tt test) {
 				subnetManagerMock.
 					EXPECT().
 					Get(gomock.Any(), gomock.Any()).
@@ -189,7 +189,7 @@ func TestEnableServiceEndpoints(t *testing.T) {
 					},
 				},
 			},
-			setMocks: func(subnetManagerMock *mock_subnet.MockManager, subnetsUpdaterMock *mock_subnet.MockUpdater, tt test) {
+			setMocks: func(subnetManagerMock *mock_subnet.MockManager, subnetsUpdaterMock *mock_subnet.MockEndpointsAdder, tt test) {
 				initialSubnet1 := &mgmtnetwork.Subnet{
 					ID: to.StringPtr(subnetIdMaster),
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
@@ -273,13 +273,13 @@ func TestEnableServiceEndpoints(t *testing.T) {
 			defer controller.Finish()
 
 			subnetManagerMock := mock_subnet.NewMockManager(controller)
-			subnetsUpdaterMock := mock_subnet.NewMockUpdater(controller)
+			endpointsAdderMock := mock_subnet.NewMockEndpointsAdder(controller)
 
-			tc.setMocks(subnetManagerMock, subnetsUpdaterMock, tc)
+			tc.setMocks(subnetManagerMock, endpointsAdderMock, tc)
 
 			m := &manager{
 				subnet:         subnetManagerMock,
-				subnetsUpdater: subnetsUpdaterMock,
+				endpointsAdder: endpointsAdderMock,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: tc.oc,
 				},

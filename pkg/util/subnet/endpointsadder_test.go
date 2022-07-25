@@ -231,11 +231,11 @@ func TestGetUpdatedSubnets(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			subnetsUpdater := subnet.UpdaterManager{}
-			updatedSubnets := subnetsUpdater.AddEndpointsToSubnets(tc.newEndpoints, tc.subnets)
+			endpointsAdder := subnet.EndpointsAdderManager{}
+			subnetsToBeUpdated := endpointsAdder.AddEndpointsToSubnets(tc.newEndpoints, tc.subnets)
 
-			if !reflect.DeepEqual(tc.expectedSubnets, updatedSubnets) {
-				t.Fatalf("expected subnets is different than updatedSubnets. Expected %v, but got %v", tc.expectedSubnets, updatedSubnets)
+			if !reflect.DeepEqual(tc.expectedSubnets, subnetsToBeUpdated) {
+				t.Fatalf("expected subnets is different than subnetsToBeUpdated. Expected %v, but got %v", tc.expectedSubnets, subnetsToBeUpdated)
 			}
 		})
 	}

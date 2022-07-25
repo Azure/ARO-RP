@@ -81,7 +81,7 @@ type manager struct {
 	dns            dns.Manager
 	storage        storage.Manager
 	subnet         subnet.Manager
-	subnetsUpdater subnet.Updater
+	endpointsAdder subnet.EndpointsAdder
 	graph          graph.Manager
 
 	kubernetescli    kubernetes.Interface
@@ -170,6 +170,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 
 		hiveClusterManager: hr,
 
-		subnetsUpdater: &subnet.UpdaterManager{},
+		endpointsAdder: &subnet.EndpointsAdderManager{},
 	}, nil
 }

@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
@@ -23,15 +25,17 @@ func (m *manager) enableServiceEndpoints(ctx context.Context) error {
 		return err
 	}
 
-	updatedSubnets := m.subnetsUpdater.AddEndpointsToSubnets(api.SubnetsEndpoints, subnets)
+	subnetsToBeUpdated := m.endpointsAdder.AddEndpointsToSubnets(api.SubnetsEndpoints, subnets)
 
-	for _, subnet := range updatedSubnets {
-		err := m.subnet.CreateOrUpdate(ctx, *subnet.ID, subnet)
-		if err != nil {
+	return m.updateSubnets(subnetsToBeUpdated, ctx)
+}
+
+func (m *manager) updateSubnets(subnets []*mgmtnetwork.Subnet, ctx context.Context) error {
+	for _, subnet := range subnets {
+		if err := m.subnet.CreateOrUpdate(ctx, *subnet.ID, subnet); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
