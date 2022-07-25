@@ -5,10 +5,8 @@ package hive
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/gofrs/uuid"
-	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -26,7 +24,6 @@ type ClusterManager interface {
 	CreateNamespace(ctx context.Context) (*corev1.Namespace, error)
 	CreateOrUpdate(ctx context.Context, parameters *CreateOrUpdateParameters) error
 	Delete(ctx context.Context, namespace string) error
-	IsConnected(ctx context.Context, namespace string) (bool, string, error)
 }
 
 // CreateOrUpdateParameters represents all data in hive pertaining to a single ARO cluster.
@@ -128,24 +125,4 @@ func (hr *clusterManager) Delete(ctx context.Context, namespace string) error {
 	}
 
 	return err
-}
-
-func (hr *clusterManager) IsConnected(ctx context.Context, namespace string) (bool, string, error) {
-	cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(namespace).Get(ctx, clusterDeploymentName, metav1.GetOptions{})
-	if err != nil {
-		return false, "", err
-	}
-
-	// Looking for the UnreachableCondition in the list of conditions
-	// the order is not stable, but the condition is expected to be present
-	for _, condition := range cd.Status.Conditions {
-		if condition.Type == hivev1.UnreachableCondition {
-			//checking for false, meaning not unreachable, so is reachable
-			isReachable := condition.Status != corev1.ConditionTrue
-			return isReachable, condition.Message, nil
-		}
-	}
-
-	// we should never arrive here (famous last words)
-	return false, "", fmt.Errorf("could not find UnreachableCondition")
 }
