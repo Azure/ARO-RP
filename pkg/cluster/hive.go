@@ -7,7 +7,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/openshift/installer/pkg/asset/installconfig/azure"
+	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/hive"
@@ -80,7 +80,7 @@ func (m *manager) hiveDeleteResources(ctx context.Context) error {
 
 func collectDataForHive(subscriptionDoc *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) (*hive.CreateOrUpdateParameters, error) {
 	// TODO(hive): When hive support first party principles we'll need to send both first party and cluster service principles
-	clusterSP := azure.Credentials{
+	clusterSP := icazure.Credentials{
 		TenantID:       subscriptionDoc.Subscription.Properties.TenantID,
 		SubscriptionID: subscriptionDoc.ID,
 		ClientID:       doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID,
