@@ -125,6 +125,14 @@ func (m *manager) adminUpdate() []steps.Step {
 		)
 	}
 
+	// Hive cluster adoption and reconciliation
+	if isEverything {
+		toRun = append(toRun,
+			steps.Action(m.hiveCreateNamespace),
+			steps.Action(m.hiveEnsureResources),
+		)
+	}
+
 	// We don't run this on an operator-only deploy as PUCM scripts then cannot
 	// determine if the cluster has been fully admin-updated
 	if isEverything {
@@ -148,6 +156,10 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.updateOpenShiftSecret),
 		steps.Action(m.updateAROSecret),
+		// Hive reconciliation: we mostly need it to make sure that
+		// hive has the latest credentials after rotation.
+		steps.Action(m.hiveCreateNamespace),
+		steps.Action(m.hiveEnsureResources),
 	}
 
 	return m.runSteps(ctx, steps)
@@ -155,7 +167,7 @@ func (m *manager) Update(ctx context.Context) error {
 
 // callInstaller initialises and calls the Installer code. This will later be replaced with a call into Hive.
 func (m *manager) callInstaller(ctx context.Context) error {
-	i := installer.NewInstaller(m.log, m.env, m.doc, m.subscriptionDoc, m.fpAuthorizer, m.deployments, m.graph)
+	i := installer.NewInstaller(m.log, m.env, m.doc.ID, m.doc.OpenShiftCluster, m.subscriptionDoc.Subscription, m.fpAuthorizer, m.deployments, m.graph)
 	return i.Install(ctx)
 }
 
@@ -217,6 +229,8 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.configureIngressCertificate),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute, true),
 			steps.Action(m.configureDefaultStorageClass),
+			steps.Action(m.hiveCreateNamespace),
+			steps.Action(m.hiveEnsureResources),
 			steps.Action(m.finishInstallation),
 		},
 	}

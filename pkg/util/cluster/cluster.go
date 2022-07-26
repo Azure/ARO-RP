@@ -28,7 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
 	mgmtredhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-04-01/redhatopenshift"
-	"github.com/Azure/ARO-RP/pkg/deploy"
+	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -150,7 +150,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 
 	visibility := api.VisibilityPublic
 
-	if os.Getenv("NO_INTERNET") != "" {
+	if os.Getenv("PRIVATE_CLUSTER") != "" || os.Getenv("NO_INTERNET") != "" {
 		visibility = api.VisibilityPrivate
 	}
 
@@ -164,13 +164,13 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		}
 	}
 
-	b, err := deploy.Asset(generator.FileClusterPredeploy)
+	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileClusterPredeploy)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}

@@ -82,7 +82,7 @@ def validate_disk_encryption_set(cmd, namespace):
                                                 disk_encryption_set_name=desid['name'])
     except CloudError as err:
         raise InvalidArgumentValueError(
-            f"Invald --disk-encryption-set, error when getting '{namespace.disk_encryption_set}':"
+            f"Invalid --disk-encryption-set, error when getting '{namespace.disk_encryption_set}':"
             f" {str(err)}") from err
 
 
@@ -169,7 +169,7 @@ def validate_subnet(key):
         except Exception as err:
             if isinstance(err, ResourceNotFoundError):
                 raise InvalidArgumentValueError(
-                    f"Invald --{key.replace('_', '-')}, error when getting '{subnet}': {str(err)}") from err
+                    f"Invalid --{key.replace('_', '-')}, error when getting '{subnet}': {str(err)}") from err
             raise CLIInternalError(f"Unexpected error when getting subnet '{subnet}': {str(err)}") from err
 
     return _validate_subnet

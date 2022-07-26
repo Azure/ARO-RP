@@ -79,7 +79,7 @@ deploy_e2e_db() {
     az deployment group create \
       -g "$RESOURCEGROUP" \
       -n "databases-development-$DATABASE_NAME" \
-      --template-file deploy/databases-development.json \
+      --template-file pkg/deploy/assets/databases-development.json \
       --parameters \
         "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
         "databaseName=$DATABASE_NAME" \
@@ -120,28 +120,18 @@ kill_vpn() {
 # if LOCAL_E2E is set, set the value with the local test names
 # If it it not set, it defaults to the build ID
 if [ -z "${LOCAL_E2E}" ] ; then
-    # TODO: Remove this hack after AvailabilitySet name too long bug is fixed.
-    NONZONAL_REGIONS="australiacentral australiacentral2 australiasoutheast brazilsoutheast canadaeast japanwest northcentralus norwaywest southindia switzerlandwest uaenorth ukwest westcentralus westus"
-
-    if echo $NONZONAL_REGIONS | grep -wq $LOCATION
-    then
-        export CLUSTER=$(head -c 19 <<< "v4-e2e-V$BUILD_BUILDID-$LOCATION")
-    else
-        export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-    fi
-    # TODO: uncomment after above hack is removed.
-    # export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+    export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
     export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
 fi
 
 if [ -z "${CLUSTER}" ] ; then
-    echo "CLUSTER is not set , aborting"
-    exit 1
+    echo "CLUSTER is not set, aborting"
+    return 1
 fi
 
 if [ -z "${DATABASE_NAME}" ] ; then
-    echo "DATABASE_NAME is not set , aborting"
-    exit 1
+    echo "DATABASE_NAME is not set, aborting"
+    return 1
 fi
 
 echo "######################################"
@@ -163,11 +153,11 @@ echo
 echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
 echo "######################################"
 
-[ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; exit 128 )
-[ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set; please validate your ./secrets/env"; exit 128 )
-[ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set; please validate your ./secrets/env"; exit 128 )
-[ "$DATABASE_ACCOUNT_NAME" ] || ( echo ">> DATABASE_ACCOUNT_NAME is not set; please validate your ./secrets/env"; exit 128 )
-[ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set; please validate your ./secrets/env"; exit 128 )
-[ "$AZURE_SUBSCRIPTION_ID" ] || ( echo ">> AZURE_SUBSCRIPTION_ID is not set; please validate your ./secrets/env"; exit 128 )
+[ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; return 128 )
+[ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set; please validate your ./secrets/env"; return 128 )
+[ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set; please validate your ./secrets/env"; return 128 )
+[ "$DATABASE_ACCOUNT_NAME" ] || ( echo ">> DATABASE_ACCOUNT_NAME is not set; please validate your ./secrets/env"; return 128 )
+[ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set; please validate your ./secrets/env"; return 128 )
+[ "$AZURE_SUBSCRIPTION_ID" ] || ( echo ">> AZURE_SUBSCRIPTION_ID is not set; please validate your ./secrets/env"; return 128 )
 
 az account set -s $AZURE_SUBSCRIPTION_ID >/dev/null

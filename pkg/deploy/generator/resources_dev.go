@@ -87,6 +87,13 @@ EOF
 
 systemctl enable proxy.service
 
+cat >/etc/cron.weekly/yumupdate <<'EOF'
+#!/bin/bash
+
+yum update -y
+EOF
+chmod +x /etc/cron.weekly/yumupdate
+
 (sleep 30; reboot) &
 `))
 
@@ -331,7 +338,7 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel htop go-toolset-1.17.7-1.module+el8.6.0+14297+32a15e19
+yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel htop go-toolset-1.17.7-1.module+el8.6.0+14297+32a15e19 openvpn
 
 # Suppress emulation output for podman instead of docker for az acr compatability
 mkdir -p /etc/containers/
@@ -359,6 +366,13 @@ go-1.17=true
 GOLANG_FIPS=1
 XDG_RUNTIME_DIR=/run/user/1000
 EOF
+
+cat >/etc/cron.weekly/yumupdate <<'EOF'
+#!/bin/bash
+
+yum update -y
+EOF
+chmod +x /etc/cron.weekly/yumupdate
 
 cat >/etc/cron.hourly/tmpwatch <<'EOF'
 #!/bin/bash

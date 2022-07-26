@@ -9,13 +9,14 @@ import (
 	"sort"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	utilmachine "github.com/Azure/ARO-RP/pkg/util/machine"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -74,12 +75,14 @@ func (ef *workerProfilesEnricherTask) FetchData(ctx context.Context, callbacks c
 			continue
 		}
 
-		machineProviderSpec, err := utilmachine.UnmarshalAzureProviderSpec(machineset.Name, utilmachine.MachineSet, machineset.Spec.Template.Spec.ProviderSpec.Value.Raw)
-
+		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(machineset.Spec.Template.Spec.ProviderSpec.Value.Raw, nil, nil)
 		if err != nil {
-			// If this happens, the azure machine provider spec type/apiversion may have been updated and
-			// we need to handle it appropriately
-			ef.log.Info(err.Error())
+			ef.log.Info(err)
+			continue
+		}
+		machineProviderSpec, ok := obj.(*machinev1beta1.AzureMachineProviderSpec)
+		if !ok {
+			ef.log.Infof("failed to read provider spec from the machine set %q: %T", machineset.Name, obj)
 			continue
 		}
 

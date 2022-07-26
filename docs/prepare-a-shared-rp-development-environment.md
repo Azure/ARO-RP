@@ -35,7 +35,7 @@ locations.
    development environment key vault(s).  Set ADMIN_OBJECT_ID to the object ID.
 
    ```bash
-   ADMIN_OBJECT_ID="$(az ad group show -g 'ARO v4 RP Engineering' --query objectId -o tsv)"
+   ADMIN_OBJECT_ID="$(az ad group show -g 'aro-engineering' --query id -o tsv)"
    ```
 
 1. You will need the ARO RP-specific pull secret (ask one of the
@@ -206,12 +206,12 @@ locations.
    LOCATION=<YOUR-REGION>
    az deployment sub create \
      -l $LOCATION \
-     --template-file deploy/rbac-development.json \
+     --template-file pkg/deploy/assets/rbac-development.json \
      --parameters \
-       "armServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_ARM_CLIENT_ID'" --query '[].objectId' -o tsv)" \
-       "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
+       "armServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_ARM_CLIENT_ID'" --query '[].id' -o tsv)" \
+       "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)" \
        "fpRoleDefinitionId"="$(uuidgen)" \
-       "devServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)" \
+       "devServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].id' -o tsv)" \
      >/dev/null
    ```
 
@@ -248,7 +248,7 @@ locations.
       --query appId \
       -o tsv)"
 
-   OBJ_ID="$(az ad app show --id $AZURE_DBTOKEN_CLIENT_ID --query objectId)"
+   OBJ_ID="$(az ad app show --id $AZURE_DBTOKEN_CLIENT_ID --query id)"
 
    > __NOTE:__: the graph API requires this to be done from a managed machine
    az rest --method PATCH \
@@ -352,7 +352,7 @@ Variable                 | Certificate Client | Subscription Type  | AAD App Nam
 # Import firstparty.pem to keyvault v4-eastus-svc
 az keyvault certificate import --vault-name <kv_name>  --name rp-firstparty --file firstparty.pem
 
-# Rotate certificates for SPs ARM, FP, and PORTAL (wherever applicable) 
+# Rotate certificates for SPs ARM, FP, and PORTAL (wherever applicable)
 az ad app credential reset \
    --id "$AZURE_ARM_CLIENT_ID" \
    --cert "$(base64 -w0 <secrets/arm.crt)" >/dev/null
@@ -395,18 +395,18 @@ storage account so other people on your team can access it via `make secrets`
    export AZURE_SUBSCRIPTION_ID='$AZURE_SUBSCRIPTION_ID'
    export AZURE_ARM_CLIENT_ID='$AZURE_ARM_CLIENT_ID'
    export AZURE_FP_CLIENT_ID='$AZURE_FP_CLIENT_ID'
-   export AZURE_FP_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)'
+   export AZURE_FP_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)'
    export AZURE_DBTOKEN_CLIENT_ID='$AZURE_DBTOKEN_CLIENT_ID'
    export AZURE_PORTAL_CLIENT_ID='$AZURE_PORTAL_CLIENT_ID'
    export AZURE_PORTAL_ACCESS_GROUP_IDS='$ADMIN_OBJECT_ID'
    export AZURE_PORTAL_ELEVATED_GROUP_IDS='$ADMIN_OBJECT_ID'
    export AZURE_CLIENT_ID='$AZURE_CLIENT_ID'
-   export AZURE_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)'
+   export AZURE_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].id' -o tsv)'
    export AZURE_CLIENT_SECRET='$AZURE_CLIENT_SECRET'
    export AZURE_RP_CLIENT_ID='$AZURE_RP_CLIENT_ID'
    export AZURE_RP_CLIENT_SECRET='$AZURE_RP_CLIENT_SECRET'
    export AZURE_GATEWAY_CLIENT_ID='$AZURE_GATEWAY_CLIENT_ID'
-   export AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_GATEWAY_CLIENT_ID'" --query '[].objectId' -o tsv)'
+   export AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_GATEWAY_CLIENT_ID'" --query '[].id' -o tsv)'
    export AZURE_GATEWAY_CLIENT_SECRET='$AZURE_GATEWAY_CLIENT_SECRET'
    export RESOURCEGROUP="$RESOURCEGROUP_PREFIX-\$LOCATION"
    export PROXY_HOSTNAME="vm0.$PROXY_DOMAIN_NAME_LABEL.\$LOCATION.cloudapp.azure.com"
@@ -513,7 +513,7 @@ each of the bash functions below.
    > __NOTE:__: in development, if you don't have valid certs for these, you can just
    upload `localhost.pem` as a placeholder for each of these. This will avoid an
    error stemming from them not existing, but it will result in logging pods
-   crash looping in any clusters you make. Additionally, no gateway resources are 
+   crash looping in any clusters you make. Additionally, no gateway resources are
    created in development so you should not need to execute the cert import statement
    for the "-gwy" keyvault.
 
@@ -546,4 +546,4 @@ Development value: secrets/cluster-logging-int.pem
 ## Append Resource Group to Subscription Cleaner DenyList
 
 * We have subscription pruning that takes place routinely and need to add our resource group for the shared rp environment to the `denylist` of the cleaner:
-   * [https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29](https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29) 
+   * [https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29](https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29)

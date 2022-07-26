@@ -69,7 +69,7 @@
    az deployment group create \
      -g "$RESOURCEGROUP" \
      -n "databases-development-$USER" \
-     --template-file deploy/databases-development.json \
+     --template-file pkg/deploy/assets/databases-development.json \
      --parameters \
        "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
        "databaseName=$DATABASE_NAME" \
@@ -107,6 +107,8 @@
    ```bash
    CLUSTER=<cluster-name> go run ./hack/cluster delete
    ```
+
+   By default, a public cluster will be created. In order to create a private cluster, set the `PRIVATE_CLUSTER` environment variable to `true` prior to creation. Internet access from the cluster can also be restricted by setting the `NO_INTERNET` environment variable to `true`.
 
    [1]: https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster
 
@@ -159,6 +161,36 @@
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
   curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/serialconsole?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
+  ```
+
+* Redeploy node of a dev cluster
+  ```bash
+  VMNAME="aro-cluster-qplnw-master-0"
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/redeployvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
+  ```
+
+* Stop node of a dev cluster
+  ```bash
+  VMNAME="aro-cluster-qplnw-master-0"
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/stopvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
+  ```
+
+* Start node of a dev cluster
+  ```bash
+  VMNAME="aro-cluster-qplnw-master-0"
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/startvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
+  ```
+
+* List VM Resize Options for a master node of dev cluster
+  ```bash
+  curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/skus" --header "Content-Type: application/json" -d "{}"
+  ```
+
+* Reize master node of a dev cluster
+  ```bash
+  VMNAME="aro-cluster-qplnw-master-0"
+  VMSIZE="Standard_D16s_v3"
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/resize?vmName=$VMNAME&vmSize=$VMSIZE" --header "Content-Type: application/json" -d "{}"
   ```
 
 * List Clusters of a local-rp
@@ -258,7 +290,7 @@ To access the cluster for oc / kubectl or SSH'ing into the cluster you need to c
 
 * Access via Azure Portal
 
-Due to the fact that the AKS cluster is private, you need to be connected to the VPN in order to view certain AKS cluster properties, because the UI interrogates k8s via the VPN. 
+Due to the fact that the AKS cluster is private, you need to be connected to the VPN in order to view certain AKS cluster properties, because the UI interrogates k8s via the VPN.
 
 ### Metrics
 
