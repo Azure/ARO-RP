@@ -27,16 +27,15 @@ var (
 )
 
 func TestEnableServiceEndpoints(t *testing.T) {
-	ctx := context.Background()
-
-	type test struct {
+	type testData struct {
 		name          string
 		oc            *api.OpenShiftCluster
-		setMocks      func(subnetManagerMock *mock_subnet.MockManager, subnetsUpdaterMock *mock_subnet.MockEndpointsAdder, tt test)
+		setMocks      func(subnetManagerMock *mock_subnet.MockManager, endpointsAdderMock *mock_subnet.MockEndpointsAdder, testData testData)
 		expectedError string
 	}
 
-	tt := []test{
+	ctx := context.Background()
+	testCases := []testData{
 		{
 			name: "should not call to subnetManager.CreateOrUpdate() because all endpoints are already in the subnet",
 			oc: &api.OpenShiftCluster{
@@ -44,7 +43,7 @@ func TestEnableServiceEndpoints(t *testing.T) {
 					MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
 				},
 			},
-			setMocks: func(subnetManagerMock *mock_subnet.MockManager, subnetsUpdaterMock *mock_subnet.MockEndpointsAdder, tt test) {
+			setMocks: func(subnetManagerMock *mock_subnet.MockManager, endpointsAdderMock *mock_subnet.MockEndpointsAdder, testData testData) {
 				subnet := &mgmtnetwork.Subnet{
 					ID: to.StringPtr(subnetIdMaster),
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
@@ -63,7 +62,7 @@ func TestEnableServiceEndpoints(t *testing.T) {
 					},
 				}
 
-				subnetIds := []string{tt.oc.Properties.MasterProfile.SubnetID}
+				subnetIds := []string{testData.oc.Properties.MasterProfile.SubnetID}
 				endpoints := []string{"Microsoft.ContainerRegistry", "Microsoft.Storage"}
 				subnets := []*mgmtnetwork.Subnet{subnet}
 
@@ -72,7 +71,7 @@ func TestEnableServiceEndpoints(t *testing.T) {
 					GetAll(gomock.Any(), subnetIds).
 					Return(subnets, nil)
 
-				subnetsUpdaterMock.
+				endpointsAdderMock.
 					EXPECT().
 					AddEndpointsToSubnets(endpoints, subnets).
 					Return(nil)
@@ -93,8 +92,8 @@ func TestEnableServiceEndpoints(t *testing.T) {
 					},
 				},
 			},
-			setMocks: func(subnetManagerMock *mock_subnet.MockManager, subnetsUpdaterMock *mock_subnet.MockEndpointsAdder, tt test) {
-				subnetIds := []string{tt.oc.Properties.MasterProfile.SubnetID, tt.oc.Properties.WorkerProfiles[0].SubnetID}
+			setMocks: func(subnetManagerMock *mock_subnet.MockManager, endpointsAdderMock *mock_subnet.MockEndpointsAdder, testData testData) {
+				subnetIds := []string{testData.oc.Properties.MasterProfile.SubnetID, testData.oc.Properties.WorkerProfiles[0].SubnetID}
 
 				subnet := &mgmtnetwork.Subnet{
 					ID: to.StringPtr(subnetIdMaster),
@@ -141,7 +140,7 @@ func TestEnableServiceEndpoints(t *testing.T) {
 					GetAll(gomock.Any(), subnetIds).
 					Return(subnets, nil)
 
-				subnetsUpdaterMock.
+				endpointsAdderMock.
 					EXPECT().
 					AddEndpointsToSubnets(endpoints, subnets).
 					Return(nil)
@@ -167,7 +166,7 @@ func TestEnableServiceEndpoints(t *testing.T) {
 					},
 				},
 			},
-			setMocks: func(subnetManagerMock *mock_subnet.MockManager, subnetsUpdaterMock *mock_subnet.MockEndpointsAdder, tt test) {
+			setMocks: func(subnetManagerMock *mock_subnet.MockManager, endpointsAdderMock *mock_subnet.MockEndpointsAdder, testData testData) {
 				subnetManagerMock.
 					EXPECT().
 					Get(gomock.Any(), gomock.Any()).
@@ -189,7 +188,7 @@ func TestEnableServiceEndpoints(t *testing.T) {
 					},
 				},
 			},
-			setMocks: func(subnetManagerMock *mock_subnet.MockManager, subnetsUpdaterMock *mock_subnet.MockEndpointsAdder, tt test) {
+			setMocks: func(subnetManagerMock *mock_subnet.MockManager, endpointsAdderMock *mock_subnet.MockEndpointsAdder, testData testData) {
 				initialSubnet1 := &mgmtnetwork.Subnet{
 					ID: to.StringPtr(subnetIdMaster),
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
@@ -242,14 +241,14 @@ func TestEnableServiceEndpoints(t *testing.T) {
 
 				endpoints := []string{"Microsoft.ContainerRegistry", "Microsoft.Storage"}
 
-				subnetIds := []string{tt.oc.Properties.MasterProfile.SubnetID, tt.oc.Properties.WorkerProfiles[0].SubnetID}
+				subnetIds := []string{testData.oc.Properties.MasterProfile.SubnetID, testData.oc.Properties.WorkerProfiles[0].SubnetID}
 
 				subnetManagerMock.
 					EXPECT().
 					GetAll(gomock.Any(), subnetIds).
 					Return(initialSubnets, nil)
 
-				subnetsUpdaterMock.
+				endpointsAdderMock.
 					EXPECT().
 					AddEndpointsToSubnets(endpoints, initialSubnets).
 					Return(updatedSubnets)
@@ -267,7 +266,7 @@ func TestEnableServiceEndpoints(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tt {
+	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
