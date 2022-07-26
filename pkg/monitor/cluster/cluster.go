@@ -89,7 +89,7 @@ func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config,
 		return nil, err
 	}
 
-	var hiveclientset *hiveclient.Clientset
+	var hiveclientset hiveclient.Interface
 	if hiveRestConfig != nil {
 		var err error
 		hiveclientset, err = hiveclient.NewForConfig(hiveRestConfig)
