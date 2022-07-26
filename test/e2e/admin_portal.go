@@ -56,7 +56,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		filter.SendKeys("Incorrect Cluster")
 
 		wd.Wait(ElementIsLocated(ByID, "ClusterCount"))
-		text, err := wd.FindElement(ByCSSSelector, "ClusterCount")
+		text, err := wd.FindElement(ByID, "ClusterCount")
 		if err != nil {
 			TakeScreenshot(wd, err)
 		}
@@ -165,8 +165,8 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 
 		wd.Wait(ElementIsLocated(ByID, "sshModal"))
 
-		wd.Wait(ElementIsLocated(ByCSSSelector, "sshDropdown"))
-		sshDropdown, err := wd.FindElement(ByCSSSelector, "sshDropdown")
+		wd.Wait(ElementIsLocated(ByID, "sshDropdown"))
+		sshDropdown, err := wd.FindElement(ByID, "sshDropdown")
 		if err != nil {
 			TakeScreenshot(wd, err)
 		}
