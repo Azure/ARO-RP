@@ -51,6 +51,7 @@ const (
 	GatewayKeyvaultSuffix            = "-gwy"
 	PortalKeyvaultSuffix             = "-por"
 	ServiceKeyvaultSuffix            = "-svc"
+	LiveConfigKeyvaultSuffix         = "-cfg"
 	RPPrivateEndpointPrefix          = "rp-pe-"
 )
 
