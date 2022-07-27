@@ -1,16 +1,19 @@
 package liveconfig
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
 	"embed"
 	"encoding/json"
 	"testing"
 
+	azkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 
 	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
-	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
-	"github.com/Azure/go-autorest/autorest/to"
 )
 
 //go:embed testdata
@@ -42,7 +45,7 @@ func TestProdHive(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rsp := keyvault.SecretBundle{
+	rsp := azkeyvault.SecretBundle{
 		Value: to.StringPtr(string(response)),
 	}
 	kv.EXPECT().GetSecret(gomock.Any(), "HiveConfig").Return(rsp, nil)

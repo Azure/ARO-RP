@@ -6,8 +6,9 @@ package liveconfig
 import (
 	"context"
 
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"k8s.io/client-go/rest"
+
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 type Manager interface {
