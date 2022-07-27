@@ -10,6 +10,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
 
 // Core collects basic configuration information which is expected to be
@@ -18,6 +20,7 @@ import (
 type Core interface {
 	IsLocalDevelopmentMode() bool
 	NewMSIAuthorizer(MSIContext, string) (autorest.Authorizer, error)
+	NewLiveConfigManager(context.Context) (liveconfig.Manager, error)
 	instancemetadata.InstanceMetadata
 }
 
@@ -29,6 +32,25 @@ type core struct {
 
 func (c *core) IsLocalDevelopmentMode() bool {
 	return c.isLocalDevelopmentMode
+}
+
+func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, error) {
+	if c.isLocalDevelopmentMode {
+		return liveconfig.NewDev(), nil
+	} else {
+		msiKVAuthorizer, err := c.NewMSIAuthorizer(MSIContextRP, c.Environment().ResourceIdentifiers.KeyVault)
+		if err != nil {
+			return nil, err
+		}
+
+		serviceKeyvaultURI, err := keyvault.URI(c, ServiceKeyvaultSuffix)
+		if err != nil {
+			return nil, err
+		}
+
+		configKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
+		return liveconfig.NewProd(configKeyvault), nil
+	}
 }
 
 func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
