@@ -104,9 +104,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 
 	hiveRestConfig, err := hive.HiveRestConfig()
 	if err != nil {
-		// TODO(hive): Update to fail once we have Hive everywhere in prod and dev
-		// Don't fail because of hive
-		log.Error(err)
+		log.Info(err) // TODO(hive): Update to fail once we have Hive everywhere in prod and dev
 	}
 
 	m, err := ocb.newManager(ctx, log, ocb.env, ocb.dbOpenShiftClusters, ocb.dbGateway, ocb.aead, ocb.billing, doc, subscriptionDoc, hiveRestConfig)

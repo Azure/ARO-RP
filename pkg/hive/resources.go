@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	clusterDeploymentName      = "cluster"
+	ClusterDeploymentName      = "cluster"
 	kubesecretName             = "admin-kube-secret"
 	servicePrincipalSecretname = "serviceprincipal-secret"
 )
@@ -45,7 +45,7 @@ func servicePrincipalSecret(namespace string, secret []byte) *corev1.Secret {
 func clusterDeployment(namespace, clusterName, clusterID, infraID, location, APIServerPrivateEndpointIP string) *hivev1.ClusterDeployment {
 	return &hivev1.ClusterDeployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      clusterDeploymentName,
+			Name:      ClusterDeploymentName,
 			Namespace: namespace,
 		},
 		Spec: hivev1.ClusterDeploymentSpec{
