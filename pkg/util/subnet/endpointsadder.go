@@ -20,14 +20,14 @@ type EndpointsAdder interface {
 	AddEndpointsToSubnets(endpoints []string, subnets []*mgmtnetwork.Subnet) (subnetsToBeUpdated []*mgmtnetwork.Subnet)
 }
 
-// EndpointsAdderManager is the basic implementation of EndpointsAdder interface.
-type EndpointsAdderManager struct {
+// DefaultEndpointsAdder is the basic implementation of EndpointsAdder interface.
+type DefaultEndpointsAdder struct {
 }
 
 // AddEndpointsToSubnets adds the endpoints (that either are missing in subnets
 // or aren't in succeded state in subnets) to the subnets and returns those updated subnets.
 // This method does not talk to any external dependecies to remain pure bussiness logic.
-func (um *EndpointsAdderManager) AddEndpointsToSubnets(endpoints []string, subnets []*mgmtnetwork.Subnet) (subnetsToBeUpdated []*mgmtnetwork.Subnet) {
+func (um *DefaultEndpointsAdder) AddEndpointsToSubnets(endpoints []string, subnets []*mgmtnetwork.Subnet) (subnetsToBeUpdated []*mgmtnetwork.Subnet) {
 	for _, subnet := range subnets {
 		if subnetChanged := addEndpointsToSubnet(endpoints, subnet); subnetChanged {
 			subnetsToBeUpdated = append(subnetsToBeUpdated, subnet)

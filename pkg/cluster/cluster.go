@@ -170,6 +170,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 
 		hiveClusterManager: hr,
 
-		endpointsAdder: &subnet.EndpointsAdderManager{},
+		endpointsAdder: &subnet.DefaultEndpointsAdder{},
 	}, nil
 }

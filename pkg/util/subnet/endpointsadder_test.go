@@ -231,7 +231,7 @@ func TestGetUpdatedSubnets(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			endpointsAdder := subnet.EndpointsAdderManager{}
+			endpointsAdder := subnet.DefaultEndpointsAdder{}
 			subnetsToBeUpdated := endpointsAdder.AddEndpointsToSubnets(tc.newEndpoints, tc.subnets)
 
 			if !reflect.DeepEqual(tc.expectedSubnets, subnetsToBeUpdated) {

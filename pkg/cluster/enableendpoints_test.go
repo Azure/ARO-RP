@@ -58,15 +58,17 @@ func TestEnableServiceEndpointsShouldNotCall_SubnetManager_CreateOrUpdate_AsAllE
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
+	ctx := context.Background()
+
 	subnetManagerMock := mock_subnet.NewMockManager(controller)
 	subnetManagerMock.
 		EXPECT().
-		GetAll(gomock.Any(), subnetIds).
+		GetAll(ctx, subnetIds).
 		Return(subnets, nil)
 
 	subnetManagerMock.
 		EXPECT().
-		CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any()).
+		CreateOrUpdate(ctx, gomock.Any(), gomock.Any()).
 		Times(0)
 
 	endpointsAdderMock := mock_subnet.NewMockEndpointsAdder(controller)
@@ -83,10 +85,10 @@ func TestEnableServiceEndpointsShouldNotCall_SubnetManager_CreateOrUpdate_AsAllE
 		},
 	}
 
-	err := m.enableServiceEndpoints(context.Background())
+	err := m.enableServiceEndpoints(ctx)
 	expectedError := ""
 
-	if err != nil && err.Error() != expectedError || err == nil && expectedError != "" {
+	if (err != nil && err.Error() != expectedError) || (err == nil && expectedError != "") {
 		t.Fatalf("expected error '%v', but got '%v'", expectedError, err)
 	}
 }
@@ -145,15 +147,17 @@ func TestEnableServiceEndpointsShouldNotCall_SubnetManager_CreateOrUpdate_AsAllE
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
+	ctx := context.Background()
+
 	subnetManagerMock := mock_subnet.NewMockManager(controller)
 	subnetManagerMock.
 		EXPECT().
-		GetAll(gomock.Any(), subnetIds).
+		GetAll(ctx, subnetIds).
 		Return(subnets, nil)
 
 	subnetManagerMock.
 		EXPECT().
-		CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any()).
+		CreateOrUpdate(ctx, gomock.Any(), gomock.Any()).
 		Times(0)
 
 	endpointsAdderMock := mock_subnet.NewMockEndpointsAdder(controller)
@@ -170,10 +174,10 @@ func TestEnableServiceEndpointsShouldNotCall_SubnetManager_CreateOrUpdate_AsAllE
 		},
 	}
 
-	err := m.enableServiceEndpoints(context.Background())
+	err := m.enableServiceEndpoints(ctx)
 	expectedError := ""
 
-	if err != nil && err.Error() != expectedError || err == nil && expectedError != "" {
+	if (err != nil && err.Error() != expectedError) || (err == nil && expectedError != "") {
 		t.Fatalf("expected error '%v', but got '%v'", expectedError, err)
 	}
 }
@@ -196,11 +200,13 @@ func TestEnableServiceEndpointsShouldReturnErrorAndNotCall_SubnetManager_CreateO
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
+	ctx := context.Background()
+
 	subnetManagerMock := mock_subnet.NewMockManager(controller)
 
 	subnetManagerMock.
 		EXPECT().
-		Get(gomock.Any(), gomock.Any()).
+		Get(ctx, gomock.Any()).
 		Times(0)
 
 	m := &manager{
@@ -210,10 +216,10 @@ func TestEnableServiceEndpointsShouldReturnErrorAndNotCall_SubnetManager_CreateO
 		},
 	}
 
-	err := m.enableServiceEndpoints(context.Background())
+	err := m.enableServiceEndpoints(ctx)
 	expectedError := fmt.Sprintf("WorkerProfile '%v' has no SubnetID; check that the corresponding MachineSet is valid", "worker_profile_name")
 
-	if err != nil && err.Error() != expectedError || err == nil && expectedError != "" {
+	if (err != nil && err.Error() != expectedError) || (err == nil && expectedError != "") {
 		t.Fatalf("expected error '%v', but got '%v'", expectedError, err)
 	}
 }
@@ -289,20 +295,22 @@ func TestEnableServiceEndpointsShouldCall_SubnetManager_CreateOrUpdate_WithTheUp
 
 	subnetIds := []string{oc.Properties.MasterProfile.SubnetID, oc.Properties.WorkerProfiles[0].SubnetID}
 
+	ctx := context.Background()
+
 	subnetManagerMock := mock_subnet.NewMockManager(controller)
 	subnetManagerMock.
 		EXPECT().
-		GetAll(gomock.Any(), subnetIds).
+		GetAll(ctx, subnetIds).
 		Return(initialSubnets, nil)
 
 	subnetManagerMock.
 		EXPECT().
-		CreateOrUpdate(gomock.Any(), *updatedSubnets[0].ID, updatedSubnets[0]).
+		CreateOrUpdate(ctx, *updatedSubnets[0].ID, updatedSubnets[0]).
 		Return(nil)
 
 	subnetManagerMock.
 		EXPECT().
-		CreateOrUpdate(gomock.Any(), *updatedSubnets[1].ID, updatedSubnets[1]).
+		CreateOrUpdate(ctx, *updatedSubnets[1].ID, updatedSubnets[1]).
 		Return(nil)
 
 	endpointsAdderMock := mock_subnet.NewMockEndpointsAdder(controller)
@@ -319,10 +327,10 @@ func TestEnableServiceEndpointsShouldCall_SubnetManager_CreateOrUpdate_WithTheUp
 		},
 	}
 
-	err := m.enableServiceEndpoints(context.Background())
+	err := m.enableServiceEndpoints(ctx)
 	expectedError := ""
 
-	if err != nil && err.Error() != expectedError || err == nil && expectedError != "" {
+	if (err != nil && err.Error() != expectedError) || (err == nil && expectedError != "") {
 		t.Fatalf("expected error '%v', but got '%v'", expectedError, err)
 	}
 }
