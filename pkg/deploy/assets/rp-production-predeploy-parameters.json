@@ -8,6 +8,9 @@
         "extraClusterKeyvaultAccessPolicies": {
             "value": []
         },
+        "extraConfigKeyvaultAccessPolicies": {
+            "value": []
+        },
         "extraDBTokenKeyvaultAccessPolicies": {
             "value": []
         },
