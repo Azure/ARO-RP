@@ -248,6 +248,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 			"dbTokenKeyvaultAccessPolicies": g.rpDBTokenKeyvaultAccessPolicies(),
 			"portalKeyvaultAccessPolicies":  g.rpPortalKeyvaultAccessPolicies(),
 			"serviceKeyvaultAccessPolicies": g.rpServiceKeyvaultAccessPolicies(),
+			"configKeyvaultAccessPolicies":  g.rpConfigKeyvaultAccessPolicies(),
 		}
 	}
 
@@ -264,6 +265,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 			"extraDBTokenKeyvaultAccessPolicies",
 			"extraPortalKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies",
+			"extraConfigKeyvaultAccessPolicies",
 			"gatewayResourceGroupName",
 			"rpNsgSourceAddressPrefixes",
 		)
@@ -282,7 +284,8 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		case "extraClusterKeyvaultAccessPolicies",
 			"extraDBTokenKeyvaultAccessPolicies",
 			"extraPortalKeyvaultAccessPolicies",
-			"extraServiceKeyvaultAccessPolicies":
+			"extraServiceKeyvaultAccessPolicies",
+			"extraConfigKeyvaultAccessPolicies":
 			p.Type = "array"
 			p.DefaultValue = []interface{}{}
 		case "rpNsgSourceAddressPrefixes":
@@ -304,6 +307,12 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		g.rpPortalKeyvault(),
 		g.rpServiceKeyvault(),
 	)
+
+	if g.production {
+		t.Resources = append(t.Resources,
+			g.rpConfigKeyvault(),
+		)
+	}
 
 	return t
 }

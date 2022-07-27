@@ -1284,6 +1284,22 @@ func (g *generator) rpServiceKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolic
 	}
 }
 
+func (g *generator) rpConfigKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
+	return []mgmtkeyvault.AccessPolicyEntry{
+		{
+			TenantID: &tenantUUIDHack,
+			ObjectID: to.StringPtr("[parameters('fpServicePrincipalId')]"),
+			Permissions: &mgmtkeyvault.Permissions{
+				Secrets: &[]mgmtkeyvault.SecretPermissions{
+					mgmtkeyvault.SecretPermissionsGet,
+					mgmtkeyvault.SecretPermissionsList,
+					mgmtkeyvault.SecretPermissionsSet,
+				},
+			},
+		},
+	}
+}
+
 func (g *generator) rpClusterKeyvault() *arm.Resource {
 	vault := &mgmtkeyvault.Vault{
 		Properties: &mgmtkeyvault.VaultProperties{
@@ -1459,6 +1475,32 @@ func (g *generator) rpServiceKeyvault() *arm.Resource {
 				},
 			},
 		)
+	}
+
+	return &arm.Resource{
+		Resource:   vault,
+		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
+	}
+}
+
+func (g *generator) rpConfigKeyvault() *arm.Resource {
+	vault := &mgmtkeyvault.Vault{
+		Properties: &mgmtkeyvault.VaultProperties{
+			EnableSoftDelete: to.BoolPtr(true),
+			TenantID:         &tenantUUIDHack,
+			Sku: &mgmtkeyvault.Sku{
+				Name:   mgmtkeyvault.Standard,
+				Family: to.StringPtr("A"),
+			},
+			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
+				{
+					ObjectID: to.StringPtr(dbTokenAccessPolicyHack),
+				},
+			},
+		},
+		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + env.LiveConfigKeyvaultSuffix + "')]"),
+		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
+		Location: to.StringPtr("[resourceGroup().location]"),
 	}
 
 	return &arm.Resource{

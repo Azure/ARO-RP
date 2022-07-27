@@ -20,6 +20,7 @@ const (
 	portalAccessPolicyHack  = "e5e11dae-7c49-4118-9628-e0afa4d6a502"
 	serviceAccessPolicyHack = "533a94d0-d6c2-4fca-9af1-374aa6493468"
 	gatewayAccessPolicyHack = "d377245e-57a7-4e58-b618-492f9dbdd74b"
+	configAccessPolicyHack  = "2132312d-ff5f-4654-bc4e-720d0de38c83"
 )
 
 var (
@@ -56,6 +57,7 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 		b = regexp.MustCompile(`(?m)"accessPolicies": \[[^]]*`+gatewayAccessPolicyHack+`[^]]*\]`).ReplaceAll(b, []byte(`"accessPolicies": "[concat(variables('gatewayKeyvaultAccessPolicies'), parameters('extraGatewayKeyvaultAccessPolicies'))]"`))
 		b = regexp.MustCompile(`(?m)"accessPolicies": \[[^]]*`+portalAccessPolicyHack+`[^]]*\]`).ReplaceAll(b, []byte(`"accessPolicies": "[concat(variables('portalKeyvaultAccessPolicies'), parameters('extraPortalKeyvaultAccessPolicies'))]"`))
 		b = regexp.MustCompile(`(?m)"accessPolicies": \[[^]]*`+serviceAccessPolicyHack+`[^]]*\]`).ReplaceAll(b, []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraServiceKeyvaultAccessPolicies'))]"`))
+		b = regexp.MustCompile(`(?m)"accessPolicies": \[[^]]*`+configAccessPolicyHack+`[^]]*\]`).ReplaceAll(b, []byte(`"accessPolicies": "[concat(variables('configKeyvaultAccessPolicies'), parameters('extraConfigKeyvaultAccessPolicies'))]"`))
 		b = bytes.Replace(b, []byte(`"sourceAddressPrefixes": []`), []byte(`"sourceAddressPrefixes": "[parameters('rpNsgSourceAddressPrefixes')]"`), 1)
 		b = bytes.Replace(b, []byte(`"isVirtualNetworkFilterEnabled": true`), []byte(`"isVirtualNetworkFilterEnabled": "[not(parameters('disableCosmosDBFirewall'))]"`), 1)
 		b = bytes.Replace(b, []byte(`"virtualNetworkRules": []`), []byte(`"virtualNetworkRules": "[if(parameters('disableCosmosDBFirewall'), createArray(), createArray(createObject('id', resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')), createObject('id', resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet'))))]"`), 1)
