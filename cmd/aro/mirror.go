@@ -99,9 +99,19 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 					Payload: version.InstallStream.PullSpec,
 				})
 			} else {
+				vers, err := version.ParseVersion(arg)
+				if err != nil {
+					return err
+				}
+
+				node, err := pkgmirror.VersionInfo(vers)
+				if err != nil {
+					return err
+				}
+
 				releases = append(releases, pkgmirror.Node{
-					Version: arg,
-					Payload: arg,
+					Version: node.Version,
+					Payload: node.Payload,
 				})
 			}
 		}
