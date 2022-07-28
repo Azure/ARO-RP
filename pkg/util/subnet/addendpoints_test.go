@@ -23,7 +23,7 @@ var (
 	subnetIdMaster    = "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 )
 
-func TestGetUpdatedSubnets(t *testing.T) {
+func TestAddEndpointsToSubnets(t *testing.T) {
 	type testData struct {
 		name            string
 		subnets         []*mgmtnetwork.Subnet
@@ -231,8 +231,7 @@ func TestGetUpdatedSubnets(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			endpointsAdder := subnet.DefaultEndpointsAdder{}
-			subnetsToBeUpdated := endpointsAdder.AddEndpointsToSubnets(tc.newEndpoints, tc.subnets)
+			subnetsToBeUpdated := subnet.AddEndpointsToSubnets(tc.newEndpoints, tc.subnets)
 
 			if !reflect.DeepEqual(tc.expectedSubnets, subnetsToBeUpdated) {
 				t.Fatalf("expected subnets is different than subnetsToBeUpdated. Expected %v, but got %v", tc.expectedSubnets, subnetsToBeUpdated)

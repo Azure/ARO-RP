@@ -5,7 +5,6 @@ package cluster
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
@@ -52,7 +51,6 @@ func TestEnableServiceEndpointsShouldNotCall_SubnetManager_CreateOrUpdate_AsAllE
 	}
 
 	subnetIds := []string{oc.Properties.MasterProfile.SubnetID}
-	endpoints := []string{"Microsoft.ContainerRegistry", "Microsoft.Storage"}
 	subnets := []*mgmtnetwork.Subnet{subnet}
 
 	controller := gomock.NewController(t)
@@ -68,18 +66,16 @@ func TestEnableServiceEndpointsShouldNotCall_SubnetManager_CreateOrUpdate_AsAllE
 
 	subnetManagerMock.
 		EXPECT().
-		CreateOrUpdate(ctx, gomock.Any(), gomock.Any()).
+		CreateOrUpdateSubnets(ctx, nil).
+		Times(1)
+
+	subnetManagerMock.
+		EXPECT().
+		CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any()).
 		Times(0)
 
-	endpointsAdderMock := mock_subnet.NewMockEndpointsAdder(controller)
-	endpointsAdderMock.
-		EXPECT().
-		AddEndpointsToSubnets(endpoints, subnets).
-		Return(nil)
-
 	m := &manager{
-		subnet:         subnetManagerMock,
-		endpointsAdder: endpointsAdderMock,
+		subnet: subnetManagerMock,
 		doc: &api.OpenShiftClusterDocument{
 			OpenShiftCluster: oc,
 		},
@@ -142,7 +138,6 @@ func TestEnableServiceEndpointsShouldNotCall_SubnetManager_CreateOrUpdate_AsAllE
 	}
 
 	subnets := []*mgmtnetwork.Subnet{subnet, secondSubnet}
-	endpoints := []string{"Microsoft.ContainerRegistry", "Microsoft.Storage"}
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
@@ -157,18 +152,16 @@ func TestEnableServiceEndpointsShouldNotCall_SubnetManager_CreateOrUpdate_AsAllE
 
 	subnetManagerMock.
 		EXPECT().
-		CreateOrUpdate(ctx, gomock.Any(), gomock.Any()).
+		CreateOrUpdateSubnets(ctx, nil).
+		Times(1)
+
+	subnetManagerMock.
+		EXPECT().
+		CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any()).
 		Times(0)
 
-	endpointsAdderMock := mock_subnet.NewMockEndpointsAdder(controller)
-	endpointsAdderMock.
-		EXPECT().
-		AddEndpointsToSubnets(endpoints, subnets).
-		Return(nil)
-
 	m := &manager{
-		subnet:         subnetManagerMock,
-		endpointsAdder: endpointsAdderMock,
+		subnet: subnetManagerMock,
 		doc: &api.OpenShiftClusterDocument{
 			OpenShiftCluster: oc,
 		},
@@ -190,7 +183,7 @@ func TestEnableServiceEndpointsShouldReturnErrorAndNotCall_SubnetManager_CreateO
 			},
 			WorkerProfiles: []api.WorkerProfile{
 				{
-					Name:     "worker_profile_name",
+					Name:     "profile_name",
 					SubnetID: "",
 				},
 			},
@@ -206,7 +199,7 @@ func TestEnableServiceEndpointsShouldReturnErrorAndNotCall_SubnetManager_CreateO
 
 	subnetManagerMock.
 		EXPECT().
-		Get(ctx, gomock.Any()).
+		Get(gomock.Any(), gomock.Any()).
 		Times(0)
 
 	m := &manager{
@@ -217,7 +210,7 @@ func TestEnableServiceEndpointsShouldReturnErrorAndNotCall_SubnetManager_CreateO
 	}
 
 	err := m.enableServiceEndpoints(ctx)
-	expectedError := fmt.Sprintf("WorkerProfile '%v' has no SubnetID; check that the corresponding MachineSet is valid", "worker_profile_name")
+	expectedError := "WorkerProfile 'profile_name' has no SubnetID; check that the corresponding MachineSet is valid"
 
 	if (err != nil && err.Error() != expectedError) || (err == nil && expectedError != "") {
 		t.Fatalf("expected error '%v', but got '%v'", expectedError, err)
@@ -291,8 +284,6 @@ func TestEnableServiceEndpointsShouldCall_SubnetManager_CreateOrUpdate_WithTheUp
 
 	updatedSubnets := []*mgmtnetwork.Subnet{updatedSubnet1, updatedSubnet2}
 
-	endpoints := []string{"Microsoft.ContainerRegistry", "Microsoft.Storage"}
-
 	subnetIds := []string{oc.Properties.MasterProfile.SubnetID, oc.Properties.WorkerProfiles[0].SubnetID}
 
 	ctx := context.Background()
@@ -305,23 +296,11 @@ func TestEnableServiceEndpointsShouldCall_SubnetManager_CreateOrUpdate_WithTheUp
 
 	subnetManagerMock.
 		EXPECT().
-		CreateOrUpdate(ctx, *updatedSubnets[0].ID, updatedSubnets[0]).
-		Return(nil)
-
-	subnetManagerMock.
-		EXPECT().
-		CreateOrUpdate(ctx, *updatedSubnets[1].ID, updatedSubnets[1]).
-		Return(nil)
-
-	endpointsAdderMock := mock_subnet.NewMockEndpointsAdder(controller)
-	endpointsAdderMock.
-		EXPECT().
-		AddEndpointsToSubnets(endpoints, initialSubnets).
-		Return(updatedSubnets)
+		CreateOrUpdateSubnets(ctx, updatedSubnets).
+		Times(1)
 
 	m := &manager{
-		subnet:         subnetManagerMock,
-		endpointsAdder: endpointsAdderMock,
+		subnet: subnetManagerMock,
 		doc: &api.OpenShiftClusterDocument{
 			OpenShiftCluster: oc,
 		},

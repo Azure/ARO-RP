@@ -29,7 +29,9 @@ type Manager interface {
 	GetAll(ctx context.Context, subnetIds []string) ([]*mgmtnetwork.Subnet, error)
 	GetHighestFreeIP(ctx context.Context, subnetID string) (string, error)
 	CreateOrUpdate(ctx context.Context, subnetID string, subnet *mgmtnetwork.Subnet) error
+	CreateOrUpdateSubnets(ctx context.Context, subnets []*mgmtnetwork.Subnet) error
 }
+
 type manager struct {
 	subnets         network.SubnetsClient
 	virtualNetworks network.VirtualNetworksClient
@@ -138,6 +140,15 @@ func (m *manager) GetAll(ctx context.Context, subnetIds []string) ([]*mgmtnetwor
 		subnets[i] = subnet
 	}
 	return subnets, nil
+}
+
+func (m *manager) CreateOrUpdateSubnets(ctx context.Context, subnets []*mgmtnetwork.Subnet) error {
+	for _, subnet := range subnets {
+		if err := m.CreateOrUpdate(ctx, *subnet.ID, subnet); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Split splits the given subnetID into a vnetID and subnetName

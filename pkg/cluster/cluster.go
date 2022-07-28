@@ -78,11 +78,10 @@ type manager struct {
 	fpPrivateEndpoints    network.PrivateEndpointsClient
 	rpPrivateLinkServices network.PrivateLinkServicesClient
 
-	dns            dns.Manager
-	storage        storage.Manager
-	subnet         subnet.Manager
-	endpointsAdder subnet.EndpointsAdder
-	graph          graph.Manager
+	dns     dns.Manager
+	storage storage.Manager
+	subnet  subnet.Manager
+	graph   graph.Manager
 
 	kubernetescli    kubernetes.Interface
 	extensionscli    extensionsclient.Interface
@@ -169,7 +168,5 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		graph:   graph.NewManager(log, aead, storage),
 
 		hiveClusterManager: hr,
-
-		endpointsAdder: &subnet.DefaultEndpointsAdder{},
 	}, nil
 }

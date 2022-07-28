@@ -9,25 +9,12 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 )
 
-//  EndpointsAdder is the interface that wraps the basic logic to add endpoints to subnets
-//
-// AddEndpointsToSubnets adds the endpoints (that either are missing in subnets
-// or aren't in succeded state in subnets) to the subnets and returns those subnets.
-// Implementations of this method should not talk to infrastructure layer (e.g, Azure).
-// In contrast, the result of this function should be passed to a subnet manager to update the subnets
-// in Azure.
-type EndpointsAdder interface {
-	AddEndpointsToSubnets(endpoints []string, subnets []*mgmtnetwork.Subnet) (subnetsToBeUpdated []*mgmtnetwork.Subnet)
-}
-
-// DefaultEndpointsAdder is the basic implementation of EndpointsAdder interface.
-type DefaultEndpointsAdder struct {
-}
-
 // AddEndpointsToSubnets adds the endpoints (that either are missing in subnets
 // or aren't in succeded state in subnets) to the subnets and returns those updated subnets.
 // This method does not talk to any external dependecies to remain pure bussiness logic.
-func (um *DefaultEndpointsAdder) AddEndpointsToSubnets(endpoints []string, subnets []*mgmtnetwork.Subnet) (subnetsToBeUpdated []*mgmtnetwork.Subnet) {
+// The result of this function should be passed to a subnet manager to update the subnets
+// in Azure.
+func AddEndpointsToSubnets(endpoints []string, subnets []*mgmtnetwork.Subnet) (subnetsToBeUpdated []*mgmtnetwork.Subnet) {
 	for _, subnet := range subnets {
 		if subnetChanged := addEndpointsToSubnet(endpoints, subnet); subnetChanged {
 			subnetsToBeUpdated = append(subnetsToBeUpdated, subnet)

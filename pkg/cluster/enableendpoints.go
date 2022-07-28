@@ -7,9 +7,8 @@ import (
 	"context"
 	"fmt"
 
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 // enableServiceEndpoints should enable service endpoints on
@@ -25,18 +24,9 @@ func (m *manager) enableServiceEndpoints(ctx context.Context) error {
 		return err
 	}
 
-	subnetsToBeUpdated := m.endpointsAdder.AddEndpointsToSubnets(api.SubnetsEndpoints, subnets)
+	subnetsToBeUpdated := subnet.AddEndpointsToSubnets(api.SubnetsEndpoints, subnets)
 
-	return m.updateSubnets(subnetsToBeUpdated, ctx)
-}
-
-func (m *manager) updateSubnets(subnets []*mgmtnetwork.Subnet, ctx context.Context) error {
-	for _, subnet := range subnets {
-		if err := m.subnet.CreateOrUpdate(ctx, *subnet.ID, subnet); err != nil {
-			return err
-		}
-	}
-	return nil
+	return m.subnet.CreateOrUpdateSubnets(ctx, subnetsToBeUpdated)
 }
 
 func (m *manager) getSubnetIds() ([]string, error) {
