@@ -1,6 +1,8 @@
 package deterministicuuid
 
 import (
+	"bytes"
+
 	gofrsuuid "github.com/gofrs/uuid"
 
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
@@ -34,8 +36,13 @@ func NewTestUUIDGenerator(namespace uint8) uuid.Generator {
 // specify the last two bytes and namespaced by the first byte.
 func (g *gen) Generate() string {
 	g.counter++
+
+	// repeat the namespace for the first 14 bytes to make an obvious non-random
+	// pattern
+	uuidBytes := bytes.Repeat([]byte{g.namespace}, 14)
+
 	// 16 bits of uuid ought to be enough for any test :)
-	return gofrsuuid.FromBytesOrNil([]byte{
-		g.namespace, g.namespace, g.namespace, g.namespace, g.namespace, g.namespace, g.namespace, g.namespace, g.namespace, g.namespace, g.namespace, g.namespace, g.namespace, g.namespace, byte(uint8(g.counter >> 8)), byte(uint8(g.counter)),
-	}).String()
+	uuidBytes = append(uuidBytes, byte(uint8(g.counter>>8)))
+	uuidBytes = append(uuidBytes, byte(uint8(g.counter)))
+	return gofrsuuid.FromBytesOrNil(uuidBytes).String()
 }
