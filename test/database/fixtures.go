@@ -6,8 +6,6 @@ package database
 import (
 	"context"
 
-	"github.com/gofrs/uuid"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 )
@@ -151,7 +149,7 @@ func (f *Fixture) Create() error {
 
 	for _, i := range f.openshiftClusterDocuments {
 		if i.ID == "" {
-			i.ID = uuid.Must(uuid.NewV4()).String()
+			i.ID = f.openShiftClustersDatabase.NewUUID()
 		}
 		_, err := f.openShiftClustersDatabase.Create(ctx, i)
 		if err != nil {

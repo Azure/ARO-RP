@@ -22,7 +22,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -42,6 +41,7 @@ import (
 	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
 	redhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-04-01/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type Cluster struct {
@@ -188,7 +188,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 
 	if c.ci {
 		// name is limited to 24 characters, but must be globally unique, so we generate one and try if it is available
-		kvName = "kv-" + uuid.Must(uuid.NewV4()).String()[:21]
+		kvName = "kv-" + uuid.DefaultGenerator.Generate()[:21]
 		result, err := c.vaultsClient.CheckNameAvailability(ctx, mgmtkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: to.StringPtr("Microsoft.KeyVault/vaults")})
 		if err != nil {
 			return err
@@ -259,7 +259,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 				_, err = c.roleassignments.Create(
 					ctx,
 					scope.resource,
-					uuid.Must(uuid.NewV4()).String(),
+					uuid.DefaultGenerator.Generate(),
 					mgmtauthorization.RoleAssignmentCreateParameters{
 						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
 							RoleDefinitionID: to.StringPtr("/subscriptions/" + c.env.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/" + scope.role),

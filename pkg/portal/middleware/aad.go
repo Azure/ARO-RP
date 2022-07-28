@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
@@ -24,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (
@@ -209,7 +209,7 @@ func (a *aad) redirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	state := uuid.Must(uuid.NewV4()).String()
+	state := uuid.DefaultGenerator.Generate()
 
 	session.Values = map[interface{}]interface{}{
 		sessionKeyState: state,

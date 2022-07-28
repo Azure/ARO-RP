@@ -11,10 +11,12 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type portals struct {
-	c cosmosdb.PortalDocumentClient
+	c             cosmosdb.PortalDocumentClient
+	uuidGenerator uuid.Generator
 }
 
 // Portal is the database interface for PortalDocuments
@@ -22,6 +24,7 @@ type Portal interface {
 	Create(context.Context, *api.PortalDocument) (*api.PortalDocument, error)
 	Get(context.Context, string) (*api.PortalDocument, error)
 	Patch(context.Context, string, func(*api.PortalDocument) error) (*api.PortalDocument, error)
+	NewUUID() string
 }
 
 // NewPortal returns a new Portal
@@ -34,13 +37,18 @@ func NewPortal(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.Da
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	documentClient := cosmosdb.NewPortalDocumentClient(collc, collPortal)
-	return NewPortalWithProvidedClient(documentClient), nil
+	return NewPortalWithProvidedClient(documentClient, uuid.DefaultGenerator), nil
 }
 
-func NewPortalWithProvidedClient(client cosmosdb.PortalDocumentClient) Portal {
+func NewPortalWithProvidedClient(client cosmosdb.PortalDocumentClient, uuidGenerator uuid.Generator) Portal {
 	return &portals{
-		c: client,
+		c:             client,
+		uuidGenerator: uuidGenerator,
 	}
+}
+
+func (c *portals) NewUUID() string {
+	return c.uuidGenerator.Generate()
 }
 
 func (c *portals) Create(ctx context.Context, doc *api.PortalDocument) (*api.PortalDocument, error) {

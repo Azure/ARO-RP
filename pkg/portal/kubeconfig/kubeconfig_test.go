@@ -29,7 +29,7 @@ func TestNew(t *testing.T) {
 	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/microsoft.redhatopenshift/openshiftclusters/cluster"
 	elevatedGroupIDs := []string{"10000000-0000-0000-0000-000000000000"}
 	username := "username"
-	password := "password"
+	password := "03030303-0303-0303-0303-030303030001"
 
 	servingCert := &x509.Certificate{}
 
@@ -60,7 +60,7 @@ func TestNew(t *testing.T) {
 			wantHeaders: http.Header{
 				"Content-Disposition": []string{`attachment; filename="cluster.kubeconfig"`},
 			},
-			wantBody: "{\n    \"kind\": \"Config\",\n    \"apiVersion\": \"v1\",\n    \"preferences\": {},\n    \"clusters\": [\n        {\n            \"name\": \"cluster\",\n            \"cluster\": {\n                \"server\": \"https://localhost:8444/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/microsoft.redhatopenshift/openshiftclusters/cluster/kubeconfig/proxy\",\n                \"certificate-authority-data\": \"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K\"\n            }\n        }\n    ],\n    \"users\": [\n        {\n            \"name\": \"user\",\n            \"user\": {\n                \"token\": \"password\"\n            }\n        }\n    ],\n    \"contexts\": [\n        {\n            \"name\": \"context\",\n            \"context\": {\n                \"cluster\": \"cluster\",\n                \"user\": \"user\",\n                \"namespace\": \"default\"\n            }\n        }\n    ],\n    \"current-context\": \"context\"\n}",
+			wantBody: "{\n    \"kind\": \"Config\",\n    \"apiVersion\": \"v1\",\n    \"preferences\": {},\n    \"clusters\": [\n        {\n            \"name\": \"cluster\",\n            \"cluster\": {\n                \"server\": \"https://localhost:8444/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/microsoft.redhatopenshift/openshiftclusters/cluster/kubeconfig/proxy\",\n                \"certificate-authority-data\": \"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K\"\n            }\n        }\n    ],\n    \"users\": [\n        {\n            \"name\": \"user\",\n            \"user\": {\n                \"token\": \"03030303-0303-0303-0303-030303030001\"\n            }\n        }\n    ],\n    \"contexts\": [\n        {\n            \"name\": \"context\",\n            \"context\": {\n                \"cluster\": \"cluster\",\n                \"user\": \"user\",\n                \"namespace\": \"default\"\n            }\n        }\n    ],\n    \"current-context\": \"context\"\n}",
 		},
 		{
 			name:     "success - elevated",
@@ -83,7 +83,7 @@ func TestNew(t *testing.T) {
 			wantHeaders: http.Header{
 				"Content-Disposition": []string{`attachment; filename="cluster-elevated.kubeconfig"`},
 			},
-			wantBody: "{\n    \"kind\": \"Config\",\n    \"apiVersion\": \"v1\",\n    \"preferences\": {},\n    \"clusters\": [\n        {\n            \"name\": \"cluster\",\n            \"cluster\": {\n                \"server\": \"https://localhost:8444/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/microsoft.redhatopenshift/openshiftclusters/cluster/kubeconfig/proxy\",\n                \"certificate-authority-data\": \"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K\"\n            }\n        }\n    ],\n    \"users\": [\n        {\n            \"name\": \"user\",\n            \"user\": {\n                \"token\": \"password\"\n            }\n        }\n    ],\n    \"contexts\": [\n        {\n            \"name\": \"context\",\n            \"context\": {\n                \"cluster\": \"cluster\",\n                \"user\": \"user\",\n                \"namespace\": \"default\"\n            }\n        }\n    ],\n    \"current-context\": \"context\"\n}",
+			wantBody: "{\n    \"kind\": \"Config\",\n    \"apiVersion\": \"v1\",\n    \"preferences\": {},\n    \"clusters\": [\n        {\n            \"name\": \"cluster\",\n            \"cluster\": {\n                \"server\": \"https://localhost:8444/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/microsoft.redhatopenshift/openshiftclusters/cluster/kubeconfig/proxy\",\n                \"certificate-authority-data\": \"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K\"\n            }\n        }\n    ],\n    \"users\": [\n        {\n            \"name\": \"user\",\n            \"user\": {\n                \"token\": \"03030303-0303-0303-0303-030303030001\"\n            }\n        }\n    ],\n    \"contexts\": [\n        {\n            \"name\": \"context\",\n            \"context\": {\n                \"cluster\": \"cluster\",\n                \"user\": \"user\",\n                \"namespace\": \"default\"\n            }\n        }\n    ],\n    \"current-context\": \"context\"\n}",
 		},
 		{
 			name: "bad path",
@@ -148,9 +148,7 @@ func TestNew(t *testing.T) {
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
 			_, baseAccessLog := testlog.New()
-			k := New(baseLog, audit, _env, baseAccessLog, servingCert, elevatedGroupIDs, nil, dbPortal, nil, aadAuthenticatedRouter, &mux.Router{})
-
-			k.newToken = func() string { return password }
+			_ = New(baseLog, audit, _env, baseAccessLog, servingCert, elevatedGroupIDs, nil, dbPortal, nil, aadAuthenticatedRouter, &mux.Router{})
 
 			if tt.r != nil {
 				tt.r(r)

@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (
@@ -61,7 +62,7 @@ var (
 	// epoch is an unique identifier associated with the current session of the
 	// telemetry library running on the platform. It must be stable during a
 	// session, and has no implied ordering across sessions.
-	epoch = uuid.Must(uuid.NewV4()).String()
+	epoch = uuid.DefaultGenerator.Generate()
 
 	// seqNum is used to track absolute order of uploaded events, per session.
 	// It is reset when the ARO component is restarted. The first log will have

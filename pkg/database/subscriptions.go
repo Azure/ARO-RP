@@ -9,10 +9,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gofrs/uuid"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const SubscriptionsDequeueQuery string = `SELECT * FROM Subscriptions doc WHERE (doc.deleting ?? false) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
@@ -78,7 +77,7 @@ func NewSubscriptions(ctx context.Context, isLocalDevelopmentMode bool, dbc cosm
 	}
 
 	documentClient := cosmosdb.NewSubscriptionDocumentClient(collc, collSubscriptions)
-	return NewSubscriptionsWithProvidedClient(documentClient, uuid.Must(uuid.NewV4()).String()), nil
+	return NewSubscriptionsWithProvidedClient(documentClient, uuid.DefaultGenerator.Generate()), nil
 }
 
 func NewSubscriptionsWithProvidedClient(client cosmosdb.SubscriptionDocumentClient, uuid string) Subscriptions {

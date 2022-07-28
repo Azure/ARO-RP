@@ -8,9 +8,8 @@ import (
 	"encoding/json"
 	"regexp"
 
-	"github.com/gofrs/uuid"
-
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (
@@ -23,7 +22,7 @@ const (
 )
 
 var (
-	tenantUUIDHack = uuid.Must(uuid.FromString(tenantIDHack))
+	tenantUUIDHack = uuid.MustFromString(tenantIDHack)
 )
 
 func max(is ...int) int {
