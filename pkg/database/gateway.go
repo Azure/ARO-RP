@@ -24,7 +24,7 @@ type Gateway interface {
 	Delete(context.Context, *api.GatewayDocument) error
 	Get(context.Context, string) (*api.GatewayDocument, error)
 	Patch(context.Context, string, func(*api.GatewayDocument) error) (*api.GatewayDocument, error)
-	NextUUID() string
+	NewUUID() string
 }
 
 func NewGateway(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (Gateway, error) {
@@ -46,7 +46,7 @@ func NewGatewayWithProvidedClient(client cosmosdb.GatewayDocumentClient, uuidGen
 	}
 }
 
-func (c *gateway) NextUUID() string {
+func (c *gateway) NewUUID() string {
 	return c.uuidGenerator.Generate()
 }
 

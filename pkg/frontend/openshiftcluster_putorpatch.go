@@ -65,7 +65,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		}
 
 		doc = &api.OpenShiftClusterDocument{
-			ID:  f.dbOpenShiftClusters.NextUUID(),
+			ID:  f.dbOpenShiftClusters.NewUUID(),
 			Key: r.URL.Path,
 			OpenShiftCluster: &api.OpenShiftCluster{
 				ID:   originalPath,

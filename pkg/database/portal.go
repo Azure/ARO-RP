@@ -24,7 +24,7 @@ type Portal interface {
 	Create(context.Context, *api.PortalDocument) (*api.PortalDocument, error)
 	Get(context.Context, string) (*api.PortalDocument, error)
 	Patch(context.Context, string, func(*api.PortalDocument) error) (*api.PortalDocument, error)
-	NextUUID() string
+	NewUUID() string
 }
 
 // NewPortal returns a new Portal
@@ -47,7 +47,7 @@ func NewPortalWithProvidedClient(client cosmosdb.PortalDocumentClient, uuidGener
 	}
 }
 
-func (c *portals) NextUUID() string {
+func (c *portals) NewUUID() string {
 	return c.uuidGenerator.Generate()
 }
 

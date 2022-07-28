@@ -132,7 +132,7 @@ func (s *ssh) new(w http.ResponseWriter, r *http.Request) {
 	username := r.Context().Value(middleware.ContextKeyUsername).(string)
 	username = strings.SplitN(username, "@", 2)[0]
 
-	password := s.dbPortal.NextUUID()
+	password := s.dbPortal.NewUUID()
 	portalDoc := &api.PortalDocument{
 		ID:  password,
 		TTL: int(sshNewTimeout / time.Second),

@@ -149,7 +149,7 @@ func (f *Fixture) Create() error {
 
 	for _, i := range f.openshiftClusterDocuments {
 		if i.ID == "" {
-			i.ID = f.openShiftClustersDatabase.NextUUID()
+			i.ID = f.openShiftClustersDatabase.NewUUID()
 		}
 		_, err := f.openShiftClustersDatabase.Create(ctx, i)
 		if err != nil {

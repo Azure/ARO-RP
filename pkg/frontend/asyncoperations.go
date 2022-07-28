@@ -15,7 +15,7 @@ import (
 )
 
 func (f *frontend) newAsyncOperation(ctx context.Context, r *http.Request, doc *api.OpenShiftClusterDocument) (string, error) {
-	id := f.dbAsyncOperations.NextUUID()
+	id := f.dbAsyncOperations.NewUUID()
 	_, err := f.dbAsyncOperations.Create(ctx, &api.AsyncOperationDocument{
 		ID:                  id,
 		OpenShiftClusterKey: doc.Key,

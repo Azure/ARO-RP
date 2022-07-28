@@ -24,7 +24,7 @@ type AsyncOperations interface {
 	Create(context.Context, *api.AsyncOperationDocument) (*api.AsyncOperationDocument, error)
 	Get(context.Context, string) (*api.AsyncOperationDocument, error)
 	Patch(context.Context, string, func(*api.AsyncOperationDocument) error) (*api.AsyncOperationDocument, error)
-	NextUUID() string
+	NewUUID() string
 }
 
 // NewAsyncOperations returns a new AsyncOperations
@@ -46,7 +46,7 @@ func NewAsyncOperationsWithProvidedClient(client cosmosdb.AsyncOperationDocument
 	}
 }
 
-func (c *asyncOperations) NextUUID() string {
+func (c *asyncOperations) NewUUID() string {
 	return c.uuidGenerator.Generate()
 }
 

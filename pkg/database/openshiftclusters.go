@@ -52,7 +52,7 @@ type OpenShiftClusters interface {
 	EndLease(context.Context, string, api.ProvisioningState, api.ProvisioningState, *string) (*api.OpenShiftClusterDocument, error)
 	GetByClientID(ctx context.Context, partitionKey, clientID string) (*api.OpenShiftClusterDocuments, error)
 	GetByClusterResourceGroupID(ctx context.Context, partitionKey, resourceGroupID string) (*api.OpenShiftClusterDocuments, error)
-	NextUUID() string
+	NewUUID() string
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
@@ -100,7 +100,7 @@ func NewOpenShiftClustersWithProvidedClient(client cosmosdb.OpenShiftClusterDocu
 	}
 }
 
-func (c *openShiftClusters) NextUUID() string {
+func (c *openShiftClusters) NewUUID() string {
 	return c.uuidGenerator.Generate()
 }
 

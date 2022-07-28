@@ -101,7 +101,7 @@ func (k *kubeconfig) new(w http.ResponseWriter, r *http.Request) {
 
 	elevated := len(middleware.GroupsIntersect(k.elevatedGroupIDs, ctx.Value(middleware.ContextKeyGroups).([]string))) > 0
 
-	token := k.dbPortal.NextUUID()
+	token := k.dbPortal.NewUUID()
 	portalDoc := &api.PortalDocument{
 		ID:  token,
 		TTL: int(kubeconfigNewTimeout / time.Second),
