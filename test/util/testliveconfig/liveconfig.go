@@ -24,6 +24,10 @@ func (t *testLiveConfig) HiveRestConfig(ctx context.Context, shard int) (*rest.C
 	}
 }
 
+func (t *testLiveConfig) InstallViaHive(ctx context.Context) (bool, error) {
+	return t.hasHive, nil
+}
+
 func NewTestLiveConfig(hasHive bool) liveconfig.Manager {
 	return &testLiveConfig{hasHive: hasHive}
 }

@@ -67,7 +67,7 @@ func (mr *MockClusterManagerMockRecorder) CreateOrUpdate(arg0, arg1, arg2 interf
 }
 
 // Delete mocks base method.
-func (m *MockClusterManager) Delete(arg0 context.Context, arg1 string) error {
+func (m *MockClusterManager) Delete(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -80,8 +80,22 @@ func (mr *MockClusterManagerMockRecorder) Delete(arg0, arg1 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockClusterManager)(nil).Delete), arg0, arg1)
 }
 
+// Install mocks base method.
+func (m *MockClusterManager) Install(arg0 context.Context, arg1 *api.SubscriptionDocument, arg2 *api.OpenShiftClusterDocument) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Install", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Install indicates an expected call of Install.
+func (mr *MockClusterManagerMockRecorder) Install(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockClusterManager)(nil).Install), arg0, arg1, arg2)
+}
+
 // IsClusterDeploymentReady mocks base method.
-func (m *MockClusterManager) IsClusterDeploymentReady(arg0 context.Context, arg1 string) (bool, error) {
+func (m *MockClusterManager) IsClusterDeploymentReady(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsClusterDeploymentReady", arg0, arg1)
 	ret0, _ := ret[0].(bool)
@@ -96,7 +110,7 @@ func (mr *MockClusterManagerMockRecorder) IsClusterDeploymentReady(arg0, arg1 in
 }
 
 // ResetCorrelationData mocks base method.
-func (m *MockClusterManager) ResetCorrelationData(arg0 context.Context, arg1 string) error {
+func (m *MockClusterManager) ResetCorrelationData(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResetCorrelationData", arg0, arg1)
 	ret0, _ := ret[0].(error)

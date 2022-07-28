@@ -14,6 +14,7 @@ import (
 
 type Manager interface {
 	HiveRestConfig(context.Context, int) (*rest.Config, error)
+	InstallViaHive(context.Context) (bool, error)
 }
 
 type dev struct{}

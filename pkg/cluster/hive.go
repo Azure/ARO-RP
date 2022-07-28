@@ -11,10 +11,12 @@ import (
 
 func (m *manager) hiveCreateNamespace(ctx context.Context) error {
 	m.log.Info("creating a namespace in the hive cluster")
-	if m.hiveClusterManager == nil {
-		// TODO(hive): remove this once we have Hive everywhere
-		m.log.Info("skipping: no hive cluster manager")
-		return nil
+	if !m.installViaHive {
+		if m.hiveClusterManager == nil {
+			// TODO(hive): remove this once we have Hive everywhere
+			m.log.Info("skipping: no hive cluster manager")
+			return nil
+		}
 	}
 
 	if m.doc.OpenShiftCluster.Properties.HiveProfile.Namespace != "" {
@@ -47,24 +49,28 @@ func (m *manager) hiveEnsureResources(ctx context.Context) error {
 
 func (m *manager) hiveClusterDeploymentReady(ctx context.Context) (bool, error) {
 	m.log.Info("waiting for cluster deployment to become ready")
-	if m.hiveClusterManager == nil {
-		// TODO(hive): remove this if once we have Hive everywhere
-		m.log.Info("skipping: no hive cluster manager")
-		return true, nil
+	if !m.installViaHive {
+		if m.hiveClusterManager == nil {
+			// TODO(hive): remove this if once we have Hive everywhere
+			m.log.Info("skipping: no hive cluster manager")
+			return true, nil
+		}
 	}
 
-	return m.hiveClusterManager.IsClusterDeploymentReady(ctx, m.doc.OpenShiftCluster.Properties.HiveProfile.Namespace)
+	return m.hiveClusterManager.IsClusterDeploymentReady(ctx, m.doc)
 }
 
 func (m *manager) hiveResetCorrelationData(ctx context.Context) error {
 	m.log.Info("resetting correlation data for hive")
-	if m.hiveClusterManager == nil {
-		// TODO(hive): remove this if once we have Hive everywhere
-		m.log.Info("skipping: no hive cluster manager")
-		return nil
+	if !m.installViaHive {
+		if m.hiveClusterManager == nil {
+			// TODO(hive): remove this if once we have Hive everywhere
+			m.log.Info("skipping: no hive cluster manager")
+			return nil
+		}
 	}
 
-	return m.hiveClusterManager.ResetCorrelationData(ctx, m.doc.OpenShiftCluster.Properties.HiveProfile.Namespace)
+	return m.hiveClusterManager.ResetCorrelationData(ctx, m.doc)
 }
 
 func (m *manager) hiveDeleteResources(ctx context.Context) error {
@@ -81,5 +87,5 @@ func (m *manager) hiveDeleteResources(ctx context.Context) error {
 		return nil
 	}
 
-	return m.hiveClusterManager.Delete(ctx, namespace)
+	return m.hiveClusterManager.Delete(ctx, m.doc)
 }

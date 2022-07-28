@@ -15,6 +15,7 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/uuid/fake"
@@ -22,6 +23,15 @@ import (
 
 func TestIsClusterDeploymentReady(t *testing.T) {
 	fakeNamespace := "fake-namespace"
+	doc := &api.OpenShiftClusterDocument{
+		OpenShiftCluster: &api.OpenShiftCluster{
+			Properties: api.OpenShiftClusterProperties{
+				HiveProfile: api.HiveProfile{
+					Namespace: fakeNamespace,
+				},
+			},
+		},
+	}
 
 	for _, tt := range []struct {
 		name       string
@@ -90,7 +100,7 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 				hiveClientset: fakeClientset,
 			}
 
-			result, err := c.IsClusterDeploymentReady(context.Background(), fakeNamespace)
+			result, err := c.IsClusterDeploymentReady(context.Background(), doc)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -105,6 +115,15 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 
 func TestResetCorrelationData(t *testing.T) {
 	fakeNamespace := "fake-namespace"
+	doc := &api.OpenShiftClusterDocument{
+		OpenShiftCluster: &api.OpenShiftCluster{
+			Properties: api.OpenShiftClusterProperties{
+				HiveProfile: api.HiveProfile{
+					Namespace: fakeNamespace,
+				},
+			},
+		},
+	}
 
 	for _, tt := range []struct {
 		name            string
@@ -143,7 +162,7 @@ func TestResetCorrelationData(t *testing.T) {
 				hiveClientset: fakeClientset,
 			}
 
-			err := c.ResetCorrelationData(context.Background(), fakeNamespace)
+			err := c.ResetCorrelationData(context.Background(), doc)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

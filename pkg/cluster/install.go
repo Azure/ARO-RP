@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -141,54 +142,85 @@ func (m *manager) Update(ctx context.Context) error {
 	return m.runSteps(ctx, steps)
 }
 
-// callInstaller initialises and calls the Installer code. This will later be replaced with a call into Hive.
-func (m *manager) callInstaller(ctx context.Context) error {
+func (m *manager) runIntegratedInstaller(ctx context.Context) error {
 	i := installer.NewInstaller(m.log, m.env, m.doc.ID, m.doc.OpenShiftCluster, m.subscriptionDoc.Subscription, m.fpAuthorizer, m.deployments, m.graph)
 	return i.Install(ctx)
 }
 
-// Install installs an ARO cluster
-func (m *manager) Install(ctx context.Context) error {
-	steps := map[api.InstallPhase][]steps.Step{
-		api.InstallPhaseBootstrap: {
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
-			steps.Action(m.ensureACRToken),
-			steps.Action(m.ensureInfraID),
-			steps.Action(m.ensureSSHKey),
-			steps.Action(m.ensureStorageSuffix),
-			steps.Action(m.populateMTUSize),
+func (m *manager) runHiveInstaller(ctx context.Context) error {
+	// Run installer. For M5/M6 we will persist the graph inside the installer
+	// code since it's easier, but in the future, this data should be collected
+	// from Hive's outputs where needed.
+	return m.hiveClusterManager.Install(ctx, m.subscriptionDoc, m.doc)
+}
 
-			steps.Action(m.createDNS),
-			steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
-			steps.Action(m.clusterSPObjectID),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies)),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.deployStorageTemplate)),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGs)),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.updateAPIIPEarly)),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.createOrUpdateRouterIPEarly)),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureGatewayCreate)),
-			steps.Action(m.createAPIServerPrivateEndpoint),
-			steps.Action(m.createCertificates),
+func (m *manager) bootstrap() []steps.Step {
+	s := []steps.Step{
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
+		steps.Action(m.ensureACRToken),
+		steps.Action(m.ensureInfraID),
+		steps.Action(m.ensureSSHKey),
+		steps.Action(m.ensureStorageSuffix),
+		steps.Action(m.populateMTUSize),
 
-			// Run installer. For M5/M6 we will persist the graph inside the
-			// installer code since it's easier, but in the future, this data
-			// should be collected from Hive's outputs where needed.
-			steps.Action(m.callInstaller),
+		steps.Action(m.createDNS),
+		steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
+		steps.Action(m.clusterSPObjectID),
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies)),
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.deployStorageTemplate)),
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGs)),
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.updateAPIIPEarly)),
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.createOrUpdateRouterIPEarly)),
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureGatewayCreate)),
+		steps.Action(m.createAPIServerPrivateEndpoint),
+		steps.Action(m.createCertificates),
+
+		// We will always need a Hive namespace, whether we are installing
+		// via Hive or adopting
+		steps.Action(m.hiveCreateNamespace),
+	}
+
+	if m.installViaHive {
+		s = append(s,
+			steps.Action(m.hiveCreateNamespace),
+			steps.Action(m.runHiveInstaller),
+			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+		)
+	} else {
+		s = append(s,
+			steps.Action(m.runIntegratedInstaller),
 			steps.Action(m.hiveCreateNamespace),
 			steps.Action(m.hiveEnsureResources),
 			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
-			steps.Action(m.hiveResetCorrelationData),
+		)
+	}
 
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
-			steps.Action(m.ensureBillingRecord),
-			steps.Action(m.initializeKubernetesClients),
-			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
-			steps.Condition(m.apiServersReady, 30*time.Minute, true),
-			steps.Action(m.ensureAROOperator),
-			steps.Action(m.incrInstallPhase),
-		},
+	s = append(s,
+		// Reset correlation data whether adopting or installing via Hive
+		steps.Action(m.hiveResetCorrelationData),
+
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
+		steps.Action(m.ensureBillingRecord),
+		steps.Action(m.initializeKubernetesClients),
+		steps.Action(m.initializeOperatorDeployer), // depends on kube clients
+		steps.Condition(m.apiServersReady, 30*time.Minute, true),
+		steps.Action(m.ensureAROOperator),
+		steps.Action(m.incrInstallPhase),
+	)
+
+	return s
+}
+
+// Install installs an ARO cluster
+func (m *manager) Install(ctx context.Context) error {
+	if m.installViaHive && m.hiveClusterManager == nil {
+		return errors.New("installViaHive was requested but hiveClusterManager is unavailable")
+	}
+
+	steps := map[api.InstallPhase][]steps.Step{
+		api.InstallPhaseBootstrap: m.bootstrap(),
 		api.InstallPhaseRemoveBootstrap: {
 			steps.Action(m.initializeKubernetesClients),
 			steps.Action(m.initializeOperatorDeployer), // depends on kube clients

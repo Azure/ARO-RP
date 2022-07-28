@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	HIVE_ENV_VARIABLE = "HIVEKUBECONFIGPATH"
+	HIVE_ENV_VARIABLE         = "HIVEKUBECONFIGPATH"
+	HIVE_INSTALL_ENV_VARIABLE = "ARO_INSTALL_VIA_HIVE"
 )
 
 func (d *dev) HiveRestConfig(ctx context.Context, index int) (*rest.Config, error) {
@@ -34,4 +35,12 @@ func (d *dev) HiveRestConfig(ctx context.Context, index int) (*rest.Config, erro
 	}
 
 	return restConfig, nil
+}
+
+func (d *dev) InstallViaHive(ctx context.Context) (bool, error) {
+	installViaHive := os.Getenv(HIVE_INSTALL_ENV_VARIABLE)
+	if installViaHive != "" {
+		return true, nil
+	}
+	return false, nil
 }
