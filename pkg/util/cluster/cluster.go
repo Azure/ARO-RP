@@ -373,39 +373,28 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 		}
 	}
 
-	if c.ci {
-		_, err = c.groups.Get(ctx, vnetResourceGroup)
-		if err == nil {
-			c.log.Print("deleting resource group")
-			err = c.groups.DeleteAndWait(ctx, vnetResourceGroup)
-			if err != nil {
-				errs = append(errs, err)
-			}
-		}
-	} else {
-		// Deleting the deployment does not clean up the associated resources
-		c.log.Info("deleting deployment")
-		err = c.deployments.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
-		if err != nil {
-			errs = append(errs, err)
-		}
+	// Deleting the deployment does not clean up the associated resources
+	c.log.Info("deleting deployment")
+	err = c.deployments.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
+	if err != nil {
+		errs = append(errs, err)
+	}
 
-		c.log.Info("deleting master/worker subnets")
-		err = c.subnets.DeleteAndWait(ctx, vnetResourceGroup, "dev-vnet", clusterName+"-master")
-		if err != nil {
-			errs = append(errs, err)
-		}
+	c.log.Info("deleting master/worker subnets")
+	err = c.subnets.DeleteAndWait(ctx, vnetResourceGroup, "dev-vnet", clusterName+"-master")
+	if err != nil {
+		errs = append(errs, err)
+	}
 
-		err = c.subnets.DeleteAndWait(ctx, vnetResourceGroup, "dev-vnet", clusterName+"-worker")
-		if err != nil {
-			errs = append(errs, err)
-		}
+	err = c.subnets.DeleteAndWait(ctx, vnetResourceGroup, "dev-vnet", clusterName+"-worker")
+	if err != nil {
+		errs = append(errs, err)
+	}
 
-		c.log.Info("deleting route table")
-		err = c.routetables.DeleteAndWait(ctx, vnetResourceGroup, clusterName+"-rt")
-		if err != nil {
-			errs = append(errs, err)
-		}
+	c.log.Info("deleting route table")
+	err = c.routetables.DeleteAndWait(ctx, vnetResourceGroup, clusterName+"-rt")
+	if err != nil {
+		errs = append(errs, err)
 	}
 
 	c.log.Info("done")
