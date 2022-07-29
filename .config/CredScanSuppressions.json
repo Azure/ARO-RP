@@ -2,6 +2,14 @@
     "tool": "Credential Scanner",
     "suppressions": [
         {
+            "file": "pkg/portal/kubeconfig/kubeconfig_test.go",
+            "_justification": "password used for testing"
+        },
+        {
+            "file": "pkg/portal/ssh/ssh_test.go",
+            "_justification": "passwords used for testing"
+        },
+        {
             "file": "pkg/env/certificateRefresher_test.go",
             "_justification": "sample cert for testing"
         },
