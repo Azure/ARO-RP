@@ -56,11 +56,9 @@ jobs:
       validate_rp_running
       register_sub
 
-      go run ./hack/cluster create
-
+      export CI=true
       make test-e2e
 
-      go run ./hack/cluster delete
 
       kill_vpn
 
