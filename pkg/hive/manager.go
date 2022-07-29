@@ -16,39 +16,28 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type ClusterManager interface {
 	CreateNamespace(ctx context.Context) (*corev1.Namespace, error)
-	CreateOrUpdate(ctx context.Context, parameters *CreateOrUpdateParameters) error
+	CreateOrUpdate(ctx context.Context) error
 	Delete(ctx context.Context, namespace string) error
 }
 
-// CreateOrUpdateParameters represents all data in hive pertaining to a single ARO cluster.
-// CreateOrUpdate must not receive any data which requires an API call to the customer cluster
-// as the intention of this is to be able to reconcile hive resources from CosmosDB -> Hive
-// and this process should work even if the customer cluster is not responding for any reason.
-type CreateOrUpdateParameters struct {
-	Namespace                  string
-	ClusterName                string
-	Location                   string
-	InfraID                    string
-	ClusterID                  string
-	KubeConfig                 string
-	ServicePrincipal           string
-	APIServerPrivateEndpointIP string
-}
-
 type clusterManager struct {
+	subscriptionDoc *api.SubscriptionDocument
+	doc             *api.OpenShiftClusterDocument
+
 	hiveClientset *hiveclient.Clientset
 	kubernetescli *kubernetes.Clientset
 
 	dh dynamichelper.Interface
 }
 
-func NewFromConfig(log *logrus.Entry, restConfig *rest.Config) (ClusterManager, error) {
+func NewFromConfig(log *logrus.Entry, subscriptionDoc *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, restConfig *rest.Config) (ClusterManager, error) {
 	hiveclientset, err := hiveclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
@@ -64,11 +53,14 @@ func NewFromConfig(log *logrus.Entry, restConfig *rest.Config) (ClusterManager, 
 		return nil, err
 	}
 
-	return new(log, hiveclientset, kubernetescli, dh), nil
+	return new(subscriptionDoc, doc, hiveclientset, kubernetescli, dh), nil
 }
 
-func new(log *logrus.Entry, hiveClientset *hiveclient.Clientset, kubernetescli *kubernetes.Clientset, dh dynamichelper.Interface) ClusterManager {
+func new(subscriptionDoc *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, hiveClientset *hiveclient.Clientset, kubernetescli *kubernetes.Clientset, dh dynamichelper.Interface) ClusterManager {
 	return &clusterManager{
+		subscriptionDoc: subscriptionDoc,
+		doc:             doc,
+
 		hiveClientset: hiveClientset,
 		kubernetescli: kubernetescli,
 
@@ -98,14 +90,28 @@ func (hr *clusterManager) CreateNamespace(ctx context.Context) (*corev1.Namespac
 	return namespace, nil
 }
 
-func (hr *clusterManager) CreateOrUpdate(ctx context.Context, parameters *CreateOrUpdateParameters) error {
-	resources := []kruntime.Object{
-		kubeAdminSecret(parameters.Namespace, []byte(parameters.KubeConfig)),
-		servicePrincipalSecret(parameters.Namespace, []byte(parameters.ServicePrincipal)),
-		clusterDeployment(parameters.Namespace, parameters.ClusterName, parameters.ClusterID, parameters.InfraID, parameters.Location, parameters.APIServerPrivateEndpointIP),
+func (hr *clusterManager) CreateOrUpdate(ctx context.Context) error {
+	namespace := hr.doc.OpenShiftCluster.Properties.HiveProfile.Namespace
+
+	clusterSP, err := clusterSPToBytes(hr.subscriptionDoc, hr.doc.OpenShiftCluster)
+	if err != nil {
+		return err
 	}
 
-	err := dynamichelper.Prepare(resources)
+	resources := []kruntime.Object{
+		aroServiceKubeconfigSecret(namespace, hr.doc.OpenShiftCluster.Properties.AROServiceKubeconfig),
+		clusterServicePrincipalSecret(namespace, clusterSP),
+		clusterDeployment(
+			namespace,
+			hr.doc.OpenShiftCluster.Name,
+			hr.doc.ID,
+			hr.doc.OpenShiftCluster.Properties.InfraID,
+			hr.doc.OpenShiftCluster.Location,
+			hr.doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
+		),
+	}
+
+	err = dynamichelper.Prepare(resources)
 	if err != nil {
 		return err
 	}

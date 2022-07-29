@@ -10,16 +10,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Changing values of these constants most likely would require
+// some sort of migration on the Hive cluster for existing clusters.
 const (
-	ClusterDeploymentName      = "cluster"
-	kubesecretName             = "admin-kube-secret"
-	servicePrincipalSecretname = "serviceprincipal-secret"
+	ClusterDeploymentName             = "cluster"
+	aroServiceKubeconfigSecretName    = "aro-service-kubeconfig-secret"
+	clusterServicePrincipalSecretName = "cluster-service-principal-secret"
 )
 
-func kubeAdminSecret(namespace string, kubeConfig []byte) *corev1.Secret {
+func aroServiceKubeconfigSecret(namespace string, kubeConfig []byte) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubesecretName,
+			Name:      aroServiceKubeconfigSecretName,
 			Namespace: namespace,
 		},
 		Data: map[string][]byte{
@@ -29,10 +31,10 @@ func kubeAdminSecret(namespace string, kubeConfig []byte) *corev1.Secret {
 	}
 }
 
-func servicePrincipalSecret(namespace string, secret []byte) *corev1.Secret {
+func clusterServicePrincipalSecret(namespace string, secret []byte) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      servicePrincipalSecretname,
+			Name:      clusterServicePrincipalSecretName,
 			Namespace: namespace,
 		},
 		Data: map[string][]byte{
@@ -54,7 +56,7 @@ func clusterDeployment(namespace, clusterName, clusterID, infraID, location, API
 			Installed:   true,
 			ClusterMetadata: &hivev1.ClusterMetadata{
 				AdminKubeconfigSecretRef: corev1.LocalObjectReference{
-					Name: kubesecretName,
+					Name: aroServiceKubeconfigSecretName,
 				},
 				ClusterID: clusterID,
 				InfraID:   infraID,
@@ -64,7 +66,7 @@ func clusterDeployment(namespace, clusterName, clusterID, infraID, location, API
 					BaseDomainResourceGroupName: "",
 					Region:                      location,
 					CredentialsSecretRef: corev1.LocalObjectReference{
-						Name: servicePrincipalSecretname,
+						Name: clusterServicePrincipalSecretName,
 					},
 				},
 			},
