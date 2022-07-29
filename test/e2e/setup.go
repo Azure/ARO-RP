@@ -182,9 +182,6 @@ func setup(ctx context.Context) error {
 	}
 
 	vnetResourceGroup = os.Getenv("RESOURCEGROUP") // TODO: remove this when we deploy and peer a vnet per cluster create
-	if os.Getenv("CI") != "" {
-		vnetResourceGroup = os.Getenv("CLUSTER")
-	}
 	clusterName = os.Getenv("CLUSTER")
 
 	if os.Getenv("CI") != "" { // always create cluster in CI
