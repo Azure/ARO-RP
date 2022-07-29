@@ -48,7 +48,7 @@ type clusterManager struct {
 	dh dynamichelper.Interface
 }
 
-func NewClusterManagerFromConfig(log *logrus.Entry, restConfig *rest.Config) (ClusterManager, error) {
+func NewFromConfig(log *logrus.Entry, restConfig *rest.Config) (ClusterManager, error) {
 	hiveclientset, err := hiveclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
@@ -64,10 +64,10 @@ func NewClusterManagerFromConfig(log *logrus.Entry, restConfig *rest.Config) (Cl
 		return nil, err
 	}
 
-	return newClusterManager(log, hiveclientset, kubernetescli, dh), nil
+	return new(log, hiveclientset, kubernetescli, dh), nil
 }
 
-func newClusterManager(log *logrus.Entry, hiveClientset *hiveclient.Clientset, kubernetescli *kubernetes.Clientset, dh dynamichelper.Interface) ClusterManager {
+func new(log *logrus.Entry, hiveClientset *hiveclient.Clientset, kubernetescli *kubernetes.Clientset, dh dynamichelper.Interface) ClusterManager {
 	return &clusterManager{
 		hiveClientset: hiveClientset,
 		kubernetescli: kubernetescli,
