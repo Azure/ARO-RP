@@ -127,7 +127,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	// TODO(hive): always set hiveClusterManager once we have Hive everywhere in prod and dev
 	var hr hive.ClusterManager
 	if hiveRestConfig != nil {
-		hr, err = hive.NewFromConfig(log, subscriptionDoc, doc, hiveRestConfig)
+		hr, err = hive.NewFromConfig(log, _env, hiveRestConfig)
 		if err != nil {
 			return nil, err
 		}
