@@ -5,7 +5,7 @@ package hive
 
 import (
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
-	"github.com/openshift/hive/apis/hive/v1/azure"
+	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -88,7 +88,7 @@ func clusterDeployment(namespace, clusterName, clusterID, infraID, location, API
 				InfraID:   infraID,
 			},
 			Platform: hivev1.Platform{
-				Azure: &azure.Platform{
+				Azure: &hivev1azure.Platform{
 					BaseDomainResourceGroupName: "",
 					Region:                      location,
 					CredentialsSecretRef: corev1.LocalObjectReference{

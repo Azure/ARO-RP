@@ -109,5 +109,7 @@ allowedImportNames:
     - hivefake
   github.com/openshift/hive/apis/hive/v1:
     - hivev1
+  github.com/openshift/hive/apis/hive/v1/azure:
+    - hivev1azure
   github.com/gofrs/uuid:
     - gofrsuuid
