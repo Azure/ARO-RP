@@ -43,7 +43,7 @@ func (m *manager) hiveEnsureResources(ctx context.Context) error {
 		return nil
 	}
 
-	return m.hiveClusterManager.CreateOrUpdate(ctx)
+	return m.hiveClusterManager.CreateOrUpdate(ctx, m.subscriptionDoc, m.doc)
 }
 
 func (m *manager) hiveDeleteResources(ctx context.Context) error {
