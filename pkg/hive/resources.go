@@ -8,6 +8,9 @@ import (
 	"github.com/openshift/hive/apis/hive/v1/azure"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 // Changing values of these constants most likely would require
@@ -17,6 +20,29 @@ const (
 	aroServiceKubeconfigSecretName    = "aro-service-kubeconfig-secret"
 	clusterServicePrincipalSecretName = "cluster-service-principal-secret"
 )
+
+func (hr *clusterManager) resources(sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) ([]kruntime.Object, error) {
+	namespace := doc.OpenShiftCluster.Properties.HiveProfile.Namespace
+	clusterSP, err := clusterSPToBytes(sub, doc.OpenShiftCluster)
+	if err != nil {
+		return nil, err
+	}
+
+	cd := clusterDeployment(
+		namespace,
+		doc.OpenShiftCluster.Name,
+		doc.ID,
+		doc.OpenShiftCluster.Properties.InfraID,
+		doc.OpenShiftCluster.Location,
+		doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
+	)
+
+	return []kruntime.Object{
+		aroServiceKubeconfigSecret(namespace, doc.OpenShiftCluster.Properties.AROServiceKubeconfig),
+		clusterServicePrincipalSecret(namespace, clusterSP),
+		cd,
+	}, nil
+}
 
 func aroServiceKubeconfigSecret(namespace string, kubeConfig []byte) *corev1.Secret {
 	return &corev1.Secret{

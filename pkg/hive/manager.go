@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
@@ -39,7 +38,7 @@ type clusterManager struct {
 }
 
 // NewFromConfig creates a ClusterManager.
-// Not MUST NOT take cluster or subscription document as values
+// It MUST NOT take cluster or subscription document as values
 // in these structs can be change during the lifetime of the cluster manager.
 func NewFromConfig(log *logrus.Entry, _env env.Core, restConfig *rest.Config) (ClusterManager, error) {
 	hiveClientset, err := hiveclient.NewForConfig(restConfig)
@@ -91,24 +90,9 @@ func (hr *clusterManager) CreateNamespace(ctx context.Context) (*corev1.Namespac
 }
 
 func (hr *clusterManager) CreateOrUpdate(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) error {
-	namespace := doc.OpenShiftCluster.Properties.HiveProfile.Namespace
-
-	clusterSP, err := clusterSPToBytes(sub, doc.OpenShiftCluster)
+	resources, err := hr.resources(sub, doc)
 	if err != nil {
 		return err
-	}
-
-	resources := []kruntime.Object{
-		aroServiceKubeconfigSecret(namespace, doc.OpenShiftCluster.Properties.AROServiceKubeconfig),
-		clusterServicePrincipalSecret(namespace, clusterSP),
-		clusterDeployment(
-			namespace,
-			doc.OpenShiftCluster.Name,
-			doc.ID,
-			doc.OpenShiftCluster.Properties.InfraID,
-			doc.OpenShiftCluster.Location,
-			doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
-		),
 	}
 
 	err = dynamichelper.Prepare(resources)
