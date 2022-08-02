@@ -16,7 +16,7 @@
         },
         "aksClusterName": {
             "type": "string",
-            "defaultValue": "aro-aks-cluster",
+            "defaultValue": "aro-aks-cluster-001",
             "metadata": {
                 "description": "The name of the AKS Managed Cluster resource."
             }
@@ -142,7 +142,7 @@
         },
         "vnetSubnetName": {
             "type": "string",
-            "defaultValue": "ClusterSubnet",
+            "defaultValue": "ClusterSubnet-001",
             "metadata": {
                 "description": "Subnet name that will contain the App Service Environment"
             }
@@ -155,7 +155,7 @@
             }
         },
         "podSubnetName": {
-            "defaultValue": "PodSubnet",
+            "defaultValue": "PodSubnet-001",
             "type": "string",
             "metadata": {
                 "description": "Specifies the name of the subnet hosting the pods of the AKS cluster."
@@ -484,7 +484,7 @@
                 }
             },
             "properties": {
-                "nodeResourceGroup": "[concat(resourceGroup().name, '-aks')]",
+                "nodeResourceGroup": "[concat(resourceGroup().name, '-aks1')]",
                 "apiServerAccessProfile": {
                     "enablePrivateCluster": true
                 },
@@ -552,7 +552,7 @@
         {
             "type": "Microsoft.Network/dnszones/CNAME",
             "apiVersion": "2018-05-01",
-            "name": "[concat(parameters('dnsZone'), '/api.aks')]",
+            "name": "[concat(parameters('dnsZone'), '/api.aks1')]",
             "dependsOn": [
                 "[parameters('aksClusterName')]"
             ],
