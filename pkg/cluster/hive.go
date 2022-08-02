@@ -12,7 +12,7 @@ import (
 func (m *manager) hiveCreateNamespace(ctx context.Context) error {
 	m.log.Info("creating a namespace in the hive cluster")
 	if m.hiveClusterManager == nil {
-		// TODO(hive): remove this if once we have Hive everywhere
+		// TODO(hive): remove this once we have Hive everywhere
 		m.log.Info("skipping: no hive cluster manager")
 		return nil
 	}
@@ -38,7 +38,7 @@ func (m *manager) hiveCreateNamespace(ctx context.Context) error {
 func (m *manager) hiveEnsureResources(ctx context.Context) error {
 	m.log.Info("registering with hive")
 	if m.hiveClusterManager == nil {
-		// TODO(hive): remove this if once we have Hive everywhere
+		// TODO(hive): remove this once we have Hive everywhere
 		m.log.Info("skipping: no hive cluster manager")
 		return nil
 	}
@@ -49,7 +49,7 @@ func (m *manager) hiveEnsureResources(ctx context.Context) error {
 func (m *manager) hiveDeleteResources(ctx context.Context) error {
 	m.log.Info("deregistering cluster with hive")
 	if m.hiveClusterManager == nil {
-		// TODO(hive): remove this if once we have Hive everywhere
+		// TODO(hive): remove this once we have Hive everywhere
 		m.log.Info("skipping: no hive cluster manager")
 		return nil
 	}
