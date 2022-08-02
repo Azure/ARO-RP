@@ -31,8 +31,8 @@ type clusterManager struct {
 	log *logrus.Entry
 	env env.Core
 
-	hiveClientset *hiveclient.Clientset
-	kubernetescli *kubernetes.Clientset
+	hiveClientset hiveclient.Interface
+	kubernetescli kubernetes.Interface
 
 	dh dynamichelper.Interface
 }
