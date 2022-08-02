@@ -10,10 +10,10 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/gofrs/uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (
@@ -28,9 +28,10 @@ const (
 type OpenShiftClusterDocumentMutator func(*api.OpenShiftClusterDocument) error
 
 type openShiftClusters struct {
-	c     cosmosdb.OpenShiftClusterDocumentClient
-	collc cosmosdb.CollectionClient
-	uuid  string
+	c             cosmosdb.OpenShiftClusterDocumentClient
+	collc         cosmosdb.CollectionClient
+	uuid          string
+	uuidGenerator uuid.Generator
 }
 
 // OpenShiftClusters is the database interface for OpenShiftClusterDocuments
@@ -51,6 +52,7 @@ type OpenShiftClusters interface {
 	EndLease(context.Context, string, api.ProvisioningState, api.ProvisioningState, *string) (*api.OpenShiftClusterDocument, error)
 	GetByClientID(ctx context.Context, partitionKey, clientID string) (*api.OpenShiftClusterDocuments, error)
 	GetByClusterResourceGroupID(ctx context.Context, partitionKey, resourceGroupID string) (*api.OpenShiftClusterDocuments, error)
+	NewUUID() string
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
@@ -86,15 +88,20 @@ func NewOpenShiftClusters(ctx context.Context, isLocalDevelopmentMode bool, dbc 
 	}
 
 	documentClient := cosmosdb.NewOpenShiftClusterDocumentClient(collc, collOpenShiftClusters)
-	return NewOpenShiftClustersWithProvidedClient(documentClient, collc, uuid.Must(uuid.NewV4()).String()), nil
+	return NewOpenShiftClustersWithProvidedClient(documentClient, collc, uuid.DefaultGenerator.Generate(), uuid.DefaultGenerator), nil
 }
 
-func NewOpenShiftClustersWithProvidedClient(client cosmosdb.OpenShiftClusterDocumentClient, collectionClient cosmosdb.CollectionClient, uuid string) OpenShiftClusters {
+func NewOpenShiftClustersWithProvidedClient(client cosmosdb.OpenShiftClusterDocumentClient, collectionClient cosmosdb.CollectionClient, uuid string, uuidGenerator uuid.Generator) OpenShiftClusters {
 	return &openShiftClusters{
-		c:     client,
-		collc: collectionClient,
-		uuid:  uuid,
+		c:             client,
+		collc:         collectionClient,
+		uuid:          uuid,
+		uuidGenerator: uuidGenerator,
 	}
+}
+
+func (c *openShiftClusters) NewUUID() string {
+	return c.uuidGenerator.Generate()
 }
 
 func (c *openShiftClusters) Create(ctx context.Context, doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {

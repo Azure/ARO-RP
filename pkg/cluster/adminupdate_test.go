@@ -50,6 +50,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				"[Action initializeOperatorDeployer-fm]",
 				"[Action ensureAROOperator-fm]",
 				"[Condition aroDeploymentReady-fm, timeout 20m0s]",
+				"[Action ensureAROOperatorRunningDesiredVersion-fm]",
 			},
 		},
 		{
@@ -88,6 +89,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				"[Action initializeOperatorDeployer-fm]",
 				"[Action ensureAROOperator-fm]",
 				"[Condition aroDeploymentReady-fm, timeout 20m0s]",
+				"[Action ensureAROOperatorRunningDesiredVersion-fm]",
 				"[Action hiveCreateNamespace-fm]",
 				"[Action hiveEnsureResources-fm]",
 				"[Action updateProvisionedBy-fm]",
@@ -129,6 +131,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				"[Action initializeOperatorDeployer-fm]",
 				"[Action ensureAROOperator-fm]",
 				"[Condition aroDeploymentReady-fm, timeout 20m0s]",
+				"[Action ensureAROOperatorRunningDesiredVersion-fm]",
 				"[Action hiveCreateNamespace-fm]",
 				"[Action hiveEnsureResources-fm]",
 				"[Action updateProvisionedBy-fm]",

@@ -12,9 +12,9 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/gofrs/uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/validate"
 )
@@ -83,8 +83,9 @@ func validOpenShiftCluster(name, location string) *OpenShiftCluster {
 				ClientID:     "11111111-1111-1111-1111-111111111111",
 			},
 			NetworkProfile: NetworkProfile{
-				PodCIDR:     "10.128.0.0/14",
-				ServiceCIDR: "172.30.0.0/16",
+				SoftwareDefinedNetwork: SoftwareDefinedNetworkOVNKubernetes,
+				PodCIDR:                "10.128.0.0/14",
+				ServiceCIDR:            "172.30.0.0/16",
 			},
 			MasterProfile: MasterProfile{
 				VMSize:           "Standard_D8s_v3",
@@ -448,7 +449,29 @@ func TestOpenShiftClusterStaticValidateServicePrincipalProfile(t *testing.T) {
 }
 
 func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
-	tests := []*validateTest{
+	createTests := []*validateTest{
+		{
+			name: "SoftwareDefinedNetwork valid with OpenShiftSDN",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.SoftwareDefinedNetwork = SoftwareDefinedNetworkOpenShiftSDN
+			},
+		},
+		{
+			name: "SoftwareDefinedNetwork invalid when empty",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.SoftwareDefinedNetwork = ""
+			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.SoftwareDefinedNetwork: The provided SoftwareDefinedNetwork '' is invalid.",
+		},
+		{
+			name: "SoftwareDefinedNetwork invalid when not predefined name",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.SoftwareDefinedNetwork = "InvalidSDN"
+			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.SoftwareDefinedNetwork: The provided SoftwareDefinedNetwork 'InvalidSDN' is invalid.",
+		},
+	}
+	commonTests := []*validateTest{
 		{
 			name: "valid",
 		},
@@ -496,8 +519,9 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, testModeCreate, tests)
-	runTests(t, testModeUpdate, tests)
+	runTests(t, testModeCreate, createTests)
+	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, commonTests)
 }
 
 func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
@@ -868,12 +892,19 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		{
 			name: "clientId change",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ServicePrincipalProfile.ClientID = uuid.Must(uuid.NewV4()).String()
+				oc.Properties.ServicePrincipalProfile.ClientID = uuid.DefaultGenerator.Generate()
 			},
 		},
 		{
 			name:   "clientSecret change",
 			modify: func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientSecret = "invalid" },
+		},
+		{
+			name: "SoftwareDefinedNetwork change",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.SoftwareDefinedNetwork = SoftwareDefinedNetworkOpenShiftSDN
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.softwareDefinedNetwork: Changing property 'properties.networkProfile.softwareDefinedNetwork' is not allowed.",
 		},
 		{
 			name:    "podCidr change",

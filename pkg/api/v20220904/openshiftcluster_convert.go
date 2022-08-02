@@ -36,8 +36,9 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				ClientSecret: string(oc.Properties.ServicePrincipalProfile.ClientSecret),
 			},
 			NetworkProfile: NetworkProfile{
-				PodCIDR:     oc.Properties.NetworkProfile.PodCIDR,
-				ServiceCIDR: oc.Properties.NetworkProfile.ServiceCIDR,
+				SoftwareDefinedNetwork: SoftwareDefinedNetwork(oc.Properties.NetworkProfile.SoftwareDefinedNetwork),
+				PodCIDR:                oc.Properties.NetworkProfile.PodCIDR,
+				ServiceCIDR:            oc.Properties.NetworkProfile.ServiceCIDR,
 			},
 			MasterProfile: MasterProfile{
 				VMSize:              VMSize(oc.Properties.MasterProfile.VMSize),
@@ -140,6 +141,7 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.ClusterProfile.FipsValidatedModules = api.FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules)
 	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
 	out.Properties.ServicePrincipalProfile.ClientSecret = api.SecureString(oc.Properties.ServicePrincipalProfile.ClientSecret)
+	out.Properties.NetworkProfile.SoftwareDefinedNetwork = api.SoftwareDefinedNetwork(oc.Properties.NetworkProfile.SoftwareDefinedNetwork)
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
 	out.Properties.MasterProfile.VMSize = api.VMSize(oc.Properties.MasterProfile.VMSize)

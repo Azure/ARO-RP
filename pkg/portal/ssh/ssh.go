@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	cryptossh "golang.org/x/crypto/ssh"
@@ -44,7 +43,6 @@ type ssh struct {
 	dialer proxy.Dialer
 
 	baseServerConfig *cryptossh.ServerConfig
-	newPassword      func() string
 }
 
 func New(env env.Core,
@@ -71,7 +69,6 @@ func New(env env.Core,
 		dialer: dialer,
 
 		baseServerConfig: &cryptossh.ServerConfig{},
-		newPassword:      func() string { return uuid.Must(uuid.NewV4()).String() },
 	}
 
 	signer, err := cryptossh.NewSignerFromSigner(hostKey)
@@ -135,8 +132,7 @@ func (s *ssh) new(w http.ResponseWriter, r *http.Request) {
 	username := r.Context().Value(middleware.ContextKeyUsername).(string)
 	username = strings.SplitN(username, "@", 2)[0]
 
-	password := s.newPassword()
-
+	password := s.dbPortal.NewUUID()
 	portalDoc := &api.PortalDocument{
 		ID:  password,
 		TTL: int(sshNewTimeout / time.Second),

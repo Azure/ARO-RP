@@ -9,13 +9,14 @@ data:
       source: {{ if .EnableConnected }}OCM{{ else }}LOCAL{{ end }}
       {{ if .EnableConnected }}ocmBaseUrl: {{.OCMBaseURL}}{{end}}
       {{ if not .EnableConnected }}localConfigName: managed-upgrade-config{{end}}
-      watchInterval: 1
+      watchInterval: {{ if .EnableConnected }}60{{ else }}15{{ end }}
     maintenance:
       controlPlaneTime: 90
       ignoredAlerts:
         controlPlaneCriticals:
         - ClusterOperatorDown
         - ClusterOperatorDegraded
+    upgradeType: ARO
     upgradeWindow:
       delayTrigger: 30
       timeOut: 120

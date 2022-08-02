@@ -24,14 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
-type getUserDataSecretReferenceTestData struct {
-	name        string
-	objectMeta  *metav1.ObjectMeta
-	machineSpec *machinev1beta1.MachineSpec
-	result      *corev1.SecretReference
-	shouldFail  bool
-}
-
 func marshalAzureMachineProviderSpec(t *testing.T, spec *machinev1beta1.AzureMachineProviderSpec) []byte {
 	serializer := kjson.NewSerializerWithOptions(
 		kjson.DefaultMetaFactory, scheme.Scheme, scheme.Scheme,
@@ -194,7 +186,13 @@ func TestFixMCSUserData(t *testing.T) {
 }
 
 func TestGetUserDataSecretReference(t *testing.T) {
-	for _, td := range []getUserDataSecretReferenceTestData{
+	for _, td := range []struct {
+		name        string
+		objectMeta  *metav1.ObjectMeta
+		machineSpec *machinev1beta1.MachineSpec
+		result      *corev1.SecretReference
+		shouldFail  bool
+	}{
 		{
 			name:       "valid cluster-api-provider-azure spec",
 			objectMeta: &metav1.ObjectMeta{Namespace: "any"},
@@ -249,6 +247,29 @@ func TestGetUserDataSecretReference(t *testing.T) {
 				},
 			},
 			shouldFail: true,
+		},
+		{
+			name:        "nil object meta",
+			objectMeta:  nil,
+			machineSpec: &machinev1beta1.MachineSpec{},
+			shouldFail:  false,
+			result:      nil,
+		},
+		{
+			name:       "nil user secret data",
+			objectMeta: &metav1.ObjectMeta{Namespace: "any"},
+			machineSpec: &machinev1beta1.MachineSpec{
+				ProviderSpec: machinev1beta1.ProviderSpec{
+					Value: &kruntime.RawExtension{
+						Raw: []byte(`{
+								"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+								"kind": "AzureMachineProviderSpec"
+							}`),
+					},
+				},
+			},
+			shouldFail: false,
+			result:     nil,
 		},
 	} {
 		t.Run(td.name, func(t *testing.T) {

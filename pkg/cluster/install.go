@@ -93,6 +93,7 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 			steps.Action(m.ensureAROOperator),
 			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
+			steps.Action(m.ensureAROOperatorRunningDesiredVersion),
 		)
 	}
 

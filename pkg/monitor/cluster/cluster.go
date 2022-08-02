@@ -6,13 +6,12 @@ package cluster
 import (
 	"context"
 	"net/http"
-	"reflect"
-	"runtime"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -41,6 +40,8 @@ type Monitor struct {
 	m          metrics.Emitter
 	arocli     aroclient.Interface
 
+	hiveclientset hiveclient.Interface
+
 	// access below only via the helper functions in cache.go
 	cache struct {
 		cos   *configv1.ClusterOperatorList
@@ -50,7 +51,7 @@ type Monitor struct {
 	}
 }
 
-func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hourlyRun bool) (*Monitor, error) {
+func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -88,6 +89,16 @@ func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config,
 		return nil, err
 	}
 
+	var hiveclientset hiveclient.Interface
+	if hiveRestConfig != nil {
+		var err error
+		hiveclientset, err = hiveclient.NewForConfig(hiveRestConfig)
+		if err != nil {
+			// TODO(hive): Update to fail once we have Hive everywhere in prod and dev
+			log.Error(err)
+		}
+	}
+
 	return &Monitor{
 		log:       log,
 		hourlyRun: hourlyRun,
@@ -95,13 +106,14 @@ func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config,
 		oc:   oc,
 		dims: dims,
 
-		restconfig: restConfig,
-		cli:        cli,
-		configcli:  configcli,
-		maocli:     maocli,
-		mcocli:     mcocli,
-		arocli:     arocli,
-		m:          m,
+		restconfig:    restConfig,
+		cli:           cli,
+		configcli:     configcli,
+		maocli:        maocli,
+		mcocli:        mcocli,
+		arocli:        arocli,
+		m:             m,
+		hiveclientset: hiveclientset,
 	}, nil
 }
 
@@ -120,13 +132,13 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
 	if err != nil {
 		errs = append(errs, err)
-		mon.log.Printf("%s: %s", runtime.FuncForPC(reflect.ValueOf(mon.emitAPIServerHealthzCode).Pointer()).Name(), err)
-		mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": runtime.FuncForPC(reflect.ValueOf(mon.emitAPIServerHealthzCode).Pointer()).Name()})
+		friendlyFuncName := steps.FriendlyName(mon.emitAPIServerHealthzCode)
+		mon.log.Printf("%s: %s", friendlyFuncName, err)
+		mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
 	}
 	if statusCode != http.StatusOK {
 		return
 	}
-
 	for _, f := range []func(context.Context) error{
 		mon.emitAroOperatorHeartbeat,
 		mon.emitAroOperatorConditions,
@@ -144,13 +156,13 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitStatefulsetStatuses,
 		mon.emitJobConditions,
 		mon.emitSummary,
+		mon.emitHiveRegistrationStatus,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 	} {
 		err = f(ctx)
 		if err != nil {
 			errs = append(errs, err)
 			friendlyFuncName := steps.FriendlyName(f)
-
 			mon.log.Printf("%s: %s", friendlyFuncName, err)
 			mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
 			// keep going

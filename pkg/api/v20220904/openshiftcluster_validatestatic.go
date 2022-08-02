@@ -11,13 +11,13 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/gofrs/uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/util/immutable"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -181,8 +181,8 @@ func (sv *openShiftClusterStaticValidator) validateConsoleProfile(path string, c
 }
 
 func (sv *openShiftClusterStaticValidator) validateServicePrincipalProfile(path string, spp *ServicePrincipalProfile) error {
-	_, err := uuid.FromString(spp.ClientID)
-	if err != nil {
+	valid := uuid.IsValid(spp.ClientID)
+	if !valid {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".clientId", "The provided client ID '%s' is invalid.", spp.ClientID)
 	}
 	if spp.ClientSecret == "" {
@@ -193,6 +193,10 @@ func (sv *openShiftClusterStaticValidator) validateServicePrincipalProfile(path 
 }
 
 func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile) error {
+	if np.SoftwareDefinedNetwork != SoftwareDefinedNetwork(api.SoftwareDefinedNetworkOVNKubernetes) &&
+		np.SoftwareDefinedNetwork != SoftwareDefinedNetwork(api.SoftwareDefinedNetworkOpenShiftSDN) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".SoftwareDefinedNetwork", "The provided SoftwareDefinedNetwork '%s' is invalid.", np.SoftwareDefinedNetwork)
+	}
 	_, pod, err := net.ParseCIDR(np.PodCIDR)
 	if err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".podCidr", "The provided pod CIDR '%s' is invalid: '%s'.", np.PodCIDR, err)

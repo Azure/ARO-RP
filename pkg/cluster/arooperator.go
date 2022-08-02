@@ -35,3 +35,17 @@ func (m *manager) aroDeploymentReady(ctx context.Context) (bool, error) {
 	}
 	return m.aroOperatorDeployer.IsReady(ctx)
 }
+
+func (m *manager) ensureAROOperatorRunningDesiredVersion(ctx context.Context) error {
+	if !m.isIngressProfileAvailable() {
+		m.log.Error("skip ensureAROOperatorRunningDesiredVersion")
+		return nil
+	}
+
+	err := m.aroOperatorDeployer.IsRunningDesiredVersion(ctx)
+	if err != nil {
+		m.log.Errorf("cannot ensureAROOperatorRunningDesiredVersion.IsRunningDesiredVersion: %s", err.Error())
+	}
+
+	return err
+}

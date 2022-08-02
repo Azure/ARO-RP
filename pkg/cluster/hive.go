@@ -5,12 +5,8 @@ package cluster
 
 import (
 	"context"
-	"encoding/json"
-
-	"github.com/openshift/installer/pkg/asset/installconfig/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/hive"
 )
 
 func (m *manager) hiveCreateNamespace(ctx context.Context) error {
@@ -47,18 +43,7 @@ func (m *manager) hiveEnsureResources(ctx context.Context) error {
 		return nil
 	}
 
-	m.log.Info("collecting registration data from the new cluster")
-	parameters, err := collectDataForHive(m.subscriptionDoc, m.doc)
-	if err != nil {
-		return err
-	}
-
-	err = m.hiveClusterManager.CreateOrUpdate(ctx, parameters)
-	if err != nil {
-		return err
-	}
-
-	return err
+	return m.hiveClusterManager.CreateOrUpdate(ctx, m.subscriptionDoc, m.doc)
 }
 
 func (m *manager) hiveDeleteResources(ctx context.Context) error {
@@ -76,30 +61,4 @@ func (m *manager) hiveDeleteResources(ctx context.Context) error {
 	}
 
 	return m.hiveClusterManager.Delete(ctx, namespace)
-}
-
-// TODO(hive): Consider moving somewhere like pkg/hive/util.go
-func collectDataForHive(subscriptionDoc *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) (*hive.CreateOrUpdateParameters, error) {
-	// TODO(hive): When hive support first party principles we'll need to send both first party and cluster service principles
-	clusterSP := azure.Credentials{
-		TenantID:       subscriptionDoc.Subscription.Properties.TenantID,
-		SubscriptionID: subscriptionDoc.ID,
-		ClientID:       doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID,
-		ClientSecret:   string(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret),
-	}
-
-	clusterSPBytes, err := json.Marshal(clusterSP)
-	if err != nil {
-		return nil, err
-	}
-
-	return &hive.CreateOrUpdateParameters{
-		Namespace:        doc.OpenShiftCluster.Properties.HiveProfile.Namespace,
-		ClusterName:      doc.OpenShiftCluster.Name,
-		Location:         doc.OpenShiftCluster.Location,
-		InfraID:          doc.OpenShiftCluster.Properties.InfraID,
-		ClusterID:        doc.ID,
-		KubeConfig:       string(doc.OpenShiftCluster.Properties.AROServiceKubeconfig),
-		ServicePrincipal: string(clusterSPBytes),
-	}, nil
 }

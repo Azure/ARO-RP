@@ -15,7 +15,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
@@ -99,7 +98,6 @@ func TestNewGateway(t *testing.T) {
 			defer controller.Finish()
 
 			baseLog := logrus.NewEntry(logrus.StandardLogger())
-			db := mock_database.NewMockGateway(controller)
 			metrics := mock_metrics.NewMockEmitter(controller)
 
 			httpl, _ := utilnet.Listen("tcp", ":8080", SocketSize)
@@ -108,7 +106,7 @@ func TestNewGateway(t *testing.T) {
 			env := mock_env.NewMockCore(controller)
 			tt.mocks(env)
 
-			gtwy, err := NewGateway(ctx, env, baseLog, baseLog, db, httpsl, httpl, tt.acrResourceID, tt.gatewayDomains, metrics)
+			gtwy, err := NewGateway(ctx, env, baseLog, baseLog, nil, httpsl, httpl, tt.acrResourceID, tt.gatewayDomains, metrics)
 
 			if tt.wantErr != "" {
 				if err == nil {
@@ -157,13 +155,12 @@ func TestNewGatewayDefaultConditions(t *testing.T) {
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
-	db := mock_database.NewMockGateway(controller)
 	metrics := mock_metrics.NewMockEmitter(controller)
 	env := mock_env.NewMockCore(controller)
 	env.EXPECT().Environment().AnyTimes().Return(populatedEnv)
 	env.EXPECT().Location().AnyTimes().Return("location")
 
-	gtwy, _ := NewGateway(ctx, env, baseLog, baseLog, db, httpsl, httpl, acrResourceID, gatewayDomains, metrics)
+	gtwy, _ := NewGateway(ctx, env, baseLog, baseLog, nil, httpsl, httpl, acrResourceID, gatewayDomains, metrics)
 
 	gateway, _ := gtwy.(*gateway)
 

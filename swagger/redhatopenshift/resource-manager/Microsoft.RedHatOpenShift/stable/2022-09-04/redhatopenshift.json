@@ -627,6 +627,10 @@
       "description": "NetworkProfile represents a network profile.",
       "type": "object",
       "properties": {
+        "softwareDefinedNetwork": {
+          "$ref": "#/definitions/SoftwareDefinedNetwork",
+          "description": "The SDN type used for OpenShift/Kubernetes Pods."
+        },
         "podCidr": {
           "description": "The CIDR used for OpenShift/Kubernetes Pods.",
           "type": "string"
@@ -832,6 +836,18 @@
           "description": "The client secret used for the cluster.",
           "type": "string"
         }
+      }
+    },
+    "SoftwareDefinedNetwork": {
+      "description": "SoftwareDefinedNetwork is a choice of network used for Pods.",
+      "enum": [
+        "OVNKubernetes",
+        "OpenShiftSDN"
+      ],
+      "type": "string",
+      "x-ms-enum": {
+        "name": "SoftwareDefinedNetwork",
+        "modelAsString": true
       }
     },
     "Tags": {

@@ -75,3 +75,19 @@ func AddFromGraph(min *version.Version) ([]Node, error) {
 
 	return releases, nil
 }
+
+// VersionInfo fetches the Node containing the version payload
+func VersionInfo(ver *version.Version) (Node, error) {
+	nodes, err := AddFromGraph(ver)
+	if err != nil {
+		return Node{}, err
+	}
+
+	for _, node := range nodes {
+		if strings.EqualFold(node.Version, ver.String()) {
+			return node, nil
+		}
+	}
+
+	return Node{}, fmt.Errorf("version '%s' not found", ver.String())
+}

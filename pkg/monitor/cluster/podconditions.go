@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/kubernetes/pkg/kubelet/events"
 
 	"github.com/Azure/ARO-RP/pkg/util/namespace"
 )
@@ -56,6 +57,10 @@ func (mon *Monitor) _emitPodConditions(ps *corev1.PodList) {
 		}
 
 		if p.Status.Phase == corev1.PodSucceeded {
+			continue
+		}
+
+		if p.Status.Reason == events.PreemptContainer {
 			continue
 		}
 

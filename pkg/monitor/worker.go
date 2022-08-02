@@ -198,7 +198,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		return
 	}
 
-	c, err := cluster.NewMonitor(ctx, log, restConfig, doc.OpenShiftCluster, mon.clusterm, hourlyRun)
+	c, err := cluster.NewMonitor(ctx, log, restConfig, doc.OpenShiftCluster, mon.clusterm, mon.hiveRestConfig, hourlyRun)
 	if err != nil {
 		log.Error(err)
 		return

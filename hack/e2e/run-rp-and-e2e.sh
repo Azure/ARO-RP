@@ -43,7 +43,7 @@ deploy_e2e_db() {
     az deployment group create \
       -g "$RESOURCEGROUP" \
       -n "databases-development-$DATABASE_NAME" \
-      --template-file deploy/databases-development.json \
+      --template-file pkg/deploy/assets/databases-development.json \
       --parameters \
         "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
         "databaseName=$DATABASE_NAME" \
@@ -72,8 +72,8 @@ clean_e2e_db(){
 
 
 # if LOCAL_E2E is set, set the value with the local test names
-# If it it not set, it defaults to the build ID 
-if [ -z "${LOCAL_E2E}" ] ; then 
+# If it it not set, it defaults to the build ID
+if [ -z "${LOCAL_E2E}" ] ; then
     export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
     export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
 fi

@@ -435,6 +435,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"armApiClientCertCommonName",
 		"armClientId",
 		"azureCloudName",
+		"azureSecPackQualysUrl",
 		"azureSecPackVSATenantId",
 		"billingE2EStorageAccountId",
 		"clusterMdmAccount",
@@ -543,8 +544,7 @@ semanage fcontext -a -t var_log_t "/var/log/journal(/.*)?"
 mkdir -p /var/log/journal
 
 for attempt in {1..5}; do
-# HACK: Pinning azure-security package to 2.19.1-248 until we have a fix from IcM 316173166
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security-2.19.1-248 docker openssl-perl python3 && break
+yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security docker openssl-perl python3 && break
   # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
@@ -1049,6 +1049,7 @@ cat >/etc/default/vsa-nodescan-agent.config <<EOF
     "Timeout": 10800,
     "ClientId": "",
     "TenantId": "$AZURESECPACKVSATENANTID",
+    "QualysStoreBaseUrl": "$AZURESECPACKQUALYSURL",
     "ProcessTimeout": 300,
     "CommandDelay": 0
   }
@@ -1606,6 +1607,30 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 					Options: &mgmtdocumentdb.CreateUpdateOptions{},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/AsyncOperations')]"),
+				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: to.StringPtr("[resourceGroup().location]"),
+			},
+			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+			DependsOn: []string{
+				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+			},
+		},
+		{
+			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
+				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
+					Resource: &mgmtdocumentdb.SQLContainerResource{
+						ID: to.StringPtr("OpenShiftVersions"),
+						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
+							Paths: &[]string{
+								"/id",
+							},
+							Kind: mgmtdocumentdb.PartitionKindHash,
+						},
+						DefaultTTL: to.Int32Ptr(7 * 86400), // 7 days
+					},
+					Options: &mgmtdocumentdb.CreateUpdateOptions{},
+				},
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/OpenShiftVersions')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},

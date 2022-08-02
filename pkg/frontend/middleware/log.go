@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type logResponseWriter struct {
@@ -65,7 +65,7 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 			correlationData := &api.CorrelationData{
 				ClientRequestID: r.Header.Get("X-Ms-Client-Request-Id"),
 				CorrelationID:   r.Header.Get("X-Ms-Correlation-Request-Id"),
-				RequestID:       uuid.Must(uuid.NewV4()).String(),
+				RequestID:       uuid.DefaultGenerator.Generate(),
 				RequestTime:     t,
 			}
 
