@@ -11,6 +11,7 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
 // Changing values of these constants most likely would require
@@ -36,6 +37,14 @@ func (hr *clusterManager) resources(sub *api.SubscriptionDocument, doc *api.Open
 		doc.OpenShiftCluster.Location,
 		doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
 	)
+	err = utillog.EnrichHiveWithCorrelationData(cd, doc.CorrelationData)
+	if err != nil {
+		return nil, err
+	}
+	err = utillog.EnrichHiveWithResourceID(cd, doc.OpenShiftCluster.ID)
+	if err != nil {
+		return nil, err
+	}
 
 	return []kruntime.Object{
 		aroServiceKubeconfigSecret(namespace, doc.OpenShiftCluster.Properties.AROServiceKubeconfig),
