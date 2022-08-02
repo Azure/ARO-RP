@@ -15,6 +15,7 @@ import (
 	"time"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
@@ -36,8 +37,9 @@ type prod struct {
 	armClientAuthorizer   clientauthorizer.ClientAuthorizer
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
 
-	acrDomain string
-	vmskus    map[string]*mgmtcompute.ResourceSku
+	acrDomain      string
+	vmskus         map[string]*mgmtcompute.ResourceSku
+	clustersClient mgmtcontainerservice.ManagedClustersClient
 
 	fpCertificateRefresher CertificateRefresher
 	fpClientID             string
@@ -138,6 +140,20 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	}
 
 	p.serviceKeyvault = keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
+
+	client := mgmtcontainerservice.NewManagedClustersClient(p.SubscriptionID())
+	client.Authorizer = msiAuthorizer
+
+	// by convention, the AKS cluster that hosts the hive instance is in resource group "rp-{regionName}" and named "aro-aks-cluster-001"
+	// see the EV2 pipeline that deploys the AKS cluster for hive:
+	// https://msazure.visualstudio.com/AzureRedHatOpenShift/_git/ARO.Pipelines?path=/ev2/Aks-Deployment/ServiceGroupRoot/Templates/aks-production.json
+	res, err := client.ListClusterAdminCredentials(ctx, "rp-"+p.Location(), "aro-aks-cluster-001", "")
+	if err != nil {
+		return nil, err
+	}
+	kubecfg := (*res.Kubeconfigs)[0].Value
+	// continue using kubecfg...
+	log.Info(kubecfg)
 
 	resourceSkusClient := compute.NewResourceSkusClient(p.Environment(), p.SubscriptionID(), msiAuthorizer)
 	err = p.populateVMSkus(ctx, resourceSkusClient)
