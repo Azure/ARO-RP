@@ -6,9 +6,6 @@ package cluster
 import (
 	"context"
 	"fmt"
-
-	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 // enableServiceEndpoints should enable service endpoints on
@@ -19,14 +16,7 @@ func (m *manager) enableServiceEndpoints(ctx context.Context) error {
 		return err
 	}
 
-	subnets, err := m.subnet.GetAll(ctx, subnetIds)
-	if err != nil {
-		return err
-	}
-
-	subnetsToBeUpdated := subnet.AddEndpointsToSubnets(api.SubnetsEndpoints, subnets)
-
-	return m.subnet.CreateOrUpdateSubnets(ctx, subnetsToBeUpdated)
+	return m.subnet.CreateOrUpdateFromIds(ctx, subnetIds)
 }
 
 func (m *manager) getSubnetIds() ([]string, error) {

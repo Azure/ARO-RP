@@ -9,12 +9,12 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 )
 
-// AddEndpointsToSubnets adds the endpoints (that either are missing in subnets
+// addEndpointsToSubnets adds the endpoints (that either are missing in subnets
 // or aren't in succeded state in subnets) to the subnets and returns those updated subnets.
 // This method does not talk to any external dependecies to remain pure bussiness logic.
 // The result of this function should be passed to a subnet manager to update the subnets
 // in Azure.
-func AddEndpointsToSubnets(endpoints []string, subnets []*mgmtnetwork.Subnet) (subnetsToBeUpdated []*mgmtnetwork.Subnet) {
+func addEndpointsToSubnets(endpoints []string, subnets []*mgmtnetwork.Subnet) (subnetsToBeUpdated []*mgmtnetwork.Subnet) {
 	for _, subnet := range subnets {
 		if subnetChanged := addEndpointsToSubnet(endpoints, subnet); subnetChanged {
 			subnetsToBeUpdated = append(subnetsToBeUpdated, subnet)

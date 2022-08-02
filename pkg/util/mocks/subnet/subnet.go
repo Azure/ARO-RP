@@ -51,18 +51,18 @@ func (mr *MockManagerMockRecorder) CreateOrUpdate(arg0, arg1, arg2 interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockManager)(nil).CreateOrUpdate), arg0, arg1, arg2)
 }
 
-// CreateOrUpdateSubnets mocks base method.
-func (m *MockManager) CreateOrUpdateSubnets(arg0 context.Context, arg1 []*network.Subnet) error {
+// CreateOrUpdateFromIds mocks base method.
+func (m *MockManager) CreateOrUpdateFromIds(arg0 context.Context, arg1 []string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdateSubnets", arg0, arg1)
+	ret := m.ctrl.Call(m, "CreateOrUpdateFromIds", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// CreateOrUpdateSubnets indicates an expected call of CreateOrUpdateSubnets.
-func (mr *MockManagerMockRecorder) CreateOrUpdateSubnets(arg0, arg1 interface{}) *gomock.Call {
+// CreateOrUpdateFromIds indicates an expected call of CreateOrUpdateFromIds.
+func (mr *MockManagerMockRecorder) CreateOrUpdateFromIds(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateSubnets", reflect.TypeOf((*MockManager)(nil).CreateOrUpdateSubnets), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateFromIds", reflect.TypeOf((*MockManager)(nil).CreateOrUpdateFromIds), arg0, arg1)
 }
 
 // Get mocks base method.
