@@ -89,8 +89,8 @@ func Run(api, outputDir string) error {
 		},
 	}
 
-	// for installaOpenShiftVerions
-	if g.installableOpenShiftVersion {
+	// for installaVerions available for ARO
+	if g.installableVersion {
 		s.Paths["/providers/Microsoft.RedHatOpenShift/listinstallversions"] = &PathItem{
 			Get: &Operation{
 				Tags:        []string{"InstallVersions"},
@@ -109,7 +109,7 @@ func Run(api, outputDir string) error {
 		names = append(names, "OpenShiftClusterAdminKubeconfig")
 	}
 
-	if g.installableOpenShiftVersion {
+	if g.installableVersion {
 		names = append(names, "InstallVersions")
 	}
 

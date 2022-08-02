@@ -28,13 +28,13 @@ type generator struct {
 	exampleInstallVersions                         func() interface{}
 	exampleOperationListResponse                   func() interface{}
 
-	systemData                  bool
-	kubeConfig                  bool
-	installableOpenShiftVersion bool
-	xmsEnum                     []string
-	xmsSecretList               []string
-	xmsIdentifiers              []string
-	commonTypesVersion          string
+	systemData         bool
+	kubeConfig         bool
+	installableVersion bool
+	xmsEnum            []string
+	xmsSecretList      []string
+	xmsIdentifiers     []string
+	commonTypesVersion string
 }
 
 var apis = map[string]*generator{
@@ -90,13 +90,13 @@ var apis = map[string]*generator{
 		exampleInstallVersions:                         v20220904.ExampleInstallVersionsResponse,
 		exampleOperationListResponse:                   api.ExampleOperationListResponse,
 
-		xmsEnum:                     []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},
-		xmsSecretList:               []string{"kubeconfig", "kubeadminPassword"},
-		xmsIdentifiers:              []string{},
-		commonTypesVersion:          "v2",
-		systemData:                  true,
-		installableOpenShiftVersion: true,
-		kubeConfig:                  true,
+		xmsEnum:            []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},
+		xmsSecretList:      []string{"kubeconfig", "kubeadminPassword"},
+		xmsIdentifiers:     []string{},
+		commonTypesVersion: "v2",
+		systemData:         true,
+		installableVersion: true,
+		kubeConfig:         true,
 	},
 }
 
