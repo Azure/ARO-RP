@@ -77,3 +77,16 @@ func FilterVMSizes(skus []mgmtcompute.ResourceSku, location string) map[string]*
 
 	return vmskus
 }
+
+// SupportedOSDisk returns the type of OSDisk for the given resource. Most VMs will use Premium disks but some SKUs only support Standard SSDs
+func SupportedOSDisk(vmSku *mgmtcompute.ResourceSku) string {
+	const (
+		standardDisk          = "StandardSSD_LRS"
+		premiumDisk           = "Premium_LRS"
+		premiumDiskCapability = "PremiumIO"
+	)
+	if HasCapability(vmSku, premiumDiskCapability) {
+		return premiumDisk
+	}
+	return standardDisk
+}

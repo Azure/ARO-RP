@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"strings"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -31,18 +30,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
-
-func supportedDefaultDisk(vmSku *mgmtcompute.ResourceSku) string {
-	const (
-		standardDisk          = "StandardSSD_LRS"
-		premiumDisk           = "Premium_LRS"
-		premiumDiskCapability = "PremiumIO"
-	)
-	if computeskus.HasCapability(vmSku, premiumDiskCapability) {
-		return premiumDisk
-	}
-	return standardDisk
-}
 
 func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.InstallConfig, *releaseimage.Image, error) {
 	resourceGroup := stringutils.LastTokenByte(m.oc.Properties.ClusterProfile.ResourceGroupID, '/')
@@ -102,7 +89,6 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 	if len(masterZones) == 0 {
 		masterZones = []string{""}
 	}
-	masterDiskType := supportedDefaultDisk(masterSKU)
 
 	workerSKU, err := m.env.VMSku(string(m.oc.Properties.WorkerProfiles[0].VMSize))
 	if err != nil {
@@ -112,7 +98,6 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 	if len(workerZones) == 0 {
 		workerZones = []string{""}
 	}
-	workerDiskType := supportedDefaultDisk(workerSKU)
 
 	// Standard_D8s_v3 is only available in one zone in centraluseuap, so we need a non-zonal install in that region
 	if strings.EqualFold(m.oc.Location, "centraluseuap") {
@@ -163,7 +148,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 						OSDisk: azuretypes.OSDisk{
 							DiskEncryptionSetID: m.oc.Properties.MasterProfile.DiskEncryptionSetID,
 							DiskSizeGB:          1024,
-							DiskType:            supportedDefaultDisk(masterSKU),
+							DiskType:            computeskus.SupportedOSDisk(masterSKU),
 						},
 					},
 				},
@@ -182,7 +167,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 							OSDisk: azuretypes.OSDisk{
 								DiskEncryptionSetID: m.oc.Properties.WorkerProfiles[0].DiskEncryptionSetID,
 								DiskSizeGB:          int32(m.oc.Properties.WorkerProfiles[0].DiskSizeGB),
-								DiskType:            supportedDefaultDisk(workerSKU),
+								DiskType:            computeskus.SupportedOSDisk(workerSKU),
 							},
 						},
 					},
