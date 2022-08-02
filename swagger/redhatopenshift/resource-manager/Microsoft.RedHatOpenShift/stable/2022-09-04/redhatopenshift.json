@@ -19,11 +19,11 @@
     "/providers/Microsoft.RedHatOpenShift/listinstallversions": {
       "get": {
         "tags": [
-          "InstallOpenShiftVersions"
+          "InstallVersions"
         ],
         "summary": "Lists all OpenShift versions available to install.",
         "description": "The operation returns the installable OpenShift versions as strings.",
-        "operationId": "List_Installable_OpenShift_Versions",
+        "operationId": "List_Install_Versions",
         "parameters": [
           {
             "$ref": "../../../../../common-types/resource-management/v2/types.json#/parameters/ApiVersionParameter"
@@ -33,7 +33,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/InstallOpenShiftVersions"
+              "$ref": "#/definitions/InstallVersions"
             }
           },
           "default": {
@@ -45,7 +45,7 @@
         },
         "x-ms-examples": {
           "Lists all OpenShift versions available to install.": {
-            "$ref": "./examples/List_Installable_OpenShift_Versions.json"
+            "$ref": "./examples/List_Install_Versions.json"
           }
         }
       }
@@ -635,7 +635,7 @@
         }
       }
     },
-    "InstallOpenShiftVersions": {
+    "InstallVersions": {
       "description": "InstallOpenShiftVersions represents a List of OpenShift installable versions."
     },
     "MasterProfile": {

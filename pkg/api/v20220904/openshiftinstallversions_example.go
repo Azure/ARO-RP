@@ -5,6 +5,6 @@ package v20220904
 
 // ExampleInstallOpenShiftVersions returns an example
 // InstallOpenShiftVersions object i.e []string that the RP would return to an end-user.
-func ExampleInstallOpenShiftVersionsResponse() interface{} {
-	return &InstallOpenShiftVersions{"4.10.20"}
+func ExampleInstallVersionsResponse() interface{} {
+	return &InstallVersions{"4.10.20"}
 }

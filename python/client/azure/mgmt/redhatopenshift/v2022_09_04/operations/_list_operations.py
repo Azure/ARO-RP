@@ -38,7 +38,7 @@ _SERIALIZER = Serializer()
 _SERIALIZER.client_side_validation = False
 # fmt: off
 
-def build_installable_open_shift_versions_request(
+def build_install_versions_request(
     **kwargs  # type: Any
 ):
     # type: (...) -> HttpRequest
@@ -88,7 +88,7 @@ class ListOperations(object):
         self._config = config
 
     @distributed_trace
-    def installable_open_shift_versions(
+    def install_versions(
         self,
         **kwargs  # type: Any
     ):
@@ -111,9 +111,9 @@ class ListOperations(object):
         api_version = kwargs.pop('api_version', "2022-09-04")  # type: str
 
         
-        request = build_installable_open_shift_versions_request(
+        request = build_install_versions_request(
             api_version=api_version,
-            template_url=self.installable_open_shift_versions.metadata['url'],
+            template_url=self.install_versions.metadata['url'],
         )
         request = _convert_request(request)
         request.url = self._client.format_url(request.url)
@@ -136,5 +136,5 @@ class ListOperations(object):
 
         return deserialized
 
-    installable_open_shift_versions.metadata = {'url': "/providers/Microsoft.RedHatOpenShift/listinstallversions"}  # type: ignore
+    install_versions.metadata = {'url': "/providers/Microsoft.RedHatOpenShift/listinstallversions"}  # type: ignore
 

@@ -15,25 +15,25 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func (f *frontend) listInstallOpenShiftVersions(w http.ResponseWriter, r *http.Request) {
+func (f *frontend) listInstallVersions(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 
-	if f.apis[vars["api-version"]].InstallOpenShiftVersionsConverter == nil {
+	if f.apis[vars["api-version"]].InstallVersionsConverter == nil {
 		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The endpoint could not be found in the namespace '%s' for api version '%s'.", vars["resourceProviderNamespace"], vars["api-version"])
 		return
 	}
 
-	versions := f.getInstallOpenShiftVersions()
-	converter := f.apis[vars["api-version"]].InstallOpenShiftVersionsConverter()
+	versions := f.getInstallVersions()
+	converter := f.apis[vars["api-version"]].InstallVersionsConverter()
 
-	b, err := json.Marshal(converter.ToExternal((*api.InstallOpenShiftVersions)(&versions)))
+	b, err := json.Marshal(converter.ToExternal((*api.InstallVersions)(&versions)))
 	reply(log, w, nil, b, err)
 }
 
 // Creating this separate method so that it can be reused while doing some other stuff like validating the install version against available version.
-func (f *frontend) getInstallOpenShiftVersions() []string {
+func (f *frontend) getInstallVersions() []string {
 	// TODO: Currently, the versions are hard coded and being pulled from version.UpgradeStreams, but in future they will be pulled from cosmosdb.
 	installStream := version.InstallStream
 	versions := make([]string, 0)

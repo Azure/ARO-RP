@@ -31,7 +31,7 @@ func TestListInstallableVersions(t *testing.T) {
 		name                    string
 		mocks                   func(*test, *mock_adminactions.MockKubeActions)
 		wantStatusCode          int
-		wantResponse            *v20220904.InstallOpenShiftVersions
+		wantResponse            *v20220904.InstallVersions
 		wantResponseContentType string
 		wantError               string
 	}
@@ -42,7 +42,7 @@ func TestListInstallableVersions(t *testing.T) {
 			mocks:                   func(t *test, mka *mock_adminactions.MockKubeActions) {},
 			wantStatusCode:          http.StatusOK,
 			wantResponseContentType: "application/json",
-			wantResponse:            &v20220904.InstallOpenShiftVersions{version.InstallStream.Version.String()},
+			wantResponse:            &v20220904.InstallVersions{version.InstallStream.Version.String()},
 		},
 	} {
 		t.Run(fmt.Sprintf("%s: %s", method, tt.name), func(t *testing.T) {

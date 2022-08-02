@@ -93,12 +93,12 @@ func Run(api, outputDir string) error {
 	if g.installableOpenShiftVersion {
 		s.Paths["/providers/Microsoft.RedHatOpenShift/listinstallversions"] = &PathItem{
 			Get: &Operation{
-				Tags:        []string{"InstallOpenShiftVersions"},
+				Tags:        []string{"InstallVersions"},
 				Summary:     "Lists all OpenShift versions available to install.",
 				Description: "The operation returns the installable OpenShift versions as strings.",
-				OperationID: "List_Installable_OpenShift_Versions",
-				Parameters:  g.populateParameters(0, "InstallOpenShiftVersions", "Install OpenShift Versions"),
-				Responses:   g.populateResponses("InstallOpenShiftVersions", false, http.StatusOK),
+				OperationID: "List_Install_Versions",
+				Parameters:  g.populateParameters(0, "InstallVersions", "Install Versions"),
+				Responses:   g.populateResponses("InstallVersions", false, http.StatusOK),
 			},
 		}
 	}
@@ -110,7 +110,7 @@ func Run(api, outputDir string) error {
 	}
 
 	if g.installableOpenShiftVersion {
-		names = append(names, "InstallOpenShiftVersions")
+		names = append(names, "InstallVersions")
 	}
 
 	err = define(s.Definitions, api, g.xmsEnum, g.xmsSecretList, g.xmsIdentifiers, names...)

@@ -222,7 +222,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodGet).HandlerFunc(f.listInstallOpenShiftVersions).Name("listInstallVersions")
+	s.Methods(http.MethodGet).HandlerFunc(f.listInstallVersions).Name("listInstallVersions")
 
 	// Admin actions
 	s = r.

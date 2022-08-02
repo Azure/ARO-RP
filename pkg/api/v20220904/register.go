@@ -34,8 +34,8 @@ func init() {
 		OpenShiftClusterAdminKubeconfigConverter: func() api.OpenShiftClusterAdminKubeconfigConverter {
 			return &openShiftClusterAdminKubeconfigConverter{}
 		},
-		InstallOpenShiftVersionsConverter: func() api.InstallOpenShiftVersionsConverter {
-			return &installOpenShiftVersionsConverter{}
+		InstallVersionsConverter: func() api.InstallVersionsConverter {
+			return &installVersionsConverter{}
 		},
 	}
 }

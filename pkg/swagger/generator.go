@@ -25,7 +25,7 @@ type generator struct {
 	exampleOpenShiftClusterCredentialsResponse     func() interface{}
 	exampleOpenShiftClusterAdminKubeconfigResponse func() interface{}
 	exampleOpenShiftClusterListResponse            func() interface{}
-	exampleInstallOpenShiftVersions                func() interface{}
+	exampleInstallVersions                         func() interface{}
 	exampleOperationListResponse                   func() interface{}
 
 	systemData                  bool
@@ -87,7 +87,7 @@ var apis = map[string]*generator{
 		exampleOpenShiftClusterCredentialsResponse:     v20220904.ExampleOpenShiftClusterCredentialsResponse,
 		exampleOpenShiftClusterListResponse:            v20220904.ExampleOpenShiftClusterListResponse,
 		exampleOpenShiftClusterAdminKubeconfigResponse: v20220904.ExampleOpenShiftClusterAdminKubeconfigResponse,
-		exampleInstallOpenShiftVersions:                v20220904.ExampleInstallOpenShiftVersionsResponse,
+		exampleInstallVersions:                         v20220904.ExampleInstallVersionsResponse,
 		exampleOperationListResponse:                   api.ExampleOperationListResponse,
 
 		xmsEnum:                     []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},

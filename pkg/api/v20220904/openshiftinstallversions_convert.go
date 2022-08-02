@@ -5,8 +5,8 @@ import "github.com/Azure/ARO-RP/pkg/api"
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-type installOpenShiftVersionsConverter struct{}
+type installVersionsConverter struct{}
 
-func (*installOpenShiftVersionsConverter) ToExternal(iov *api.InstallOpenShiftVersions) interface{} {
+func (*installVersionsConverter) ToExternal(iov *api.InstallVersions) interface{} {
 	return iov
 }
