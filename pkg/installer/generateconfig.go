@@ -163,7 +163,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 						OSDisk: azuretypes.OSDisk{
 							DiskEncryptionSetID: m.oc.Properties.MasterProfile.DiskEncryptionSetID,
 							DiskSizeGB:          1024,
-							DiskType:            masterDiskType,
+							DiskType:            supportedDefaultDisk(masterSKU),
 						},
 					},
 				},
