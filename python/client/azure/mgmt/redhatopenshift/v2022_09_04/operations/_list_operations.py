@@ -46,7 +46,7 @@ def build_installable_open_shift_versions_request(
 
     accept = "application/json"
     # Construct URL
-    _url = kwargs.pop("template_url", "/providers/Microsoft.RedHatOpenShift/listinstallopenshiftversions")
+    _url = kwargs.pop("template_url", "/providers/Microsoft.RedHatOpenShift/listinstallversions")
 
     # Construct parameters
     _query_parameters = kwargs.pop("params", {})  # type: Dict[str, Any]
@@ -136,5 +136,5 @@ class ListOperations(object):
 
         return deserialized
 
-    installable_open_shift_versions.metadata = {'url': "/providers/Microsoft.RedHatOpenShift/listinstallopenshiftversions"}  # type: ignore
+    installable_open_shift_versions.metadata = {'url': "/providers/Microsoft.RedHatOpenShift/listinstallversions"}  # type: ignore
 

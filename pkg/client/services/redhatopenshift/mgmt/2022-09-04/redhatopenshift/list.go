@@ -86,7 +86,7 @@ func (client ListClient) VersionsPreparer(ctx context.Context) (*http.Request, e
 	preparer := autorest.CreatePreparer(
 		autorest.AsGet(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPath("/providers/Microsoft.RedHatOpenShift/listinstallopenshiftversions"),
+		autorest.WithPath("/providers/Microsoft.RedHatOpenShift/listinstallversions"),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }

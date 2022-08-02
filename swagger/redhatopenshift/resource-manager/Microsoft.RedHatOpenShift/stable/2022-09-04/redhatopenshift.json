@@ -16,7 +16,7 @@
     "application/json"
   ],
   "paths": {
-    "/providers/Microsoft.RedHatOpenShift/listinstallopenshiftversions": {
+    "/providers/Microsoft.RedHatOpenShift/listinstallversions": {
       "get": {
         "tags": [
           "InstallOpenShiftVersions"

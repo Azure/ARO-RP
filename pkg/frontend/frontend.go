@@ -218,11 +218,11 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterKubeConfigCredentials).Name("postOpenShiftClusterKubeConfigCredentials")
 
 	s = r.
-		Path("/providers/{resourceProviderNamespace}/listinstallopenshiftversions").
+		Path("/providers/{resourceProviderNamespace}/listinstallversions").
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodGet).HandlerFunc(f.listInstallOpenShiftVersions).Name("listInstallOpenShiftVersions")
+	s.Methods(http.MethodGet).HandlerFunc(f.listInstallOpenShiftVersions).Name("listInstallVersions")
 
 	// Admin actions
 	s = r.

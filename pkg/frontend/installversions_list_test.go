@@ -74,7 +74,7 @@ func TestListInstallableVersions(t *testing.T) {
 			go f.Run(ctx, nil, nil)
 
 			resp, b, err := ti.request(method,
-				fmt.Sprintf("https://server//providers/%s/listinstallopenshiftversions?api-version=2022-09-04", resourceProviderNamespace),
+				fmt.Sprintf("https://server//providers/%s/listinstallversions?api-version=2022-09-04", resourceProviderNamespace),
 				nil, nil)
 			if err != nil {
 				t.Fatal(err)

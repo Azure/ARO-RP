@@ -91,7 +91,7 @@ func Run(api, outputDir string) error {
 
 	// for installaOpenShiftVerions
 	if g.installableOpenShiftVersion {
-		s.Paths["/providers/Microsoft.RedHatOpenShift/listinstallopenshiftversions"] = &PathItem{
+		s.Paths["/providers/Microsoft.RedHatOpenShift/listinstallversions"] = &PathItem{
 			Get: &Operation{
 				Tags:        []string{"InstallOpenShiftVersions"},
 				Summary:     "Lists all OpenShift versions available to install.",
