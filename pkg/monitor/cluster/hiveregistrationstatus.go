@@ -31,20 +31,40 @@ func (mon *Monitor) emitHiveRegistrationStatus(ctx context.Context) error {
 		return fmt.Errorf("cluster %s not adopted. No namespace in the clusterdocument", mon.oc.Name)
 	}
 
+	return mon.validateHiveConditions(ctx)
+}
+
+func (mon *Monitor) validateHiveConditions(ctx context.Context) error {
 	cd, err := mon.hiveclientset.HiveV1().ClusterDeployments(mon.oc.Properties.HiveProfile.Namespace).Get(ctx, hive.ClusterDeploymentName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
+	conditions := mon.filterConditions(ctx, cd, clusterDeploymentConditionsExpected)
+
+	mon.emitMetrics(conditions)
+
+	return nil
+}
+
+func (mon *Monitor) filterConditions(ctx context.Context, cd *hivev1.ClusterDeployment, clusterDeploymentConditionsExpected map[hivev1.ClusterDeploymentConditionType]corev1.ConditionStatus) []hivev1.ClusterDeploymentCondition {
+	conditions := make([]hivev1.ClusterDeploymentCondition, 0)
 	for _, condition := range cd.Status.Conditions {
 		if expectedState, ok := clusterDeploymentConditionsExpected[condition.Type]; ok {
 			if condition.Status != expectedState {
-				mon.emitGauge("hive.clusterdeployment.conditions", 1, map[string]string{
-					"type":   string(condition.Type),
-					"reason": condition.Reason,
-				})
+				conditions = append(conditions, condition)
 			}
 		}
 	}
-	return nil
+
+	return conditions
+}
+
+func (mon *Monitor) emitMetrics(conditions []hivev1.ClusterDeploymentCondition) {
+	for _, condition := range conditions {
+		mon.emitGauge("hive.clusterdeployment.conditions", 1, map[string]string{
+			"type":   string(condition.Type),
+			"reason": condition.Reason,
+		})
+	}
 }

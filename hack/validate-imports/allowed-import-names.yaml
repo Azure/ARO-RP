@@ -107,6 +107,10 @@ allowedImportNames:
     - hiveclient
   github.com/openshift/hive/pkg/client/clientset/versioned/fake:
     - hivefake
+  github.com/Azure/ARO-RP/pkg/util/mocks/hive/clientset/versioned:
+    - mock_hiveclient
+  github.com/Azure/ARO-RP/pkg/util/mocks/hive/clientset/versioned/typed/hive/v1:
+    - mock_hiveclientv1
   github.com/openshift/hive/apis/hive/v1:
     - hivev1
   github.com/openshift/hive/apis/hive/v1/azure:
