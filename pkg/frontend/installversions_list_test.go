@@ -21,7 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func TestListInstallableVersions(t *testing.T) {
+func TestListInstallVersions(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	mockTenantID := "00000000-0000-0000-0000-000000000000"
 	method := http.MethodGet

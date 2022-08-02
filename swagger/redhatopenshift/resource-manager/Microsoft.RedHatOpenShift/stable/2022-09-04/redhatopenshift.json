@@ -636,7 +636,7 @@
       }
     },
     "InstallVersions": {
-      "description": "InstallOpenShiftVersions represents a List of OpenShift installable versions."
+      "description": "InstallVersions represents a List of OpenShift installable versions."
     },
     "MasterProfile": {
       "description": "MasterProfile represents a master profile.",
