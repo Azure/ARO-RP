@@ -168,6 +168,8 @@ func (m *manager) Install(ctx context.Context) error {
 			// installer code since it's easier, but in the future, this data
 			// should be collected from Hive's outputs where needed.
 			steps.Action(m.callInstaller),
+			steps.Action(m.hiveCreateNamespace),
+			steps.Action(m.hiveEnsureResources),
 
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
 			steps.Action(m.ensureBillingRecord),
@@ -197,8 +199,6 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.configureIngressCertificate),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute, true),
 			steps.Action(m.configureDefaultStorageClass),
-			steps.Action(m.hiveCreateNamespace),
-			steps.Action(m.hiveEnsureResources),
 			steps.Action(m.finishInstallation),
 		},
 	}
