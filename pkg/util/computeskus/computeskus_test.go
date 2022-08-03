@@ -264,16 +264,16 @@ func TestSupportedOSDisk(t *testing.T) {
 		wantOSDisk          string
 	}{
 		{
-			"Premium disk supported on VMSize",
-			"premium_disk_supported",
-			"True",
-			premiumDisk,
+			name:                "Premium disk supported on VMSize",
+			vmSku:               "premium_disk_supported",
+			supportsPremiumDisk: "True",
+			wantOSDisk:          premiumDisk,
 		},
 		{
-			"Premium disk not supported on VMSize",
-			"premium_disk_not_supported",
-			"False",
-			standardDisk,
+			name:                "Premium disk not supported on VMSize",
+			vmSku:               "premium_disk_not_supported",
+			supportsPremiumDisk: "False",
+			wantOSDisk:          standardDisk,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
