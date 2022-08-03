@@ -23,10 +23,17 @@ import (
 	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-09-04/redhatopenshift"
 )
 
+// ListClientAPI contains the set of methods on the ListClient type.
+type ListClientAPI interface {
+	Versions(ctx context.Context) (result redhatopenshift.SetObject, err error)
+}
+
+var _ ListClientAPI = (*redhatopenshift.ListClient)(nil)
+
 // OperationsClientAPI contains the set of methods on the OperationsClient type.
 type OperationsClientAPI interface {
-	List(ctx context.Context) (result redhatopenshift.OperationListPage, err error)
-	ListComplete(ctx context.Context) (result redhatopenshift.OperationListIterator, err error)
+	ListMethod(ctx context.Context) (result redhatopenshift.OperationListPage, err error)
+	ListMethodComplete(ctx context.Context) (result redhatopenshift.OperationListIterator, err error)
 }
 
 var _ OperationsClientAPI = (*redhatopenshift.OperationsClient)(nil)
@@ -36,12 +43,12 @@ type OpenShiftClustersClientAPI interface {
 	CreateOrUpdate(ctx context.Context, resourceGroupName string, resourceName string, parameters redhatopenshift.OpenShiftCluster) (result redhatopenshift.OpenShiftClustersCreateOrUpdateFuture, err error)
 	Delete(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.OpenShiftClustersDeleteFuture, err error)
 	Get(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.OpenShiftCluster, err error)
-	List(ctx context.Context) (result redhatopenshift.OpenShiftClusterListPage, err error)
-	ListComplete(ctx context.Context) (result redhatopenshift.OpenShiftClusterListIterator, err error)
 	ListAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.OpenShiftClusterAdminKubeconfig, err error)
 	ListByResourceGroup(ctx context.Context, resourceGroupName string) (result redhatopenshift.OpenShiftClusterListPage, err error)
 	ListByResourceGroupComplete(ctx context.Context, resourceGroupName string) (result redhatopenshift.OpenShiftClusterListIterator, err error)
 	ListCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.OpenShiftClusterCredentials, err error)
+	ListMethod(ctx context.Context) (result redhatopenshift.OpenShiftClusterListPage, err error)
+	ListMethodComplete(ctx context.Context) (result redhatopenshift.OpenShiftClusterListIterator, err error)
 	Update(ctx context.Context, resourceGroupName string, resourceName string, parameters redhatopenshift.OpenShiftClusterUpdate) (result redhatopenshift.OpenShiftClustersUpdateFuture, err error)
 }
 

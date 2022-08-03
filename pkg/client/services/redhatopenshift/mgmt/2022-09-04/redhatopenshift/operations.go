@@ -42,10 +42,10 @@ func NewOperationsClientWithBaseURI(baseURI string, subscriptionID string) Opera
 	return OperationsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
-// List the operation returns the RP operations.
-func (client OperationsClient) List(ctx context.Context) (result OperationListPage, err error) {
+// ListMethod the operation returns the RP operations.
+func (client OperationsClient) ListMethod(ctx context.Context) (result OperationListPage, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/OperationsClient.List")
+		ctx = tracing.StartSpan(ctx, fqdn+"/OperationsClient.ListMethod")
 		defer func() {
 			sc := -1
 			if result.ol.Response.Response != nil {
@@ -54,23 +54,23 @@ func (client OperationsClient) List(ctx context.Context) (result OperationListPa
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	result.fn = client.listNextResults
-	req, err := client.ListPreparer(ctx)
+	result.fn = client.listMethodNextResults
+	req, err := client.ListMethodPreparer(ctx)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "redhatopenshift.OperationsClient", "List", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OperationsClient", "ListMethod", nil, "Failure preparing request")
 		return
 	}
 
-	resp, err := client.ListSender(req)
+	resp, err := client.ListMethodSender(req)
 	if err != nil {
 		result.ol.Response = autorest.Response{Response: resp}
-		err = autorest.NewErrorWithError(err, "redhatopenshift.OperationsClient", "List", resp, "Failure sending request")
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OperationsClient", "ListMethod", resp, "Failure sending request")
 		return
 	}
 
-	result.ol, err = client.ListResponder(resp)
+	result.ol, err = client.ListMethodResponder(resp)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "redhatopenshift.OperationsClient", "List", resp, "Failure responding to request")
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OperationsClient", "ListMethod", resp, "Failure responding to request")
 		return
 	}
 	if result.ol.hasNextLink() && result.ol.IsEmpty() {
@@ -81,8 +81,8 @@ func (client OperationsClient) List(ctx context.Context) (result OperationListPa
 	return
 }
 
-// ListPreparer prepares the List request.
-func (client OperationsClient) ListPreparer(ctx context.Context) (*http.Request, error) {
+// ListMethodPreparer prepares the ListMethod request.
+func (client OperationsClient) ListMethodPreparer(ctx context.Context) (*http.Request, error) {
 	const APIVersion = "2022-09-04"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
@@ -96,15 +96,15 @@ func (client OperationsClient) ListPreparer(ctx context.Context) (*http.Request,
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
-// ListSender sends the List request. The method will close the
+// ListMethodSender sends the ListMethod request. The method will close the
 // http.Response Body if it receives an error.
-func (client OperationsClient) ListSender(req *http.Request) (*http.Response, error) {
+func (client OperationsClient) ListMethodSender(req *http.Request) (*http.Response, error) {
 	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
-// ListResponder handles the response to the List request. The method always
+// ListMethodResponder handles the response to the ListMethod request. The method always
 // closes the http.Response Body.
-func (client OperationsClient) ListResponder(resp *http.Response) (result OperationList, err error) {
+func (client OperationsClient) ListMethodResponder(resp *http.Response) (result OperationList, err error) {
 	err = autorest.Respond(
 		resp,
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
@@ -114,31 +114,31 @@ func (client OperationsClient) ListResponder(resp *http.Response) (result Operat
 	return
 }
 
-// listNextResults retrieves the next set of results, if any.
-func (client OperationsClient) listNextResults(ctx context.Context, lastResults OperationList) (result OperationList, err error) {
+// listMethodNextResults retrieves the next set of results, if any.
+func (client OperationsClient) listMethodNextResults(ctx context.Context, lastResults OperationList) (result OperationList, err error) {
 	req, err := lastResults.operationListPreparer(ctx)
 	if err != nil {
-		return result, autorest.NewErrorWithError(err, "redhatopenshift.OperationsClient", "listNextResults", nil, "Failure preparing next results request")
+		return result, autorest.NewErrorWithError(err, "redhatopenshift.OperationsClient", "listMethodNextResults", nil, "Failure preparing next results request")
 	}
 	if req == nil {
 		return
 	}
-	resp, err := client.ListSender(req)
+	resp, err := client.ListMethodSender(req)
 	if err != nil {
 		result.Response = autorest.Response{Response: resp}
-		return result, autorest.NewErrorWithError(err, "redhatopenshift.OperationsClient", "listNextResults", resp, "Failure sending next results request")
+		return result, autorest.NewErrorWithError(err, "redhatopenshift.OperationsClient", "listMethodNextResults", resp, "Failure sending next results request")
 	}
-	result, err = client.ListResponder(resp)
+	result, err = client.ListMethodResponder(resp)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "redhatopenshift.OperationsClient", "listNextResults", resp, "Failure responding to next results request")
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OperationsClient", "listMethodNextResults", resp, "Failure responding to next results request")
 	}
 	return
 }
 
-// ListComplete enumerates all values, automatically crossing page boundaries as required.
-func (client OperationsClient) ListComplete(ctx context.Context) (result OperationListIterator, err error) {
+// ListMethodComplete enumerates all values, automatically crossing page boundaries as required.
+func (client OperationsClient) ListMethodComplete(ctx context.Context) (result OperationListIterator, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/OperationsClient.List")
+		ctx = tracing.StartSpan(ctx, fqdn+"/OperationsClient.ListMethod")
 		defer func() {
 			sc := -1
 			if result.Response().Response.Response != nil {
@@ -147,6 +147,6 @@ func (client OperationsClient) ListComplete(ctx context.Context) (result Operati
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	result.page, err = client.List(ctx)
+	result.page, err = client.ListMethod(ctx)
 	return
 }

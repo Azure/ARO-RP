@@ -16,6 +16,40 @@
     "application/json"
   ],
   "paths": {
+    "/providers/Microsoft.RedHatOpenShift/listinstallversions": {
+      "get": {
+        "tags": [
+          "InstallVersions"
+        ],
+        "summary": "Lists all OpenShift versions available to install.",
+        "description": "The operation returns the installable OpenShift versions as strings.",
+        "operationId": "List_Install_Versions",
+        "parameters": [
+          {
+            "$ref": "../../../../../common-types/resource-management/v2/types.json#/parameters/ApiVersionParameter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/InstallVersions"
+            }
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        },
+        "x-ms-examples": {
+          "Lists all OpenShift versions available to install.": {
+            "$ref": "./examples/List_Install_Versions.json"
+          }
+        }
+      }
+    },
     "/providers/Microsoft.RedHatOpenShift/operations": {
       "get": {
         "tags": [
@@ -601,6 +635,9 @@
         }
       }
     },
+    "InstallVersions": {
+      "description": "InstallVersions represents a List of OpenShift installable versions."
+    },
     "MasterProfile": {
       "description": "MasterProfile represents a master profile.",
       "type": "object",
@@ -768,6 +805,10 @@
           "$ref": "#/definitions/OpenShiftClusterProperties",
           "description": "The cluster properties.",
           "x-ms-client-flatten": true
+        },
+        "installVersion": {
+          "description": "The cluster install version.",
+          "type": "string"
         },
         "systemData": {
           "$ref": "../../../../../common-types/resource-management/v2/types.json#/definitions/systemData",
