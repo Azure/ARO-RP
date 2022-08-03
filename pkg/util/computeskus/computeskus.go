@@ -9,6 +9,12 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 )
 
+const (
+	standardDisk          = "StandardSSD_LRS"
+	premiumDisk           = "Premium_LRS"
+	premiumDiskCapability = "PremiumIO"
+)
+
 // Zones returns zone information for the resource SKU
 func Zones(sku *mgmtcompute.ResourceSku) []string {
 	if sku.LocationInfo == nil ||
@@ -80,11 +86,6 @@ func FilterVMSizes(skus []mgmtcompute.ResourceSku, location string) map[string]*
 
 // SupportedOSDisk returns the type of OSDisk for the given resource. Most VMs will use Premium disks but some SKUs only support Standard SSDs
 func SupportedOSDisk(vmSku *mgmtcompute.ResourceSku) string {
-	const (
-		standardDisk          = "StandardSSD_LRS"
-		premiumDisk           = "Premium_LRS"
-		premiumDiskCapability = "PremiumIO"
-	)
 	if HasCapability(vmSku, premiumDiskCapability) {
 		return premiumDisk
 	}
