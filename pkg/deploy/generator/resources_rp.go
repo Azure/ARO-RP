@@ -598,6 +598,18 @@ cat >/etc/fluentbit/fluentbit.conf <<'EOF'
 [FILTER]
 	Name rewrite_tag
 	Match journald
+	Rule $LOGKIND asyncqos asyncqos true
+
+[FILTER]
+	Name modify
+	Match asyncqos
+	Remove CLIENT_PRINCIPAL_NAME
+	Remove FILE
+	Remove COMPONENT
+
+[FILTER]
+	Name rewrite_tag
+	Match journald
 	Rule $LOGKIND ifxaudit ifxaudit false
 
 [OUTPUT]
