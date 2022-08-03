@@ -10,121 +10,146 @@ import (
 
 	"github.com/golang/mock/gomock"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
+	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
+	hivefake "github.com/openshift/hive/pkg/client/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	mock_hiveclient "github.com/Azure/ARO-RP/pkg/util/mocks/hive/clientset/versioned"
-	mock_hiveclientv1 "github.com/Azure/ARO-RP/pkg/util/mocks/hive/clientset/versioned/typed/hive/v1"
+	"github.com/Azure/ARO-RP/pkg/hive"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
 func TestEmitHiveRegistrationStatus(t *testing.T) {
-	ctx := context.Background()
-
-	controller := gomock.NewController(t)
-
-	logger, hook := test.NewNullLogger()
-	log := logrus.NewEntry(logger)
-
-	m := mock_metrics.NewMockEmitter(controller)
-
-	oc := &api.OpenShiftCluster{
-		Name: "testcluster",
-		Properties: api.OpenShiftClusterProperties{
-			HiveProfile: api.HiveProfile{
-				Namespace: "",
-			},
-		},
-	}
-
-	mon := &Monitor{
-		hiveclientset: nil,
-		m:             m,
-		oc:            oc,
-		log:           log,
-	}
-
-	// no hive client set
-	err := mon.emitHiveRegistrationStatus(ctx)
-	if err != nil {
-		t.Fatal("should not fail")
-	}
-	x := hook.LastEntry()
-	assert.Equal(t, "skipping: no hive cluster manager", x.Message)
-
-	// no namespace
-	hiveclientset := mock_hiveclient.NewMockInterface(controller)
-	mon.hiveclientset = hiveclientset
-	err = mon.emitHiveRegistrationStatus(ctx)
-	if err == nil {
-		t.Fatal("should not fail")
-	}
-	if err.Error() != "cluster testcluster not adopted. No namespace in the clusterdocument" {
-		t.Fatal("Expecting error")
-	}
-
-	// happy path
-	mon.oc.Properties.HiveProfile.Namespace = "abc"
-
-	cds := mock_hiveclientv1.NewMockClusterDeploymentInterface(controller)
-	v1 := mock_hiveclientv1.NewMockHiveV1Interface(controller)
-	cd := &hivev1.ClusterDeployment{}
-	hiveclientset.EXPECT().HiveV1().Return(v1)
-	v1.EXPECT().ClusterDeployments(gomock.Any()).Return(cds)
-	cds.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(cd, nil)
-
-	err = mon.emitHiveRegistrationStatus(ctx)
-	if err != nil {
-		t.Fatal("should not fail")
-	}
-}
-
-func TestValidateHiveConditions(t *testing.T) {
-	ctx := context.Background()
+	fakeNamespace := "fake-namespace"
 
 	for _, tt := range []struct {
-		name        string
-		cd          *hivev1.ClusterDeployment
-		expectError error
-	}{{
-		name:        "Regular case",
-		cd:          &hivev1.ClusterDeployment{},
-		expectError: nil,
-	}, {
-
-		name:        "no cluster deployment found in hive",
-		cd:          nil,
-		expectError: fmt.Errorf("not found error message"),
-	}} {
-		controller := gomock.NewController(t)
-
-		hiveclientset := mock_hiveclient.NewMockInterface(controller)
-		cds := mock_hiveclientv1.NewMockClusterDeploymentInterface(controller)
-		v1 := mock_hiveclientv1.NewMockHiveV1Interface(controller)
-
-		hiveclientset.EXPECT().HiveV1().Return(v1)
-		v1.EXPECT().ClusterDeployments(gomock.Any()).Return(cds)
-		cds.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.cd, tt.expectError)
-
-		mon := &Monitor{
-			hiveclientset: hiveclientset,
+		name       string
+		oc         *api.OpenShiftCluster
+		cd         kruntime.Object
+		withClient bool
+		wantErr    string
+		wantLog    string
+	}{
+		{
+			name:       "no hiveclient",
+			withClient: false,
+			wantLog:    "skipping: no hive cluster manager",
+		},
+		{
+			name:       "No Namespace",
+			withClient: true,
 			oc: &api.OpenShiftCluster{
 				Name: "testcluster",
 				Properties: api.OpenShiftClusterProperties{
 					HiveProfile: api.HiveProfile{
-						Namespace: "abc",
+						Namespace: "",
 					},
 				},
 			},
-		}
+			wantErr: "cluster testcluster not adopted. No namespace in the clusterdocument",
+		},
+		{
+			name:       "Happy Path",
+			withClient: true,
+			oc: &api.OpenShiftCluster{
+				Name: "testcluster",
+				Properties: api.OpenShiftClusterProperties{
+					HiveProfile: api.HiveProfile{
+						Namespace: fakeNamespace,
+					},
+				},
+			},
+			cd: &hivev1.ClusterDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      hive.ClusterDeploymentName,
+					Namespace: fakeNamespace,
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var hiveclient hiveclient.Interface
+			if tt.withClient {
+				fakeclient := hivefake.NewSimpleClientset()
+				if tt.cd != nil {
+					fakeclient.Tracker().Add(tt.cd)
+				}
+				hiveclient = fakeclient
+			}
 
-		err := mon.validateHiveConditions(ctx)
-		if err != tt.expectError {
-			t.Fatal("Unexpected error handling")
-		}
+			logger, hook := test.NewNullLogger()
+			log := logrus.NewEntry(logger)
+
+			mon := &Monitor{
+				hiveclientset: hiveclient,
+				oc:            tt.oc,
+				log:           log,
+			}
+
+			err := mon.emitHiveRegistrationStatus(context.Background())
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+
+			if tt.wantLog != "" {
+				x := hook.LastEntry()
+				assert.Equal(t, tt.wantLog, x.Message)
+			}
+		})
+	}
+}
+
+func TestValidateHiveConditions(t *testing.T) {
+	fakeNamespace := "fake-namespace"
+
+	for _, tt := range []struct {
+		name    string
+		cd      *hivev1.ClusterDeployment
+		wantErr string
+	}{{
+		name: "Regular case",
+		cd: &hivev1.ClusterDeployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      hive.ClusterDeploymentName,
+				Namespace: fakeNamespace,
+			},
+		},
+		wantErr: "",
+	}, {
+		name:    "no cluster deployment found in hive",
+		cd:      nil,
+		wantErr: fmt.Sprintf("clusterdeployments.hive.openshift.io %q not found", hive.ClusterDeploymentName),
+	}} {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeclient := hivefake.NewSimpleClientset()
+			if tt.cd != nil {
+				fakeclient.Tracker().Add(tt.cd)
+			}
+
+			mon := &Monitor{
+				hiveclientset: fakeclient,
+				oc: &api.OpenShiftCluster{
+					Name: "testcluster",
+					Properties: api.OpenShiftClusterProperties{
+						HiveProfile: api.HiveProfile{
+							Namespace: fakeNamespace,
+						},
+					},
+				},
+			}
+
+			err := mon.validateHiveConditions(context.Background())
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+		})
 	}
 }
 
@@ -182,35 +207,35 @@ func TestFilterConditions(t *testing.T) {
 			},
 		},
 	} {
-		ctx := context.Background()
-
-		mon := &Monitor{}
-		conditions := mon.filterConditions(ctx, tt.cd, testConditionList)
-		for _, c := range conditions {
-			isExpected := false
-			for _, ex := range tt.expectedConditions {
-				if ex.Type == c.Type {
-					isExpected = true
-					break
-				}
-			}
-			if !isExpected {
-				t.Fatalf("condition %s should not be returned", c.Type)
-			}
-		}
-
-		for _, ex := range tt.expectedConditions {
-			isReturned := false
+		t.Run(tt.name, func(t *testing.T) {
+			mon := &Monitor{}
+			conditions := mon.filterConditions(context.Background(), tt.cd, testConditionList)
 			for _, c := range conditions {
-				if ex.Type == c.Type {
-					isReturned = true
-					break
+				isExpected := false
+				for _, ex := range tt.expectedConditions {
+					if ex.Type == c.Type {
+						isExpected = true
+						break
+					}
+				}
+				if !isExpected {
+					t.Errorf("condition %s should not be returned", c.Type)
 				}
 			}
-			if !isReturned {
-				t.Fatalf("expected condition %s not returned", ex.Type)
+
+			for _, ex := range tt.expectedConditions {
+				isReturned := false
+				for _, c := range conditions {
+					if ex.Type == c.Type {
+						isReturned = true
+						break
+					}
+				}
+				if !isReturned {
+					t.Errorf("expected condition %s not returned", ex.Type)
+				}
 			}
-		}
+		})
 	}
 }
 
