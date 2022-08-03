@@ -17,6 +17,7 @@ const (
 	ASYNCOPERATIONS
 	PORTAL
 	GATEWAY
+	CLUSTERMANAGER
 )
 
 type gen struct {

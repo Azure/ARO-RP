@@ -4,9 +4,13 @@ package api
 // Licensed under the Apache License 2.0.
 
 type ClusterManagerConverter interface {
-	ToExternal(*ClusterManagerConfiguration) interface{}
+	ToExternal(*ClusterManagerConfiguration) (interface{}, error)
+	ToExternalList([]*ClusterManagerConfiguration, string) (interface{}, error)
+	ToInternal(interface{}, *ClusterManagerConfiguration) error
 }
-
+type ClusterManagerStaticValidator interface {
+	Static(interface{}, *ClusterManagerConfiguration) error
+}
 type OpenShiftClusterConverter interface {
 	ToExternal(*OpenShiftCluster) interface{}
 	ToExternalList([]*OpenShiftCluster, string) interface{}
@@ -41,6 +45,8 @@ type OpenShiftVersionStaticValidator interface {
 
 // Version is a set of endpoints implemented by each API version
 type Version struct {
+	ClusterManagerConverter                  func() ClusterManagerConverter
+	ClusterManagerStaticValidator            func() ClusterManagerStaticValidator
 	OpenShiftClusterConverter                func() OpenShiftClusterConverter
 	OpenShiftClusterStaticValidator          func(string, string, bool, string) OpenShiftClusterStaticValidator
 	OpenShiftClusterCredentialsConverter     func() OpenShiftClusterCredentialsConverter

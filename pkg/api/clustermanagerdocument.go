@@ -31,7 +31,12 @@ type ClusterManagerConfigurationDocument struct {
 	LSN         int                    `json:"_lsn,omitempty"`
 	Metadata    map[string]interface{} `json:"_metadata,omitempty"`
 
+	Key          string `json:"key,omitempty"`
+	PartitionKey string `json:"partitionKey,omitempty" deep:"-"`
+
 	ClusterManagerConfiguration *ClusterManagerConfiguration `json:"clusterManagerConfiguration,omitempty"`
+
+	CorrelationData *CorrelationData `json:"correlationData,omitempty" deep:"-"`
 }
 
 // String returns a JSON representation of the OpenShiftClusterManagerConfigurationDocument struct.

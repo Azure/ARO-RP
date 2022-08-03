@@ -6,25 +6,32 @@ package database
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 type clusterManagerConfiguration struct {
-	c cosmosdb.ClusterManagerConfigurationDocumentClient
+	c             cosmosdb.ClusterManagerConfigurationDocumentClient
+	collc         cosmosdb.CollectionClient
+	uuid          string
+	uuidGenerator uuid.Generator
 }
 
-type ClusterManagerConfiguration interface {
+type ClusterManagerConfigurations interface {
 	Create(context.Context, *api.ClusterManagerConfigurationDocument) (*api.ClusterManagerConfigurationDocument, error)
 	Get(context.Context, string) (*api.ClusterManagerConfigurationDocument, error)
 	Patch(context.Context, string, func(*api.ClusterManagerConfigurationDocument) error) (*api.ClusterManagerConfigurationDocument, error)
 	Delete(context.Context, *api.ClusterManagerConfigurationDocument) error
 	ChangeFeed() cosmosdb.ClusterManagerConfigurationDocumentIterator
+	NewUUID() string
 }
 
-func NewClusterManagerConfiguration(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (ClusterManagerConfiguration, error) {
+func NewClusterManagerConfigurations(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (ClusterManagerConfigurations, error) {
 	dbid, err := Name(isDevelopmentMode)
 	if err != nil {
 		return nil, err
@@ -32,12 +39,21 @@ func NewClusterManagerConfiguration(ctx context.Context, isDevelopmentMode bool,
 
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
-	documentClient := cosmosdb.NewClusterManagerConfigurationDocumentClient(collc, collHiveResources)
-	return NewClusterManagerConfigurationWithProvidedClient(documentClient), nil
+	documentClient := cosmosdb.NewClusterManagerConfigurationDocumentClient(collc, collClusterManager)
+	return NewClusterManagerConfigurationsWithProvidedClient(documentClient, collc, uuid.DefaultGenerator.Generate(), uuid.DefaultGenerator), nil
 }
 
-func NewClusterManagerConfigurationWithProvidedClient(client cosmosdb.ClusterManagerConfigurationDocumentClient) ClusterManagerConfiguration {
-	return &clusterManagerConfiguration{c: client}
+func NewClusterManagerConfigurationsWithProvidedClient(client cosmosdb.ClusterManagerConfigurationDocumentClient, collectionClient cosmosdb.CollectionClient, uuid string, uuidGenerator uuid.Generator) ClusterManagerConfigurations {
+	return &clusterManagerConfiguration{
+		c:             client,
+		collc:         collectionClient,
+		uuid:          uuid,
+		uuidGenerator: uuidGenerator,
+	}
+}
+
+func (c *clusterManagerConfiguration) NewUUID() string {
+	return c.uuidGenerator.Generate()
 }
 
 // Only used internally by Patch()
@@ -54,7 +70,19 @@ func (c *clusterManagerConfiguration) Create(ctx context.Context, doc *api.Clust
 		return nil, fmt.Errorf("id %q is not lower case", doc.ID)
 	}
 
-	return c.c.Create(ctx, doc.ID, doc, nil)
+	var err error
+	doc.PartitionKey, err = c.partitionKey(doc.Key)
+	if err != nil {
+		return nil, err
+	}
+
+	doc, err = c.c.Create(ctx, doc.PartitionKey, doc, nil)
+
+	if err, ok := err.(*cosmosdb.Error); ok && err.StatusCode == http.StatusConflict {
+		err.StatusCode = http.StatusPreconditionFailed
+	}
+
+	return doc, err
 }
 
 func (c *clusterManagerConfiguration) Get(ctx context.Context, id string) (*api.ClusterManagerConfigurationDocument, error) {
@@ -65,11 +93,11 @@ func (c *clusterManagerConfiguration) Get(ctx context.Context, id string) (*api.
 	return c.c.Get(ctx, id, id, nil)
 }
 
-func (c *clusterManagerConfiguration) Patch(ctx context.Context, id string, callback func(*api.ClusterManagerConfigurationDocument) error) (*api.ClusterManagerConfigurationDocument, error) {
+func (c *clusterManagerConfiguration) Patch(ctx context.Context, key string, callback func(*api.ClusterManagerConfigurationDocument) error) (*api.ClusterManagerConfigurationDocument, error) {
 	var doc *api.ClusterManagerConfigurationDocument
 
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
-		doc, err := c.Get(ctx, id)
+		doc, err := c.Get(ctx, key)
 		if err != nil {
 			return err
 		}
@@ -96,4 +124,9 @@ func (c *clusterManagerConfiguration) Delete(ctx context.Context, doc *api.Clust
 
 func (c *clusterManagerConfiguration) ChangeFeed() cosmosdb.ClusterManagerConfigurationDocumentIterator {
 	return c.c.ChangeFeed(nil)
+}
+
+func (c *clusterManagerConfiguration) partitionKey(key string) (string, error) {
+	r, err := azure.ParseResourceID(key)
+	return r.SubscriptionID, err
 }

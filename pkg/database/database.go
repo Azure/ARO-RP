@@ -28,14 +28,13 @@ import (
 const (
 	collAsyncOperations   = "AsyncOperations"
 	collBilling           = "Billing"
-	collClusterManager    = "ClusterManager"
+	collClusterManager    = "ClusterManagerConfigurations"
 	collGateway           = "Gateway"
-	collHiveResources     = "HiveResources"
 	collMonitors          = "Monitors"
 	collOpenShiftClusters = "OpenShiftClusters"
+	collOpenShiftVersion  = "OpenShiftVersions"
 	collPortal            = "Portal"
 	collSubscriptions     = "Subscriptions"
-	collOpenShiftVersion  = "OpenShiftVersions"
 )
 
 func NewDatabaseClient(log *logrus.Entry, env env.Core, authorizer cosmosdb.Authorizer, m metrics.Emitter, aead encryption.AEAD) (cosmosdb.DatabaseClient, error) {

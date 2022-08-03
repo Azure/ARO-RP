@@ -49,10 +49,11 @@ type frontend struct {
 	baseLog  *logrus.Entry
 	env      env.Interface
 
-	dbAsyncOperations   database.AsyncOperations
-	dbOpenShiftClusters database.OpenShiftClusters
-	dbSubscriptions     database.Subscriptions
-	dbOpenShiftVersions database.OpenShiftVersions
+	dbAsyncOperations             database.AsyncOperations
+	dbClusterManagerConfiguration database.ClusterManagerConfigurations
+	dbOpenShiftClusters           database.OpenShiftClusters
+	dbSubscriptions               database.Subscriptions
+	dbOpenShiftVersions           database.OpenShiftVersions
 
 	apis map[string]*api.Version
 	m    metrics.Emitter
@@ -87,6 +88,7 @@ func NewFrontend(ctx context.Context,
 	baseLog *logrus.Entry,
 	_env env.Interface,
 	dbAsyncOperations database.AsyncOperations,
+	dbClusterManagerConfiguration database.ClusterManagerConfigurations,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbSubscriptions database.Subscriptions,
 	dbOpenShiftVersions database.OpenShiftVersions,
@@ -97,19 +99,20 @@ func NewFrontend(ctx context.Context,
 	azureActionsFactory azureActionsFactory,
 	ocEnricherFactory ocEnricherFactory) (Runnable, error) {
 	f := &frontend{
-		auditLog:            auditLog,
-		baseLog:             baseLog,
-		env:                 _env,
-		dbAsyncOperations:   dbAsyncOperations,
-		dbOpenShiftClusters: dbOpenShiftClusters,
-		dbSubscriptions:     dbSubscriptions,
-		dbOpenShiftVersions: dbOpenShiftVersions,
-		apis:                apis,
-		m:                   m,
-		aead:                aead,
-		kubeActionsFactory:  kubeActionsFactory,
-		azureActionsFactory: azureActionsFactory,
-		ocEnricherFactory:   ocEnricherFactory,
+		auditLog:                      auditLog,
+		baseLog:                       baseLog,
+		env:                           _env,
+		dbAsyncOperations:             dbAsyncOperations,
+		dbClusterManagerConfiguration: dbClusterManagerConfiguration,
+		dbOpenShiftClusters:           dbOpenShiftClusters,
+		dbSubscriptions:               dbSubscriptions,
+		dbOpenShiftVersions:           dbOpenShiftVersions,
+		apis:                          apis,
+		m:                             m,
+		aead:                          aead,
+		kubeActionsFactory:            kubeActionsFactory,
+		azureActionsFactory:           azureActionsFactory,
+		ocEnricherFactory:             ocEnricherFactory,
 
 		bucketAllocator: &bucket.Random{},
 
@@ -178,6 +181,16 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftCluster).Name("getOpenShiftCluster")
 	s.Methods(http.MethodPatch).HandlerFunc(f.putOrPatchOpenShiftCluster).Name("putOrPatchOpenShiftCluster")
 	s.Methods(http.MethodPut).HandlerFunc(f.putOrPatchOpenShiftCluster).Name("putOrPatchOpenShiftCluster")
+
+	s = r.
+		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/{clusterManagerKind}/{ocmResourceName}").
+		Queries("api-version", "{api-version}").
+		Subrouter()
+
+	s.Methods(http.MethodDelete).HandlerFunc(f.deleteClusterManagerConfiguration).Name("deleteClusterManagerConfiguration")
+	s.Methods(http.MethodGet).HandlerFunc(f.getClusterManagerConfiguration).Name("getClusterManagerConfiguration")
+	s.Methods(http.MethodPatch).HandlerFunc(f.putOrPatchClusterManagerConfiguration).Name("putOrPatchClusterManagerConfiguration")
+	s.Methods(http.MethodPut).HandlerFunc(f.putOrPatchClusterManagerConfiguration).Name("putOrPatchClusterManagerConfiguration")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}").

@@ -12,27 +12,34 @@ import (
 )
 
 type Fixture struct {
-	openshiftClusterDocuments []*api.OpenShiftClusterDocument
-	subscriptionDocuments     []*api.SubscriptionDocument
-	billingDocuments          []*api.BillingDocument
-	asyncOperationDocuments   []*api.AsyncOperationDocument
-	portalDocuments           []*api.PortalDocument
-	gatewayDocuments          []*api.GatewayDocument
-	openShiftVersionDocuments []*api.OpenShiftVersionDocument
+	openshiftClusterDocuments            []*api.OpenShiftClusterDocument
+	subscriptionDocuments                []*api.SubscriptionDocument
+	billingDocuments                     []*api.BillingDocument
+	asyncOperationDocuments              []*api.AsyncOperationDocument
+	portalDocuments                      []*api.PortalDocument
+	gatewayDocuments                     []*api.GatewayDocument
+	openShiftVersionDocuments            []*api.OpenShiftVersionDocument
+	clusterManagerConfigurationDocuments []*api.ClusterManagerConfiguration
 
-	openShiftClustersDatabase database.OpenShiftClusters
-	billingDatabase           database.Billing
-	subscriptionsDatabase     database.Subscriptions
-	asyncOperationsDatabase   database.AsyncOperations
-	portalDatabase            database.Portal
-	gatewayDatabase           database.Gateway
-	openShiftVersionsDatabase database.OpenShiftVersions
+	openShiftClustersDatabase            database.OpenShiftClusters
+	billingDatabase                      database.Billing
+	subscriptionsDatabase                database.Subscriptions
+	asyncOperationsDatabase              database.AsyncOperations
+	portalDatabase                       database.Portal
+	gatewayDatabase                      database.Gateway
+	openShiftVersionsDatabase            database.OpenShiftVersions
+	clusterManagerConfigurationsDatabase database.ClusterManagerConfigurations
 
 	openShiftVersionsUUID uuid.Generator
 }
 
 func NewFixture() *Fixture {
 	return &Fixture{}
+}
+
+func (f *Fixture) WithClusterManagerConfigurations(db database.ClusterManagerConfigurations) *Fixture {
+	f.clusterManagerConfigurationsDatabase = db
+	return f
 }
 
 func (f *Fixture) WithOpenShiftClusters(db database.OpenShiftClusters) *Fixture {

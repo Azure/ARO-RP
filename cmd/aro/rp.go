@@ -110,6 +110,11 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
+	dbClusterManagerConfiguration, err := database.NewClusterManagerConfigurations(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	if err != nil {
+		return err
+	}
+
 	dbBilling, err := database.NewBilling(ctx, _env.IsLocalDevelopmentMode(), dbc)
 	if err != nil {
 		return err
@@ -142,7 +147,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbAsyncOperations, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, api.APIs, m, feAead, adminactions.NewKubeActions, adminactions.NewAzureActions, clusterdata.NewBestEffortEnricher)
+	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbAsyncOperations, dbClusterManagerConfiguration, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, api.APIs, m, feAead, adminactions.NewKubeActions, adminactions.NewAzureActions, clusterdata.NewBestEffortEnricher)
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -17,20 +16,21 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
-func (f *frontend) getOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
+func (f *frontend) getClusterManagerConfiguration(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	b, err := f._getOpenShiftCluster(ctx, log, r, f.apis[vars["api-version"]].OpenShiftClusterConverter())
+	f.baseLog.Warn("url: ", r.URL.Path)
 
+	b, err := f._getClusterManagerConfiguration(ctx, log, r, f.apis[vars["api-version"]].ClusterManagerConverter())
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getOpenShiftCluster(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.OpenShiftClusterConverter) ([]byte, error) {
+func (f *frontend) _getClusterManagerConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.ClusterManagerConverter) ([]byte, error) {
 	vars := mux.Vars(r)
 
-	doc, err := f.dbOpenShiftClusters.Get(ctx, r.URL.Path)
+	doc, err := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
@@ -38,14 +38,9 @@ func (f *frontend) _getOpenShiftCluster(ctx context.Context, log *logrus.Entry, 
 		return nil, err
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	ocEnricher := f.ocEnricherFactory(log, f.env, f.m)
-	ocEnricher.Enrich(timeoutCtx, doc.OpenShiftCluster)
-
-	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
-	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
-
-	return json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")
+	ext, err := converter.ToExternal(doc.ClusterManagerConfiguration)
+	if err != nil {
+		return nil, err
+	}
+	return json.MarshalIndent(ext, "", "    ")
 }

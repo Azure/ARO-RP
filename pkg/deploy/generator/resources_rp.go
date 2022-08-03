@@ -1638,7 +1638,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
 				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
 					Resource: &mgmtdocumentdb.SQLContainerResource{
-						ID: to.StringPtr("OCMConfig"),
+						ID: to.StringPtr("OpenShiftVersions"),
 						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
 							Paths: &[]string{
 								"/id",
@@ -1649,7 +1649,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 					},
 					Options: &mgmtdocumentdb.CreateUpdateOptions{},
 				},
-				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/OCMConfig')]"),
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/OpenShiftVersions')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
@@ -1662,18 +1662,17 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
 				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
 					Resource: &mgmtdocumentdb.SQLContainerResource{
-						ID: to.StringPtr("OCMConfig"),
+						ID: to.StringPtr("ClusterManagerConfigurations"),
 						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
 							Paths: &[]string{
-								"/id",
+								"/partitionKey",
 							},
 							Kind: mgmtdocumentdb.PartitionKindHash,
 						},
-						DefaultTTL: to.Int32Ptr(7 * 86400), // 7 days
 					},
 					Options: &mgmtdocumentdb.CreateUpdateOptions{},
 				},
-				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/OCMConfig')]"),
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/ClusterManagerConfigurations')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
@@ -1783,6 +1782,15 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 								"/id",
 							},
 							Kind: mgmtdocumentdb.PartitionKindHash,
+						},
+						UniqueKeyPolicy: &mgmtdocumentdb.UniqueKeyPolicy{
+							UniqueKeys: &[]mgmtdocumentdb.UniqueKey{
+								{
+									Paths: &[]string{
+										"/key",
+									},
+								},
+							},
 						},
 					},
 					Options: &mgmtdocumentdb.CreateUpdateOptions{},

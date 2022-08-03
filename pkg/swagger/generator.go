@@ -31,6 +31,7 @@ type generator struct {
 	systemData         bool
 	kubeConfig         bool
 	installVersionList bool
+	clusterManager     bool
 	xmsEnum            []string
 	xmsSecretList      []string
 	xmsIdentifiers     []string
@@ -81,6 +82,7 @@ var apis = map[string]*generator{
 		kubeConfig:         true,
 	},
 	apiv20220904Path: {
+		// exampleClusterManagerPut
 		exampleOpenShiftClusterPutParameter:            v20220904.ExampleOpenShiftClusterPutParameter,
 		exampleOpenShiftClusterPatchParameter:          v20220904.ExampleOpenShiftClusterPatchParameter,
 		exampleOpenShiftClusterResponse:                v20220904.ExampleOpenShiftClusterResponse,
@@ -95,6 +97,7 @@ var apis = map[string]*generator{
 		xmsIdentifiers:     []string{},
 		commonTypesVersion: "v3",
 		systemData:         true,
+		clusterManager:     true,
 		installVersionList: true,
 		kubeConfig:         true,
 	},

@@ -54,7 +54,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
 	}
-
+	f.baseLog.Warn("converter: ", converter)
 	isCreate := doc == nil
 
 	if isCreate {

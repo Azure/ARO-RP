@@ -17,6 +17,9 @@ const (
 
 func init() {
 	api.APIs[APIVersion] = &api.Version{
+		ClusterManagerConverter: func() api.ClusterManagerConverter {
+			return &clusterManagerConverter{}
+		},
 		OpenShiftClusterConverter: func() api.OpenShiftClusterConverter {
 			return &openShiftClusterConverter{}
 		},

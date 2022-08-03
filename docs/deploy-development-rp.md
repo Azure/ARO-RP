@@ -216,6 +216,26 @@
   curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/kubernetespodlogs?podname=$POD&namespace=$NAMESPACE&container=$CONTAINER"
   ```
 
+## OpenShift Cluster Manager (OCM) Configuration API Actions
+
+* Create a new OCM configuration
+  ```bash
+  curl -X PUT -k "https://localhost:8443/subscriptions/fe16a035-e540-4ab7-80d9-373fa9a3d6ae/resourceGroups/v4-eastus/providers/Microsoft.RedHatOpenShift/openShiftClusters/noncreate/syncsets/noncreate?api-version=2022-04-01" --header "Content-Type: application/json" -d @payload.json
+  ```
+
+  * payload.json:
+  ```
+  {
+        "metadata": {
+                "creationTimestamp": null
+        },
+        "spec": {
+                "clusterDeploymentRefs": []
+        },
+        "status": {}
+}
+  ```
+
 ## Debugging OpenShift Cluster
 
 * SSH to the bootstrap node:
