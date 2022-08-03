@@ -89,7 +89,6 @@ func Run(api, outputDir string) error {
 		},
 	}
 
-	// for installaVerions available for ARO
 	if g.installableVersion {
 		s.Paths["/providers/Microsoft.RedHatOpenShift/listinstallversions"] = &PathItem{
 			Get: &Operation{
