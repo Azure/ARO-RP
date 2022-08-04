@@ -554,7 +554,7 @@
             "apiVersion": "2018-05-01",
             "name": "[concat(parameters('dnsZone'), '/api.aks1')]",
             "dependsOn": [
-                "[parameters('aksClusterName')]"
+                "[variables('aksClusterId')]"
             ],
             "properties": {
                 "TTL": 300,
@@ -611,6 +611,55 @@
                     }
                 ],
                 "enableSoftDelete": true
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworkGateways",
+            "name": "aks-vpn",
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', 'aks-vpn-pip')]",
+                "[variables('vnetId')]",
+                "[variables('aksClusterId')]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('gatewaySubnetName'))]"
+                            },
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'aks-vpn-pip')]"
+                            }
+                        },
+                        "name": "default"
+                    }
+                ],
+                "vpnType": "RouteBased",
+                "sku": {
+                    "name": "VpnGw1",
+                    "tier": "VpnGw1"
+                },
+                "vpnClientConfiguration": {
+                    "vpnClientAddressPool": {
+                        "addressPrefixes": [
+                            "192.168.254.0/24"
+                        ]
+                    },
+                    "vpnClientRootCertificates": [
+                        {
+                            "properties": {
+                                "publicCertData": "[parameters('vpnCACertificate')]"
+                            },
+                            "name": "aks-vpn-ca"
+                        }
+                    ],
+                    "vpnClientProtocols": [
+                        "OpenVPN"
+                    ]
+                }
             }
         }
     ]
