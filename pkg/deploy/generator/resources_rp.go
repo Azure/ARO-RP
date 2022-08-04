@@ -598,7 +598,7 @@ cat >/etc/fluentbit/fluentbit.conf <<'EOF'
 [FILTER]
 	Name rewrite_tag
 	Match journald
-	Rule $LOGKIND asyncQoS asyncQoS true
+	Rule $LOGKIND asyncqos asyncqos true
 
 [FILTER]
 	Name rewrite_tag

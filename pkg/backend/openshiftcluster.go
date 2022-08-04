@@ -295,7 +295,7 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 
 func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, initialProvisioningState api.ProvisioningState, backendErr error) {
 	log = log.WithFields(logrus.Fields{
-		"logKind":       "asyncQoS",
+		"logKind":       "asyncqos",
 		"resultType":    utillog.SuccessResultType,
 		"operationType": initialProvisioningState.String(),
 	})
