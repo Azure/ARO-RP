@@ -30,7 +30,7 @@ type generator struct {
 
 	systemData         bool
 	kubeConfig         bool
-	installableVersion bool
+	installVersionList bool
 	xmsEnum            []string
 	xmsSecretList      []string
 	xmsIdentifiers     []string
@@ -95,7 +95,7 @@ var apis = map[string]*generator{
 		xmsIdentifiers:     []string{},
 		commonTypesVersion: "v3",
 		systemData:         true,
-		installableVersion: true,
+		installVersionList: true,
 		kubeConfig:         true,
 	},
 }

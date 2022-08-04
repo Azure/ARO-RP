@@ -89,7 +89,7 @@ func Run(api, outputDir string) error {
 		},
 	}
 
-	if g.installableVersion {
+	if g.installVersionList {
 		s.Paths["/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/listinstallversions"] = &PathItem{
 			Get: &Operation{
 				Tags:        []string{"InstallVersions"},
@@ -108,7 +108,7 @@ func Run(api, outputDir string) error {
 		names = append(names, "OpenShiftClusterAdminKubeconfig")
 	}
 
-	if g.installableVersion {
+	if g.installVersionList {
 		names = append(names, "InstallVersions")
 	}
 
