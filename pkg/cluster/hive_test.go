@@ -6,14 +6,18 @@ package cluster
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 func TestHiveClusterDeploymentReady(t *testing.T) {
@@ -157,4 +161,114 @@ func TestHiveResetCorrelationData(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHiveCreateNamespace(t *testing.T) {
+	for _, tt := range []struct {
+		testName              string
+		existingNamespaceName string
+		newNamespaceName      string
+		clusterManagerMock    func(mockCtrl *gomock.Controller, namespaceName string) *mock_hive.MockClusterManager
+		expectedNamespaceName string
+		wantErr               string
+	}{
+		{
+			testName:              "doesn't return error if cluster manager is nil",
+			existingNamespaceName: "",
+			newNamespaceName:      "new-namespace",
+			expectedNamespaceName: "",
+		},
+		{
+			testName:              "creates namespace if it doesn't exist",
+			existingNamespaceName: "",
+			newNamespaceName:      "new-namespace",
+			clusterManagerMock: func(mockCtrl *gomock.Controller, namespaceName string) *mock_hive.MockClusterManager {
+				namespaceToReturn := &corev1.Namespace{}
+				namespaceToReturn.Name = namespaceName
+				mockClusterManager := mock_hive.NewMockClusterManager(mockCtrl)
+				mockClusterManager.EXPECT().CreateNamespace(gomock.Any()).Return(namespaceToReturn, nil)
+				return mockClusterManager
+			},
+			expectedNamespaceName: "new-namespace",
+			wantErr:               "",
+		},
+		{
+			testName:              "doesn't create namespace if it already exists",
+			existingNamespaceName: "existing-namespace",
+			newNamespaceName:      "new-namespace",
+			expectedNamespaceName: "existing-namespace",
+			clusterManagerMock: func(mockCtrl *gomock.Controller, namespaceName string) *mock_hive.MockClusterManager {
+				mockClusterManager := mock_hive.NewMockClusterManager(mockCtrl)
+				mockClusterManager.EXPECT().CreateNamespace(gomock.Any()).Times(0)
+				return mockClusterManager
+			},
+		},
+		{
+			testName:              "returns error if cluster manager returns error",
+			existingNamespaceName: "",
+			newNamespaceName:      "new-namespace",
+			expectedNamespaceName: "",
+			clusterManagerMock: func(mockCtrl *gomock.Controller, namespaceName string) *mock_hive.MockClusterManager {
+				mockClusterManager := mock_hive.NewMockClusterManager(mockCtrl)
+				mockClusterManager.EXPECT().CreateNamespace(gomock.Any()).Return(nil, fmt.Errorf("cluster manager error"))
+				return mockClusterManager
+			},
+			wantErr: "cluster manager error",
+		},
+	} {
+		t.Run(tt.testName, func(t *testing.T) {
+			ctx := context.Background()
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			m := createManagerForTests(t, tt.existingNamespaceName)
+
+			if tt.clusterManagerMock != nil {
+				m.hiveClusterManager = tt.clusterManagerMock(controller, tt.newNamespaceName)
+			}
+
+			err := m.hiveCreateNamespace(ctx)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+
+			if m.doc.OpenShiftCluster.Properties.HiveProfile.Namespace != tt.expectedNamespaceName {
+				t.Errorf("expected namespace to be %s, got %s",
+					tt.expectedNamespaceName, m.doc.OpenShiftCluster.Properties.HiveProfile.Namespace)
+			}
+		},
+		)
+	}
+}
+
+func createManagerForTests(t *testing.T, existingNamespaceName string) *manager {
+	fakeDb, _ := testdatabase.NewFakeOpenShiftClusters()
+	key := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
+
+	doc := &api.OpenShiftClusterDocument{
+		Key: strings.ToLower(key),
+		OpenShiftCluster: &api.OpenShiftCluster{
+			ID: key,
+			Properties: api.OpenShiftClusterProperties{
+				HiveProfile: api.HiveProfile{
+					Namespace: existingNamespaceName,
+				},
+			},
+		},
+	}
+
+	fixture := testdatabase.NewFixture().WithOpenShiftClusters(fakeDb)
+	fixture.AddOpenShiftClusterDocuments(doc)
+	err := fixture.Create()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m := &manager{
+		log: logrus.NewEntry(logrus.StandardLogger()),
+		db:  fakeDb,
+		doc: doc,
+	}
+	return m
 }
