@@ -4,6 +4,9 @@ package deploy
 // Licensed under the Apache License 2.0.
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"fmt"
 	"io/ioutil"
 	"reflect"
@@ -90,7 +93,7 @@ type Configuration struct {
 	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty" value:"required"`
 	RPParentDomainName                 *string       `json:"rpParentDomainName,omitempty" value:"required"`
 	RPVMSSCapacity                     *int          `json:"rpVmssCapacity,omitempty"`
-	SSHPublicKey                       *string       `json:"sshPublicKey,omitempty" value:"required"`
+	SSHPublicKey                       *string       `json:"sshPublicKey,omitempty"`
 	StorageAccountDomain               *string       `json:"storageAccountDomain,omitempty" value:"required"`
 	SubscriptionResourceGroupName      *string       `json:"subscriptionResourceGroupName,omitempty" value:"required"`
 	SubscriptionResourceGroupLocation  *string       `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
@@ -147,6 +150,16 @@ func (conf *RPConfig) validate() error {
 	configuration := conf.Configuration
 	v := reflect.ValueOf(*configuration)
 	missingFields := []string{}
+
+	if conf.Configuration.SSHPublicKey == nil {
+		key, err := rsa.GenerateKey(rand.Reader, 2048)
+		if err != nil {
+			return err
+		}
+		pubKey := x509.MarshalPKCS1PublicKey(&key.PublicKey)
+		publicKey := string(pubKey)
+		conf.Configuration.SSHPublicKey = (&publicKey)
+	}
 
 	for i := 0; i < v.NumField(); i++ {
 		required := v.Type().Field(i).Tag.Get("value") == "required"
