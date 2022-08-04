@@ -7,8 +7,8 @@ E2E_FLAGS ?= -test.timeout 180m -test.v -ginkgo.v -ginkgo.noColor
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
 FLUENTBIT_VERSION = 1.9.4-1
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)
-AUTOREST_VERSION = 3.3.2
-AUTOREST_IMAGE = "quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}"
+AUTOREST_VERSION = 3.6.2
+AUTOREST_IMAGE = "quay.io/anshulvermapatel/autorest:${AUTOREST_VERSION}"
 
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
