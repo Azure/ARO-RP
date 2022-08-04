@@ -5,6 +5,7 @@ package storageaccounts
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
@@ -30,6 +31,10 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 	rc, err := r.imageregistrycli.ImageregistryV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
 	if err != nil {
 		return err
+	}
+
+	if rc.Spec.Storage.Azure == nil {
+		return fmt.Errorf("azure storage field is nil in image registry config")
 	}
 
 	storageAccounts := []string{

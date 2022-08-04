@@ -104,6 +104,10 @@ func (m *manager) populateRegistryStorageAccountName(ctx context.Context) error 
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		if rc.Spec.Storage.Azure == nil {
+			return fmt.Errorf("azure storage field is nil in image registry config")
+		}
+
 		doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName = rc.Spec.Storage.Azure.AccountName
 		return nil
 	})
