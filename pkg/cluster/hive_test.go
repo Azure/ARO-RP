@@ -272,3 +272,51 @@ func createManagerForTests(t *testing.T, existingNamespaceName string) *manager 
 	}
 	return m
 }
+
+func TestHiveEnsureResources(t *testing.T) {
+	ctx := context.Background()
+	for _, tt := range []struct {
+		testName           string
+		clusterManagerMock func(mockCtrl *gomock.Controller, m *manager) *mock_hive.MockClusterManager
+		wantErr            string
+	}{
+		{
+			testName: "returns error if cluster manager returns error",
+			clusterManagerMock: func(mockCtrl *gomock.Controller, m *manager) *mock_hive.MockClusterManager {
+				mockClusterManager := mock_hive.NewMockClusterManager(mockCtrl)
+				mockClusterManager.EXPECT().CreateOrUpdate(ctx, m.subscriptionDoc, m.doc).Return(fmt.Errorf("cluster manager error"))
+				return mockClusterManager
+			},
+			wantErr: "cluster manager error",
+		},
+		{
+			testName: "does not return error if cluster manager is nil",
+		},
+		{
+			testName: "calls cluster manager CreateOrUpdate with correct parameters",
+			clusterManagerMock: func(mockCtrl *gomock.Controller, m *manager) *mock_hive.MockClusterManager {
+				mockClusterManager := mock_hive.NewMockClusterManager(mockCtrl)
+				mockClusterManager.EXPECT().CreateOrUpdate(ctx, m.subscriptionDoc, m.doc).Return(nil)
+				return mockClusterManager
+			},
+		},
+	} {
+		t.Run(tt.testName, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			m := createManagerForTests(t, "")
+
+			if tt.clusterManagerMock != nil {
+				m.hiveClusterManager = tt.clusterManagerMock(controller, m)
+			}
+
+			err := m.hiveEnsureResources(ctx)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+		},
+		)
+	}
+}
