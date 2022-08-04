@@ -23,6 +23,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/validation"
 	"github.com/Azure/go-autorest/tracing"
 )
 
@@ -43,7 +44,9 @@ func NewListClientWithBaseURI(baseURI string, subscriptionID string) ListClient 
 }
 
 // Versions the operation returns the installable OpenShift versions as strings.
-func (client ListClient) Versions(ctx context.Context) (result SetObject, err error) {
+// Parameters:
+// location - the name of Azure region.
+func (client ListClient) Versions(ctx context.Context, location string) (result SetObject, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/ListClient.Versions")
 		defer func() {
@@ -54,7 +57,15 @@ func (client ListClient) Versions(ctx context.Context) (result SetObject, err er
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	req, err := client.VersionsPreparer(ctx)
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: location,
+			Constraints: []validation.Constraint{{Target: "location", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("redhatopenshift.ListClient", "Versions", err.Error())
+	}
+
+	req, err := client.VersionsPreparer(ctx, location)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.ListClient", "Versions", nil, "Failure preparing request")
 		return
@@ -77,7 +88,12 @@ func (client ListClient) Versions(ctx context.Context) (result SetObject, err er
 }
 
 // VersionsPreparer prepares the Versions request.
-func (client ListClient) VersionsPreparer(ctx context.Context) (*http.Request, error) {
+func (client ListClient) VersionsPreparer(ctx context.Context, location string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"location":       autorest.Encode("path", location),
+		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
+	}
+
 	const APIVersion = "2022-09-04"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
@@ -86,7 +102,7 @@ func (client ListClient) VersionsPreparer(ctx context.Context) (*http.Request, e
 	preparer := autorest.CreatePreparer(
 		autorest.AsGet(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPath("/providers/Microsoft.RedHatOpenShift/listinstallversions"),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/listinstallversions", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
@@ -94,7 +110,7 @@ func (client ListClient) VersionsPreparer(ctx context.Context) (*http.Request, e
 // VersionsSender sends the Versions request. The method will close the
 // http.Response Body if it receives an error.
 func (client ListClient) VersionsSender(req *http.Request) (*http.Response, error) {
-	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // VersionsResponder handles the response to the Versions request. The method always
