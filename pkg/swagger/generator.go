@@ -93,7 +93,7 @@ var apis = map[string]*generator{
 		xmsEnum:            []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},
 		xmsSecretList:      []string{"kubeconfig", "kubeadminPassword"},
 		xmsIdentifiers:     []string{},
-		commonTypesVersion: "v2",
+		commonTypesVersion: "v3",
 		systemData:         true,
 		installableVersion: true,
 		kubeConfig:         true,
