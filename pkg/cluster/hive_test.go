@@ -320,3 +320,61 @@ func TestHiveEnsureResources(t *testing.T) {
 		)
 	}
 }
+
+func TestHiveDeleteResources(t *testing.T) {
+	ctx := context.Background()
+	for _, tt := range []struct {
+		testName           string
+		namespace          string
+		clusterManagerMock func(mockCtrl *gomock.Controller, namespaceName string) *mock_hive.MockClusterManager
+		wantErr            string
+	}{
+		{
+			testName: "doesn't return error if cluster manager is nil",
+		},
+		{
+			testName:  "deletes namespace if it exists",
+			namespace: "existing-namespace",
+			clusterManagerMock: func(mockCtrl *gomock.Controller, namespaceName string) *mock_hive.MockClusterManager {
+				mockClusterManager := mock_hive.NewMockClusterManager(mockCtrl)
+				mockClusterManager.EXPECT().Delete(ctx, namespaceName).Return(nil)
+				return mockClusterManager
+			},
+		},
+		{
+			testName: "doesn't attempt to delete namespace if it doesn't exist",
+			clusterManagerMock: func(mockCtrl *gomock.Controller, namespaceName string) *mock_hive.MockClusterManager {
+				mockClusterManager := mock_hive.NewMockClusterManager(mockCtrl)
+				mockClusterManager.EXPECT().Delete(ctx, namespaceName).Times(0)
+				return mockClusterManager
+			},
+		},
+		{
+			testName:  "returns error if cluster manager returns error",
+			namespace: "existing-namespace",
+			clusterManagerMock: func(mockCtrl *gomock.Controller, namespaceName string) *mock_hive.MockClusterManager {
+				mockClusterManager := mock_hive.NewMockClusterManager(mockCtrl)
+				mockClusterManager.EXPECT().Delete(ctx, namespaceName).Return(fmt.Errorf("cluster manager error"))
+				return mockClusterManager
+			},
+			wantErr: "cluster manager error",
+		},
+	} {
+		t.Run(tt.testName, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			m := createManagerForTests(t, tt.namespace)
+
+			if tt.clusterManagerMock != nil {
+				m.hiveClusterManager = tt.clusterManagerMock(controller, m.doc.OpenShiftCluster.Properties.HiveProfile.Namespace)
+			}
+
+			err := m.hiveDeleteResources(ctx)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+		})
+	}
+}
