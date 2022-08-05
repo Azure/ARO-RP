@@ -98,7 +98,7 @@ func (m *manager) adminUpdate() []steps.Step {
 		toRun = append(toRun,
 			steps.Action(m.hiveCreateNamespace),
 			steps.Action(m.hiveEnsureResources),
-			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, false),
 			steps.Action(m.hiveResetCorrelationData),
 		)
 	}
