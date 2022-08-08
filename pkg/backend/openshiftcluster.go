@@ -19,7 +19,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -102,7 +101,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		return err
 	}
 
-	hiveRestConfig, err := hive.HiveRestConfig()
+	hiveRestConfig, err := ocb.env.LiveConfig().HiveRestConfig(ctx, 1)
 	if err != nil {
 		log.Info(err) // TODO(hive): Update to fail once we have Hive everywhere in prod and dev
 	}
