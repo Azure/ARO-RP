@@ -537,6 +537,20 @@ func (mr *MockInterfaceMockRecorder) Listen() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Listen", reflect.TypeOf((*MockInterface)(nil).Listen))
 }
 
+// LiveConfig mocks base method.
+func (m *MockInterface) LiveConfig() liveconfig.Manager {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LiveConfig")
+	ret0, _ := ret[0].(liveconfig.Manager)
+	return ret0
+}
+
+// LiveConfig indicates an expected call of LiveConfig.
+func (mr *MockInterfaceMockRecorder) LiveConfig() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LiveConfig", reflect.TypeOf((*MockInterface)(nil).LiveConfig))
+}
+
 // Location mocks base method.
 func (m *MockInterface) Location() string {
 	m.ctrl.T.Helper()
