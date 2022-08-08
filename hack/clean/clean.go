@@ -54,6 +54,12 @@ func main() {
 	}
 }
 
+type settings struct {
+	ttl                 time.Duration
+	createdTag          string
+	deleteGroupPrefixes []string
+}
+
 func run(ctx context.Context, log *logrus.Entry) error {
 	for _, key := range []string{
 		"AZURE_CLIENT_ID",
@@ -92,71 +98,15 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		deleteGroupPrefixes = strings.Split(os.Getenv("AZURE_PURGE_RESOURCEGROUP_PREFIXES"), ",")
 	}
 
-	shouldDelete := func(resourceGroup mgmtfeatures.ResourceGroup, log *logrus.Entry) bool {
-		//assume its a prod cluster, dev clusters will have purge tag
-		devCluster := false
-		if resourceGroup.Tags != nil {
-			_, devCluster = resourceGroup.Tags["purge"]
-		}
-
-		// don't mess with clusters in RGs managed by a production RP. Although
-		// the production deny assignment will prevent us from breaking most
-		// things, that does not include us potentially detaching the cluster's
-		// NSG from the vnet, thus breaking inbound access to the cluster.
-		if !devCluster && resourceGroup.ManagedBy != nil && *resourceGroup.ManagedBy != "" {
-			return false
-		}
-
-		// if prefix is set we check if we need to evaluate this group for purge
-		// before we check other fields.
-		if len(deleteGroupPrefixes) > 0 {
-			isDeleteGroup := false
-			for _, deleteGroupPrefix := range deleteGroupPrefixes {
-				if strings.HasPrefix(*resourceGroup.Name, deleteGroupPrefix) {
-					isDeleteGroup = true
-					break
-				}
-			}
-			// return if prefix not matched
-			if !isDeleteGroup {
-				return false
-			}
-		}
-
-		for t := range resourceGroup.Tags {
-			if strings.ToLower(t) == defaultKeepTag {
-				log.Debugf("Group %s is to persist. SKIP.", *resourceGroup.Name)
-				return false
-			}
-		}
-
-		// azure tags is not consistent with lower/upper cases.
-		if _, ok := resourceGroup.Tags[createdTag]; !ok {
-			log.Debugf("Group %s does not have createdAt tag. SKIP.", *resourceGroup.Name)
-			return false
-		}
-
-		createdAt, err := time.Parse(time.RFC3339Nano, *resourceGroup.Tags[createdTag])
-		if err != nil {
-			log.Errorf("%s: %s", *resourceGroup.Name, err)
-			return false
-		}
-		if time.Since(createdAt) < ttl {
-			log.Debugf("Group %s is still less than TTL. SKIP.", *resourceGroup.Name)
-			return false
-		}
-
-		// TODO(mj): Fix this!
-		if contains(denylist, *resourceGroup.Name) {
-			return false
-		}
-
-		return true
+	settings := settings{
+		deleteGroupPrefixes: deleteGroupPrefixes,
+		ttl:                 ttl,
+		createdTag:          createdTag,
 	}
 
 	log.Infof("Starting the resource cleaner, DryRun: %t", *dryRun)
 
-	rc, err := purge.NewResourceCleaner(log, env, shouldDelete, *dryRun)
+	rc, err := purge.NewResourceCleaner(log, env, settings.shouldDelete, *dryRun)
 	if err != nil {
 		return err
 	}
@@ -171,4 +121,66 @@ func contains(s []string, e string) bool {
 		}
 	}
 	return false
+}
+
+func (s settings) shouldDelete(resourceGroup mgmtfeatures.ResourceGroup, log *logrus.Entry) bool {
+	//assume its a prod cluster, dev clusters will have purge tag
+	devCluster := false
+	if resourceGroup.Tags != nil {
+		_, devCluster = resourceGroup.Tags["purge"]
+	}
+
+	// don't mess with clusters in RGs managed by a production RP. Although
+	// the production deny assignment will prevent us from breaking most
+	// things, that does not include us potentially detaching the cluster's
+	// NSG from the vnet, thus breaking inbound access to the cluster.
+	if !devCluster && resourceGroup.ManagedBy != nil && *resourceGroup.ManagedBy != "" {
+		return false
+	}
+
+	// if prefix is set we check if we need to evaluate this group for purge
+	// before we check other fields.
+	if len(s.deleteGroupPrefixes) > 0 {
+		isDeleteGroup := false
+		for _, deleteGroupPrefix := range s.deleteGroupPrefixes {
+			if strings.HasPrefix(*resourceGroup.Name, deleteGroupPrefix) {
+				isDeleteGroup = true
+				break
+			}
+		}
+		// return if prefix not matched
+		if !isDeleteGroup {
+			return false
+		}
+	}
+
+	for t := range resourceGroup.Tags {
+		if strings.ToLower(t) == defaultKeepTag {
+			log.Debugf("Group %s is to persist. SKIP.", *resourceGroup.Name)
+			return false
+		}
+	}
+
+	// azure tags is not consistent with lower/upper cases.
+	if _, ok := resourceGroup.Tags[s.createdTag]; !ok {
+		log.Debugf("Group %s does not have createdAt tag. SKIP.", *resourceGroup.Name)
+		return false
+	}
+
+	createdAt, err := time.Parse(time.RFC3339Nano, *resourceGroup.Tags[s.createdTag])
+	if err != nil {
+		log.Errorf("%s: %s", *resourceGroup.Name, err)
+		return false
+	}
+	if time.Since(createdAt) < s.ttl {
+		log.Debugf("Group %s is still less than TTL. SKIP.", *resourceGroup.Name)
+		return false
+	}
+
+	// TODO(mj): Fix this!
+	if contains(denylist, *resourceGroup.Name) {
+		return false
+	}
+
+	return true
 }
