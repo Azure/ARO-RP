@@ -37,7 +37,7 @@ func (a *azureActions) ResourcesList(ctx context.Context) ([]byte, error) {
 	}
 
 	current := 0
-	var buff []string = make([]string, len(resources)+1)
+	var buff = make([]string, len(resources)+1)
 	byt, err := json.Marshal(armResources)
 	if err != nil {
 		a.log.Warnf("error when marshalling arm resources: %s", err)
