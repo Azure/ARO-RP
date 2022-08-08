@@ -6,6 +6,7 @@ package adminactions
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -25,7 +26,7 @@ func (a *azureActions) ResourcesList(ctx context.Context) ([]byte, error) {
 	}
 
 	// +4 because we expect +2 subnet and +1 vnets and optional +1 diskEncryptionSet
-	armResources := make([]arm.Resource, 0, len(resources)+4)
+	armResources := make([]arm.Resource, 0, 4)
 	armResources, err = a.appendAzureNetworkResources(ctx, armResources)
 	if err != nil {
 		a.log.Warnf("error when getting network resources: %s", err)
@@ -35,6 +36,20 @@ func (a *azureActions) ResourcesList(ctx context.Context) ([]byte, error) {
 		a.log.Warnf("error when getting DiskEncryptionSet resources: %s", err)
 	}
 
+	current := 0
+	var buff []string = make([]string, len(resources)+1)
+	byt, err := json.Marshal(armResources)
+	if err != nil {
+		a.log.Warnf("error when marshalling arm resources: %s", err)
+		buff[current] = "["
+	} else {
+		str := string(byt)
+		// remove trailing ']'
+		buff[current] = str[:len(str)-1]
+	}
+	current++
+
+	var armRes arm.Resource
 	for _, res := range resources {
 		apiVersion := azureclient.APIVersion(*res.Type)
 		if apiVersion == "" {
@@ -49,30 +64,37 @@ func (a *azureActions) ResourcesList(ctx context.Context) ([]byte, error) {
 			vm, err := a.virtualMachines.Get(ctx, clusterRGName, *res.Name, mgmtcompute.InstanceView)
 			if err != nil {
 				a.log.Warn(err) // can happen when the ARM cache is lagging
-				armResources = append(armResources, arm.Resource{
+				armRes = arm.Resource{
 					Resource: res,
-				})
-				continue
+				}
+			} else {
+				armRes = arm.Resource{
+					Resource: vm,
+				}
 			}
-			armResources = append(armResources, arm.Resource{
-				Resource: vm,
-			})
+
 		default:
 			gr, err := a.resources.GetByID(ctx, *res.ID, apiVersion)
 			if err != nil {
 				a.log.Warn(err) // can happen when the ARM cache is lagging
-				armResources = append(armResources, arm.Resource{
+				armRes = arm.Resource{
 					Resource: res,
-				})
-				continue
+				}
+			} else {
+				armRes = arm.Resource{
+					Resource: gr,
+				}
 			}
-			armResources = append(armResources, arm.Resource{
-				Resource: gr,
-			})
 		}
+		out, err := json.Marshal(armRes)
+		if err == nil {
+			buff[current] = string(out)
+		}
+		current++
 	}
 
-	return json.Marshal(armResources)
+	all := strings.Join(buff, ",") + "]"
+	return []byte(all), nil
 }
 
 func (a *azureActions) appendAzureNetworkResources(ctx context.Context, armResources []arm.Resource) ([]arm.Resource, error) {
