@@ -78,15 +78,17 @@ To bring new OCP release branch into ARO installer fork:
 5. For every commit you need to cherry-pick (in-order), do:
     ```sh
     # WARNING: when you reach the commit for `commit data/assets_vfsdata.go`, look ahead
-    git cherry-pick abc123
-    ./hack/build.sh   # fix any failures, then `git cherry-pick --continue`
-    ./hack/go-test.sh # fix any failures, then `git cherry-pick --continue`
+    git cherry-pick abc123 # may require manually fixing a merge
+    ./hack/build.sh   # fix any failures
+    ./hack/go-test.sh # fix any failures
+    # if you had to manually merge, you can now `git cherry-pick --continue`
     ```
     - When cherry-picking the specific patch `commit data/assets_vfsdata.go`, instead run:
         ```sh
-        git cherry-pick abc123
-        ./hack/build.sh   # fix any failures, then `git cherry-pick --continue`
-        ./hack/go-test.sh # fix any failures, then `git cherry-pick --continue`
+        git cherry-pick abc123 # may require manually fixing a merge
+        ./hack/build.sh   # fix any failures
+        ./hack/go-test.sh # fix any failures
+        # if you had to manually merge, you can now `git cherry-pick --continue`
         pushd ./hack/assets && go run ./assets.go && popd
         ./hack/build.sh   # fix any failures
         ./hack/go-test.sh # fix any failures
