@@ -163,7 +163,6 @@ func TestResetCorrelationData(t *testing.T) {
 }
 
 func TestCreateNamespace(t *testing.T) {
-
 	for _, tc := range []struct {
 		name             string
 		nsNames          []string
