@@ -34,12 +34,13 @@ type backend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
 
-	dbAsyncOperations   database.AsyncOperations
-	dbBilling           database.Billing
-	dbGateway           database.Gateway
-	dbOpenShiftClusters database.OpenShiftClusters
-	dbSubscriptions     database.Subscriptions
-	dbBackends          database.Backends
+	dbAsyncOperations              database.AsyncOperations
+	dbBilling                      database.Billing
+	dbGateway                      database.Gateway
+	dbOpenShiftClusters            database.OpenShiftClusters
+	dbSubscriptions                database.Subscriptions
+	dbBackends                     database.Backends
+	dbClusterManagerConfigurations database.ClusterManagerConfigurations
 
 	aead    encryption.AEAD
 	m       metrics.Emitter
@@ -54,6 +55,7 @@ type backend struct {
 
 	ocb *openShiftClusterBackend
 	sb  *subscriptionBackend
+	cmc *clusterManagerConfigurationBackend
 }
 
 // Runnable represents a runnable object
@@ -62,18 +64,19 @@ type Runnable interface {
 }
 
 // NewBackend returns a new runnable backend
-func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbGateway database.Gateway, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, dbBackends database.Backends, aead encryption.AEAD, m metrics.Emitter) (Runnable, error) {
-	b, err := newBackend(ctx, log, env, dbAsyncOperations, dbBilling, dbGateway, dbOpenShiftClusters, dbSubscriptions, dbBackends, aead, m)
+func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbGateway database.Gateway, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, dbBackends database.Backends, dbClusterManagerConfigurations database.ClusterManagerConfigurations, aead encryption.AEAD, m metrics.Emitter) (Runnable, error) {
+	b, err := newBackend(ctx, log, env, dbAsyncOperations, dbBilling, dbGateway, dbOpenShiftClusters, dbSubscriptions, dbBackends, dbClusterManagerConfigurations, aead, m)
 	if err != nil {
 		return nil, err
 	}
 
 	b.ocb = newOpenShiftClusterBackend(b)
 	b.sb = newSubscriptionBackend(b)
+	b.cmc = newClusterManagerConfigurationBackend(b)
 	return b, nil
 }
 
-func newBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbGateway database.Gateway, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, dbBackends database.Backends, aead encryption.AEAD, m metrics.Emitter) (*backend, error) {
+func newBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbGateway database.Gateway, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, dbBackends database.Backends, dbClusterManagerConfigurations database.ClusterManagerConfigurations, aead encryption.AEAD, m metrics.Emitter) (*backend, error) {
 	billing, err := billing.NewManager(env, dbBilling, dbSubscriptions, log)
 	if err != nil {
 		return nil, err
@@ -83,12 +86,13 @@ func newBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsy
 		baseLog: log,
 		env:     env,
 
-		dbAsyncOperations:   dbAsyncOperations,
-		dbBilling:           dbBilling,
-		dbGateway:           dbGateway,
-		dbOpenShiftClusters: dbOpenShiftClusters,
-		dbSubscriptions:     dbSubscriptions,
-		dbBackends:          dbBackends,
+		dbAsyncOperations:              dbAsyncOperations,
+		dbBilling:                      dbBilling,
+		dbGateway:                      dbGateway,
+		dbOpenShiftClusters:            dbOpenShiftClusters,
+		dbSubscriptions:                dbSubscriptions,
+		dbBackends:                     dbBackends,
+		dbClusterManagerConfigurations: dbClusterManagerConfigurations,
 
 		billing: billing,
 		aead:    aead,
@@ -134,6 +138,10 @@ func (b *backend) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 			break
 		}
 
+		// Currently the lease only applies to the
+		// ClusterManagerConfigurationBackend, but
+		// a future backend type could potentially
+		// use this too.
 		var backendDoc *api.BackendDocument
 		if b.tryLeaseTimer > 0 {
 			// This means we previously failed to get
@@ -166,7 +174,12 @@ func (b *backend) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 			b.baseLog.Error(err)
 		}
 
-		if !(ocbDidWork || sbDidWork) {
+		cmcDidWork, err := b.cmc.try(ctx, backendDoc)
+		if err != nil {
+			b.baseLog.Error(err)
+		}
+
+		if !(ocbDidWork || sbDidWork || cmcDidWork) {
 			<-t.C
 		}
 
