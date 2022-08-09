@@ -38,6 +38,34 @@ func (m *MockKubeActions) EXPECT() *MockKubeActionsMockRecorder {
 	return m.recorder
 }
 
+// CordonNode mocks base method.
+func (m *MockKubeActions) CordonNode(arg0 context.Context, arg1 string, arg2 bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CordonNode", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CordonNode indicates an expected call of CordonNode.
+func (mr *MockKubeActionsMockRecorder) CordonNode(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CordonNode", reflect.TypeOf((*MockKubeActions)(nil).CordonNode), arg0, arg1, arg2)
+}
+
+// DrainNode mocks base method.
+func (m *MockKubeActions) DrainNode(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DrainNode", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DrainNode indicates an expected call of DrainNode.
+func (mr *MockKubeActionsMockRecorder) DrainNode(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DrainNode", reflect.TypeOf((*MockKubeActions)(nil).DrainNode), arg0, arg1)
+}
+
 // KubeCreateOrUpdate mocks base method.
 func (m *MockKubeActions) KubeCreateOrUpdate(arg0 context.Context, arg1 *unstructured.Unstructured) error {
 	m.ctrl.T.Helper()
