@@ -128,7 +128,7 @@ pyenv:
 	python3 -m venv pyenv
 	. pyenv/bin/activate && \
 		pip install -U pip && \
-		pip install autopep8 azdev azure-mgmt-loganalytics==0.2.0 colorama ruamel.yaml wheel && \
+		pip install -r requirements.txt && \
 		azdev setup -r . && \
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
 
