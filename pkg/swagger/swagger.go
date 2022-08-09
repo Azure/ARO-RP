@@ -89,14 +89,14 @@ func Run(api, outputDir string) error {
 		},
 	}
 
-	if g.installableVersion {
-		s.Paths["/providers/Microsoft.RedHatOpenShift/listinstallversions"] = &PathItem{
+	if g.installVersionList {
+		s.Paths["/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/listinstallversions"] = &PathItem{
 			Get: &Operation{
 				Tags:        []string{"InstallVersions"},
-				Summary:     "Lists all OpenShift versions available to install.",
+				Summary:     "Lists all OpenShift versions available to install in the specified location.",
 				Description: "The operation returns the installable OpenShift versions as strings.",
 				OperationID: "List_Install_Versions",
-				Parameters:  g.populateParameters(0, "InstallVersions", "Install Versions"),
+				Parameters:  g.populateParameters(6, "InstallVersions", "Install Versions"),
 				Responses:   g.populateResponses("InstallVersions", false, http.StatusOK),
 			},
 		}
@@ -108,7 +108,7 @@ func Run(api, outputDir string) error {
 		names = append(names, "OpenShiftClusterAdminKubeconfig")
 	}
 
-	if g.installableVersion {
+	if g.installVersionList {
 		names = append(names, "InstallVersions")
 	}
 

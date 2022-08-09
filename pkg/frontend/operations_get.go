@@ -91,11 +91,11 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 				Origin: "user,system",
 			},
 			{
-				Name: "Microsoft.RedHatOpenShift/listInstallVersions/read",
+				Name: "Microsoft.RedHatOpenShift/locations/listInstallVersions/read",
 				Display: api.Display{
 					Provider:  "Azure Red Hat OpenShift",
 					Resource:  "listInstallVersions",
-					Operation: "Lists all OpenShift versions available to install",
+					Operation: "Lists all OpenShift versions available to install in the specified location",
 				},
 				Origin: "user,system",
 			},

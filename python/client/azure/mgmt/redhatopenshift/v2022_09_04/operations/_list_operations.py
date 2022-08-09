@@ -26,7 +26,7 @@ from azure.core.tracing.decorator import distributed_trace
 from azure.mgmt.core.exceptions import ARMErrorFormat
 
 from .. import models as _models
-from .._vendor import _convert_request
+from .._vendor import _convert_request, _format_url_section
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import,ungrouped-imports
@@ -39,6 +39,8 @@ _SERIALIZER.client_side_validation = False
 # fmt: off
 
 def build_install_versions_request(
+    subscription_id,  # type: str
+    location,  # type: str
     **kwargs  # type: Any
 ):
     # type: (...) -> HttpRequest
@@ -46,7 +48,13 @@ def build_install_versions_request(
 
     accept = "application/json"
     # Construct URL
-    _url = kwargs.pop("template_url", "/providers/Microsoft.RedHatOpenShift/listinstallversions")
+    _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/listinstallversions")  # pylint: disable=line-too-long
+    path_format_arguments = {
+        "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, 'str', min_length=1),
+        "location": _SERIALIZER.url("location", location, 'str', min_length=1),
+    }
+
+    _url = _format_url_section(_url, **path_format_arguments)
 
     # Construct parameters
     _query_parameters = kwargs.pop("params", {})  # type: Dict[str, Any]
@@ -90,13 +98,16 @@ class ListOperations(object):
     @distributed_trace
     def install_versions(
         self,
+        location,  # type: str
         **kwargs  # type: Any
     ):
         # type: (...) -> Any
-        """Lists all OpenShift versions available to install.
+        """Lists all OpenShift versions available to install in the specified location.
 
         The operation returns the installable OpenShift versions as strings.
 
+        :param location: The name of Azure region.
+        :type location: str
         :keyword callable cls: A custom type or function that will be passed the direct response
         :return: any, or the result of cls(response)
         :rtype: any
@@ -112,6 +123,8 @@ class ListOperations(object):
 
         
         request = build_install_versions_request(
+            subscription_id=self._config.subscription_id,
+            location=location,
             api_version=api_version,
             template_url=self.install_versions.metadata['url'],
         )
@@ -136,5 +149,5 @@ class ListOperations(object):
 
         return deserialized
 
-    install_versions.metadata = {'url': "/providers/Microsoft.RedHatOpenShift/listinstallversions"}  # type: ignore
+    install_versions.metadata = {'url': "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/listinstallversions"}  # type: ignore
 

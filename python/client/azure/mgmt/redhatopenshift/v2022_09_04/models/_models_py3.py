@@ -388,18 +388,23 @@ class Resource(msrest.serialization.Model):
     :ivar type: The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or
      "Microsoft.Storage/storageAccounts".
     :vartype type: str
+    :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
+     information.
+    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
     """
 
     _validation = {
         'id': {'readonly': True},
         'name': {'readonly': True},
         'type': {'readonly': True},
+        'system_data': {'readonly': True},
     }
 
     _attribute_map = {
         'id': {'key': 'id', 'type': 'str'},
         'name': {'key': 'name', 'type': 'str'},
         'type': {'key': 'type', 'type': 'str'},
+        'system_data': {'key': 'systemData', 'type': 'SystemData'},
     }
 
     def __init__(
@@ -412,10 +417,11 @@ class Resource(msrest.serialization.Model):
         self.id = None
         self.name = None
         self.type = None
+        self.system_data = None
 
 
 class TrackedResource(Resource):
-    """The resource model definition for an Azure Resource Manager tracked top level resource.
+    """The resource model definition for an Azure Resource Manager tracked top level resource which has 'tags' and a 'location'.
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
@@ -429,6 +435,9 @@ class TrackedResource(Resource):
     :ivar type: The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or
      "Microsoft.Storage/storageAccounts".
     :vartype type: str
+    :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
+     information.
+    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
     :ivar tags: A set of tags. Resource tags.
     :vartype tags: dict[str, str]
     :ivar location: Required. The geo-location where the resource lives.
@@ -439,6 +448,7 @@ class TrackedResource(Resource):
         'id': {'readonly': True},
         'name': {'readonly': True},
         'type': {'readonly': True},
+        'system_data': {'readonly': True},
         'location': {'required': True},
     }
 
@@ -446,6 +456,7 @@ class TrackedResource(Resource):
         'id': {'key': 'id', 'type': 'str'},
         'name': {'key': 'name', 'type': 'str'},
         'type': {'key': 'type', 'type': 'str'},
+        'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'tags': {'key': 'tags', 'type': '{str}'},
         'location': {'key': 'location', 'type': 'str'},
     }
@@ -483,12 +494,13 @@ class OpenShiftCluster(TrackedResource):
     :ivar type: The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or
      "Microsoft.Storage/storageAccounts".
     :vartype type: str
+    :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
+     information.
+    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
     :ivar tags: A set of tags. Resource tags.
     :vartype tags: dict[str, str]
     :ivar location: Required. The geo-location where the resource lives.
     :vartype location: str
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
     :ivar provisioning_state: The cluster provisioning state. Possible values include:
      "AdminUpdating", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
     :vartype provisioning_state: str or
@@ -516,17 +528,17 @@ class OpenShiftCluster(TrackedResource):
         'id': {'readonly': True},
         'name': {'readonly': True},
         'type': {'readonly': True},
-        'location': {'required': True},
         'system_data': {'readonly': True},
+        'location': {'required': True},
     }
 
     _attribute_map = {
         'id': {'key': 'id', 'type': 'str'},
         'name': {'key': 'name', 'type': 'str'},
         'type': {'key': 'type', 'type': 'str'},
+        'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'tags': {'key': 'tags', 'type': '{str}'},
         'location': {'key': 'location', 'type': 'str'},
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
         'cluster_profile': {'key': 'properties.clusterProfile', 'type': 'ClusterProfile'},
         'console_profile': {'key': 'properties.consoleProfile', 'type': 'ConsoleProfile'},
@@ -583,7 +595,6 @@ class OpenShiftCluster(TrackedResource):
          list[~azure.mgmt.redhatopenshift.v2022_09_04.models.IngressProfile]
         """
         super(OpenShiftCluster, self).__init__(tags=tags, location=location, **kwargs)
-        self.system_data = None
         self.provisioning_state = provisioning_state
         self.cluster_profile = cluster_profile
         self.console_profile = console_profile
@@ -917,7 +928,7 @@ class SystemData(msrest.serialization.Model):
      values include: "User", "Application", "ManagedIdentity", "Key".
     :vartype last_modified_by_type: str or
      ~azure.mgmt.redhatopenshift.v2022_09_04.models.CreatedByType
-    :ivar last_modified_at: The type of identity that last modified the resource.
+    :ivar last_modified_at: The timestamp of resource last modification (UTC).
     :vartype last_modified_at: ~datetime.datetime
     """
 
@@ -955,7 +966,7 @@ class SystemData(msrest.serialization.Model):
          values include: "User", "Application", "ManagedIdentity", "Key".
         :paramtype last_modified_by_type: str or
          ~azure.mgmt.redhatopenshift.v2022_09_04.models.CreatedByType
-        :keyword last_modified_at: The type of identity that last modified the resource.
+        :keyword last_modified_at: The timestamp of resource last modification (UTC).
         :paramtype last_modified_at: ~datetime.datetime
         """
         super(SystemData, self).__init__(**kwargs)

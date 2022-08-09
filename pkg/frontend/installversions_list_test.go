@@ -46,7 +46,6 @@ func TestListInstallVersions(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("%s: %s", method, tt.name), func(t *testing.T) {
-			resourceProviderNamespace := "Microsoft.RedHatOpenShift"
 			ti := newTestInfra(t).WithSubscriptions()
 			defer ti.done()
 			ti.fixture.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -74,7 +73,7 @@ func TestListInstallVersions(t *testing.T) {
 			go f.Run(ctx, nil, nil)
 
 			resp, b, err := ti.request(method,
-				fmt.Sprintf("https://server//providers/%s/listinstallversions?api-version=2022-09-04", resourceProviderNamespace),
+				fmt.Sprintf("https://server/subscriptions/%s/providers/Microsoft.RedHatOpenShift/locations/%s/listinstallversions?api-version=2022-09-04", mockSubID, ti.env.Location()),
 				nil, nil)
 			if err != nil {
 				t.Fatal(err)
