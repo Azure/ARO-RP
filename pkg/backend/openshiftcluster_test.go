@@ -306,7 +306,7 @@ func TestBackendTry(t *testing.T) {
 				return manager, nil
 			}
 
-			b, err := newBackend(ctx, log, _env, nil, nil, nil, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, nil, nil, &noop.Noop{})
+			b, err := newBackend(ctx, log, _env, nil, nil, nil, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, nil, nil, nil, &noop.Noop{})
 			if err != nil {
 				t.Fatal(err)
 			}
