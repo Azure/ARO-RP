@@ -51,6 +51,20 @@ func (mr *MockManagerMockRecorder) CreateOrUpdate(arg0, arg1, arg2 interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockManager)(nil).CreateOrUpdate), arg0, arg1, arg2)
 }
 
+// CreateOrUpdateFromIds mocks base method.
+func (m *MockManager) CreateOrUpdateFromIds(arg0 context.Context, arg1 []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOrUpdateFromIds", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateOrUpdateFromIds indicates an expected call of CreateOrUpdateFromIds.
+func (mr *MockManagerMockRecorder) CreateOrUpdateFromIds(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateFromIds", reflect.TypeOf((*MockManager)(nil).CreateOrUpdateFromIds), arg0, arg1)
+}
+
 // Get mocks base method.
 func (m *MockManager) Get(arg0 context.Context, arg1 string) (*network.Subnet, error) {
 	m.ctrl.T.Helper()
@@ -64,6 +78,21 @@ func (m *MockManager) Get(arg0 context.Context, arg1 string) (*network.Subnet, e
 func (mr *MockManagerMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockManager)(nil).Get), arg0, arg1)
+}
+
+// GetAll mocks base method.
+func (m *MockManager) GetAll(arg0 context.Context, arg1 []string) ([]*network.Subnet, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAll", arg0, arg1)
+	ret0, _ := ret[0].([]*network.Subnet)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAll indicates an expected call of GetAll.
+func (mr *MockManagerMockRecorder) GetAll(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAll", reflect.TypeOf((*MockManager)(nil).GetAll), arg0, arg1)
 }
 
 // GetHighestFreeIP mocks base method.
