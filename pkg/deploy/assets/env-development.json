@@ -65,7 +65,7 @@
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
-                        "10.0.0.0/9"
+                        "10.0.0.0/16"
                     ]
                 },
                 "subnets": [
@@ -90,13 +90,13 @@
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
-                        "10.129.0.0/24"
+                        "10.2.0.0/24"
                     ]
                 },
                 "subnets": [
                     {
                         "properties": {
-                            "addressPrefix": "10.129.0.0/24"
+                            "addressPrefix": "10.2.0.0/24"
                         },
                         "name": "GatewaySubnet"
                     }

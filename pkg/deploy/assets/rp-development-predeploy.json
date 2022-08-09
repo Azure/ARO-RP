@@ -64,13 +64,13 @@
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
-                        "10.128.0.0/24"
+                        "10.1.0.0/24"
                     ]
                 },
                 "subnets": [
                     {
                         "properties": {
-                            "addressPrefix": "10.128.0.0/24",
+                            "addressPrefix": "10.1.0.0/24",
                             "networkSecurityGroup": {
                                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]",
                                 "tags": null

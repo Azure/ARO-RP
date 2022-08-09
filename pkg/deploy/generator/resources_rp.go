@@ -136,7 +136,7 @@ func (g *generator) rpPESecurityGroup() *arm.Resource {
 }
 
 func (g *generator) rpVnet() *arm.Resource {
-	addressPrefix := "10.128.0.0/24"
+	addressPrefix := "10.1.0.0/24"
 	if g.production {
 		addressPrefix = "10.0.0.0/24"
 	}

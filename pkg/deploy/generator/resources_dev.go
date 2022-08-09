@@ -231,10 +231,10 @@ func (g *generator) devVnet() *arm.Resource {
 }
 
 func (g *generator) devVPNVnet() *arm.Resource {
-	return g.virtualNetwork("dev-vpn-vnet", "10.129.0.0/24", &[]mgmtnetwork.Subnet{
+	return g.virtualNetwork("dev-vpn-vnet", "10.2.0.0/24", &[]mgmtnetwork.Subnet{
 		{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-				AddressPrefix: to.StringPtr("10.129.0.0/24"),
+				AddressPrefix: to.StringPtr("10.2.0.0/24"),
 			},
 			Name: to.StringPtr("GatewaySubnet"),
 		},
