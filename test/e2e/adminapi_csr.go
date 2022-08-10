@@ -20,28 +20,28 @@ import (
 var _ = Describe("[Admin API] CertificateSigningRequest action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
-	const objName = "e2e-test-csr"
+	const prefix = "e2e-test-csr"
 	const namespace = "openshift"
-	const num = 4
+	const csrCount = 4
 
 	It("should be able to approve one or multiple CSRs", func() {
 		By("creating mock CSRs via Kubernetes API")
-		for i := 0; i < num; i++ {
-			csr := mockCSR(objName+strconv.Itoa(i), namespace)
+		for i := 0; i < csrCount; i++ {
+			csr := mockCSR(prefix+strconv.Itoa(i), namespace)
 			_, err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Create(context.Background(), csr, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 		}
 
 		defer func() {
 			By("deleting the mock CSRs via Kubernetes API")
-			for i := 0; i < num; i++ {
-				err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete(context.Background(), objName+strconv.Itoa(i), metav1.DeleteOptions{})
+			for i := 0; i < csrCount; i++ {
+				err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete(context.Background(), prefix+strconv.Itoa(i), metav1.DeleteOptions{})
 				Expect(err).NotTo(HaveOccurred())
 			}
 		}()
 
-		testCSRApproveOK(objName+"0", namespace)
-		testCSRMassApproveOK(objName, namespace, num)
+		testCSRApproveOK(prefix+"0", namespace)
+		testCSRMassApproveOK(prefix, namespace, csrCount)
 	})
 })
 
