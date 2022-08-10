@@ -136,18 +136,29 @@ func (g *generator) rpPESecurityGroup() *arm.Resource {
 }
 
 func (g *generator) rpVnet() *arm.Resource {
+	addressPrefix := "10.1.0.0/24"
+	if g.production {
+		addressPrefix = "10.0.0.0/24"
+	}
+
 	subnet := mgmtnetwork.Subnet{
 		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-			AddressPrefix: to.StringPtr("10.0.0.0/24"),
+			AddressPrefix: to.StringPtr(addressPrefix),
 			NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 				ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
+			},
+			ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+				{
+					Service:   to.StringPtr("Microsoft.Storage"),
+					Locations: &[]string{"*"},
+				},
 			},
 		},
 		Name: to.StringPtr("rp-subnet"),
 	}
 
 	if g.production {
-		subnet.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+		*subnet.ServiceEndpoints = append(*subnet.ServiceEndpoints, []mgmtnetwork.ServiceEndpointPropertiesFormat{
 			{
 				Service:   to.StringPtr("Microsoft.KeyVault"),
 				Locations: &[]string{"*"},
@@ -156,14 +167,10 @@ func (g *generator) rpVnet() *arm.Resource {
 				Service:   to.StringPtr("Microsoft.AzureCosmosDB"),
 				Locations: &[]string{"*"},
 			},
-			{
-				Service:   to.StringPtr("Microsoft.Storage"),
-				Locations: &[]string{"*"},
-			},
-		}
+		}...)
 	}
 
-	return g.virtualNetwork("rp-vnet", "10.0.0.0/24", &[]mgmtnetwork.Subnet{subnet}, nil, []string{"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"})
+	return g.virtualNetwork("rp-vnet", addressPrefix, &[]mgmtnetwork.Subnet{subnet}, nil, []string{"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"})
 }
 
 func (g *generator) rpPEVnet() *arm.Resource {

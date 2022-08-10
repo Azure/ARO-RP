@@ -15,13 +15,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-const HIVEENVVARIABLE = "HIVEKUBECONFIGPATH"
+const hiveKubeConfigEnvVar = "HIVEKUBECONFIGPATH"
 
 func HiveRestConfig() (*rest.Config, error) {
-	//only one for now
-	kubeConfigPath := os.Getenv(HIVEENVVARIABLE)
+	kubeConfigPath := os.Getenv(hiveKubeConfigEnvVar)
 	if kubeConfigPath == "" {
-		return nil, fmt.Errorf("missing %s env variable", HIVEENVVARIABLE)
+		return nil, fmt.Errorf("missing %s env variable", hiveKubeConfigEnvVar)
 	}
 
 	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)

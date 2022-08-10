@@ -11,9 +11,6 @@
         "fpServicePrincipalId": {
             "type": "string"
         },
-        "ipRules": {
-            "type": "array"
-        },
         "rpServicePrincipalId": {
             "type": "string"
         }

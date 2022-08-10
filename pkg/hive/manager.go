@@ -6,12 +6,12 @@ package hive
 import (
 	"context"
 
+	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
@@ -26,20 +27,22 @@ type ClusterManager interface {
 	CreateNamespace(ctx context.Context) (*corev1.Namespace, error)
 	CreateOrUpdate(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) error
 	Delete(ctx context.Context, namespace string) error
+	IsClusterDeploymentReady(ctx context.Context, namespace string) (bool, error)
+	ResetCorrelationData(ctx context.Context, namespace string) error
 }
 
 type clusterManager struct {
 	log *logrus.Entry
 	env env.Core
 
-	hiveClientset *hiveclient.Clientset
-	kubernetescli *kubernetes.Clientset
+	hiveClientset hiveclient.Interface
+	kubernetescli kubernetes.Interface
 
 	dh dynamichelper.Interface
 }
 
 // NewFromConfig creates a ClusterManager.
-// Not MUST NOT take cluster or subscription document as values
+// It MUST NOT take cluster or subscription document as values
 // in these structs can be change during the lifetime of the cluster manager.
 func NewFromConfig(log *logrus.Entry, _env env.Core, restConfig *rest.Config) (ClusterManager, error) {
 	hiveClientset, err := hiveclient.NewForConfig(restConfig)
@@ -91,24 +94,9 @@ func (hr *clusterManager) CreateNamespace(ctx context.Context) (*corev1.Namespac
 }
 
 func (hr *clusterManager) CreateOrUpdate(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) error {
-	namespace := doc.OpenShiftCluster.Properties.HiveProfile.Namespace
-
-	clusterSP, err := clusterSPToBytes(sub, doc.OpenShiftCluster)
+	resources, err := hr.resources(sub, doc)
 	if err != nil {
 		return err
-	}
-
-	resources := []kruntime.Object{
-		aroServiceKubeconfigSecret(namespace, doc.OpenShiftCluster.Properties.AROServiceKubeconfig),
-		clusterServicePrincipalSecret(namespace, clusterSP),
-		clusterDeployment(
-			namespace,
-			doc.OpenShiftCluster.Name,
-			doc.ID,
-			doc.OpenShiftCluster.Properties.InfraID,
-			doc.OpenShiftCluster.Location,
-			doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
-		),
 	}
 
 	err = dynamichelper.Prepare(resources)
@@ -131,4 +119,33 @@ func (hr *clusterManager) Delete(ctx context.Context, namespace string) error {
 	}
 
 	return err
+}
+
+func (hr *clusterManager) IsClusterDeploymentReady(ctx context.Context, namespace string) (bool, error) {
+	cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
+	if err == nil {
+		for _, cond := range cd.Status.Conditions {
+			if cond.Type == hivev1.ClusterReadyCondition && cond.Status == corev1.ConditionTrue {
+				return true, nil
+			}
+		}
+	}
+	return false, err
+}
+
+func (hr *clusterManager) ResetCorrelationData(ctx context.Context, namespace string) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		err = utillog.ResetHiveCorrelationData(cd)
+		if err != nil {
+			return err
+		}
+
+		_, err = hr.hiveClientset.HiveV1().ClusterDeployments(namespace).Update(ctx, cd, metav1.UpdateOptions{})
+		return err
+	})
 }

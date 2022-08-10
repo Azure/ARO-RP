@@ -102,6 +102,8 @@ func (m *manager) adminUpdate() []steps.Step {
 		toRun = append(toRun,
 			steps.Action(m.hiveCreateNamespace),
 			steps.Action(m.hiveEnsureResources),
+			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, false),
+			steps.Action(m.hiveResetCorrelationData),
 		)
 	}
 
@@ -132,6 +134,8 @@ func (m *manager) Update(ctx context.Context) error {
 		// hive has the latest credentials after rotation.
 		steps.Action(m.hiveCreateNamespace),
 		steps.Action(m.hiveEnsureResources),
+		steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+		steps.Action(m.hiveResetCorrelationData),
 	}
 
 	return m.runSteps(ctx, steps, currentTime)
@@ -172,22 +176,26 @@ func (m *manager) Install(ctx context.Context) error {
 			// installer code since it's easier, but in the future, this data
 			// should be collected from Hive's outputs where needed.
 			steps.Action(m.callInstaller, "call_installer"),
+			steps.Action(m.hiveCreateNamespace, "hive_create_namespace"),
+			steps.Action(m.hiveEnsureResources, "hive_ensure_resources"),
+			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true, "check_hive_cluster_deployment"),
+			steps.Action(m.hiveResetCorrelationData, "hive_reset_correlation_data"),
 
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs), "generate_kubeconfigs"),
 			steps.Action(m.ensureBillingRecord, "ensure_billing_record"),
-			steps.Action(m.initializeKubernetesClients, "initialize_kubernetes_clients"),
+			steps.Action(m.initializeKubernetesClients, "init_phase_initialize_kubernetes_clients"),
 			steps.Action(m.initializeOperatorDeployer, "initialize_operator_deployer"), // depends on kube clients
-			steps.Condition(m.apiServersReady, 30*time.Minute, true, "init_phase_check_api_server_condition"),
+			steps.Condition(m.apiServersReady, 30*time.Minute, true, "init_phase_check_api_server"),
 			steps.Action(m.ensureAROOperator, "ensure_aro_operator"),
 			steps.Action(m.incrInstallPhase, "incr_install_phase"),
 		},
 		api.InstallPhaseRemoveBootstrap: {
 			steps.Action(m.initializeKubernetesClients, "initialize_kubernetes_clients"),
-			steps.Action(m.initializeOperatorDeployer, "initialize_operator_deployer"), // depends on kube clients
+			steps.Action(m.initializeOperatorDeployer, "finishing_phase_initialize_operator_deployer"), // depends on kube clients
 			steps.Action(m.removeBootstrap, "remove_bootstrap"),
 			steps.Action(m.removeBootstrapIgnition, "remove_bootstrap_ignition"),
 			steps.Action(m.configureAPIServerCertificate, "configure_api_server_certificate"),
-			steps.Condition(m.apiServersReady, 30*time.Minute, true, "finishing_phase_check_api_server_condition"),
+			steps.Condition(m.apiServersReady, 30*time.Minute, true, "finishing_phase_check_api_server"),
 			steps.Condition(m.minimumWorkerNodesReady, 30*time.Minute, true, "check_minimum_worker_nodes"),
 			steps.Condition(m.operatorConsoleExists, 30*time.Minute, true, "check_operator_console"),
 			steps.Action(m.updateConsoleBranding, "update_console_branding"),
@@ -201,8 +209,6 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.configureIngressCertificate, "configure_ingress_certificate"),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute, true, "check_ingress_controller"),
 			steps.Action(m.configureDefaultStorageClass, "configure_default_storage_class"),
-			steps.Action(m.hiveCreateNamespace, "create_hive_namespace"),
-			steps.Action(m.hiveEnsureResources, "ensure_hive_resources"),
 			steps.Action(m.finishInstallation, "finish_installation"),
 		},
 	}

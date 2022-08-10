@@ -28,6 +28,8 @@ type KubeActions interface {
 	KubeList(ctx context.Context, groupKind, namespace string) ([]byte, error)
 	KubeCreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
 	KubeDelete(ctx context.Context, groupKind, namespace, name string) error
+	CordonNode(ctx context.Context, nodeName string, unschedulable bool) error
+	DrainNode(ctx context.Context, nodeName string) error
 	Upgrade(ctx context.Context, upgradeY bool) error
 	KubeGetPodLogs(ctx context.Context, namespace, name, containerName string) ([]byte, error)
 }

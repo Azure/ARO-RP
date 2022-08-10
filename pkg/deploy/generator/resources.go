@@ -113,14 +113,14 @@ func (g *generator) virtualNetwork(name, addressPrefix string, subnets *[]mgmtne
 
 // virtualNetworkPeering configures vnetA to peer with vnetB, two symmetrical
 // configurations have to be applied for a peering to work
-func (g *generator) virtualNetworkPeering(name, vnetB string) *arm.Resource {
+func (g *generator) virtualNetworkPeering(name, vnetB string, allowGatewayTransit, useRemoteGateways bool, dependsOn []string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.VirtualNetworkPeering{
 			VirtualNetworkPeeringPropertiesFormat: &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
 				AllowVirtualNetworkAccess: to.BoolPtr(true),
 				AllowForwardedTraffic:     to.BoolPtr(true),
-				AllowGatewayTransit:       to.BoolPtr(false),
-				UseRemoteGateways:         to.BoolPtr(false),
+				AllowGatewayTransit:       to.BoolPtr(allowGatewayTransit),
+				UseRemoteGateways:         to.BoolPtr(useRemoteGateways),
 				RemoteVirtualNetwork: &mgmtnetwork.SubResource{
 					ID: &vnetB,
 				},
@@ -130,6 +130,7 @@ func (g *generator) virtualNetworkPeering(name, vnetB string) *arm.Resource {
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		Type:       "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
 		Location:   "[resourceGroup().location]",
+		DependsOn:  dependsOn,
 	}
 }
 

@@ -5,9 +5,13 @@ package hive
 
 import (
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
-	"github.com/openshift/hive/apis/hive/v1/azure"
+	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/Azure/ARO-RP/pkg/api"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
 // Changing values of these constants most likely would require
@@ -17,6 +21,37 @@ const (
 	aroServiceKubeconfigSecretName    = "aro-service-kubeconfig-secret"
 	clusterServicePrincipalSecretName = "cluster-service-principal-secret"
 )
+
+func (hr *clusterManager) resources(sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) ([]kruntime.Object, error) {
+	namespace := doc.OpenShiftCluster.Properties.HiveProfile.Namespace
+	clusterSP, err := clusterSPToBytes(sub, doc.OpenShiftCluster)
+	if err != nil {
+		return nil, err
+	}
+
+	cd := clusterDeployment(
+		namespace,
+		doc.OpenShiftCluster.Name,
+		doc.ID,
+		doc.OpenShiftCluster.Properties.InfraID,
+		doc.OpenShiftCluster.Location,
+		doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
+	)
+	err = utillog.EnrichHiveWithCorrelationData(cd, doc.CorrelationData)
+	if err != nil {
+		return nil, err
+	}
+	err = utillog.EnrichHiveWithResourceID(cd, doc.OpenShiftCluster.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return []kruntime.Object{
+		aroServiceKubeconfigSecret(namespace, doc.OpenShiftCluster.Properties.AROServiceKubeconfig),
+		clusterServicePrincipalSecret(namespace, clusterSP),
+		cd,
+	}, nil
+}
 
 func aroServiceKubeconfigSecret(namespace string, kubeConfig []byte) *corev1.Secret {
 	return &corev1.Secret{
@@ -62,7 +97,7 @@ func clusterDeployment(namespace, clusterName, clusterID, infraID, location, API
 				InfraID:   infraID,
 			},
 			Platform: hivev1.Platform{
-				Azure: &azure.Platform{
+				Azure: &hivev1azure.Platform{
 					BaseDomainResourceGroupName: "",
 					Region:                      location,
 					CredentialsSecretRef: corev1.LocalObjectReference{

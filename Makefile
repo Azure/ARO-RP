@@ -7,7 +7,7 @@ E2E_FLAGS ?= -test.timeout 180m -test.v -ginkgo.v -ginkgo.noColor
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
 FLUENTBIT_VERSION = 1.9.4-1
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)
-AUTOREST_VERSION = 3.3.2
+AUTOREST_VERSION = 3.6.2
 AUTOREST_IMAGE = "quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}"
 
 ifneq ($(shell uname -s),Darwin)
@@ -128,7 +128,7 @@ pyenv:
 	python3 -m venv pyenv
 	. pyenv/bin/activate && \
 		pip install -U pip && \
-		pip install autopep8 azdev azure-mgmt-loganalytics==0.2.0 colorama ruamel.yaml wheel && \
+		pip install -r requirements.txt && \
 		azdev setup -r . && \
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
 

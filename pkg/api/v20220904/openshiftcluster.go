@@ -36,6 +36,9 @@ type OpenShiftCluster struct {
 
 	// The cluster properties.
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
+
+	// The cluster install version.
+	InstallVersion string `json:"installVersion,omitempty"`
 }
 
 // Tags represents an OpenShift cluster's tags.

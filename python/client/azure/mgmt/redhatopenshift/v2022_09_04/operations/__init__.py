@@ -15,9 +15,11 @@
 # --------------------------------------------------------------------------
 
 from ._operations import Operations
+from ._list_operations import ListOperations
 from ._open_shift_clusters_operations import OpenShiftClustersOperations
 
 __all__ = [
     'Operations',
+    'ListOperations',
     'OpenShiftClustersOperations',
 ]

@@ -23,7 +23,7 @@ from azure.mgmt.core import ARMPipelineClient
 
 from . import models
 from ._configuration import AzureRedHatOpenShiftClientConfiguration
-from .operations import OpenShiftClustersOperations, Operations
+from .operations import ListOperations, OpenShiftClustersOperations, Operations
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import,ungrouped-imports
@@ -37,6 +37,8 @@ class AzureRedHatOpenShiftClient(object):
 
     :ivar operations: Operations operations
     :vartype operations: azure.mgmt.redhatopenshift.v2022_09_04.operations.Operations
+    :ivar list: ListOperations operations
+    :vartype list: azure.mgmt.redhatopenshift.v2022_09_04.operations.ListOperations
     :ivar open_shift_clusters: OpenShiftClustersOperations operations
     :vartype open_shift_clusters:
      azure.mgmt.redhatopenshift.v2022_09_04.operations.OpenShiftClustersOperations
@@ -69,6 +71,7 @@ class AzureRedHatOpenShiftClient(object):
         self._deserialize = Deserializer(client_models)
         self._serialize.client_side_validation = False
         self.operations = Operations(self._client, self._config, self._serialize, self._deserialize)
+        self.list = ListOperations(self._client, self._config, self._serialize, self._deserialize)
         self.open_shift_clusters = OpenShiftClustersOperations(self._client, self._config, self._serialize, self._deserialize)
 
 
