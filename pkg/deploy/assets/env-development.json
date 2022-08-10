@@ -59,23 +59,16 @@
             "name": "dev-vpn-pip",
             "type": "Microsoft.Network/publicIPAddresses",
             "location": "[resourceGroup().location]",
-            "condition": "[equals(parameters('ciCapacity'), 0)]",
             "apiVersion": "2020-08-01"
         },
         {
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
-                        "10.0.0.0/9"
+                        "10.0.0.0/16"
                     ]
                 },
                 "subnets": [
-                    {
-                        "properties": {
-                            "addressPrefix": "10.0.0.0/24"
-                        },
-                        "name": "GatewaySubnet"
-                    },
                     {
                         "properties": {
                             "addressPrefix": "10.0.1.0/24",
@@ -95,11 +88,32 @@
         },
         {
             "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.2.0.0/24"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "properties": {
+                            "addressPrefix": "10.2.0.0/24"
+                        },
+                        "name": "GatewaySubnet"
+                    }
+                ]
+            },
+            "name": "dev-vpn-vnet",
+            "type": "Microsoft.Network/virtualNetworks",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2020-08-01"
+        },
+        {
+            "properties": {
                 "ipConfigurations": [
                     {
                         "properties": {
                             "subnet": {
-                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', 'GatewaySubnet')]"
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vpn-vnet', 'GatewaySubnet')]"
                             },
                             "publicIPAddress": {
                                 "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]"
@@ -135,11 +149,10 @@
             "name": "dev-vpn",
             "type": "Microsoft.Network/virtualNetworkGateways",
             "location": "[resourceGroup().location]",
-            "condition": "[equals(parameters('ciCapacity'), 0)]",
             "apiVersion": "2020-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]",
-                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]"
             ]
         },
         {
@@ -407,6 +420,84 @@
             "type": "Microsoft.Compute/virtualMachineScaleSets",
             "location": "[resourceGroup().location]",
             "apiVersion": "2020-12-01"
+        },
+        {
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": true,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"
+                }
+            },
+            "name": "dev-vpn-vnet/peering-dev-vnet",
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "apiVersion": "2020-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
+                "[resourceId('Microsoft.Network/virtualNetworkGateways', 'dev-vpn')]"
+            ],
+            "location": "[resourceGroup().location]"
+        },
+        {
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": true,
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]"
+                }
+            },
+            "name": "dev-vnet/peering-dev-vpn-vnet",
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "apiVersion": "2020-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
+                "[resourceId('Microsoft.Network/virtualNetworkGateways', 'dev-vpn')]"
+            ],
+            "location": "[resourceGroup().location]"
+        },
+        {
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": true,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"
+                }
+            },
+            "name": "dev-vpn-vnet/peering-rp-vnet",
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "apiVersion": "2020-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
+                "[resourceId('Microsoft.Network/virtualNetworkGateways', 'dev-vpn')]"
+            ],
+            "location": "[resourceGroup().location]"
+        },
+        {
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": true,
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]"
+                }
+            },
+            "name": "rp-vnet/peering-dev-vpn-vnet",
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "apiVersion": "2020-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
+                "[resourceId('Microsoft.Network/virtualNetworkGateways', 'dev-vpn')]"
+            ],
+            "location": "[resourceGroup().location]"
         }
     ]
 }

@@ -195,6 +195,12 @@
                             },
                             "serviceEndpoints": [
                                 {
+                                    "service": "Microsoft.Storage",
+                                    "locations": [
+                                        "*"
+                                    ]
+                                },
+                                {
                                     "service": "Microsoft.KeyVault",
                                     "locations": [
                                         "*"
@@ -202,12 +208,6 @@
                                 },
                                 {
                                     "service": "Microsoft.AzureCosmosDB",
-                                    "locations": [
-                                        "*"
-                                    ]
-                                },
-                                {
-                                    "service": "Microsoft.Storage",
                                     "locations": [
                                         "*"
                                     ]
