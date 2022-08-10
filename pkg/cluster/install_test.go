@@ -172,9 +172,10 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				kubernetescli: tt.kubernetescli,
 				configcli:     tt.configcli,
 				operatorcli:   tt.operatorcli,
+				now:           func() time.Time { return time.Now() },
 			}
 
-			err := m.runSteps(ctx, tt.steps, func() time.Time { return time.Now() })
+			err := m.runSteps(ctx, tt.steps)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -268,9 +269,10 @@ func TestInstallationTimeMetrics(t *testing.T) {
 			m := &manager{
 				log:            log,
 				metricsEmitter: fm,
+				now:            func() time.Time { return time.Now().Add(2 * time.Second) },
 			}
 
-			err := m.runSteps(ctx, tt.steps, func() time.Time { return time.Now().Add(2 * time.Second) })
+			err := m.runSteps(ctx, tt.steps)
 			if err != nil {
 				if len(fm.Metrics) != 0 {
 					t.Error("fake metrics obj should be empty when run steps failed")

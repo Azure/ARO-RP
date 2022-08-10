@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -99,6 +100,8 @@ type manager struct {
 	hiveClusterManager hive.ClusterManager
 
 	aroOperatorDeployer deploy.Operator
+
+	now func() time.Time
 }
 
 // New returns a cluster manager
@@ -170,5 +173,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		graph:   graph.NewManager(log, aead, storage),
 
 		hiveClusterManager: hr,
+		now:                func() time.Time { return time.Now() },
 	}, nil
 }

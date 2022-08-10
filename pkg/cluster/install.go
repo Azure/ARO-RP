@@ -27,14 +27,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func currentTime() time.Time {
-	return time.Now()
-}
-
 // AdminUpdate performs an admin update of an ARO cluster
 func (m *manager) AdminUpdate(ctx context.Context) error {
 	toRun := m.adminUpdate()
-	return m.runSteps(ctx, toRun, currentTime)
+	return m.runSteps(ctx, toRun)
 }
 
 func (m *manager) adminUpdate() []steps.Step {
@@ -138,7 +134,7 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.hiveResetCorrelationData),
 	}
 
-	return m.runSteps(ctx, steps, currentTime)
+	return m.runSteps(ctx, steps)
 }
 
 // callInstaller initialises and calls the Installer code. This will later be replaced with a call into Hive.
@@ -222,11 +218,11 @@ func (m *manager) Install(ctx context.Context) error {
 		return fmt.Errorf("unrecognised phase %s", m.doc.OpenShiftCluster.Properties.Install.Phase)
 	}
 	m.log.Printf("starting phase %s", m.doc.OpenShiftCluster.Properties.Install.Phase)
-	return m.runSteps(ctx, steps[m.doc.OpenShiftCluster.Properties.Install.Phase], currentTime)
+	return m.runSteps(ctx, steps[m.doc.OpenShiftCluster.Properties.Install.Phase])
 }
 
-func (m *manager) runSteps(ctx context.Context, s []steps.Step, currentTime func() time.Time) error {
-	stepsTimeRun, err := steps.Run(ctx, m.log, 10*time.Second, s, currentTime)
+func (m *manager) runSteps(ctx context.Context, s []steps.Step) error {
+	stepsTimeRun, err := steps.Run(ctx, m.log, 10*time.Second, s, m.now)
 	if err != nil {
 		m.gatherFailureLogs(ctx)
 	} else {
