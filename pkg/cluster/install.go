@@ -186,7 +186,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {
-			steps.Action(m.initializeKubernetesClients, "asdasdasdas_dasdasdasdas_asdasdasd"),
+			steps.Action(m.initializeKubernetesClients),
 			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 			steps.Action(m.removeBootstrap),
 			steps.Action(m.removeBootstrapIgnition),
