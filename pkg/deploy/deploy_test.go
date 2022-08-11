@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
-	"github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
+	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -30,7 +30,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_vmsscleaner "github.com/Azure/ARO-RP/pkg/util/mocks/vmsscleaner"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
-	test_log "github.com/Azure/ARO-RP/test/util/log"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestDeploy(t *testing.T) {
@@ -304,7 +304,7 @@ func TestRPParameters(t *testing.T) {
 						Value: "ver1234",
 					},
 					"ipRules": {
-						Value: []documentdb.IPAddressOrRange{},
+						Value: []mgmtdocumentdb.IPAddressOrRange{},
 					},
 				},
 			},
@@ -345,7 +345,7 @@ func TestRPParameters(t *testing.T) {
 						Value: "ver1234",
 					},
 					"ipRules": {
-						Value: []documentdb.IPAddressOrRange{},
+						Value: []mgmtdocumentdb.IPAddressOrRange{},
 					},
 				},
 			},
@@ -362,7 +362,7 @@ func TestRPParameters(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			hook, entry := test_log.New()
+			hook, entry := testlog.New()
 
 			mockUserAssignedIdentities := mock_msi.NewMockUserAssignedIdentitiesClient(controller)
 			mcc := mock_containerservice.NewMockManagedClustersClient(controller)
@@ -399,7 +399,7 @@ func TestRPParameters(t *testing.T) {
 				t.Error(i)
 			}
 
-			err = test_log.AssertLoggingOutput(hook, tt.wantEntries)
+			err = testlog.AssertLoggingOutput(hook, tt.wantEntries)
 			if err != nil {
 				t.Fatal(err)
 			}
