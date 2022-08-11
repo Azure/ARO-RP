@@ -9,7 +9,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
@@ -38,13 +37,7 @@ func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, er
 	if c.isLocalDevelopmentMode {
 		return liveconfig.NewDev(), nil
 	} else {
-		msiAuthorizer, err := c.NewMSIAuthorizer(MSIContextRP, c.Environment().ResourceManagerEndpoint)
-		if err != nil {
-			return nil, err
-		}
-
-		mcc := containerservice.NewManagedClustersClient(c.Environment(), c.SubscriptionID(), msiAuthorizer)
-		return liveconfig.NewProd(c.Location(), mcc), nil
+		return liveconfig.NewProd(), nil
 	}
 }
 

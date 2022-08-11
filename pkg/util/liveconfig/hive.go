@@ -5,27 +5,30 @@ package liveconfig
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
+	"os"
 
-	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func parseKubeconfig(credentials []mgmtcontainerservice.CredentialResult) (*rest.Config, error) {
-	res := make([]byte, base64.StdEncoding.DecodedLen(len(*credentials[0].Value)))
-	_, err := base64.StdEncoding.Decode(res, *credentials[0].Value)
-	if err != nil {
-		return nil, err
+const (
+	HIVEENVVARIABLE = "HIVEKUBECONFIGPATH"
+)
+
+func hiveRestConfig(ctx context.Context, index int) (*rest.Config, error) {
+	// Indexes above 1 have _index appended to them
+	envVar := HIVEENVVARIABLE
+	if index > 1 {
+		envVar = fmt.Sprintf("%s_%d", HIVEENVVARIABLE, index)
 	}
 
-	clientconfig, err := clientcmd.NewClientConfigFromBytes(res)
-	if err != nil {
-		return nil, err
+	kubeConfigPath := os.Getenv(envVar)
+	if kubeConfigPath == "" {
+		return nil, fmt.Errorf("missing %s env variable", HIVEENVVARIABLE)
 	}
 
-	restConfig, err := clientconfig.ClientConfig()
+	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -33,20 +36,11 @@ func parseKubeconfig(credentials []mgmtcontainerservice.CredentialResult) (*rest
 	return restConfig, nil
 }
 
+func (d *dev) HiveRestConfig(ctx context.Context, index int) (*rest.Config, error) {
+	return hiveRestConfig(ctx, index)
+}
+
+// pass through env var for now
 func (p *prod) HiveRestConfig(ctx context.Context, index int) (*rest.Config, error) {
-	cached, ext := p.cachedCredentials[index]
-	if ext {
-		return parseKubeconfig(cached)
-	}
-
-	rpResourceGroup := fmt.Sprintf("rp-%s", p.location)
-	rpResourceName := fmt.Sprintf("aro-aks-cluster-%03d", index)
-
-	res, err := p.managedClusters.ListClusterUserCredentials(ctx, rpResourceGroup, rpResourceName, "")
-	if err != nil {
-		return nil, err
-	}
-
-	p.cachedCredentials[index] = *res.Kubeconfigs
-	return parseKubeconfig(*res.Kubeconfigs)
+	return hiveRestConfig(ctx, index)
 }
