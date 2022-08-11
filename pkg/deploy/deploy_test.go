@@ -5,18 +5,32 @@ package deploy
 
 import (
 	"context"
+	"encoding/base64"
+	"errors"
 	"reflect"
 	"testing"
 
+	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
+	"github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
+	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
+	"github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	mock_containerservice "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/containerservice"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
+	mock_msi "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/msi"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_vmsscleaner "github.com/Azure/ARO-RP/pkg/util/mocks/vmsscleaner"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
+	test_log "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestDeploy(t *testing.T) {
@@ -225,6 +239,169 @@ func TestGetParameters(t *testing.T) {
 
 			if !reflect.DeepEqual(got, &tt.want) {
 				t.Errorf("%#v", got)
+			}
+		})
+	}
+}
+
+func TestRPParameters(t *testing.T) {
+	adminApiCaBundle := to.StringPtr("adminApiCaBundle")
+	RPImagePrefix := to.StringPtr("RPImagePrefix")
+	hiveKubeConfig := to.ByteSlicePtr([]byte("alreadybase64"))
+
+	principalID := uuid.MustFromString(uuid.DefaultGenerator.Generate())
+
+	for _, tt := range []struct {
+		name        string
+		mocks       func(*mock_containerservice.MockManagedClustersClient)
+		config      Configuration
+		want        arm.Parameters
+		wantEntries []map[string]types.GomegaMatcher
+	}{
+		{
+			name: "hive kubeconfig fetched",
+			mocks: func(mcc *mock_containerservice.MockManagedClustersClient) {
+				mcc.EXPECT().ListClusterUserCredentials(gomock.Any(), "rp-eastus", "aro-aks-cluster-001", "").Return(mgmtcontainerservice.CredentialResults{
+					Kubeconfigs: &[]mgmtcontainerservice.CredentialResult{
+						{
+							Name:  to.StringPtr("example"),
+							Value: hiveKubeConfig,
+						},
+					},
+				}, nil)
+			},
+			config: Configuration{
+				AdminAPICABundle: adminApiCaBundle,
+				RPImagePrefix:    RPImagePrefix,
+			},
+			want: arm.Parameters{
+				Parameters: map[string]*arm.ParametersParameter{
+					"adminApiCaBundle": {
+						Value: base64.StdEncoding.EncodeToString([]byte(*adminApiCaBundle)),
+					},
+					"azureCloudName": {
+						Value: "AzureCloud",
+					},
+					"gatewayServicePrincipalId": {
+						Value: principalID.String(),
+					},
+					"rpServicePrincipalId": {
+						Value: principalID.String(),
+					},
+					"rpImage": {
+						Value: "RPImagePrefix:ver1234",
+					},
+					"gatewayResourceGroupName": {
+						Value: "gwy",
+					},
+					"keyvaultDNSSuffix": {
+						Value: "vault.azure.net",
+					},
+					"hiveKubeconfig": {
+						Value: "alreadybase64",
+					},
+					"vmssName": {
+						Value: "ver1234",
+					},
+					"ipRules": {
+						Value: []documentdb.IPAddressOrRange{},
+					},
+				},
+			},
+		},
+		{
+			name: "hive kubeconfig missing",
+			mocks: func(mcc *mock_containerservice.MockManagedClustersClient) {
+				mcc.EXPECT().ListClusterUserCredentials(gomock.Any(), "rp-eastus", "aro-aks-cluster-001", "").Return(mgmtcontainerservice.CredentialResults{}, errors.New("whoops"))
+			},
+			config: Configuration{
+				AdminAPICABundle: adminApiCaBundle,
+				RPImagePrefix:    RPImagePrefix,
+			},
+			want: arm.Parameters{
+				Parameters: map[string]*arm.ParametersParameter{
+					"adminApiCaBundle": {
+						Value: base64.StdEncoding.EncodeToString([]byte(*adminApiCaBundle)),
+					},
+					"azureCloudName": {
+						Value: "AzureCloud",
+					},
+					"gatewayServicePrincipalId": {
+						Value: principalID.String(),
+					},
+					"rpServicePrincipalId": {
+						Value: principalID.String(),
+					},
+					"rpImage": {
+						Value: "RPImagePrefix:ver1234",
+					},
+					"gatewayResourceGroupName": {
+						Value: "gwy",
+					},
+					"keyvaultDNSSuffix": {
+						Value: "vault.azure.net",
+					},
+					"vmssName": {
+						Value: "ver1234",
+					},
+					"ipRules": {
+						Value: []documentdb.IPAddressOrRange{},
+					},
+				},
+			},
+			wantEntries: []map[string]types.GomegaMatcher{
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`whoops`),
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			hook, entry := test_log.New()
+
+			mockUserAssignedIdentities := mock_msi.NewMockUserAssignedIdentitiesClient(controller)
+			mcc := mock_containerservice.NewMockManagedClustersClient(controller)
+			mockenv := mock_env.NewMockCore(controller)
+
+			mockUserAssignedIdentities.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(mgmtmsi.Identity{
+				UserAssignedIdentityProperties: &mgmtmsi.UserAssignedIdentityProperties{
+					PrincipalID: &principalID,
+				},
+			}, nil)
+			mockenv.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
+			tt.mocks(mcc)
+
+			d := deployer{
+				log:     entry,
+				env:     mockenv,
+				version: "ver1234",
+				config: &RPConfig{
+					Location:                 "eastus",
+					Configuration:            &tt.config,
+					GatewayResourceGroupName: "gwy",
+					RPResourceGroupName:      "rp",
+				},
+				userassignedidentities: mockUserAssignedIdentities,
+				managedclusters:        mcc,
+			}
+
+			_, params, err := d.rpTemplateAndParameters(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for _, i := range deep.Equal(params, &tt.want) {
+				t.Error(i)
+			}
+
+			err = test_log.AssertLoggingOutput(hook, tt.wantEntries)
+			if err != nil {
+				t.Fatal(err)
 			}
 		})
 	}

@@ -7,6 +7,8 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"fmt"
 
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
@@ -18,28 +20,32 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
 
-func (d *deployer) DeployRP(ctx context.Context) error {
+func (d *deployer) rpTemplateAndParameters(ctx context.Context) (map[string]interface{}, *arm.Parameters, error) {
 	rpMSI, err := d.userassignedidentities.Get(ctx, d.config.RPResourceGroupName, "aro-rp-"+d.config.Location)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	gwMSI, err := d.userassignedidentities.Get(ctx, d.config.GatewayResourceGroupName, "aro-gateway-"+d.config.Location)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-
-	deploymentName := "rp-production-" + d.version
 
 	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProduction)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	var template map[string]interface{}
 	err = json.Unmarshal(asset, &template)
 	if err != nil {
-		return err
+		return nil, nil, err
+	}
+
+	hiveKubeconfig, err := d.fetchHiveKubeconfig(ctx)
+	if err != nil {
+		// Log and continue since we might not have Hive everywhere
+		d.log.Info(err)
 	}
 
 	// Special cases where the config isn't marshalled into the ARM template parameters cleanly
@@ -50,6 +56,11 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	if d.config.Configuration.ARMAPICABundle != nil {
 		parameters.Parameters["armApiCaBundle"] = &arm.ParametersParameter{
 			Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.ARMAPICABundle)),
+		}
+	}
+	if hiveKubeconfig != "" {
+		parameters.Parameters["hiveKubeconfig"] = &arm.ParametersParameter{
+			Value: hiveKubeconfig,
 		}
 	}
 	ipRules := d.convertToIPAddressOrRange(d.config.Configuration.ExtraCosmosDBIPs)
@@ -78,6 +89,17 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 		Value: d.env.Environment().ActualCloudName,
 	}
 
+	return template, parameters, nil
+}
+
+func (d *deployer) DeployRP(ctx context.Context) error {
+	deploymentName := "rp-production-" + d.version
+
+	template, parameters, err := d.rpTemplateAndParameters(ctx)
+	if err != nil {
+		return err
+	}
+
 	err = d.deploy(ctx, d.config.RPResourceGroupName, deploymentName, rpVMSSPrefix+d.version,
 		mgmtfeatures.Deployment{
 			Properties: &mgmtfeatures.DeploymentProperties{
@@ -92,6 +114,22 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	}
 
 	return d.configureDNS(ctx)
+}
+
+func (d *deployer) fetchHiveKubeconfig(ctx context.Context) (string, error) {
+	rpResourceGroup := fmt.Sprintf("rp-%s", d.config.Location)
+	rpResourceName := fmt.Sprintf("aro-aks-cluster-%03d", 1)
+
+	res, err := d.managedclusters.ListClusterUserCredentials(ctx, rpResourceGroup, rpResourceName, "")
+	if err != nil {
+		return "", err
+	}
+
+	if len(*res.Kubeconfigs) == 0 {
+		return "", errors.New("no AKS cluster detected")
+	}
+
+	return string(*(*res.Kubeconfigs)[0].Value), nil
 }
 
 func (d *deployer) configureDNS(ctx context.Context) error {

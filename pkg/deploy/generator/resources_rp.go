@@ -483,6 +483,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 	for _, variable := range []string{
 		"adminApiCaBundle",
 		"armApiCaBundle",
+		"hiveKubeconfig",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s='''", strings.ToUpper(variable)),
@@ -655,6 +656,9 @@ base64 -d <<<"$ADMINAPICABUNDLE" >/etc/aro-rp/admin-ca-bundle.pem
 if [[ -n "$ARMAPICABUNDLE" ]]; then
   base64 -d <<<"$ARMAPICABUNDLE" >/etc/aro-rp/arm-ca-bundle.pem
 fi
+if [[ -n "$HIVEKUBECONFIG" ]]; then
+  base64 -d <<<"$HIVEKUBECONFIG" >/etc/aro-rp/hivekubeconfig
+fi
 chown -R 1000:1000 /etc/aro-rp
 
 cat >/etc/sysconfig/mdm <<EOF
@@ -722,6 +726,7 @@ MDM_NAMESPACE=RP
 MDSD_ENVIRONMENT='$MDSDENVIRONMENT'
 RP_FEATURES='$RPFEATURES'
 RPIMAGE='$RPIMAGE'
+HIVEKUBECONFIGPATH='/etc/aro-rp/hivekubeconfig'
 EOF
 
 cat >/etc/systemd/system/aro-rp.service <<'EOF'
@@ -755,6 +760,7 @@ ExecStart=/usr/bin/docker run \
   -e MDM_NAMESPACE \
   -e MDSD_ENVIRONMENT \
   -e RP_FEATURES \
+  -e HIVEKUBECONFIGPATH \
   -m 2g \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \
@@ -825,6 +831,7 @@ KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=BBM
 RPIMAGE='$RPIMAGE'
+HIVEKUBECONFIGPATH='/etc/aro-rp/hivekubeconfig'
 EOF
 
 cat >/etc/systemd/system/aro-monitor.service <<'EOF'
@@ -846,6 +853,7 @@ ExecStart=/usr/bin/docker run \
   -e KEYVAULT_PREFIX \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
+  -e HIVEKUBECONFIGPATH \
   -m 2g \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
@@ -869,6 +877,7 @@ MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=Portal
 PORTAL_HOSTNAME='$LOCATION.admin.$RPPARENTDOMAINNAME'
 RPIMAGE='$RPIMAGE'
+HIVEKUBECONFIGPATH='/etc/aro-rp/hivekubeconfig'
 EOF
 
 cat >/etc/systemd/system/aro-portal.service <<'EOF'
@@ -893,6 +902,7 @@ ExecStart=/usr/bin/docker run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -e PORTAL_HOSTNAME \
+  -e HIVEKUBECONFIGPATH \
   -m 2g \
   -p 444:8444 \
   -p 2222:2222 \
