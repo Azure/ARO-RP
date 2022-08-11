@@ -151,4 +151,3 @@ export class OverviewComponent extends Component<OverviewComponentProps, IOvervi
             }
         }
     }
-                                

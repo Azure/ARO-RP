@@ -100,13 +100,13 @@ func (p *portal) clusterOperators(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := fetcher.ClusterOperators(ctx)
+	clusterOperators, err := fetcher.ClusterOperators(ctx)
 	if err != nil {
 		p.internalServerError(w, err)
 		return
 	}
 
-	b, err := json.MarshalIndent(res, "", "    ")
+	b, err := json.MarshalIndent(clusterOperators, "", "    ")
 	if err != nil {
 		p.internalServerError(w, err)
 		return
@@ -125,13 +125,13 @@ func (p *portal) nodes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := fetcher.Nodes(ctx)
+	nodes, err := fetcher.Nodes(ctx)
 	if err != nil {
 		p.internalServerError(w, err)
 		return
 	}
 
-	b, err := json.MarshalIndent(res, "", "    ")
+	b, err := json.MarshalIndent(nodes, "", "    ")
 	if err != nil {
 		p.internalServerError(w, err)
 		return
@@ -150,13 +150,13 @@ func (p *portal) machines(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := fetcher.Machines(ctx)
+	machines, err := fetcher.Machines(ctx)
 	if err != nil {
 		p.internalServerError(w, err)
 		return
 	}
 
-	b, err := json.MarshalIndent(res, "", "    ")
+	b, err := json.MarshalIndent(machines, "", "    ")
 	if err != nil {
 		p.internalServerError(w, err)
 		return
@@ -175,13 +175,13 @@ func (p *portal) machineSets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := fetcher.MachineSets(ctx)
+	machineSets, err := fetcher.MachineSets(ctx)
 	if err != nil {
 		p.internalServerError(w, err)
 		return
 	}
 
-	b, err := json.MarshalIndent(res, "", "    ")
+	b, err := json.MarshalIndent(machineSets, "", "    ")
 	if err != nil {
 		p.internalServerError(w, err)
 		return

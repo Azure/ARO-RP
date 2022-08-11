@@ -29,7 +29,6 @@ func TestNodes(t *testing.T) {
 		t.Error(err)
 	}
 
-	// lol golang
 	converted := make([]kruntime.Object, len(nodes.Items))
 	for i := range nodes.Items {
 		converted[i] = &nodes.Items[i]
@@ -40,7 +39,7 @@ func TestNodes(t *testing.T) {
 	_, log := testlog.New()
 
 	rf := &realFetcher{
-		kubernetescli: kubernetes,
+		kubernetesCli: kubernetes,
 		log:           log,
 	}
 
@@ -127,36 +126,41 @@ func TestNodes(t *testing.T) {
 	sort.SliceStable(info.Nodes, func(i, j int) bool { return info.Nodes[i].Name < info.Nodes[j].Name })
 	sort.SliceStable(expected.Nodes, func(i, j int) bool { return expected.Nodes[i].Name < expected.Nodes[j].Name })
 
-	dateRegex := regexp.MustCompile(`\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [\+-]\d{4} \w+`)
-	expDateFormat := "2021-08-10 12:21:47 +1000 AEST"
 	for i, node := range info.Nodes {
+		dateRegex := regexp.MustCompile(`\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [\+-]\d{4} \w+`)
 		if node.CreatedTime == "" {
-			t.Error("Node field CreatedTime was null, expected not null")
-		} else if !dateRegex.Match([]byte(node.CreatedTime)) {
-			t.Errorf("Node field CreatedTime was in incorrect format %v, expected format of %v",
-				node.CreatedTime, expDateFormat)
-		} else {
-			info.Nodes[i].CreatedTime = ""
+			t.Fatal("Node field CreatedTime was null, expected not null")
 		}
+
+		if !dateRegex.Match([]byte(node.CreatedTime)) {
+			expDateFormat := "2021-08-10 12:21:47 +1000 AEST"
+			t.Fatalf("Node field CreatedTime was in incorrect format %v, expected format of %v",
+				node.CreatedTime, expDateFormat)
+		}
+		info.Nodes[i].CreatedTime = ""
 
 		for j, condition := range node.Conditions {
 			if condition.LastHeartbeatTime == "" {
 				t.Error("Node field LastHeartbeatTime was null, expected not null")
-			} else if !dateRegex.Match([]byte(condition.LastHeartbeatTime)) {
-				t.Errorf("Node field LastHeartbeatTime was in incorrect format %v, expected format of %v",
-					condition.LastHeartbeatTime, expDateFormat)
-			} else {
-				info.Nodes[i].Conditions[j].LastHeartbeatTime = ""
 			}
 
-			if condition.LastTransitionTime == "" {
-				t.Error("Node field LastTransitionTime was null, expected not null")
-			} else if !dateRegex.Match([]byte(condition.LastTransitionTime)) {
-				t.Errorf("Node field LastTransitionTime was in incorrect format %v, expected format of %v",
-					condition.LastTransitionTime, expDateFormat)
-			} else {
-				info.Nodes[i].Conditions[j].LastTransitionTime = ""
+			if !dateRegex.Match([]byte(condition.LastHeartbeatTime)) {
+				expDateFormat := "2021-08-10 12:21:47 +1000 AEST"
+				t.Fatalf("Node field LastHeartbeatTime was in incorrect format %v, expected format of %v",
+					condition.LastHeartbeatTime, expDateFormat)
 			}
+			info.Nodes[i].Conditions[j].LastHeartbeatTime = ""
+
+			if condition.LastTransitionTime == "" {
+				t.Fatal("Node field LastTransitionTime was null, expected not null")
+			}
+
+			if !dateRegex.Match([]byte(condition.LastTransitionTime)) {
+				expDateFormat := "2021-08-10 12:21:47 +1000 AEST"
+				t.Fatalf("Node field LastTransitionTime was in incorrect format %v, expected format of %v",
+					condition.LastTransitionTime, expDateFormat)
+			}
+			info.Nodes[i].Conditions[j].LastTransitionTime = ""
 		}
 	}
 

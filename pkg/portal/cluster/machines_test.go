@@ -29,18 +29,17 @@ func TestMachines(t *testing.T) {
 		t.Error(err)
 	}
 
-	// lol golang
 	converted := make([]kruntime.Object, len(machines.Items))
 	for i := range machines.Items {
 		converted[i] = &machines.Items[i]
 	}
 
-	machineclient := machinefake.NewSimpleClientset(converted...)
+	machineClient := machinefake.NewSimpleClientset(converted...)
 
 	_, log := testlog.New()
 
 	rf := &realFetcher{
-		machineclient: machineclient,
+		machineClient: machineClient,
 		log:           log,
 	}
 
@@ -67,38 +66,34 @@ func TestMachines(t *testing.T) {
 	sort.SliceStable(info.Machines, func(i, j int) bool { return info.Machines[i].Name < info.Machines[j].Name })
 	sort.SliceStable(expected.Machines, func(i, j int) bool { return expected.Machines[i].Name < expected.Machines[j].Name })
 
-	dateRegex := regexp.MustCompile(`\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [\+-]\d{4} \w+`)
-	expDateFormat := "2021-08-10T12:21:47 +1000 AEST"
 	for i, machine := range info.Machines {
 		if machine.CreatedTime == "" {
-			t.Error("Node field CreatedTime was null, expected not null")
-			// } else if !dateRegex.Match( []byte machine.CreatedTime)) {
-			// 	t.Errorf("Node field CreatedTime was in incorrect format %v, expected format of %v", machine.CreatedTime, expDateFormat)
-		} else {
-			info.Machines[i].CreatedTime = ""
+			t.Fatal("Node field CreatedTime was null, expected not null")
 		}
+		info.Machines[i].CreatedTime = ""
 
 		if machine.LastUpdated == "" {
-			t.Error("Machine field LastUpdated was null, expected not null")
-			// } else if !dateRegex.Match([]byte(condition.LastUpdated)) {
-			// 	t.Errorf("Node field LastUpdated was in incorrect format %v, expected format of %v",
-			// 		condition.LastUpdated, expDateFormat)
-		} else {
-			info.Machines[i].LastUpdated = ""
+			t.Fatal("Machine field LastUpdated was null, expected not null")
 		}
+		info.Machines[i].LastUpdated = ""
 
 		if machine.LastOperationDate == "" {
-			t.Error("Node field LastOperationDate was null, expected not null")
-		} else if !dateRegex.Match([]byte(machine.LastOperationDate)) {
-			t.Errorf("Node field LastOperationDate was in incorrect format %v, expected format of %v",
-				machine.LastOperationDate, expDateFormat)
-		} else {
-			info.Machines[i].LastOperationDate = ""
+			t.Fatal("Node field LastOperationDate was null, expected not null")
 		}
+
+		dateRegex := regexp.MustCompile(`\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [\+-]\d{4} \w+`)
+
+		if !dateRegex.Match([]byte(machine.LastOperationDate)) {
+			expDateFormat := "2021-08-10T12:21:47 +1000 AEST"
+
+			t.Fatalf("Node field LastOperationDate was in incorrect format %v, expected format of %v",
+				machine.LastOperationDate, expDateFormat)
+		}
+		info.Machines[i].LastOperationDate = ""
 	}
 
 	// No need to check every single machine
 	for _, r := range deep.Equal(expected.Machines[0], info.Machines[0]) {
-		t.Error(r)
+		t.Fatal(r)
 	}
 }

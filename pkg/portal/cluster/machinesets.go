@@ -30,23 +30,14 @@ func MachineSetsFromMachineSetList(machineSets *machinev1beta1.MachineSetList) *
 	}
 
 	for _, machineSet := range machineSets.Items {
-		errorReason := "None"
-		if machineSet.Status.ErrorReason != nil {
-			errorReason = string(*machineSet.Status.ErrorReason)
-		}
-
-		errorMessage := "None"
-		if machineSet.Status.ErrorMessage != nil {
-			errorMessage = *machineSet.Status.ErrorMessage
-		}
 		final.MachineSets = append(final.MachineSets, MachineSetsInformation{
 			Name:            machineSet.Name,
 			Type:            machineSet.ObjectMeta.Labels["machine.openshift.io/cluster-api-machine-type"],
 			CreatedAt:       machineSet.ObjectMeta.CreationTimestamp.String(),
 			DesiredReplicas: int(*machineSet.Spec.Replicas),
 			Replicas:        int(machineSet.Status.Replicas),
-			ErrorReason:     errorReason,
-			ErrorMessage:    errorMessage,
+			ErrorReason:     getErrorReasonMachineSet(machineSet),
+			ErrorMessage:    getErrorMessageMachineSet(machineSet),
 		})
 	}
 
@@ -54,7 +45,7 @@ func MachineSetsFromMachineSetList(machineSets *machinev1beta1.MachineSetList) *
 }
 
 func (f *realFetcher) MachineSets(ctx context.Context) (*MachineSetListInformation, error) {
-	r, err := f.machineclient.MachineV1beta1().MachineSets("").List(ctx, metav1.ListOptions{})
+	r, err := f.machineClient.MachineV1beta1().MachineSets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -64,4 +55,21 @@ func (f *realFetcher) MachineSets(ctx context.Context) (*MachineSetListInformati
 
 func (c *client) MachineSets(ctx context.Context) (*MachineSetListInformation, error) {
 	return c.fetcher.MachineSets(ctx)
+}
+
+// Helper functions
+func getErrorMessageMachineSet(machineSet machinev1beta1.MachineSet) string {
+	errorMessage := "None"
+	if machineSet.Status.ErrorMessage != nil {
+		errorMessage = *machineSet.Status.ErrorMessage
+	}
+	return errorMessage
+}
+
+func getErrorReasonMachineSet(machineSet machinev1beta1.MachineSet) string {
+	errorReason := "None"
+	if machineSet.Status.ErrorReason != nil {
+		errorReason = string(*machineSet.Status.ErrorReason)
+	}
+	return errorReason
 }

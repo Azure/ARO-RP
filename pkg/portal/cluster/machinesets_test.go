@@ -29,18 +29,17 @@ func TestMachineSets(t *testing.T) {
 		t.Error(err)
 	}
 
-	// lol golang
 	converted := make([]kruntime.Object, len(machineSets.Items))
 	for i := range machineSets.Items {
 		converted[i] = &machineSets.Items[i]
 	}
 
-	machineclient := machinefake.NewSimpleClientset(converted...)
+	machineClient := machinefake.NewSimpleClientset(converted...)
 
 	_, log := testlog.New()
 
 	rf := &realFetcher{
-		machineclient: machineclient,
+		machineClient: machineClient,
 		log:           log,
 	}
 
@@ -53,11 +52,10 @@ func TestMachineSets(t *testing.T) {
 	}
 
 	for i, machineSet := range machineSets.Items {
-		if i < len(info.MachineSets) {
-			info.MachineSets[i].CreatedAt = machineSet.CreationTimestamp.In(time.UTC).String()
-		} else {
-			t.Error(err)
+		if i >= len(info.MachineSets) {
+			t.Fatal(err)
 		}
+		info.MachineSets[i].CreatedAt = machineSet.CreationTimestamp.In(time.UTC).String()
 	}
 
 	expected := &MachineSetListInformation{

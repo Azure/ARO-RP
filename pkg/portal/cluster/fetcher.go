@@ -42,9 +42,9 @@ type client struct {
 // structures. The concrete implementation of FetchClient wraps this.
 type realFetcher struct {
 	log           *logrus.Entry
-	configcli     configclient.Interface
-	kubernetescli kubernetes.Interface
-	machineclient machineclient.Interface
+	configCli     configclient.Interface
+	kubernetesCli kubernetes.Interface
+	machineClient machineclient.Interface
 }
 
 func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument) (*realFetcher, error) {
@@ -54,18 +54,18 @@ func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftCl
 		return nil, err
 	}
 
-	configcli, err := configclient.NewForConfig(restConfig)
+	configCli, err := configclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	kubernetescli, err := kubernetes.NewForConfig(restConfig)
+	kubernetesCli, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		log.Error(err)
 		return nil, err
 	}
 
-	machineclient, err := machineclient.NewForConfig(restConfig)
+	machineClient, err := machineclient.NewForConfig(restConfig)
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -73,9 +73,9 @@ func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftCl
 
 	return &realFetcher{
 		log:           log,
-		configcli:     configcli,
-		kubernetescli: kubernetescli,
-		machineclient: machineclient,
+		configCli:     configCli,
+		kubernetesCli: kubernetesCli,
+		machineClient: machineClient,
 	}, nil
 }
 
