@@ -31,6 +31,16 @@ helps['aro list'] = """
     text: az aro list -o table
 """
 
+helps['aro list-install-versions'] = """
+  type: command
+  short-summary: List versions available for installation.
+  examples:
+  - name: List install versions available for the East US region.
+    text: az aro list-install-versions --location eastus
+  - name: List install versions available for the East US region with table formatted output.
+    text: az aro list-install-versions --location eastus -o table
+"""
+
 helps['aro delete'] = """
   type: command
   short-summary: Delete a cluster.
