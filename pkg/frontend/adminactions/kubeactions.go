@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -27,7 +28,7 @@ type KubeActions interface {
 	KubeGet(ctx context.Context, groupKind, namespace, name string) ([]byte, error)
 	KubeList(ctx context.Context, groupKind, namespace string) ([]byte, error)
 	KubeCreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
-	KubeDelete(ctx context.Context, groupKind, namespace, name string) error
+	KubeDelete(ctx context.Context, groupKind, namespace, name string, force bool) error
 	CordonNode(ctx context.Context, nodeName string, unschedulable bool) error
 	DrainNode(ctx context.Context, nodeName string) error
 	Upgrade(ctx context.Context, upgradeY bool) error
@@ -140,11 +141,16 @@ func (k *kubeActions) KubeCreateOrUpdate(ctx context.Context, o *unstructured.Un
 	return err
 }
 
-func (k *kubeActions) KubeDelete(ctx context.Context, groupKind, namespace, name string) error {
+func (k *kubeActions) KubeDelete(ctx context.Context, groupKind, namespace, name string, force bool) error {
 	gvr, err := k.gvrResolver.Resolve(groupKind, "")
 	if err != nil {
 		return err
 	}
 
-	return k.dyn.Resource(*gvr).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	resourceDeleteOptions := metav1.DeleteOptions{}
+	if force {
+		resourceDeleteOptions.GracePeriodSeconds = to.Int64Ptr(0)
+	}
+
+	return k.dyn.Resource(*gvr).Namespace(namespace).Delete(ctx, name, resourceDeleteOptions)
 }
