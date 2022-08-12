@@ -96,6 +96,7 @@ const (
 	CloudErrorCodeResourceQuotaExceeded              = "ResourceQuotaExceeded"
 	CloudErrorCodeQuotaExceeded                      = "QuotaExceeded"
 	CloudErrorResourceProviderNotRegistered          = "ResourceProviderNotRegistered"
+	CloudErrorCodeInvalidVersion                     = "InvalidVersion"
 )
 
 // NewCloudError returns a new CloudError

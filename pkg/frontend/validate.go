@@ -163,3 +163,13 @@ func validateAdminVMSize(vmSize string) error {
 	}
 	return nil
 }
+
+func (f *frontend) validateVersion(currentVersion string) error {
+	installedVersions := f.getInstallVersions()
+	for _, version := range installedVersions {
+		if currentVersion == version {
+			return nil
+		}
+	}
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidVersion, "", "The provided verion '%s' is not supported or invalid", currentVersion)
+}
