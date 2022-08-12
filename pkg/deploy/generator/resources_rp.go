@@ -603,9 +603,9 @@ cat >/etc/fluentbit/fluentbit.conf <<'EOF'
 [FILTER]
 	Name modify
 	Match asyncqos
-	Remove_wildcard CLIENT_PRINCIPAL_NAME
-	Remove_wildcard FILE
-	Remove_wildcard COMPONENT
+	Remove CLIENT_PRINCIPAL_NAME
+	Remove FILE
+	Remove COMPONENT
 
 [FILTER]
 	Name rewrite_tag
