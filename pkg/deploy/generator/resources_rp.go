@@ -601,6 +601,13 @@ cat >/etc/fluentbit/fluentbit.conf <<'EOF'
 	Rule $LOGKIND asyncqos asyncqos true
 
 [FILTER]
+	Name modify
+	Match asyncqos
+	Remove_wildcard CLIENT_PRINCIPAL_NAME
+	Remove_wildcard FILE
+	Remove_wildcard COMPONENT
+
+[FILTER]
 	Name rewrite_tag
 	Match journald
 	Rule $LOGKIND ifxaudit ifxaudit false
