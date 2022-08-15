@@ -3,9 +3,10 @@ steps:
   displayName: Build Multi Stage Dockerfile
   inputs:
     repositoryName: aro-rp
-    dockerFileRelPath: ./Dockerfile.aro-multistage-onebranch
+    dockerFileRelPath: ./Dockerfile.aro-multistage
     dockerFileContextPath: ./
-    registry: cdpxlinux.azurecr.io
+    registry: cdpxb8e9ef87cd634085ab141c637806568c00.azurecr.io
+    arguments: --build-arg REGISTRY=registry.access.redhat.com
     saveImageToPath: aro-rp.tar
     buildkit: 1
     enable_network: true
