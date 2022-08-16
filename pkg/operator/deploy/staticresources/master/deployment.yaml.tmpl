@@ -2,12 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: aro-operator-master 
-    {{ if .HasVersion}}
-    version: {{ .Version }} 
-    {{ else }}
-    version: unknown
-    {{end}}
+    app: aro-operator-master
+    version: {{ .Version }}
   name: aro-operator-master
   namespace: openshift-azure-operator
 spec:
@@ -30,12 +26,12 @@ spec:
         args:
         - operator
         - master
-        image: "{{ .Image }}{{ if .HasVersion}}:{{ if .IsLocalDevelopment }}{{ .GitCommit }}{{ else }}{{ .Version }}{{end}}{{end}}"
+        image: "{{ .Image }}"
         name: aro-operator
         {{ if .IsLocalDevelopment}}
-        env: 
+        env:
         - name: "RP_MODE"
-          value: "development" 
+          value: "development"
         {{ end }}
         ports:
         - containerPort: 8080
