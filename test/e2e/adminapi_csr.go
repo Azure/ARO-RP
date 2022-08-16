@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"context"
+	"encoding/base64"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -23,11 +24,19 @@ var _ = Describe("[Admin API] CertificateSigningRequest action", func() {
 	const prefix = "e2e-test-csr"
 	const namespace = "openshift"
 	const csrCount = 4
+	const csrdataStr = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KTUlJQ3BEQ0NBWXdDQVFBd1h6RUxNQWtHQTFVRUJoTUNWVk14Q3pBSkJnTlZCQWdNQWtOUE1ROHdEUVlEVlFRSApEQVpFWlc1MlpYSXhFakFRQmdOVkJBb01DVTFwWTNKdmMyOW1kREVNTUFvR0ExVUVDd3dEUVZKUE1SQXdEZ1lEClZRUUREQWRsTW1VdVlYSnZNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQWxqWUUKcnFkU0hvV1p2MVdHSnN1RFZsaGExVU1BVnJiUk0xWjJHaWZJMzNETlBUWGFmQnN1QVI2ZGVCQVgyWmpybUozNQpuekNBZ0k5d1ltdlYwN3JtTEFYQlloRnJiTWtNN1pSU1ZFT01hL2ZXdlN5ZjJVQWxSdm5Jd0JmRkgwS1pRSGg5Cm5aV3RIZHQxSzRuZ3ZnM1NuQ3JEU0NBRUhsS2hoN3Jua1pyRkdrMldabFFoVklWUXFReFFzdmx3VStvWlhnNjQKdmpleDRuc3BZaXFXMERzakl6RzFsSEszWHczN3RGeWhNNzJ4SjByblBYVTRGWkJsWXUzWkVqOFVhSFBoTlcrdgpqZmg2c0hCbWFkcHpEMWRuNDJ4eXgrUGhOaCtKWTVVT3ZWWnR2MWx5UU44eEswL0VjK0Mvcm1mOWZPYmdFSkNVCm00Z3pFSXhhVGhCVURsN1JHd0lEQVFBQm9BQXdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBQnYvVHdUR0JvL20KcVJVK0djZ3Bsa3I1aDlKQVdSZjNNazV3Z1o0ZmlSZm85UEVaYUxJWkZYQ0V0elNHV3JZenFjbFpZQ3JuRmUySQpzdHdNUU8yb1pQUzNvcUVIcWs5Uk0rbzRUVmtkSldjY3hKV3RMY3JoTWRwVjVMc3VMam1qRS9jeDcrbEtUZkh1Cno0eDllYzJTajhnZmV3SFowZTkzZjFTT3ZhVGFMaTQrT3JkM3FTT0NyNE5ZSGhvVDJiM0pBUFpMSmkvVEFpb1gKOUxJNFJpVXNSSWlMUm45VDZidzczM0FLMkpNMXREWU9Tc0hXdmJrZ3FDOFlHMmpYUW9LNUpZOWdTN0V5TkF6NwpjT1plbkkwK2dVeE1leUlNN2I0S05YWFQ3NmxVdHZ5M2N3LzhwVmxQU01pTDFVZ2RpMXFZMDl0MW9FMmU4YnljCm5GdWhZOW5ERU53PQotLS0tLUVORCBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0K"
 
 	It("should be able to approve one or multiple CSRs", func() {
+
+		csrDataEncoded := []byte(csrdataStr)
+		csrDataDecoded := make([]byte, base64.StdEncoding.DecodedLen(len(csrDataEncoded)))
+		csrDataLength, err := base64.StdEncoding.Decode(csrDataDecoded, csrDataEncoded)
+		Expect(err).NotTo(HaveOccurred())
+		csrData := csrDataDecoded[:csrDataLength]
+
 		By("creating mock CSRs via Kubernetes API")
 		for i := 0; i < csrCount; i++ {
-			csr := mockCSR(prefix+strconv.Itoa(i), namespace)
+			csr := mockCSR(prefix+strconv.Itoa(i), namespace, csrData)
 			_, err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Create(context.Background(), csr, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 		}
@@ -99,7 +108,7 @@ func testCSRMassApproveOK(namePrefix, namespace string, csrCount int) {
 	}
 }
 
-func mockCSR(objName, namespace string) *certificatesv1.CertificateSigningRequest {
+func mockCSR(objName, namespace string, csrData []byte) *certificatesv1.CertificateSigningRequest {
 	csr := &certificatesv1.CertificateSigningRequest{
 		// Username, UID, Groups will be injected by API server.
 		TypeMeta: metav1.TypeMeta{Kind: "CertificateSigningRequest"},
@@ -108,7 +117,7 @@ func mockCSR(objName, namespace string) *certificatesv1.CertificateSigningReques
 			Namespace: namespace,
 		},
 		Spec: certificatesv1.CertificateSigningRequestSpec{
-			Request:    []byte("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KTUlJQ1ZqQ0NBVDRDQVFBd0VURVBNQTBHQTFVRUF3d0dZVzVuWld4aE1JSUJJakFOQmdrcWhraUc5dzBCQVFFRgpBQU9DQVE4QU1JSUJDZ0tDQVFFQTByczhJTHRHdTYxakx2dHhWTTJSVlRWMDNHWlJTWWw0dWluVWo4RElaWjBOCnR2MUZtRVFSd3VoaUZsOFEzcWl0Qm0wMUFSMkNJVXBGd2ZzSjZ4MXF3ckJzVkhZbGlBNVhwRVpZM3ExcGswSDQKM3Z3aGJlK1o2MVNrVHF5SVBYUUwrTWM5T1Nsbm0xb0R2N0NtSkZNMUlMRVI3QTVGZnZKOEdFRjJ6dHBoaUlFMwpub1dtdHNZb3JuT2wzc2lHQ2ZGZzR4Zmd4eW8ybmlneFNVekl1bXNnVm9PM2ttT0x1RVF6cXpkakJ3TFJXbWlECklmMXBMWnoyalVnald4UkhCM1gyWnVVV1d1T09PZnpXM01LaE8ybHEvZi9DdS8wYk83c0x0MCt3U2ZMSU91TFcKcW90blZtRmxMMytqTy82WDNDKzBERHk5aUtwbXJjVDBnWGZLemE1dHJRSURBUUFCb0FBd0RRWUpLb1pJaHZjTgpBUUVMQlFBRGdnRUJBR05WdmVIOGR4ZzNvK21VeVRkbmFjVmQ1N24zSkExdnZEU1JWREkyQTZ1eXN3ZFp1L1BVCkkwZXpZWFV0RVNnSk1IRmQycVVNMjNuNVJsSXJ3R0xuUXFISUh5VStWWHhsdnZsRnpNOVpEWllSTmU3QlJvYXgKQVlEdUI5STZXT3FYbkFvczFqRmxNUG5NbFpqdU5kSGxpT1BjTU1oNndLaTZzZFhpVStHYTJ2RUVLY01jSVUyRgpvU2djUWdMYTk0aEpacGk3ZnNMdm1OQUxoT045UHdNMGM1dVJVejV4T0dGMUtCbWRSeEgvbUNOS2JKYjFRQm1HCkkwYitEUEdaTktXTU0xMzhIQXdoV0tkNjVoVHdYOWl4V3ZHMkh4TG1WQzg0L1BHT0tWQW9FNkpsYWFHdTlQVmkKdjlOSjVaZlZrcXdCd0hKbzZXdk9xVlA3SVFjZmg3d0drWm89Ci0tLS0tRU5EIENFUlRJRklDQVRFIFJFUVVFU1QtLS0tLQo"),
+			Request:    csrData,
 			Usages:     []certificatesv1.KeyUsage{certificatesv1.UsageClientAuth},
 			SignerName: "kubernetes.io/kube-apiserver-client",
 		},
