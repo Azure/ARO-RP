@@ -5,9 +5,11 @@ package hive
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hivefake "github.com/openshift/hive/pkg/client/clientset/versioned/fake"
 	corev1 "k8s.io/api/core/v1"
@@ -17,6 +19,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 )
@@ -239,4 +242,47 @@ func TestCreateNamespace(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCreateOrUpdate(t *testing.T) {
+	subscriptionDoc := &api.SubscriptionDocument{
+		Subscription: &api.Subscription{
+			Properties: &api.SubscriptionProperties{
+				TenantID: "tenantID",
+			},
+		},
+	}
+	mockSubID := "00000000-0000-0000-0000-000000000000"
+	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
+	ocDoc := &api.OpenShiftClusterDocument{
+		ID: "id",
+		OpenShiftCluster: &api.OpenShiftCluster{
+			ID:       resourceID,
+			Name:     "name",
+			Location: "location",
+			Properties: api.OpenShiftClusterProperties{
+				InfraID: "infraID",
+				HiveProfile: api.HiveProfile{
+					Namespace: "namespace",
+				},
+				NetworkProfile: api.NetworkProfile{
+					APIServerPrivateEndpointIP: "apiServerPrivateEndpointIP",
+				},
+			},
+		},
+	}
+
+	controller := gomock.NewController(t)
+	dh := mock_dynamichelper.NewMockInterface(controller)
+	cm := clusterManager{dh: dh}
+
+	dh.EXPECT().Ensure(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	err := cm.CreateOrUpdate(context.Background(), subscriptionDoc, ocDoc)
+	if err != nil {
+		t.Errorf("failed to create or update: %v", err)
+	}
+
+	// There is nothing to check here, because the function we test has no effect on objects
+	// we pass – SubscriptionDocument and OpenShiftClusterDocument. It can be changed in
+	// the future.
 }
