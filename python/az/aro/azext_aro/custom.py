@@ -221,7 +221,7 @@ def aro_list_admin_credentials(cmd, client, resource_group_name, resource_name, 
     logger.info("Kubeconfig written to file: %s", file)
 
 
-def aro_list_install_versions(client, location):
+def aro_get_versions(client, location):
     return client.list.install_versions(location)
 
 
