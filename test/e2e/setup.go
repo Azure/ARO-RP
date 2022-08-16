@@ -158,7 +158,8 @@ func TakeScreenshot(wd WebDriver, e error) {
 
 func adminPortalSessionSetup() (string, *WebDriver) {
 	const (
-		port = 4444
+		hubPort  = 4444
+		hostPort = 8444
 	)
 
 	os.Setenv("SE_SESSION_REQUEST_TIMEOUT", "9000")
@@ -169,18 +170,18 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 	}
 	wd := WebDriver(nil)
 
-	_, err := url.ParseRequestURI("https://localhost:4444")
+	_, err := url.ParseRequestURI(fmt.Sprintf("https://localhost:%d", hubPort))
 	if err != nil {
 		panic(err)
 	}
 
 	for i := 0; i < 10; i++ {
-		wd, err = NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
-		time.Sleep(time.Second)
+		wd, err = NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", hubPort))
 		if wd != nil {
 			err = nil
 			break
 		}
+		time.Sleep(time.Second)
 	}
 
 	if err != nil {
@@ -194,14 +195,15 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 	// Navigate to the simple playground interface.
 	host, exists := os.LookupEnv("PORTAL_HOSTNAME")
 	if !exists {
-		host = "https://localhost:8444"
+		host = fmt.Sprintf("https://localhost:%d", hostPort)
 	}
+
 	if err := wd.Get(host + "/api/info"); err != nil {
 		log.Infof("Could not get to %s. With error : %s", host, err.Error())
 	}
+
 	cmd := exec.Command("go", "run", "./hack/portalauth", "-username", "test", "-groups", "$AZURE_PORTAL_ELEVATED_GROUP_IDS", "2>", "/dev/null")
 	output, err := cmd.Output()
-
 	if err != nil {
 		log.Fatalf("Error occurred creating session cookie\n Output: %s\n Error: %s\n", output, err)
 	}

@@ -18,6 +18,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	var wdPoint *WebDriver
 	var wd WebDriver
 	var host string
+
 	JustBeforeEach(func() {
 		host, wdPoint = adminPortalSessionSetup()
 		wd = *wdPoint
@@ -30,6 +31,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 			wd.Quit()
 		}
 	})
+
 	It("Should be able to populate cluster data correctly", func() {
 		err := wd.Wait(ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))
 		if err != nil {
@@ -66,6 +68,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 
 	It("Should be able to populate cluster info panel correctly", func() {
 		const CLUSTER_INFO_HEADINGS = 17
+
 		err := wd.Wait(ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))
 		if err != nil {
 			TakeScreenshot(wd, err)
@@ -143,7 +146,6 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		// Paste clipboard
 		filter.Click()
 		filter.SendKeys(ControlKey + "v")
-
 		resourceId, err := filter.GetAttribute("value")
 
 		if err != nil {
@@ -164,8 +166,8 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		button.Click()
 
 		wd.Wait(ElementIsLocated(ByID, "sshModal"))
-
 		wd.Wait(ElementIsLocated(ByID, "sshDropdown"))
+
 		sshDropdown, err := wd.FindElement(ByID, "sshDropdown")
 		if err != nil {
 			TakeScreenshot(wd, err)
