@@ -1,23 +1,19 @@
-# Azure DevOps Pipeline building rp images and pushing to int acr
+# Azure DevOps Pipeline for generating release notes
 trigger: none
 pr: none
 
 variables:
-- template: vars.yml
 - name: TAG
-- group: PROD CI Credentials
 
 jobs:
-- job: Build_and_push_images
+- job: Generate_release_notes
   condition: startsWith(variables['build.sourceBranch'], 'refs/tags/v2')
-  displayName: Build release
+  displayName: Generate release notes
   pool:
     name: ARO-CI
-    demands: go-1.17
 
   steps:
   - template: ./templates/template-checkout.yml
-  - template: ./templates/template-az-cli-login.yml
     parameters:
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
 
@@ -30,19 +26,6 @@ jobs:
 
       ## set the variable
       echo "##vso[task.setvariable variable=TAG]${TAG}"
-
-  - template: ./templates/template-push-images-to-acr-tagged.yml
-    parameters:
-      rpImageACR: $(RP_IMAGE_ACR)
-      imageTag: $(TAG)
-
-  - template: ./templates/template-az-cli-logout.yml
-  - script: |
-      cp -a --parents aro "$(Build.ArtifactStagingDirectory)"
-    displayName: Copy artifacts
-  - task: PublishBuildArtifacts@1
-    displayName: Publish Artifacts
-    name: aro_deployer
 
   - script: |
       set -xe
