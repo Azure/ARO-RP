@@ -90,7 +90,6 @@ type Configuration struct {
 	RPMDSDAccount                      *string       `json:"rpMdsdAccount,omitempty" value:"required"`
 	RPMDSDConfigVersion                *string       `json:"rpMdsdConfigVersion,omitempty" value:"required"`
 	RPMDSDNamespace                    *string       `json:"rpMdsdNamespace,omitempty" value:"required"`
-	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty" value:"required"`
 	RPParentDomainName                 *string       `json:"rpParentDomainName,omitempty" value:"required"`
 	RPVMSSCapacity                     *int          `json:"rpVmssCapacity,omitempty"`
 	SSHPublicKey                       *string       `json:"sshPublicKey,omitempty"`

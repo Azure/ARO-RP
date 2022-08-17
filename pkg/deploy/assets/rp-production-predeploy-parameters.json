@@ -26,9 +26,6 @@
         "keyvaultPrefix": {
             "value": ""
         },
-        "rpNsgSourceAddressPrefixes": {
-            "value": []
-        },
         "rpServicePrincipalId": {
             "value": ""
         }
