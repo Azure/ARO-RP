@@ -13,11 +13,13 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -27,7 +29,7 @@ import (
 type openShiftClusterBackend struct {
 	*backend
 
-	newManager func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument) (cluster.Interface, error)
+	newManager func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, *rest.Config) (cluster.Interface, error)
 }
 
 func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
@@ -100,7 +102,12 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		return err
 	}
 
-	m, err := ocb.newManager(ctx, log, ocb.env, ocb.dbOpenShiftClusters, ocb.dbGateway, ocb.aead, ocb.billing, doc, subscriptionDoc)
+	hiveRestConfig, err := hive.HiveRestConfig()
+	if err != nil {
+		log.Info(err) // TODO(hive): Update to fail once we have Hive everywhere in prod and dev
+	}
+
+	m, err := ocb.newManager(ctx, log, ocb.env, ocb.dbOpenShiftClusters, ocb.dbGateway, ocb.aead, ocb.billing, doc, subscriptionDoc, hiveRestConfig)
 	if err != nil {
 		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 	}
@@ -288,6 +295,7 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 
 func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, initialProvisioningState api.ProvisioningState, backendErr error) {
 	log = log.WithFields(logrus.Fields{
+		"LOGKIND":       "asyncqos",
 		"resultType":    utillog.SuccessResultType,
 		"operationType": initialProvisioningState.String(),
 	})

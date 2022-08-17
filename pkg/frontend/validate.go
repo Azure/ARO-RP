@@ -111,11 +111,38 @@ func validateAdminKubernetesObjects(method, groupKind, namespace, name string) e
 	return nil
 }
 
+func validateAdminKubernetesObjectsForceDelete(groupKind string) error {
+	if !strings.EqualFold(groupKind, "Pod") {
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Force deleting groupKind '%s' is forbidden.", groupKind)
+	}
+
+	return nil
+}
+
 func validateAdminVMName(vmName string) error {
 	if vmName == "" || !rxKubernetesString.MatchString(vmName) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmName '%s' is invalid.", vmName)
 	}
 
+	return nil
+}
+
+func validateAdminKubernetesPodLogs(namespace, podName, containerName string) error {
+	if podName == "" || !rxKubernetesString.MatchString(podName) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided pod name '%s' is invalid.", podName)
+	}
+
+	if namespace == "" || !rxKubernetesString.MatchString(namespace) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided namespace '%s' is invalid.", namespace)
+	}
+	// Checking if the namespace is an OpenShift namespace not a customer workload namespace.
+	if !utilnamespace.IsOpenShiftNamespace(namespace) {
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to the provided namespace '%s' is forbidden.", namespace)
+	}
+
+	if containerName == "" || !rxKubernetesString.MatchString(containerName) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided container name '%s' is invalid.", containerName)
+	}
 	return nil
 }
 

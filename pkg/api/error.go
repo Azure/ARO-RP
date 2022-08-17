@@ -85,6 +85,7 @@ const (
 	CloudErrorCodeForbidden                          = "Forbidden"
 	CloudErrorCodeInvalidSubscriptionState           = "InvalidSubscriptionState"
 	CloudErrorCodeInvalidServicePrincipalCredentials = "InvalidServicePrincipalCredentials"
+	CloudErrorCodeInvalidServicePrincipalToken       = "InvalidServicePrincipalToken"
 	CloudErrorCodeInvalidServicePrincipalClaims      = "InvalidServicePrincipalClaims"
 	CloudErrorCodeInvalidResourceProviderPermissions = "InvalidResourceProviderPermissions"
 	CloudErrorCodeInvalidServicePrincipalPermissions = "InvalidServicePrincipalPermissions"

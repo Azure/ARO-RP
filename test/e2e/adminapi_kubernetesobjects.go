@@ -27,8 +27,9 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 
 	When("in a standard openshift namespace", func() {
 		const namespace = "openshift"
+		const containerName = "e2e-test-container-name"
 
-		It("should be able to create, get, list, update and delete objects", func() {
+		It("should be able to create, get, list, update and delete objects, but force delete is only allowed for pods", func() {
 			defer func() {
 				// When ran successfully this test should delete the object,
 				// but we need to remove the object in case of failure
@@ -39,13 +40,22 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 				if !kerrors.IsNotFound(err) {
 					Expect(err).NotTo(HaveOccurred())
 				}
+				By("deleting the pod via Kubernetes API")
+				err = clients.Kubernetes.CoreV1().Pods(namespace).Delete(context.Background(), objName, metav1.DeleteOptions{})
+				// On successfully we expect NotFound error
+				if !kerrors.IsNotFound(err) {
+					Expect(err).NotTo(HaveOccurred())
+				}
 			}()
 
 			testConfigMapCreateOK(objName, namespace)
 			testConfigMapGetOK(objName, namespace)
 			testConfigMapListOK(objName, namespace)
 			testConfigMapUpdateOK(objName, namespace)
+			testConfigMapForceDeleteForbidden(objName, namespace)
 			testConfigMapDeleteOK(objName, namespace)
+			testPodCreateOK(containerName, objName, namespace)
+			testPodForceDeleteOK(objName, namespace)
 		})
 
 		testSecretOperationsForbidden(objName, namespace)
@@ -228,12 +238,28 @@ func testConfigMapUpdateOK(objName, namespace string) {
 	Expect(cm.Data).To(Equal(map[string]string{"key": "new_value"}))
 }
 
+func testConfigMapForceDeleteForbidden(objName, namespace string) {
+	By("force deleting the object via RP admin API")
+	params := url.Values{
+		"kind":      []string{"configmap"},
+		"namespace": []string{namespace},
+		"name":      []string{objName},
+		"force":     []string{"true"},
+	}
+	var cloudErr api.CloudError
+	resp, err := adminRequest(context.Background(), http.MethodDelete, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", params, nil, &cloudErr)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+	Expect(cloudErr.Code).To(Equal(api.CloudErrorCodeForbidden))
+}
+
 func testConfigMapDeleteOK(objName, namespace string) {
 	By("deleting the object via RP admin API")
 	params := url.Values{
 		"kind":      []string{"configmap"},
 		"namespace": []string{namespace},
 		"name":      []string{objName},
+		"force":     []string{"false"},
 	}
 	resp, err := adminRequest(context.Background(), http.MethodDelete, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", params, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
@@ -271,12 +297,56 @@ func testConfigMapDeleteForbidden(objName, namespace string) {
 		"kind":      []string{"configmap"},
 		"namespace": []string{namespace},
 		"name":      []string{objName},
+		"force":     []string{"false"},
 	}
 	var cloudErr api.CloudError
 	resp, err := adminRequest(context.Background(), http.MethodDelete, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", params, nil, &cloudErr)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 	Expect(cloudErr.Code).To(Equal(api.CloudErrorCodeForbidden))
+}
+
+func testPodCreateOK(containerName, objName, namespace string) {
+	By("creating a new pod via RP admin API")
+	obj := mockPod(containerName, objName, namespace)
+	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", nil, obj, nil)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+	By("checking that the pod was created via Kubernetes API")
+	pod, err := clients.Kubernetes.CoreV1().Pods(namespace).Get(context.Background(), objName, metav1.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(obj.Namespace).To(Equal(pod.Namespace))
+	Expect(obj.Name).To(Equal(pod.Name))
+	Expect(obj.Spec.Containers[0].Name).To(Equal(pod.Spec.Containers[0].Name))
+}
+
+func testPodForceDeleteOK(objName, namespace string) {
+	By("deleting the object via RP admin API")
+	params := url.Values{
+		"kind":      []string{"pod"},
+		"namespace": []string{namespace},
+		"name":      []string{objName},
+		"force":     []string{"true"},
+	}
+	resp, err := adminRequest(context.Background(), http.MethodDelete, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", params, nil, nil)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+	// To avoid flakes, we need it to be completely deleted before we can use it again
+	// in a separate run or in a separate It block
+	By("waiting for the pod to be deleted")
+	err = wait.PollImmediate(10*time.Second, time.Minute, func() (bool, error) {
+		_, err = clients.Kubernetes.CoreV1().Pods(namespace).Get(context.Background(), objName, metav1.GetOptions{})
+		if kerrors.IsNotFound(err) {
+			return true, nil
+		}
+		if err != nil {
+			log.Warn(err)
+		}
+		return false, nil // swallow error
+	})
+	Expect(err).NotTo(HaveOccurred())
 }
 
 func mockSecret(name, namespace string) corev1.Secret {

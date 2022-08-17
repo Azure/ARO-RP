@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -45,8 +44,6 @@ type kubeconfig struct {
 
 	dialer      proxy.Dialer
 	clientCache clientcache.ClientCache
-
-	newToken func() string
 }
 
 func New(baseLog *logrus.Entry,
@@ -72,8 +69,6 @@ func New(baseLog *logrus.Entry,
 
 		dialer:      dialer,
 		clientCache: clientcache.New(time.Hour),
-
-		newToken: func() string { return uuid.Must(uuid.NewV4()).String() },
 	}
 
 	rp := &httputil.ReverseProxy{
@@ -106,8 +101,7 @@ func (k *kubeconfig) new(w http.ResponseWriter, r *http.Request) {
 
 	elevated := len(middleware.GroupsIntersect(k.elevatedGroupIDs, ctx.Value(middleware.ContextKeyGroups).([]string))) > 0
 
-	token := k.newToken()
-
+	token := k.dbPortal.NewUUID()
 	portalDoc := &api.PortalDocument{
 		ID:  token,
 		TTL: int(kubeconfigNewTimeout / time.Second),

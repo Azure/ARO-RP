@@ -1,0 +1,327 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "variables": {
+        "clusterKeyvaultAccessPolicies": [
+            {
+                "tenantId": "[subscription().tenantId]",
+                "objectId": "[parameters('fpServicePrincipalId')]",
+                "permissions": {
+                    "secrets": [
+                        "get"
+                    ],
+                    "certificates": [
+                        "create",
+                        "delete",
+                        "get",
+                        "update"
+                    ]
+                }
+            }
+        ],
+        "dbTokenKeyvaultAccessPolicies": [
+            {
+                "tenantId": "[subscription().tenantId]",
+                "objectId": "[parameters('rpServicePrincipalId')]",
+                "permissions": {
+                    "secrets": [
+                        "get"
+                    ]
+                }
+            }
+        ],
+        "portalKeyvaultAccessPolicies": [
+            {
+                "tenantId": "[subscription().tenantId]",
+                "objectId": "[parameters('rpServicePrincipalId')]",
+                "permissions": {
+                    "secrets": [
+                        "get"
+                    ]
+                }
+            }
+        ],
+        "serviceKeyvaultAccessPolicies": [
+            {
+                "tenantId": "[subscription().tenantId]",
+                "objectId": "[parameters('rpServicePrincipalId')]",
+                "permissions": {
+                    "secrets": [
+                        "get",
+                        "list"
+                    ]
+                }
+            }
+        ]
+    },
+    "parameters": {
+        "deployNSGs": {
+            "type": "bool",
+            "defaultValue": false
+        },
+        "extraClusterKeyvaultAccessPolicies": {
+            "type": "array",
+            "defaultValue": []
+        },
+        "extraDBTokenKeyvaultAccessPolicies": {
+            "type": "array",
+            "defaultValue": []
+        },
+        "extraPortalKeyvaultAccessPolicies": {
+            "type": "array",
+            "defaultValue": []
+        },
+        "extraServiceKeyvaultAccessPolicies": {
+            "type": "array",
+            "defaultValue": []
+        },
+        "fpServicePrincipalId": {
+            "type": "string"
+        },
+        "gatewayResourceGroupName": {
+            "type": "string"
+        },
+        "keyvaultPrefix": {
+            "type": "string",
+            "maxLength": 20
+        },
+        "rpNsgSourceAddressPrefixes": {
+            "type": "array",
+            "defaultValue": []
+        },
+        "rpServicePrincipalId": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "properties": {
+                "securityRules": [
+                    {
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "443",
+                            "sourceAddressPrefix": "AzureResourceManager",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 120,
+                            "direction": "Inbound"
+                        },
+                        "name": "rp_in_arm"
+                    },
+                    {
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "445",
+                            "sourceAddressPrefix": "10.0.8.0/24",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 140,
+                            "direction": "Inbound"
+                        },
+                        "name": "dbtoken_in_gateway_445"
+                    },
+                    {
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "8445",
+                            "sourceAddressPrefix": "10.0.8.0/24",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 141,
+                            "direction": "Inbound"
+                        },
+                        "name": "dbtoken_in_gateway_8445"
+                    },
+                    {
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "10.0.8.0/24",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 145,
+                            "direction": "Inbound"
+                        },
+                        "name": "deny_in_gateway"
+                    },
+                    {
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "443",
+                            "sourceAddressPrefixes": "[parameters('rpNsgSourceAddressPrefixes')]",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 130,
+                            "direction": "Inbound"
+                        },
+                        "name": "rp_in_geneva"
+                    }
+                ]
+            },
+            "name": "rp-nsg",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "location": "[resourceGroup().location]",
+            "condition": "[parameters('deployNSGs')]",
+            "apiVersion": "2020-08-01"
+        },
+        {
+            "properties": {},
+            "name": "rp-pe-nsg",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "location": "[resourceGroup().location]",
+            "condition": "[parameters('deployNSGs')]",
+            "apiVersion": "2020-08-01"
+        },
+        {
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/24"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "properties": {
+                            "addressPrefix": "10.0.0.0/24",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]",
+                                "tags": null
+                            },
+                            "serviceEndpoints": [
+                                {
+                                    "service": "Microsoft.Storage",
+                                    "locations": [
+                                        "*"
+                                    ]
+                                },
+                                {
+                                    "service": "Microsoft.KeyVault",
+                                    "locations": [
+                                        "*"
+                                    ]
+                                },
+                                {
+                                    "service": "Microsoft.AzureCosmosDB",
+                                    "locations": [
+                                        "*"
+                                    ]
+                                }
+                            ]
+                        },
+                        "name": "rp-subnet"
+                    }
+                ]
+            },
+            "name": "rp-vnet",
+            "type": "Microsoft.Network/virtualNetworks",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2020-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"
+            ]
+        },
+        {
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.4.0/22"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "properties": {
+                            "addressPrefix": "10.0.4.0/22",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]",
+                                "tags": null
+                            },
+                            "serviceEndpoints": [
+                                {
+                                    "service": "Microsoft.Storage",
+                                    "locations": [
+                                        "*"
+                                    ]
+                                }
+                            ],
+                            "privateEndpointNetworkPolicies": "Disabled"
+                        },
+                        "name": "rp-pe-subnet"
+                    }
+                ]
+            },
+            "name": "rp-pe-vnet-001",
+            "type": "Microsoft.Network/virtualNetworks",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2020-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": "[concat(variables('clusterKeyvaultAccessPolicies'), parameters('extraClusterKeyvaultAccessPolicies'))]",
+                "enableSoftDelete": true
+            },
+            "apiVersion": "2019-09-01"
+        },
+        {
+            "name": "[concat(parameters('keyvaultPrefix'), '-dbt')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": "[concat(variables('dbTokenKeyvaultAccessPolicies'), parameters('extraDBTokenKeyvaultAccessPolicies'))]",
+                "enableSoftDelete": true
+            },
+            "apiVersion": "2019-09-01"
+        },
+        {
+            "name": "[concat(parameters('keyvaultPrefix'), '-por')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": "[concat(variables('portalKeyvaultAccessPolicies'), parameters('extraPortalKeyvaultAccessPolicies'))]",
+                "enableSoftDelete": true
+            },
+            "apiVersion": "2019-09-01"
+        },
+        {
+            "name": "[concat(parameters('keyvaultPrefix'), '-svc')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraServiceKeyvaultAccessPolicies'))]",
+                "enableSoftDelete": true
+            },
+            "apiVersion": "2019-09-01"
+        }
+    ]
+}

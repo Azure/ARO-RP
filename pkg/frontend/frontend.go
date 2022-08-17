@@ -217,6 +217,13 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterKubeConfigCredentials).Name("postOpenShiftClusterKubeConfigCredentials")
 
+	s = r.
+		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/listinstallversions").
+		Queries("api-version", "{api-version}").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.listInstallVersions).Name("listInstallVersions")
+
 	// Admin actions
 	s = r.
 		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/kubernetesobjects").
@@ -225,6 +232,13 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodGet).HandlerFunc(f.getAdminKubernetesObjects).Name("getAdminKubernetesObjects")
 	s.Methods(http.MethodPost).HandlerFunc(f.postAdminKubernetesObjects).Name("postAdminKubernetesObjects")
 	s.Methods(http.MethodDelete).HandlerFunc(f.deleteAdminKubernetesObjects).Name("deleteAdminKubernetesObjects")
+
+	// Pod logs
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/kubernetespodlogs").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.getAdminKubernetesPodLogs).Name("getAdminKubernetesPodLogs")
 
 	s = r.
 		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/resources").
@@ -285,6 +299,18 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Subrouter()
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postAdminReconcileFailedNIC).Name("reconcileFailedNic")
+
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/cordonnode").
+		Subrouter()
+
+	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterCordonNode).Name("postAdminOpenShiftClusterCordonNode")
+
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/drainnode").
+		Subrouter()
+
+	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterDrainNode).Name("postAdminOpenShiftClusterDrainNode")
 
 	// Operations
 	s = r.

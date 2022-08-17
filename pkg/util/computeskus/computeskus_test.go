@@ -255,3 +255,42 @@ func TestIsRestricted(t *testing.T) {
 		})
 	}
 }
+
+func TestSupportedOSDisk(t *testing.T) {
+	for _, tt := range []struct {
+		name                string
+		vmSku               string
+		supportsPremiumDisk string
+		wantOSDisk          string
+	}{
+		{
+			name:                "Premium disk supported on VMSize",
+			vmSku:               "premium_disk_supported",
+			supportsPremiumDisk: "True",
+			wantOSDisk:          premiumDisk,
+		},
+		{
+			name:                "Premium disk not supported on VMSize",
+			vmSku:               "premium_disk_not_supported",
+			supportsPremiumDisk: "False",
+			wantOSDisk:          standardDisk,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			resourceSku := &mgmtcompute.ResourceSku{
+				Name: &tt.vmSku,
+				Capabilities: &[]mgmtcompute.ResourceSkuCapabilities{
+					{
+						Name:  to.StringPtr(premiumDiskCapability),
+						Value: &tt.supportsPremiumDisk,
+					},
+				},
+			}
+
+			result := SupportedOSDisk(resourceSku)
+			if result != tt.wantOSDisk {
+				t.Errorf("got %v but want %v", result, tt.wantOSDisk)
+			}
+		})
+	}
+}

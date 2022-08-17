@@ -1,0 +1,42 @@
+# Azure DevOps Pipeline for generating release notes
+trigger: none
+pr: none
+
+variables:
+- name: TAG
+
+jobs:
+- job: Generate_release_notes
+  condition: startsWith(variables['build.sourceBranch'], 'refs/tags/v2')
+  displayName: Generate release notes
+  pool:
+    name: ARO-CI
+
+  steps:
+  - template: ./templates/template-checkout.yml
+    parameters:
+      azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+
+  - script: |
+      # read current annotated tag that started this pipeline
+      TAG=$(git describe --exact-match)
+
+      # there is no this pipeline ends with error
+      [[ -z ${TAG} ]] && exit 1
+
+      ## set the variable
+      echo "##vso[task.setvariable variable=TAG]${TAG}"
+
+  - script: |
+      set -xe
+      MESSAGE="$(git for-each-ref refs/tags/${TAG} --format='%(contents)')"
+      echo "$MESSAGE" > $(System.DefaultWorkingDirectory)/release.txt
+    displayName: Extract release notes from annotated tag
+  - task: GithubRelease@0
+    displayName: Publish ARO-RP release notes
+    inputs:
+      githubConnection: github.com_petrkotas
+      repositoryName: Azure/ARO-RP
+      action: create
+      releaseNotesFile: $(System.DefaultWorkingDirectory)/release.txt
+      addChangeLog: true

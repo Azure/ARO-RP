@@ -90,7 +90,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 									ProviderSpec: machinev1beta1.ProviderSpec{
 										Value: &kruntime.RawExtension{
 											Raw: []byte(fmt.Sprintf(`{
-	"apiVersion": "machine.openshift.io/v1beta1",
+	"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
 	"kind": "AzureMachineProviderSpec",
 	"osDisk": {
 		"diskSizeGB": 128

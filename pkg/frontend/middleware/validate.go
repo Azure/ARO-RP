@@ -8,12 +8,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (
@@ -46,8 +46,8 @@ func Validate(env env.Core, apis map[string]*api.Version) func(http.Handler) htt
 			}
 
 			if _, found := vars["subscriptionId"]; found {
-				_, err := uuid.FromString(vars["subscriptionId"])
-				if err != nil {
+				valid := uuid.IsValid(vars["subscriptionId"])
+				if !valid {
 					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionID, "", "The provided subscription identifier '%s' is malformed or invalid.", vars["subscriptionId"])
 					return
 				}
@@ -89,8 +89,8 @@ func Validate(env env.Core, apis map[string]*api.Version) func(http.Handler) htt
 			}
 
 			if _, found := vars["operationId"]; found {
-				_, err := uuid.FromString(vars["operationId"])
-				if err != nil {
+				valid := uuid.IsValid(vars["operationId"])
+				if !valid {
 					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidOperationID, "", "The provided operation identifier '%s' is malformed or invalid.", vars["operationId"])
 					return
 				}

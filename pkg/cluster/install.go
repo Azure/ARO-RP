@@ -14,14 +14,12 @@ import (
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
-	"github.com/openshift/installer/pkg/asset/installconfig"
-	"github.com/openshift/installer/pkg/asset/releaseimage"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/cluster/graph"
+	"github.com/Azure/ARO-RP/pkg/installer"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -44,7 +42,6 @@ func (m *manager) adminUpdate() []steps.Step {
 	// don't require a running cluster
 	toRun := []steps.Step{
 		steps.Action(m.initializeKubernetesClients), // must be first
-		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
 		steps.Action(m.ensureBillingRecord),         // belt and braces
 		steps.Action(m.ensureDefaults),
 		steps.Action(m.fixupClusterSPObjectID),
@@ -83,16 +80,26 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Action(m.configureIngressCertificate),
 			steps.Action(m.populateRegistryStorageAccountName),
 			steps.Action(m.ensureMTUSize),
-			steps.Action(m.populateCreatedAt), // TODO(mikalai): Remove after a round of admin updates
-
 		)
 	}
 
 	// Update the ARO Operator
 	if isEverything || isOperator {
 		toRun = append(toRun,
+			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 			steps.Action(m.ensureAROOperator),
 			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
+			steps.Action(m.ensureAROOperatorRunningDesiredVersion),
+		)
+	}
+
+	// Hive cluster adoption and reconciliation
+	if isEverything {
+		toRun = append(toRun,
+			steps.Action(m.hiveCreateNamespace),
+			steps.Action(m.hiveEnsureResources),
+			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, false),
+			steps.Action(m.hiveResetCorrelationData),
 		)
 	}
 
@@ -117,33 +124,40 @@ func (m *manager) Update(ctx context.Context) error {
 		// credentials rotation flow steps
 		steps.Action(m.createOrUpdateClusterServicePrincipalRBAC),
 		steps.Action(m.createOrUpdateDenyAssignment),
+		steps.Action(m.startVMs),
+		steps.Condition(m.apiServersReady, 30*time.Minute, true),
+		steps.Action(m.configureAPIServerCertificate),
+		steps.Action(m.configureIngressCertificate),
 		steps.Action(m.updateOpenShiftSecret),
 		steps.Action(m.updateAROSecret),
+		// Hive reconciliation: we mostly need it to make sure that
+		// hive has the latest credentials after rotation.
+		steps.Action(m.hiveCreateNamespace),
+		steps.Action(m.hiveEnsureResources),
+		steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+		steps.Action(m.hiveResetCorrelationData),
 	}
 
 	return m.runSteps(ctx, steps)
 }
 
+// callInstaller initialises and calls the Installer code. This will later be replaced with a call into Hive.
+func (m *manager) callInstaller(ctx context.Context) error {
+	i := installer.NewInstaller(m.log, m.env, m.doc.ID, m.doc.OpenShiftCluster, m.subscriptionDoc.Subscription, m.fpAuthorizer, m.deployments, m.graph)
+	return i.Install(ctx)
+}
+
 // Install installs an ARO cluster
 func (m *manager) Install(ctx context.Context) error {
-	var (
-		installConfig *installconfig.InstallConfig
-		image         *releaseimage.Image
-		g             graph.Graph
-	)
-
 	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
 			steps.Action(m.ensureACRToken),
 			steps.Action(m.ensureInfraID),
-			steps.Action(m.generateSSHKey),
+			steps.Action(m.ensureSSHKey),
+			steps.Action(m.ensureStorageSuffix),
 			steps.Action(m.populateMTUSize),
-			steps.Action(func(ctx context.Context) error {
-				var err error
-				installConfig, image, err = m.generateInstallConfig(ctx)
-				return err
-			}),
+
 			steps.Action(m.createDNS),
 			steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
 			steps.Action(m.clusterSPObjectID),
@@ -151,28 +165,26 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.deployStorageTemplate)),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGs)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.updateAPIIPEarly)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.createOrUpdateRouterIPEarly)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureGatewayCreate)),
-			steps.Action(func(ctx context.Context) error {
-				var err error
-				// Applies ARO-specific customisations to the InstallConfig
-				g, err = m.applyInstallConfigCustomisations(ctx, installConfig, image)
-				return err
-			}),
-			steps.Action(func(ctx context.Context) error {
-				// saves the graph to storage account
-				return m.persistGraph(ctx, g)
-			}),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGs)),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
-			steps.Action(m.ensureBillingRecord),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.deployResourceTemplate)),
 			steps.Action(m.createAPIServerPrivateEndpoint),
 			steps.Action(m.createCertificates),
+
+			// Run installer. For M5/M6 we will persist the graph inside the
+			// installer code since it's easier, but in the future, this data
+			// should be collected from Hive's outputs where needed.
+			steps.Action(m.callInstaller),
+			steps.Action(m.hiveCreateNamespace),
+			steps.Action(m.hiveEnsureResources),
+			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+			steps.Action(m.hiveResetCorrelationData),
+
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
+			steps.Action(m.ensureBillingRecord),
 			steps.Action(m.initializeKubernetesClients),
 			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
-			steps.Condition(m.bootstrapConfigMapReady, 30*time.Minute, true),
 			steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Action(m.ensureAROOperator),
 			steps.Action(m.incrInstallPhase),
@@ -225,7 +237,11 @@ func (m *manager) startInstallation(ctx context.Context) error {
 	var err error
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		if doc.OpenShiftCluster.Properties.Install == nil {
-			doc.OpenShiftCluster.Properties.Install = &api.Install{}
+			// set the install time which is used for the SAS token with which
+			// the bootstrap node retrieves its ignition payload
+			doc.OpenShiftCluster.Properties.Install = &api.Install{
+				Now: time.Now().UTC(),
+			}
 		}
 		return nil
 	})

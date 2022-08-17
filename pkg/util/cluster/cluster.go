@@ -22,14 +22,13 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
 	mgmtredhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-04-01/redhatopenshift"
-	"github.com/Azure/ARO-RP/pkg/deploy"
+	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -42,6 +41,7 @@ import (
 	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
 	redhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-04-01/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type Cluster struct {
@@ -147,7 +147,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 
 	visibility := api.VisibilityPublic
 
-	if os.Getenv("NO_INTERNET") != "" {
+	if os.Getenv("PRIVATE_CLUSTER") != "" || os.Getenv("NO_INTERNET") != "" {
 		visibility = api.VisibilityPrivate
 	}
 
@@ -161,13 +161,13 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		}
 	}
 
-	b, err := deploy.Asset(generator.FileClusterPredeploy)
+	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileClusterPredeploy)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
@@ -188,7 +188,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 
 	if c.ci {
 		// name is limited to 24 characters, but must be globally unique, so we generate one and try if it is available
-		kvName = "kv-" + uuid.Must(uuid.NewV4()).String()[:21]
+		kvName = "kv-" + uuid.DefaultGenerator.Generate()[:21]
 		result, err := c.vaultsClient.CheckNameAvailability(ctx, mgmtkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: to.StringPtr("Microsoft.KeyVault/vaults")})
 		if err != nil {
 			return err
@@ -259,7 +259,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 				_, err = c.roleassignments.Create(
 					ctx,
 					scope.resource,
-					uuid.Must(uuid.NewV4()).String(),
+					uuid.DefaultGenerator.Generate(),
 					mgmtauthorization.RoleAssignmentCreateParameters{
 						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
 							RoleDefinitionID: to.StringPtr("/subscriptions/" + c.env.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/" + scope.role),

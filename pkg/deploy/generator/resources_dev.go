@@ -87,6 +87,13 @@ EOF
 
 systemctl enable proxy.service
 
+cat >/etc/cron.weekly/yumupdate <<'EOF'
+#!/bin/bash
+
+yum update -y
+EOF
+chmod +x /etc/cron.weekly/yumupdate
+
 (sleep 30; reboot) &
 `))
 
@@ -205,19 +212,12 @@ func (g *generator) devVPNPip() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		Condition:  "[equals(parameters('ciCapacity'), 0)]", // TODO(mj): Refactor g.conditionStanza for better usage
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
 func (g *generator) devVnet() *arm.Resource {
-	return g.virtualNetwork("dev-vnet", "10.0.0.0/9", &[]mgmtnetwork.Subnet{
-		{
-			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-				AddressPrefix: to.StringPtr("10.0.0.0/24"),
-			},
-			Name: to.StringPtr("GatewaySubnet"),
-		},
+	return g.virtualNetwork("dev-vnet", "10.0.0.0/16", &[]mgmtnetwork.Subnet{
 		{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 				AddressPrefix: to.StringPtr("10.0.1.0/24"),
@@ -230,6 +230,17 @@ func (g *generator) devVnet() *arm.Resource {
 	}, nil, nil)
 }
 
+func (g *generator) devVPNVnet() *arm.Resource {
+	return g.virtualNetwork("dev-vpn-vnet", "10.2.0.0/24", &[]mgmtnetwork.Subnet{
+		{
+			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+				AddressPrefix: to.StringPtr("10.2.0.0/24"),
+			},
+			Name: to.StringPtr("GatewaySubnet"),
+		},
+	}, nil, nil)
+}
+
 func (g *generator) devVPN() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.VirtualNetworkGateway{
@@ -238,7 +249,7 @@ func (g *generator) devVPN() *arm.Resource {
 					{
 						VirtualNetworkGatewayIPConfigurationPropertiesFormat: &mgmtnetwork.VirtualNetworkGatewayIPConfigurationPropertiesFormat{
 							Subnet: &mgmtnetwork.SubResource{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', 'GatewaySubnet')]"),
+								ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vpn-vnet', 'GatewaySubnet')]"),
 							},
 							PublicIPAddress: &mgmtnetwork.SubResource{
 								ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]"),
@@ -273,11 +284,10 @@ func (g *generator) devVPN() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/virtualNetworkGateways"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		Condition:  "[equals(parameters('ciCapacity'), 0)]", // TODO(mj): Refactor g.conditionStanza for better usage
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]",
-			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
+			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
 		},
 	}
 }
@@ -328,7 +338,7 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel htop go-toolset-1.17.7-1.module+el8.6.0+14297+32a15e19
+yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel htop go-toolset-1.17.7-1.module+el8.6.0+14297+32a15e19 openvpn
 
 # Suppress emulation output for podman instead of docker for az acr compatability
 mkdir -p /etc/containers/
@@ -356,6 +366,13 @@ go-1.17=true
 GOLANG_FIPS=1
 XDG_RUNTIME_DIR=/run/user/1000
 EOF
+
+cat >/etc/cron.weekly/yumupdate <<'EOF'
+#!/bin/bash
+
+yum update -y
+EOF
+chmod +x /etc/cron.weekly/yumupdate
 
 cat >/etc/cron.hourly/tmpwatch <<'EOF'
 #!/bin/bash

@@ -74,6 +74,14 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 
 func (a *azureActions) VMRedeployAndWait(ctx context.Context, vmName string) error {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
+	vm, err := a.virtualMachines.Get(ctx, clusterRGName, vmName, mgmtcompute.InstanceView)
+	if err != nil {
+		return err
+	}
+	if vmDisk := vm.StorageProfile.OsDisk; vmDisk != nil && vmDisk.DiffDiskSettings != nil &&
+		vmDisk.Caching == "ReadOnly" && vmDisk.DiffDiskSettings.Option == "Local" && vmDisk.DiffDiskSettings.Placement == "CacheDisk" {
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "VM '%s' has an Ephemeral Disk OS and cannot be redeployed.", vmName)
+	}
 	return a.virtualMachines.RedeployAndWait(ctx, clusterRGName, vmName)
 }
 

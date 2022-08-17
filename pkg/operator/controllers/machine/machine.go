@@ -5,9 +5,7 @@ package machine
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"strings"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,27 +37,13 @@ func (r *Reconciler) machineValid(ctx context.Context, machine *machinev1beta1.M
 		return []error{fmt.Errorf("machine %s: provider spec missing", machine.Name)}
 	}
 
-	var machineProviderSpec *machinev1beta1.AzureMachineProviderSpec
-
-	if strings.Contains(string(machine.Spec.ProviderSpec.Value.Raw), "azureproviderconfig.openshift.io") {
-		machineProviderSpec = &machinev1beta1.AzureMachineProviderSpec{}
-		err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, machineProviderSpec)
-		if err != nil {
-			return []error{fmt.Errorf("machine %s: failed to unmarshal the 'azureproviderconfig.openshift.io' provider spec: %q", machine.Name, err.Error())}
-		}
-	} else {
-		o, _, err := scheme.Codecs.UniversalDeserializer().Decode(machine.Spec.ProviderSpec.Value.Raw, nil, nil)
-		if err != nil {
-			return []error{err}
-		}
-
-		var ok bool
-		machineProviderSpec, ok = o.(*machinev1beta1.AzureMachineProviderSpec)
-		if !ok {
-			// This should never happen: codecs uses scheme that has only one registered type
-			// and if something is wrong with the provider spec - decoding should fail
-			return []error{fmt.Errorf("machine %s: failed to read provider spec: %T", machine.Name, o)}
-		}
+	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(machine.Spec.ProviderSpec.Value.Raw, nil, nil)
+	if err != nil {
+		return []error{err}
+	}
+	machineProviderSpec, ok := obj.(*machinev1beta1.AzureMachineProviderSpec)
+	if !ok {
+		return []error{fmt.Errorf("machine %s: failed to read provider spec: %T", machine.Name, obj)}
 	}
 
 	// Validate VM size in machine provider spec

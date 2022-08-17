@@ -136,18 +136,29 @@ func (g *generator) rpPESecurityGroup() *arm.Resource {
 }
 
 func (g *generator) rpVnet() *arm.Resource {
+	addressPrefix := "10.1.0.0/24"
+	if g.production {
+		addressPrefix = "10.0.0.0/24"
+	}
+
 	subnet := mgmtnetwork.Subnet{
 		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-			AddressPrefix: to.StringPtr("10.0.0.0/24"),
+			AddressPrefix: to.StringPtr(addressPrefix),
 			NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 				ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
+			},
+			ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+				{
+					Service:   to.StringPtr("Microsoft.Storage"),
+					Locations: &[]string{"*"},
+				},
 			},
 		},
 		Name: to.StringPtr("rp-subnet"),
 	}
 
 	if g.production {
-		subnet.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+		*subnet.ServiceEndpoints = append(*subnet.ServiceEndpoints, []mgmtnetwork.ServiceEndpointPropertiesFormat{
 			{
 				Service:   to.StringPtr("Microsoft.KeyVault"),
 				Locations: &[]string{"*"},
@@ -156,14 +167,10 @@ func (g *generator) rpVnet() *arm.Resource {
 				Service:   to.StringPtr("Microsoft.AzureCosmosDB"),
 				Locations: &[]string{"*"},
 			},
-			{
-				Service:   to.StringPtr("Microsoft.Storage"),
-				Locations: &[]string{"*"},
-			},
-		}
+		}...)
 	}
 
-	return g.virtualNetwork("rp-vnet", "10.0.0.0/24", &[]mgmtnetwork.Subnet{subnet}, nil, []string{"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"})
+	return g.virtualNetwork("rp-vnet", addressPrefix, &[]mgmtnetwork.Subnet{subnet}, nil, []string{"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"})
 }
 
 func (g *generator) rpPEVnet() *arm.Resource {
@@ -435,6 +442,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"armApiClientCertCommonName",
 		"armClientId",
 		"azureCloudName",
+		"azureSecPackQualysUrl",
 		"azureSecPackVSATenantId",
 		"billingE2EStorageAccountId",
 		"clusterMdmAccount",
@@ -593,6 +601,18 @@ cat >/etc/fluentbit/fluentbit.conf <<'EOF'
 	Match journald
 	Remove_wildcard _
 	Remove TIMESTAMP
+
+[FILTER]
+	Name rewrite_tag
+	Match journald
+	Rule $LOGKIND asyncqos asyncqos true
+
+[FILTER]
+	Name modify
+	Match asyncqos
+	Remove CLIENT_PRINCIPAL_NAME
+	Remove FILE
+	Remove COMPONENT
 
 [FILTER]
 	Name rewrite_tag
@@ -1048,6 +1068,7 @@ cat >/etc/default/vsa-nodescan-agent.config <<EOF
     "Timeout": 10800,
     "ClientId": "",
     "TenantId": "$AZURESECPACKVSATENANTID",
+    "QualysStoreBaseUrl": "$AZURESECPACKQUALYSURL",
     "ProcessTimeout": 300,
     "CommandDelay": 0
   }
@@ -1070,6 +1091,9 @@ done
 for scan in baseline clamav software; do
   /usr/local/bin/azsecd config -s $scan -d P1D
 done
+
+# We need to manually set PasswordAuthentication to true in order for the VMSS Access JIT to work
+sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
 
 restorecon -RF /var/log/*
 (sleep 30; reboot) &
@@ -1602,6 +1626,30 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 					Options: &mgmtdocumentdb.CreateUpdateOptions{},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/AsyncOperations')]"),
+				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: to.StringPtr("[resourceGroup().location]"),
+			},
+			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+			DependsOn: []string{
+				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+			},
+		},
+		{
+			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
+				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
+					Resource: &mgmtdocumentdb.SQLContainerResource{
+						ID: to.StringPtr("OpenShiftVersions"),
+						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
+							Paths: &[]string{
+								"/id",
+							},
+							Kind: mgmtdocumentdb.PartitionKindHash,
+						},
+						DefaultTTL: to.Int32Ptr(7 * 86400), // 7 days
+					},
+					Options: &mgmtdocumentdb.CreateUpdateOptions{},
+				},
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/OpenShiftVersions')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},

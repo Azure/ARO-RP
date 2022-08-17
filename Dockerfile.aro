@@ -1,4 +1,5 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal
+ARG REGISTRY
+FROM ${REGISTRY}/ubi8/ubi-minimal
 RUN microdnf update && microdnf clean all
 COPY aro e2e.test /usr/local/bin/
 ENTRYPOINT ["aro"]

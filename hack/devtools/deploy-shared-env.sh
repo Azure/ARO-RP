@@ -11,12 +11,12 @@ deploy_rp_dev_predeploy() {
     az deployment group create \
         -g "$RESOURCEGROUP" \
         -n rp-development-predeploy \
-        --template-file deploy/rp-development-predeploy.json \
+        --template-file pkg/deploy/assets/rp-development-predeploy.json \
         --parameters \
             "adminObjectId=$ADMIN_OBJECT_ID" \
-            "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
+            "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)" \
             "keyvaultPrefix=$KEYVAULT_PREFIX" \
-            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].objectId' -o tsv)" >/dev/null
+            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].id' -o tsv)" >/dev/null
 }
 
 deploy_rp_dev() {
@@ -24,12 +24,12 @@ deploy_rp_dev() {
     az deployment group create \
         -g "$RESOURCEGROUP" \
         -n rp-development \
-        --template-file deploy/rp-development.json \
+        --template-file pkg/deploy/assets/rp-development.json \
         --parameters \
             "clusterParentDomainName=$PARENT_DOMAIN_NAME" \
             "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
-            "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
-            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].objectId' -o tsv)" >/dev/null
+            "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)" \
+            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].id' -o tsv)" >/dev/null
 }
 
 deploy_env_dev_ci() {
@@ -37,7 +37,7 @@ deploy_env_dev_ci() {
     az deployment group create \
         -g "$RESOURCEGROUP" \
         -n env-development \
-        --template-file deploy/env-development.json \
+        --template-file pkg/deploy/assets/env-development.json \
         --parameters \
             "ciAzpToken=$AZPTOKEN" \
             "ciCapacity=6" \
@@ -56,7 +56,7 @@ deploy_env_dev() {
     az deployment group create \
         -g "$RESOURCEGROUP" \
         -n env-development \
-        --template-file deploy/env-development.json \
+        --template-file pkg/deploy/assets/env-development.json \
         --parameters \
             "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
             "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
@@ -68,12 +68,25 @@ deploy_env_dev() {
             "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
 }
 
+deploy_aks_dev() {
+    echo "########## Deploying aks-development in RG $RESOURCEGROUP ##########"
+    az deployment group create \
+        -g "$RESOURCEGROUP" \
+        -n aks-development \
+        --template-file pkg/deploy/assets/aks-development.json \
+        --parameters \
+            "adminObjectId=$ADMIN_OBJECT_ID" \
+            "dnsZone=$DOMAIN_NAME" \
+            "sshRSAPublicKey=$(<secrets/proxy_id_rsa.pub)" \
+            "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
+}
+
 deploy_env_dev_override() {
     echo "########## Deploying env-development in RG $RESOURCEGROUP ##########"
     az deployment group create \
         -g "$RESOURCEGROUP" \
         -n env-development \
-        --template-file deploy/env-development.json \
+        --template-file pkg/deploy/assets/env-development.json \
         --parameters \
             "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
             "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \

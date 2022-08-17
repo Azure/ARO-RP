@@ -11,7 +11,7 @@ steps:
     export LOCATION=${{ parameters.location }}
     export AZURE_SUBSCRIPTION_ID=${{ parameters.subscription }}
 
-    trap 'set +e; rm -f devops-spn.json ; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af; rm -rf ~/.docker/config.json' EXIT
+    trap 'set +e; rm -f devops-spn.json ; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af; rm -rf ~/.docker/config.json; rm -rf /run/user/$(id -u $USERNAME)/containers/auth.json' EXIT
     base64 -d >devops-spn.json <<<${{ parameters.azureDevOpsE2EJSONSPN }}
     export AZURE_CLIENT_ID=$(jq -r .clientId <devops-spn.json)
     export AZURE_CLIENT_SECRET=$(jq -r .clientSecret <devops-spn.json)

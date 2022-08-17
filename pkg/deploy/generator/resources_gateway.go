@@ -196,6 +196,7 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 	for _, variable := range []string{
 		"acrResourceId",
 		"azureCloudName",
+		"azureSecPackQualysUrl",
 		"azureSecPackVSATenantId",
 		"databaseAccountName",
 		"dbtokenClientId",
@@ -621,6 +622,7 @@ cat >/etc/default/vsa-nodescan-agent.config <<EOF
     "Timeout": 10800,
     "ClientId": "",
     "TenantId": "$AZURESECPACKVSATENANTID",
+    "QualysStoreBaseUrl": "$AZURESECPACKQUALYSURL",
     "ProcessTimeout": 300,
     "CommandDelay": 0
   }
@@ -643,6 +645,9 @@ done
 for scan in baseline clamav software; do
   /usr/local/bin/azsecd config -s $scan -d P1D
 done
+
+# We need to manually set PasswordAuthentication to true in order for the VMSS Access JIT to work
+sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
 
 restorecon -RF /var/log/*
 

@@ -13,6 +13,7 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/to"
 
+	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
@@ -30,17 +31,18 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 
 	deploymentName := "rp-production-" + d.version
 
-	b, err := Asset(generator.FileRPProduction)
+	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProduction)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
 
+	// Special cases where the config isn't marshalled into the ARM template parameters cleanly
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
 	parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
 		Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.AdminAPICABundle)),
@@ -74,9 +76,6 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	}
 	parameters.Parameters["azureCloudName"] = &arm.ParametersParameter{
 		Value: d.env.Environment().ActualCloudName,
-	}
-	parameters.Parameters["fluentbitImage"] = &arm.ParametersParameter{
-		Value: *d.config.Configuration.FluentbitImage,
 	}
 
 	err = d.deploy(ctx, d.config.RPResourceGroupName, deploymentName, rpVMSSPrefix+d.version,

@@ -10,10 +10,10 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/gofrs/uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (
@@ -25,10 +25,13 @@ const (
 	OpenshiftClustersResourceGroupQuery = `SELECT * FROM OpenShiftClusters doc WHERE doc.clusterResourceGroupIdKey = @resourceGroupID`
 )
 
+type OpenShiftClusterDocumentMutator func(*api.OpenShiftClusterDocument) error
+
 type openShiftClusters struct {
-	c     cosmosdb.OpenShiftClusterDocumentClient
-	collc cosmosdb.CollectionClient
-	uuid  string
+	c             cosmosdb.OpenShiftClusterDocumentClient
+	collc         cosmosdb.CollectionClient
+	uuid          string
+	uuidGenerator uuid.Generator
 }
 
 // OpenShiftClusters is the database interface for OpenShiftClusterDocuments
@@ -36,8 +39,8 @@ type OpenShiftClusters interface {
 	Create(context.Context, *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error)
 	Get(context.Context, string) (*api.OpenShiftClusterDocument, error)
 	QueueLength(context.Context, string) (int, error)
-	Patch(context.Context, string, func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error)
-	PatchWithLease(context.Context, string, func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error)
+	Patch(context.Context, string, OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error)
+	PatchWithLease(context.Context, string, OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error)
 	Update(context.Context, *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error)
 	Delete(context.Context, *api.OpenShiftClusterDocument) error
 	ChangeFeed() cosmosdb.OpenShiftClusterDocumentIterator
@@ -49,6 +52,7 @@ type OpenShiftClusters interface {
 	EndLease(context.Context, string, api.ProvisioningState, api.ProvisioningState, *string) (*api.OpenShiftClusterDocument, error)
 	GetByClientID(ctx context.Context, partitionKey, clientID string) (*api.OpenShiftClusterDocuments, error)
 	GetByClusterResourceGroupID(ctx context.Context, partitionKey, resourceGroupID string) (*api.OpenShiftClusterDocuments, error)
+	NewUUID() string
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
@@ -84,15 +88,20 @@ func NewOpenShiftClusters(ctx context.Context, isLocalDevelopmentMode bool, dbc 
 	}
 
 	documentClient := cosmosdb.NewOpenShiftClusterDocumentClient(collc, collOpenShiftClusters)
-	return NewOpenShiftClustersWithProvidedClient(documentClient, collc, uuid.Must(uuid.NewV4()).String()), nil
+	return NewOpenShiftClustersWithProvidedClient(documentClient, collc, uuid.DefaultGenerator.Generate(), uuid.DefaultGenerator), nil
 }
 
-func NewOpenShiftClustersWithProvidedClient(client cosmosdb.OpenShiftClusterDocumentClient, collectionClient cosmosdb.CollectionClient, uuid string) OpenShiftClusters {
+func NewOpenShiftClustersWithProvidedClient(client cosmosdb.OpenShiftClusterDocumentClient, collectionClient cosmosdb.CollectionClient, uuid string, uuidGenerator uuid.Generator) OpenShiftClusters {
 	return &openShiftClusters{
-		c:     client,
-		collc: collectionClient,
-		uuid:  uuid,
+		c:             client,
+		collc:         collectionClient,
+		uuid:          uuid,
+		uuidGenerator: uuidGenerator,
 	}
+}
+
+func (c *openShiftClusters) NewUUID() string {
+	return c.uuidGenerator.Generate()
 }
 
 func (c *openShiftClusters) Create(ctx context.Context, doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
@@ -179,11 +188,11 @@ func (c *openShiftClusters) QueueLength(ctx context.Context, collid string) (int
 	return countTotal, nil
 }
 
-func (c *openShiftClusters) Patch(ctx context.Context, key string, f func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
+func (c *openShiftClusters) Patch(ctx context.Context, key string, f OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error) {
 	return c.patch(ctx, key, f, nil)
 }
 
-func (c *openShiftClusters) patch(ctx context.Context, key string, f func(*api.OpenShiftClusterDocument) error, options *cosmosdb.Options) (*api.OpenShiftClusterDocument, error) {
+func (c *openShiftClusters) patch(ctx context.Context, key string, f OpenShiftClusterDocumentMutator, options *cosmosdb.Options) (*api.OpenShiftClusterDocument, error) {
 	var doc *api.OpenShiftClusterDocument
 
 	err := cosmosdb.RetryOnPreconditionFailed(func() (err error) {
@@ -204,11 +213,11 @@ func (c *openShiftClusters) patch(ctx context.Context, key string, f func(*api.O
 	return doc, err
 }
 
-func (c *openShiftClusters) PatchWithLease(ctx context.Context, key string, f func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
+func (c *openShiftClusters) PatchWithLease(ctx context.Context, key string, f OpenShiftClusterDocumentMutator) (*api.OpenShiftClusterDocument, error) {
 	return c.patchWithLease(ctx, key, f, nil)
 }
 
-func (c *openShiftClusters) patchWithLease(ctx context.Context, key string, f func(*api.OpenShiftClusterDocument) error, options *cosmosdb.Options) (*api.OpenShiftClusterDocument, error) {
+func (c *openShiftClusters) patchWithLease(ctx context.Context, key string, f OpenShiftClusterDocumentMutator, options *cosmosdb.Options) (*api.OpenShiftClusterDocument, error) {
 	return c.patch(ctx, key, func(doc *api.OpenShiftClusterDocument) error {
 		if doc.LeaseOwner != c.uuid {
 			return fmt.Errorf("lost lease")

@@ -16,7 +16,6 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/davecgh/go-spew/spew"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -54,7 +53,7 @@ func (m *manager) deleteNic(ctx context.Context, nicName string) error {
 
 	if nic.ProvisioningState == mgmtnetwork.Failed {
 		m.log.Printf("NIC '%s' is in a Failed provisioning state, attempting to reconcile prior to deletion.", *nic.ID)
-		err := m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, mgmtnetwork.Interface{})
+		err := m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, *nic.Name, nic)
 		if err != nil {
 			return err
 		}
@@ -371,19 +370,11 @@ func (m *manager) deleteResourcesAndResourceGroup(ctx context.Context) error {
 
 	m.log.Printf("deleting resource group %s", resourceGroup)
 	err = m.resourceGroups.DeleteAndWait(ctx, resourceGroup)
-	// TODO(mjudeikis): Remove this once we know all the error flavors this is
-	// returning so we can unify checks bellow
-	if err != nil {
-		m.log.Printf("delete resource group failed: %s", spew.Sdump(err))
-	}
-	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		(detailedErr.StatusCode == http.StatusForbidden || detailedErr.StatusCode == http.StatusNotFound) {
+	detailedErr, ok := err.(autorest.DetailedError)
+	if ok && (detailedErr.StatusCode == http.StatusForbidden || detailedErr.StatusCode == http.StatusNotFound) {
 		err = nil
 	}
-	if azureerrors.HasAuthorizationFailedError(err) {
-		err = nil
-	}
-	if azureerrors.ResourceGroupNotFound(err) {
+	if azureerrors.HasAuthorizationFailedError(err) || azureerrors.ResourceGroupNotFound(err) {
 		err = nil
 	}
 	return err
@@ -463,6 +454,13 @@ func (m *manager) Delete(ctx context.Context) error {
 				return err
 			}
 		}
+	}
+
+	// Don't fail the deletion because of hive
+	// This should change when/if we start using hive for cluster deletion
+	err = m.hiveDeleteResources(ctx)
+	if err != nil {
+		m.log.Info(err)
 	}
 
 	return m.billing.Delete(ctx, m.doc)

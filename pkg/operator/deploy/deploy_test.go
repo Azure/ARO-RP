@@ -174,7 +174,7 @@ func TestOperatorVersion(t *testing.T) {
 				env: _env,
 			}
 
-			staticResources, err := o.staticResources()
+			staticResources, err := o.createObjects()
 			if err != nil {
 				t.Error(err)
 			}
@@ -192,7 +192,7 @@ func TestOperatorVersion(t *testing.T) {
 
 			for _, d := range deployments {
 				if d.Labels["version"] != tt.wantVersion {
-					t.Errorf("Got %q, not %q", d.Labels["version"], tt.wantVersion)
+					t.Errorf("Got %q, not %q for label \"version\"", d.Labels["version"], tt.wantVersion)
 				}
 
 				if len(d.Spec.Template.Spec.Containers) != 1 {
@@ -201,7 +201,7 @@ func TestOperatorVersion(t *testing.T) {
 
 				image := d.Spec.Template.Spec.Containers[0].Image
 				if image != tt.wantPullspec {
-					t.Errorf("Got %q, not %q", image, tt.wantPullspec)
+					t.Errorf("Got %q, not %q for the image", image, tt.wantPullspec)
 				}
 			}
 		})

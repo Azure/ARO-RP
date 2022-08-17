@@ -24,6 +24,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 	params := []string{
 		"acrResourceId",
 		"azureCloudName",
+		"azureSecPackQualysUrl",
 		"azureSecPackVSATenantId",
 		"databaseAccountName",
 		"dbtokenClientId",
@@ -90,7 +91,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 	)
 
 	t.Resources = append(t.Resources,
-		g.virtualNetworkPeering("gateway-vnet/peering-rp-vnet", "[resourceId(parameters('rpResourceGroupName'), 'Microsoft.Network/virtualNetworks', 'rp-vnet')]"),
+		g.virtualNetworkPeering("gateway-vnet/peering-rp-vnet", "[resourceId(parameters('rpResourceGroupName'), 'Microsoft.Network/virtualNetworks', 'rp-vnet')]", false, false, nil),
 	)
 
 	t.Resources = append(t.Resources, g.gatewayRBAC()...)

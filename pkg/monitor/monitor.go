@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -42,13 +43,15 @@ type monitor struct {
 	lastBucketlist atomic.Value //time.Time
 	lastChangefeed atomic.Value //time.Time
 	startTime      time.Time
+
+	hiveRestConfig *rest.Config
 }
 
 type Runnable interface {
 	Run(context.Context) error
 }
 
-func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Emitter) Runnable {
+func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Emitter, hiveRestConfig *rest.Config) Runnable {
 	return &monitor{
 		baseLog: log,
 		dialer:  dialer,
@@ -66,6 +69,8 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Moni
 		buckets:     map[int]struct{}{},
 
 		startTime: time.Now(),
+
+		hiveRestConfig: hiveRestConfig,
 	}
 }
 

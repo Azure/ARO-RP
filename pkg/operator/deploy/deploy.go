@@ -4,14 +4,16 @@ package deploy
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
+	"embed"
 	"errors"
 	"fmt"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/sirupsen/logrus"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -22,6 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
+	appsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -40,9 +44,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
+//go:embed staticresources
+var embeddedFiles embed.FS
+
 type Operator interface {
 	CreateOrUpdate(context.Context) error
 	IsReady(context.Context) (bool, error)
+	IsRunningDesiredVersion(context.Context) error
 }
 
 type operator struct {
@@ -78,54 +86,82 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli 
 	}, nil
 }
 
-func (o *operator) staticResources() ([]kruntime.Object, error) {
-	results := []kruntime.Object{}
-	for _, assetName := range AssetNames() {
-		b, err := Asset(assetName)
-		if err != nil {
-			return nil, err
-		}
+type deploymentData struct {
+	Image              string
+	Version            string
+	GitCommit          string
+	IsLocalDevelopment bool
+	HasVersion         bool
+}
 
-		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(b, nil, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		// set the image for the deployments
-		if d, ok := obj.(*appsv1.Deployment); ok {
-			if d.Labels == nil {
-				d.Labels = map[string]string{}
-			}
-			var image string
-
-			if o.oc.Properties.OperatorVersion != "" {
-				image = fmt.Sprintf("%s/aro:%s", o.env.ACRDomain(), o.oc.Properties.OperatorVersion)
-				d.Labels["version"] = o.oc.Properties.OperatorVersion
-			} else {
-				image = o.env.AROOperatorImage()
-				d.Labels["version"] = version.GitCommit
-			}
-
-			for i := range d.Spec.Template.Spec.Containers {
-				d.Spec.Template.Spec.Containers[i].Image = image
-
-				if o.env.IsLocalDevelopmentMode() {
-					d.Spec.Template.Spec.Containers[i].Env = append(d.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
-						Name:  "RP_MODE",
-						Value: "development",
-					})
-				}
-			}
-		}
-
-		results = append(results, obj)
+func templateManifests(data deploymentData) ([][]byte, error) {
+	templatesRoot, err := template.ParseFS(embeddedFiles, "staticresources/*.yaml")
+	if err != nil {
+		return nil, err
 	}
-	return results, nil
+	templatesMaster, err := template.ParseFS(embeddedFiles, "staticresources/master/*")
+	if err != nil {
+		return nil, err
+	}
+	templatesWorker, err := template.ParseFS(embeddedFiles, "staticresources/worker/*")
+	if err != nil {
+		return nil, err
+	}
+
+	templatedFiles := make([][]byte, 0)
+	templatesArray := []*template.Template{templatesMaster, templatesRoot, templatesWorker}
+
+	for _, templates := range templatesArray {
+		for _, templ := range templates.Templates() {
+			buff := &bytes.Buffer{}
+			if err := templ.Execute(buff, data); err != nil {
+				return nil, err
+			}
+			templatedFiles = append(templatedFiles, buff.Bytes())
+		}
+	}
+	return templatedFiles, nil
+}
+
+func (o *operator) createDeploymentData() deploymentData {
+	image := o.env.AROOperatorImage()
+	hasVersion := false
+	if o.oc.Properties.OperatorVersion != "" {
+		image = fmt.Sprintf("%s/aro", o.env.ACRDomain())
+		hasVersion = true
+	}
+
+	return deploymentData{
+		IsLocalDevelopment: o.env.IsLocalDevelopmentMode(),
+		Image:              image,
+		Version:            o.oc.Properties.OperatorVersion,
+		GitCommit:          version.GitCommit,
+		HasVersion:         hasVersion,
+	}
+}
+
+func (o *operator) createObjects() ([]kruntime.Object, error) {
+	deploymentData := o.createDeploymentData()
+	templated, err := templateManifests(deploymentData)
+	if err != nil {
+		return nil, err
+	}
+	objects := make([]kruntime.Object, 0, len(templated))
+	for _, v := range templated {
+		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(v, nil, nil)
+		if err != nil {
+			return nil, err
+		}
+		objects = append(objects, obj)
+	}
+
+	return objects, nil
 }
 
 func (o *operator) resources() ([]kruntime.Object, error) {
 	// first static resources from Assets
-	results, err := o.staticResources()
+
+	results, err := o.createObjects()
 	if err != nil {
 		return nil, err
 	}
@@ -336,6 +372,55 @@ func (o *operator) IsReady(ctx context.Context) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func checkOperatorDeploymentVersion(ctx context.Context, cli appsv1client.DeploymentInterface, name string, gitCommit string) error {
+	d, err := cli.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if d.Labels["version"] != gitCommit {
+		return errors.New(name + " is not running the desired version: " + gitCommit)
+	}
+
+	return nil
+}
+
+func checkPodImageVersion(ctx context.Context, cli corev1client.PodInterface, namespace string, gitCommit string) error {
+	podList, err := cli.List(ctx, metav1.ListOptions{LabelSelector: "app=" + namespace})
+	if err != nil {
+		return err
+	}
+	for _, pod := range podList.Items {
+		imageTag := strings.Split(pod.Spec.Containers[0].Image, ":")
+		if imageTag[len(imageTag)-1] != gitCommit {
+			return errors.New(pod.Name + " pod of namespace " + pod.Namespace + " is not running the desired version: " + gitCommit)
+		}
+	}
+	return nil
+}
+
+func (o *operator) IsRunningDesiredVersion(ctx context.Context) error {
+	// check if aro-operator-master is running desired version
+	err := checkOperatorDeploymentVersion(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-master", version.GitCommit)
+	if err != nil {
+		return err
+	}
+	err = checkPodImageVersion(ctx, o.kubernetescli.CoreV1().Pods(pkgoperator.Namespace), "aro-operator-master", version.GitCommit)
+	if err != nil {
+		return err
+	}
+	// check if aro-operator-worker is running desired version
+	err = checkOperatorDeploymentVersion(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-worker", version.GitCommit)
+	if err != nil {
+		return err
+	}
+	err = checkPodImageVersion(ctx, o.kubernetescli.CoreV1().Pods(pkgoperator.Namespace), "aro-operator-worker", version.GitCommit)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func checkIngressIP(ingressProfiles []api.IngressProfile) (string, error) {

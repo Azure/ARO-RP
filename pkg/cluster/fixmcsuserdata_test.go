@@ -184,3 +184,105 @@ func TestFixMCSUserData(t *testing.T) {
 		}
 	}
 }
+
+func TestGetUserDataSecretReference(t *testing.T) {
+	for _, td := range []struct {
+		name        string
+		objectMeta  *metav1.ObjectMeta
+		machineSpec *machinev1beta1.MachineSpec
+		result      *corev1.SecretReference
+		shouldFail  bool
+	}{
+		{
+			name:       "valid cluster-api-provider-azure spec",
+			objectMeta: &metav1.ObjectMeta{Namespace: "any"},
+			machineSpec: &machinev1beta1.MachineSpec{
+				ProviderSpec: machinev1beta1.ProviderSpec{
+					Value: &kruntime.RawExtension{
+						Raw: []byte(`{
+								"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+								"kind": "AzureMachineProviderSpec",
+								"userDataSecret": {"name": "any"}
+							}`),
+					},
+				},
+			},
+			result: &corev1.SecretReference{
+				Name:      "any",
+				Namespace: "any",
+			},
+			shouldFail: false,
+		},
+		{
+			name:       "valid openshift/api spec",
+			objectMeta: &metav1.ObjectMeta{Namespace: "another"},
+			machineSpec: &machinev1beta1.MachineSpec{
+				ProviderSpec: machinev1beta1.ProviderSpec{
+					Value: &kruntime.RawExtension{
+						Raw: []byte(`{
+								"apiVersion": "machine.openshift.io/v1beta1",
+								"kind": "AzureMachineProviderSpec",
+								"userDataSecret": {"name": "any"}
+							}`),
+					},
+				},
+			},
+			result: &corev1.SecretReference{
+				Name:      "any",
+				Namespace: "another",
+			},
+			shouldFail: false,
+		},
+		{
+			name:       "not valid spec",
+			objectMeta: &metav1.ObjectMeta{Namespace: "any"},
+			machineSpec: &machinev1beta1.MachineSpec{
+				ProviderSpec: machinev1beta1.ProviderSpec{
+					Value: &kruntime.RawExtension{
+						Raw: []byte(`{
+								"apiVersion": "apiversion.openshift.io/unknown",
+								"kind": "AzureMachineProviderSpec"
+							}`),
+					},
+				},
+			},
+			shouldFail: true,
+		},
+		{
+			name:        "nil object meta",
+			objectMeta:  nil,
+			machineSpec: &machinev1beta1.MachineSpec{},
+			shouldFail:  false,
+			result:      nil,
+		},
+		{
+			name:       "nil user secret data",
+			objectMeta: &metav1.ObjectMeta{Namespace: "any"},
+			machineSpec: &machinev1beta1.MachineSpec{
+				ProviderSpec: machinev1beta1.ProviderSpec{
+					Value: &kruntime.RawExtension{
+						Raw: []byte(`{
+								"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+								"kind": "AzureMachineProviderSpec"
+							}`),
+					},
+				},
+			},
+			shouldFail: false,
+			result:     nil,
+		},
+	} {
+		t.Run(td.name, func(t *testing.T) {
+			res, err := getUserDataSecretReference(td.objectMeta, td.machineSpec)
+			if err != nil {
+				if !td.shouldFail {
+					t.Errorf("error hasn't been expected: %v", err)
+				}
+				return
+			}
+			if !reflect.DeepEqual(res, td.result) {
+				t.Errorf("unexpected result: %+v", res)
+			}
+		})
+	}
+}

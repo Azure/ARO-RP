@@ -397,9 +397,7 @@ func TestProxy(t *testing.T) {
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
 			_, baseAccessLog := testlog.New()
-			k := New(baseLog, audit, _env, baseAccessLog, nil, nil, dbOpenShiftClusters, dbPortal, dialer, &mux.Router{}, unauthenticatedRouter)
-
-			k.newToken = func() string { return token }
+			_ = New(baseLog, audit, _env, baseAccessLog, nil, nil, dbOpenShiftClusters, dbPortal, dialer, &mux.Router{}, unauthenticatedRouter)
 
 			if tt.r != nil {
 				tt.r(r)

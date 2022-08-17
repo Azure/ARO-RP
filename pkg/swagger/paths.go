@@ -17,6 +17,8 @@ import (
 // n==3 action on resource not expecting input payload
 // n==4 action on resource expecting input payload
 // n==5 patch action on resource expecting input payload
+// n==6 list across subscription and location
+
 func (g *generator) populateParameters(n int, typ, friendlyName string) (s []interface{}) {
 	s = []interface{}{
 		Reference{
@@ -28,6 +30,12 @@ func (g *generator) populateParameters(n int, typ, friendlyName string) (s []int
 		s = append(s, Reference{
 			Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/SubscriptionIdParameter",
 		})
+		if n == 6 {
+			s = append(s, Reference{
+				Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/LocationParameter",
+			})
+			return
+		}
 	}
 
 	if n > 1 {

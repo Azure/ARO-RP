@@ -170,6 +170,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 			PortalElevatedGroupIDs: []string{
 				os.Getenv("AZURE_PORTAL_ELEVATED_GROUP_IDS"),
 			},
+			AzureSecPackQualysUrl: to.StringPtr(""),
 			RPFeatures: []string{
 				"DisableDenyAssignments",
 				"DisableSignedCertificates",
