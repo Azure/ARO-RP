@@ -52,7 +52,7 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 			},
 			Name: to.StringPtr("rp_in_arm"),
 		},
-		mgmtnetwork.SecurityRule{
+		{
 			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
 				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
 				SourcePortRange:          to.StringPtr("*"),
