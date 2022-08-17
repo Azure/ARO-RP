@@ -74,10 +74,18 @@ func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Re
 	vars := mux.Vars(r)
 
 	groupKind, namespace, name := r.URL.Query().Get("kind"), r.URL.Query().Get("namespace"), r.URL.Query().Get("name")
+	force := strings.EqualFold(r.URL.Query().Get("force"), "true")
 
 	err := validateAdminKubernetesObjectsNonCustomer(r.Method, groupKind, namespace, name)
 	if err != nil {
 		return err
+	}
+
+	if force {
+		err := validateAdminKubernetesObjectsForceDelete(groupKind)
+		if err != nil {
+			return err
+		}
 	}
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
@@ -95,7 +103,7 @@ func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Re
 		return err
 	}
 
-	return k.KubeDelete(ctx, groupKind, namespace, name)
+	return k.KubeDelete(ctx, groupKind, namespace, name, force)
 }
 
 func (f *frontend) postAdminKubernetesObjects(w http.ResponseWriter, r *http.Request) {
