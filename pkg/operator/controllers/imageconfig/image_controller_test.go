@@ -87,7 +87,7 @@ func TestImageConfigReconciler(t *testing.T) {
 				AllowedRegistries: []string{
 					"quay.io",
 					"arointsvc.azurecr.io",
-					"arosvc.eastus.data.azurecr.io",
+					"arointsvc.eastus.data.azurecr.io",
 				},
 			},
 		},
@@ -100,7 +100,7 @@ func TestImageConfigReconciler(t *testing.T) {
 						BlockedRegistries: []string{
 							"quay.io",
 							"arointsvc.azurecr.io",
-							"arosvc.eastus.data.azurecr.io",
+							"arointsvc.eastus.data.azurecr.io",
 						},
 					},
 				},
@@ -164,6 +164,64 @@ func TestImageConfigReconciler(t *testing.T) {
 			},
 			wantErr: `both AllowedRegistries and BlockedRegistries are present`,
 		},
+		{
+			name: "uses Public Cloud cluster's ACRDomain configuration for both Azure registries",
+			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
+				Spec: arov1alpha1.ClusterSpec{
+					ACRDomain:     "fakesvc.azurecr.io",
+					AZEnvironment: azureclient.PublicCloud.Environment.Name,
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						controllerEnabled: strconv.FormatBool(true),
+					},
+					Location: "anyplace",
+				},
+			}),
+			configcli: configfake.NewSimpleClientset(&configv1.Image{
+				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
+				Spec: configv1.ImageSpec{
+					RegistrySources: configv1.RegistrySources{
+						AllowedRegistries: []string{"quay.io"},
+					},
+				},
+			}),
+			wantRegistrySources: configv1.RegistrySources{
+				AllowedRegistries: []string{
+					"quay.io",
+					"fakesvc.azurecr.io",
+					"fakesvc.anyplace.data.azurecr.io",
+				},
+			},
+		},
+		{
+			name: "uses USGov Cloud cluster's ACRDomain configuration for both Azure registries",
+			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
+				Spec: arov1alpha1.ClusterSpec{
+					ACRDomain:     "fakesvc.azurecr.us",
+					AZEnvironment: azureclient.USGovernmentCloud.Environment.Name,
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						controllerEnabled: strconv.FormatBool(true),
+					},
+					Location: "anyplace",
+				},
+			}),
+			configcli: configfake.NewSimpleClientset(&configv1.Image{
+				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
+				Spec: configv1.ImageSpec{
+					RegistrySources: configv1.RegistrySources{
+						AllowedRegistries: []string{"quay.io"},
+					},
+				},
+			}),
+			wantRegistrySources: configv1.RegistrySources{
+				AllowedRegistries: []string{
+					"quay.io",
+					"fakesvc.azurecr.us",
+					"fakesvc.anyplace.data.azurecr.us",
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -222,12 +280,12 @@ func TestGetCloudAwareRegistries(t *testing.T) {
 			name: "public cloud",
 			instance: &arov1alpha1.Cluster{
 				Spec: arov1alpha1.ClusterSpec{
-					ACRDomain:     "arointsvc.azurecr.io",
+					ACRDomain:     "arosvc.azurecr.io",
 					AZEnvironment: azureclient.PublicCloud.Environment.Name,
 					Location:      "eastus",
 				},
 			},
-			wantResult: []string{"arointsvc.azurecr.io", "arosvc.eastus.data.azurecr.io"},
+			wantResult: []string{"arosvc.azurecr.io", "arosvc.eastus.data.azurecr.io"},
 		},
 		{
 			name: "us gov cloud",
@@ -238,7 +296,18 @@ func TestGetCloudAwareRegistries(t *testing.T) {
 					Location:      "eastus",
 				},
 			},
-			wantResult: []string{"arointsvc.azurecr.us", "arosvc.eastus.data.azurecr.us"},
+			wantResult: []string{"arointsvc.azurecr.us", "arointsvc.eastus.data.azurecr.us"},
+		},
+		{
+			name: "arbitrary name",
+			instance: &arov1alpha1.Cluster{
+				Spec: arov1alpha1.ClusterSpec{
+					ACRDomain:     "fakeacr.azurecr.io",
+					AZEnvironment: azureclient.PublicCloud.Environment.Name,
+					Location:      "anyplace",
+				},
+			},
+			wantResult: []string{"fakeacr.azurecr.io", "fakeacr.anyplace.data.azurecr.io"},
 		},
 		{
 			name: "unsupported cloud",

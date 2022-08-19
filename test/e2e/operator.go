@@ -436,18 +436,20 @@ var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 
 	// Reimplementation of function from image config controller
 	getCloudAwareRegistries := func(instance *arov1alpha1.Cluster) ([]string, error) {
-		var requiredRegistries []string
+		acrSubdomain := strings.Split(instance.Spec.ACRDomain, ".")[0]
+		var regionalRegistry string
+
 		switch instance.Spec.AZEnvironment {
 		case azureclient.PublicCloud.Environment.Name:
-			requiredRegistries = []string{instance.Spec.ACRDomain, "arosvc." + instance.Spec.Location + ".data." + azure.PublicCloud.ContainerRegistryDNSSuffix}
+			regionalRegistry = fmt.Sprintf("%s.%s.data.%s", acrSubdomain, instance.Spec.Location, azure.PublicCloud.ContainerRegistryDNSSuffix)
 
 		case azureclient.USGovernmentCloud.Environment.Name:
-			requiredRegistries = []string{instance.Spec.ACRDomain, "arosvc." + instance.Spec.Location + ".data." + azure.USGovernmentCloud.ContainerRegistryDNSSuffix}
+			regionalRegistry = fmt.Sprintf("%s.%s.data.%s", acrSubdomain, instance.Spec.Location, azure.USGovernmentCloud.ContainerRegistryDNSSuffix)
 
 		default:
 			return nil, fmt.Errorf("cloud environment %s is not supported", instance.Spec.AZEnvironment)
 		}
-		return requiredRegistries, nil
+		return []string{instance.Spec.ACRDomain, regionalRegistry}, nil
 	}
 
 	sliceEqual := func(a, b []string) bool {
