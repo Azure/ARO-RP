@@ -118,7 +118,6 @@ func getNodeConditions(node corev1.Node) []NodeConditions {
 
 func getTaints(node corev1.Node) []Taint {
 	taints := []Taint{}
-	// TODO: Add Null fields seperately!
 	for _, taint := range node.Spec.Taints {
 		timeAdded := ""
 		if taint.TimeAdded != nil {
