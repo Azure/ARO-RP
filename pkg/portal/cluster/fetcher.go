@@ -10,7 +10,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
@@ -40,8 +39,8 @@ type realFetcher struct {
 	configcli configclient.Interface
 }
 
-func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument) (*realFetcher, error) {
-	restConfig, err := restconfig.RestConfig(dialer, doc.OpenShiftCluster)
+func newRealFetcher(log *logrus.Entry, doc *api.OpenShiftClusterDocument) (*realFetcher, error) {
+	restConfig, err := restconfig.RestConfig(doc.OpenShiftCluster)
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -58,8 +57,8 @@ func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftCl
 	}, nil
 }
 
-func NewFetchClient(log *logrus.Entry, dialer proxy.Dialer, cluster *api.OpenShiftClusterDocument) (FetchClient, error) {
-	fetcher, err := newRealFetcher(log, dialer, cluster)
+func NewFetchClient(log *logrus.Entry, cluster *api.OpenShiftClusterDocument) (FetchClient, error) {
+	fetcher, err := newRealFetcher(log, cluster)
 	if err != nil {
 		return nil, err
 	}

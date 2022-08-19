@@ -64,7 +64,7 @@ type operator struct {
 }
 
 func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli aroclient.Interface, extensionscli extensionsclient.Interface, kubernetescli kubernetes.Interface) (Operator, error) {
-	restConfig, err := restconfig.RestConfig(env, oc)
+	restConfig, err := restconfig.RestConfig(oc)
 	if err != nil {
 		return nil, err
 	}

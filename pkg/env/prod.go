@@ -19,7 +19,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
@@ -31,7 +30,6 @@ import (
 
 type prod struct {
 	Core
-	proxy.Dialer
 	ARMHelper
 
 	liveConfig liveconfig.Manager
@@ -92,14 +90,8 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
-	dialer, err := proxy.NewDialer(core.IsLocalDevelopmentMode())
-	if err != nil {
-		return nil, err
-	}
-
 	p := &prod{
-		Core:   core,
-		Dialer: dialer,
+		Core: core,
 
 		fpClientID: os.Getenv("AZURE_FP_CLIENT_ID"),
 

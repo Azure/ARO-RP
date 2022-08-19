@@ -14,7 +14,6 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
@@ -65,7 +64,6 @@ const (
 // should be part of that.
 type Interface interface {
 	Core
-	proxy.Dialer
 	ARMHelper
 
 	InitializeAuthorizers() error

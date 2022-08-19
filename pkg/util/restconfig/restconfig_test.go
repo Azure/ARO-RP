@@ -5,12 +5,12 @@ package restconfig
 
 import (
 	"context"
+	"net"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	mock_proxy "github.com/Azure/ARO-RP/pkg/util/mocks/proxy"
 )
 
 func TestDialContext(t *testing.T) {
@@ -24,21 +24,21 @@ func TestDialContext(t *testing.T) {
 	}{
 		{
 			name:                       "replace host ip",
-			apiServerPrivateEndpointIP: "10.0.4.6",
+			apiServerPrivateEndpointIP: "127.0.0.1",
 			dialAddress:                "1.1.1.1:6443",
 			dialNetwork:                "tcp",
-			wantAddress:                "10.0.4.6:6443",
+			wantAddress:                ":6443",
 		},
 		{
 			name:                       "invalid address",
-			apiServerPrivateEndpointIP: "10.0.4.6",
+			apiServerPrivateEndpointIP: "127.0.0.1",
 			dialAddress:                "1.1.1.1",
 			dialNetwork:                "tcp",
 			wantErr:                    "address 1.1.1.1: missing port in address",
 		},
 		{
 			name:                       "unsupported network",
-			apiServerPrivateEndpointIP: "10.0.4.6",
+			apiServerPrivateEndpointIP: "127.0.0.1",
 			dialAddress:                "1.1.1.1:6443",
 			dialNetwork:                "udp",
 			wantErr:                    "unimplemented network \"udp\"",
@@ -50,11 +50,6 @@ func TestDialContext(t *testing.T) {
 
 			testCtx := context.WithValue(context.Background(), struct{ nonEmptyCtx string }{}, 1)
 
-			dialer := mock_proxy.NewMockDialer(controller)
-			if tt.wantAddress != "" {
-				dialer.EXPECT().DialContext(testCtx, tt.dialNetwork, tt.wantAddress)
-			}
-
 			oc := &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					NetworkProfile: api.NetworkProfile{
@@ -62,7 +57,15 @@ func TestDialContext(t *testing.T) {
 					},
 				},
 			}
-			dial := DialContext(dialer, oc)
+			dial := DialContext(oc)
+
+			if tt.wantAddress != "" {
+				l, err := net.Listen("tcp", tt.wantAddress)
+				if err != nil {
+					t.Error(err)
+				}
+				defer l.Close()
+			}
 
 			_, err := dial(testCtx, tt.dialNetwork, tt.dialAddress)
 			if err != nil && err.Error() != tt.wantErr ||

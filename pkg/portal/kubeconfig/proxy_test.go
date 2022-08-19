@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"testing"
@@ -24,7 +25,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/portal/util/responsewriter"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_proxy "github.com/Azure/ARO-RP/pkg/util/mocks/proxy"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/listener"
@@ -91,7 +91,6 @@ func testKubeconfig(cacerts []*x509.Certificate, clientkey *rsa.PrivateKey, clie
 }
 
 func TestProxy(t *testing.T) {
-	ctx := context.Background()
 	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/microsoft.redhatopenshift/openshiftclusters/cluster"
 	username := "username"
 	token := "00000000-0000-0000-0000-000000000000"
@@ -134,7 +133,6 @@ func TestProxy(t *testing.T) {
 		name           string
 		r              func(*http.Request)
 		fixtureChecker func(*testdatabase.Fixture, *testdatabase.Checker, *cosmosdb.FakeOpenShiftClusterDocumentClient, *cosmosdb.FakePortalDocumentClient)
-		mocks          func(*mock_proxy.MockDialer)
 		wantStatusCode int
 		wantBody       string
 	}{
@@ -170,9 +168,6 @@ func TestProxy(t *testing.T) {
 				fixture.AddOpenShiftClusterDocuments(openShiftClusterDocument)
 				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
 			},
-			mocks: func(dialer *mock_proxy.MockDialer) {
-				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":6443").Return(l.DialContext(ctx, "", ""))
-			},
 			wantStatusCode: http.StatusOK,
 			wantBody:       "GET /test HTTP/1.1\r\nHost: kubernetes:6443\r\nAccept-Encoding: gzip\r\nUser-Agent: Go-http-client/1.1\r\nX-Authenticated-Name: system:aro-service\r\n\r\n",
 		},
@@ -205,9 +200,6 @@ func TestProxy(t *testing.T) {
 				}
 				fixture.AddOpenShiftClusterDocuments(openShiftClusterDocument)
 				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
-			},
-			mocks: func(dialer *mock_proxy.MockDialer) {
-				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":6443").Return(l.DialContext(ctx, "", ""))
 			},
 			wantStatusCode: http.StatusOK,
 			wantBody:       "GET /test HTTP/1.1\r\nHost: kubernetes:6443\r\nAccept-Encoding: gzip\r\nUser-Agent: Go-http-client/1.1\r\nX-Authenticated-Name: system:aro-sre\r\n\r\n",
@@ -353,6 +345,11 @@ func TestProxy(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			dialContext = func(oc *api.OpenShiftCluster) func(ctx context.Context, network, address string) (net.Conn, error) {
+				return func(ctx context.Context, network, address string) (net.Conn, error) {
+					return l.DialContext(ctx, "", "")
+				}
+			}
 			dbPortal, portalClient := testdatabase.NewFakePortal()
 			dbOpenShiftClusters, openShiftClustersClient := testdatabase.NewFakeOpenShiftClusters()
 
@@ -387,17 +384,12 @@ func TestProxy(t *testing.T) {
 			_env.EXPECT().Hostname().AnyTimes().Return("testhost")
 			_env.EXPECT().Location().AnyTimes().Return("eastus")
 
-			dialer := mock_proxy.NewMockDialer(ctrl)
-			if tt.mocks != nil {
-				tt.mocks(dialer)
-			}
-
 			unauthenticatedRouter := &mux.Router{}
 
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
 			_, baseAccessLog := testlog.New()
-			_ = New(baseLog, audit, _env, baseAccessLog, nil, nil, dbOpenShiftClusters, dbPortal, dialer, &mux.Router{}, unauthenticatedRouter)
+			_ = New(baseLog, audit, _env, baseAccessLog, nil, nil, dbOpenShiftClusters, dbPortal, &mux.Router{}, unauthenticatedRouter)
 
 			if tt.r != nil {
 				tt.r(r)

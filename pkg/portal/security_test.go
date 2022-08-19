@@ -90,7 +90,7 @@ func TestSecurity(t *testing.T) {
 		},
 	}
 
-	p := NewPortal(_env, portalAuditLog, portalLog, portalAccessLog, l, sshl, nil, "", serverkey, servercerts, "", nil, nil, make([]byte, 32), sshkey, nil, elevatedGroupIDs, dbOpenShiftClusters, dbPortal, nil, &noop.Noop{})
+	p := NewPortal(_env, portalAuditLog, portalLog, portalAccessLog, l, sshl, nil, "", serverkey, servercerts, "", nil, nil, make([]byte, 32), sshkey, nil, elevatedGroupIDs, dbOpenShiftClusters, dbPortal, &noop.Noop{})
 	go func() {
 		err := p.Run(ctx)
 		if err != nil {

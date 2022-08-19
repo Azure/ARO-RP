@@ -8,16 +8,16 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"time"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 )
 
 // RestConfig returns the Kubernetes *rest.Config for a kubeconfig
-func RestConfig(dialer proxy.Dialer, oc *api.OpenShiftCluster) (*rest.Config, error) {
+func RestConfig(oc *api.OpenShiftCluster) (*rest.Config, error) {
 	// must not proceed if PrivateEndpointIP is not set.  In
 	// k8s.io/client-go/transport/cache.go, k8s caches our transport, and it
 	// can't tell if data in the restconfig.Dial closure has changed.  We don't
@@ -40,12 +40,12 @@ func RestConfig(dialer proxy.Dialer, oc *api.OpenShiftCluster) (*rest.Config, er
 		return nil, err
 	}
 
-	restconfig.Dial = DialContext(dialer, oc)
+	restconfig.Dial = DialContext(oc)
 
 	return restconfig, nil
 }
 
-func DialContext(dialer proxy.Dialer, oc *api.OpenShiftCluster) func(ctx context.Context, network, address string) (net.Conn, error) {
+func DialContext(oc *api.OpenShiftCluster) func(ctx context.Context, network, address string) (net.Conn, error) {
 	return func(ctx context.Context, network, address string) (net.Conn, error) {
 		if network != "tcp" {
 			return nil, fmt.Errorf("unimplemented network %q", network)
@@ -55,7 +55,8 @@ func DialContext(dialer proxy.Dialer, oc *api.OpenShiftCluster) func(ctx context
 		if err != nil {
 			return nil, err
 		}
-
-		return dialer.DialContext(ctx, network, oc.Properties.NetworkProfile.APIServerPrivateEndpointIP+":"+port)
+		return (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second}).DialContext(ctx, network, oc.Properties.NetworkProfile.APIServerPrivateEndpointIP+":"+port)
 	}
 }

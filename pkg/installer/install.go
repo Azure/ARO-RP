@@ -87,7 +87,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	r.Dial = restconfig.DialContext(m.env, m.oc)
+	r.Dial = restconfig.DialContext(m.oc)
 
 	m.kubernetescli, err = kubernetes.NewForConfig(r)
 	return err

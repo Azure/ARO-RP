@@ -146,7 +146,7 @@ func applyPythonLicense() error {
 	})
 }
 
-//returns the lists of files that don't have a license but should
+// returns the lists of files that don't have a license but should
 func validateGoLicenses(ignored map[string]bool, dirs []string) []string {
 	unlicensedFiles := make([]string, 0)
 	for _, dir := range dirs {
@@ -182,7 +182,7 @@ func validateGoLicenses(ignored map[string]bool, dirs []string) []string {
 	return unlicensedFiles
 }
 
-//returns the lists of files that don't have a license but should
+// returns the lists of files that don't have a license but should
 func validatePythonLicenses(ignored map[string]bool, dirs []string) []string {
 	unlicensedFiles := make([]string, 0)
 

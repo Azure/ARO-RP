@@ -24,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -46,7 +45,7 @@ type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster
 
 type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error)
 
-type ocEnricherFactory func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher
+type ocEnricherFactory func(log *logrus.Entry, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher
 
 type frontend struct {
 	auditLog *logrus.Entry

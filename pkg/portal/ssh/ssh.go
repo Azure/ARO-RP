@@ -22,7 +22,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 )
 
 const (
@@ -40,8 +39,6 @@ type ssh struct {
 	dbOpenShiftClusters database.OpenShiftClusters
 	dbPortal            database.Portal
 
-	dialer proxy.Dialer
-
 	baseServerConfig *cryptossh.ServerConfig
 }
 
@@ -53,7 +50,6 @@ func New(env env.Core,
 	elevatedGroupIDs []string,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbPortal database.Portal,
-	dialer proxy.Dialer,
 	aadAuthenticatedRouter *mux.Router) (*ssh, error) {
 	s := &ssh{
 		env:           env,
@@ -65,8 +61,6 @@ func New(env env.Core,
 
 		dbOpenShiftClusters: dbOpenShiftClusters,
 		dbPortal:            dbPortal,
-
-		dialer: dialer,
 
 		baseServerConfig: &cryptossh.ServerConfig{},
 	}

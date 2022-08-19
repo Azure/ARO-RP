@@ -33,6 +33,8 @@ const (
 	contextKeyResponse
 )
 
+var rc = restconfig.RestConfig
+
 func (p *prometheus) director(r *http.Request) {
 	ctx := r.Context()
 
@@ -74,7 +76,7 @@ func (p *prometheus) cli(ctx context.Context, resourceID string) (*http.Client, 
 		return nil, err
 	}
 
-	restconfig, err := restconfig.RestConfig(p.dialer, openShiftDoc.OpenShiftCluster)
+	restconfig, err := rc(openShiftDoc.OpenShiftCluster)
 	if err != nil {
 		return nil, err
 	}

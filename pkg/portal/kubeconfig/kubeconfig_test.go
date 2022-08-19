@@ -148,7 +148,7 @@ func TestNew(t *testing.T) {
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
 			_, baseAccessLog := testlog.New()
-			_ = New(baseLog, audit, _env, baseAccessLog, servingCert, elevatedGroupIDs, nil, dbPortal, nil, aadAuthenticatedRouter, &mux.Router{})
+			_ = New(baseLog, audit, _env, baseAccessLog, servingCert, elevatedGroupIDs, nil, dbPortal, aadAuthenticatedRouter, &mux.Router{})
 
 			if tt.r != nil {
 				tt.r(r)

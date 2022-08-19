@@ -58,6 +58,13 @@ const (
 	sshTimeout = time.Hour // never allow a connection to live longer than an hour.
 )
 
+var dialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+	return (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}).DialContext(ctx, "tcp", address)
+}
+
 func (s *ssh) Run() error {
 	go func() {
 		defer recover.Panic(s.log)
@@ -146,7 +153,7 @@ func (s *ssh) newConn(ctx context.Context, clientConn net.Conn) error {
 
 	address := fmt.Sprintf("%s:%d", openShiftDoc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP, 2200+portalDoc.Portal.SSH.Master)
 
-	c2, err := s.dialer.DialContext(ctx, "tcp", address)
+	c2, err := dialContext(ctx, "tcp", address)
 	if err != nil {
 		return err
 	}

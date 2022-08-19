@@ -20,7 +20,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	pkgmonitor "github.com/Azure/ARO-RP/pkg/monitor"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
@@ -109,17 +108,12 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode())
-	if err != nil {
-		return err
-	}
-
 	liveConfig, err := _env.NewLiveConfigManager(ctx)
 	if err != nil {
 		return err
 	}
 
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm, liveConfig)
+	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm, liveConfig)
 
 	return mon.Run(ctx)
 }

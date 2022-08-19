@@ -22,14 +22,6 @@ type dev struct {
 }
 
 func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
-	for _, key := range []string{
-		"PROXY_HOSTNAME",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return nil, fmt.Errorf("environment variable %q unset", key)
-		}
-	}
-
 	d := &dev{}
 
 	var err error

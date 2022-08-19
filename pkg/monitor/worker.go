@@ -192,7 +192,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	ctx, cancel := context.WithTimeout(ctx, 50*time.Second)
 	defer cancel()
 
-	restConfig, err := restconfig.RestConfig(mon.dialer, doc.OpenShiftCluster)
+	restConfig, err := restconfig.RestConfig(doc.OpenShiftCluster)
 	if err != nil {
 		log.Error(err)
 		return

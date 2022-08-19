@@ -5,11 +5,11 @@ package prometheus
 
 import (
 	"bufio"
-	"context"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -26,12 +26,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/apimachinery/pkg/util/httpstream/spdy"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/portal/util/responsewriter"
-	mock_proxy "github.com/Azure/ARO-RP/pkg/util/mocks/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/portforward"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -169,7 +170,6 @@ func testKubeconfig(cacerts []*x509.Certificate, clientkey *rsa.PrivateKey, clie
 }
 
 func TestProxy(t *testing.T) {
-	ctx := context.Background()
 	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/microsoft.redhatopenshift/openshiftclusters/cluster"
 	apiServerPrivateEndpointIP := "1.2.3.4"
 
@@ -200,7 +200,6 @@ func TestProxy(t *testing.T) {
 		name           string
 		r              func(*http.Request)
 		fixtureChecker func(*testdatabase.Fixture, *testdatabase.Checker, *cosmosdb.FakeOpenShiftClusterDocumentClient)
-		mocks          func(*mock_proxy.MockDialer)
 		wantStatusCode int
 		wantBody       string
 	}{
@@ -222,9 +221,6 @@ func TestProxy(t *testing.T) {
 
 				fixture.AddOpenShiftClusterDocuments(openShiftClusterDocument)
 				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
-			},
-			mocks: func(dialer *mock_proxy.MockDialer) {
-				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":6443").Return(l.DialContext(ctx, "", ""))
 			},
 			wantStatusCode: http.StatusOK,
 			wantBody:       "GET /test HTTP/1.1\r\nHost: prometheus-k8s-0:9090\r\nAccept-Encoding: gzip\r\nUser-Agent: Go-http-client/1.1\r\n\r\n",
@@ -269,17 +265,36 @@ func TestProxy(t *testing.T) {
 				panic(err)
 			}
 
+			// Override restconfig to dial the server rather than the private endpoint IP
+			rc = func(oc *api.OpenShiftCluster) (*rest.Config, error) {
+				if oc.Properties.NetworkProfile.APIServerPrivateEndpointIP == "" {
+					return nil, errors.New("privateEndpointIP is empty")
+				}
+
+				kubeconfig := oc.Properties.AROServiceKubeconfig
+				if kubeconfig == nil {
+					kubeconfig = oc.Properties.AdminKubeconfig
+				}
+				config, err := clientcmd.Load(kubeconfig)
+				if err != nil {
+					return nil, err
+				}
+
+				restconfig, err := clientcmd.NewDefaultClientConfig(*config, &clientcmd.ConfigOverrides{}).ClientConfig()
+				if err != nil {
+					return nil, err
+				}
+
+				restconfig.Dial = l.DialContext
+				return restconfig, nil
+			}
+
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			dialer := mock_proxy.NewMockDialer(ctrl)
-			if tt.mocks != nil {
-				tt.mocks(dialer)
-			}
-
 			aadAuthenticatedRouter := &mux.Router{}
 
-			New(logrus.NewEntry(logrus.StandardLogger()), dbOpenShiftClusters, dialer, aadAuthenticatedRouter)
+			New(logrus.NewEntry(logrus.StandardLogger()), dbOpenShiftClusters, aadAuthenticatedRouter)
 
 			if tt.r != nil {
 				tt.r(r)
