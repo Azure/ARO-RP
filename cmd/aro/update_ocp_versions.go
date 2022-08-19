@@ -19,39 +19,61 @@ import (
 )
 
 var (
+	IgnoreList               []string
 	MinimumOpenshiftVersions = []api.OpenShiftVersion{
 		{
-			ID:                "4.12",
-			Version:           "4.12.0",
-			OpenShiftPullspec: "",
-			InstallerPullspec: "",
-			Enabled:           false,
-		},
-		{
-			ID:                "4.11",
 			Version:           "4.11.0",
-			OpenShiftPullspec: "",
+			ID:                "4.11.0",
+			OpenShiftPullspec: "quay.io/openshift-release-dev/ocp-release@sha256:b89ada9261a1b257012469e90d7d4839d0d2f99654f5ce76394fa3f06522b600",
 			InstallerPullspec: "",
 			Enabled:           true,
 		},
 		{
-			ID:                "4.10",
-			Version:           "4.10.0",
-			OpenShiftPullspec: "",
+			Version:           "4.10.20",
+			ID:                "4.10.20",
+			OpenShiftPullspec: "quay.io/openshift-release-dev/ocp-release@sha256:b89ada9261a1b257012469e90d7d4839d0d2f99654f5ce76394fa3f06522b600",
 			InstallerPullspec: "",
 			Enabled:           true,
 		},
 		{
-			ID:                "4.9",
-			Version:           "4.9.0",
-			OpenShiftPullspec: "",
+			Version:           "4.10.21",
+			ID:                "4.10.21",
+			OpenShiftPullspec: "quay.io/openshift-release-dev/ocp-release@sha256:420ee7160d4970304ae97a1b0a77d9bd52af1fd97c597d7cb5d5a2c0d0b72dda",
 			InstallerPullspec: "",
 			Enabled:           true,
 		},
 		{
-			ID:                "4.8",
-			Version:           "4.8.0",
-			OpenShiftPullspec: "",
+			Version:           "4.10.22",
+			ID:                "4.10.22",
+			OpenShiftPullspec: "quay.io/openshift-release-dev/ocp-release@sha256:62c995079672535662ee94ef2358ee6b0e700475c38f6502ca2d3d13d9d7de5b",
+			InstallerPullspec: "",
+			Enabled:           true,
+		},
+		{
+			Version:           "4.10.23",
+			ID:                "4.10.23",
+			OpenShiftPullspec: "quay.io/openshift-release-dev/ocp-release@sha256:e40e49d722cb36a95fa1c03002942b967ccbd7d68de10e003f0baa69abad457b",
+			InstallerPullspec: "",
+			Enabled:           true,
+		},
+		{
+			Version:           "4.10.24",
+			ID:                "4.10.24",
+			OpenShiftPullspec: "quay.io/openshift-release-dev/ocp-release@sha256:aab51636460b5a9757b736a29bc92ada6e6e6282e46b06e6fd483063d590d62a",
+			InstallerPullspec: "",
+			Enabled:           true,
+		},
+		{
+			Version:           "4.10.25",
+			ID:                "4.10.25",
+			OpenShiftPullspec: "quay.io/openshift-release-dev/ocp-release@sha256:ed84fb3fbe026b3bbb4a2637ddd874452ac49c6ead1e15675f257e28664879cc",
+			InstallerPullspec: "",
+			Enabled:           true,
+		},
+		{
+			Version:           "4.10.26",
+			ID:                "4.10.26",
+			OpenShiftPullspec: "quay.io/openshift-release-dev/ocp-release@sha256:e1fa1f513068082d97d78be643c369398b0e6820afab708d26acda2262940954",
 			InstallerPullspec: "",
 			Enabled:           true,
 		},
@@ -59,7 +81,6 @@ var (
 )
 
 func updateOCPVersions(ctx context.Context, log *logrus.Entry) error {
-
 	_env, err := env.NewCore(ctx, log)
 	if err != nil {
 		return err
@@ -127,27 +148,40 @@ func updateOCPVersions(ctx context.Context, log *logrus.Entry) error {
 
 	for _, doc := range versions.OpenShiftVersionDocuments {
 		foundDoc := false
+		ignored := false
 		version := doc.OpenShiftVersion.ID
-		for _, minVer := range MinimumOpenshiftVersions {
-			if version == minVer.ID {
-				foundDoc = true
-				log.Printf("Found Version %s in min version list, patching", doc.ID)
-				_, err := dbOpenShiftVersions.Patch(ctx, "1", func(inFlightDoc *api.OpenShiftVersionDocument) error {
-					inFlightDoc.OpenShiftVersion = &minVer
-					return nil
-				})
+
+		for _, ignoredVer := range IgnoreList {
+			if ignoredVer == version {
+				ignored = true
+				log.Printf("Found Version %s in ignore list, ignoring", doc.ID)
+				break
+			}
+		}
+
+		if !ignored {
+			for _, minVer := range MinimumOpenshiftVersions {
+				if version == minVer.ID {
+					foundDoc = true
+					log.Printf("Found Version %s in min version list, patching", doc.ID)
+					_, err := dbOpenShiftVersions.Patch(ctx, "1", func(inFlightDoc *api.OpenShiftVersionDocument) error {
+						inFlightDoc.OpenShiftVersion = &minVer
+						return nil
+					})
+					if err != nil {
+						return err
+					}
+					log.Printf("Version %s found", minVer.ID)
+					delete(newVersions, minVer.ID)
+				}
+			}
+
+			if !foundDoc {
+				log.Printf("Version %s not found, deleting", doc.ID)
+				err := dbOpenShiftVersions.Delete(ctx, doc)
 				if err != nil {
 					return err
 				}
-				log.Printf("Version %s found", minVer.ID)
-				delete(newVersions, minVer.ID)
-			}
-		}
-		if !foundDoc {
-			log.Printf("Version %s not found, deleting", doc.ID)
-			err := dbOpenShiftVersions.Delete(ctx, doc)
-			if err != nil {
-				return err
 			}
 		}
 	}
