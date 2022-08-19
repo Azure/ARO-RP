@@ -27,6 +27,7 @@ const (
 
 	// advisor checks
 	DefaultIngressCertificate = "DefaultIngressCertificate"
+	DefaultIngressReplica     = "DefaultIngressReplica"
 	DefaultClusterDNS         = "DefaultClusterDNS"
 )
 
