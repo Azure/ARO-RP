@@ -79,17 +79,3 @@ func (r *IngressCertificateChecker) Check(ctx context.Context) error {
 
 	return conditions.SetCondition(ctx, r.arocli, cond, r.role)
 }
-
-// return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-// 		ic, err := m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get(ctx, "default", metav1.GetOptions{})
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		ic.Spec.DefaultCertificate = &corev1.LocalObjectReference{
-// 			Name: m.doc.ID + "-ingress",
-// 		}
-
-// 		_, err = m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ctx, ic, metav1.UpdateOptions{})
-// 		return err
-// 	})
