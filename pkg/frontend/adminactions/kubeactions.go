@@ -50,7 +50,7 @@ type kubeActions struct {
 
 // NewKubeActions returns a kubeActions
 func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster) (KubeActions, error) {
-	restConfig, err := restconfig.RestConfig(env, oc)
+	restConfig, err := restconfig.RestConfig(oc)
 	if err != nil {
 		return nil, err
 	}

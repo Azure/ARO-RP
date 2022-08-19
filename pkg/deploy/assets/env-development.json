@@ -14,24 +14,6 @@
             "type": "string",
             "defaultValue": ""
         },
-        "proxyCert": {
-            "type": "string"
-        },
-        "proxyClientCert": {
-            "type": "string"
-        },
-        "proxyDomainNameLabel": {
-            "type": "string"
-        },
-        "proxyImage": {
-            "type": "string"
-        },
-        "proxyImageAuth": {
-            "type": "securestring"
-        },
-        "proxyKey": {
-            "type": "securestring"
-        },
         "publicIPAddressAllocationMethod": {
             "type": "string",
             "defaultValue": "Static"

@@ -35,6 +35,8 @@ const (
 	contextKeyResponse
 )
 
+var dialContext = restconfig.DialContext
+
 // director is called by the ReverseProxy.  It converts an incoming request into
 // the one that'll go out to the API server.  It also resolves an HTTP client
 // that will be able to make the ongoing request.
@@ -135,7 +137,7 @@ func (k *kubeconfig) cli(ctx context.Context, resourceID string, elevated bool) 
 
 	return &http.Client{
 		Transport: &http.Transport{
-			DialContext: restconfig.DialContext(k.dialer, openShiftDoc.OpenShiftCluster),
+			DialContext: dialContext(openShiftDoc.OpenShiftCluster),
 			TLSClientConfig: &tls.Config{
 				Certificates: []tls.Certificate{
 					{

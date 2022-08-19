@@ -22,7 +22,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	mock_proxy "github.com/Azure/ARO-RP/pkg/util/mocks/proxy"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/bufferedpipe"
@@ -134,7 +133,6 @@ func fakeServer(clientKey *rsa.PublicKey) (*listener.Listener, error) {
 }
 
 func TestProxy(t *testing.T) {
-	ctx := context.Background()
 	username := "test"
 	password := "00000000-0000-0000-0000-000000000000"
 	subscriptionID := "10000000-0000-0000-0000-000000000000"
@@ -192,7 +190,7 @@ func TestProxy(t *testing.T) {
 		username       string
 		password       string
 		fixtureChecker func(*test, *testdatabase.Fixture, *testdatabase.Checker, *cosmosdb.FakeOpenShiftClusterDocumentClient, *cosmosdb.FakePortalDocumentClient)
-		mocks          func(*mock_proxy.MockDialer)
+		dc             func(ctx context.Context, network, address string) (net.Conn, error)
 		wantErrPrefix  string
 		wantLogs       []map[string]types.GomegaMatcher
 	}
@@ -202,6 +200,9 @@ func TestProxy(t *testing.T) {
 			name:     "good",
 			username: username,
 			password: password,
+			dc: func(ctx context.Context, network, address string) (net.Conn, error) {
+				return l.DialContext(ctx, "", "")
+			},
 			fixtureChecker: func(tt *test, fixture *testdatabase.Fixture, checker *testdatabase.Checker, openShiftClustersClient *cosmosdb.FakeOpenShiftClusterDocumentClient, portalClient *cosmosdb.FakePortalDocumentClient) {
 				portalDocument := goodPortalDocument(tt.password)
 				fixture.AddPortalDocuments(portalDocument)
@@ -211,9 +212,6 @@ func TestProxy(t *testing.T) {
 				portalDocument.Portal.SSH.Authenticated = true
 				checker.AddPortalDocuments(portalDocument)
 				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
-			},
-			mocks: func(dialer *mock_proxy.MockDialer) {
-				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":2201").Return(l.DialContext(ctx, "", ""))
 			},
 			wantLogs: []map[string]types.GomegaMatcher{
 				{
@@ -279,9 +277,12 @@ func TestProxy(t *testing.T) {
 			},
 		},
 		{
-			name:          "bad password",
-			username:      username,
-			password:      password,
+			name:     "bad password",
+			username: username,
+			password: password,
+			dc: func(ctx context.Context, network, address string) (net.Conn, error) {
+				return l.DialContext(ctx, "", "")
+			},
 			wantErrPrefix: "ssh: handshake failed",
 			wantLogs: []map[string]types.GomegaMatcher{
 				{
@@ -296,6 +297,9 @@ func TestProxy(t *testing.T) {
 			name:     "not ssh record",
 			username: username,
 			password: password,
+			dc: func(ctx context.Context, network, address string) (net.Conn, error) {
+				return l.DialContext(ctx, "", "")
+			},
 			fixtureChecker: func(tt *test, fixture *testdatabase.Fixture, checker *testdatabase.Checker, openShiftClustersClient *cosmosdb.FakeOpenShiftClusterDocumentClient, portalClient *cosmosdb.FakePortalDocumentClient) {
 				portalDocument := goodPortalDocument(tt.password)
 				portalDocument.Portal.SSH = nil
@@ -356,6 +360,9 @@ func TestProxy(t *testing.T) {
 			name:     "sad dialer",
 			username: username,
 			password: password,
+			dc: func(ctx context.Context, network, address string) (net.Conn, error) {
+				return nil, fmt.Errorf("sad")
+			},
 			fixtureChecker: func(tt *test, fixture *testdatabase.Fixture, checker *testdatabase.Checker, openShiftClustersClient *cosmosdb.FakeOpenShiftClusterDocumentClient, portalClient *cosmosdb.FakePortalDocumentClient) {
 				portalDocument := goodPortalDocument(tt.password)
 				fixture.AddPortalDocuments(portalDocument)
@@ -365,9 +372,6 @@ func TestProxy(t *testing.T) {
 				portalDocument.Portal.SSH.Authenticated = true
 				checker.AddPortalDocuments(portalDocument)
 				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
-			},
-			mocks: func(dialer *mock_proxy.MockDialer) {
-				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":2201").Return(nil, fmt.Errorf("sad"))
 			},
 			wantErrPrefix: "EOF",
 			wantLogs: []map[string]types.GomegaMatcher{
@@ -399,20 +403,16 @@ func TestProxy(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			dialContext = tt.dc
+
 			client, client1 := bufferedpipe.New()
 
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			dialer := mock_proxy.NewMockDialer(ctrl)
-
-			if tt.mocks != nil {
-				tt.mocks(dialer)
-			}
-
 			hook, log := testlog.New()
 
-			s, err := New(nil, nil, log, nil, hostKey, nil, dbOpenShiftClusters, dbPortal, dialer, &mux.Router{})
+			s, err := New(nil, nil, log, nil, hostKey, nil, dbOpenShiftClusters, dbPortal, &mux.Router{})
 			if err != nil {
 				t.Fatal(err)
 			}

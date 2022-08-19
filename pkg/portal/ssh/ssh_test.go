@@ -140,7 +140,7 @@ func TestNew(t *testing.T) {
 
 			aadAuthenticatedRouter := &mux.Router{}
 
-			_, err = New(env, logrus.NewEntry(logrus.StandardLogger()), nil, nil, hostKey, elevatedGroupIDs, nil, dbPortal, nil, aadAuthenticatedRouter)
+			_, err = New(env, logrus.NewEntry(logrus.StandardLogger()), nil, nil, hostKey, elevatedGroupIDs, nil, dbPortal, aadAuthenticatedRouter)
 			if err != nil {
 				t.Fatal(err)
 			}

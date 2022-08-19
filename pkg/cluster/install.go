@@ -369,7 +369,7 @@ func (m *manager) finishInstallation(ctx context.Context) error {
 // initializeKubernetesClients initializes clients which are used
 // once the cluster is up later on in the install process.
 func (m *manager) initializeKubernetesClients(ctx context.Context) error {
-	restConfig, err := restconfig.RestConfig(m.env, m.doc.OpenShiftCluster)
+	restConfig, err := restconfig.RestConfig(m.doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}

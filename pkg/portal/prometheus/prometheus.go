@@ -14,7 +14,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/portal/util/clientcache"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 )
 
@@ -23,20 +22,17 @@ type prometheus struct {
 
 	dbOpenShiftClusters database.OpenShiftClusters
 
-	dialer      proxy.Dialer
 	clientCache clientcache.ClientCache
 }
 
 func New(baseLog *logrus.Entry,
 	dbOpenShiftClusters database.OpenShiftClusters,
-	dialer proxy.Dialer,
 	aadAuthenticatedRouter *mux.Router) *prometheus {
 	p := &prometheus{
 		log: baseLog,
 
 		dbOpenShiftClusters: dbOpenShiftClusters,
 
-		dialer:      dialer,
 		clientCache: clientcache.New(time.Hour),
 	}
 

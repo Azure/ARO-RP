@@ -31,7 +31,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/portal/prometheus"
 	"github.com/Azure/ARO-RP/pkg/portal/ssh"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 )
@@ -67,8 +66,6 @@ type portal struct {
 	dbPortal            database.Portal
 	dbOpenShiftClusters database.OpenShiftClusters
 
-	dialer proxy.Dialer
-
 	templateV1 *template.Template
 	templateV2 *template.Template
 
@@ -96,7 +93,6 @@ func NewPortal(env env.Core,
 	elevatedGroupIDs []string,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbPortal database.Portal,
-	dialer proxy.Dialer,
 	m metrics.Emitter,
 ) Runnable {
 	return &portal{
@@ -122,8 +118,6 @@ func NewPortal(env env.Core,
 
 		dbOpenShiftClusters: dbOpenShiftClusters,
 		dbPortal:            dbPortal,
-
-		dialer: dialer,
 
 		m: m,
 	}
@@ -184,7 +178,7 @@ func (p *portal) setupRouter() error {
 }
 
 func (p *portal) setupServices() error {
-	ssh, err := ssh.New(p.env, p.log, p.baseAccessLog, p.sshl, p.sshKey, p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer, p.authenticatedRouter)
+	ssh, err := ssh.New(p.env, p.log, p.baseAccessLog, p.sshl, p.sshKey, p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.authenticatedRouter)
 	if err != nil {
 		return err
 	}
@@ -194,9 +188,9 @@ func (p *portal) setupServices() error {
 		return err
 	}
 
-	kubeconfig.New(p.log, p.audit, p.env, p.baseAccessLog, p.servingCerts[0], p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer, p.authenticatedRouter, p.publicRouter)
+	kubeconfig.New(p.log, p.audit, p.env, p.baseAccessLog, p.servingCerts[0], p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.authenticatedRouter, p.publicRouter)
 
-	prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer, p.authenticatedRouter)
+	prometheus.New(p.log, p.dbOpenShiftClusters, p.authenticatedRouter)
 
 	return nil
 }
@@ -343,19 +337,7 @@ func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.Fetc
 		return nil, err
 	}
 
-	// In development mode, we can have localhost "fake" APIServers which don't
-	// get proxied, so use a direct dialer for this
-	var dialer proxy.Dialer
-	if p.env.IsLocalDevelopmentMode() && doc.OpenShiftCluster.Properties.APIServerProfile.IP == "127.0.0.1" {
-		dialer, err = proxy.NewDialer(false)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		dialer = p.dialer
-	}
-
-	return cluster.NewFetchClient(p.log, dialer, doc)
+	return cluster.NewFetchClient(p.log, doc)
 }
 
 func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request) {

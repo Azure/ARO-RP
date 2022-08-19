@@ -18,7 +18,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -197,7 +196,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 
 					aead := testdatabase.NewFakeAEAD()
 
-					f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, aead, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
+					f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, aead, nil, nil, func(log *logrus.Entry, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
 						return ti.enricher
 					})
 					if err != nil {

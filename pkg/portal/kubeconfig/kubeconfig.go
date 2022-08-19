@@ -24,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/portal/util/clientcache"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 )
 
@@ -42,7 +41,6 @@ type kubeconfig struct {
 	dbOpenShiftClusters database.OpenShiftClusters
 	dbPortal            database.Portal
 
-	dialer      proxy.Dialer
 	clientCache clientcache.ClientCache
 }
 
@@ -54,7 +52,6 @@ func New(baseLog *logrus.Entry,
 	elevatedGroupIDs []string,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbPortal database.Portal,
-	dialer proxy.Dialer,
 	aadAuthenticatedRouter,
 	unauthenticatedRouter *mux.Router) *kubeconfig {
 	k := &kubeconfig{
@@ -67,7 +64,6 @@ func New(baseLog *logrus.Entry,
 		dbOpenShiftClusters: dbOpenShiftClusters,
 		dbPortal:            dbPortal,
 
-		dialer:      dialer,
 		clientCache: clientcache.New(time.Hour),
 	}
 

@@ -37,8 +37,7 @@ func (g *generator) devSharedTemplate() *arm.Template {
 		g.devDiskEncryptionKeyvault(),
 		g.devDiskEncryptionKey(),
 		g.devDiskEncryptionKeyVaultAccessPolicy(),
-		g.devDiskEncryptionSet(),
-		g.devProxyVMSS())
+		g.devDiskEncryptionSet())
 
 	t.Resources = append(t.Resources,
 		g.virtualNetworkPeering("dev-vpn-vnet/peering-dev-vnet",
@@ -84,12 +83,6 @@ func (g *generator) devSharedTemplate() *arm.Template {
 		"ciAzpToken",
 		"ciCapacity",
 		"ciPoolName",
-		"proxyCert",
-		"proxyClientCert",
-		"proxyDomainNameLabel",
-		"proxyImage",
-		"proxyImageAuth",
-		"proxyKey",
 		"publicIPAddressAllocationMethod",
 		"publicIPAddressSkuName",
 		"sshPublicKey",
@@ -103,8 +96,6 @@ func (g *generator) devSharedTemplate() *arm.Template {
 		case "ciCapacity":
 			typ = "int"
 			defaultValue = 0
-		case "proxyImageAuth", "proxyKey":
-			typ = "securestring"
 		case "publicIPAddressAllocationMethod":
 			defaultValue = "Static"
 		case "publicIPAddressSkuName":
