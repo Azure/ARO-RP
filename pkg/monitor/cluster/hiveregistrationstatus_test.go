@@ -41,7 +41,7 @@ func TestEmitHiveRegistrationStatus(t *testing.T) {
 			wantLog:    "skipping: no hive cluster manager",
 		},
 		{
-			name:       "No Namespace",
+			name:       "no namespace in cosmosDB - not adopted yet",
 			withClient: true,
 			oc: &api.OpenShiftCluster{
 				Name: "testcluster",
@@ -54,7 +54,20 @@ func TestEmitHiveRegistrationStatus(t *testing.T) {
 			wantErr: "cluster testcluster not adopted. No namespace in the clusterdocument",
 		},
 		{
-			name:       "Happy Path",
+			name:       "clusterdeployment can not be retrieved",
+			withClient: true,
+			oc: &api.OpenShiftCluster{
+				Name: "testcluster",
+				Properties: api.OpenShiftClusterProperties{
+					HiveProfile: api.HiveProfile{
+						Namespace: fakeNamespace,
+					},
+				},
+			},
+			wantErr: "clusterdeployments.hive.openshift.io \"cluster\" not found",
+		},
+		{
+			name:       "send metrics data",
 			withClient: true,
 			oc: &api.OpenShiftCluster{
 				Name: "testcluster",
@@ -105,7 +118,7 @@ func TestEmitHiveRegistrationStatus(t *testing.T) {
 	}
 }
 
-func TestValidateHiveConditions(t *testing.T) {
+func TestRetrieveClusterDeployment(t *testing.T) {
 	fakeNamespace := "fake-namespace"
 
 	for _, tt := range []struct {
@@ -113,17 +126,15 @@ func TestValidateHiveConditions(t *testing.T) {
 		cd      *hivev1.ClusterDeployment
 		wantErr string
 	}{{
-		name: "Regular case",
+		name: "clusterdeployment available in hive",
 		cd: &hivev1.ClusterDeployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      hive.ClusterDeploymentName,
 				Namespace: fakeNamespace,
 			},
 		},
-		wantErr: "",
 	}, {
 		name:    "no cluster deployment found in hive",
-		cd:      nil,
 		wantErr: fmt.Sprintf("clusterdeployments.hive.openshift.io %q not found", hive.ClusterDeploymentName),
 	}} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -144,7 +155,7 @@ func TestValidateHiveConditions(t *testing.T) {
 				},
 			}
 
-			err := mon.validateHiveConditions(context.Background())
+			_, err := mon.retrieveClusterDeployment(context.Background())
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -153,7 +164,7 @@ func TestValidateHiveConditions(t *testing.T) {
 	}
 }
 
-func TestFilterConditions(t *testing.T) {
+func TestFilterClusterDeploymentConditions(t *testing.T) {
 	var testConditionList = map[hivev1.ClusterDeploymentConditionType]corev1.ConditionStatus{
 		hivev1.ClusterReadyCondition:  corev1.ConditionTrue,
 		hivev1.UnreachableCondition:   corev1.ConditionFalse,
@@ -209,7 +220,7 @@ func TestFilterConditions(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			mon := &Monitor{}
-			conditions := mon.filterConditions(context.Background(), tt.cd, testConditionList)
+			conditions := mon.filterClusterDeploymentConditions(context.Background(), tt.cd, testConditionList)
 			for _, c := range conditions {
 				isExpected := false
 				for _, ex := range tt.expectedConditions {
@@ -239,7 +250,7 @@ func TestFilterConditions(t *testing.T) {
 	}
 }
 
-func TestEmitMetrics(t *testing.T) {
+func TestEmitFilteredClusterDeploymentMetrics(t *testing.T) {
 	conditions := []hivev1.ClusterDeploymentCondition{
 		{
 			Type:   hivev1.ClusterHibernatingCondition,
@@ -266,5 +277,5 @@ func TestEmitMetrics(t *testing.T) {
 		})
 	}
 
-	mon.emitMetrics(conditions)
+	mon.emitFilteredClusterDeploymentMetrics(conditions)
 }
