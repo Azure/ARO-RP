@@ -37,6 +37,15 @@ kill_rp(){
     wait $rppid
 }
 
+run_vpn() {
+    sudo openvpn --config secrets/$VPN --daemon --writepid vpnpid
+    sleep 10
+}
+
+kill_vpn() {
+    while read pid; do sudo kill $pid; done < vpnpid
+}
+
 deploy_e2e_db() {
     echo "########## 📦 Creating new DB $DATABASE_NAME in $DATABASE_ACCOUNT_NAME ##########"
 
