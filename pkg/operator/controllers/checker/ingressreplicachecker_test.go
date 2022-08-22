@@ -52,5 +52,4 @@ func TestIngressReplicaChecker(t *testing.T) {
 	if *ingressController.Spec.Replicas != 1 {
 		t.Errorf("invalid replica count: %d", *ingressController.Spec.Replicas)
 	}
-
 }
