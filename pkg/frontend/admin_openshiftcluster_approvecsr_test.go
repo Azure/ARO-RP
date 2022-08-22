@@ -26,10 +26,9 @@ func TestAdminApproveCSR(t *testing.T) {
 	ctx := context.Background()
 
 	type test struct {
-		name       string
-		resourceID string
-		csrName    string
-		// approveAll     string
+		name           string
+		resourceID     string
+		csrName        string
 		mocks          func(*test, *mock_adminactions.MockKubeActions)
 		method         string
 		wantStatusCode int
@@ -54,8 +53,6 @@ func TestAdminApproveCSR(t *testing.T) {
 			method:     http.MethodPost,
 			name:       "all csrs",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			//csrName:    "aro-csr",
-			//approveAll: "true",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
 					RunCertificateMassApprove(gomock.Any()).
@@ -63,17 +60,6 @@ func TestAdminApproveCSR(t *testing.T) {
 			},
 			wantStatusCode: http.StatusOK,
 		},
-		// {
-		// 	method:     http.MethodPost,
-		// 	name:       "invalid csr name",
-		// 	resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-		// 	csrName:    "",
-		// 	// approveAll: "false",
-		// 	mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
-		// 	},
-		// 	wantStatusCode: http.StatusBadRequest,
-		// 	wantError:      "400: InvalidParameter: : The provided name '' is invalid.",
-		// },
 	} {
 		t.Run(fmt.Sprintf("%s: %s", tt.method, tt.name), func(t *testing.T) {
 			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
@@ -115,7 +101,6 @@ func TestAdminApproveCSR(t *testing.T) {
 			go f.Run(ctx, nil, nil)
 
 			resp, b, err := ti.request(tt.method,
-				// fmt.Sprintf("https://server/admin%s/approvecsr?csrName=%s&approveAll=%s", tt.resourceID, tt.csrName, tt.approveAll),
 				fmt.Sprintf("https://server/admin%s/approvecsr?csrName=%s", tt.resourceID, tt.csrName),
 				nil, nil)
 			if err != nil {
