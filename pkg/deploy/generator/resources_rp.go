@@ -57,7 +57,7 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
 				SourcePortRange:          to.StringPtr("*"),
 				DestinationPortRange:     to.StringPtr("443"),
-				SourceAddressPrefixes:    to.StringSlicePtr([]string{"GenevaActions"}),
+				SourceAddressPrefix:      to.StringPtr("GenevaActions"),
 				DestinationAddressPrefix: to.StringPtr("*"),
 				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
 				Priority:                 to.Int32Ptr(130),
