@@ -38,9 +38,7 @@
                             "protocol": "Tcp",
                             "sourcePortRange": "*",
                             "destinationPortRange": "443",
-                            "sourceAddressPrefixes": [
-                                "GenevaActions"
-                            ],
+                            "sourceAddressPrefix": "GenevaActions",
                             "destinationAddressPrefix": "*",
                             "access": "Allow",
                             "priority": 130,
