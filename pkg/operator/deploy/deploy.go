@@ -89,9 +89,7 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli 
 type deploymentData struct {
 	Image              string
 	Version            string
-	GitCommit          string
 	IsLocalDevelopment bool
-	HasVersion         bool
 }
 
 func templateManifests(data deploymentData) ([][]byte, error) {
@@ -125,18 +123,24 @@ func templateManifests(data deploymentData) ([][]byte, error) {
 
 func (o *operator) createDeploymentData() deploymentData {
 	image := o.env.AROOperatorImage()
-	hasVersion := false
+
+	// HACK: Override for ARO_IMAGE env variable setup in local-dev mode
+	version := "latest"
+	if strings.Contains(image, ":") {
+		str := strings.Split(image, ":")
+		version = str[len(str)-1]
+	}
+
+	// Set version correctly if it's overridden
 	if o.oc.Properties.OperatorVersion != "" {
-		image = fmt.Sprintf("%s/aro", o.env.ACRDomain())
-		hasVersion = true
+		version = o.oc.Properties.OperatorVersion
+		image = fmt.Sprintf("%s/aro:%s", o.env.ACRDomain(), version)
 	}
 
 	return deploymentData{
 		IsLocalDevelopment: o.env.IsLocalDevelopmentMode(),
 		Image:              image,
-		Version:            o.oc.Properties.OperatorVersion,
-		GitCommit:          version.GitCommit,
-		HasVersion:         hasVersion,
+		Version:            version,
 	}
 }
 
