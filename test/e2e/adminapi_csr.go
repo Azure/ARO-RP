@@ -57,8 +57,8 @@ var _ = Describe("[Admin API] CertificateSigningRequest action", func() {
 func testCSRApproveOK(objName, namespace string) {
 	By("approving the CSR via RP admin API")
 	params := url.Values{
-		"csrName":    []string{objName},
-		"approveAll": []string{"false"},
+		"csrName": []string{objName},
+		// "approveAll": []string{"false"},
 	}
 	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/approvecsr", params, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
@@ -82,10 +82,11 @@ func testCSRApproveOK(objName, namespace string) {
 
 func testCSRMassApproveOK(namePrefix, namespace string, csrCount int) {
 	By("approving all CSRs via RP admin API")
-	params := url.Values{
-		"approveAll": []string{"true"},
-	}
-	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/approvecsr", params, nil, nil)
+	// params := url.Values{
+	// 	"approveAll": []string{"true"},
+	// }
+	// resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/approvecsr", params, nil, nil)
+	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/approvecsr", nil, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 

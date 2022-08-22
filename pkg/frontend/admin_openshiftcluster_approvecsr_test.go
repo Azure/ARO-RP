@@ -26,10 +26,10 @@ func TestAdminApproveCSR(t *testing.T) {
 	ctx := context.Background()
 
 	type test struct {
-		name           string
-		resourceID     string
-		csrName        string
-		approveAll     string
+		name       string
+		resourceID string
+		csrName    string
+		// approveAll     string
 		mocks          func(*test, *mock_adminactions.MockKubeActions)
 		method         string
 		wantStatusCode int

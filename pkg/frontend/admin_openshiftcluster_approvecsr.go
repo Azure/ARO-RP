@@ -30,15 +30,24 @@ func (f *frontend) postAdminOpenShiftClusterApproveCSR(w http.ResponseWriter, r 
 func (f *frontend) _postAdminOpenShiftClusterApproveCSR(ctx context.Context, r *http.Request, log *logrus.Entry) error {
 	vars := mux.Vars(r)
 
-	approveAll := strings.EqualFold(r.URL.Query().Get("approveAll"), "true")
-	csrName := ""
-	if !approveAll {
-		csrName = r.URL.Query().Get("csrName")
+	// Get csrName if provided
+	csrName := r.URL.Query().Get("csrName")
+	if csrName != "" {
 		err := validateAdminKubernetesObjects(r.Method, "CertificateSigningRequest", "", csrName)
 		if err != nil {
 			return err
 		}
 	}
+
+	// approveAll := strings.EqualFold(r.URL.Query().Get("approveAll"), "true")
+	// csrName := ""
+	// if !approveAll {
+	// 	csrName = r.URL.Query().Get("csrName")
+	// 	err := validateAdminKubernetesObjects(r.Method, "CertificateSigningRequest", "", csrName)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
@@ -55,8 +64,15 @@ func (f *frontend) _postAdminOpenShiftClusterApproveCSR(ctx context.Context, r *
 		return err
 	}
 
-	if approveAll {
-		return k.RunCertificateMassApprove(ctx)
+	// Swapped out to mass approve if no csrName is provided, otherwise approve single CSR
+	if csrName != "" {
+		return k.RunCertificateApprove(ctx, csrName)
 	}
-	return k.RunCertificateApprove(ctx, csrName)
+
+	return k.RunCertificateMassApprove(ctx)
+
+	// if approveAll {
+	// 	return k.RunCertificateMassApprove(ctx)
+	// }
+	// return k.RunCertificateApprove(ctx, csrName)
 }
