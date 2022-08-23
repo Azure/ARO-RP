@@ -37,15 +37,15 @@ func (c *core) IsLocalDevelopmentMode() bool {
 func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, error) {
 	if c.isLocalDevelopmentMode {
 		return liveconfig.NewDev(), nil
-	} else {
-		msiAuthorizer, err := c.NewMSIAuthorizer(MSIContextRP, c.Environment().ResourceManagerEndpoint)
-		if err != nil {
-			return nil, err
-		}
-
-		mcc := containerservice.NewManagedClustersClient(c.Environment(), c.SubscriptionID(), msiAuthorizer)
-		return liveconfig.NewProd(c.Location(), mcc), nil
 	}
+
+	msiAuthorizer, err := c.NewMSIAuthorizer(MSIContextRP, c.Environment().ResourceManagerEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	mcc := containerservice.NewManagedClustersClient(c.Environment(), c.SubscriptionID(), msiAuthorizer)
+	return liveconfig.NewProd(c.Location(), mcc), nil
 }
 
 func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
