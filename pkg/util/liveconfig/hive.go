@@ -41,7 +41,7 @@ func (p *prod) HiveRestConfig(ctx context.Context, index int) (*rest.Config, err
 	cached, ext := p.cachedCredentials[index]
 	p.hiveCredentialsMutex.RUnlock()
 	if ext {
-		return cached, nil
+		return rest.CopyConfig(cached), nil
 	}
 
 	// Lock the RWMutex as we're starting to fetch so that new readers will wait
@@ -63,5 +63,5 @@ func (p *prod) HiveRestConfig(ctx context.Context, index int) (*rest.Config, err
 	}
 
 	p.cachedCredentials[index] = parsed
-	return parsed, nil
+	return rest.CopyConfig(parsed), nil
 }
