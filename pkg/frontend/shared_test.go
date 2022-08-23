@@ -96,7 +96,7 @@ func newTestInfra(t *testing.T) *testInfra {
 	_env.EXPECT().ServiceKeyvault().AnyTimes().Return(keyvault)
 	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
-	_env.EXPECT().Domain().AnyTimes().Return("")
+	_env.EXPECT().Domain().AnyTimes().Return("aro.example")
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 	_env.EXPECT().FeatureIsSet(env.FeatureRequireD2sV3Workers).AnyTimes().Return(false)
 	_env.EXPECT().FeatureIsSet(env.FeatureDisableReadinessDelay).AnyTimes().Return(false)
