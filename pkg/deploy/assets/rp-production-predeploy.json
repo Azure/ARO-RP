@@ -57,7 +57,7 @@
     "parameters": {
         "deployNSGs": {
             "type": "bool",
-            "defaultValue": false
+            "defaultValue": true
         },
         "extraClusterKeyvaultAccessPolicies": {
             "type": "array",
