@@ -125,6 +125,11 @@ func TestListInstallVersions(t *testing.T) {
 				}
 			}
 
+			// sort the expected response as the version order might change
+			sort.Slice(tt.wantResponse.OpenShiftVersions, func(i, j int) bool {
+				return semver.New(tt.wantResponse.OpenShiftVersions[i].Properties.Version).LessThan(*semver.New(tt.wantResponse.OpenShiftVersions[j].Properties.Version))
+			})
+
 			// marshal the expected response into a []byte otherwise
 			// it will compare zero values to omitempty json tags
 			want, err := json.Marshal(tt.wantResponse)
