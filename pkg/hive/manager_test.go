@@ -13,8 +13,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
+	"github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 )
 
 func TestIsClusterDeploymentReady(t *testing.T) {
@@ -153,6 +156,66 @@ func TestResetCorrelationData(t *testing.T) {
 				}
 				if !reflect.DeepEqual(tt.wantAnnotations, cd.Annotations) {
 					t.Error(cmp.Diff(tt.wantAnnotations, cd.Annotations))
+				}
+			}
+		})
+	}
+}
+
+func TestCreateNamespace(t *testing.T) {
+	for _, tc := range []struct {
+		name             string
+		nsNames          []string
+		useFakeGenerator bool
+		shouldFail       bool
+	}{
+		{
+			name:             "not conflict names and real generator",
+			nsNames:          []string{"namespace1", "namespace2"},
+			useFakeGenerator: false,
+			shouldFail:       false,
+		},
+		{
+			name:             "conflict names and real generator",
+			nsNames:          []string{"namespace", "namespace"},
+			useFakeGenerator: false,
+			shouldFail:       false,
+		},
+		{
+			name:             "not conflict names and fake generator",
+			nsNames:          []string{"namespace1", "namespace2"},
+			useFakeGenerator: true,
+			shouldFail:       false,
+		},
+		{
+			name:             "conflict names and fake generator",
+			nsNames:          []string{"namespace", "namespace"},
+			useFakeGenerator: true,
+			shouldFail:       true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeClientset := kubernetesfake.NewSimpleClientset()
+			c := clusterManager{
+				kubernetescli: fakeClientset,
+			}
+
+			if tc.useFakeGenerator {
+				uuid.DefaultGenerator = fake.NewGenerator(tc.nsNames)
+			}
+
+			ns, err := c.CreateNamespace(context.Background())
+			if err != nil && !tc.shouldFail {
+				t.Error(err)
+			}
+
+			if err == nil {
+				res, err := fakeClientset.CoreV1().Namespaces().Get(context.Background(), ns.Name, metav1.GetOptions{})
+				if err != nil {
+					t.Error(err)
+				}
+				if !reflect.DeepEqual(ns, res) {
+					t.Errorf("results are not equal: \n wanted: %+v \n got %+v", ns, res)
 				}
 			}
 		})
