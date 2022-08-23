@@ -6,13 +6,14 @@ package deploy
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/x509"
 	"fmt"
 	"io/ioutil"
 	"reflect"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/ghodss/yaml"
+	"golang.org/x/crypto/ssh"
 )
 
 // NOTICE: when modifying the config definition here, don't forget to update
@@ -156,9 +157,12 @@ func (conf *RPConfig) validate() error {
 		if err != nil {
 			return err
 		}
-		pubKey := x509.MarshalPKCS1PublicKey(&key.PublicKey)
-		publicKey := string(pubKey)
-		conf.Configuration.SSHPublicKey = (&publicKey)
+		publicRsaKey, err := ssh.NewPublicKey(&key.PublicKey)
+		if err != nil {
+			return err
+		}
+		publicKeyBytes := ssh.MarshalAuthorizedKey(publicRsaKey)
+		conf.Configuration.SSHPublicKey = to.StringPtr(string(publicKeyBytes))
 	}
 
 	for i := 0; i < v.NumField(); i++ {

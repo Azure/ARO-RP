@@ -1,0 +1,25 @@
+name: ci-go
+
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+  pull_request:
+permissions:
+  contents: read
+
+jobs:
+  ci-from-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: build from buildah
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: test-image
+          tags: ${{ github.sha }}
+          context: .
+          containerfiles: ./Dockerfile.ci

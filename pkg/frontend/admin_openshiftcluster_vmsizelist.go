@@ -24,9 +24,7 @@ func (f *frontend) getAdminOpenShiftClusterVMResizeOptions(w http.ResponseWriter
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
-
 	b, err := f._getAdminOpenShiftClusterVMResizeOptions(ctx, r, log)
-
 	adminReply(log, w, nil, b, err)
 }
 
