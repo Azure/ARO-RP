@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -20,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
+	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
 
 type monitor struct {
@@ -44,14 +44,14 @@ type monitor struct {
 	lastChangefeed atomic.Value //time.Time
 	startTime      time.Time
 
-	hiveRestConfig *rest.Config
+	liveConfig liveconfig.Manager
 }
 
 type Runnable interface {
 	Run(context.Context) error
 }
 
-func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Emitter, hiveRestConfig *rest.Config) Runnable {
+func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Emitter, liveConfig liveconfig.Manager) Runnable {
 	return &monitor{
 		baseLog: log,
 		dialer:  dialer,
@@ -70,7 +70,7 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Moni
 
 		startTime: time.Now(),
 
-		hiveRestConfig: hiveRestConfig,
+		liveConfig: liveConfig,
 	}
 }
 

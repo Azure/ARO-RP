@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
@@ -87,6 +88,7 @@ type Interface interface {
 	ACRResourceID() string
 	ACRDomain() string
 	AROOperatorImage() string
+	LiveConfig() liveconfig.Manager
 
 	// VMSku returns SKU for a given vm size. Note that this
 	// returns a pointer to partly populated object.
