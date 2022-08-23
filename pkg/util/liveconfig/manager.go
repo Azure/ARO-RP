@@ -23,18 +23,18 @@ func NewDev() Manager {
 }
 
 type prod struct {
-	location        string
-	managedClusters containerservice.ManagedClustersClient
+	location              string
+	managedClustersClient containerservice.ManagedClustersClient
 
 	hiveCredentialsMutex *sync.RWMutex
 	cachedCredentials    map[int]*rest.Config
 }
 
-func NewProd(location string, managedClusters containerservice.ManagedClustersClient) Manager {
+func NewProd(location string, managedClustersClient containerservice.ManagedClustersClient) Manager {
 	return &prod{
-		location:             location,
-		managedClusters:      managedClusters,
-		cachedCredentials:    make(map[int]*rest.Config),
-		hiveCredentialsMutex: &sync.RWMutex{},
+		location:              location,
+		managedClustersClient: managedClustersClient,
+		cachedCredentials:     make(map[int]*rest.Config),
+		hiveCredentialsMutex:  &sync.RWMutex{},
 	}
 }

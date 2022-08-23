@@ -52,7 +52,7 @@ func (p *prod) HiveRestConfig(ctx context.Context, index int) (*rest.Config, err
 	rpResourceGroup := fmt.Sprintf("rp-%s", p.location)
 	rpResourceName := fmt.Sprintf("aro-aks-cluster-%03d", index)
 
-	res, err := p.managedClusters.ListClusterUserCredentials(ctx, rpResourceGroup, rpResourceName, "")
+	res, err := p.managedClustersClient.ListClusterUserCredentials(ctx, rpResourceGroup, rpResourceName, "")
 	if err != nil {
 		return nil, err
 	}
