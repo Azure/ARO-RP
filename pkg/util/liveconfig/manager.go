@@ -5,6 +5,7 @@ package liveconfig
 
 import (
 	"context"
+	"sync"
 
 	"k8s.io/client-go/rest"
 
@@ -25,13 +26,15 @@ type prod struct {
 	location        string
 	managedClusters containerservice.ManagedClustersClient
 
-	cachedCredentials map[int]*rest.Config
+	hiveCredentialsMutex *sync.RWMutex
+	cachedCredentials    map[int]*rest.Config
 }
 
 func NewProd(location string, managedClusters containerservice.ManagedClustersClient) Manager {
 	return &prod{
-		location:          location,
-		managedClusters:   managedClusters,
-		cachedCredentials: make(map[int]*rest.Config),
+		location:             location,
+		managedClusters:      managedClusters,
+		cachedCredentials:    make(map[int]*rest.Config),
+		hiveCredentialsMutex: &sync.RWMutex{},
 	}
 }

@@ -34,10 +34,20 @@ func parseKubeconfig(credentials []mgmtcontainerservice.CredentialResult) (*rest
 }
 
 func (p *prod) HiveRestConfig(ctx context.Context, index int) (*rest.Config, error) {
+	// NOTE: This RWMutex locks on a fetch for any index for simplicity, rather
+	// than a more granular per-index lock. As of the time of writing, multiple
+	// Hive shards are planned but unimplemented elsewhere.
+	p.hiveCredentialsMutex.RLock()
 	cached, ext := p.cachedCredentials[index]
+	p.hiveCredentialsMutex.RUnlock()
 	if ext {
 		return cached, nil
 	}
+
+	// Lock the RWMutex as we're starting to fetch so that new readers will wait
+	// for the existing Azure API call to be done.
+	p.hiveCredentialsMutex.Lock()
+	defer p.hiveCredentialsMutex.Unlock()
 
 	rpResourceGroup := fmt.Sprintf("rp-%s", p.location)
 	rpResourceName := fmt.Sprintf("aro-aks-cluster-%03d", index)
