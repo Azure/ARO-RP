@@ -260,6 +260,8 @@
         "vnetId": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]",
         "vnetSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('vnetSubnetName'))]",
         "podSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('podSubnetName'))]",
+        "aksClusterAdminRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions/', '0ab0b1a8-8aac-4efd-b8c2-3ee1fb270be8')]",
+        "aksClusterAdminRoleAssignmentName": "[guid(variables('aksClusterName'), parameters('aksClusterAdminRoleId'))]",
         "networkContributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions/', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
         "aksClusterUserDefinedManagedIdentityName": "[concat(parameters('aksClusterName'), '-msi')]",
         "aksClusterUserDefinedManagedIdentityId": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('aksClusterUserDefinedManagedIdentityName'))]",
@@ -547,6 +549,20 @@
                     "scale-down-utilization-threshold": "[parameters('autoScalerProfileUtilizationThreshold')]",
                     "max-graceful-termination-sec": "[parameters('autoScalerProfileMaxGracefulTerminationSec')]"
                 }
+            }
+        },
+        {
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2020-10-01-preview",
+            "name": "[variables('aksClusterAdminRoleAssignmentName')]",
+            "scope": "[variables('aksClusterId')]",
+            "dependsOn": [
+                "[variables('aksClusterId')]"
+            ],
+            "properties": {
+                "roleDefinitionId": "[variables('aksClusterAdminRoleId')]",
+                "principalId": "[parameters('adminObjectId')]",
+                "principalType": "ServicePrincipal"
             }
         },
         {
