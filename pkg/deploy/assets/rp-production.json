@@ -790,7 +790,7 @@
                         ],
                         "kind": "Hash"
                     },
-                    "defaultTtl": 604800
+                    "defaultTtl": -1
                 },
                 "options": {}
             },
