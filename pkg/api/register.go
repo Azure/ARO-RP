@@ -37,6 +37,7 @@ type Version struct {
 	OpenShiftClusterAdminKubeconfigConverter func() OpenShiftClusterAdminKubeconfigConverter
 	OpenShiftVersionConverter                func() OpenShiftVersionConverter
 	InstallVersionsConverter                 func() InstallVersionsConverter
+	OperationList                            OperationList
 }
 
 // APIs is the map of registered API versions

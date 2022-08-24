@@ -34,5 +34,17 @@ func init() {
 		OpenShiftClusterAdminKubeconfigConverter: func() api.OpenShiftClusterAdminKubeconfigConverter {
 			return &openShiftClusterAdminKubeconfigConverter{}
 		},
+		OperationList: api.OperationList{
+			Operations: []api.Operation{
+				api.OperationResultsRead,
+				api.OperationStatusRead,
+				api.OperationRead,
+				api.OperationOpenShiftClusterRead,
+				api.OperationOpenShiftClusterWrite,
+				api.OperationOpenShiftClusterDelete,
+				api.OperationOpenShiftClusterListCredentials,
+				api.OperationOpenShiftClusterListAdminCredentials,
+			},
+		},
 	}
 }

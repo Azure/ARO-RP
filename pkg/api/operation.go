@@ -38,3 +38,94 @@ type Display struct {
 	// Friendly name of the operation.
 	Description string `json:"description,omitempty"`
 }
+
+// Common operations defined which can be used within the registration of the APIs
+var OperationResultsRead = Operation{
+	Name: "Microsoft.RedHatOpenShift/locations/operationresults/read",
+	Display: Display{
+		Provider:  "Azure Red Hat OpenShift",
+		Resource:  "locations/operationresults",
+		Operation: "Read operation results",
+	},
+	Origin: "user,system",
+}
+
+var OperationStatusRead = Operation{
+	Name: "Microsoft.RedHatOpenShift/locations/operationsstatus/read",
+	Display: Display{
+		Provider:  "Azure Red Hat OpenShift",
+		Resource:  "locations/operationsstatus",
+		Operation: "Read operations status",
+	},
+	Origin: "user,system",
+}
+
+var OperationRead = Operation{
+	Name: "Microsoft.RedHatOpenShift/operations/read",
+	Display: Display{
+		Provider:  "Azure Red Hat OpenShift",
+		Resource:  "operations",
+		Operation: "Read operations",
+	},
+	Origin: "user,system",
+}
+
+var OperationOpenShiftClusterRead = Operation{
+	Name: "Microsoft.RedHatOpenShift/openShiftClusters/read",
+	Display: Display{
+		Provider:  "Azure Red Hat OpenShift",
+		Resource:  "openShiftClusters",
+		Operation: "Read OpenShift cluster",
+	},
+	Origin: "user,system",
+}
+
+var OperationOpenShiftClusterWrite = Operation{
+	Name: "Microsoft.RedHatOpenShift/openShiftClusters/write",
+	Display: Display{
+		Provider:  "Azure Red Hat OpenShift",
+		Resource:  "openShiftClusters",
+		Operation: "Write OpenShift cluster",
+	},
+	Origin: "user,system",
+}
+
+var OperationOpenShiftClusterDelete = Operation{
+	Name: "Microsoft.RedHatOpenShift/openShiftClusters/delete",
+	Display: Display{
+		Provider:  "Azure Red Hat OpenShift",
+		Resource:  "openShiftClusters",
+		Operation: "Delete OpenShift cluster",
+	},
+	Origin: "user,system",
+}
+
+var OperationOpenShiftClusterListCredentials = Operation{
+	Name: "Microsoft.RedHatOpenShift/openShiftClusters/listCredentials/action",
+	Display: Display{
+		Provider:  "Azure Red Hat OpenShift",
+		Resource:  "openShiftClusters",
+		Operation: "List credentials of an OpenShift cluster",
+	},
+	Origin: "user,system",
+}
+
+var OperationOpenShiftClusterListAdminCredentials = Operation{
+	Name: "Microsoft.RedHatOpenShift/openShiftClusters/listAdminCredentials/action",
+	Display: Display{
+		Provider:  "Azure Red Hat OpenShift",
+		Resource:  "openShiftClusters",
+		Operation: "List Admin Kubeconfig of an OpenShift cluster",
+	},
+	Origin: "user,system",
+}
+
+var OperationListInstallVersions = Operation{
+	Name: "Microsoft.RedHatOpenShift/locations/listInstallVersions/read",
+	Display: Display{
+		Provider:  "Azure Red Hat OpenShift",
+		Resource:  "listInstallVersions",
+		Operation: "Lists all OpenShift versions available to install in the specified location",
+	},
+	Origin: "user,system",
+}
