@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -45,16 +44,19 @@ func (m *manager) ensureInfraID(ctx context.Context) (err error) {
 func (m *manager) ensureResourceGroup(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	group := mgmtfeatures.ResourceGroup{
-		Location:  &m.doc.OpenShiftCluster.Location,
-		ManagedBy: &m.doc.OpenShiftCluster.ID,
-	}
-	if m.env.IsLocalDevelopmentMode() {
-		// grab tags so we do not accidently remove them on createOrUpdate, set purge tag to true for dev clusters
-		rg, err := m.resourceGroups.Get(ctx, resourceGroup)
-		if err == nil {
-			group.Tags = rg.Tags
+	// Retain the existing resource group configuration (such as tags) if it exists
+	group, err := m.resourceGroups.Get(ctx, resourceGroup)
+	if err != nil {
+		if detailedErr, ok := err.(autorest.DetailedError); !ok || detailedErr.StatusCode != http.StatusNotFound {
+			return err
 		}
+	}
+
+	group.Location = &m.doc.OpenShiftCluster.Location
+	group.ManagedBy = &m.doc.OpenShiftCluster.ID
+
+	// HACK: set purge=true on dev clusters so our purger wipes them out since there is not deny assignment in place
+	if m.env.IsLocalDevelopmentMode() {
 		if group.Tags == nil {
 			group.Tags = map[string]*string{}
 		}
@@ -64,7 +66,7 @@ func (m *manager) ensureResourceGroup(ctx context.Context) error {
 	// According to https://stackoverflow.microsoft.com/a/245391/62320,
 	// re-PUTting our RG should re-create RP RBAC after a customer subscription
 	// migrates between tenants.
-	_, err := m.resourceGroups.CreateOrUpdate(ctx, resourceGroup, group)
+	_, err = m.resourceGroups.CreateOrUpdate(ctx, resourceGroup, group)
 
 	var serviceError *azure.ServiceError
 	// CreateOrUpdate wraps DetailedError wrapping a *RequestError (if error generated in ResourceGroup CreateOrUpdateResponder at least)

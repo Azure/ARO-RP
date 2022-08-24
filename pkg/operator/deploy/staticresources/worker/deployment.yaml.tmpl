@@ -2,12 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: aro-operator-worker 
-    {{ if .HasVersion}}
-    version: {{ .Version }} 
-    {{ else }}
-    version: unknown
-    {{end}}
+    app: aro-operator-worker
+    version: {{ .Version }}
   name: aro-operator-worker
   namespace: openshift-azure-operator
 spec:
@@ -30,13 +26,13 @@ spec:
         args:
         - operator
         - worker
-        image: "{{ .Image }}{{ if .HasVersion}}:{{ if .IsLocalDevelopment }}{{ .GitCommit }}{{ else }}{{ .Version }}{{end}}{{end}}"
-        {{ if .IsLocalDevelopment}}
-        env: 
-        - name: "RP_MODE"
-          value: "development" 
-        {{ end }}
+        image: "{{ .Image }}"
         name: aro-operator
+        {{ if .IsLocalDevelopment}}
+        env:
+        - name: "RP_MODE"
+          value: "development"
+        {{ end }}
         livenessProbe:
           httpGet:
             path: /healthz/ready
