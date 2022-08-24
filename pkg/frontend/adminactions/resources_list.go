@@ -39,15 +39,16 @@ func (a *azureActions) ResourcesList(ctx context.Context) ([]byte, error) {
 	current := 0
 	var buff = make([]string, len(resources)+1)
 	byt, err := json.Marshal(armResources)
-	if err != nil {
+	switch {
+	case err != nil:
 		a.log.Warnf("error when marshalling arm resources: %s", err)
-		buff[current] = "["
-	} else {
+	case len(byt) <= 2: // empty result "[]", do nothing
+	default:
 		str := string(byt)
-		// remove trailing ']'
-		buff[current] = str[:len(str)-1]
+		// remove '[]'
+		buff[current] = str[1 : len(str)-1]
+		current++
 	}
-	current++
 
 	var armRes arm.Resource
 	for _, res := range resources {
@@ -86,14 +87,14 @@ func (a *azureActions) ResourcesList(ctx context.Context) ([]byte, error) {
 				}
 			}
 		}
-		out, err := json.Marshal(armRes)
+		out, err := json.Marshal(&armRes)
 		if err == nil {
 			buff[current] = string(out)
+			current++
 		}
-		current++
 	}
 
-	all := strings.Join(buff, ",") + "]"
+	all := "[" + strings.Join(buff[:current], ",") + "]"
 	return []byte(all), nil
 }
 
