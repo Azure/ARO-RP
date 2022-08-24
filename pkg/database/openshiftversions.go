@@ -22,6 +22,7 @@ type OpenShiftVersions interface {
 	Create(context.Context, *api.OpenShiftVersionDocument) (*api.OpenShiftVersionDocument, error)
 	Delete(context.Context, *api.OpenShiftVersionDocument) error
 	Get(context.Context, string) (*api.OpenShiftVersionDocument, error)
+	Update(context.Context, *api.OpenShiftVersionDocument) (*api.OpenShiftVersionDocument, error)
 	Patch(context.Context, string, func(*api.OpenShiftVersionDocument) error) (*api.OpenShiftVersionDocument, error)
 	ListAll(context.Context) (*api.OpenShiftVersionDocuments, error)
 	NewUUID() string
@@ -89,6 +90,10 @@ func (c *openShiftVersions) Patch(ctx context.Context, id string, f func(*api.Op
 	})
 
 	return doc, err
+}
+
+func (c *openShiftVersions) Update(ctx context.Context, doc *api.OpenShiftVersionDocument) (*api.OpenShiftVersionDocument, error) {
+	return c.update(ctx, doc)
 }
 
 func (c *openShiftVersions) update(ctx context.Context, doc *api.OpenShiftVersionDocument) (*api.OpenShiftVersionDocument, error) {

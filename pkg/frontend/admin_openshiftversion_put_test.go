@@ -112,6 +112,80 @@ func TestOpenShiftVersionPut(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "updating known version requires installer pullspec",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftVersionDocuments(
+					&api.OpenShiftVersionDocument{
+						OpenShiftVersion: &api.OpenShiftVersion{
+							Version:           "4.10.0",
+							Enabled:           true,
+							OpenShiftPullspec: "a:a/b",
+							InstallerPullspec: "d:d/e",
+						},
+					},
+				)
+			},
+			body: &admin.OpenShiftVersion{
+				Version:           "4.10.0",
+				Enabled:           true,
+				OpenShiftPullspec: "c:c/d",
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      "400: InvalidParameter: installerPullspec: Must be provided",
+			wantDocuments: []*api.OpenShiftVersionDocument{
+				{
+					ID: "07070707-0707-0707-0707-070707070001",
+					OpenShiftVersion: &api.OpenShiftVersion{
+						Version:           "4.10.0",
+						Enabled:           true,
+						OpenShiftPullspec: "a:a/b",
+						InstallerPullspec: "d:d/e",
+					},
+				},
+			},
+		},
+		{
+			name: "updating known version requires openshift pullspec",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftVersionDocuments(
+					&api.OpenShiftVersionDocument{
+						OpenShiftVersion: &api.OpenShiftVersion{
+							Version:           "4.10.0",
+							Enabled:           true,
+							OpenShiftPullspec: "a:a/b",
+							InstallerPullspec: "d:d/e",
+						},
+					},
+				)
+			},
+			body: &admin.OpenShiftVersion{
+				Version:           "4.10.0",
+				Enabled:           true,
+				InstallerPullspec: "c:c/d",
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      "400: InvalidParameter: openShiftPullspec: Must be provided",
+			wantDocuments: []*api.OpenShiftVersionDocument{
+				{
+					ID: "07070707-0707-0707-0707-070707070001",
+					OpenShiftVersion: &api.OpenShiftVersion{
+						Version:           "4.10.0",
+						Enabled:           true,
+						OpenShiftPullspec: "a:a/b",
+						InstallerPullspec: "d:d/e",
+					},
+				},
+			},
+		},
+		{
+			name:           "creating new version needs body",
+			fixture:        func(f *testdatabase.Fixture) {},
+			body:           &admin.OpenShiftVersion{},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      "400: InvalidParameter: version: Must be provided",
+			wantDocuments:  []*api.OpenShiftVersionDocument{},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).WithOpenShiftVersions()
@@ -123,7 +197,6 @@ func TestOpenShiftVersionPut(t *testing.T) {
 			}
 
 			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, nil, nil, nil, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
-
 			if err != nil {
 				t.Fatal(err)
 			}

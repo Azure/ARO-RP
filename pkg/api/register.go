@@ -24,9 +24,15 @@ type OpenShiftClusterAdminKubeconfigConverter interface {
 type OpenShiftVersionConverter interface {
 	ToExternal(*OpenShiftVersion) interface{}
 	ToExternalList([]*OpenShiftVersion) interface{}
+	ToInternal(interface{}, *OpenShiftVersion)
 }
+
 type InstallVersionsConverter interface {
 	ToExternal(*InstallVersions) interface{}
+}
+
+type OpenShiftVersionStaticValidator interface {
+	Static(interface{}, *OpenShiftVersion) error
 }
 
 // Version is a set of endpoints implemented by each API version
@@ -36,6 +42,7 @@ type Version struct {
 	OpenShiftClusterCredentialsConverter     func() OpenShiftClusterCredentialsConverter
 	OpenShiftClusterAdminKubeconfigConverter func() OpenShiftClusterAdminKubeconfigConverter
 	OpenShiftVersionConverter                func() OpenShiftVersionConverter
+	OpenShiftVersionStaticValidator          func() OpenShiftVersionStaticValidator
 	InstallVersionsConverter                 func() InstallVersionsConverter
 }
 

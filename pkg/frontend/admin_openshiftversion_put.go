@@ -21,6 +21,7 @@ func (f *frontend) putAdminOpenShiftVersion(w http.ResponseWriter, r *http.Reque
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
 	converter := f.apis[admin.APIVersion].OpenShiftVersionConverter()
+	staticValidator := f.apis[admin.APIVersion].OpenShiftVersionStaticValidator()
 
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	if len(body) == 0 || !json.Valid(body) {
@@ -28,7 +29,7 @@ func (f *frontend) putAdminOpenShiftVersion(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var version admin.OpenShiftVersion
+	var version *admin.OpenShiftVersion
 
 	err := json.Unmarshal(body, &version)
 	if err != nil {
@@ -42,48 +43,50 @@ func (f *frontend) putAdminOpenShiftVersion(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var foundDoc *api.OpenShiftVersionDocument
-	var returnDoc *api.OpenShiftVersionDocument
+	var versionDoc *api.OpenShiftVersionDocument
 
 	if docs != nil {
 		for _, doc := range docs.OpenShiftVersionDocuments {
 			if doc.OpenShiftVersion.Version == version.Version {
-				foundDoc = doc
+				versionDoc = doc
 				break
 			}
 		}
 	}
 
 	isCreate := false
-	if foundDoc != nil {
-		returnDoc, err = f.dbOpenShiftVersions.Patch(ctx, foundDoc.ID, func(osvd *api.OpenShiftVersionDocument) error {
-			osvd.OpenShiftVersion.OpenShiftPullspec = version.OpenShiftPullspec
-			osvd.OpenShiftVersion.InstallerPullspec = version.InstallerPullspec
-			osvd.OpenShiftVersion.Enabled = version.Enabled
-			return nil
-		})
+	if versionDoc == nil {
+		isCreate = true
+		err = staticValidator.Static(version, nil)
+		versionDoc = &api.OpenShiftVersionDocument{
+			ID:               f.dbOpenShiftVersions.NewUUID(),
+			OpenShiftVersion: &api.OpenShiftVersion{},
+		}
+	} else {
+		err = staticValidator.Static(version, versionDoc.OpenShiftVersion)
+	}
+	if err != nil {
+		adminReply(log, w, nil, []byte{}, err)
+		return
+	}
+
+	converter.ToInternal(version, versionDoc.OpenShiftVersion)
+
+	if isCreate {
+		versionDoc, err = f.dbOpenShiftVersions.Create(ctx, versionDoc)
 		if err != nil {
 			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 			return
 		}
 	} else {
-		isCreate = true
-		returnDoc, err = f.dbOpenShiftVersions.Create(ctx, &api.OpenShiftVersionDocument{
-			ID: f.dbOpenShiftVersions.NewUUID(),
-			OpenShiftVersion: &api.OpenShiftVersion{
-				Version:           version.Version,
-				OpenShiftPullspec: version.OpenShiftPullspec,
-				InstallerPullspec: version.InstallerPullspec,
-				Enabled:           version.Enabled,
-			},
-		})
+		versionDoc, err = f.dbOpenShiftVersions.Update(ctx, versionDoc)
 		if err != nil {
 			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 			return
 		}
 	}
 
-	b, err := json.MarshalIndent(converter.ToExternal(returnDoc.OpenShiftVersion), "", "    ")
+	b, err := json.MarshalIndent(converter.ToExternal(versionDoc.OpenShiftVersion), "", "    ")
 	if err == nil {
 		if isCreate {
 			err = statusCodeError(http.StatusCreated)
