@@ -581,8 +581,7 @@
                 "TTL": 300,
                 "CNAMERecord": {
                     "cname": "[reference(variables('aksClusterId')).fqdn]"
-                },
-                "targetResource": {}
+                }
             }
         },
         {
