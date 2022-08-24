@@ -35,6 +35,7 @@ func (f *frontend) _getClusterManagerConfiguration(ctx context.Context, log *log
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
 	case err != nil:
+		f.baseLog.Warn("cosmos get failed")
 		return nil, err
 	}
 

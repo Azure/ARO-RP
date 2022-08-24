@@ -56,15 +56,6 @@ func (c *clusterManagerConfiguration) NewUUID() string {
 	return c.uuidGenerator.Generate()
 }
 
-// Only used internally by Patch()
-func (c *clusterManagerConfiguration) replace(ctx context.Context, doc *api.ClusterManagerConfigurationDocument) (*api.ClusterManagerConfigurationDocument, error) {
-	if doc.ID != strings.ToLower(doc.ID) {
-		return nil, fmt.Errorf("id %q is not lower case", doc.ID)
-	}
-
-	return c.c.Replace(ctx, doc.ID, doc, nil)
-}
-
 func (c *clusterManagerConfiguration) Create(ctx context.Context, doc *api.ClusterManagerConfigurationDocument) (*api.ClusterManagerConfigurationDocument, error) {
 	if doc.ID != strings.ToLower(doc.ID) {
 		return nil, fmt.Errorf("id %q is not lower case", doc.ID)
@@ -89,15 +80,40 @@ func (c *clusterManagerConfiguration) Get(ctx context.Context, id string) (*api.
 	if id != strings.ToLower(id) {
 		return nil, fmt.Errorf("id %q is not lower case", id)
 	}
+	partitionKey, err := c.partitionKey(id)
+	if err != nil {
+		return nil, err
+	}
 
-	return c.c.Get(ctx, id, id, nil)
+	docs, err := c.c.QueryAll(ctx, partitionKey, &cosmosdb.Query{
+		Query: OpenShiftClustersGetQuery,
+		Parameters: []cosmosdb.Parameter{
+			{
+				Name:  "@key",
+				Value: id,
+			},
+		},
+	}, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	switch {
+	case len(docs.ClusterManagerConfigurationDocuments) > 1:
+		return nil, fmt.Errorf("read %d documents, expected <= 1", len(docs.ClusterManagerConfigurationDocuments))
+	case len(docs.ClusterManagerConfigurationDocuments) == 1:
+		return docs.ClusterManagerConfigurationDocuments[0], nil
+	default:
+		return nil, &cosmosdb.Error{StatusCode: http.StatusNotFound}
+	}
+
 }
 
 func (c *clusterManagerConfiguration) Patch(ctx context.Context, key string, callback func(*api.ClusterManagerConfigurationDocument) error) (*api.ClusterManagerConfigurationDocument, error) {
 	var doc *api.ClusterManagerConfigurationDocument
-
-	err := cosmosdb.RetryOnPreconditionFailed(func() error {
-		doc, err := c.Get(ctx, key)
+	var err error
+	err = cosmosdb.RetryOnPreconditionFailed(func() error {
+		doc, err = c.Get(ctx, key)
 		if err != nil {
 			return err
 		}
@@ -112,6 +128,15 @@ func (c *clusterManagerConfiguration) Patch(ctx context.Context, key string, cal
 	})
 
 	return doc, err
+}
+
+// Only used internally by Patch()
+func (c *clusterManagerConfiguration) replace(ctx context.Context, doc *api.ClusterManagerConfigurationDocument) (*api.ClusterManagerConfigurationDocument, error) {
+	if doc.ID != strings.ToLower(doc.ID) {
+		return nil, fmt.Errorf("id %q is not lower case", doc.ID)
+	}
+
+	return c.c.Replace(ctx, doc.ID, doc, nil)
 }
 
 func (c *clusterManagerConfiguration) Delete(ctx context.Context, doc *api.ClusterManagerConfigurationDocument) error {
