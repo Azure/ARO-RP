@@ -21,8 +21,6 @@ func (f *frontend) getClusterManagerConfiguration(w http.ResponseWriter, r *http
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	f.baseLog.Warn("url: ", r.URL.Path)
-
 	b, err := f._getClusterManagerConfiguration(ctx, log, r, f.apis[vars["api-version"]].ClusterManagerConverter())
 	reply(log, w, nil, b, err)
 }
@@ -35,7 +33,6 @@ func (f *frontend) _getClusterManagerConfiguration(ctx context.Context, log *log
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
 	case err != nil:
-		f.baseLog.Warn("cosmos get failed")
 		return nil, err
 	}
 

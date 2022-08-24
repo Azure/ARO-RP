@@ -575,9 +575,9 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			}
 			f.(*frontend).bucketAllocator = bucket.Fixed(1)
 
-			var systemDataEnricherCalled bool
-			f.(*frontend).systemDataEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
-				systemDataEnricherCalled = true
+			var systemDataClusterDocEnricherCalled bool
+			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+				systemDataClusterDocEnricherCalled = true
 			}
 
 			go f.Run(ctx, nil, nil)
@@ -633,8 +633,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				t.Error(err)
 			}
 
-			if tt.wantSystemDataEnriched != systemDataEnricherCalled {
-				t.Error(systemDataEnricherCalled)
+			if tt.wantSystemDataEnriched != systemDataClusterDocEnricherCalled {
+				t.Error(systemDataClusterDocEnricherCalled)
 			}
 		})
 	}
@@ -1402,9 +1402,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			f.(*frontend).bucketAllocator = bucket.Fixed(1)
 			f.(*frontend).now = func() time.Time { return mockCurrentTime }
 
-			var systemDataEnricherCalled bool
-			f.(*frontend).systemDataEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
-				systemDataEnricherCalled = true
+			var systemDataClusterDocEnricherCalled bool
+			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+				systemDataClusterDocEnricherCalled = true
 			}
 
 			go f.Run(ctx, nil, nil)
@@ -1458,8 +1458,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				}
 			}
 
-			if tt.wantSystemDataEnriched != systemDataEnricherCalled {
-				t.Error(systemDataEnricherCalled)
+			if tt.wantSystemDataEnriched != systemDataClusterDocEnricherCalled {
+				t.Error(systemDataClusterDocEnricherCalled)
 			}
 		})
 	}
@@ -1704,10 +1704,10 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 			f.(*frontend).bucketAllocator = bucket.Fixed(1)
 			f.(*frontend).now = func() time.Time { return mockCurrentTime }
 
-			var systemDataEnricherCalled bool
-			f.(*frontend).systemDataEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
-				enrichSystemData(doc, systemData)
-				systemDataEnricherCalled = true
+			var systemDataClusterDocEnricherCalled bool
+			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+				enrichClusterSystemData(doc, systemData)
+				systemDataClusterDocEnricherCalled = true
 			}
 
 			go f.Run(ctx, nil, nil)
@@ -1770,8 +1770,8 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 				}
 			}
 
-			if tt.wantSystemDataEnriched != systemDataEnricherCalled {
-				t.Error(systemDataEnricherCalled)
+			if tt.wantSystemDataEnriched != systemDataClusterDocEnricherCalled {
+				t.Error(systemDataClusterDocEnricherCalled)
 			}
 		})
 	}
@@ -1866,7 +1866,7 @@ func TestEnrichSystemData(t *testing.T) {
 			doc := &api.OpenShiftClusterDocument{
 				OpenShiftCluster: &api.OpenShiftCluster{},
 			}
-			enrichSystemData(doc, tt.systemData)
+			enrichClusterSystemData(doc, tt.systemData)
 
 			if !reflect.DeepEqual(doc, tt.expected) {
 				t.Error(cmp.Diff(doc, tt.expected))

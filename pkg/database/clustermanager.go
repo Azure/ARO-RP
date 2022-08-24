@@ -9,10 +9,15 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/azure"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
-	"github.com/Azure/go-autorest/autorest/azure"
+)
+
+const (
+	ClusterManagerConfigurationsGetQuery = `SELECT * FROM ClusterManagerConfigurations doc WHERE doc.key = @key`
 )
 
 type clusterManagerConfiguration struct {
@@ -25,7 +30,7 @@ type clusterManagerConfiguration struct {
 type ClusterManagerConfigurations interface {
 	Create(context.Context, *api.ClusterManagerConfigurationDocument) (*api.ClusterManagerConfigurationDocument, error)
 	Get(context.Context, string) (*api.ClusterManagerConfigurationDocument, error)
-	Patch(context.Context, string, func(*api.ClusterManagerConfigurationDocument) error) (*api.ClusterManagerConfigurationDocument, error)
+	Update(context.Context, *api.ClusterManagerConfigurationDocument) (*api.ClusterManagerConfigurationDocument, error)
 	Delete(context.Context, *api.ClusterManagerConfigurationDocument) error
 	ChangeFeed() cosmosdb.ClusterManagerConfigurationDocumentIterator
 	NewUUID() string
@@ -86,7 +91,7 @@ func (c *clusterManagerConfiguration) Get(ctx context.Context, id string) (*api.
 	}
 
 	docs, err := c.c.QueryAll(ctx, partitionKey, &cosmosdb.Query{
-		Query: OpenShiftClustersGetQuery,
+		Query: ClusterManagerConfigurationsGetQuery,
 		Parameters: []cosmosdb.Parameter{
 			{
 				Name:  "@key",
@@ -109,34 +114,16 @@ func (c *clusterManagerConfiguration) Get(ctx context.Context, id string) (*api.
 
 }
 
-func (c *clusterManagerConfiguration) Patch(ctx context.Context, key string, callback func(*api.ClusterManagerConfigurationDocument) error) (*api.ClusterManagerConfigurationDocument, error) {
-	var doc *api.ClusterManagerConfigurationDocument
-	var err error
-	err = cosmosdb.RetryOnPreconditionFailed(func() error {
-		doc, err = c.Get(ctx, key)
-		if err != nil {
-			return err
-		}
-
-		err = callback(doc)
-		if err != nil {
-			return err
-		}
-
-		doc, err = c.replace(ctx, doc)
-		return err
-	})
-
-	return doc, err
+func (c *clusterManagerConfiguration) Update(ctx context.Context, doc *api.ClusterManagerConfigurationDocument) (*api.ClusterManagerConfigurationDocument, error) {
+	return c.update(ctx, doc, nil)
 }
 
-// Only used internally by Patch()
-func (c *clusterManagerConfiguration) replace(ctx context.Context, doc *api.ClusterManagerConfigurationDocument) (*api.ClusterManagerConfigurationDocument, error) {
-	if doc.ID != strings.ToLower(doc.ID) {
-		return nil, fmt.Errorf("id %q is not lower case", doc.ID)
+func (c *clusterManagerConfiguration) update(ctx context.Context, doc *api.ClusterManagerConfigurationDocument, options *cosmosdb.Options) (*api.ClusterManagerConfigurationDocument, error) {
+	if doc.Key != strings.ToLower(doc.Key) {
+		return nil, fmt.Errorf("key %q is not lower case", doc.Key)
 	}
 
-	return c.c.Replace(ctx, doc.ID, doc, nil)
+	return c.c.Replace(ctx, doc.PartitionKey, doc, options)
 }
 
 func (c *clusterManagerConfiguration) Delete(ctx context.Context, doc *api.ClusterManagerConfigurationDocument) error {
@@ -144,7 +131,7 @@ func (c *clusterManagerConfiguration) Delete(ctx context.Context, doc *api.Clust
 		return fmt.Errorf("id %q is not lower case", doc.ID)
 	}
 
-	return c.c.Delete(ctx, doc.ID, doc, &cosmosdb.Options{NoETag: true})
+	return c.c.Delete(ctx, doc.PartitionKey, doc, &cosmosdb.Options{NoETag: true})
 }
 
 func (c *clusterManagerConfiguration) ChangeFeed() cosmosdb.ClusterManagerConfigurationDocumentIterator {

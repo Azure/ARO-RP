@@ -40,10 +40,6 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 	vars := mux.Vars(r)
 
-	f.baseLog.Info("body: ", string(body))
-	f.baseLog.Info("correlationData: ", correlationData)
-	f.baseLog.Info("systemData: ", systemData)
-
 	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, err
@@ -61,14 +57,13 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 	}
 	clusterURL := strings.ToLower(cluster.String())
 
-	ocpdoc, err := f.dbOpenShiftClusters.Get(ctx, clusterURL)
+	ocp, err := f.dbOpenShiftClusters.Get(ctx, clusterURL)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
 	}
 
-	exists := ocpdoc != nil
-	if !exists {
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "Cannot modify cluster resources when cluster does not exist.")
+	if ocp == nil || cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "cluster does not exist.")
 	}
 
 	ocmdoc, _ := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
@@ -99,20 +94,70 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 		default:
 			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidResource, "", "Invalid cluster manager kind.")
 		}
-		ocmdoc.CorrelationData = correlationData
 
 		newdoc, err := f.dbClusterManagerConfiguration.Create(ctx, ocmdoc)
 		if err != nil {
 			return nil, err
 		}
 		ocmdoc = newdoc
+	} else {
+		f.baseLog.Warn("doc exists, replace body for below update")
+		ocmdoc.ClusterManagerConfiguration.Resources = body
+	}
+
+	ocmdoc.CorrelationData = correlationData
+
+	f.systemDataClusterManagerDocEnricher(ocmdoc, systemData)
+	ocmdoc, err = f.dbClusterManagerConfiguration.Update(ctx, ocmdoc)
+	if err != nil {
+		return nil, err
 	}
 
 	var ext interface{}
+	switch r.Method {
+	case http.MethodPut:
+		ext, err = converter.ToExternal(ocmdoc.ClusterManagerConfiguration)
+		if err != nil {
+			return nil, err
+		}
+	case http.MethodPatch:
+		ext, err = converter.ToExternal(ocmdoc.ClusterManagerConfiguration)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	ext, err = converter.ToExternal(ocmdoc.ClusterManagerConfiguration)
 	if err != nil {
-		f.baseLog.Fatal(err)
+		return nil, err
 	}
+
 	b, err := json.MarshalIndent(ext, "", "  ")
 	return b, err
+}
+
+// enrichClusterManagerSystemData will selectively overwrite systemData fields based on
+// arm inputs
+func enrichClusterManagerSystemData(doc *api.ClusterManagerConfigurationDocument, systemData *api.SystemData) {
+	if systemData == nil {
+		return
+	}
+	if systemData.CreatedAt != nil {
+		doc.ClusterManagerConfiguration.SystemData.CreatedAt = systemData.CreatedAt
+	}
+	if systemData.CreatedBy != "" {
+		doc.ClusterManagerConfiguration.SystemData.CreatedBy = systemData.CreatedBy
+	}
+	if systemData.CreatedByType != "" {
+		doc.ClusterManagerConfiguration.SystemData.CreatedByType = systemData.CreatedByType
+	}
+	if systemData.LastModifiedAt != nil {
+		doc.ClusterManagerConfiguration.SystemData.LastModifiedAt = systemData.LastModifiedAt
+	}
+	if systemData.LastModifiedBy != "" {
+		doc.ClusterManagerConfiguration.SystemData.LastModifiedBy = systemData.LastModifiedBy
+	}
+	if systemData.LastModifiedByType != "" {
+		doc.ClusterManagerConfiguration.SystemData.LastModifiedByType = systemData.LastModifiedByType
+	}
 }

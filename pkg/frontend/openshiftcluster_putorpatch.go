@@ -54,7 +54,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
 	}
-	f.baseLog.Warn("converter: ", converter)
 	isCreate := doc == nil
 
 	if isCreate {
@@ -169,7 +168,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 
 	// This will update systemData from the values in the header. Old values, which
 	// is not provided in the header must be preserved
-	f.systemDataEnricher(doc, systemData)
+	f.systemDataClusterDocEnricher(doc, systemData)
 
 	if isCreate {
 		// on create, make the cluster resourcegroup ID lower case to work
@@ -245,9 +244,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	return b, err
 }
 
-// enrichSystemData will selectively overwrite systemData fields based on
+// enrichClusterSystemData will selectively overwrite systemData fields based on
 // arm inputs
-func enrichSystemData(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+func enrichClusterSystemData(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
 	if systemData == nil {
 		return
 	}
