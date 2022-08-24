@@ -550,6 +550,27 @@
             }
         },
         {
+            "name": "[concat(parameters('keyvaultPrefix'), '-svc/add')]",
+            "type": "Microsoft.KeyVault/vaults/accessPolicies",
+            "apiVersion": "2021-10-01",
+            "dependsOn": [
+                "[variables('aksClusterId')]"
+            ],
+            "properties": {
+                "accessPolicies": [
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[reference(variables('aksClusterId'), '2020-12-01', 'Full').properties.identityProfile.kubeletidentity.objectId]",
+                        "permissions": {
+                            "certificates": [
+                                "get"
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        {
             "type": "Microsoft.Network/dnszones/CNAME",
             "apiVersion": "2018-05-01",
             "name": "[concat(parameters('dnsZone'), '/api.aks1')]",
