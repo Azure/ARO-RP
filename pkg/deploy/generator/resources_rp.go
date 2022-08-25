@@ -1645,7 +1645,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 							},
 							Kind: mgmtdocumentdb.PartitionKindHash,
 						},
-						DefaultTTL: to.Int32Ptr(7 * 86400), // 7 days
+						DefaultTTL: to.Int32Ptr(-1),
 					},
 					Options: &mgmtdocumentdb.CreateUpdateOptions{},
 				},

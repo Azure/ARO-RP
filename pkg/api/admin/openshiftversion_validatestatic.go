@@ -1,0 +1,58 @@
+package admin
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
+import (
+	"net/http"
+
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/immutable"
+)
+
+type openShiftVersionStaticValidator struct{}
+
+// Validate validates an OpenShift cluster
+func (sv *openShiftVersionStaticValidator) Static(_new interface{}, _current *api.OpenShiftVersion) error {
+	new := _new.(*OpenShiftVersion)
+
+	var current *OpenShiftVersion
+	if _current != nil {
+		current = (&openShiftVersionConverter{}).ToExternal(_current).(*OpenShiftVersion)
+	}
+
+	err := sv.validate(new, current == nil)
+	if err != nil {
+		return err
+	}
+
+	if current == nil {
+		return nil
+	}
+
+	return sv.validateDelta(new, current)
+}
+
+func (sv *openShiftVersionStaticValidator) validate(new *OpenShiftVersion, isCreate bool) error {
+	if new.Version == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "version", "Must be provided")
+	}
+
+	if new.InstallerPullspec == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "installerPullspec", "Must be provided")
+	}
+
+	if new.OpenShiftPullspec == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "openShiftPullspec", "Must be provided")
+	}
+	return nil
+}
+
+func (sv *openShiftVersionStaticValidator) validateDelta(new, current *OpenShiftVersion) error {
+	err := immutable.Validate("", new, current)
+	if err != nil {
+		err := err.(*immutable.ValidationError)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, err.Message)
+	}
+	return nil
+}
