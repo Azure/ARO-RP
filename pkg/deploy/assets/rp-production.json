@@ -998,6 +998,17 @@
             ]
         },
         {
+            "name": "[guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / AKS Admin')]",
+            "type": "Microsoft.Authorization/roleAssignments",
+            "properties": {
+                "scope": "[resourceGroup().id]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '0ab0b1a8-8aac-4efd-b8c2-3ee1fb270be8')]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview"
+        },
+        {
             "name": "[concat(resourceGroup().location, '.', parameters('clusterParentDomainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))), 'FP / DNS Zone Contributor'))]",
             "type": "Microsoft.Network/dnsZones/providers/roleAssignments",
             "properties": {

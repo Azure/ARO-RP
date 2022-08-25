@@ -1830,6 +1830,11 @@ func (g *generator) rpRBAC() []*arm.Resource {
 			"parameters('databaseAccountName')",
 			"concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('rpServicePrincipalId'), 'RP / DocumentDB Account Contributor'))",
 		),
+		rbac.ResourceGroupRoleAssignmentWithName(
+			rbac.RoleAzureKubernetesServiceClusterAdminRole,
+			"parameters('rpServicePrincipalId')",
+			"guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / AKS Admin')",
+		),
 		rbac.ResourceRoleAssignmentWithName(
 			rbac.RoleDNSZoneContributor,
 			"parameters('fpServicePrincipalId')",
