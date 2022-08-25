@@ -220,7 +220,7 @@
 
 * Create a new OCM configuration
   ```bash
-  curl -X PUT -k "https://localhost:8443/subscriptions/fe16a035-e540-4ab7-80d9-373fa9a3d6ae/resourceGroups/v4-eastus/providers/Microsoft.RedHatOpenShift/openShiftClusters/noncreate/syncsets/noncreate?api-version=2022-04-01" --header "Content-Type: application/json" -d @payload.json
+  curl -X PUT -k "https://localhost:8443/subscriptions/fe16a035-e540-4ab7-80d9-373fa9a3d6ae/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/syncsets/mySyncSet?api-version=2022-09-04" --header "Content-Type: application/json" -d @./hack/ocm/syncset.json
   ```
 
   * payload.json:

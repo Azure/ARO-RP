@@ -19,6 +19,10 @@ const apiv20220401Path = "github.com/Azure/ARO-RP/pkg/api/v20220401"
 const apiv20220904Path = "github.com/Azure/ARO-RP/pkg/api/v20220904"
 
 type generator struct {
+	exampleClusterManagerSyncSetPutParameter       func() interface{}
+	exampleClusterManagerSyncSetPatchParameter     func() interface{}
+	exampleClusterManagerSyncSetResponse           func() interface{}
+	exampleClusterManagerListSyncSetResponse       func() interface{}
 	exampleOpenShiftClusterPutParameter            func() interface{}
 	exampleOpenShiftClusterPatchParameter          func() interface{}
 	exampleOpenShiftClusterResponse                func() interface{}
@@ -82,7 +86,10 @@ var apis = map[string]*generator{
 		kubeConfig:         true,
 	},
 	apiv20220904Path: {
-		// exampleClusterManagerPut
+		exampleClusterManagerSyncSetPutParameter:       v20220904.ExampleClusterManagerSyncSetPutParameter,
+		exampleClusterManagerSyncSetPatchParameter:     v20220904.ExampleClusterManagerSyncSetPatchParameter,
+		exampleClusterManagerSyncSetResponse:           v20220904.ExampleClusterManagerSyncSetResponse,
+		exampleClusterManagerListSyncSetResponse:       v20220904.ExampleClusterManagerListSyncSetResponse,
 		exampleOpenShiftClusterPutParameter:            v20220904.ExampleOpenShiftClusterPutParameter,
 		exampleOpenShiftClusterPatchParameter:          v20220904.ExampleOpenShiftClusterPatchParameter,
 		exampleOpenShiftClusterResponse:                v20220904.ExampleOpenShiftClusterResponse,
@@ -97,7 +104,7 @@ var apis = map[string]*generator{
 		xmsIdentifiers:     []string{},
 		commonTypesVersion: "v3",
 		systemData:         true,
-		clusterManager:     true,
+		clusterManager:     false,
 		installVersionList: true,
 		kubeConfig:         true,
 	},

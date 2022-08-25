@@ -38,7 +38,6 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
-	vars := mux.Vars(r)
 
 	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
@@ -68,26 +67,18 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 
 	isCreate := ocmdoc == nil
 	uuid := f.dbClusterManagerConfiguration.NewUUID()
-	f.baseLog.Info("uuid: ", uuid)
 	if isCreate {
 		ocmdoc = &api.ClusterManagerConfigurationDocument{
 			ID:  uuid,
 			Key: r.URL.Path,
 			ClusterManagerConfiguration: &api.ClusterManagerConfiguration{
 				ID:                originalPath,
+				Name:              armResource.SubResource.ResourceName,
 				ClusterResourceId: clusterURL,
-				Resources:         body,
+				Properties: api.ClusterManagerConfigurationProperties{
+					Resources: body,
+				},
 			},
-		}
-		switch vars["clusterManagerKind"] {
-		case strings.ToLower(api.MachinePoolType):
-			ocmdoc.ClusterManagerConfiguration.Kind = api.MachinePoolKind
-		case strings.ToLower(api.SyncIdentityProviderType):
-			ocmdoc.ClusterManagerConfiguration.Kind = api.SyncIdentityProviderKind
-		case strings.ToLower(api.SyncSetType):
-			ocmdoc.ClusterManagerConfiguration.Kind = api.SyncSetKind
-		default:
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidResource, "", "Invalid cluster manager kind.")
 		}
 
 		newdoc, err := f.dbClusterManagerConfiguration.Create(ctx, ocmdoc)
@@ -96,8 +87,7 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 		}
 		ocmdoc = newdoc
 	} else {
-		f.baseLog.Warn("doc exists, replace body for below update")
-		ocmdoc.ClusterManagerConfiguration.Resources = body
+		ocmdoc.ClusterManagerConfiguration.Properties.Resources = body
 	}
 
 	ocmdoc.CorrelationData = correlationData
@@ -109,19 +99,6 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 	}
 
 	var ext interface{}
-	switch r.Method {
-	case http.MethodPut:
-		ext, err = converter.ToExternal(ocmdoc.ClusterManagerConfiguration)
-		if err != nil {
-			return nil, err
-		}
-	case http.MethodPatch:
-		ext, err = converter.ToExternal(ocmdoc.ClusterManagerConfiguration)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	ext, err = converter.ToExternal(ocmdoc.ClusterManagerConfiguration)
 	if err != nil {
 		return nil, err

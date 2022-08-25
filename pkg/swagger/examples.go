@@ -89,6 +89,10 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 				var body interface{}
 				if response.Schema != nil {
 					switch response.Schema.Ref {
+					case "#/definitions/SyncSets":
+						body = g.exampleClusterManagerSyncSetResponse()
+					case "#/definitions/SyncSetsList":
+						body = g.exampleClusterManagerListSyncSetResponse()
 					case "#/definitions/OpenShiftCluster":
 						body = g.exampleOpenShiftClusterResponse()
 					case "#/definitions/OpenShiftClusterCredentials":

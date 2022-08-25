@@ -102,6 +102,19 @@ func Run(api, outputDir string) error {
 		}
 	}
 
+	if g.clusterManager {
+		s.Paths["/subscriptions/{subscriptionId/resourcegroups/{resourcegroup}/providers/{provider}/openshiftclusters/{cluster}/syncSets/{syncset}"] = &PathItem{
+			Get: &Operation{
+				Summary:     "Returns a hive syncset applied to the cluster.",
+				Description: "The operation returns the syncset definition of a given syncset for the cluster.",
+				OperationID: "Get_SyncSets",
+				Parameters:  g.populateParameters(3, "SyncSets", "SyncSets"),
+				Responses:   g.populateResponses("SyncSets", false, http.StatusOK),
+			},
+		}
+
+	}
+
 	populateExamples(s.Paths)
 	names := []string{"OpenShiftClusterList", "OpenShiftClusterCredentials"}
 	if g.kubeConfig {

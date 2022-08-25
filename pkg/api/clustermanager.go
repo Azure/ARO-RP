@@ -6,6 +6,8 @@ package api
 const (
 	MachinePoolKind          = "MachinePool"
 	MachinePoolType          = "MachinePools"
+	SecretKind               = "Secret"
+	SecretType               = "Secrets"
 	SyncIdentityProviderKind = "SyncIdentityProvider"
 	SyncIdentityProviderType = "SyncIdentityProviders"
 	SyncSetKind              = "SyncSet"
@@ -17,13 +19,19 @@ type ClusterManagerConfiguration struct {
 	MissingFields
 
 	// ID is the unique identifier for the cluster manager configuration
-	ID string `json:"id,omitempty"`
-
-	ClusterResourceId string `json:"clusterResourceId,omitempty"`
-	Kind              string `json:"kind,omitempty"`
-	Resources         []byte `json:"resources,omitempty"`
-	Deleting          bool   `json:"deleting,omitempty"` // https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
-
+	ID                string                                `json:"id,omitempty"`
+	Name              string                                `json:"name,omitempty"`
+	ClusterResourceId string                                `json:"clusterResourceId,omitempty"`
+	Deleting          bool                                  `json:"deleting,omitempty"` // https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
+	Properties        ClusterManagerConfigurationProperties `json:"properties,omitempty"`
 	// SystemData metadata from ARM, more info in pkg/api/openshiftcluster.go
 	SystemData *SystemData `json:"systemData,omitempty"`
+}
+
+type ClusterManagerConfigurationProperties struct {
+	Resources []byte `json:"resources,omitempty"`
+}
+type Syncset struct {
+}
+type SyncSets struct {
 }

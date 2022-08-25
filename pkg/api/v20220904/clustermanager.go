@@ -8,6 +8,7 @@ const (
 	MachinePoolKind          = "MachinePool"
 	SyncIdentityProviderKind = "SyncIdentityProvider"
 	SyncSetKind              = "SyncSet"
+	SecretKind               = "Secret"
 )
 
 type ClusterManagerConfigurationsList struct {
@@ -20,11 +21,16 @@ type ClusterManagerConfigurationsList struct {
 type ClusterManagerConfiguration struct {
 
 	// ID is the unique identifier for the cluster manager configuration
-	ID string `json:"id,omitempty"`
-
-	ClusterResourceId string      `json:"clusterResourceId,omitempty"`
-	Name              string      `json:"name,omitempty"`
-	Kind              string      `json:"kind,omitempty"`
-	Resources         interface{} `json:"resources,omitempty"`
-	Deleting          bool        `json:"deleting,omitempty"` // https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
+	ID                string                                `json:"id,omitempty"`
+	ClusterResourceId string                                `json:"clusterResourceId,omitempty"`
+	Name              string                                `json:"name,omitempty"`
+	Properties        ClusterManagerConfigurationProperties `json:"properties,omitempty"`
+	Deleting          bool                                  `json:"deleting,omitempty"` // https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
 }
+
+// ClusterManagerConfigurationProperties represents properties of a cluster manager configuration
+type ClusterManagerConfigurationProperties struct {
+	Resources interface{} `json:"resources,omitempty"`
+}
+type Syncset struct{}
+type SyncSets struct{}

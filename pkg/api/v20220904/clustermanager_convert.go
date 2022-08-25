@@ -14,13 +14,12 @@ type clusterManagerConverter struct{}
 func (c *clusterManagerConverter) ToExternal(ocm *api.ClusterManagerConfiguration) (interface{}, error) {
 	out := new(ClusterManagerConfiguration)
 	out.ID = ocm.ID
-	out.Kind = ocm.Kind
 	var data interface{}
-	err := json.Unmarshal(ocm.Resources, &data)
+	err := json.Unmarshal(ocm.Properties.Resources, &data)
 	if err != nil {
 		return nil, err
 	}
-	out.Resources = data
+	out.Properties.Resources = data
 	return out, nil
 }
 

@@ -8,7 +8,7 @@ E2E_FLAGS ?= -test.timeout 180m -test.v -ginkgo.v -ginkgo.noColor
 FLUENTBIT_VERSION = 1.9.4-1
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)
 AUTOREST_VERSION = 3.6.2
-AUTOREST_IMAGE = "quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}"
+AUTOREST_IMAGE = "quay.io/anshulvermapatel/autorest:${AUTOREST_VERSION}"
 
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
@@ -56,7 +56,9 @@ clean:
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 client: generate
-	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04
+	hack/build-client.sh "${AUTOREST_IMAGE}" 2022-09-04
+
+#	# hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
