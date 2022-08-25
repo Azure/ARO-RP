@@ -19,12 +19,11 @@ type clusterOperatorConditionsIgnoreStruct struct {
 // clusterOperatorConditionsIgnore contains list of failures we know we can
 // ignore for now
 var clusterOperatorConditionsIgnore = map[clusterOperatorConditionsIgnoreStruct]struct{}{
-	{"insights", "Disabled", configv1.ConditionFalse}:                                          {},
-	{"insights", "Disabled", configv1.ConditionTrue}:                                           {},
-	{"openshift-controller-manager", configv1.OperatorUpgradeable, configv1.ConditionUnknown}:  {},
-	{"service-ca", configv1.OperatorUpgradeable, configv1.ConditionUnknown}:                    {},
-	{"service-catalog-apiserver", configv1.OperatorUpgradeable, configv1.ConditionUnknown}:     {},
-	{"kube-storage-version-migrator", configv1.OperatorUpgradeable, configv1.ConditionUnknown}: {},
+	{"insights", "Disabled", configv1.ConditionFalse}:                                         {},
+	{"insights", "Disabled", configv1.ConditionTrue}:                                          {},
+	{"openshift-controller-manager", configv1.OperatorUpgradeable, configv1.ConditionUnknown}: {},
+	{"service-ca", configv1.OperatorUpgradeable, configv1.ConditionUnknown}:                   {},
+	{"service-catalog-apiserver", configv1.OperatorUpgradeable, configv1.ConditionUnknown}:    {},
 }
 
 var clusterOperatorConditionsExpected = map[configv1.ClusterStatusConditionType]configv1.ConditionStatus{
