@@ -30,10 +30,6 @@ class AroScenarioTest(ScenarioTest):
             self.check('tags.foo', 'boo')
         ])
 
-        self.cmd('az aro get-versions --location eastus', checks=[
-            self.check('4.10.20')
-        ])
-
         count = len(self.cmd('aro list').get_output_in_json())
         self.cmd('aro show -g {rg} -n {name}', checks=[
             self.check('name', '{name}'),
