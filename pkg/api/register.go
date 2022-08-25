@@ -44,6 +44,7 @@ type Version struct {
 	OpenShiftVersionConverter                func() OpenShiftVersionConverter
 	OpenShiftVersionStaticValidator          func() OpenShiftVersionStaticValidator
 	InstallVersionsConverter                 func() InstallVersionsConverter
+	OperationList                            OperationList
 }
 
 // APIs is the map of registered API versions
