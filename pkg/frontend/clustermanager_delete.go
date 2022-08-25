@@ -45,6 +45,7 @@ func (f *frontend) _deleteClusterManagerConfiguration(ctx context.Context, log *
 	if err != nil {
 		return err
 	}
+
 	err = f.dbClusterManagerConfiguration.Delete(ctx, doc)
 	return err
 }

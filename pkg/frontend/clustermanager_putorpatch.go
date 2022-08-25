@@ -9,13 +9,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
 
 func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, r *http.Request) {
@@ -46,16 +46,11 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 	}
 
 	originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
-
-	// this func isn't meant for sub resources, its going to take the name of our ocm resource
-	// and use that for the cluster resourceID
-	// until I fix this I just create ocm resources with the same name as the cluster :-)
-	// TODO look into existing funcs vs a new splitting func
-	cluster, err := azure.ParseResourceID(originalPath)
+	armResource, err := arm.ParseArmResourceId(originalPath)
 	if err != nil {
 		return nil, err
 	}
-	clusterURL := strings.ToLower(cluster.String())
+	clusterURL := strings.ToLower(armResource.ParentResourceToString())
 
 	ocp, err := f.dbOpenShiftClusters.Get(ctx, clusterURL)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
