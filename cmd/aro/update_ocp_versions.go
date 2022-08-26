@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShiftVersion, error) {
@@ -30,8 +31,8 @@ func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShi
 	var (
 		OpenshiftVersions = []api.OpenShiftVersion{
 			{
-				Version:           "4.10.20",
-				OpenShiftPullspec: "quay.io/openshift-release-dev/ocp-release@sha256:e1fa1f513068082d97d78be643c369398b0e6820afab708d26acda2262940954",
+				Version:           version.InstallStream.Version.String(),
+				OpenShiftPullspec: version.InstallStream.PullSpec,
 				InstallerPullspec: dstRepo + "/aro-installer:release-4.10",
 				Enabled:           true,
 			},
