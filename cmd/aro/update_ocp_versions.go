@@ -32,7 +32,7 @@ func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShi
 			{
 				Version:           "4.10.20",
 				OpenShiftPullspec: "quay.io/openshift-release-dev/ocp-release@sha256:e1fa1f513068082d97d78be643c369398b0e6820afab708d26acda2262940954",
-				InstallerPullspec: dstRepo + "aro-installer:release-4.10",
+				InstallerPullspec: dstRepo + "/aro-installer:release-4.10",
 				Enabled:           true,
 			},
 		}
