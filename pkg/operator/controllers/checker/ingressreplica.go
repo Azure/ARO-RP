@@ -65,7 +65,7 @@ func (r *IngressReplicaChecker) Check(ctx context.Context) error {
 		if err != nil {
 			cond.Status = operatorv1.ConditionFalse
 			cond.Message = err.Error()
-			cond.Reason = "RescaleFailed"
+			cond.Reason = "CheckFailed"
 			cond.LastTransitionTime = metav1.NewTime(time.Now().UTC())
 			return conditions.SetCondition(ctx, r.arocli, cond, r.role)
 		}

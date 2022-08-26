@@ -107,7 +107,6 @@ func TestIngressReplicaChecker(t *testing.T) {
 			if cluster.Status.Conditions[0].LastTransitionTime.IsZero() {
 				t.Error("zero last transition time")
 			}
-
 		})
 	}
 }
