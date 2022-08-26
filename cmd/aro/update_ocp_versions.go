@@ -108,50 +108,41 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 }
 
 func updateOpenShiftVersions(ctx context.Context, dbOpenShiftVersions database.OpenShiftVersions, log *logrus.Entry) error {
-	versions, err := dbOpenShiftVersions.ListAll(ctx)
+	existingVersions, err := dbOpenShiftVersions.ListAll(ctx)
 	if err != nil {
 		return err
 	}
 
-	openShiftVersions, err := getLatestOCPVersions(ctx, log)
+	latestVersions, err := getLatestOCPVersions(ctx, log)
 	if err != nil {
 		return err
 	}
 
 	newVersions := make(map[string]api.OpenShiftVersion)
-	for _, doc := range openShiftVersions {
+	for _, doc := range latestVersions {
 		newVersions[doc.Version] = doc
 	}
 
-	for _, doc := range versions.OpenShiftVersionDocuments {
-		foundDoc := false
-		ignored := false
-		version := doc.OpenShiftVersion.Version
-
-		if !ignored {
-			for _, newVersion := range openShiftVersions {
-				if version == newVersion.Version {
-					foundDoc = true
-					log.Printf("Found Version %s in min version list, patching", version)
-					_, err := dbOpenShiftVersions.Patch(ctx, doc.ID, func(inFlightDoc *api.OpenShiftVersionDocument) error {
-						inFlightDoc.OpenShiftVersion = &newVersion
-						return nil
-					})
-					if err != nil {
-						return err
-					}
-					log.Printf("Version %s found", newVersion.Version)
-					delete(newVersions, newVersion.Version)
-				}
+	for _, doc := range existingVersions.OpenShiftVersionDocuments {
+		existing, found := newVersions[doc.OpenShiftVersion.Version]
+		if found {
+			log.Printf("Found Version %q, patching", existing.Version)
+			_, err := dbOpenShiftVersions.Patch(ctx, doc.ID, func(inFlightDoc *api.OpenShiftVersionDocument) error {
+				inFlightDoc.OpenShiftVersion = &existing
+				return nil
+			})
+			if err != nil {
+				return err
 			}
+			log.Printf("Version %q found", existing.Version)
+			delete(newVersions, existing.Version)
+			continue
+		}
 
-			if !foundDoc {
-				log.Printf("Version %s not found, deleting", version)
-				err := dbOpenShiftVersions.Delete(ctx, doc)
-				if err != nil {
-					return err
-				}
-			}
+		log.Printf("Version %q not found, deleting", doc.OpenShiftVersion.Version)
+		err := dbOpenShiftVersions.Delete(ctx, doc)
+		if err != nil {
+			return err
 		}
 	}
 
