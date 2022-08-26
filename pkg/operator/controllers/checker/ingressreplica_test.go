@@ -7,11 +7,12 @@ import (
 	"context"
 	"testing"
 
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 )
 
 func TestIngressReplicaChecker(t *testing.T) {
