@@ -46,6 +46,14 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		return nil, err
 	}
 
+	for _, key := range []string{
+		"DST_ACR_NAME",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return nil, fmt.Errorf("environment variable %q unset", key)
+		}
+	}
+
 	if !_env.IsLocalDevelopmentMode() {
 		for _, key := range []string{
 			"MDM_ACCOUNT",
