@@ -25,7 +25,7 @@ func (d *dev) HiveRestConfig(ctx context.Context, index int) (*rest.Config, erro
 
 	kubeConfigPath := os.Getenv(envVar)
 	if kubeConfigPath == "" {
-		return nil, fmt.Errorf("missing %s env variable", HIVE_ENV_VARIABLE)
+		return nil, fmt.Errorf("missing %s env variable", envVar)
 	}
 
 	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
