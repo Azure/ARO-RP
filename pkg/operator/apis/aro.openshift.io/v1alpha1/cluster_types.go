@@ -41,6 +41,7 @@ func AllConditionTypes() []string {
 		ServicePrincipalValid,
 		ManagedUpgradeOperatorStatus,
 		DefaultIngressCertificate,
+		DefaultIngressReplica,
 		DefaultClusterDNS,
 	}
 }

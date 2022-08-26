@@ -4,6 +4,7 @@
 // Included checks are:
 //  - existence of default ingresscontroller
 //  - if the ingresscontroller replica is downgraded to 0
+//  - rescale replica to 1 when it's 0
 
 package checker
 
@@ -12,6 +13,7 @@ package checker
 
 import (
 	"context"
+	"time"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
@@ -43,8 +45,8 @@ func (r *IngressReplicaChecker) Name() string {
 func (r *IngressReplicaChecker) Check(ctx context.Context) error {
 	cond := &operatorv1.OperatorCondition{
 		Type:    arov1alpha1.DefaultIngressReplica,
-		Status:  operatorv1.ConditionUnknown,
-		Message: "",
+		Status:  operatorv1.ConditionTrue,
+		Message: "Default replicas in place",
 		Reason:  "CheckDone",
 	}
 
@@ -52,6 +54,7 @@ func (r *IngressReplicaChecker) Check(ctx context.Context) error {
 	if err != nil {
 		cond.Message = err.Error()
 		cond.Reason = "CheckFailed"
+		cond.LastTransitionTime = metav1.NewTime(time.Now().UTC())
 		return conditions.SetCondition(ctx, r.arocli, cond, r.role)
 	}
 
@@ -60,11 +63,14 @@ func (r *IngressReplicaChecker) Check(ctx context.Context) error {
 		ingress.Spec.Replicas = &minimumReplica
 		_, err := r.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ctx, ingress, metav1.UpdateOptions{})
 		if err != nil {
+			cond.Status = operatorv1.ConditionFalse
 			cond.Message = err.Error()
 			cond.Reason = "RescaleFailed"
+			cond.LastTransitionTime = metav1.NewTime(time.Now().UTC())
 			return conditions.SetCondition(ctx, r.arocli, cond, r.role)
 		}
-		cond.Message = "RescaleSucceeded"
+		cond.Message = "Rescale succeeded"
+		cond.LastTransitionTime = metav1.NewTime(time.Now().UTC())
 	}
 
 	return conditions.SetCondition(ctx, r.arocli, cond, r.role)
