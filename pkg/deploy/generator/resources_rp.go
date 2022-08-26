@@ -1645,7 +1645,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 							},
 							Kind: mgmtdocumentdb.PartitionKindHash,
 						},
-						DefaultTTL: to.Int32Ptr(7 * 86400), // 7 days
+						DefaultTTL: to.Int32Ptr(-1),
 					},
 					Options: &mgmtdocumentdb.CreateUpdateOptions{},
 				},
@@ -1829,6 +1829,11 @@ func (g *generator) rpRBAC() []*arm.Resource {
 			"Microsoft.DocumentDB/databaseAccounts",
 			"parameters('databaseAccountName')",
 			"concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('rpServicePrincipalId'), 'RP / DocumentDB Account Contributor'))",
+		),
+		rbac.ResourceGroupRoleAssignmentWithName(
+			rbac.RoleAzureKubernetesServiceClusterAdminRole,
+			"parameters('rpServicePrincipalId')",
+			"guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / AKS Admin')",
 		),
 		rbac.ResourceRoleAssignmentWithName(
 			rbac.RoleDNSZoneContributor,

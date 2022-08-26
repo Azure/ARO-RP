@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -13,7 +14,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func TestCheckIngressIP(t *testing.T) {
@@ -130,6 +130,79 @@ func TestCheckIngressIP(t *testing.T) {
 	}
 }
 
+func TestCreateDeploymentData(t *testing.T) {
+	operatorImageTag := "v20071110"
+	operatorImageUntagged := "arosvc.azurecr.io/aro"
+	operatorImageWithTag := operatorImageUntagged + ":" + operatorImageTag
+
+	for _, tt := range []struct {
+		name                    string
+		mock                    func(*mock_env.MockInterface, *api.OpenShiftCluster)
+		operatorVersionOverride string
+		expected                deploymentData
+	}{
+		{
+			name: "no image override, use default",
+			mock: func(env *mock_env.MockInterface, oc *api.OpenShiftCluster) {
+				env.EXPECT().
+					AROOperatorImage().
+					Return(operatorImageWithTag)
+			},
+			expected: deploymentData{
+				Image:   operatorImageWithTag,
+				Version: operatorImageTag},
+		},
+		{
+			name: "no image tag, use latest version",
+			mock: func(env *mock_env.MockInterface, oc *api.OpenShiftCluster) {
+				env.EXPECT().
+					AROOperatorImage().
+					Return(operatorImageUntagged)
+			},
+			expected: deploymentData{
+				Image:   operatorImageUntagged,
+				Version: "latest"},
+		},
+		{
+			name: "OperatorVersion override set",
+			mock: func(env *mock_env.MockInterface, oc *api.OpenShiftCluster) {
+				env.EXPECT().
+					AROOperatorImage().
+					Return(operatorImageUntagged)
+				env.EXPECT().
+					ACRDomain().
+					Return("docker.io")
+
+				oc.Properties.OperatorVersion = "override"
+			},
+			expected: deploymentData{
+				Image:   "docker.io/aro:override",
+				Version: "override"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().IsLocalDevelopmentMode().Return(tt.expected.IsLocalDevelopment).AnyTimes()
+
+			oc := &api.OpenShiftCluster{Properties: api.OpenShiftClusterProperties{}}
+			tt.mock(env, oc)
+
+			o := operator{
+				oc:  oc,
+				env: env,
+			}
+
+			deploymentData := o.createDeploymentData()
+			if !reflect.DeepEqual(deploymentData, tt.expected) {
+				t.Errorf("actual deployment: %v, expected %v", deploymentData, tt.expected)
+			}
+		})
+	}
+}
+
 func TestOperatorVersion(t *testing.T) {
 	type test struct {
 		name         string
@@ -144,7 +217,7 @@ func TestOperatorVersion(t *testing.T) {
 			oc: func() *api.OpenShiftClusterProperties {
 				return &api.OpenShiftClusterProperties{}
 			},
-			wantVersion:  version.GitCommit,
+			wantVersion:  "latest",
 			wantPullspec: "defaultaroimagefromenv",
 		},
 		{

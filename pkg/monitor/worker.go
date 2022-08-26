@@ -198,7 +198,13 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		return
 	}
 
-	c, err := cluster.NewMonitor(ctx, log, restConfig, doc.OpenShiftCluster, mon.clusterm, mon.hiveRestConfig, hourlyRun)
+	hiveRestConfig, err := mon.liveConfig.HiveRestConfig(ctx, 1)
+	if err != nil {
+		// TODO(hive): Update to fail once we have Hive everywhere in prod and dev
+		log.Info(err)
+	}
+
+	c, err := cluster.NewMonitor(ctx, log, restConfig, doc.OpenShiftCluster, mon.clusterm, hiveRestConfig, hourlyRun)
 	if err != nil {
 		log.Error(err)
 		return

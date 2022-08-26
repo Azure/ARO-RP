@@ -31,6 +31,7 @@ import (
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/clusterdata"
+	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	"github.com/Azure/ARO-RP/test/util/listener"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -75,6 +76,8 @@ type testInfra struct {
 	billingDatabase           database.Billing
 	subscriptionsClient       *cosmosdb.FakeSubscriptionDocumentClient
 	subscriptionsDatabase     database.Subscriptions
+	openShiftVersionsClient   *cosmosdb.FakeOpenShiftVersionDocumentClient
+	openShiftVersionsDatabase database.OpenShiftVersions
 }
 
 func newTestInfra(t *testing.T) *testInfra {
@@ -96,7 +99,7 @@ func newTestInfra(t *testing.T) *testInfra {
 	_env.EXPECT().ServiceKeyvault().AnyTimes().Return(keyvault)
 	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
-	_env.EXPECT().Domain().AnyTimes().Return("")
+	_env.EXPECT().Domain().AnyTimes().Return("aro.example")
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 	_env.EXPECT().FeatureIsSet(env.FeatureRequireD2sV3Workers).AnyTimes().Return(false)
 	_env.EXPECT().FeatureIsSet(env.FeatureDisableReadinessDelay).AnyTimes().Return(false)
@@ -156,6 +159,13 @@ func (ti *testInfra) WithSubscriptions() *testInfra {
 func (ti *testInfra) WithAsyncOperations() *testInfra {
 	ti.asyncOperationsDatabase, ti.asyncOperationsClient = testdatabase.NewFakeAsyncOperations()
 	ti.fixture.WithAsyncOperations(ti.asyncOperationsDatabase)
+	return ti
+}
+
+func (ti *testInfra) WithOpenShiftVersions() *testInfra {
+	uuid := deterministicuuid.NewTestUUIDGenerator(7)
+	ti.openShiftVersionsDatabase, ti.openShiftVersionsClient = testdatabase.NewFakeOpenShiftVersions(uuid)
+	ti.fixture.WithOpenShiftVersions(ti.openShiftVersionsDatabase, uuid)
 	return ti
 }
 

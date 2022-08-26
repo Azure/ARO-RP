@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/go-test/deep"
 
@@ -246,6 +247,8 @@ func (f *Checker) CheckOpenShiftVersions(versions *cosmosdb.FakeOpenShiftVersion
 	if err != nil {
 		return []error{err}
 	}
+
+	sort.Slice(all.OpenShiftVersionDocuments, func(i, j int) bool { return all.OpenShiftVersionDocuments[i].ID < all.OpenShiftVersionDocuments[j].ID })
 
 	if len(f.openShiftVersionDocuments) != 0 && len(all.OpenShiftVersionDocuments) == len(f.openShiftVersionDocuments) {
 		diff := deep.Equal(all.OpenShiftVersionDocuments, f.openShiftVersionDocuments)

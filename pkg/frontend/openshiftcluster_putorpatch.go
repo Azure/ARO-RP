@@ -138,6 +138,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 					ClientSecret: doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret,
 				},
 			},
+			SystemData: doc.OpenShiftCluster.SystemData,
 		})
 
 		// In case of PATCH we take current cluster document, which is enriched
