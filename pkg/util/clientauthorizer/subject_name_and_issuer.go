@@ -4,10 +4,10 @@ package clientauthorizer
 // Licensed under the Apache License 2.0.
 
 import (
-	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 
 	"github.com/sirupsen/logrus"
 )
@@ -60,7 +60,9 @@ func (sni *subjectNameAndIssuer) readCABundle(caBundlePath string) error {
 	return nil
 }
 
-func (sni *subjectNameAndIssuer) IsAuthorized(cs *tls.ConnectionState) bool {
+func (sni *subjectNameAndIssuer) IsAuthorized(r *http.Request) bool {
+
+	cs := r.TLS
 	if sni.roots == nil {
 		// Should never happen.  Do not fall back to system CA bundle.
 		sni.log.Error("no CA certificate configured")

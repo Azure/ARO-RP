@@ -5,7 +5,7 @@ package clientauthorizer
 
 import (
 	"bytes"
-	"crypto/tls"
+	"net/http"
 )
 
 type one struct {
@@ -18,7 +18,8 @@ func NewOne(cert []byte) ClientAuthorizer {
 	}
 }
 
-func (o *one) IsAuthorized(cs *tls.ConnectionState) bool {
+func (o *one) IsAuthorized(r *http.Request) bool {
+	cs := r.TLS
 	if cs == nil || len(cs.PeerCertificates) == 0 {
 		return false
 	}
