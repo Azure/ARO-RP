@@ -75,3 +75,8 @@ func (p *prod) InstallViaHive(ctx context.Context) (bool, error) {
 	}
 	return false, nil
 }
+
+func (p *prod) DefaultInstallerPullSpec(ctx context.Context) (string, error) {
+	// TODO: Replace with loading from M6's database always
+	return os.Getenv(HIVE_DEFAULT_INSTALLER_VARIABLE), nil
+}
