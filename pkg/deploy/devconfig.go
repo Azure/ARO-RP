@@ -195,6 +195,10 @@ func DevConfig(_env env.Core) (*Config, error) {
 			SubscriptionResourceGroupName:     to.StringPtr(os.Getenv("USER") + "-subscription"),
 			VMSSCleanupEnabled:                to.BoolPtr(true),
 			VMSize:                            to.StringPtr("Standard_D2s_v3"),
+
+			// TODO: Replace with Live Service Configuration in KeyVault
+			InstallViaHive:           to.BoolPtr(os.Getenv("ARO_INSTALL_VIA_HIVE") != ""),
+			DefaultInstallerPullspec: to.StringPtr(os.Getenv("ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC")),
 		},
 	}, nil
 }
