@@ -148,10 +148,22 @@ func (m *manager) runIntegratedInstaller(ctx context.Context) error {
 }
 
 func (m *manager) runHiveInstaller(ctx context.Context) error {
+	// TODO: Load from M6 database
+	installerPullspec, err := m.env.LiveConfig().DefaultInstallerPullSpec(ctx)
+	if err != nil {
+		return err
+	}
+
+	v := &api.OpenShiftVersion{
+		Version:           version.InstallStream.Version.String(),
+		OpenShiftPullspec: version.InstallStream.PullSpec,
+		InstallerPullspec: installerPullspec,
+	}
+
 	// Run installer. For M5/M6 we will persist the graph inside the installer
 	// code since it's easier, but in the future, this data should be collected
 	// from Hive's outputs where needed.
-	return m.hiveClusterManager.Install(ctx, m.subscriptionDoc, m.doc)
+	return m.hiveClusterManager.Install(ctx, m.subscriptionDoc, m.doc, v)
 }
 
 func (m *manager) bootstrap() []steps.Step {

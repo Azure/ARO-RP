@@ -34,7 +34,7 @@ type ClusterManager interface {
 	Delete(ctx context.Context, doc *api.OpenShiftClusterDocument) error
 	// Install creates a ClusterDocument and related secrets for a new cluster
 	// so that it can be provisioned by Hive.
-	Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) error
+	Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error
 	IsClusterDeploymentReady(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error)
 	ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error
 }

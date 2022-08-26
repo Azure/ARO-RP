@@ -17,7 +17,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
@@ -40,8 +39,8 @@ func makeEnvSecret(name string) corev1.EnvVar {
 	}
 }
 
-func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) error {
-	sppSecret, err := c.servicePrincipalSecretForInstall(doc.OpenShiftCluster, sub)
+func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error {
+	sppSecret, err := servicePrincipalSecretForInstall(doc.OpenShiftCluster, sub, c.env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}
@@ -51,7 +50,7 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 		return err
 	}
 
-	cd := c.clusterDeploymentForInstall(doc, c.env.IsLocalDevelopmentMode())
+	cd := c.clusterDeploymentForInstall(doc, version, c.env.IsLocalDevelopmentMode())
 
 	// Enrich the cluster deployment with the correlation data so that logs are
 	// properly annotated
@@ -85,7 +84,7 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 	return nil
 }
 
-func (hr *clusterManager) servicePrincipalSecretForInstall(oc *api.OpenShiftCluster, sub *api.SubscriptionDocument) (*corev1.Secret, error) {
+func servicePrincipalSecretForInstall(oc *api.OpenShiftCluster, sub *api.SubscriptionDocument, isDevelopment bool) (*corev1.Secret, error) {
 	clusterSPBytes, err := clusterSPToBytes(sub, oc)
 	if err != nil {
 		return nil, err
@@ -101,37 +100,37 @@ func (hr *clusterManager) servicePrincipalSecretForInstall(oc *api.OpenShiftClus
 		return nil, err
 	}
 
-	proxyCert, err := ioutil.ReadFile("secrets/proxy.crt")
-	if err != nil {
-		return nil, err
-	}
-
-	proxyClientCert, err := ioutil.ReadFile("secrets/proxy-client.crt")
-	if err != nil {
-		return nil, err
-	}
-
-	proxyClientKey, err := ioutil.ReadFile("secrets/proxy-client.key")
-	if err != nil {
-		return nil, err
-	}
-
 	sppSecret := clusterServicePrincipalSecret(oc.Properties.HiveProfile.Namespace, clusterSPBytes)
+	sppSecret.Data["99_aro.json"] = enc
+	sppSecret.Data["99_sub.json"] = encSub
 
-	data := map[string][]byte{
-		"osServicePrincipal.json": sppSecret.Data["osServicePrincipal.json"],
-		"99_aro.json":             enc,
-		"99_sub.json":             encSub,
-		"proxy.crt":               proxyCert,
-		"proxy-client.crt":        proxyClientCert,
-		"proxy-client.key":        proxyClientKey,
+	if isDevelopment {
+		// In development mode, load in the proxy certificates so that clusters
+		// can be accessed from a local (not in Azure) Hive
+		proxyCert, err := ioutil.ReadFile("secrets/proxy.crt")
+		if err != nil {
+			return nil, err
+		}
+
+		proxyClientCert, err := ioutil.ReadFile("secrets/proxy-client.crt")
+		if err != nil {
+			return nil, err
+		}
+
+		proxyClientKey, err := ioutil.ReadFile("secrets/proxy-client.key")
+		if err != nil {
+			return nil, err
+		}
+
+		sppSecret.Data["proxy.crt"] = proxyCert
+		sppSecret.Data["proxy-client.crt"] = proxyClientCert
+		sppSecret.Data["proxy-client.key"] = proxyClientKey
 	}
-	sppSecret.Data = data
 
 	return sppSecret, nil
 }
 
-func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDocument, isDevelopment bool) *hivev1.ClusterDeployment {
+func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, isDevelopment bool) *hivev1.ClusterDeployment {
 	var envVars = []corev1.EnvVar{
 		{
 			Name:  "ARO_UUID",
@@ -182,8 +181,8 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 				Name: pullsecretSecretName,
 			},
 			Provisioning: &hivev1.Provisioning{
-				InstallerImageOverride: "quay.io/hawkieowl/aro:10d5cba",
-				ReleaseImage:           version.InstallStream.PullSpec,
+				InstallerImageOverride: version.InstallerPullspec,
+				ReleaseImage:           version.OpenShiftPullspec,
 				InstallConfigSecretRef: &corev1.LocalObjectReference{
 					Name: installConfigName,
 				},
