@@ -35,6 +35,9 @@
         "billingServicePrincipalId": {
             "value": ""
         },
+        "clusterDefaultInstallerPullspec": {
+            "value": ""
+        },
         "clusterMdmAccount": {
             "value": ""
         },
@@ -48,6 +51,9 @@
             "value": ""
         },
         "clusterParentDomainName": {
+            "value": ""
+        },
+        "clustersInstallViaHive": {
             "value": ""
         },
         "databaseAccountName": {
