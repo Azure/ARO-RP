@@ -147,7 +147,7 @@ func updateOpenShiftVersions(ctx context.Context, dbOpenShiftVersions database.O
 	}
 
 	for _, doc := range newVersions {
-		log.Printf("Version %s not found in database, creating", doc.Version)
+		log.Printf("Version %q not found in database, creating", doc.Version)
 		newDoc := api.OpenShiftVersionDocument{
 			ID:               dbOpenShiftVersions.NewUUID(),
 			OpenShiftVersion: &doc,
