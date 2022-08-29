@@ -92,6 +92,28 @@
         {
             "properties": {
                 "resource": {
+                    "id": "Backends",
+                    "partitionKey": {
+                        "paths": [
+                            "/id"
+                        ],
+                        "kind": "Hash"
+                    },
+                    "defaultTtl": 604800
+                },
+                "options": {}
+            },
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Backends')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2021-01-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
+            ]
+        },
+        {
+            "properties": {
+                "resource": {
                     "id": "Billing",
                     "partitionKey": {
                         "paths": [
