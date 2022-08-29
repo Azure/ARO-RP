@@ -46,7 +46,7 @@ func NewListClientWithBaseURI(baseURI string, subscriptionID string) ListClient 
 // Versions the operation returns the installable OpenShift versions as strings.
 // Parameters:
 // location - the name of Azure region.
-func (client ListClient) Versions(ctx context.Context, location string) (result SetObject, err error) {
+func (client ListClient) Versions(ctx context.Context, location string) (result ListString, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/ListClient.Versions")
 		defer func() {
@@ -115,7 +115,7 @@ func (client ListClient) VersionsSender(req *http.Request) (*http.Response, erro
 
 // VersionsResponder handles the response to the Versions request. The method always
 // closes the http.Response Body.
-func (client ListClient) VersionsResponder(resp *http.Response) (result SetObject, err error) {
+func (client ListClient) VersionsResponder(resp *http.Response) (result ListString, err error) {
 	err = autorest.Respond(
 		resp,
 		azure.WithErrorUnlessStatusCode(http.StatusOK),

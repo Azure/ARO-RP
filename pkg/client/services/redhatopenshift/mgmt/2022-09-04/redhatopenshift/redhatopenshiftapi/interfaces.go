@@ -33,7 +33,7 @@ var _ OperationsClientAPI = (*redhatopenshift.OperationsClient)(nil)
 
 // ListClientAPI contains the set of methods on the ListClient type.
 type ListClientAPI interface {
-	Versions(ctx context.Context, location string) (result redhatopenshift.SetObject, err error)
+	Versions(ctx context.Context, location string) (result redhatopenshift.ListString, err error)
 }
 
 var _ ListClientAPI = (*redhatopenshift.ListClient)(nil)
