@@ -41,7 +41,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 //go:embed staticresources
@@ -50,7 +49,7 @@ var embeddedFiles embed.FS
 type Operator interface {
 	CreateOrUpdate(context.Context) error
 	IsReady(context.Context) (bool, error)
-	IsRunningDesiredVersion(context.Context) error
+	IsRunningDesiredVersion(context.Context) (bool, error)
 }
 
 type operator struct {
@@ -378,53 +377,72 @@ func (o *operator) IsReady(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func checkOperatorDeploymentVersion(ctx context.Context, cli appsv1client.DeploymentInterface, name string, gitCommit string) error {
+func checkOperatorDeploymentVersion(ctx context.Context, cli appsv1client.DeploymentInterface, name string, desiredVersion string) (bool, error) {
 	d, err := cli.Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return err
+	switch {
+	case kerrors.IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, err
 	}
-
-	if d.Labels["version"] != gitCommit {
-		return errors.New(name + " is not running the desired version: " + gitCommit)
+	if d.Labels["version"] != desiredVersion {
+		return false, nil
 	}
-
-	return nil
+	return true, nil
 }
 
-func checkPodImageVersion(ctx context.Context, cli corev1client.PodInterface, namespace string, gitCommit string) error {
-	podList, err := cli.List(ctx, metav1.ListOptions{LabelSelector: "app=" + namespace})
-	if err != nil {
-		return err
+func checkPodImageVersion(ctx context.Context, cli corev1client.PodInterface, role string, desiredVersion string) (bool, error) {
+	podList, err := cli.List(ctx, metav1.ListOptions{LabelSelector: "app=" + role})
+	switch {
+	case kerrors.IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, err
 	}
+	imageTag := "latest"
 	for _, pod := range podList.Items {
-		imageTag := strings.Split(pod.Spec.Containers[0].Image, ":")
-		if imageTag[len(imageTag)-1] != gitCommit {
-			return errors.New(pod.Name + " pod of namespace " + pod.Namespace + " is not running the desired version: " + gitCommit)
+		if strings.Contains(pod.Spec.Containers[0].Image, ":") {
+			str := strings.Split(pod.Spec.Containers[0].Image, ":")
+			imageTag = str[len(str)-1]
 		}
 	}
-	return nil
+	if imageTag != desiredVersion {
+		return false, nil
+	}
+	return true, nil
 }
 
-func (o *operator) IsRunningDesiredVersion(ctx context.Context) error {
-	// check if aro-operator-master is running desired version
-	err := checkOperatorDeploymentVersion(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-master", version.GitCommit)
-	if err != nil {
-		return err
+func (o *operator) IsRunningDesiredVersion(ctx context.Context) (bool, error) {
+	// Get the desired Version
+	image := o.env.AROOperatorImage()
+	desiredVersion := "latest"
+	if strings.Contains(image, ":") {
+		str := strings.Split(image, ":")
+		desiredVersion = str[len(str)-1]
 	}
-	err = checkPodImageVersion(ctx, o.kubernetescli.CoreV1().Pods(pkgoperator.Namespace), "aro-operator-master", version.GitCommit)
-	if err != nil {
-		return err
+	if o.oc.Properties.OperatorVersion != "" {
+		desiredVersion = o.oc.Properties.OperatorVersion
 	}
-	// check if aro-operator-worker is running desired version
-	err = checkOperatorDeploymentVersion(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-worker", version.GitCommit)
-	if err != nil {
-		return err
+
+	// Check if aro-operator-master is running desired version
+	ok, err := checkOperatorDeploymentVersion(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-master", desiredVersion)
+	if !ok || err != nil {
+		return ok, err
 	}
-	err = checkPodImageVersion(ctx, o.kubernetescli.CoreV1().Pods(pkgoperator.Namespace), "aro-operator-worker", version.GitCommit)
-	if err != nil {
-		return err
+	ok, err = checkPodImageVersion(ctx, o.kubernetescli.CoreV1().Pods(pkgoperator.Namespace), "aro-operator-master", desiredVersion)
+	if !ok || err != nil {
+		return ok, err
 	}
-	return nil
+	// Check if aro-operator-worker is running desired version
+	ok, err = checkOperatorDeploymentVersion(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-worker", desiredVersion)
+	if !ok || err != nil {
+		return ok, err
+	}
+	ok, err = checkPodImageVersion(ctx, o.kubernetescli.CoreV1().Pods(pkgoperator.Namespace), "aro-operator-worker", desiredVersion)
+	if !ok || err != nil {
+		return ok, err
+	}
+	return true, nil
 }
 
 func checkIngressIP(ingressProfiles []api.IngressProfile) (string, error) {
