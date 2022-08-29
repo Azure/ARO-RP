@@ -137,6 +137,9 @@
      journalctl _COMM=aro -o json --since "15 min ago" -f | jq -r 'select (.COMPONENT != null and (.COMPONENT | contains("access"))|not) | .MESSAGE'
      ```
 
+## Automatically run local RP
+If you are already familiar with running the ARO RP locally, you can speed up the process executing the [local_dev_env.sh](../hack/devtools/local_dev_env.sh) script.
+
 ## Connect ARO-RP with a Hive development cluster
 The env variables names defined in pkg/util/liveconfig/manager.go control the communication of the ARO-RP with Hive.
 - If you want to use ARO-RP + Hive, set *HIVE_KUBE_CONFIG_PATH* to the path of the kubeconfig of the AKS Dev cluster. [Info](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-openshift-cluster) about creating that kubeconfig (Step *Get an admin kubeconfig:*).
