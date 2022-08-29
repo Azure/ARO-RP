@@ -8,8 +8,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"os"
 	"testing"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -198,65 +196,5 @@ func TestResourcesList(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func BenchmarkResourcesList10(b *testing.B) {
-	benchResourcesList(b, 10)
-}
-func BenchmarkResourcesList100(b *testing.B) {
-	benchResourcesList(b, 100)
-}
-func BenchmarkResourcesList500(b *testing.B) {
-	benchResourcesList(b, 500)
-}
-func BenchmarkResourcesList1000(b *testing.B) {
-	benchResourcesList(b, 1000)
-}
-func BenchmarkResourcesList10000(b *testing.B) {
-	benchResourcesList(b, 10000)
-}
-func benchResourcesList(b *testing.B, nbOfVms int) {
-	ctx := context.Background()
-	controller := gomock.NewController(b)
-	defer controller.Finish()
-	virtualMachines := mock_compute.NewMockVirtualMachinesClient(controller)
-	validVirtualMachinesMock(virtualMachines)
-	devnull, err := os.Open("/dev/null")
-	if err != nil {
-		fmt.Println("couldn't open dev null")
-	}
-	logger := logrus.New()
-	logger.SetOutput(ioutil.Discard)
-	azureA := azureActions{
-		log: logrus.NewEntry(logger),
-		oc: &api.OpenShiftCluster{
-			Properties: api.OpenShiftClusterProperties{
-				ClusterProfile: api.ClusterProfile{
-					ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", ""),
-				},
-				MasterProfile: api.MasterProfile{
-					SubnetID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", ""),
-				},
-			},
-		},
-
-		virtualMachines: virtualMachines,
-	}
-
-	genResources := make([]mgmtfeatures.GenericResourceExpanded, 0)
-
-	for i := 0; i < nbOfVms; i++ {
-		genResources = append(genResources, mgmtfeatures.GenericResourceExpanded{
-			Type: to.StringPtr("Microsoft.Compute/virtualMachines"),
-			Name: to.StringPtr("vm-1"),
-		})
-	}
-
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		azureA.ResourcesList(ctx, genResources, devnull)
 	}
 }
