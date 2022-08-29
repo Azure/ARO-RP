@@ -19,7 +19,7 @@ webhooks:
     scope: "Namespaced"
   clientConfig:
     service:
-      namespace: "openshift-ocm-pullsecret-admission"
+      namespace: "openshift-azure-operator"
       name: "pullsecret-validation"
   admissionReviewVersions: ["v1"]
   sideEffects: None
