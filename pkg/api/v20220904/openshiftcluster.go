@@ -36,9 +36,6 @@ type OpenShiftCluster struct {
 
 	// The cluster properties.
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
-
-	// The cluster install version.
-	InstallVersion string `json:"installVersion,omitempty"`
 }
 
 // Tags represents an OpenShift cluster's tags.
@@ -72,6 +69,9 @@ type OpenShiftClusterProperties struct {
 
 	// The cluster ingress profiles.
 	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`
+
+	// The cluster install version.
+	InstallVersion string `json:"installVersion,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.
@@ -86,6 +86,9 @@ const (
 	ProvisioningStateSucceeded     ProvisioningState = "Succeeded"
 	ProvisioningStateFailed        ProvisioningState = "Failed"
 )
+
+// InstallVersion is the OpenShift installation version string.
+type InstallVersion string
 
 // FipsValidatedModules determines if FIPS is used.
 type FipsValidatedModules string
