@@ -95,7 +95,8 @@ const (
 	CloudErrorCodeDuplicateDomain                    = "DuplicateDomain"
 	CloudErrorCodeResourceQuotaExceeded              = "ResourceQuotaExceeded"
 	CloudErrorCodeQuotaExceeded                      = "QuotaExceeded"
-	CloudErrorResourceProviderNotRegistered          = "ResourceProviderNotRegistered"
+	CloudErrorCodeResourceProviderNotRegistered      = "ResourceProviderNotRegistered"
+	CloudErrorCodeCannotDeleteLoadBalancerByID       = "CannotDeleteLoadBalancerWithPrivateLinkService"
 )
 
 // NewCloudError returns a new CloudError
