@@ -26,6 +26,7 @@ func TestIngressReplicaChecker(t *testing.T) {
 		aroCluster        *arov1alpha1.Cluster
 		ingressController *operatorv1.IngressController
 		expectedState     operatorv1.OperatorCondition
+		expectedReplica   int32
 	}{
 		{
 			name: "ingress controller has default replicas",
@@ -49,6 +50,7 @@ func TestIngressReplicaChecker(t *testing.T) {
 				Message: "Default replicas in place",
 				Reason:  "CheckDone",
 			},
+			expectedReplica: 2,
 		},
 		{
 			name: "ingress controller has zero replicas",
@@ -72,6 +74,7 @@ func TestIngressReplicaChecker(t *testing.T) {
 				Message: "Rescale succeeded",
 				Reason:  "CheckDone",
 			},
+			expectedReplica: 1,
 		},
 	} {
 		arocli := arofake.NewSimpleClientset()
@@ -89,9 +92,17 @@ func TestIngressReplicaChecker(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			err := replicaChecker.Check(ctx)
-
 			if err != nil {
 				t.Error(err)
+			}
+
+			ingress, err := operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get(ctx, "default", metav1.GetOptions{})
+			if err != nil {
+				t.Error(err)
+			}
+
+			if *ingress.Spec.Replicas != tt.expectedReplica {
+				t.Errorf("wrong replica count, want: %d, got: %d", tt.expectedReplica, *ingress.Spec.Replicas)
 			}
 
 			cluster, err := arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
