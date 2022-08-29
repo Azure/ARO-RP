@@ -58,6 +58,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                apiserver_visibility=None,
                ingress_visibility=None,
                tags=None,
+               install_version=None,
                no_wait=False):
     if not rp_mode_development():
         resource_client = get_mgmt_service_client(
@@ -141,6 +142,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                 visibility=ingress_visibility or 'Public',
             )
         ],
+        install_version=install_version or '',
     )
 
     sp_obj_ids = [client_sp_id, rp_client_sp_id]
