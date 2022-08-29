@@ -68,12 +68,12 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 
 	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerEndpoint)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("MSI Authorizer failed with: %s", err.Error())
 	}
 
 	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("MSI KeyVault Authorizer failed with: %s", err.Error())
 	}
 
 	m := statsd.New(ctx, log.WithField("component", "update-ocp-versions"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
