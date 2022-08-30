@@ -76,20 +76,20 @@ generate:
 
 image-aro: aro e2e.test
 	docker pull $(REGISTRY)/ubi8/ubi-minimal
-	docker build --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
+	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
 
 image-aro-multistage:
-	docker build --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
+	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
 
 image-autorest:
-	docker build --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
+	docker build --platform=linux/amd64 --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
 
 image-fluentbit:
-	docker build --network=host --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
+	docker build --platform=linux/amd64 --network=host --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
 
 image-proxy: proxy
 	docker pull $(REGISTRY)/ubi8/ubi-minimal
-	docker build --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) .
+	docker build --platform=linux/amd64 --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) .
 
 publish-image-aro: image-aro
 	docker push $(ARO_IMAGE)
@@ -184,8 +184,8 @@ lint-go:
 	hack/lint-go.sh
 
 lint-admin-portal:
-	docker build --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.portal_lint . -t linter
-	docker run -it --rm localhost/linter ./src --ext .ts
+	docker build --platform=linux/amd64 --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.portal_lint . -t linter
+	docker run --platform=linux/amd64 -it --rm localhost/linter ./src --ext .ts
 
 test-python: pyenv az
 	. pyenv/bin/activate && \
@@ -194,7 +194,7 @@ test-python: pyenv az
 		hack/unit-test-python.sh
 
 
-shared-cluster-login: 
+shared-cluster-login:
 	@oc login ${SHARED_CLUSTER_API} -u kubeadmin -p ${SHARED_CLUSTER_KUBEADMIN_PASSWORD}
 
 unit-test-python:

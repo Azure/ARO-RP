@@ -25,18 +25,19 @@ function generate_golang() {
 
   # Generating Track 1 SDK. Needs work to migrate to Track 2.
   sudo docker run \
-		--rm \
-		-v $PWD/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
-		-v $PWD/swagger:/swagger:z \
+    --platform=linux/amd64 \
+    --rm \
+    -v $PWD/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
+    -v $PWD/swagger:/swagger:z \
     "${AUTOREST_IMAGE}" \
-		--go \
+    --go \
     --use=@microsoft.azure/autorest.go@~2.1.187 \
     --use=@microsoft.azure/autorest.modeler@~2.3.38 \
     --version=~2.0.4421 \
-		--license-header=MICROSOFT_APACHE_NO_VERSION \
-		--namespace=redhatopenshift \
-		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
-		--output-folder=/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift
+    --license-header=MICROSOFT_APACHE_NO_VERSION \
+    --namespace=redhatopenshift \
+    --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
+    --output-folder=/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift
 
   sudo chown -R $(id -un):$(id -gn) pkg/client
   sed -i -e 's|azure/aro-rp|Azure/ARO-RP|g' pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift/models.go pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift/redhatopenshiftapi/interfaces.go
@@ -50,6 +51,7 @@ function generate_python() {
 
   # Generating Track 2 SDK
   sudo docker run \
+    --platform=linux/amd64 \
     --rm \
     -v $PWD/python/client:/python/client:z \
     -v $PWD/swagger:/swagger:z \
