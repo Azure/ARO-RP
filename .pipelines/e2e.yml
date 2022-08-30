@@ -38,6 +38,7 @@ jobs:
       set -o pipefail
 
       . secrets/env
+      export HIVEKUBECONFIGPATH="secrets/e2e-aks-kubeconfig"
 
       az account set -s $AZURE_SUBSCRIPTION_ID
 
