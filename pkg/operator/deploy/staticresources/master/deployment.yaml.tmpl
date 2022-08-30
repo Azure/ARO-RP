@@ -28,8 +28,10 @@ spec:
         - master
         image: "{{ .Image }}"
         name: aro-operator
+        env: 
+        - name: "RP_IMAGE"
+          value: "{{ .Image }}:{{ .Version }}" 
         {{ if .IsLocalDevelopment}}
-        env:
         - name: "RP_MODE"
           value: "development"
         {{ end }}

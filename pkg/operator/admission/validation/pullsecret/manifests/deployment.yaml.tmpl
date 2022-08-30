@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: openshift-ocm-pullsecret-admission
+  name: pullsecret-validation
+  labels:
+    app: pullsecret-validation
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: pullsecret-validation
+  template:
+    metadata:
+      labels:
+        app: pullsecret-validation
+    spec:
+      containers:
+      - image: {{ .Image }}
+        command:
+          - aro
+          - admissionhooks
+        name: hook
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: pullsecretvalidationcert
+          readOnly: true
+          mountPath: "/etc/certificates"
+        resources:
+          limits: 
+            memory: "100Mi"
+            cpu: "50m"
+        
+      volumes:
+      - name: pullsecretvalidationcert
+        secret:
+          secretName: pullsecretvalidationcert

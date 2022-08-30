@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/ARO-RP/pkg/operator/admission/validation/pullsecret"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -83,6 +84,12 @@ func main() {
 	case "update-versions":
 		checkArgs(1)
 		err = updateOCPVersions(ctx, log)
+	case "admissionhooks":
+		checkArgs(1)
+		//certificates come from openshift. They are put into the container via a secret.
+		//https://docs.openshift.com/container-platform/4.10/security/certificates/service-serving-certificate.html
+		err = pullsecret.StartValidator(ctx, log, "/etc/certificates/tls.crt", "/etc/certificates/tls.key")
+
 	default:
 		usage()
 		os.Exit(2)

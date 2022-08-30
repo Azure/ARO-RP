@@ -1,0 +1,26 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: "verifypullsecret.redhat.com"
+  annotations:
+     service.beta.openshift.io/inject-cabundle: "true"
+webhooks:
+- name: "verifypullsecret.openshift.io"
+  namespaceSelector:
+    matchExpressions:
+    - key: kubernetes.io/metadata.name
+      operator: In
+      values: ["openshift-config"]
+  rules:
+  - apiGroups: [""]
+    apiVersions: ["v1"]
+    operations: ["CREATE", "UPDATE", "DELETE"]
+    resources: ["secrets"]
+    scope: "Namespaced"
+  clientConfig:
+    service:
+      namespace: "openshift-ocm-pullsecret-admission"
+      name: "pullsecret-validation"
+  admissionReviewVersions: ["v1"]
+  sideEffects: None
+  timeoutSeconds: 5
