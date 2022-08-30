@@ -76,6 +76,10 @@ func (g *generator) rpTemplate() *arm.Template {
 			"vmSize",
 			"vmssCleanupEnabled",
 			"vmssName",
+
+			// TODO: Replace with Live Service Configuration in KeyVault
+			"clustersInstallViaHive",
+			"clusterDefaultInstallerPullspec",
 		)
 	}
 

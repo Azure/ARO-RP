@@ -472,6 +472,10 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"rpMdsdConfigVersion",
 		"rpMdsdNamespace",
 		"rpParentDomainName",
+
+		// TODO: Replace with Live Service Configuration in KeyVault
+		"clustersInstallViaHive",
+		"clusterDefaultInstallerPullspec",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
@@ -734,6 +738,8 @@ MDM_NAMESPACE=RP
 MDSD_ENVIRONMENT='$MDSDENVIRONMENT'
 RP_FEATURES='$RPFEATURES'
 RPIMAGE='$RPIMAGE'
+ARO_INSTALL_VIA_HIVE='$CLUSTERSINSTALLVIAHIVE'
+ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC='$CLUSTERDEFAULTINSTALLERPULLSPEC'
 EOF
 
 cat >/etc/systemd/system/aro-rp.service <<'EOF'
@@ -767,6 +773,8 @@ ExecStart=/usr/bin/docker run \
   -e MDM_NAMESPACE \
   -e MDSD_ENVIRONMENT \
   -e RP_FEATURES \
+  -e ARO_INSTALL_VIA_HIVE \
+  -e ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC \
   -m 2g \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \

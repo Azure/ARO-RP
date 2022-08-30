@@ -100,6 +100,10 @@ type Configuration struct {
 	SubscriptionResourceGroupLocation  *string       `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
 	VMSize                             *string       `json:"vmSize,omitempty" value:"required"`
 	VMSSCleanupEnabled                 *bool         `json:"vmssCleanupEnabled,omitempty"`
+
+	// TODO: Replace with Live Service Configuration in KeyVault
+	InstallViaHive           *bool   `json:"clustersInstallViaHive,omitempty"`
+	DefaultInstallerPullspec *string `json:"clusterDefaultInstallerPullspec,omitempty"`
 }
 
 // GetConfig return RP configuration from the file
