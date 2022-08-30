@@ -13,25 +13,30 @@ import (
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 func (m *manager) networkBootstrapNIC(installConfig *installconfig.InstallConfig) *arm.Resource {
+	// Private clusters without Public IPs will not have valid external load balancers
+	lbBackendAddressPool := &[]mgmtnetwork.BackendAddressPool{
+		{
+			ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", m.oc.Properties.InfraID)),
+		},
+	}
+	if m.oc.Properties.NetworkProfile.OutboundType == api.OutboundTypeUserDefinedRouting {
+		*lbBackendAddressPool = append(*lbBackendAddressPool, mgmtnetwork.BackendAddressPool{
+			ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.oc.Properties.InfraID)),
+		})
+	}
 	return &arm.Resource{
 		Resource: &mgmtnetwork.Interface{
 			InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
 				IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
 					{
 						InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
-							LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
-								{
-									ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.oc.Properties.InfraID)),
-								},
-								{
-									ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", m.oc.Properties.InfraID)),
-								},
-							},
+							LoadBalancerBackendAddressPools: lbBackendAddressPool,
 							Subnet: &mgmtnetwork.Subnet{
 								ID: &m.oc.Properties.MasterProfile.SubnetID,
 							},
@@ -49,23 +54,27 @@ func (m *manager) networkBootstrapNIC(installConfig *installconfig.InstallConfig
 }
 
 func (m *manager) networkMasterNICs(installConfig *installconfig.InstallConfig) *arm.Resource {
+	// Private clusters without Public IPs not have valid external load balancers
+	lbBackendAddressPool := &[]mgmtnetwork.BackendAddressPool{
+		{
+			ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", m.oc.Properties.InfraID)),
+		},
+		{
+			ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', concat('ssh-', copyIndex()))]", m.oc.Properties.InfraID)),
+		},
+	}
+	if m.oc.Properties.NetworkProfile.OutboundType == api.OutboundTypeUserDefinedRouting {
+		*lbBackendAddressPool = append(*lbBackendAddressPool, mgmtnetwork.BackendAddressPool{
+			ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.oc.Properties.InfraID)),
+		})
+	}
 	return &arm.Resource{
 		Resource: &mgmtnetwork.Interface{
 			InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
 				IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
 					{
 						InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
-							LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
-								{
-									ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.oc.Properties.InfraID)),
-								},
-								{
-									ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", m.oc.Properties.InfraID)),
-								},
-								{
-									ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', concat('ssh-', copyIndex()))]", m.oc.Properties.InfraID)),
-								},
-							},
+							LoadBalancerBackendAddressPools: lbBackendAddressPool,
 							Subnet: &mgmtnetwork.Subnet{
 								ID: &m.oc.Properties.MasterProfile.SubnetID,
 							},

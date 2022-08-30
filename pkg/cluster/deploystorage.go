@@ -130,15 +130,22 @@ func (m *manager) deployStorageTemplate(ctx context.Context) error {
 		m.clusterNSG(infraID, azureRegion),
 		m.clusterServicePrincipalRBAC(),
 		m.networkPrivateLinkService(azureRegion),
-		m.networkPublicIPAddress(azureRegion, infraID+"-pip-v4"),
 		m.networkInternalLoadBalancer(azureRegion),
-		m.networkPublicLoadBalancer(azureRegion),
 	}
 
-	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPublic {
+	// Create a public load balancer routing if needed
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == api.OutboundTypeLoadbalancer {
+		// Normal private clusters still need a public load balancer
 		resources = append(resources,
-			m.networkPublicIPAddress(azureRegion, infraID+"-default-v4"),
+			m.networkPublicIPAddress(azureRegion, infraID+"-pip-v4"),
+			m.networkPublicLoadBalancer(azureRegion),
 		)
+		// If the cluster is public we still want the default public IP address
+		if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPublic {
+			resources = append(resources,
+				m.networkPublicIPAddress(azureRegion, infraID+"-default-v4"),
+			)
+		}
 	}
 
 	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
