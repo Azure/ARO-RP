@@ -29,6 +29,7 @@ func usage() {
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s portal\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s rp\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s operator {master,worker}\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s update-versions\n", os.Args[0])
 	flag.PrintDefaults()
 }
 
@@ -79,6 +80,9 @@ func main() {
 	case "operator":
 		checkArgs(2)
 		err = operator(ctx, log)
+	case "update-versions":
+		checkArgs(1)
+		err = updateOCPVersions(ctx, log)
 	default:
 		usage()
 		os.Exit(2)
