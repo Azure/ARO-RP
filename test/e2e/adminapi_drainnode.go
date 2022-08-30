@@ -14,7 +14,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/kubectl/pkg/drain"
 )
 
@@ -94,34 +93,11 @@ func testUncordonNodeOK(nodeName string) {
 }
 
 func testDrainNodeOK(nodeName string, drainer *drain.Helper) {
-	By("counting the number of pods on the node via Kubernetes API")
-	podsListPreDrain, err := clients.Kubernetes.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{
-		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName}).String(),
-	})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(len(podsListPreDrain.Items)).Should(BeNumerically(">", 0))
-
-	By("counting the number of pods to be deleted/evicted via Kubernetes API")
-	podsForDeletion, errs := drainer.GetPodsForDeletion(nodeName)
-	Expect(errs).To(BeNil())
-	Expect(len(podsForDeletion.Pods())).Should(BeNumerically(">", 0))
-
 	By("draining the node via RP admin API")
 	params := url.Values{
-		"shouldCordon": []string{"true"},
-		"vmName":       []string{nodeName},
+		"vmName": []string{nodeName},
 	}
 	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/drainnode", params, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
-
-	By("counting the number of pods on the drained node via Kubernetes API")
-	podsListPostDrain, err := clients.Kubernetes.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{
-		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName}).String(),
-	})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(len(podsListPostDrain.Items)).Should(BeNumerically(">", 0))
-
-	By("checking that the expected number of pods exist on the drained node")
-	Expect(len(podsListPostDrain.Items)).Should(BeNumerically("<=", len(podsListPreDrain.Items)-len(podsForDeletion.Pods())))
 }
