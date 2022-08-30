@@ -198,6 +198,9 @@ func (m *manager) bootstrap() []steps.Step {
 		s = append(s,
 			steps.Action(m.hiveCreateNamespace),
 			steps.Action(m.runHiveInstaller),
+			// Give Hive 60 minutes to install the cluster, since this includes
+			// all of bootstrapping being complete
+			steps.Condition(m.hiveClusterInstallationComplete, 60*time.Minute, true),
 			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
 		)
 	} else {

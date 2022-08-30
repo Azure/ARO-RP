@@ -109,6 +109,21 @@ func (mr *MockClusterManagerMockRecorder) IsClusterDeploymentReady(arg0, arg1 in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClusterDeploymentReady", reflect.TypeOf((*MockClusterManager)(nil).IsClusterDeploymentReady), arg0, arg1)
 }
 
+// IsClusterInstallationComplete mocks base method.
+func (m *MockClusterManager) IsClusterInstallationComplete(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsClusterInstallationComplete", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsClusterInstallationComplete indicates an expected call of IsClusterInstallationComplete.
+func (mr *MockClusterManagerMockRecorder) IsClusterInstallationComplete(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClusterInstallationComplete", reflect.TypeOf((*MockClusterManager)(nil).IsClusterInstallationComplete), arg0, arg1)
+}
+
 // ResetCorrelationData mocks base method.
 func (m *MockClusterManager) ResetCorrelationData(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) error {
 	m.ctrl.T.Helper()

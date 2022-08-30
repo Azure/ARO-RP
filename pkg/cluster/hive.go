@@ -60,6 +60,11 @@ func (m *manager) hiveClusterDeploymentReady(ctx context.Context) (bool, error) 
 	return m.hiveClusterManager.IsClusterDeploymentReady(ctx, m.doc)
 }
 
+func (m *manager) hiveClusterInstallationComplete(ctx context.Context) (bool, error) {
+	m.log.Info("waiting for cluster installation to complete")
+	return m.hiveClusterManager.IsClusterInstallationComplete(ctx, m.doc)
+}
+
 func (m *manager) hiveResetCorrelationData(ctx context.Context) error {
 	m.log.Info("resetting correlation data for hive")
 	if !m.installViaHive {

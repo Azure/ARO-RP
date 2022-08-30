@@ -36,6 +36,7 @@ type ClusterManager interface {
 	// so that it can be provisioned by Hive.
 	Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error
 	IsClusterDeploymentReady(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error)
+	IsClusterInstallationComplete(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error)
 	ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error
 }
 
@@ -137,6 +138,14 @@ func (hr *clusterManager) IsClusterDeploymentReady(ctx context.Context, doc *api
 				return true, nil
 			}
 		}
+	}
+	return false, err
+}
+
+func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error) {
+	cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
+	if err == nil {
+		return cd.Spec.Installed, nil
 	}
 	return false, err
 }
