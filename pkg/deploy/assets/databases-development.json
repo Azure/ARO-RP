@@ -77,7 +77,8 @@
                             "/partitionKey"
                         ],
                         "kind": "Hash"
-                    }
+                    },
+                    "defaultTtl": -1
                 },
                 "options": {}
             },

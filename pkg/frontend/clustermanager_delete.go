@@ -52,6 +52,7 @@ func (f *frontend) _deleteClusterManagerConfiguration(ctx context.Context, log *
 	}
 
 	// Right now we are going to assume that the backend will delete the document, we will just mark for deletion.
+	doc.TTL = 86400 // expires in 24 hours
 	doc.Deleting = true
 	err = cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
