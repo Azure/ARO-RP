@@ -52,6 +52,19 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 			},
 			Name: to.StringPtr("rp_in_arm"),
 		},
+		{
+			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+				SourcePortRange:          to.StringPtr("*"),
+				DestinationPortRange:     to.StringPtr("443"),
+				SourceAddressPrefix:      to.StringPtr("GenevaActions"),
+				DestinationAddressPrefix: to.StringPtr("*"),
+				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+				Priority:                 to.Int32Ptr(130),
+				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+			},
+			Name: to.StringPtr("rp_in_geneva"),
+		},
 	}
 
 	if !g.production {
@@ -111,19 +124,6 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 				},
 				Name: to.StringPtr("deny_in_gateway"),
-			},
-			mgmtnetwork.SecurityRule{
-				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-					SourcePortRange:          to.StringPtr("*"),
-					DestinationPortRange:     to.StringPtr("443"),
-					SourceAddressPrefixes:    to.StringSlicePtr([]string{}),
-					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-					DestinationAddressPrefix: to.StringPtr("*"),
-					Priority:                 to.Int32Ptr(130),
-					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-				},
-				Name: to.StringPtr("rp_in_geneva"),
 			},
 		)
 	}
