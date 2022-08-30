@@ -4,6 +4,7 @@ package hive
 // Licensed under the Apache License 2.0.
 
 import (
+	"fmt"
 	"os"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
@@ -196,7 +197,7 @@ func installConfigCM(namespace string, location string) *corev1.Secret {
 			Name:      installConfigName,
 		},
 		StringData: map[string]string{
-			"install-config.yaml": "apiVersion: v1\nplatform:\n  azure:\n    region: " + location + "\n",
+			"install-config.yaml": fmt.Sprintf(installConfigTemplate, location),
 		},
 	}
 }

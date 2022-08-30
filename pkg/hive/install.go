@@ -20,9 +20,14 @@ import (
 )
 
 const (
-	envSecretsName       = "aro-env-secret"
-	pullsecretSecretName = "aro-pullsecret"
-	installConfigName    = "aro-installconfig"
+	envSecretsName        = "aro-env-secret"
+	pullsecretSecretName  = "aro-pullsecret"
+	installConfigName     = "aro-installconfig"
+	installConfigTemplate = `apiVersion: v1
+platform:
+  azure:
+    region: "%s"
+`
 )
 
 func makeEnvSecret(name string) corev1.EnvVar {
