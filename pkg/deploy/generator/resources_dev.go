@@ -38,7 +38,7 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 		)
 	}
 
-	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
+	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update
 yum -y install docker
 
 firewall-cmd --add-port=443/tcp --permanent
@@ -312,7 +312,7 @@ func (g *generator) devCIPool() *arm.Resource {
 sleep 60
 
 for attempt in {1..5}; do
-  yum -y update -x WALinuxAgent && break
+  yum -y update && break
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
