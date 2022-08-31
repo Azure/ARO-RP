@@ -1,0 +1,17 @@
+name: PR Review Flow
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  remove_labels:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions-ecosystem/action-remove-labels@v1
+        if: github.event.review.state == 'changes_requested'
+        with:
+          labels: "ready-for-review"
