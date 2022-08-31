@@ -14,6 +14,10 @@ import (
 
 type Manager interface {
 	HiveRestConfig(context.Context, int) (*rest.Config, error)
+	InstallViaHive(context.Context) (bool, error)
+
+	// TEMPORARY: Default installation versions for pre-M6 APIs
+	DefaultInstallerPullSpec(context.Context) (string, error)
 }
 
 type dev struct{}

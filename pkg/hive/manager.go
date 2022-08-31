@@ -25,10 +25,19 @@ import (
 
 type ClusterManager interface {
 	CreateNamespace(ctx context.Context) (*corev1.Namespace, error)
+
+	// CreateOrUpdate reconciles the ClusterDocument and related secrets for an
+	// existing cluster. This may adopt the cluster (Create) or amend the
+	// existing resources (Update).
 	CreateOrUpdate(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) error
-	Delete(ctx context.Context, namespace string) error
-	IsClusterDeploymentReady(ctx context.Context, namespace string) (bool, error)
-	ResetCorrelationData(ctx context.Context, namespace string) error
+	// Delete removes the cluster from Hive.
+	Delete(ctx context.Context, doc *api.OpenShiftClusterDocument) error
+	// Install creates a ClusterDocument and related secrets for a new cluster
+	// so that it can be provisioned by Hive.
+	Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error
+	IsClusterDeploymentReady(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error)
+	IsClusterInstallationComplete(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error)
+	ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error
 }
 
 type clusterManager struct {
@@ -112,8 +121,8 @@ func (hr *clusterManager) CreateOrUpdate(ctx context.Context, sub *api.Subscript
 	return nil
 }
 
-func (hr *clusterManager) Delete(ctx context.Context, namespace string) error {
-	err := hr.kubernetescli.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
+func (hr *clusterManager) Delete(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
+	err := hr.kubernetescli.CoreV1().Namespaces().Delete(ctx, doc.OpenShiftCluster.Properties.HiveProfile.Namespace, metav1.DeleteOptions{})
 	if err != nil && kerrors.IsNotFound(err) {
 		return nil
 	}
@@ -121,8 +130,8 @@ func (hr *clusterManager) Delete(ctx context.Context, namespace string) error {
 	return err
 }
 
-func (hr *clusterManager) IsClusterDeploymentReady(ctx context.Context, namespace string) (bool, error) {
-	cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
+func (hr *clusterManager) IsClusterDeploymentReady(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error) {
+	cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
 	if err == nil {
 		for _, cond := range cd.Status.Conditions {
 			if cond.Type == hivev1.ClusterReadyCondition && cond.Status == corev1.ConditionTrue {
@@ -133,9 +142,17 @@ func (hr *clusterManager) IsClusterDeploymentReady(ctx context.Context, namespac
 	return false, err
 }
 
-func (hr *clusterManager) ResetCorrelationData(ctx context.Context, namespace string) error {
+func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error) {
+	cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
+	if err == nil {
+		return cd.Spec.Installed, nil
+	}
+	return false, err
+}
+
+func (hr *clusterManager) ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
+		cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -145,7 +162,7 @@ func (hr *clusterManager) ResetCorrelationData(ctx context.Context, namespace st
 			return err
 		}
 
-		_, err = hr.hiveClientset.HiveV1().ClusterDeployments(namespace).Update(ctx, cd, metav1.UpdateOptions{})
+		_, err = hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Update(ctx, cd, metav1.UpdateOptions{})
 		return err
 	})
 }

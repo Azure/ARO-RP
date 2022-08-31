@@ -94,6 +94,7 @@ type manager struct {
 	arocli           aroclient.Interface
 	imageregistrycli imageregistryclient.Interface
 
+	installViaHive     bool
 	hiveClusterManager hive.ClusterManager
 
 	aroOperatorDeployer deploy.Operator
@@ -123,6 +124,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	}
 
 	storage := storage.NewManager(_env, r.SubscriptionID, fpAuthorizer)
+
+	installViaHive, err := _env.LiveConfig().InstallViaHive(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	// TODO(hive): always set hiveClusterManager once we have Hive everywhere in prod and dev
 	var hr hive.ClusterManager
@@ -167,6 +173,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		subnet:  subnet.NewManager(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		graph:   graph.NewManager(log, aead, storage),
 
+		installViaHive:     installViaHive,
 		hiveClusterManager: hr,
 	}, nil
 }

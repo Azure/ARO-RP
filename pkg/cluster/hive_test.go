@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/hive"
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -25,7 +24,7 @@ func TestHiveClusterDeploymentReady(t *testing.T) {
 
 	for _, tt := range []struct {
 		name  string
-		mocks func(hiveMock *mock_hive.MockClusterManager)
+		mocks func(hiveMock *mock_hive.MockClusterManager, doc *api.OpenShiftClusterDocument)
 		// TODO(hive): remove wantSkip and all test cases with wantSkip=True once we have Hive everywhere
 		wantSkip   bool
 		wantResult bool
@@ -33,22 +32,22 @@ func TestHiveClusterDeploymentReady(t *testing.T) {
 	}{
 		{
 			name: "ready",
-			mocks: func(hiveMock *mock_hive.MockClusterManager) {
-				hiveMock.EXPECT().IsClusterDeploymentReady(gomock.Any(), fakeNamespace).Return(true, nil)
+			mocks: func(hiveMock *mock_hive.MockClusterManager, doc *api.OpenShiftClusterDocument) {
+				hiveMock.EXPECT().IsClusterDeploymentReady(gomock.Any(), doc).Return(true, nil)
 			},
 			wantResult: true,
 		},
 		{
 			name: "not ready",
-			mocks: func(hiveMock *mock_hive.MockClusterManager) {
-				hiveMock.EXPECT().IsClusterDeploymentReady(gomock.Any(), fakeNamespace).Return(false, nil)
+			mocks: func(hiveMock *mock_hive.MockClusterManager, doc *api.OpenShiftClusterDocument) {
+				hiveMock.EXPECT().IsClusterDeploymentReady(gomock.Any(), doc).Return(false, nil)
 			},
 			wantResult: false,
 		},
 		{
 			name: "error",
-			mocks: func(hiveMock *mock_hive.MockClusterManager) {
-				hiveMock.EXPECT().IsClusterDeploymentReady(gomock.Any(), fakeNamespace).Return(false, errors.New("fake err"))
+			mocks: func(hiveMock *mock_hive.MockClusterManager, doc *api.OpenShiftClusterDocument) {
+				hiveMock.EXPECT().IsClusterDeploymentReady(gomock.Any(), doc).Return(false, errors.New("fake err"))
 			},
 			wantResult: false,
 			wantErr:    "fake err",
@@ -63,27 +62,14 @@ func TestHiveClusterDeploymentReady(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			var hiveClusterManager hive.ClusterManager
+			m := createManagerForTests(t, fakeNamespace)
+
 			if !tt.wantSkip {
 				hiveMock := mock_hive.NewMockClusterManager(controller)
-				hiveClusterManager = hiveMock
 				if tt.mocks != nil {
-					tt.mocks(hiveMock)
+					tt.mocks(hiveMock, m.doc)
 				}
-			}
-
-			m := &manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-				doc: &api.OpenShiftClusterDocument{
-					OpenShiftCluster: &api.OpenShiftCluster{
-						Properties: api.OpenShiftClusterProperties{
-							HiveProfile: api.HiveProfile{
-								Namespace: fakeNamespace,
-							},
-						},
-					},
-				},
-				hiveClusterManager: hiveClusterManager,
+				m.hiveClusterManager = hiveMock
 			}
 
 			result, err := m.hiveClusterDeploymentReady(context.Background())
@@ -104,21 +90,21 @@ func TestHiveResetCorrelationData(t *testing.T) {
 
 	for _, tt := range []struct {
 		name  string
-		mocks func(hiveMock *mock_hive.MockClusterManager)
+		mocks func(hiveMock *mock_hive.MockClusterManager, doc *api.OpenShiftClusterDocument)
 		// TODO(hive): remove wantSkip and all test cases with wantSkip=True once we have Hive everywhere
 		wantSkip bool
 		wantErr  string
 	}{
 		{
 			name: "success",
-			mocks: func(hiveMock *mock_hive.MockClusterManager) {
-				hiveMock.EXPECT().ResetCorrelationData(gomock.Any(), fakeNamespace).Return(nil)
+			mocks: func(hiveMock *mock_hive.MockClusterManager, doc *api.OpenShiftClusterDocument) {
+				hiveMock.EXPECT().ResetCorrelationData(gomock.Any(), doc).Return(nil)
 			},
 		},
 		{
 			name: "error",
-			mocks: func(hiveMock *mock_hive.MockClusterManager) {
-				hiveMock.EXPECT().ResetCorrelationData(gomock.Any(), fakeNamespace).Return(errors.New("fake err"))
+			mocks: func(hiveMock *mock_hive.MockClusterManager, doc *api.OpenShiftClusterDocument) {
+				hiveMock.EXPECT().ResetCorrelationData(gomock.Any(), doc).Return(errors.New("fake err"))
 			},
 			wantErr: "fake err",
 		},
@@ -130,28 +116,14 @@ func TestHiveResetCorrelationData(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
+			m := createManagerForTests(t, fakeNamespace)
 
-			var hiveClusterManager hive.ClusterManager
 			if !tt.wantSkip {
 				hiveMock := mock_hive.NewMockClusterManager(controller)
-				hiveClusterManager = hiveMock
 				if tt.mocks != nil {
-					tt.mocks(hiveMock)
+					tt.mocks(hiveMock, m.doc)
 				}
-			}
-
-			m := &manager{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-				doc: &api.OpenShiftClusterDocument{
-					OpenShiftCluster: &api.OpenShiftCluster{
-						Properties: api.OpenShiftClusterProperties{
-							HiveProfile: api.HiveProfile{
-								Namespace: fakeNamespace,
-							},
-						},
-					},
-				},
-				hiveClusterManager: hiveClusterManager,
+				m.hiveClusterManager = hiveMock
 			}
 
 			err := m.hiveResetCorrelationData(context.Background())
@@ -265,12 +237,11 @@ func createManagerForTests(t *testing.T, existingNamespaceName string) *manager 
 		t.Fatal(err)
 	}
 
-	m := &manager{
+	return &manager{
 		log: logrus.NewEntry(logrus.StandardLogger()),
 		db:  fakeDb,
 		doc: doc,
 	}
-	return m
 }
 
 func TestHiveEnsureResources(t *testing.T) {
@@ -326,7 +297,7 @@ func TestHiveDeleteResources(t *testing.T) {
 	for _, tt := range []struct {
 		testName           string
 		namespace          string
-		clusterManagerMock func(mockCtrl *gomock.Controller, namespaceName string) *mock_hive.MockClusterManager
+		clusterManagerMock func(mockCtrl *gomock.Controller, doc *api.OpenShiftClusterDocument) *mock_hive.MockClusterManager
 		wantErr            string
 	}{
 		{
@@ -335,26 +306,26 @@ func TestHiveDeleteResources(t *testing.T) {
 		{
 			testName:  "deletes namespace if it exists",
 			namespace: "existing-namespace",
-			clusterManagerMock: func(mockCtrl *gomock.Controller, namespaceName string) *mock_hive.MockClusterManager {
+			clusterManagerMock: func(mockCtrl *gomock.Controller, doc *api.OpenShiftClusterDocument) *mock_hive.MockClusterManager {
 				mockClusterManager := mock_hive.NewMockClusterManager(mockCtrl)
-				mockClusterManager.EXPECT().Delete(ctx, namespaceName).Return(nil)
+				mockClusterManager.EXPECT().Delete(ctx, doc).Return(nil)
 				return mockClusterManager
 			},
 		},
 		{
 			testName: "doesn't attempt to delete namespace if it doesn't exist",
-			clusterManagerMock: func(mockCtrl *gomock.Controller, namespaceName string) *mock_hive.MockClusterManager {
+			clusterManagerMock: func(mockCtrl *gomock.Controller, doc *api.OpenShiftClusterDocument) *mock_hive.MockClusterManager {
 				mockClusterManager := mock_hive.NewMockClusterManager(mockCtrl)
-				mockClusterManager.EXPECT().Delete(ctx, namespaceName).Times(0)
+				mockClusterManager.EXPECT().Delete(ctx, doc).Times(0)
 				return mockClusterManager
 			},
 		},
 		{
 			testName:  "returns error if cluster manager returns error",
 			namespace: "existing-namespace",
-			clusterManagerMock: func(mockCtrl *gomock.Controller, namespaceName string) *mock_hive.MockClusterManager {
+			clusterManagerMock: func(mockCtrl *gomock.Controller, doc *api.OpenShiftClusterDocument) *mock_hive.MockClusterManager {
 				mockClusterManager := mock_hive.NewMockClusterManager(mockCtrl)
-				mockClusterManager.EXPECT().Delete(ctx, namespaceName).Return(fmt.Errorf("cluster manager error"))
+				mockClusterManager.EXPECT().Delete(ctx, doc).Return(fmt.Errorf("cluster manager error"))
 				return mockClusterManager
 			},
 			wantErr: "cluster manager error",
@@ -367,7 +338,7 @@ func TestHiveDeleteResources(t *testing.T) {
 			m := createManagerForTests(t, tt.namespace)
 
 			if tt.clusterManagerMock != nil {
-				m.hiveClusterManager = tt.clusterManagerMock(controller, m.doc.OpenShiftCluster.Properties.HiveProfile.Namespace)
+				m.hiveClusterManager = tt.clusterManagerMock(controller, m.doc)
 			}
 
 			err := m.hiveDeleteResources(ctx)
