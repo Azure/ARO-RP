@@ -518,7 +518,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 	)
 
 	trailer := base64.StdEncoding.EncodeToString([]byte(`
-yum -y update -x WALinuxAgent
+yum -y update
 
 lvextend -l +50%FREE /dev/rootvg/rootlv
 xfs_growfs /
