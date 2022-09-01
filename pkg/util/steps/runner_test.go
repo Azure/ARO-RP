@@ -354,28 +354,23 @@ func TestStepMetricsTopicNaming(t *testing.T) {
 	}{
 		{
 			desc: "test action step naming",
-			step: Action(successfulFunc, "successful_action"),
-			want: "action.successful_action",
+			step: Action(successfulFunc),
+			want: "action.successfulFunc",
 		},
 		{
 			desc: "test condition step naming",
-			step: Condition(alwaysTrueCondition, 1*time.Millisecond, true, "always_true"),
-			want: "condition.always_true",
+			step: Condition(alwaysTrueCondition, 1*time.Millisecond, true),
+			want: "condition.alwaysTrueCondition",
 		},
 		{
-			desc: "test refreshing action step naming",
-			step: AuthorizationRefreshingAction(nil, Action(successfulFunc, "success"), "successful_refreshing"),
-			want: "refreshing_action.successful_refreshing",
-		},
-		{
-			desc: "test without topic param",
+			desc: "test refreshing step naming",
 			step: AuthorizationRefreshingAction(nil, Action(successfulFunc)),
-			want: "",
+			want: "refreshing.successfulFunc",
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
 			if got := tt.step.MetricsTopic(); got != tt.want {
-				t.Errorf("incorrect step nameing, want: %s, got: %s", tt.want, got)
+				t.Errorf("incorrect step metrics topic, want: %s, got: %s", tt.want, got)
 			}
 		})
 	}

@@ -175,7 +175,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				now:           func() time.Time { return time.Now() },
 			}
 
-			err := m.runSteps(ctx, tt.steps)
+			err := m.runSteps(ctx, tt.steps, false)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -245,22 +245,22 @@ func TestInstallationTimeMetrics(t *testing.T) {
 		{
 			name: "Failed step run will not generate any install time metrics",
 			steps: []steps.Step{
-				steps.Action(successfulActionStep, ""),
-				steps.Action(failingFunc, ""),
+				steps.Action(successfulActionStep),
+				steps.Action(failingFunc),
 			},
 		},
 		{
 			name: "Succeeded step run will generate a valid install time metrics",
 			steps: []steps.Step{
-				steps.Action(successfulActionStep, "init_install_phase"),
-				steps.Condition(successfulConditionStep, 30*time.Minute, true, "check_api_server"),
-				steps.AuthorizationRefreshingAction(nil, steps.Action(successfulActionStep), "generate_kubeconfigs"),
+				steps.Action(successfulActionStep),
+				steps.Condition(successfulConditionStep, 30*time.Minute, true),
+				steps.AuthorizationRefreshingAction(nil, steps.Action(successfulActionStep)),
 			},
 			wantedMetrics: map[string]int64{
-				"backend.openshiftcluster.installtime.total":                                  6,
-				"backend.openshiftcluster.installtime.action.init_install_phase":              2,
-				"backend.openshiftcluster.installtime.condition.check_api_server":             2,
-				"backend.openshiftcluster.installtime.refreshing_action.generate_kubeconfigs": 2,
+				"backend.openshiftcluster.installtime.total":                             6,
+				"backend.openshiftcluster.installtime.action.successfulActionStep":       2,
+				"backend.openshiftcluster.installtime.condition.successfulConditionStep": 2,
+				"backend.openshiftcluster.installtime.refreshing.successfulActionStep":   2,
 			},
 		},
 	} {
@@ -272,7 +272,7 @@ func TestInstallationTimeMetrics(t *testing.T) {
 				now:            func() time.Time { return time.Now().Add(2 * time.Second) },
 			}
 
-			err := m.runSteps(ctx, tt.steps)
+			err := m.runSteps(ctx, tt.steps, true)
 			if err != nil {
 				if len(fm.Metrics) != 0 {
 					t.Error("fake metrics obj should be empty when run steps failed")

@@ -7,6 +7,7 @@ import (
 	"context"
 	"reflect"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -15,6 +16,19 @@ import (
 // FriendlyName returns a "friendly" stringified name of the given func.
 func FriendlyName(f interface{}) string {
 	return runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
+}
+
+func shortName(fullName string) string {
+	sepCheck := func(c rune) bool {
+		return c == '/' || c == '.'
+	}
+
+	fields := strings.FieldsFunc(strings.TrimSpace(fullName), sepCheck)
+
+	if size := len(fields); size > 0 {
+		return fields[size-1]
+	}
+	return fullName
 }
 
 // Step is the interface for steps that Runner can execute.
@@ -40,8 +54,10 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 			return nil, err
 		}
 
-		currentTime := now()
-		stepTimeRun[step.MetricsTopic()] = int64(currentTime.Sub(startTime).Seconds())
+		if now != nil {
+			currentTime := now()
+			stepTimeRun[step.MetricsTopic()] = int64(currentTime.Sub(startTime).Seconds())
+		}
 	}
 	return stepTimeRun, nil
 }

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -23,11 +24,10 @@ var ErrWantRefresh = errors.New("want refresh")
 // The step will be retried until `retryTimeout` is hit. Any other error will be
 // returned directly.
 // The metricsTopic parameter is optional and only the first element is considered if present.
-func AuthorizationRefreshingAction(authorizer refreshable.Authorizer, step Step, metricsTopic ...string) Step {
+func AuthorizationRefreshingAction(authorizer refreshable.Authorizer, step Step) Step {
 	return authorizationRefreshingActionStep{
-		step:         step,
-		authorizer:   authorizer,
-		metricsTopic: metricsTopic,
+		step:       step,
+		authorizer: authorizer,
 	}
 }
 
@@ -36,7 +36,6 @@ type authorizationRefreshingActionStep struct {
 	authorizer   refreshable.Authorizer
 	retryTimeout time.Duration
 	pollInterval time.Duration
-	metricsTopic []string
 }
 
 func (s authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.Entry) error {
@@ -93,8 +92,7 @@ func (s authorizationRefreshingActionStep) String() string {
 }
 
 func (s authorizationRefreshingActionStep) MetricsTopic() string {
-	if len(s.metricsTopic) > 0 {
-		return fmt.Sprintf("refreshing_action.%s", s.metricsTopic[0])
-	}
-	return ""
+	trimedName := strings.ReplaceAll(s.step.String(), "[", "")
+	trimedName = strings.ReplaceAll(trimedName, "]", "")
+	return fmt.Sprintf("refreshing.%s", shortName(trimedName))
 }

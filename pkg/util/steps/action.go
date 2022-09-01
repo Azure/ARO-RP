@@ -18,18 +18,16 @@ type actionFunction func(context.Context) error
 // Action returns a Step which will execute the action function `f`. Errors from
 // `f` are returned directly.
 // The metricsTopic parameter is optional and only the first element is considered if present.
-func Action(f actionFunction, metricsTopic ...string) Step {
+func Action(f actionFunction) Step {
 	return actionStep{
-		f:            f,
-		metricsTopic: metricsTopic,
+		f: f,
 	}
 }
 
 // name field is for better naming
 // when processing metrics emitting
 type actionStep struct {
-	f            actionFunction
-	metricsTopic []string
+	f actionFunction
 }
 
 func (s actionStep) run(ctx context.Context, log *logrus.Entry) error {
@@ -41,8 +39,5 @@ func (s actionStep) String() string {
 }
 
 func (s actionStep) MetricsTopic() string {
-	if len(s.metricsTopic) > 0 {
-		return fmt.Sprintf("action.%s", s.metricsTopic[0])
-	}
-	return ""
+	return fmt.Sprintf("action.%s", shortName(FriendlyName(s.f)))
 }

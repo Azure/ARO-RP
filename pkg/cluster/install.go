@@ -31,7 +31,7 @@ import (
 // AdminUpdate performs an admin update of an ARO cluster
 func (m *manager) AdminUpdate(ctx context.Context) error {
 	toRun := m.adminUpdate()
-	return m.runSteps(ctx, toRun)
+	return m.runSteps(ctx, toRun, false)
 }
 
 func (m *manager) adminUpdate() []steps.Step {
@@ -139,7 +139,7 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.hiveResetCorrelationData),
 	}
 
-	return m.runSteps(ctx, steps)
+	return m.runSteps(ctx, steps, false)
 }
 
 func (m *manager) runIntegratedInstaller(ctx context.Context) error {
@@ -237,26 +237,26 @@ func (m *manager) Install(ctx context.Context) error {
 	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: m.bootstrap(),
 		api.InstallPhaseRemoveBootstrap: {
-			steps.Action(m.initializeKubernetesClients, "initialize_kubernetes_clients"),
-			steps.Action(m.initializeOperatorDeployer, "finishing_phase_initialize_operator_deployer"), // depends on kube clients
-			steps.Action(m.removeBootstrap, "remove_bootstrap"),
-			steps.Action(m.removeBootstrapIgnition, "remove_bootstrap_ignition"),
-			steps.Action(m.configureAPIServerCertificate, "configure_api_server_certificate"),
-			steps.Condition(m.apiServersReady, 30*time.Minute, true, "finishing_phase_check_api_server"),
-			steps.Condition(m.minimumWorkerNodesReady, 30*time.Minute, true, "check_minimum_worker_nodes"),
-			steps.Condition(m.operatorConsoleExists, 30*time.Minute, true, "check_operator_console"),
-			steps.Action(m.updateConsoleBranding, "update_console_branding"),
-			steps.Condition(m.operatorConsoleReady, 20*time.Minute, true, "check_operator_console"),
-			steps.Condition(m.clusterVersionReady, 30*time.Minute, true, "check_cluster_version"),
-			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true, "check_aro_deployment"),
-			steps.Action(m.disableUpdates, "disable_updates"),
-			steps.Action(m.disableSamples, "disable_samples"),
-			steps.Action(m.disableOperatorHubSources, "disable_operator_hub_sources"),
-			steps.Action(m.updateClusterData, "update_cluster_data"),
-			steps.Action(m.configureIngressCertificate, "configure_ingress_certificate"),
-			steps.Condition(m.ingressControllerReady, 30*time.Minute, true, "check_ingress_controller"),
-			steps.Action(m.configureDefaultStorageClass, "configure_default_storage_class"),
-			steps.Action(m.finishInstallation, "finish_installation"),
+			steps.Action(m.initializeKubernetesClients),
+			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
+			steps.Action(m.removeBootstrap),
+			steps.Action(m.removeBootstrapIgnition),
+			steps.Action(m.configureAPIServerCertificate),
+			steps.Condition(m.apiServersReady, 30*time.Minute, true),
+			steps.Condition(m.minimumWorkerNodesReady, 30*time.Minute, true),
+			steps.Condition(m.operatorConsoleExists, 30*time.Minute, true),
+			steps.Action(m.updateConsoleBranding),
+			steps.Condition(m.operatorConsoleReady, 20*time.Minute, true),
+			steps.Condition(m.clusterVersionReady, 30*time.Minute, true),
+			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
+			steps.Action(m.disableUpdates),
+			steps.Action(m.disableSamples),
+			steps.Action(m.disableOperatorHubSources),
+			steps.Action(m.updateClusterData),
+			steps.Action(m.configureIngressCertificate),
+			steps.Condition(m.ingressControllerReady, 30*time.Minute, true),
+			steps.Action(m.configureDefaultStorageClass),
+			steps.Action(m.finishInstallation),
 		},
 	}
 
@@ -269,20 +269,27 @@ func (m *manager) Install(ctx context.Context) error {
 		return fmt.Errorf("unrecognised phase %s", m.doc.OpenShiftCluster.Properties.Install.Phase)
 	}
 	m.log.Printf("starting phase %s", m.doc.OpenShiftCluster.Properties.Install.Phase)
-	return m.runSteps(ctx, steps[m.doc.OpenShiftCluster.Properties.Install.Phase])
+	return m.runSteps(ctx, steps[m.doc.OpenShiftCluster.Properties.Install.Phase], true)
 }
 
-func (m *manager) runSteps(ctx context.Context, s []steps.Step) error {
-	stepsTimeRun, err := steps.Run(ctx, m.log, 10*time.Second, s, m.now)
+func (m *manager) runSteps(ctx context.Context, s []steps.Step, emitMetrics bool) error {
+	var err error
+	if emitMetrics {
+		var stepsTimeRun map[string]int64
+		stepsTimeRun, err = steps.Run(ctx, m.log, 10*time.Second, s, m.now)
+		if err == nil {
+			var totalInstallTime int64
+			for topic, duration := range stepsTimeRun {
+				m.metricsEmitter.EmitGauge(fmt.Sprintf("backend.openshiftcluster.installtime.%s", topic), duration, nil)
+				totalInstallTime += duration
+			}
+			m.metricsEmitter.EmitGauge("backend.openshiftcluster.installtime.total", totalInstallTime, nil)
+		}
+	} else {
+		_, err = steps.Run(ctx, m.log, 10*time.Second, s, nil)
+	}
 	if err != nil {
 		m.gatherFailureLogs(ctx)
-	} else {
-		var totalInstallTime int64
-		for topic, duration := range stepsTimeRun {
-			m.metricsEmitter.EmitGauge(fmt.Sprintf("backend.openshiftcluster.installtime.%s", topic), duration, nil)
-			totalInstallTime += duration
-		}
-		m.metricsEmitter.EmitGauge("backend.openshiftcluster.installtime.total", totalInstallTime, nil)
 	}
 	return err
 }
