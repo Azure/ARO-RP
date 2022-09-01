@@ -49,3 +49,17 @@ type ClusterManagerConfigurationDocument struct {
 func (c *ClusterManagerConfigurationDocument) String() string {
 	return encodeJSON(c)
 }
+
+// GetResources returns the resource byte array from a ClusterManagerConfigurationDocument struct.
+func (c *ClusterManagerConfigurationDocument) GetResources() string {
+	if c.SyncIdentityProvider != nil {
+		return c.SyncIdentityProvider.Properties.Resources
+	}
+	if c.SyncSet != nil {
+		return c.SyncSet.Properties.Resources
+	}
+	if c.MachinePool != nil {
+		return c.MachinePool.Properties.Resources
+	}
+	return "" // should never be reached
+}
