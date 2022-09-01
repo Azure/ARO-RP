@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sort"
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -111,6 +112,10 @@ func TestListInstallVersions(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			sort.Slice(*tt.wantResponse, func(i, j int) bool {
+				return i < j
+			})
 
 			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
 			if err != nil {
