@@ -19,21 +19,19 @@ type testLiveConfig struct {
 func (t *testLiveConfig) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, error) {
 	if t.hasHive {
 		return &rest.Config{}, nil
-	} else {
-		return nil, errors.New("testLiveConfig does not have a Hive")
 	}
+	return nil, errors.New("testLiveConfig does not have a Hive")
 }
 
 func (t *testLiveConfig) InstallViaHive(ctx context.Context) (bool, error) {
 	return t.hasHive, nil
 }
 
-func (t *testLiveConfig) DefaultInstallerPullSpec(ctx context.Context) (string, error) {
+func (t *testLiveConfig) DefaultInstallerPullSpecOverride(ctx context.Context) string {
 	if t.hasHive {
-		return "example/pull:spec", nil
-	} else {
-		return "", nil
+		return "example/pull:spec"
 	}
+	return ""
 }
 
 func NewTestLiveConfig(hasHive bool) liveconfig.Manager {

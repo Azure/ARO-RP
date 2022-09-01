@@ -29,7 +29,7 @@ import (
 type openShiftClusterBackend struct {
 	*backend
 
-	newManager func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, *rest.Config, metrics.Emitter) (cluster.Interface, error)
+	newManager func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, database.OpenShiftVersions, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, *rest.Config, metrics.Emitter) (cluster.Interface, error)
 }
 
 func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
@@ -107,7 +107,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		log.Info(err) // TODO(hive): Update to fail once we have Hive everywhere in prod and dev
 	}
 
-	m, err := ocb.newManager(ctx, log, ocb.env, ocb.dbOpenShiftClusters, ocb.dbGateway, ocb.aead, ocb.billing, doc, subscriptionDoc, hiveRestConfig, ocb.m)
+	m, err := ocb.newManager(ctx, log, ocb.env, ocb.dbOpenShiftClusters, ocb.dbGateway, ocb.dbOpenShiftVersions, ocb.aead, ocb.billing, doc, subscriptionDoc, hiveRestConfig, ocb.m)
 	if err != nil {
 		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 	}

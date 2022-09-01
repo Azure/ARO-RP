@@ -18,7 +18,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type openShiftClusterStaticValidator struct {
@@ -147,7 +146,7 @@ func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, c
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
 	}
 
-	if isCreate && cp.Version != version.InstallStream.Version.String() {
+	if isCreate && !validate.RxInstallVersion.MatchString(cp.Version) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".version", "The provided version '%s' is invalid.", cp.Version)
 	}
 

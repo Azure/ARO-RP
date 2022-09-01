@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"regexp"
 	"strings"
@@ -12,8 +13,11 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
+	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	utilnamespace "github.com/Azure/ARO-RP/pkg/util/namespace"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func validateTerminalProvisioningState(state api.ProvisioningState) error {
@@ -162,4 +166,43 @@ func validateAdminVMSize(vmSize string) error {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmSize '%s' is invalid.", vmSize)
 	}
 	return nil
+}
+
+func (f *frontend) validateAndReturnInstallVersion(ctx context.Context, body *[]byte) (string, error) {
+	var oc *v20220904.OpenShiftCluster
+	err := json.Unmarshal(*body, &oc)
+	if err != nil || oc == nil {
+		return "", api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: '%s'.", err)
+	}
+
+	// If this request is from an older API or the user never specified
+	// the version to install we default to the InstallStream.Version
+	if len(oc.Properties.InstallVersion) == 0 {
+		return version.InstallStream.Version.String(), nil
+	}
+
+	if !validate.RxInstallVersion.MatchString(oc.Properties.InstallVersion) {
+		return "", api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The requested OpenShift version '%s' is invalid.", oc.Properties.InstallVersion)
+	}
+
+	docs, err := f.dbOpenShiftVersions.ListAll(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// If we have no OpenShiftVersion entries in CosmoDB, default to using the InstallStream.Version
+	if len(docs.OpenShiftVersionDocuments) == 0 {
+		if oc.Properties.InstallVersion != version.InstallStream.Version.String() {
+			return "", api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.installversion", "The requested OpenShift version '%s' is not supported.", oc.Properties.InstallVersion)
+		}
+		return version.InstallStream.Version.String(), nil
+	}
+
+	for _, doc := range docs.OpenShiftVersionDocuments {
+		if oc.Properties.InstallVersion == doc.OpenShiftVersion.Version {
+			return oc.Properties.InstallVersion, nil
+		}
+	}
+
+	return "", api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.installversion", "The requested OpenShift version '%s' is not supported.", oc.Properties.InstallVersion)
 }

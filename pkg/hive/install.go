@@ -100,7 +100,7 @@ func servicePrincipalSecretForInstall(oc *api.OpenShiftCluster, sub *api.Subscri
 		return nil, err
 	}
 
-	encSub, err := json.Marshal(sub)
+	encSub, err := json.Marshal(sub.Subscription)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,9 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 			},
 			Provisioning: &hivev1.Provisioning{
 				InstallerImageOverride: version.InstallerPullspec,
-				ReleaseImage:           version.OpenShiftPullspec,
+				// TEMPORARY hack until Hive has the override in place for the ACRDomain
+				CLIImageOverride: "arointsvc.azurecr.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:b03b7e931356494d1084c8bec1d8fa3602553d28f01c4c712034152adaf45f29",
+				ReleaseImage:     version.OpenShiftPullspec,
 				InstallConfigSecretRef: &corev1.LocalObjectReference{
 					Name: installConfigName,
 				},
