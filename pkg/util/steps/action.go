@@ -23,7 +23,6 @@ func Action(f actionFunction) Step {
 	}
 }
 
-// when processing metrics emitting
 type actionStep struct {
 	f actionFunction
 }
