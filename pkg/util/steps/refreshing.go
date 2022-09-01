@@ -23,7 +23,6 @@ var ErrWantRefresh = errors.New("want refresh")
 // `authorizer` if the step returns an Azure AuthenticationError and rerun it.
 // The step will be retried until `retryTimeout` is hit. Any other error will be
 // returned directly.
-// The metricsTopic parameter is optional and only the first element is considered if present.
 func AuthorizationRefreshingAction(authorizer refreshable.Authorizer, step Step) Step {
 	return authorizationRefreshingActionStep{
 		step:       step,
@@ -91,8 +90,7 @@ func (s authorizationRefreshingActionStep) String() string {
 	return fmt.Sprintf("[AuthorizationRefreshingAction %s]", s.step)
 }
 
-func (s authorizationRefreshingActionStep) MetricsTopic() string {
-	trimedName := strings.ReplaceAll(s.step.String(), "[", "")
-	trimedName = strings.ReplaceAll(trimedName, "]", "")
+func (s authorizationRefreshingActionStep) metricsTopic() string {
+	trimedName := strings.ReplaceAll(strings.ReplaceAll(s.step.String(), "[", ""), "]", "")
 	return fmt.Sprintf("refreshing.%s", shortName(trimedName))
 }

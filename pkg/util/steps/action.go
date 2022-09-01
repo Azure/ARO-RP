@@ -17,14 +17,12 @@ type actionFunction func(context.Context) error
 
 // Action returns a Step which will execute the action function `f`. Errors from
 // `f` are returned directly.
-// The metricsTopic parameter is optional and only the first element is considered if present.
 func Action(f actionFunction) Step {
 	return actionStep{
 		f: f,
 	}
 }
 
-// name field is for better naming
 // when processing metrics emitting
 type actionStep struct {
 	f actionFunction
@@ -38,6 +36,6 @@ func (s actionStep) String() string {
 	return fmt.Sprintf("[Action %s]", FriendlyName(s.f))
 }
 
-func (s actionStep) MetricsTopic() string {
+func (s actionStep) metricsTopic() string {
 	return fmt.Sprintf("action.%s", shortName(FriendlyName(s.f)))
 }

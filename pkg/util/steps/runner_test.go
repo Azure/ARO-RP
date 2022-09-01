@@ -367,9 +367,19 @@ func TestStepMetricsTopicNaming(t *testing.T) {
 			step: AuthorizationRefreshingAction(nil, Action(successfulFunc)),
 			want: "refreshing.successfulFunc",
 		},
+		{
+			desc: "test anonymous action step naming",
+			step: Action(func(context.Context) error { return nil }),
+			want: "action.func1",
+		},
+		{
+			desc: "test anonymous action step naming",
+			step: AuthorizationRefreshingAction(nil, Action(func(context.Context) error { return nil })),
+			want: "refreshing.func2",
+		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
-			if got := tt.step.MetricsTopic(); got != tt.want {
+			if got := tt.step.metricsTopic(); got != tt.want {
 				t.Errorf("incorrect step metrics topic, want: %s, got: %s", tt.want, got)
 			}
 		})

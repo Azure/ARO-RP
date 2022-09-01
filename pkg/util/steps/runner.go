@@ -35,7 +35,7 @@ func shortName(fullName string) string {
 type Step interface {
 	run(ctx context.Context, log *logrus.Entry) error
 	String() string
-	MetricsTopic() string
+	metricsTopic() string
 }
 
 // Run executes the provided steps in order until one fails or all steps
@@ -56,7 +56,7 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 
 		if now != nil {
 			currentTime := now()
-			stepTimeRun[step.MetricsTopic()] = int64(currentTime.Sub(startTime).Seconds())
+			stepTimeRun[step.metricsTopic()] = int64(currentTime.Sub(startTime).Seconds())
 		}
 	}
 	return stepTimeRun, nil

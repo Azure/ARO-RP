@@ -25,7 +25,6 @@ type conditionFunction func(context.Context) (bool, error)
 // out with a failure when more time than the provided timeout has elapsed
 // without f returning (true, nil). Errors from `f` are returned directly.
 // If fail is set to false - it will not fail after timeout.
-// The metricsTopic parameter is optional and only the first element is considered if present.
 func Condition(f conditionFunction, timeout time.Duration, fail bool) Step {
 	return conditionStep{
 		f:       f,
@@ -74,6 +73,6 @@ func (c conditionStep) String() string {
 	return fmt.Sprintf("[Condition %s, timeout %s]", FriendlyName(c.f), c.timeout)
 }
 
-func (c conditionStep) MetricsTopic() string {
+func (c conditionStep) metricsTopic() string {
 	return fmt.Sprintf("condition.%s", shortName(FriendlyName(c.f)))
 }

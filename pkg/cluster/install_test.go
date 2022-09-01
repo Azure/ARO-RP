@@ -281,7 +281,10 @@ func TestInstallationTimeMetrics(t *testing.T) {
 				if tt.wantedMetrics != nil {
 					for k, v := range tt.wantedMetrics {
 						time, ok := fm.Metrics[k]
-						if !ok || time != v {
+						if !ok {
+							t.Errorf("unexpected metrics topic: %s", k)
+						}
+						if time != v {
 							t.Errorf("incorrect fake metrics obj, want: %d, got: %d", v, time)
 						}
 					}
