@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"os"
 
 	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
 	"k8s.io/client-go/rest"
@@ -64,4 +65,18 @@ func (p *prod) HiveRestConfig(ctx context.Context, index int) (*rest.Config, err
 
 	p.cachedCredentials[index] = parsed
 	return rest.CopyConfig(parsed), nil
+}
+
+func (p *prod) InstallViaHive(ctx context.Context) (bool, error) {
+	// TODO: Replace with RP Live Service Config (KeyVault)
+	installViaHive := os.Getenv(HIVE_INSTALL_ENV_VARIABLE)
+	if installViaHive != "" {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (p *prod) DefaultInstallerPullSpec(ctx context.Context) (string, error) {
+	// TODO: Replace with loading from M6's database always
+	return os.Getenv(HIVE_DEFAULT_INSTALLER_VARIABLE), nil
 }

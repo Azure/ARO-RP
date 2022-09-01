@@ -76,6 +76,10 @@ func (g *generator) rpTemplate() *arm.Template {
 			"vmSize",
 			"vmssCleanupEnabled",
 			"vmssName",
+
+			// TODO: Replace with Live Service Configuration in KeyVault
+			"clustersInstallViaHive",
+			"clusterDefaultInstallerPullspec",
 		)
 	}
 
@@ -266,7 +270,6 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 			"extraPortalKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies",
 			"gatewayResourceGroupName",
-			"rpNsgSourceAddressPrefixes",
 		)
 	} else {
 		params = append(params,
@@ -279,16 +282,16 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		switch param {
 		case "deployNSGs":
 			p.Type = "bool"
-			p.DefaultValue = false
+			// TODO: *** REVERT AFTER RELEASE ***
+			// *** Forcing this to true here to ensure the rp_in_geneva NSG gets updated with GenevaActions service tag.
+			// *** Once the NSGs get updated, revert this change (set p.DefaultValue = false) so that the NSGs aren't getting redeployed every release.
+			p.DefaultValue = true
 		case "extraClusterKeyvaultAccessPolicies",
 			"extraDBTokenKeyvaultAccessPolicies",
 			"extraPortalKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies":
 			p.Type = "array"
 			p.DefaultValue = []interface{}{}
-		case "rpNsgSourceAddressPrefixes":
-			p.Type = "array"
-			p.DefaultValue = []string{}
 		case "keyvaultPrefix":
 			p.MaxLength = 24 - max(len(env.ClusterKeyvaultSuffix), len(env.ServiceKeyvaultSuffix), len(env.PortalKeyvaultSuffix))
 		}

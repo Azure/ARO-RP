@@ -42,7 +42,7 @@ func TestListInstallVersions(t *testing.T) {
 			mocks:                   func(t *test, mka *mock_adminactions.MockKubeActions) {},
 			wantStatusCode:          http.StatusOK,
 			wantResponseContentType: "application/json",
-			wantResponse:            &v20220904.InstallVersions{version.InstallStream.Version.String()},
+			wantResponse:            &v20220904.InstallVersions{(v20220904.InstallVersion)(version.InstallStream.Version.String())},
 		},
 	} {
 		t.Run(fmt.Sprintf("%s: %s", method, tt.name), func(t *testing.T) {
@@ -63,7 +63,7 @@ func TestListInstallVersions(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error) {
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error) {
 				return nil, nil
 			}, nil, nil)
 			if err != nil {

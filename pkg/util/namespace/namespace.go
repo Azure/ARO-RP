@@ -29,6 +29,7 @@ func IsOpenShiftNamespace(ns string) bool {
 		"openshift-cluster-node-tuning-operator":           {},
 		"openshift-cluster-samples-operator":               {},
 		"openshift-cluster-storage-operator":               {},
+		"openshift-cluster-version":                        {},
 		"openshift-config":                                 {},
 		"openshift-config-managed":                         {},
 		"openshift-config-operator":                        {},

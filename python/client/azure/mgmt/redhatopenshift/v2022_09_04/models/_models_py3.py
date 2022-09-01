@@ -522,6 +522,8 @@ class OpenShiftCluster(TrackedResource):
     :vartype apiserver_profile: ~azure.mgmt.redhatopenshift.v2022_09_04.models.APIServerProfile
     :ivar ingress_profiles: The cluster ingress profiles.
     :vartype ingress_profiles: list[~azure.mgmt.redhatopenshift.v2022_09_04.models.IngressProfile]
+    :ivar install_version: The cluster install version.
+    :vartype install_version: str
     """
 
     _validation = {
@@ -548,6 +550,7 @@ class OpenShiftCluster(TrackedResource):
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
+        'install_version': {'key': 'properties.installVersion', 'type': 'str'},
     }
 
     def __init__(
@@ -564,6 +567,7 @@ class OpenShiftCluster(TrackedResource):
         worker_profiles: Optional[List["WorkerProfile"]] = None,
         apiserver_profile: Optional["APIServerProfile"] = None,
         ingress_profiles: Optional[List["IngressProfile"]] = None,
+        install_version: Optional[str] = None,
         **kwargs
     ):
         """
@@ -593,6 +597,8 @@ class OpenShiftCluster(TrackedResource):
         :keyword ingress_profiles: The cluster ingress profiles.
         :paramtype ingress_profiles:
          list[~azure.mgmt.redhatopenshift.v2022_09_04.models.IngressProfile]
+        :keyword install_version: The cluster install version.
+        :paramtype install_version: str
         """
         super(OpenShiftCluster, self).__init__(tags=tags, location=location, **kwargs)
         self.provisioning_state = provisioning_state
@@ -604,6 +610,7 @@ class OpenShiftCluster(TrackedResource):
         self.worker_profiles = worker_profiles
         self.apiserver_profile = apiserver_profile
         self.ingress_profiles = ingress_profiles
+        self.install_version = install_version
 
 
 class OpenShiftClusterAdminKubeconfig(msrest.serialization.Model):
@@ -702,8 +709,6 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
 
     :ivar tags: A set of tags. The resource tags.
     :vartype tags: dict[str, str]
-    :ivar install_version: The cluster install version.
-    :vartype install_version: str
     :ivar system_data: The system meta data relating to this resource.
     :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
     :ivar provisioning_state: The cluster provisioning state. Possible values include:
@@ -727,6 +732,8 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
     :vartype apiserver_profile: ~azure.mgmt.redhatopenshift.v2022_09_04.models.APIServerProfile
     :ivar ingress_profiles: The cluster ingress profiles.
     :vartype ingress_profiles: list[~azure.mgmt.redhatopenshift.v2022_09_04.models.IngressProfile]
+    :ivar install_version: The cluster install version.
+    :vartype install_version: str
     """
 
     _validation = {
@@ -735,7 +742,6 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
 
     _attribute_map = {
         'tags': {'key': 'tags', 'type': '{str}'},
-        'install_version': {'key': 'installVersion', 'type': 'str'},
         'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
         'cluster_profile': {'key': 'properties.clusterProfile', 'type': 'ClusterProfile'},
@@ -746,13 +752,13 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
+        'install_version': {'key': 'properties.installVersion', 'type': 'str'},
     }
 
     def __init__(
         self,
         *,
         tags: Optional[Dict[str, str]] = None,
-        install_version: Optional[str] = None,
         provisioning_state: Optional[Union[str, "ProvisioningState"]] = None,
         cluster_profile: Optional["ClusterProfile"] = None,
         console_profile: Optional["ConsoleProfile"] = None,
@@ -762,13 +768,12 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         worker_profiles: Optional[List["WorkerProfile"]] = None,
         apiserver_profile: Optional["APIServerProfile"] = None,
         ingress_profiles: Optional[List["IngressProfile"]] = None,
+        install_version: Optional[str] = None,
         **kwargs
     ):
         """
         :keyword tags: A set of tags. The resource tags.
         :paramtype tags: dict[str, str]
-        :keyword install_version: The cluster install version.
-        :paramtype install_version: str
         :keyword provisioning_state: The cluster provisioning state. Possible values include:
          "AdminUpdating", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
         :paramtype provisioning_state: str or
@@ -791,10 +796,11 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         :keyword ingress_profiles: The cluster ingress profiles.
         :paramtype ingress_profiles:
          list[~azure.mgmt.redhatopenshift.v2022_09_04.models.IngressProfile]
+        :keyword install_version: The cluster install version.
+        :paramtype install_version: str
         """
         super(OpenShiftClusterUpdate, self).__init__(**kwargs)
         self.tags = tags
-        self.install_version = install_version
         self.system_data = None
         self.provisioning_state = provisioning_state
         self.cluster_profile = cluster_profile
@@ -805,6 +811,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         self.worker_profiles = worker_profiles
         self.apiserver_profile = apiserver_profile
         self.ingress_profiles = ingress_profiles
+        self.install_version = install_version
 
 
 class Operation(msrest.serialization.Model):

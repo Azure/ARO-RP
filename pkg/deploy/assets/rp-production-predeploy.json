@@ -57,7 +57,7 @@
     "parameters": {
         "deployNSGs": {
             "type": "bool",
-            "defaultValue": false
+            "defaultValue": true
         },
         "extraClusterKeyvaultAccessPolicies": {
             "type": "array",
@@ -85,10 +85,6 @@
             "type": "string",
             "maxLength": 20
         },
-        "rpNsgSourceAddressPrefixes": {
-            "type": "array",
-            "defaultValue": []
-        },
         "rpServicePrincipalId": {
             "type": "string"
         }
@@ -109,6 +105,19 @@
                             "direction": "Inbound"
                         },
                         "name": "rp_in_arm"
+                    },
+                    {
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "443",
+                            "sourceAddressPrefix": "GenevaActions",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 130,
+                            "direction": "Inbound"
+                        },
+                        "name": "rp_in_geneva"
                     },
                     {
                         "properties": {
@@ -148,19 +157,6 @@
                             "direction": "Inbound"
                         },
                         "name": "deny_in_gateway"
-                    },
-                    {
-                        "properties": {
-                            "protocol": "Tcp",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "443",
-                            "sourceAddressPrefixes": "[parameters('rpNsgSourceAddressPrefixes')]",
-                            "destinationAddressPrefix": "*",
-                            "access": "Allow",
-                            "priority": 130,
-                            "direction": "Inbound"
-                        },
-                        "name": "rp_in_geneva"
                     }
                 ]
             },

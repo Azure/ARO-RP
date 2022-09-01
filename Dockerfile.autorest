@@ -18,7 +18,7 @@ USER 1001
 
 # Autorest
 RUN npm install -g autorest@${AUTOREST_VERSION} && \
-    autorest --reset --allow-no-input --csharp --ruby --python --java --go --nodejs --typescript --azure-validator --preview  && \
+    autorest --reset && \
     npm cache clean -f
 
 ENTRYPOINT ["autorest"]

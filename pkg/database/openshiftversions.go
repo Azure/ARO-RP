@@ -10,18 +10,22 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type openShiftVersions struct {
-	c cosmosdb.OpenShiftVersionDocumentClient
+	c    cosmosdb.OpenShiftVersionDocumentClient
+	uuid uuid.Generator
 }
 
 type OpenShiftVersions interface {
 	Create(context.Context, *api.OpenShiftVersionDocument) (*api.OpenShiftVersionDocument, error)
 	Delete(context.Context, *api.OpenShiftVersionDocument) error
 	Get(context.Context, string) (*api.OpenShiftVersionDocument, error)
+	Update(context.Context, *api.OpenShiftVersionDocument) (*api.OpenShiftVersionDocument, error)
 	Patch(context.Context, string, func(*api.OpenShiftVersionDocument) error) (*api.OpenShiftVersionDocument, error)
 	ListAll(context.Context) (*api.OpenShiftVersionDocuments, error)
+	NewUUID() string
 }
 
 func NewOpenShiftVersions(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (OpenShiftVersions, error) {
@@ -33,12 +37,13 @@ func NewOpenShiftVersions(ctx context.Context, isDevelopmentMode bool, dbc cosmo
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	documentClient := cosmosdb.NewOpenShiftVersionDocumentClient(collc, collOpenShiftVersion)
-	return NewOpenShiftVersionsWithProvidedClient(documentClient), nil
+	return NewOpenShiftVersionsWithProvidedClient(documentClient, uuid.DefaultGenerator), nil
 }
 
-func NewOpenShiftVersionsWithProvidedClient(client cosmosdb.OpenShiftVersionDocumentClient) OpenShiftVersions {
+func NewOpenShiftVersionsWithProvidedClient(client cosmosdb.OpenShiftVersionDocumentClient, uuid uuid.Generator) OpenShiftVersions {
 	return &openShiftVersions{
-		c: client,
+		c:    client,
+		uuid: uuid,
 	}
 }
 
@@ -87,6 +92,10 @@ func (c *openShiftVersions) Patch(ctx context.Context, id string, f func(*api.Op
 	return doc, err
 }
 
+func (c *openShiftVersions) Update(ctx context.Context, doc *api.OpenShiftVersionDocument) (*api.OpenShiftVersionDocument, error) {
+	return c.update(ctx, doc)
+}
+
 func (c *openShiftVersions) update(ctx context.Context, doc *api.OpenShiftVersionDocument) (*api.OpenShiftVersionDocument, error) {
 	if doc.ID != strings.ToLower(doc.ID) {
 		return nil, fmt.Errorf("id %q is not lower case", doc.ID)
@@ -97,4 +106,8 @@ func (c *openShiftVersions) update(ctx context.Context, doc *api.OpenShiftVersio
 
 func (c *openShiftVersions) ListAll(ctx context.Context) (*api.OpenShiftVersionDocuments, error) {
 	return c.c.ListAll(ctx, nil)
+}
+
+func (c *openShiftVersions) NewUUID() string {
+	return c.uuid.Generate()
 }

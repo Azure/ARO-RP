@@ -24,6 +24,18 @@ func (t *testLiveConfig) HiveRestConfig(ctx context.Context, shard int) (*rest.C
 	}
 }
 
+func (t *testLiveConfig) InstallViaHive(ctx context.Context) (bool, error) {
+	return t.hasHive, nil
+}
+
+func (t *testLiveConfig) DefaultInstallerPullSpec(ctx context.Context) (string, error) {
+	if t.hasHive {
+		return "example/pull:spec", nil
+	} else {
+		return "", nil
+	}
+}
+
 func NewTestLiveConfig(hasHive bool) liveconfig.Manager {
 	return &testLiveConfig{hasHive: hasHive}
 }

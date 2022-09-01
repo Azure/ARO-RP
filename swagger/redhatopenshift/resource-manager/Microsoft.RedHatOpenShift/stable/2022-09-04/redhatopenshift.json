@@ -641,8 +641,17 @@
         }
       }
     },
+    "InstallVersion": {
+      "description": "InstallVersion is the OpenShift installation version string.",
+      "type": "string"
+    },
     "InstallVersions": {
-      "description": "InstallVersions represents a List of OpenShift installable versions."
+      "description": "InstallVersions represents a List of OpenShift installable versions.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/InstallVersion"
+      },
+      "x-ms-identifiers": []
     },
     "MasterProfile": {
       "description": "MasterProfile represents a master profile.",
@@ -796,6 +805,10 @@
             "$ref": "#/definitions/IngressProfile"
           },
           "x-ms-identifiers": []
+        },
+        "installVersion": {
+          "description": "The cluster install version.",
+          "type": "string"
         }
       }
     },
@@ -811,10 +824,6 @@
           "$ref": "#/definitions/OpenShiftClusterProperties",
           "description": "The cluster properties.",
           "x-ms-client-flatten": true
-        },
-        "installVersion": {
-          "description": "The cluster install version.",
-          "type": "string"
         },
         "systemData": {
           "$ref": "../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",

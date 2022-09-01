@@ -8,6 +8,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type Fixture struct {
@@ -26,6 +27,8 @@ type Fixture struct {
 	portalDatabase            database.Portal
 	gatewayDatabase           database.Gateway
 	openShiftVersionsDatabase database.OpenShiftVersions
+
+	openShiftVersionsUUID uuid.Generator
 }
 
 func NewFixture() *Fixture {
@@ -62,8 +65,9 @@ func (f *Fixture) WithGateway(db database.Gateway) *Fixture {
 	return f
 }
 
-func (f *Fixture) WithOpenShiftVersions(db database.OpenShiftVersions) *Fixture {
+func (f *Fixture) WithOpenShiftVersions(db database.OpenShiftVersions, uuid uuid.Generator) *Fixture {
 	f.openShiftVersionsDatabase = db
+	f.openShiftVersionsUUID = uuid
 	return f
 }
 
@@ -193,6 +197,9 @@ func (f *Fixture) Create() error {
 	}
 
 	for _, i := range f.openShiftVersionDocuments {
+		if i.ID == "" {
+			i.ID = f.openShiftVersionsDatabase.NewUUID()
+		}
 		_, err := f.openShiftVersionsDatabase.Create(ctx, i)
 		if err != nil {
 			return err
