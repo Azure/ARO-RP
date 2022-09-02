@@ -31,6 +31,7 @@ func usage() {
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s rp\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s operator {master,worker}\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s update-versions\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s admissionhooks acrregistryurl\n", os.Args[0])
 	flag.PrintDefaults()
 }
 
@@ -85,10 +86,11 @@ func main() {
 		checkArgs(1)
 		err = updateOCPVersions(ctx, log)
 	case "admissionhooks":
-		checkArgs(1)
+		checkArgs(2)
 		//certificates come from openshift. They are put into the container via a secret.
 		//https://docs.openshift.com/container-platform/4.10/security/certificates/service-serving-certificate.html
-		err = pullsecret.StartValidator(ctx, log, "/etc/certificates/tls.crt", "/etc/certificates/tls.key")
+
+		err = pullsecret.StartValidator(ctx, log, "/etc/certificates/tls.crt", "/etc/certificates/tls.key", flag.Arg(1))
 
 	default:
 		usage()

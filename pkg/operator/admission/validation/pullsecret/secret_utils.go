@@ -42,7 +42,7 @@ func unmarshalRequestToSecret(request *admissionv1.AdmissionRequest) (corev1.Sec
 	return secret, oldSecret, err
 }
 
-func modifiedAROSecret(new, old authsStruct) bool {
+func modifiedAROSecret(new, old authsStruct, azureRegistry string) bool {
 	//we only care for deletion and modifiction, creation is ignored
 
 	//secret is deleted
@@ -52,7 +52,7 @@ func modifiedAROSecret(new, old authsStruct) bool {
 
 	//secret is modified
 	if (old.Auths != nil && new.Auths != nil) &&
-		(new.Auths[aroKey].Auth != old.Auths[aroKey].Auth) {
+		(new.Auths[azureRegistry].Auth != old.Auths[azureRegistry].Auth) {
 		return true
 	}
 	return false
@@ -118,13 +118,13 @@ func jsonToAuthStruct(jsonBytes []byte) (authsStruct, error) {
 	return authStruct, err
 }
 
-func basicAuthValidation(new, old authsStruct, operation admissionv1.Operation, required map[string]bool) (isOCM bool, err error) {
+func basicAuthValidation(new, old authsStruct, operation admissionv1.Operation, required map[string]bool, azureRegistry string) (isOCM bool, err error) {
 	if operation == admissionv1.Delete {
 		return false, errors.New("cannot delete the ocm pullsecret")
 	}
 
-	if modifiedAROSecret(new, old) {
-		return false, errors.New("modification of arosvc.azurecr.io regisitry credentials is forbidden")
+	if modifiedAROSecret(new, old, azureRegistry) {
+		return false, fmt.Errorf("modification of %s regisitry credentials is forbidden", azureRegistry)
 	}
 
 	isOCM = secretIsOCM(new, old)

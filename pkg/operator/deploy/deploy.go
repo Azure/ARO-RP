@@ -89,6 +89,7 @@ type deploymentData struct {
 	Image              string
 	Version            string
 	IsLocalDevelopment bool
+	AzureRegistry      string
 }
 
 func templateManifests(data deploymentData) ([][]byte, error) {
@@ -140,6 +141,7 @@ func (o *operator) createDeploymentData() deploymentData {
 		IsLocalDevelopment: o.env.IsLocalDevelopmentMode(),
 		Image:              image,
 		Version:            version,
+		AzureRegistry:      o.env.ACRDomain(),
 	}
 }
 

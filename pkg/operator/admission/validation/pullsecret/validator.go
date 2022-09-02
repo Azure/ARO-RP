@@ -19,7 +19,6 @@ import (
 
 const (
 	ocmKey string = "registry.redhat.io"
-	aroKey string = "arosvc.azurecr.io"
 )
 
 type RequestDoer interface {
@@ -27,10 +26,11 @@ type RequestDoer interface {
 }
 
 type ociRegClient struct {
-	httpClient RequestDoer
-	ctx        context.Context
-	required   map[string]bool
-	log        *logrus.Entry
+	httpClient    RequestDoer
+	ctx           context.Context
+	required      map[string]bool
+	azureRegistry string
+	log           *logrus.Entry
 }
 
 func unmarshalReview(body io.Reader) (admissionv1.AdmissionReview, error) {
@@ -74,7 +74,7 @@ func (client ociRegClient) validateSecret(log *logrus.Entry, review admissionv1.
 		return err
 	}
 
-	isOCM, err := basicAuthValidation(authsStructNew, authsStructOld, review.Request.Operation, client.required)
+	isOCM, err := basicAuthValidation(authsStructNew, authsStructOld, review.Request.Operation, client.required, client.azureRegistry)
 	if err != nil {
 		return err
 	}

@@ -31,6 +31,8 @@ spec:
         env: 
         - name: "RP_IMAGE"
           value: "{{ .Image }}:{{ .Version }}" 
+        - name: "AZURE_REGISTRY"
+          value: " {{ .AzureRegistry }}"
         {{ if .IsLocalDevelopment}}
         - name: "RP_MODE"
           value: "development"

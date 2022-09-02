@@ -26,13 +26,15 @@ import (
 )
 
 const rpImage = "RP_IMAGE"
+const azureRegistry = "AZURE_REGISTRY"
 const httpTimeout = time.Second * 3
 
 //go:embed manifests
 var assets embed.FS
 
 type deploymentData struct {
-	Image string
+	Image         string
+	AzureRegistry string
 }
 
 func Deploy(ctx context.Context, arocli aroclient.Interface, kubernetescli kubernetes.Interface, dh dynamichelper.Interface) error {
@@ -45,12 +47,16 @@ func Deploy(ctx context.Context, arocli aroclient.Interface, kubernetescli kuber
 	if !isSet {
 		return fmt.Errorf("%s is not set", rpImage)
 	}
+	acr, isSet := os.LookupEnv(azureRegistry)
+	if !isSet {
+		return fmt.Errorf("%s is not set", azureRegistry)
+	}
 
 	dep := deployer.NewDeployer(kubernetescli, dh, assets, "manifests")
-	return dep.CreateOrUpdate(context.Background(), aroCluster, deploymentData{Image: image})
+	return dep.CreateOrUpdate(context.Background(), aroCluster, deploymentData{Image: image, AzureRegistry: acr})
 }
 
-func StartValidator(ctx context.Context, log *logrus.Entry, certPath, keyPath string) error {
+func StartValidator(ctx context.Context, log *logrus.Entry, certPath, keyPath, containerRegistryUrl string) error {
 	c := ociRegClient{
 		httpClient: &http.Client{Timeout: httpTimeout},
 		ctx:        ctx,
@@ -58,7 +64,8 @@ func StartValidator(ctx context.Context, log *logrus.Entry, certPath, keyPath st
 			"quay.io":                     true,
 			"registry.connect.redhat.com": true,
 			"registry.redhat.io":          true},
-		log: log,
+		log:           log,
+		azureRegistry: containerRegistryUrl,
 	}
 	http.HandleFunc("/", c.handleRequest)
 	return http.ListenAndServeTLS(":8080", certPath, keyPath, nil)

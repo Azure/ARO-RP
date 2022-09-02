@@ -12,6 +12,8 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 )
 
+const testACR = "arosvc.azurecr.io"
+
 func TestUserPasswordFromB64(t *testing.T) {
 	for _, tt := range []struct {
 		name               string
@@ -103,7 +105,7 @@ func TestBasicValidation(t *testing.T) {
 		},
 		{
 			name:      "removal of aro credential",
-			old:       authsStruct{Auths: map[string]Auth{aroKey: {"credentials"}}},
+			old:       authsStruct{Auths: map[string]Auth{testACR: {"credentials"}}},
 			new:       authsStruct{Auths: map[string]Auth{"someregistry": {"credentials"}}},
 			operation: admissionv1.Update,
 			required:  map[string]bool{"someregistry": true},
@@ -112,8 +114,8 @@ func TestBasicValidation(t *testing.T) {
 		},
 		{
 			name:      "modification of aro credential",
-			old:       authsStruct{Auths: map[string]Auth{aroKey: {"credentials"}}},
-			new:       authsStruct{Auths: map[string]Auth{aroKey: {"potato"}}},
+			old:       authsStruct{Auths: map[string]Auth{testACR: {"credentials"}}},
+			new:       authsStruct{Auths: map[string]Auth{testACR: {"potato"}}},
 			operation: admissionv1.Update,
 			required:  map[string]bool{"someregistry": true},
 			wantIsOCM: false,
@@ -139,7 +141,7 @@ func TestBasicValidation(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(*testing.T) {
-			isOCM, err := basicAuthValidation(tt.new, tt.old, tt.operation, tt.required)
+			isOCM, err := basicAuthValidation(tt.new, tt.old, tt.operation, tt.required, testACR)
 			if isOCM != tt.wantIsOCM {
 				t.Errorf("wanted %v but got %v", tt.wantIsOCM, isOCM)
 			}

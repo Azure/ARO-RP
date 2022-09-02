@@ -6,7 +6,6 @@ package deploy
 import (
 	"context"
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -137,6 +136,7 @@ func TestCheckIngressIP(t *testing.T) {
 func TestCreateDeploymentData(t *testing.T) {
 	operatorImageTag := "v20071110"
 	operatorImageUntagged := "arosvc.azurecr.io/aro"
+	acrdomain := "arosvc.azurecr.io"
 	operatorImageWithTag := operatorImageUntagged + ":" + operatorImageTag
 
 	for _, tt := range []struct {
@@ -151,10 +151,15 @@ func TestCreateDeploymentData(t *testing.T) {
 				env.EXPECT().
 					AROOperatorImage().
 					Return(operatorImageWithTag)
+				env.EXPECT().
+					ACRDomain().
+					Return(acrdomain)
 			},
 			expected: deploymentData{
-				Image:   operatorImageWithTag,
-				Version: operatorImageTag},
+				Image:         operatorImageWithTag,
+				Version:       operatorImageTag,
+				AzureRegistry: acrdomain,
+			},
 		},
 		{
 			name: "no image tag, use latest version",
@@ -162,10 +167,15 @@ func TestCreateDeploymentData(t *testing.T) {
 				env.EXPECT().
 					AROOperatorImage().
 					Return(operatorImageUntagged)
+				env.EXPECT().
+					ACRDomain().
+					Return(acrdomain)
 			},
 			expected: deploymentData{
-				Image:   operatorImageUntagged,
-				Version: "latest"},
+				Image:         operatorImageUntagged,
+				Version:       "latest",
+				AzureRegistry: acrdomain,
+			},
 		},
 		{
 			name: "OperatorVersion override set",
@@ -175,13 +185,16 @@ func TestCreateDeploymentData(t *testing.T) {
 					Return(operatorImageUntagged)
 				env.EXPECT().
 					ACRDomain().
+					AnyTimes().
 					Return("docker.io")
 
 				oc.Properties.OperatorVersion = "override"
 			},
 			expected: deploymentData{
-				Image:   "docker.io/aro:override",
-				Version: "override"},
+				Image:         "docker.io/aro:override",
+				Version:       "override",
+				AzureRegistry: "docker.io",
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -200,7 +213,7 @@ func TestCreateDeploymentData(t *testing.T) {
 			}
 
 			deploymentData := o.createDeploymentData()
-			if !reflect.DeepEqual(deploymentData, tt.expected) {
+			if deploymentData != tt.expected {
 				t.Errorf("actual deployment: %v, expected %v", deploymentData, tt.expected)
 			}
 		})
