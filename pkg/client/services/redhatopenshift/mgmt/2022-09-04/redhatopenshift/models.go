@@ -142,8 +142,6 @@ type MasterProfile struct {
 
 // NetworkProfile networkProfile represents a network profile.
 type NetworkProfile struct {
-	// SoftwareDefinedNetwork - The SDN type used for OpenShift/Kubernetes Pods. Possible values include: 'OVNKubernetes', 'OpenShiftSDN'
-	SoftwareDefinedNetwork SoftwareDefinedNetwork `json:"softwareDefinedNetwork,omitempty"`
 	// PodCidr - The CIDR used for OpenShift/Kubernetes Pods.
 	PodCidr *string `json:"podCidr,omitempty"`
 	// ServiceCidr - The CIDR used for OpenShift/Kubernetes Services.

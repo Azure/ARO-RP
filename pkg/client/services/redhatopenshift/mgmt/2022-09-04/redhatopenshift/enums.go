@@ -89,21 +89,6 @@ func PossibleProvisioningStateValues() []ProvisioningState {
 	return []ProvisioningState{AdminUpdating, Creating, Deleting, Failed, Succeeded, Updating}
 }
 
-// SoftwareDefinedNetwork enumerates the values for software defined network.
-type SoftwareDefinedNetwork string
-
-const (
-	// OpenShiftSDN ...
-	OpenShiftSDN SoftwareDefinedNetwork = "OpenShiftSDN"
-	// OVNKubernetes ...
-	OVNKubernetes SoftwareDefinedNetwork = "OVNKubernetes"
-)
-
-// PossibleSoftwareDefinedNetworkValues returns an array of possible values for the SoftwareDefinedNetwork const type.
-func PossibleSoftwareDefinedNetworkValues() []SoftwareDefinedNetwork {
-	return []SoftwareDefinedNetwork{OpenShiftSDN, OVNKubernetes}
-}
-
 // Visibility enumerates the values for visibility.
 type Visibility string
 

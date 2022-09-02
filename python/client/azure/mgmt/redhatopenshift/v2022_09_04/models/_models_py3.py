@@ -335,10 +335,6 @@ class MasterProfile(msrest.serialization.Model):
 class NetworkProfile(msrest.serialization.Model):
     """NetworkProfile represents a network profile.
 
-    :ivar software_defined_network: The SDN type used for OpenShift/Kubernetes Pods. Possible
-     values include: "OVNKubernetes", "OpenShiftSDN".
-    :vartype software_defined_network: str or
-     ~azure.mgmt.redhatopenshift.v2022_09_04.models.SoftwareDefinedNetwork
     :ivar pod_cidr: The CIDR used for OpenShift/Kubernetes Pods.
     :vartype pod_cidr: str
     :ivar service_cidr: The CIDR used for OpenShift/Kubernetes Services.
@@ -346,7 +342,6 @@ class NetworkProfile(msrest.serialization.Model):
     """
 
     _attribute_map = {
-        'software_defined_network': {'key': 'softwareDefinedNetwork', 'type': 'str'},
         'pod_cidr': {'key': 'podCidr', 'type': 'str'},
         'service_cidr': {'key': 'serviceCidr', 'type': 'str'},
     }
@@ -354,23 +349,17 @@ class NetworkProfile(msrest.serialization.Model):
     def __init__(
         self,
         *,
-        software_defined_network: Optional[Union[str, "SoftwareDefinedNetwork"]] = None,
         pod_cidr: Optional[str] = None,
         service_cidr: Optional[str] = None,
         **kwargs
     ):
         """
-        :keyword software_defined_network: The SDN type used for OpenShift/Kubernetes Pods. Possible
-         values include: "OVNKubernetes", "OpenShiftSDN".
-        :paramtype software_defined_network: str or
-         ~azure.mgmt.redhatopenshift.v2022_09_04.models.SoftwareDefinedNetwork
         :keyword pod_cidr: The CIDR used for OpenShift/Kubernetes Pods.
         :paramtype pod_cidr: str
         :keyword service_cidr: The CIDR used for OpenShift/Kubernetes Services.
         :paramtype service_cidr: str
         """
         super(NetworkProfile, self).__init__(**kwargs)
-        self.software_defined_network = software_defined_network
         self.pod_cidr = pod_cidr
         self.service_cidr = service_cidr
 
