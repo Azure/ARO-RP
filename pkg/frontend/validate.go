@@ -5,7 +5,6 @@ package frontend
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"regexp"
 	"strings"
@@ -13,7 +12,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
+	"github.com/Azure/ARO-RP/pkg/api/components/installversion"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	utilnamespace "github.com/Azure/ARO-RP/pkg/util/namespace"
@@ -169,10 +168,9 @@ func validateAdminVMSize(vmSize string) error {
 }
 
 func (f *frontend) validateAndReturnInstallVersion(ctx context.Context, body *[]byte) (string, error) {
-	var oc *v20220904.OpenShiftCluster
-	err := json.Unmarshal(*body, &oc)
-	if err != nil || oc == nil {
-		return "", api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: '%s'.", err)
+	oc, err := installversion.FromExternalBytes(body)
+	if err != nil {
+		return "", api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
 	// If this request is from an older API or the user never specified
