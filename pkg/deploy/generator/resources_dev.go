@@ -344,7 +344,7 @@ yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel
 mkdir -p /etc/containers/
 touch /etc/containers/nodocker
 
-VSTS_AGENT_VERSION=2.193.1
+VSTS_AGENT_VERSION=2.206.1
 mkdir /home/cloud-user/agent
 pushd /home/cloud-user/agent
 curl -s https://vstsagentpackage.azureedge.net/agent/${VSTS_AGENT_VERSION}/vsts-agent-linux-x64-${VSTS_AGENT_VERSION}.tar.gz | tar -xz
