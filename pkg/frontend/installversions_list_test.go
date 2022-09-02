@@ -113,9 +113,7 @@ func TestListInstallVersions(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			sort.Slice(*tt.wantResponse, func(i, j int) bool {
-				return i < j
-			})
+			sort.Slice(*tt.wantResponse, func(i, j int) bool { return i < j })
 
 			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
 			if err != nil {
