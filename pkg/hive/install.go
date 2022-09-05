@@ -167,7 +167,8 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 				"hive.openshift.io/cluster-region":   doc.OpenShiftCluster.Location,
 			},
 			Annotations: map[string]string{
-				"hive.openshift.io/try-install-once": "true",
+				"hive.openshift.io/try-install-once":                "true",
+				"hive.openshift.io/cli-domain-from-installer-image": "true",
 			},
 		},
 		Spec: hivev1.ClusterDeploymentSpec{
@@ -187,9 +188,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 			},
 			Provisioning: &hivev1.Provisioning{
 				InstallerImageOverride: version.InstallerPullspec,
-				// TEMPORARY hack until Hive has the override in place for the ACRDomain
-				CLIImageOverride: "arointsvc.azurecr.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:b03b7e931356494d1084c8bec1d8fa3602553d28f01c4c712034152adaf45f29",
-				ReleaseImage:     version.OpenShiftPullspec,
+				ReleaseImage:           version.OpenShiftPullspec,
 				InstallConfigSecretRef: &corev1.LocalObjectReference{
 					Name: installConfigName,
 				},
