@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -24,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
@@ -58,6 +60,7 @@ type manager struct {
 	subscriptionDoc   *api.SubscriptionDocument
 	fpAuthorizer      refreshable.Authorizer
 	localFpAuthorizer refreshable.Authorizer
+	metricsEmitter    metrics.Emitter
 
 	spApplications        graphrbac.ApplicationsClient
 	disks                 compute.DisksClient
@@ -98,11 +101,13 @@ type manager struct {
 	hiveClusterManager hive.ClusterManager
 
 	aroOperatorDeployer deploy.Operator
+
+	now func() time.Time
 }
 
 // New returns a cluster manager
 func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, dbGateway database.Gateway, aead encryption.AEAD,
-	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, hiveRestConfig *rest.Config) (Interface, error) {
+	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, hiveRestConfig *rest.Config, metricsEmitter metrics.Emitter) (Interface, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -140,16 +145,16 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	}
 
 	return &manager{
-		log:               log,
-		env:               _env,
-		db:                db,
-		dbGateway:         dbGateway,
-		billing:           billing,
-		doc:               doc,
-		subscriptionDoc:   subscriptionDoc,
-		fpAuthorizer:      fpAuthorizer,
-		localFpAuthorizer: localFPAuthorizer,
-
+		log:                   log,
+		env:                   _env,
+		db:                    db,
+		dbGateway:             dbGateway,
+		billing:               billing,
+		doc:                   doc,
+		subscriptionDoc:       subscriptionDoc,
+		fpAuthorizer:          fpAuthorizer,
+		localFpAuthorizer:     localFPAuthorizer,
+		metricsEmitter:        metricsEmitter,
 		disks:                 compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		virtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		interfaces:            network.NewInterfacesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
@@ -175,5 +180,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 
 		installViaHive:     installViaHive,
 		hiveClusterManager: hr,
+		now:                func() time.Time { return time.Now() },
 	}, nil
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -298,7 +299,7 @@ func TestBackendTry(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			createManager := func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, *rest.Config) (cluster.Interface, error) {
+			createManager := func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, *rest.Config, metrics.Emitter) (cluster.Interface, error) {
 				return manager, nil
 			}
 

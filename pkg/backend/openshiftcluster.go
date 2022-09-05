@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -28,7 +29,7 @@ import (
 type openShiftClusterBackend struct {
 	*backend
 
-	newManager func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, *rest.Config) (cluster.Interface, error)
+	newManager func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, *rest.Config, metrics.Emitter) (cluster.Interface, error)
 }
 
 func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
@@ -106,7 +107,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		log.Info(err) // TODO(hive): Update to fail once we have Hive everywhere in prod and dev
 	}
 
-	m, err := ocb.newManager(ctx, log, ocb.env, ocb.dbOpenShiftClusters, ocb.dbGateway, ocb.aead, ocb.billing, doc, subscriptionDoc, hiveRestConfig)
+	m, err := ocb.newManager(ctx, log, ocb.env, ocb.dbOpenShiftClusters, ocb.dbGateway, ocb.aead, ocb.billing, doc, subscriptionDoc, hiveRestConfig, ocb.m)
 	if err != nil {
 		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 	}

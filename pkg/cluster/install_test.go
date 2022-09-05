@@ -8,6 +8,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/onsi/gomega"
@@ -29,6 +30,27 @@ import (
 )
 
 func failingFunc(context.Context) error { return errors.New("oh no!") }
+
+func successfulActionStep(context.Context) error { return nil }
+
+func successfulConditionStep(context.Context) (bool, error) { return true, nil }
+
+type fakeMetricsEmitter struct {
+	Metrics map[string]int64
+}
+
+func newfakeMetricsEmitter() *fakeMetricsEmitter {
+	m := make(map[string]int64)
+	return &fakeMetricsEmitter{
+		Metrics: m,
+	}
+}
+
+func (e *fakeMetricsEmitter) EmitGauge(topic string, value int64, dims map[string]string) {
+	e.Metrics[topic] = value
+}
+
+func (e *fakeMetricsEmitter) EmitFloat(topic string, value float64, dims map[string]string) {}
 
 var clusterOperator = &configv1.ClusterOperator{
 	ObjectMeta: metav1.ObjectMeta{
@@ -150,9 +172,10 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				kubernetescli: tt.kubernetescli,
 				configcli:     tt.configcli,
 				operatorcli:   tt.operatorcli,
+				now:           func() time.Time { return time.Now() },
 			}
 
-			err := m.runSteps(ctx, tt.steps)
+			err := m.runSteps(ctx, tt.steps, false)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -207,5 +230,66 @@ func TestUpdateProvisionedBy(t *testing.T) {
 	}
 	if updatedClusterDoc.OpenShiftCluster.Properties.ProvisionedBy != version.GitCommit {
 		t.Error("version was not added")
+	}
+}
+
+func TestInstallationTimeMetrics(t *testing.T) {
+	_, log := testlog.New()
+	fm := newfakeMetricsEmitter()
+
+	for _, tt := range []struct {
+		name          string
+		steps         []steps.Step
+		wantedMetrics map[string]int64
+	}{
+		{
+			name: "Failed step run will not generate any install time metrics",
+			steps: []steps.Step{
+				steps.Action(successfulActionStep),
+				steps.Action(failingFunc),
+			},
+		},
+		{
+			name: "Succeeded step run will generate a valid install time metrics",
+			steps: []steps.Step{
+				steps.Action(successfulActionStep),
+				steps.Condition(successfulConditionStep, 30*time.Minute, true),
+				steps.AuthorizationRefreshingAction(nil, steps.Action(successfulActionStep)),
+			},
+			wantedMetrics: map[string]int64{
+				"backend.openshiftcluster.installtime.total":                             6,
+				"backend.openshiftcluster.installtime.action.successfulActionStep":       2,
+				"backend.openshiftcluster.installtime.condition.successfulConditionStep": 2,
+				"backend.openshiftcluster.installtime.refreshing.successfulActionStep":   2,
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			m := &manager{
+				log:            log,
+				metricsEmitter: fm,
+				now:            func() time.Time { return time.Now().Add(2 * time.Second) },
+			}
+
+			err := m.runSteps(ctx, tt.steps, true)
+			if err != nil {
+				if len(fm.Metrics) != 0 {
+					t.Error("fake metrics obj should be empty when run steps failed")
+				}
+			} else {
+				if tt.wantedMetrics != nil {
+					for k, v := range tt.wantedMetrics {
+						time, ok := fm.Metrics[k]
+						if !ok {
+							t.Errorf("unexpected metrics topic: %s", k)
+						}
+						if time != v {
+							t.Errorf("incorrect fake metrics obj, want: %d, got: %d", v, time)
+						}
+					}
+				}
+			}
+		})
 	}
 }

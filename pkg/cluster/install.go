@@ -31,7 +31,7 @@ import (
 // AdminUpdate performs an admin update of an ARO cluster
 func (m *manager) AdminUpdate(ctx context.Context) error {
 	toRun := m.adminUpdate()
-	return m.runSteps(ctx, toRun)
+	return m.runSteps(ctx, toRun, false)
 }
 
 func (m *manager) adminUpdate() []steps.Step {
@@ -139,7 +139,7 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.hiveResetCorrelationData),
 	}
 
-	return m.runSteps(ctx, steps)
+	return m.runSteps(ctx, steps, false)
 }
 
 func (m *manager) runIntegratedInstaller(ctx context.Context) error {
@@ -269,11 +269,25 @@ func (m *manager) Install(ctx context.Context) error {
 		return fmt.Errorf("unrecognised phase %s", m.doc.OpenShiftCluster.Properties.Install.Phase)
 	}
 	m.log.Printf("starting phase %s", m.doc.OpenShiftCluster.Properties.Install.Phase)
-	return m.runSteps(ctx, steps[m.doc.OpenShiftCluster.Properties.Install.Phase])
+	return m.runSteps(ctx, steps[m.doc.OpenShiftCluster.Properties.Install.Phase], true)
 }
 
-func (m *manager) runSteps(ctx context.Context, s []steps.Step) error {
-	err := steps.Run(ctx, m.log, 10*time.Second, s)
+func (m *manager) runSteps(ctx context.Context, s []steps.Step, emitMetrics bool) error {
+	var err error
+	if emitMetrics {
+		var stepsTimeRun map[string]int64
+		stepsTimeRun, err = steps.Run(ctx, m.log, 10*time.Second, s, m.now)
+		if err == nil {
+			var totalInstallTime int64
+			for topic, duration := range stepsTimeRun {
+				m.metricsEmitter.EmitGauge(fmt.Sprintf("backend.openshiftcluster.installtime.%s", topic), duration, nil)
+				totalInstallTime += duration
+			}
+			m.metricsEmitter.EmitGauge("backend.openshiftcluster.installtime.total", totalInstallTime, nil)
+		}
+	} else {
+		_, err = steps.Run(ctx, m.log, 10*time.Second, s, nil)
+	}
 	if err != nil {
 		m.gatherFailureLogs(ctx)
 	}
