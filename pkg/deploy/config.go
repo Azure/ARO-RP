@@ -103,6 +103,7 @@ type Configuration struct {
 	// TODO: Replace with Live Service Configuration in KeyVault
 	InstallViaHive           *bool   `json:"clustersInstallViaHive,omitempty"`
 	DefaultInstallerPullspec *string `json:"clusterDefaultInstallerPullspec,omitempty"`
+	AdoptByHive              *bool   `json:"clustersAdoptByHive,omitempty"`
 }
 
 // GetConfig return RP configuration from the file

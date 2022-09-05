@@ -43,3 +43,11 @@ func (d *dev) InstallViaHive(ctx context.Context) (bool, error) {
 func (d *dev) DefaultInstallerPullSpecOverride(ctx context.Context) string {
 	return os.Getenv(hiveDefaultPullSpecEnvVar)
 }
+
+func (p *dev) AdoptByHive(ctx context.Context) (bool, error) {
+	adopt := os.Getenv(hiveAdoptEnableEnvVar)
+	if adopt != "" {
+		return true, nil
+	}
+	return false, nil
+}
