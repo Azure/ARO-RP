@@ -143,7 +143,7 @@ func (m *manager) Update(ctx context.Context) error {
 }
 
 func (m *manager) runIntegratedInstaller(ctx context.Context) error {
-	version, err := m.getOpenShiftVersionFromVersion(ctx)
+	version, err := m.openShiftVersionFromVersion(ctx)
 	if err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func (m *manager) runIntegratedInstaller(ctx context.Context) error {
 }
 
 func (m *manager) runHiveInstaller(ctx context.Context) error {
-	version, err := m.getOpenShiftVersionFromVersion(ctx)
+	version, err := m.openShiftVersionFromVersion(ctx)
 	if err != nil {
 		return err
 	}

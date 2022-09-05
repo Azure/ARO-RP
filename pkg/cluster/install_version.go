@@ -13,8 +13,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func (m *manager) getOpenShiftVersionFromVersion(ctx context.Context) (*api.OpenShiftVersion, error) {
-	requestedInstallVersion := &m.doc.OpenShiftCluster.Properties.ClusterProfile.Version
+func (m *manager) openShiftVersionFromVersion(ctx context.Context) (*api.OpenShiftVersion, error) {
+	requestedInstallVersion := m.doc.OpenShiftCluster.Properties.ClusterProfile.Version
 
 	docs, err := m.dbOpenShiftVersions.ListAll(ctx)
 	if err != nil {
@@ -28,14 +28,16 @@ func (m *manager) getOpenShiftVersionFromVersion(ctx context.Context) (*api.Open
 		}
 	}
 
+	errUnsupportedVersion := api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", "The requested OpenShift version '%s' is not supported.", requestedInstallVersion)
+
 	// when we have no OpenShiftVersion entries in CosmoDB, default to building one using the InstallStream
 	if len(activeOpenShiftVersions) == 0 {
-		if *requestedInstallVersion != version.InstallStream.Version.String() {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", "The provided OpenShift version '%s' is not supported.", *requestedInstallVersion)
+		if requestedInstallVersion != version.InstallStream.Version.String() {
+			return nil, errUnsupportedVersion
 		}
 
 		installerPullSpec := m.env.LiveConfig().DefaultInstallerPullSpecOverride(ctx)
-		if len(installerPullSpec) == 0 {
+		if installerPullSpec == "" {
 			// If no ENV var was set as an override, then use the default image name:tag format we build in the ARO-Installer build & push pipeline
 			installerPullSpec = fmt.Sprintf("%s/aro-installer:release-%d.%d", m.env.ACRDomain(), version.InstallStream.Version.V[0], version.InstallStream.Version.V[1])
 		}
@@ -54,10 +56,10 @@ func (m *manager) getOpenShiftVersionFromVersion(ctx context.Context) (*api.Open
 	}
 
 	for _, active := range activeOpenShiftVersions {
-		if *requestedInstallVersion == active.Version {
+		if requestedInstallVersion == active.Version {
 			return active, nil
 		}
 	}
 
-	return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", "The requested OpenShift version '%s' is not supported.", *requestedInstallVersion)
+	return nil, errUnsupportedVersion
 }

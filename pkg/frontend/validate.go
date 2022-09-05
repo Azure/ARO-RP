@@ -179,8 +179,10 @@ func (f *frontend) validateAndReturnInstallVersion(ctx context.Context, body *[]
 		return version.InstallStream.Version.String(), nil
 	}
 
+	errInvalidVersion := api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.installversion", "The requested OpenShift version '%s' is invalid.", oc.Properties.InstallVersion)
+
 	if !validate.RxInstallVersion.MatchString(oc.Properties.InstallVersion) {
-		return "", api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The requested OpenShift version '%s' is invalid.", oc.Properties.InstallVersion)
+		return "", errInvalidVersion
 	}
 
 	docs, err := f.dbOpenShiftVersions.ListAll(ctx)
@@ -191,7 +193,7 @@ func (f *frontend) validateAndReturnInstallVersion(ctx context.Context, body *[]
 	// If we have no OpenShiftVersion entries in CosmoDB, default to using the InstallStream.Version
 	if len(docs.OpenShiftVersionDocuments) == 0 {
 		if oc.Properties.InstallVersion != version.InstallStream.Version.String() {
-			return "", api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.installversion", "The requested OpenShift version '%s' is not supported.", oc.Properties.InstallVersion)
+			return "", errInvalidVersion
 		}
 		return version.InstallStream.Version.String(), nil
 	}
@@ -202,5 +204,5 @@ func (f *frontend) validateAndReturnInstallVersion(ctx context.Context, body *[]
 		}
 	}
 
-	return "", api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.installversion", "The requested OpenShift version '%s' is not supported.", oc.Properties.InstallVersion)
+	return "", errInvalidVersion
 }

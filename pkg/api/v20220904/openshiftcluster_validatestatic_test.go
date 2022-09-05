@@ -826,7 +826,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		},
 		{
 			name:    "version change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterProfile.Version = "4.3.99" },
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterProfile.Version = "4.3.999" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.version: Changing property 'properties.clusterProfile.version' is not allowed.",
 		},
 		{

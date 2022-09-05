@@ -14,14 +14,14 @@ import (
 
 func (d *dev) HiveRestConfig(ctx context.Context, index int) (*rest.Config, error) {
 	// Indexes above 0 have _index appended to them
-	envVar := HIVE_KUBE_CONFIG_PATH
+	envVar := hiveKubeconfigPathEnvVar
 	if index != 0 {
-		envVar = fmt.Sprintf("%s_%d", HIVE_KUBE_CONFIG_PATH, index)
+		envVar = fmt.Sprintf("%s_%d", hiveKubeconfigPathEnvVar, index)
 	}
 
 	kubeConfigPath := os.Getenv(envVar)
 	if kubeConfigPath == "" {
-		return nil, fmt.Errorf("missing %s env variable", HIVE_KUBE_CONFIG_PATH)
+		return nil, fmt.Errorf("missing %s env variable", hiveKubeconfigPathEnvVar)
 	}
 
 	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
@@ -33,7 +33,7 @@ func (d *dev) HiveRestConfig(ctx context.Context, index int) (*rest.Config, erro
 }
 
 func (d *dev) InstallViaHive(ctx context.Context) (bool, error) {
-	installViaHive := os.Getenv(HIVE_INSTALL_ENV_VARIABLE)
+	installViaHive := os.Getenv(hiveInstallerEnableEnvVar)
 	if installViaHive != "" {
 		return true, nil
 	}
@@ -41,5 +41,5 @@ func (d *dev) InstallViaHive(ctx context.Context) (bool, error) {
 }
 
 func (d *dev) DefaultInstallerPullSpecOverride(ctx context.Context) string {
-	return os.Getenv(HIVE_DEFAULT_INSTALLER_VARIABLE)
+	return os.Getenv(hiveDefaultPullSpecEnvVar)
 }

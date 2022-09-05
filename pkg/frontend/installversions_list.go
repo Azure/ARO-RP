@@ -46,23 +46,16 @@ func (f *frontend) getInstallVersions(ctx context.Context) ([]string, error) {
 		return nil, fmt.Errorf("unable to list the entries in the OpenShift versions database: %s", err.Error())
 	}
 
-	activeOpenShiftVersions := make([]*api.OpenShiftVersion, 0)
+	versions := make([]string, 0)
 	for _, doc := range docs.OpenShiftVersionDocuments {
 		if doc.OpenShiftVersion.Enabled {
-			activeOpenShiftVersions = append(activeOpenShiftVersions, doc.OpenShiftVersion)
+			versions = append(versions, doc.OpenShiftVersion.Version)
 		}
 	}
 
-	versions := make([]string, 0)
-
-	// when we have no active version, we default to the version.InstallStream
-	if len(activeOpenShiftVersions) == 0 {
+	// add the default from version.InstallStream, when we have no active versions
+	if len(versions) == 0 {
 		versions = append(versions, version.InstallStream.Version.String())
-		return versions, nil
-	}
-
-	for _, active := range activeOpenShiftVersions {
-		versions = append(versions, active.Version)
 	}
 
 	return versions, nil

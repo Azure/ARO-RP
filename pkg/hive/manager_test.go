@@ -71,7 +71,7 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 			wantResult: true,
 		},
 		{
-			name: "is not ready: unreacheable",
+			name: "is not ready: unreachable",
 			cd: &hivev1.ClusterDeployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      ClusterDeploymentName,

@@ -116,7 +116,7 @@ func TestGetOpenShiftVersionFromVersion(t *testing.T) {
 
 			tt.m.dbOpenShiftVersions = dbOpenShiftVersions
 
-			version, err := tt.m.getOpenShiftVersionFromVersion(ctx)
+			version, err := tt.m.openShiftVersionFromVersion(ctx)
 
 			if len(tt.wantErrString) > 0 {
 				assert.Equal(t, tt.wantErrString, err.Error(), "Unexpected error exception")
