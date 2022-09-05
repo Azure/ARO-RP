@@ -57,6 +57,9 @@ func (m *manager) openShiftVersionFromVersion(ctx context.Context) (*api.OpenShi
 
 	for _, active := range activeOpenShiftVersions {
 		if requestedInstallVersion == active.Version {
+			if m.installViaHive {
+				active.OpenShiftPullspec = strings.Replace(active.OpenShiftPullspec, "quay.io", m.env.ACRDomain(), 1)
+			}
 			return active, nil
 		}
 	}
