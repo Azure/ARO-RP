@@ -5,10 +5,10 @@ ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
-FLUENTBIT_VERSION = 1.9.1-1
+FLUENTBIT_VERSION = 1.9.4-1
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)
-AUTOREST_VERSION = 3.3.2
-AUTOREST_IMAGE = "quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}"
+AUTOREST_VERSION = 3.6.2
+AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
 
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
@@ -76,20 +76,20 @@ generate:
 
 image-aro: aro e2e.test
 	docker pull $(REGISTRY)/ubi8/ubi-minimal
-	docker build --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
+	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
 
 image-aro-multistage:
-	docker build --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
+	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
 
 image-autorest:
-	docker build --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
+	docker build --platform=linux/amd64 --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
 
 image-fluentbit:
-	docker build --network=host --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
+	docker build --platform=linux/amd64 --network=host --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
 
 image-proxy: proxy
 	docker pull $(REGISTRY)/ubi8/ubi-minimal
-	docker build --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) .
+	docker build --platform=linux/amd64 --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) .
 
 publish-image-aro: image-aro
 	docker push $(ARO_IMAGE)
@@ -128,7 +128,7 @@ pyenv:
 	python3 -m venv pyenv
 	. pyenv/bin/activate && \
 		pip install -U pip && \
-		pip install autopep8 azdev azure-mgmt-loganalytics==0.2.0 colorama ruamel.yaml wheel && \
+		pip install -r requirements.txt && \
 		azdev setup -r . && \
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
 
@@ -184,8 +184,8 @@ lint-go:
 	hack/lint-go.sh
 
 lint-admin-portal:
-	docker build --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.portal_lint . -t linter
-	docker run -it --rm localhost/linter ./src --ext .ts
+	docker build --platform=linux/amd64 --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.portal_lint . -t linter
+	docker run --platform=linux/amd64 -it --rm localhost/linter ./src --ext .ts
 
 test-python: pyenv az
 	. pyenv/bin/activate && \
@@ -194,8 +194,8 @@ test-python: pyenv az
 		hack/unit-test-python.sh
 
 
-shared-cluster-login: 
-	oc login ${SHARED_CLUSTER_API} -u kubeadmin -p ${SHARED_CLUSTER_KUBEADMIN_PASSWORD}
+shared-cluster-login:
+	@oc login ${SHARED_CLUSTER_API} -u kubeadmin -p ${SHARED_CLUSTER_KUBEADMIN_PASSWORD}
 
 unit-test-python:
 	hack/unit-test-python.sh
