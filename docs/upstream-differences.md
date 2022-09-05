@@ -9,6 +9,8 @@ See https://github.com/openshift/installer/compare/release-4.10...jewzaam:releas
 
 ## Installation differences
 
+* ARO does not use Terraform to create clusters, and instead uses ARM templates directly
+
 * ARO persists the install graph in the cluster storage account in a new "aro"
   container / "graph" blob.
 
@@ -38,19 +40,61 @@ See https://github.com/openshift/installer/compare/release-4.10...jewzaam:releas
 
 # Introducing new OCP release into ARO RP
 
+To support a new version of OpenShift on ARO, you will need to reconcile [upstream changes](https://github.com/openshift/installer) with our [forked installer](https://github.com/jewzaam/installer-aro). This will not be a merge, but a cherry-pick of patches we've implemented.
+
 ## Update installer fork
 
 To bring new OCP release branch into ARO installer fork:
 
-1. Check git diff between the target release branch release-X.Y and previous one release-X.Y-1
-   to see if any resources changed and/or architecture changed.
-   These changes might require more modifications on ARO-RP side later on.
-1. Create a new release-X.Y-azure branch in the ARO installer fork from upstream release-X.Y branch.
-1. Cherry-pick all commits from the previous release-X.Y-1-azure branch into the new one & fix conflicts.
-    * While cherry-picking `commit data/assets_vfsdata.go` commit, run `cd ./hack/assets/ && go run ./assets.go`
-    to generate assets and then add them to this commit.
-1. Run `./hack/build.sh` and `./hack/go-test.sh` as part of every commit (`git rebase` with `-x` can help with this).
-    * Fix build and test failures.
+1. Assess and document differences in X.Y and X.Y-1 in upstream
+    ```sh
+    # clone our forked installer
+    git clone https://github.com/jewzaam/installer-aro.git
+    cd installer-aro
+    
+    # add the upstream as a remote source
+    git remote add upstream https://github.com/openshift/installer.git
+    git fetch upstream -a
+    
+    # diff the upstream X.Y with X.Y-1 and search for architecture changes
+    git diff upstream/release-X.Y-1 upstream/release-X.Y
+    
+    # pay particular attention to Terraform files, which may need to be moved into ARO's ARM templates
+    git diff upstream/release-X.Y-1 upstream/release-X.Y */azure/*.tf
+    ```
+2. Create a new X.Y release branch in our forked installer
+    ```sh
+    # create a new release branch in the fork based on the upstream
+    git checkout upstream/release-X.Y
+    git checkout -b release-X.Y-azure
+    ```
+3. If there is a golang version bump in this release, modify `./hack/build.sh` and `./hack/go-test.sh` with the new version, then verify these scripts still work and commit them
+4. Determine the patches you need to cherry-pick, based on the last (Y-1) release
+    ```sh
+    # find commit shas to cherry-pick from last time
+    git checkout release-X.Y-1-azure
+    git log
+    ```
+5. For every commit you need to cherry-pick (in-order), do:
+    ```sh
+    # WARNING: when you reach the commit for `commit data/assets_vfsdata.go`, look ahead
+    git cherry-pick abc123 # may require manually fixing a merge
+    ./hack/build.sh   # fix any failures
+    ./hack/go-test.sh # fix any failures
+    # if you had to manually merge, you can now `git cherry-pick --continue`
+    ```
+    - When cherry-picking the specific patch `commit data/assets_vfsdata.go`, instead run:
+        ```sh
+        git cherry-pick abc123 # may require manually fixing a merge
+        ./hack/build.sh   # fix any failures
+        ./hack/go-test.sh # fix any failures
+        # if you had to manually merge, you can now `git cherry-pick --continue`
+        pushd ./hack/assets && go run ./assets.go && popd
+        ./hack/build.sh   # fix any failures
+        ./hack/go-test.sh # fix any failures
+        git add data/assets_vfsdata.go
+        git commit --amend
+        ```
 
 **Note:** If any changes are required during the process, make sure to amend the relevant patch or create a new one.
 Each commit should be atomic/complete - you should be able to cherry-pick it into the upstream installer and bring

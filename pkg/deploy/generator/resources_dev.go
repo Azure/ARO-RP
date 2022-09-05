@@ -38,7 +38,7 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 		)
 	}
 
-	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
+	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update
 yum -y install docker
 
 firewall-cmd --add-port=443/tcp --permanent
@@ -312,7 +312,7 @@ func (g *generator) devCIPool() *arm.Resource {
 sleep 60
 
 for attempt in {1..5}; do
-  yum -y update -x WALinuxAgent && break
+  yum -y update && break
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
@@ -338,7 +338,7 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel htop go-toolset-1.17.7-1.module+el8.6.0+14297+32a15e19 openvpn
+yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel htop go-toolset-1.17.12-1.module+el8.6.0+16014+a372c00b openvpn
 
 # Suppress emulation output for podman instead of docker for az acr compatability
 mkdir -p /etc/containers/

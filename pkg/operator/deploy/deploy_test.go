@@ -4,16 +4,20 @@ package deploy
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func TestCheckIngressIP(t *testing.T) {
@@ -130,6 +134,79 @@ func TestCheckIngressIP(t *testing.T) {
 	}
 }
 
+func TestCreateDeploymentData(t *testing.T) {
+	operatorImageTag := "v20071110"
+	operatorImageUntagged := "arosvc.azurecr.io/aro"
+	operatorImageWithTag := operatorImageUntagged + ":" + operatorImageTag
+
+	for _, tt := range []struct {
+		name                    string
+		mock                    func(*mock_env.MockInterface, *api.OpenShiftCluster)
+		operatorVersionOverride string
+		expected                deploymentData
+	}{
+		{
+			name: "no image override, use default",
+			mock: func(env *mock_env.MockInterface, oc *api.OpenShiftCluster) {
+				env.EXPECT().
+					AROOperatorImage().
+					Return(operatorImageWithTag)
+			},
+			expected: deploymentData{
+				Image:   operatorImageWithTag,
+				Version: operatorImageTag},
+		},
+		{
+			name: "no image tag, use latest version",
+			mock: func(env *mock_env.MockInterface, oc *api.OpenShiftCluster) {
+				env.EXPECT().
+					AROOperatorImage().
+					Return(operatorImageUntagged)
+			},
+			expected: deploymentData{
+				Image:   operatorImageUntagged,
+				Version: "latest"},
+		},
+		{
+			name: "OperatorVersion override set",
+			mock: func(env *mock_env.MockInterface, oc *api.OpenShiftCluster) {
+				env.EXPECT().
+					AROOperatorImage().
+					Return(operatorImageUntagged)
+				env.EXPECT().
+					ACRDomain().
+					Return("docker.io")
+
+				oc.Properties.OperatorVersion = "override"
+			},
+			expected: deploymentData{
+				Image:   "docker.io/aro:override",
+				Version: "override"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().IsLocalDevelopmentMode().Return(tt.expected.IsLocalDevelopment).AnyTimes()
+
+			oc := &api.OpenShiftCluster{Properties: api.OpenShiftClusterProperties{}}
+			tt.mock(env, oc)
+
+			o := operator{
+				oc:  oc,
+				env: env,
+			}
+
+			deploymentData := o.createDeploymentData()
+			if !reflect.DeepEqual(deploymentData, tt.expected) {
+				t.Errorf("actual deployment: %v, expected %v", deploymentData, tt.expected)
+			}
+		})
+	}
+}
+
 func TestOperatorVersion(t *testing.T) {
 	type test struct {
 		name         string
@@ -144,7 +221,7 @@ func TestOperatorVersion(t *testing.T) {
 			oc: func() *api.OpenShiftClusterProperties {
 				return &api.OpenShiftClusterProperties{}
 			},
-			wantVersion:  version.GitCommit,
+			wantVersion:  "latest",
 			wantPullspec: "defaultaroimagefromenv",
 		},
 		{
@@ -203,6 +280,138 @@ func TestOperatorVersion(t *testing.T) {
 				if image != tt.wantPullspec {
 					t.Errorf("Got %q, not %q for the image", image, tt.wantPullspec)
 				}
+			}
+		})
+	}
+}
+
+func TestCheckOperatorDeploymentVersion(t *testing.T) {
+	ctx := context.Background()
+	for _, tt := range []struct {
+		name           string
+		deployment     *appsv1.Deployment
+		desiredVersion string
+		want           bool
+		wantErr        error
+	}{
+		{
+			name: "arooperator deployment has correct version",
+			deployment: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "arooperator-deploy",
+					Namespace: "openshift-azure-operator",
+					Labels: map[string]string{
+						"version": "abcde",
+					},
+				},
+			},
+			desiredVersion: "abcde",
+			want:           true,
+			wantErr:        nil,
+		},
+		{
+			name: "arooperator deployment has incorrect version",
+			deployment: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "arooperator-deploy",
+					Namespace: "openshift-azure-operator",
+					Labels: map[string]string{
+						"version": "unknown",
+					},
+				},
+			},
+			desiredVersion: "abcde",
+			want:           false,
+			wantErr:        nil,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			clientset := fake.NewSimpleClientset()
+			_, err := clientset.AppsV1().Deployments("openshift-azure-operator").Create(ctx, tt.deployment, metav1.CreateOptions{})
+			if err != nil {
+				t.Fatalf("error creating deployment: %v", err)
+			}
+
+			got, err := checkOperatorDeploymentVersion(ctx, clientset.AppsV1().Deployments("openshift-azure-operator"), tt.deployment.Name, tt.desiredVersion)
+			if err != nil && err.Error() != tt.wantErr.Error() ||
+				err == nil && tt.wantErr != nil {
+				t.Error(err)
+			}
+			if tt.want != got {
+				t.Fatalf("error with CheckOperatorDeploymentVersion test %s: got %v wanted %v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCheckPodImageVersion(t *testing.T) {
+	ctx := context.Background()
+	for _, tt := range []struct {
+		name           string
+		pod            *corev1.Pod
+		desiredVersion string
+		want           bool
+		wantErr        error
+	}{
+		{
+			name: "arooperator pod has correct image version",
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "arooperator-pod",
+					Namespace: "openshift-azure-operator",
+					Labels: map[string]string{
+						"app": "arooperator-pod",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Image: "random-image:abcde",
+						},
+					},
+				},
+			},
+			desiredVersion: "abcde",
+			want:           true,
+			wantErr:        nil,
+		},
+		{
+			name: "arooperator pod has incorrect image version",
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "arooperator-pod",
+					Namespace: "openshift-azure-operator",
+					Labels: map[string]string{
+						"app": "arooperator-pod",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Image: "random-image:unknown",
+						},
+					},
+				},
+			},
+			desiredVersion: "abcde",
+			want:           false,
+			wantErr:        nil,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			clientset := fake.NewSimpleClientset()
+			_, err := clientset.CoreV1().Pods("openshift-azure-operator").Create(ctx, tt.pod, metav1.CreateOptions{})
+			if err != nil {
+				t.Fatalf("error creating pod: %v", err)
+			}
+
+			got, err := checkPodImageVersion(ctx, clientset.CoreV1().Pods("openshift-azure-operator"), tt.pod.Name, tt.desiredVersion)
+			if err != nil && err.Error() != tt.wantErr.Error() ||
+				err == nil && tt.wantErr != nil {
+				t.Error(err)
+			}
+			if tt.want != got {
+				t.Fatalf("error with CheckPodImageVersion test %s: got %v wanted %v", tt.name, got, tt.want)
 			}
 		})
 	}

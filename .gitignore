@@ -32,3 +32,4 @@ gomock_reflect_*
 .idea*
 /hack/hive-config/crds
 /hack/hive-config/hive-deployment.yaml
+cmd/aro/__debug_bin

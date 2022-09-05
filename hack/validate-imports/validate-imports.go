@@ -50,42 +50,22 @@ func initValidator() importValidator {
 	return allowed
 }
 
-func (validator importValidator) isOkFromYaml(name, importedAs string) (bool, []string) {
-	for _, v := range validator.AllowedNames[name] {
-		if importedAs == v {
-			return true, nil
-		}
-	}
-	return false, validator.AllowedNames[name]
-}
-
 func (validator importValidator) validateImportName(name, importedAs string) error {
-	isAllowed, names := validator.isOkFromYaml(name, importedAs)
-
-	if isAllowed {
-		return nil
-	}
-
-	isAllowedFromRegex, namesRegex := isOkFromRegex(name, importedAs)
-
-	if isAllowedFromRegex {
-		return nil
-	}
-
-	names = append(names, namesRegex...)
-
-	return fmt.Errorf("%s is imported as %q, should be %q", name, importedAs, names)
-}
-
-func isOkFromRegex(name, importedAs string) (bool, []string) {
 	acceptableNames := acceptableNamesRegex(name)
+	acceptableNames = append(acceptableNames, validator.AllowedNames[name]...)
+
+	if len(acceptableNames) == 0 {
+		// No corresponding rule found, so we don't want to enforce
+		return nil
+	}
 
 	for _, v := range acceptableNames {
 		if v == importedAs {
-			return true, nil
+			return nil
 		}
 	}
-	return false, acceptableNames
+
+	return fmt.Errorf("%s is imported as %q, should be %q", name, importedAs, acceptableNames)
 }
 
 // acceptableNamesRegex returns a list of acceptable names for an import; empty
@@ -151,17 +131,12 @@ func acceptableNamesRegex(path string) []string {
 		return []string{m[1] + m[2]}
 	}
 
-	m = regexp.MustCompile(`^k8s\.io/kubernetes/pkg/apis/[^/]+/v[^/]+$`).FindStringSubmatch(path)
-	if m != nil {
-		return nil
-	}
-
 	m = regexp.MustCompile(`^k8s\.io/client-go/kubernetes/typed/([^/]+)/(v[^/]+)$`).FindStringSubmatch(path)
 	if m != nil {
 		return []string{m[1] + m[2] + "client"}
 	}
 
-	return []string{""}
+	return nil
 }
 
 func importedAs(spec *ast.ImportSpec) string {
@@ -237,12 +212,6 @@ func (validator importValidator) validateImport(imp *ast.ImportSpec) error {
 		if imp.Name != nil {
 			return fmt.Errorf("overridden import %s", packageName)
 		}
-		return nil
-	}
-
-	names := acceptableNamesRegex(packageName)
-
-	if names == nil {
 		return nil
 	}
 
