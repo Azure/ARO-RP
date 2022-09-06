@@ -55,7 +55,7 @@ jobs:
       validate_portal_running
       run_rp
       validate_rp_running
-      
+
       register_sub
 
       export CI=true
