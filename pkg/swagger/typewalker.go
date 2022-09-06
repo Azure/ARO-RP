@@ -162,14 +162,9 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 				}
 			}
 		}
-
-	case *types.Interface:
-		s.Type = "object"
-
 	default:
 		panic(t)
 	}
-
 	return
 }
 

@@ -43,10 +43,183 @@ func NewSyncSetsClientWithBaseURI(baseURI string, subscriptionID string) SyncSet
 	return SyncSetsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
+// CreateOrUpdate the operation returns properties of a SyncSet.
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// resourceName - the name of the OpenShift cluster resource.
+// syncSetResourceName - the name of the SyncSet resource.
+func (client SyncSetsClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (result SyncSet, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/SyncSetsClient.CreateOrUpdate")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("redhatopenshift.SyncSetsClient", "CreateOrUpdate", err.Error())
+	}
+
+	req, err := client.CreateOrUpdatePreparer(ctx, resourceGroupName, resourceName, syncSetResourceName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.SyncSetsClient", "CreateOrUpdate", nil, "Failure preparing request")
+		return
+	}
+
+	resp, err := client.CreateOrUpdateSender(req)
+	if err != nil {
+		result.Response = autorest.Response{Response: resp}
+		err = autorest.NewErrorWithError(err, "redhatopenshift.SyncSetsClient", "CreateOrUpdate", resp, "Failure sending request")
+		return
+	}
+
+	result, err = client.CreateOrUpdateResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.SyncSetsClient", "CreateOrUpdate", resp, "Failure responding to request")
+		return
+	}
+
+	return
+}
+
+// CreateOrUpdatePreparer prepares the CreateOrUpdate request.
+func (client SyncSetsClient) CreateOrUpdatePreparer(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"resourceGroupName":   autorest.Encode("path", resourceGroupName),
+		"resourceName":        autorest.Encode("path", resourceName),
+		"subscriptionId":      autorest.Encode("path", client.SubscriptionID),
+		"syncSetResourceName": autorest.Encode("path", syncSetResourceName),
+	}
+
+	const APIVersion = "2022-09-04"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPut(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// CreateOrUpdateSender sends the CreateOrUpdate request. The method will close the
+// http.Response Body if it receives an error.
+func (client SyncSetsClient) CreateOrUpdateSender(req *http.Request) (*http.Response, error) {
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
+}
+
+// CreateOrUpdateResponder handles the response to the CreateOrUpdate request. The method always
+// closes the http.Response Body.
+func (client SyncSetsClient) CreateOrUpdateResponder(resp *http.Response) (result SyncSet, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// Delete the operation returns nothing.
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// resourceName - the name of the OpenShift cluster resource.
+// syncSetResourceName - the name of the SyncSet resource.
+func (client SyncSetsClient) Delete(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (result autorest.Response, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/SyncSetsClient.Delete")
+		defer func() {
+			sc := -1
+			if result.Response != nil {
+				sc = result.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("redhatopenshift.SyncSetsClient", "Delete", err.Error())
+	}
+
+	req, err := client.DeletePreparer(ctx, resourceGroupName, resourceName, syncSetResourceName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.SyncSetsClient", "Delete", nil, "Failure preparing request")
+		return
+	}
+
+	resp, err := client.DeleteSender(req)
+	if err != nil {
+		result.Response = resp
+		err = autorest.NewErrorWithError(err, "redhatopenshift.SyncSetsClient", "Delete", resp, "Failure sending request")
+		return
+	}
+
+	result, err = client.DeleteResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.SyncSetsClient", "Delete", resp, "Failure responding to request")
+		return
+	}
+
+	return
+}
+
+// DeletePreparer prepares the Delete request.
+func (client SyncSetsClient) DeletePreparer(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"resourceGroupName":   autorest.Encode("path", resourceGroupName),
+		"resourceName":        autorest.Encode("path", resourceName),
+		"subscriptionId":      autorest.Encode("path", client.SubscriptionID),
+		"syncSetResourceName": autorest.Encode("path", syncSetResourceName),
+	}
+
+	const APIVersion = "2022-09-04"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsDelete(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// DeleteSender sends the Delete request. The method will close the
+// http.Response Body if it receives an error.
+func (client SyncSetsClient) DeleteSender(req *http.Request) (*http.Response, error) {
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
+}
+
+// DeleteResponder handles the response to the Delete request. The method always
+// closes the http.Response Body.
+func (client SyncSetsClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent),
+		autorest.ByClosing())
+	result.Response = resp
+	return
+}
+
 // Get the operation returns properties of a SyncSet.
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
-// resourceName - the name of the SyncSet resource.
+// resourceName - the name of the OpenShift cluster resource.
 // syncSetResourceName - the name of the SyncSet resource.
 func (client SyncSetsClient) Get(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (result SyncSet, err error) {
 	if tracing.IsEnabled() {
@@ -133,7 +306,7 @@ func (client SyncSetsClient) GetResponder(resp *http.Response) (result SyncSet, 
 // List the operation returns properties of each SyncSet.
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
-// resourceName - the name of the SyncSet resource.
+// resourceName - the name of the OpenShift cluster resource.
 func (client SyncSetsClient) List(ctx context.Context, resourceGroupName string, resourceName string) (result SyncSetListPage, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/SyncSetsClient.List")
@@ -254,5 +427,92 @@ func (client SyncSetsClient) ListComplete(ctx context.Context, resourceGroupName
 		}()
 	}
 	result.page, err = client.List(ctx, resourceGroupName, resourceName)
+	return
+}
+
+// Update the operation returns properties of a SyncSet.
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// resourceName - the name of the OpenShift cluster resource.
+// syncSetResourceName - the name of the SyncSet resource.
+func (client SyncSetsClient) Update(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (result SyncSet, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/SyncSetsClient.Update")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("redhatopenshift.SyncSetsClient", "Update", err.Error())
+	}
+
+	req, err := client.UpdatePreparer(ctx, resourceGroupName, resourceName, syncSetResourceName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.SyncSetsClient", "Update", nil, "Failure preparing request")
+		return
+	}
+
+	resp, err := client.UpdateSender(req)
+	if err != nil {
+		result.Response = autorest.Response{Response: resp}
+		err = autorest.NewErrorWithError(err, "redhatopenshift.SyncSetsClient", "Update", resp, "Failure sending request")
+		return
+	}
+
+	result, err = client.UpdateResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.SyncSetsClient", "Update", resp, "Failure responding to request")
+		return
+	}
+
+	return
+}
+
+// UpdatePreparer prepares the Update request.
+func (client SyncSetsClient) UpdatePreparer(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"resourceGroupName":   autorest.Encode("path", resourceGroupName),
+		"resourceName":        autorest.Encode("path", resourceName),
+		"subscriptionId":      autorest.Encode("path", client.SubscriptionID),
+		"syncSetResourceName": autorest.Encode("path", syncSetResourceName),
+	}
+
+	const APIVersion = "2022-09-04"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPatch(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// UpdateSender sends the Update request. The method will close the
+// http.Response Body if it receives an error.
+func (client SyncSetsClient) UpdateSender(req *http.Request) (*http.Response, error) {
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
+}
+
+// UpdateResponder handles the response to the Update request. The method always
+// closes the http.Response Body.
+func (client SyncSetsClient) UpdateResponder(resp *http.Response) (result SyncSet, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
 	return
 }

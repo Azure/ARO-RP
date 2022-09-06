@@ -20,6 +20,8 @@ package redhatopenshiftapi
 import (
 	"context"
 
+	"github.com/Azure/go-autorest/autorest"
+
 	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-09-04/redhatopenshift"
 )
 
@@ -56,9 +58,12 @@ var _ OpenShiftClustersClientAPI = (*redhatopenshift.OpenShiftClustersClient)(ni
 
 // SyncSetsClientAPI contains the set of methods on the SyncSetsClient type.
 type SyncSetsClientAPI interface {
+	CreateOrUpdate(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (result redhatopenshift.SyncSet, err error)
+	Delete(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (result autorest.Response, err error)
 	Get(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (result redhatopenshift.SyncSet, err error)
 	List(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.SyncSetListPage, err error)
 	ListComplete(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.SyncSetListIterator, err error)
+	Update(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (result redhatopenshift.SyncSet, err error)
 }
 
 var _ SyncSetsClientAPI = (*redhatopenshift.SyncSetsClient)(nil)

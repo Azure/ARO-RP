@@ -51,16 +51,24 @@ func (g *generator) populateParameters(n int, typ, friendlyName string) (s []int
 	}
 
 	if n > 2 {
+		temp := friendlyName
+		if temp == "SyncSet" {
+			temp = "OpenShift cluster"
+		}
 		s = append(s, Parameter{
 			Name:        "resourceName",
 			In:          "path",
-			Description: "The name of the " + friendlyName + " resource.",
+			Description: "The name of the " + temp + " resource.",
 			Required:    true,
 			Type:        "string",
 		})
 	}
 
-	if n == 7 {
+	// gross. this is really hacky :/
+	// this covers get,put,patch,delete by adding this
+	// parameter as a required parameter for those operations
+	// except when n==10, then its not a required parameter
+	if n >= 7 && n != 10 {
 		s = append(s, Parameter{
 			Name:        "syncSetResourceName",
 			In:          "path",
@@ -144,30 +152,30 @@ func (g *generator) populateChildResourcePaths(ps Paths, resourceProviderNamespa
 			Parameters:  g.populateParameters(7, titleCaser.String(childResourceType), friendlyName),
 			Responses:   g.populateResponses(titleCaser.String(childResourceType), false, http.StatusOK),
 		},
-		// Put: &Operation{
-		// 	Tags:        []string{titleCaser.String(childResourceType) + "s"},
-		// 	Summary:     "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
-		// 	Description: "The operation returns properties of a " + friendlyName + ".",
-		// 	OperationID: titleCaser.String(childResourceType) + "s_CreateOrUpdate",
-		// 	Parameters:  g.populateParameters(4, titleCaser.String(childResourceType), friendlyName),
-		// 	Responses:   g.populateResponses(titleCaser.String(childResourceType), false, http.StatusOK, http.StatusCreated),
-		// },
-		// Delete: &Operation{
-		// 	Tags:        []string{titleCaser.String(childResourceType) + "s"},
-		// 	Summary:     "Deletes a " + friendlyName + " with the specified subscription, resource group and resource name.",
-		// 	Description: "The operation returns nothing.",
-		// 	OperationID: titleCaser.String(childResourceType) + "s_Delete",
-		// 	Parameters:  g.populateParameters(3, titleCaser.String(childResourceType), friendlyName),
-		// 	Responses:   g.populateResponses(titleCaser.String(childResourceType), true, http.StatusAccepted, http.StatusNoContent),
-		// },
-		// Patch: &Operation{
-		// 	Tags:        []string{titleCaser.String(childResourceType) + "s"},
-		// 	Summary:     "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
-		// 	Description: "The operation returns properties of a " + friendlyName + ".",
-		// 	OperationID: titleCaser.String(childResourceType) + "s_Update",
-		// 	Parameters:  g.populateParameters(5, titleCaser.String(childResourceType), friendlyName),
-		// 	Responses:   g.populateResponses(titleCaser.String(childResourceType), false, http.StatusOK, http.StatusCreated),
-		// },
+		Put: &Operation{
+			Tags:        []string{titleCaser.String(childResourceType) + "s"},
+			Summary:     "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
+			Description: "The operation returns properties of a " + friendlyName + ".",
+			OperationID: titleCaser.String(childResourceType) + "s_CreateOrUpdate",
+			Parameters:  g.populateParameters(8, titleCaser.String(childResourceType), friendlyName),
+			Responses:   g.populateResponses(titleCaser.String(childResourceType), false, http.StatusOK, http.StatusCreated),
+		},
+		Delete: &Operation{
+			Tags:        []string{titleCaser.String(childResourceType) + "s"},
+			Summary:     "Deletes a " + friendlyName + " with the specified subscription, resource group and resource name.",
+			Description: "The operation returns nothing.",
+			OperationID: titleCaser.String(childResourceType) + "s_Delete",
+			Parameters:  g.populateParameters(7, titleCaser.String(childResourceType), friendlyName),
+			Responses:   g.populateResponses(titleCaser.String(childResourceType), true, http.StatusAccepted, http.StatusNoContent),
+		},
+		Patch: &Operation{
+			Tags:        []string{titleCaser.String(childResourceType) + "s"},
+			Summary:     "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
+			Description: "The operation returns properties of a " + friendlyName + ".",
+			OperationID: titleCaser.String(childResourceType) + "s_Update",
+			Parameters:  g.populateParameters(9, titleCaser.String(childResourceType), friendlyName),
+			Responses:   g.populateResponses(titleCaser.String(childResourceType), false, http.StatusOK, http.StatusCreated),
+		},
 	}
 }
 

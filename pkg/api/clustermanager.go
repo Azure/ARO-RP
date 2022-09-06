@@ -53,31 +53,8 @@ type SyncSetProperties struct {
 	// The parent Azure Red Hat OpenShift resourceID.
 	ClusterResourceId string `json:"clusterResourceId,omitempty"`
 
-	// APIVersion for the SyncSet.
-	APIVersion string `json:"apiVersion,omitempty"`
-
-	// SyncSet kind.
-	Kind string `json:"kind,omitempty"`
-
-	// Metadata for the SyncSet.
-	Metadata map[string]string `json:"metadata,omitempty"`
-
-	// The SyncSet Specification.
-	Spec SyncSetSpec `json:"spec,omitempty"`
-
-	// ClusterDeploymentRefs map SyncSets to a Hive Cluster Deployment.
-	ClusterDeploymentRefs []string `json:"clusterDeploymentRefs,omitempty"`
-
 	// Resources represents the SyncSets configuration.
-	Resources map[string]string `json:"resources,omitempty"`
-
-	// The status of the object.
-	Status string `json:"status,omitempty"`
-
-	// Resources []byte `json:"resources,omitempty"`
-}
-
-type SyncSetSpec struct {
+	Resources string `json:"resources,omitempty"`
 }
 
 // MachinePool represents a MachinePool
@@ -88,15 +65,17 @@ type MachinePool struct {
 	// The resource name.
 	Name string `json:"name,omitempty"`
 
-	// The parent cluster resourceID.
-	ClusterResourceId string `json:"clusterResourceId,omitempty"`
-
 	// The MachinePool properties.
 	Properties MachinePoolProperties `json:"properties,omitempty"`
 }
 
 // MachinePoolProperties represents the properties of a MachinePool
 type MachinePoolProperties struct {
+
+	// The parent cluster resourceID.
+	ClusterResourceId string `json:"clusterResourceId,omitempty"`
+
+	// Resources represents the machinepools configuration.
 	Resources []byte `json:"resources,omitempty"`
 }
 

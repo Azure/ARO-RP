@@ -154,7 +154,7 @@
           {
             "name": "resourceName",
             "in": "path",
-            "description": "The name of the SyncSet resource.",
+            "description": "The name of the OpenShift cluster resource.",
             "required": true,
             "type": "string"
           }
@@ -556,7 +556,7 @@
           {
             "name": "resourceName",
             "in": "path",
-            "description": "The name of the SyncSet resource.",
+            "description": "The name of the OpenShift cluster resource.",
             "required": true,
             "type": "string"
           },
@@ -585,6 +585,174 @@
         "x-ms-examples": {
           "Gets a SyncSet with the specified subscription, resource group and resource name.": {
             "$ref": "./examples/SyncSets_Get.json"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "SyncSets"
+        ],
+        "summary": "Creates or updates a SyncSet with the specified subscription, resource group and resource name.",
+        "description": "The operation returns properties of a SyncSet.",
+        "operationId": "SyncSets_CreateOrUpdate",
+        "parameters": [
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/SubscriptionIdParameter"
+          },
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/ResourceGroupNameParameter"
+          },
+          {
+            "name": "resourceName",
+            "in": "path",
+            "description": "The name of the OpenShift cluster resource.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "syncSetResourceName",
+            "in": "path",
+            "description": "The name of the SyncSet resource.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SyncSet"
+            }
+          },
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/SyncSet"
+            }
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        },
+        "x-ms-examples": {
+          "Creates or updates a SyncSet with the specified subscription, resource group and resource name.": {
+            "$ref": "./examples/SyncSets_CreateOrUpdate.json"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "SyncSets"
+        ],
+        "summary": "Deletes a SyncSet with the specified subscription, resource group and resource name.",
+        "description": "The operation returns nothing.",
+        "operationId": "SyncSets_Delete",
+        "parameters": [
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/SubscriptionIdParameter"
+          },
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/ResourceGroupNameParameter"
+          },
+          {
+            "name": "resourceName",
+            "in": "path",
+            "description": "The name of the OpenShift cluster resource.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "syncSetResourceName",
+            "in": "path",
+            "description": "The name of the SyncSet resource.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        },
+        "x-ms-examples": {
+          "Deletes a SyncSet with the specified subscription, resource group and resource name.": {
+            "$ref": "./examples/SyncSets_Delete.json"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "SyncSets"
+        ],
+        "summary": "Creates or updates a SyncSet with the specified subscription, resource group and resource name.",
+        "description": "The operation returns properties of a SyncSet.",
+        "operationId": "SyncSets_Update",
+        "parameters": [
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/SubscriptionIdParameter"
+          },
+          {
+            "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/ResourceGroupNameParameter"
+          },
+          {
+            "name": "resourceName",
+            "in": "path",
+            "description": "The name of the OpenShift cluster resource.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "syncSetResourceName",
+            "in": "path",
+            "description": "The name of the SyncSet resource.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/SyncSet"
+            }
+          },
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/SyncSet"
+            }
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        },
+        "x-ms-examples": {
+          "Creates or updates a SyncSet with the specified subscription, resource group and resource name.": {
+            "$ref": "./examples/SyncSets_Update.json"
           }
         }
       }
@@ -997,24 +1165,30 @@
     "SyncSet": {
       "description": "SyncSet represents a SyncSet for an Azure Red Hat OpenShift Cluster.",
       "type": "object",
-      "allOf": [
-        {
-          "$ref": "../../../../../common-types/resource-management/v3/types.json#/definitions/ProxyResource"
-        }
-      ],
       "properties": {
         "properties": {
           "$ref": "#/definitions/SyncSetProperties",
           "description": "The Syncsets properties",
           "x-ms-client-flatten": true
+        },
+        "systemData": {
+          "$ref": "../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
+          "description": "The system meta data relating to this resource.",
+          "readOnly": true
         }
       }
     },
     "SyncSetList": {
       "description": "SyncSetList represents a list of SyncSets",
       "type": "object",
+      "allOf": [
+        {
+          "$ref": "../../../../../common-types/resource-management/v3/types.json#/definitions/ProxyResource"
+        }
+      ],
       "properties": {
         "value": {
+          "description": "The list of syncsets.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/SyncSet"
@@ -1035,57 +1209,25 @@
           "description": "The parent Azure Red Hat OpenShift resourceID.",
           "type": "string"
         },
-        "apiVersion": {
-          "description": "APIVersion for the SyncSet.",
-          "type": "string"
-        },
-        "kind": {
-          "description": "SyncSet kind.",
-          "type": "string"
-        },
-        "metadata": {
-          "description": "Metadata for the SyncSet.",
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
-        },
-        "spec": {
-          "$ref": "#/definitions/SyncSetSpec",
-          "description": "The SyncSet Specification."
-        },
-        "clusterDeploymentRefs": {
-          "description": "ClusterDeploymentRefs map SyncSets to a Hive Cluster Deployment."
-        },
         "resources": {
           "description": "Resources represents the SyncSets configuration.",
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
-        },
-        "status": {
-          "description": "The status of the object.",
           "type": "string"
         }
       }
     },
-    "SyncSetSpec": {
+    "SyncSetUpdate": {
+      "description": "SyncSet represents a SyncSet for an Azure Red Hat OpenShift Cluster.",
       "type": "object",
       "properties": {
-        "clusterDeploymentRefs": {
-          "description": "ClusterDeploymentRefs map SyncSets to a Hive Cluster Deployment."
+        "properties": {
+          "$ref": "#/definitions/SyncSetProperties",
+          "description": "The Syncsets properties",
+          "x-ms-client-flatten": true
         },
-        "resources": {
-          "description": "Resources represents the SyncSets configuration.",
-          "type": "object",
-          "additionalProperties": {
-            "type": "object"
-          }
-        },
-        "status": {
-          "description": "The status of the object.",
-          "type": "string"
+        "systemData": {
+          "$ref": "../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
+          "description": "The system meta data relating to this resource.",
+          "readOnly": true
         }
       }
     },
