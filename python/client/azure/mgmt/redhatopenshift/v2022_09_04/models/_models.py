@@ -864,8 +864,47 @@ class ServicePrincipalProfile(msrest.serialization.Model):
         self.client_secret = kwargs.get('client_secret', None)
 
 
-class SyncSet(ProxyResource):
+class SyncSet(msrest.serialization.Model):
     """SyncSet represents a SyncSet for an Azure Red Hat OpenShift Cluster.
+
+    Variables are only populated by the server, and will be ignored when sending a request.
+
+    :ivar system_data: The system meta data relating to this resource.
+    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
+    :ivar cluster_resource_id: The parent Azure Red Hat OpenShift resourceID.
+    :vartype cluster_resource_id: str
+    :ivar resources: Resources represents the SyncSets configuration.
+    :vartype resources: str
+    """
+
+    _validation = {
+        'system_data': {'readonly': True},
+    }
+
+    _attribute_map = {
+        'system_data': {'key': 'systemData', 'type': 'SystemData'},
+        'cluster_resource_id': {'key': 'properties.clusterResourceId', 'type': 'str'},
+        'resources': {'key': 'properties.resources', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword cluster_resource_id: The parent Azure Red Hat OpenShift resourceID.
+        :paramtype cluster_resource_id: str
+        :keyword resources: Resources represents the SyncSets configuration.
+        :paramtype resources: str
+        """
+        super(SyncSet, self).__init__(**kwargs)
+        self.system_data = None
+        self.cluster_resource_id = kwargs.get('cluster_resource_id', None)
+        self.resources = kwargs.get('resources', None)
+
+
+class SyncSetList(ProxyResource):
+    """SyncSetList represents a list of SyncSets.
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
@@ -880,22 +919,10 @@ class SyncSet(ProxyResource):
     :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
      information.
     :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
-    :ivar cluster_resource_id: The parent Azure Red Hat OpenShift resourceID.
-    :vartype cluster_resource_id: str
-    :ivar api_version: APIVersion for the SyncSet.
-    :vartype api_version: str
-    :ivar kind: SyncSet kind.
-    :vartype kind: str
-    :ivar metadata: Metadata for the SyncSet.
-    :vartype metadata: dict[str, str]
-    :ivar spec: The SyncSet Specification.
-    :vartype spec: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SyncSetSpec
-    :ivar cluster_deployment_refs: ClusterDeploymentRefs map SyncSets to a Hive Cluster Deployment.
-    :vartype cluster_deployment_refs: any
-    :ivar resources: Resources represents the SyncSets configuration.
-    :vartype resources: dict[str, str]
-    :ivar status: The status of the object.
-    :vartype status: str
+    :ivar value: The list of syncsets.
+    :vartype value: list[~azure.mgmt.redhatopenshift.v2022_09_04.models.SyncSet]
+    :ivar next_link: The link used to get the next page of operations.
+    :vartype next_link: str
     """
 
     _validation = {
@@ -910,60 +937,6 @@ class SyncSet(ProxyResource):
         'name': {'key': 'name', 'type': 'str'},
         'type': {'key': 'type', 'type': 'str'},
         'system_data': {'key': 'systemData', 'type': 'SystemData'},
-        'cluster_resource_id': {'key': 'properties.clusterResourceId', 'type': 'str'},
-        'api_version': {'key': 'properties.apiVersion', 'type': 'str'},
-        'kind': {'key': 'properties.kind', 'type': 'str'},
-        'metadata': {'key': 'properties.metadata', 'type': '{str}'},
-        'spec': {'key': 'properties.spec', 'type': 'SyncSetSpec'},
-        'cluster_deployment_refs': {'key': 'properties.clusterDeploymentRefs', 'type': 'object'},
-        'resources': {'key': 'properties.resources', 'type': '{str}'},
-        'status': {'key': 'properties.status', 'type': 'str'},
-    }
-
-    def __init__(
-        self,
-        **kwargs
-    ):
-        """
-        :keyword cluster_resource_id: The parent Azure Red Hat OpenShift resourceID.
-        :paramtype cluster_resource_id: str
-        :keyword api_version: APIVersion for the SyncSet.
-        :paramtype api_version: str
-        :keyword kind: SyncSet kind.
-        :paramtype kind: str
-        :keyword metadata: Metadata for the SyncSet.
-        :paramtype metadata: dict[str, str]
-        :keyword spec: The SyncSet Specification.
-        :paramtype spec: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SyncSetSpec
-        :keyword cluster_deployment_refs: ClusterDeploymentRefs map SyncSets to a Hive Cluster
-         Deployment.
-        :paramtype cluster_deployment_refs: any
-        :keyword resources: Resources represents the SyncSets configuration.
-        :paramtype resources: dict[str, str]
-        :keyword status: The status of the object.
-        :paramtype status: str
-        """
-        super(SyncSet, self).__init__(**kwargs)
-        self.cluster_resource_id = kwargs.get('cluster_resource_id', None)
-        self.api_version = kwargs.get('api_version', None)
-        self.kind = kwargs.get('kind', None)
-        self.metadata = kwargs.get('metadata', None)
-        self.spec = kwargs.get('spec', None)
-        self.cluster_deployment_refs = kwargs.get('cluster_deployment_refs', None)
-        self.resources = kwargs.get('resources', None)
-        self.status = kwargs.get('status', None)
-
-
-class SyncSetList(msrest.serialization.Model):
-    """SyncSetList represents a list of SyncSets.
-
-    :ivar value:
-    :vartype value: list[~azure.mgmt.redhatopenshift.v2022_09_04.models.SyncSet]
-    :ivar next_link: The link used to get the next page of operations.
-    :vartype next_link: str
-    """
-
-    _attribute_map = {
         'value': {'key': 'value', 'type': '[SyncSet]'},
         'next_link': {'key': 'nextLink', 'type': 'str'},
     }
@@ -973,7 +946,7 @@ class SyncSetList(msrest.serialization.Model):
         **kwargs
     ):
         """
-        :keyword value:
+        :keyword value: The list of syncsets.
         :paramtype value: list[~azure.mgmt.redhatopenshift.v2022_09_04.models.SyncSet]
         :keyword next_link: The link used to get the next page of operations.
         :paramtype next_link: str
@@ -983,21 +956,27 @@ class SyncSetList(msrest.serialization.Model):
         self.next_link = kwargs.get('next_link', None)
 
 
-class SyncSetSpec(msrest.serialization.Model):
-    """SyncSetSpec.
+class SyncSetUpdate(msrest.serialization.Model):
+    """SyncSet represents a SyncSet for an Azure Red Hat OpenShift Cluster.
 
-    :ivar cluster_deployment_refs: ClusterDeploymentRefs map SyncSets to a Hive Cluster Deployment.
-    :vartype cluster_deployment_refs: any
+    Variables are only populated by the server, and will be ignored when sending a request.
+
+    :ivar system_data: The system meta data relating to this resource.
+    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
+    :ivar cluster_resource_id: The parent Azure Red Hat OpenShift resourceID.
+    :vartype cluster_resource_id: str
     :ivar resources: Resources represents the SyncSets configuration.
-    :vartype resources: dict[str, any]
-    :ivar status: The status of the object.
-    :vartype status: str
+    :vartype resources: str
     """
 
+    _validation = {
+        'system_data': {'readonly': True},
+    }
+
     _attribute_map = {
-        'cluster_deployment_refs': {'key': 'clusterDeploymentRefs', 'type': 'object'},
-        'resources': {'key': 'resources', 'type': '{object}'},
-        'status': {'key': 'status', 'type': 'str'},
+        'system_data': {'key': 'systemData', 'type': 'SystemData'},
+        'cluster_resource_id': {'key': 'properties.clusterResourceId', 'type': 'str'},
+        'resources': {'key': 'properties.resources', 'type': 'str'},
     }
 
     def __init__(
@@ -1005,18 +984,15 @@ class SyncSetSpec(msrest.serialization.Model):
         **kwargs
     ):
         """
-        :keyword cluster_deployment_refs: ClusterDeploymentRefs map SyncSets to a Hive Cluster
-         Deployment.
-        :paramtype cluster_deployment_refs: any
+        :keyword cluster_resource_id: The parent Azure Red Hat OpenShift resourceID.
+        :paramtype cluster_resource_id: str
         :keyword resources: Resources represents the SyncSets configuration.
-        :paramtype resources: dict[str, any]
-        :keyword status: The status of the object.
-        :paramtype status: str
+        :paramtype resources: str
         """
-        super(SyncSetSpec, self).__init__(**kwargs)
-        self.cluster_deployment_refs = kwargs.get('cluster_deployment_refs', None)
+        super(SyncSetUpdate, self).__init__(**kwargs)
+        self.system_data = None
+        self.cluster_resource_id = kwargs.get('cluster_resource_id', None)
         self.resources = kwargs.get('resources', None)
-        self.status = kwargs.get('status', None)
 
 
 class SystemData(msrest.serialization.Model):

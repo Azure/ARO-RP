@@ -28,15 +28,9 @@ func (c clusterManagerConfigurationConverter) SyncSetToExternal(ocm *api.SyncSet
 	out.ID = ocm.ID
 	out.Name = ocm.Name
 	out.Type = ocm.Type
-	out.proxyResource = true
 	out.Properties = SyncSetProperties{
-		ClusterResourceId:     ocm.Properties.ClusterResourceId,
-		APIVersion:            ocm.Properties.APIVersion,
-		Kind:                  ocm.Properties.Kind,
-		Metadata:              ocm.Properties.Metadata,
-		ClusterDeploymentRefs: ocm.Properties.ClusterDeploymentRefs,
-		Resources:             ocm.Properties.Resources,
-		Status:                ocm.Properties.Status,
+		ClusterResourceId: ocm.Properties.ClusterResourceId,
+		Resources:         ocm.Properties.Resources,
 	}
 
 	return out, nil

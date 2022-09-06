@@ -35,7 +35,7 @@ try:
     from ._models_py3 import ServicePrincipalProfile
     from ._models_py3 import SyncSet
     from ._models_py3 import SyncSetList
-    from ._models_py3 import SyncSetSpec
+    from ._models_py3 import SyncSetUpdate
     from ._models_py3 import SystemData
     from ._models_py3 import TrackedResource
     from ._models_py3 import WorkerProfile
@@ -60,7 +60,7 @@ except (SyntaxError, ImportError):
     from ._models import ServicePrincipalProfile  # type: ignore
     from ._models import SyncSet  # type: ignore
     from ._models import SyncSetList  # type: ignore
-    from ._models import SyncSetSpec  # type: ignore
+    from ._models import SyncSetUpdate  # type: ignore
     from ._models import SystemData  # type: ignore
     from ._models import TrackedResource  # type: ignore
     from ._models import WorkerProfile  # type: ignore
@@ -94,7 +94,7 @@ __all__ = [
     'ServicePrincipalProfile',
     'SyncSet',
     'SyncSetList',
-    'SyncSetSpec',
+    'SyncSetUpdate',
     'SystemData',
     'TrackedResource',
     'WorkerProfile',

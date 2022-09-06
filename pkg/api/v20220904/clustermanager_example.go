@@ -31,6 +31,7 @@ func ExampleSyncSetResponse() interface{} {
 
 func ExampleSyncSetListResponse() interface{} {
 	return &SyncSetList{
+		proxyResource: true,
 		SyncSets: []*SyncSet{
 			ExampleSyncSetResponse().(*SyncSet),
 		},
