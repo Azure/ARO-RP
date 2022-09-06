@@ -119,13 +119,13 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // Switch case to ensure the correct registries are added depending on the cloud environment (Gov or Public cloud)
 func getCloudAwareRegistries(instance *arov1alpha1.Cluster) ([]string, error) {
-	const replicationRegistryFormat = "%s.%s.data.%s"
 	var replicationRegistry string
 	var dnsSuffix string
 
-	acrSubdomain := strings.Split(instance.Spec.ACRDomain, ".")[0]
-	if len(acrSubdomain) == 0 {
-		return nil, errors.New("azure container registry domain is not present or malformed")
+	acrDomain := instance.Spec.ACRDomain
+	acrSubdomain := strings.Split(acrDomain, ".")[0]
+	if acrDomain == "" || acrSubdomain == "" {
+		return nil, fmt.Errorf("azure container registry domain is not present or is malformed")
 	}
 
 	switch instance.Spec.AZEnvironment {
@@ -136,8 +136,8 @@ func getCloudAwareRegistries(instance *arov1alpha1.Cluster) ([]string, error) {
 	default:
 		return nil, fmt.Errorf("cloud environment %s is not supported", instance.Spec.AZEnvironment)
 	}
-	replicationRegistry = fmt.Sprintf(replicationRegistryFormat, acrSubdomain, instance.Spec.Location, dnsSuffix)
-	return []string{instance.Spec.ACRDomain, replicationRegistry}, nil
+	replicationRegistry = fmt.Sprintf("%s.%s.data.%s", acrSubdomain, instance.Spec.Location, dnsSuffix)
+	return []string{acrDomain, replicationRegistry}, nil
 }
 
 // Helper function that filters registries to make sure they are added in consistent order

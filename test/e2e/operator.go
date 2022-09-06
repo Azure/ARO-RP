@@ -436,20 +436,25 @@ var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 
 	// Reimplementation of function from image config controller
 	getCloudAwareRegistries := func(instance *arov1alpha1.Cluster) ([]string, error) {
-		acrSubdomain := strings.Split(instance.Spec.ACRDomain, ".")[0]
-		var regionalRegistry string
+		var replicationRegistry string
+		var dnsSuffix string
+
+		acrDomain := instance.Spec.ACRDomain
+		acrSubdomain := strings.Split(acrDomain, ".")[0]
+		if acrDomain == "" || acrSubdomain == "" {
+			return nil, fmt.Errorf("azure container registry domain is not present or is malformed")
+		}
 
 		switch instance.Spec.AZEnvironment {
 		case azureclient.PublicCloud.Environment.Name:
-			regionalRegistry = fmt.Sprintf("%s.%s.data.%s", acrSubdomain, instance.Spec.Location, azure.PublicCloud.ContainerRegistryDNSSuffix)
-
+			dnsSuffix = azure.PublicCloud.ContainerRegistryDNSSuffix
 		case azureclient.USGovernmentCloud.Environment.Name:
-			regionalRegistry = fmt.Sprintf("%s.%s.data.%s", acrSubdomain, instance.Spec.Location, azure.USGovernmentCloud.ContainerRegistryDNSSuffix)
-
+			dnsSuffix = azure.USGovernmentCloud.ContainerRegistryDNSSuffix
 		default:
 			return nil, fmt.Errorf("cloud environment %s is not supported", instance.Spec.AZEnvironment)
 		}
-		return []string{instance.Spec.ACRDomain, regionalRegistry}, nil
+		replicationRegistry = fmt.Sprintf("%s.%s.data.%s", acrSubdomain, instance.Spec.Location, dnsSuffix)
+		return []string{acrDomain, replicationRegistry}, nil
 	}
 
 	sliceEqual := func(a, b []string) bool {
