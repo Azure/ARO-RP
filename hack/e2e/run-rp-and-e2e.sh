@@ -75,6 +75,7 @@ kill_portal(){
 
 run_vpn() {
     echo "########## 🚀 Run OpenVPN in background ##########"
+    echo "Using Secret secrets/$VPN"
     sudo openvpn --config secrets/$VPN --daemon --writepid vpnpid
     sleep 10
 }
