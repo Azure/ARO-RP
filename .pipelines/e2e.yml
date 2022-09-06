@@ -53,6 +53,7 @@ jobs:
       run_rp
       validate_rp_running
       run_portal
+      sleep 120
       validate_portal_running
       register_sub
 
