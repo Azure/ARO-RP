@@ -32,6 +32,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
+const DISABLEOCMAPI = true
+
 type statusCodeError int
 
 func (err statusCodeError) Error() string {
