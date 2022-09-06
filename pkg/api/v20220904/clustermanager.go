@@ -11,13 +11,6 @@ const (
 	SecretKind               = "Secret"
 )
 
-// SyncSetList represents a list of SyncSets
-type SyncSetList struct {
-	SyncSets []*SyncSet `json:"value"`
-	// The link used to get the next page of operations.
-	NextLink string `json:"nextLink,omitempty"`
-}
-
 type ClusterManagerConfigurationList struct {
 	ClusterManagerConfigurations []*ClusterManagerConfiguration `json:"value"`
 
@@ -39,12 +32,23 @@ type ClusterManagerConfigurationProperties struct {
 	Resources interface{} `json:"resources,omitempty"`
 }
 
+// SyncSetList represents a list of SyncSets
+type SyncSetList struct {
+	proxyResource bool
+
+	// The list of syncsets.
+	SyncSets []*SyncSet `json:"value"`
+
+	// The link used to get the next page of operations.
+	NextLink string `json:"nextLink,omitempty"`
+}
+
 // SyncSet represents a SyncSet for an Azure Red Hat OpenShift Cluster.
 type SyncSet struct {
 	// This is a flag used during the swagger generation typewalker to
 	// signal that it should be marked as a proxy resource and
 	// not a tracked ARM resource.
-	proxyResource bool
+	// proxyResource bool
 
 	// The resource ID.
 	ID string `json:"id,omitempty" mutable:"case"`
@@ -67,39 +71,8 @@ type SyncSetProperties struct {
 	// The parent Azure Red Hat OpenShift resourceID.
 	ClusterResourceId string `json:"clusterResourceId,omitempty"`
 
-	// APIVersion for the SyncSet.
-	APIVersion string `json:"apiVersion,omitempty"`
-
-	// SyncSet kind.
-	Kind string `json:"kind,omitempty"`
-
-	// Metadata for the SyncSet.
-	Metadata map[string]string `json:"metadata,omitempty"`
-
-	// The SyncSet Specification.
-	Spec SyncSetSpec `json:"spec,omitempty"`
-
-	// ClusterDeploymentRefs map SyncSets to a Hive Cluster Deployment.
-	ClusterDeploymentRefs []string `json:"clusterDeploymentRefs,omitempty"`
-
 	// Resources represents the SyncSets configuration.
-	Resources map[string]string `json:"resources,omitempty"`
-
-	// The status of the object.
-	Status string `json:"status,omitempty"`
-
-	// Resources []byte `json:"resources,omitempty"`
-}
-
-type SyncSetSpec struct {
-	// ClusterDeploymentRefs map SyncSets to a Hive Cluster Deployment.
-	ClusterDeploymentRefs []string `json:"clusterDeploymentRefs,omitempty"`
-
-	// Resources represents the SyncSets configuration.
-	Resources map[string]interface{} `json:"resources,omitempty"`
-
-	// The status of the object.
-	Status string `json:"status,omitempty"`
+	Resources string `json:"resources,omitempty"`
 }
 
 // MachinePool represents a MachinePool

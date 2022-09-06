@@ -22,6 +22,8 @@ type ArmResource struct {
 }
 
 // SubResource represents an ARM Proxy Resource
+// ARM supports up to 3 levels of nested resources
+// https://eng.ms/docs/products/arm/api_contracts/guidelines/rpc#rpc030-avoid-excessive-resource-type-nesting
 type SubResource struct {
 	ResourceName string
 	ResourceType string
@@ -38,6 +40,8 @@ func (r ArmResource) String() string {
 	return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/%s/%s/%s/%s/%s", r.SubscriptionID, r.ResourceGroup, r.Provider, r.ResourceType, r.ResourceName, r.SubResource.ResourceType, r.SubResource.ResourceName)
 }
 
+// ParseArmResourceId take the resourceID of a child resource to an OpenShiftCluster
+// TODO
 func ParseArmResourceId(resourceId string) (*ArmResource, error) {
 	const resourceIDPatternText = `(?i)subscriptions/(.+)/resourceGroups/(.+)/providers/(.+?)/(.+?)/(.+?)/(.+?)/(.+)`
 	resourceIDPattern := regexp.MustCompile(resourceIDPatternText)

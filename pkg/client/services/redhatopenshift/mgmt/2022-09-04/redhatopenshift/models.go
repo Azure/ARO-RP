@@ -866,13 +866,7 @@ type SyncSet struct {
 	autorest.Response `json:"-"`
 	// SyncSetProperties - The Syncsets properties
 	*SyncSetProperties `json:"properties,omitempty"`
-	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
-	ID *string `json:"id,omitempty"`
-	// Name - READ-ONLY; The name of the resource
-	Name *string `json:"name,omitempty"`
-	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
-	Type *string `json:"type,omitempty"`
-	// SystemData - READ-ONLY; Azure Resource Manager metadata containing createdBy and modifiedBy information.
+	// SystemData - READ-ONLY; The system meta data relating to this resource.
 	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
@@ -903,33 +897,6 @@ func (ss *SyncSet) UnmarshalJSON(body []byte) error {
 				}
 				ss.SyncSetProperties = &syncSetProperties
 			}
-		case "id":
-			if v != nil {
-				var ID string
-				err = json.Unmarshal(*v, &ID)
-				if err != nil {
-					return err
-				}
-				ss.ID = &ID
-			}
-		case "name":
-			if v != nil {
-				var name string
-				err = json.Unmarshal(*v, &name)
-				if err != nil {
-					return err
-				}
-				ss.Name = &name
-			}
-		case "type":
-			if v != nil {
-				var typeVar string
-				err = json.Unmarshal(*v, &typeVar)
-				if err != nil {
-					return err
-				}
-				ss.Type = &typeVar
-			}
 		case "systemData":
 			if v != nil {
 				var systemData SystemData
@@ -948,9 +915,30 @@ func (ss *SyncSet) UnmarshalJSON(body []byte) error {
 // SyncSetList syncSetList represents a list of SyncSets
 type SyncSetList struct {
 	autorest.Response `json:"-"`
-	Value             *[]SyncSet `json:"value,omitempty"`
+	// Value - The list of syncsets.
+	Value *[]SyncSet `json:"value,omitempty"`
 	// NextLink - The link used to get the next page of operations.
 	NextLink *string `json:"nextLink,omitempty"`
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
+	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Azure Resource Manager metadata containing createdBy and modifiedBy information.
+	SystemData *SystemData `json:"systemData,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for SyncSetList.
+func (ssl SyncSetList) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ssl.Value != nil {
+		objectMap["value"] = ssl.Value
+	}
+	if ssl.NextLink != nil {
+		objectMap["nextLink"] = ssl.NextLink
+	}
+	return json.Marshal(objectMap)
 }
 
 // SyncSetListIterator provides access to a complete listing of SyncSet values.
@@ -1107,75 +1095,58 @@ func NewSyncSetListPage(cur SyncSetList, getNextPage func(context.Context, SyncS
 type SyncSetProperties struct {
 	// ClusterResourceID - The parent Azure Red Hat OpenShift resourceID.
 	ClusterResourceID *string `json:"clusterResourceId,omitempty"`
-	// APIVersion - APIVersion for the SyncSet.
-	APIVersion *string `json:"apiVersion,omitempty"`
-	// Kind - SyncSet kind.
-	Kind *string `json:"kind,omitempty"`
-	// Metadata - Metadata for the SyncSet.
-	Metadata map[string]*string `json:"metadata"`
-	// Spec - The SyncSet Specification.
-	Spec *SyncSetSpec `json:"spec,omitempty"`
-	// ClusterDeploymentRefs - ClusterDeploymentRefs map SyncSets to a Hive Cluster Deployment.
-	ClusterDeploymentRefs interface{} `json:"clusterDeploymentRefs,omitempty"`
 	// Resources - Resources represents the SyncSets configuration.
-	Resources map[string]*string `json:"resources"`
-	// Status - The status of the object.
-	Status *string `json:"status,omitempty"`
+	Resources *string `json:"resources,omitempty"`
 }
 
-// MarshalJSON is the custom marshaler for SyncSetProperties.
-func (ssp SyncSetProperties) MarshalJSON() ([]byte, error) {
+// SyncSetUpdate syncSet represents a SyncSet for an Azure Red Hat OpenShift Cluster.
+type SyncSetUpdate struct {
+	// SyncSetProperties - The Syncsets properties
+	*SyncSetProperties `json:"properties,omitempty"`
+	// SystemData - READ-ONLY; The system meta data relating to this resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for SyncSetUpdate.
+func (ssu SyncSetUpdate) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
-	if ssp.ClusterResourceID != nil {
-		objectMap["clusterResourceId"] = ssp.ClusterResourceID
-	}
-	if ssp.APIVersion != nil {
-		objectMap["apiVersion"] = ssp.APIVersion
-	}
-	if ssp.Kind != nil {
-		objectMap["kind"] = ssp.Kind
-	}
-	if ssp.Metadata != nil {
-		objectMap["metadata"] = ssp.Metadata
-	}
-	if ssp.Spec != nil {
-		objectMap["spec"] = ssp.Spec
-	}
-	if ssp.ClusterDeploymentRefs != nil {
-		objectMap["clusterDeploymentRefs"] = ssp.ClusterDeploymentRefs
-	}
-	if ssp.Resources != nil {
-		objectMap["resources"] = ssp.Resources
-	}
-	if ssp.Status != nil {
-		objectMap["status"] = ssp.Status
+	if ssu.SyncSetProperties != nil {
+		objectMap["properties"] = ssu.SyncSetProperties
 	}
 	return json.Marshal(objectMap)
 }
 
-// SyncSetSpec ...
-type SyncSetSpec struct {
-	// ClusterDeploymentRefs - ClusterDeploymentRefs map SyncSets to a Hive Cluster Deployment.
-	ClusterDeploymentRefs interface{} `json:"clusterDeploymentRefs,omitempty"`
-	// Resources - Resources represents the SyncSets configuration.
-	Resources map[string]interface{} `json:"resources"`
-	// Status - The status of the object.
-	Status *string `json:"status,omitempty"`
-}
+// UnmarshalJSON is the custom unmarshaler for SyncSetUpdate struct.
+func (ssu *SyncSetUpdate) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var syncSetProperties SyncSetProperties
+				err = json.Unmarshal(*v, &syncSetProperties)
+				if err != nil {
+					return err
+				}
+				ssu.SyncSetProperties = &syncSetProperties
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				ssu.SystemData = &systemData
+			}
+		}
+	}
 
-// MarshalJSON is the custom marshaler for SyncSetSpec.
-func (sss SyncSetSpec) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
-	if sss.ClusterDeploymentRefs != nil {
-		objectMap["clusterDeploymentRefs"] = sss.ClusterDeploymentRefs
-	}
-	if sss.Resources != nil {
-		objectMap["resources"] = sss.Resources
-	}
-	if sss.Status != nil {
-		objectMap["status"] = sss.Status
-	}
-	return json.Marshal(objectMap)
+	return nil
 }
 
 // SystemData metadata pertaining to creation and last modification of the resource.

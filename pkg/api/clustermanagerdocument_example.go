@@ -34,6 +34,8 @@ const mpPayload string = `
 }
 `
 
+// ExampleClusterManagerConfigurationDocumentSyncSet returns a ClusterManagerConfigurationDocument
+// with an example syncset payload model. The resources field comes from the ./hack/ocm folder.
 func ExampleClusterManagerConfigurationDocumentSyncSet() *ClusterManagerConfigurationDocument {
 	return &ClusterManagerConfigurationDocument{
 		ID:           "00000000-0000-0000-0000-000000000000",
@@ -45,21 +47,7 @@ func ExampleClusterManagerConfigurationDocumentSyncSet() *ClusterManagerConfigur
 			ID:   "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/resourceName/syncSets/mySyncSet",
 			Properties: SyncSetProperties{
 				ClusterResourceId: "/subscriptions/subscriptionid/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
-				APIVersion:        "hive.openshift.io/v1",
-				Kind:              "SyncSet",
-				Metadata: map[string]string{
-					"name":      "sample",
-					"namespace": "aro-f60ae8a2-bca1-4987-9056-f2f6a1837caa",
-				},
-				ClusterDeploymentRefs: []string{
-					"uhc-staging-1u4lhakk4ar41bi3vgn0b7v9hk93dg4m",
-					"aro-f60ae8a2-bca1-4987-9056-f2f6a1837caa",
-				},
-				Resources: map[string]string{
-					"name":     "worker",
-					"platform": "azure",
-					"replicas": "2",
-				},
+				Resources:         "eyAKICAiYXBpVmVyc2lvbiI6ICJoaXZlLm9wZW5zaGlmdC5pby92MSIsCiAgImtpbmQiOiAiU3luY1NldCIsCiAgIm1ldGFkYXRhIjogewogICAgIm5hbWUiOiAic2FtcGxlIiwKICAgICJuYW1lc3BhY2UiOiAiYXJvLWY2MGFlOGEyLWJjYTEtNDk4Ny05MDU2LWYyZjZhMTgzN2NhYSIKICB9LAogICJzcGVjIjogewogICAgImNsdXN0ZXJEZXBsb3ltZW50UmVmcyI6IFtdLAogICAgInJlc291cmNlcyI6IFsKICAgICAgewogICAgICAgICJhcGlWZXJzaW9uIjogInYxIiwKICAgICAgICAia2luZCI6ICJDb25maWdNYXAiLAogICAgICAgICJtZXRhZGF0YSI6IHsKICAgICAgICAgICJuYW1lIjogIm15Y29uZmlnbWFwIgogICAgICAgIH0KICAgICAgfQogICAgXQogIH0KfQo=",
 			},
 		},
 		CorrelationData: &CorrelationData{},
@@ -73,11 +61,11 @@ func ExampleClusterManagerConfigurationDocumentMachinePool() *ClusterManagerConf
 		ResourceID:   "",
 		PartitionKey: "",
 		MachinePool: &MachinePool{
-			Name:              "myMachinePool",
-			ID:                "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/resourceName/machinePools/myMachinePool",
-			ClusterResourceId: "/subscriptions/subscriptionid/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
+			Name: "myMachinePool",
+			ID:   "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/resourceName/machinePools/myMachinePool",
 			Properties: MachinePoolProperties{
-				Resources: []byte(mpPayload),
+				ClusterResourceId: "/subscriptions/subscriptionid/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
+				Resources:         []byte(mpPayload),
 			},
 		},
 		CorrelationData: &CorrelationData{},

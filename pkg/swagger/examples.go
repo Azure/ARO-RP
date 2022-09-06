@@ -5,7 +5,6 @@ package swagger
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -35,9 +34,6 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 			}{
 				Responses: Responses{},
 			}
-			for _, v := range op.Schemes {
-				fmt.Println("scheme: ", v)
-			}
 			for _, param := range op.Parameters {
 				switch param := param.(type) {
 				case Reference:
@@ -61,11 +57,6 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 						example.Parameters = append(example.Parameters, NameParameter{
 							Name:      "location",
 							Parameter: "location",
-						})
-					case "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/ClusterParameter":
-						example.Parameters = append(example.Parameters, NameParameter{
-							Name:      "cluster",
-							Parameter: "cluster",
 						})
 					}
 				case Parameter:
@@ -91,15 +82,15 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 								Name:      param.Name,
 								Parameter: g.exampleOpenShiftClusterPatchParameter(),
 							})
-						case "#/definitions/Configuration":
-							example.Parameters = append(example.Parameters, NameParameter{
-								Name:      param.Name,
-								Parameter: g.exampleSyncSetPutParameter,
-							})
 						case "#/definitions/Syncset":
 							example.Parameters = append(example.Parameters, NameParameter{
 								Name:      param.Name,
-								Parameter: g.exampleSyncSetPutParameter,
+								Parameter: g.exampleSyncSetPutParameter(),
+							})
+						case "#/definitions/SyncsetUpdate":
+							example.Parameters = append(example.Parameters, NameParameter{
+								Name:      param.Name,
+								Parameter: g.exampleSyncSetPatchParameter(),
 							})
 						}
 					}

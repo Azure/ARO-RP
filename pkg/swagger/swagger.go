@@ -117,7 +117,7 @@ func Run(api, outputDir string) error {
 	}
 
 	if g.clusterManager {
-		names = append(names, "SyncSet", "SyncSetList")
+		names = append(names, "SyncSetList")
 	}
 
 	err = define(s.Definitions, api, g.xmsEnum, g.xmsSecretList, g.xmsIdentifiers, names...)
@@ -131,7 +131,14 @@ func Run(api, outputDir string) error {
 		return err
 	}
 
-	for _, azureResource := range []string{resourceName} {
+	azureResources := []string{
+		resourceName,
+	}
+	if g.clusterManager {
+		azureResources = append(azureResources, "SyncSet")
+	}
+
+	for _, azureResource := range azureResources {
 		def, err := deepCopy(s.Definitions[azureResource])
 		if err != nil {
 			return err
@@ -154,10 +161,12 @@ func Run(api, outputDir string) error {
 		update.Properties = properties
 		s.Definitions[azureResource+"Update"] = update
 
-		s.Definitions[azureResource].AllOf = []Schema{
-			{
-				Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/definitions/TrackedResource",
-			},
+		if azureResource != "SyncSet" {
+			s.Definitions[azureResource].AllOf = []Schema{
+				{
+					Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/definitions/TrackedResource",
+				},
+			}
 		}
 
 		properties = nil
@@ -169,20 +178,6 @@ func Run(api, outputDir string) error {
 			}
 		}
 		s.Definitions[azureResource].Properties = properties
-
-		if _, ok := s.Definitions["SyncSet"]; ok {
-			properties = nil
-			for _, property := range s.Definitions["SyncSet"].Properties {
-				if property.Name == "properties" {
-					if property.Schema == nil {
-						property.Schema = &Schema{}
-					}
-					property.Schema.ClientFlatten = true
-					properties = append(properties, property)
-				}
-			}
-			s.Definitions["SyncSet"].Properties = properties
-		}
 
 		if g.systemData {
 			s.defineSystemData([]string{azureResource, azureResource + "Update"}, g.commonTypesVersion)
