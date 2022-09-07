@@ -66,9 +66,10 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 							Name:      param.Name,
 							Parameter: "resourceName",
 						})
+					case "childResourceName":
 						example.Parameters = append(example.Parameters, NameParameter{
-							Name:      "syncSetResourceName",
-							Parameter: "syncSetResourceName",
+							Name:      "childResourceName",
+							Parameter: "childResourceName",
 						})
 					case "parameters":
 						switch param.Schema.Ref {
@@ -82,15 +83,45 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 								Name:      param.Name,
 								Parameter: g.exampleOpenShiftClusterPatchParameter(),
 							})
-						case "#/definitions/Syncset":
+						case "#/definitions/SyncSet":
 							example.Parameters = append(example.Parameters, NameParameter{
 								Name:      param.Name,
 								Parameter: g.exampleSyncSetPutParameter(),
 							})
-						case "#/definitions/SyncsetUpdate":
+						case "#/definitions/SyncSetUpdate":
 							example.Parameters = append(example.Parameters, NameParameter{
 								Name:      param.Name,
 								Parameter: g.exampleSyncSetPatchParameter(),
+							})
+						case "#/definitions/MachinePool":
+							example.Parameters = append(example.Parameters, NameParameter{
+								Name:      param.Name,
+								Parameter: g.exampleMachinePoolPutParameter(),
+							})
+						case "#/definitions/MachinePoolUpdate":
+							example.Parameters = append(example.Parameters, NameParameter{
+								Name:      param.Name,
+								Parameter: g.exampleMachinePoolPatchParameter(),
+							})
+						case "#/definitions/SyncIdentityProvider":
+							example.Parameters = append(example.Parameters, NameParameter{
+								Name:      param.Name,
+								Parameter: g.exampleSyncIdentityProviderPutParameter(),
+							})
+						case "#/definitions/SyncIdentityProviderUpdate":
+							example.Parameters = append(example.Parameters, NameParameter{
+								Name:      param.Name,
+								Parameter: g.exampleSyncIdentityProviderPatchParameter(),
+							})
+						case "#/definitions/Secret":
+							example.Parameters = append(example.Parameters, NameParameter{
+								Name:      param.Name,
+								Parameter: g.exampleSecretPutParameter(),
+							})
+						case "#/definitions/SecretUpdate":
+							example.Parameters = append(example.Parameters, NameParameter{
+								Name:      param.Name,
+								Parameter: g.exampleSecretPatchParameter(),
 							})
 						}
 					}
@@ -111,6 +142,18 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 						body = g.exampleSyncSetResponse()
 					case "#/definitions/SyncSetList":
 						body = g.exampleSyncSetListResponse()
+					case "#/definitions/MachinePool":
+						body = g.exampleSyncSetResponse()
+					case "#/definitions/MachinePoolList":
+						body = g.exampleSyncSetListResponse()
+					case "#/definitions/SyncIdentityProvider":
+						body = g.exampleSyncSetResponse()
+					case "#/definitions/SyncIdentityProviderList":
+						body = g.exampleSyncSetListResponse()
+					case "#/definitions/Secret":
+						body = g.exampleSecretResponse()
+					case "#/definitions/SecretList":
+						body = g.exampleSecretListResponse()
 					case "#/definitions/OpenShiftCluster":
 						body = g.exampleOpenShiftClusterResponse()
 					case "#/definitions/OpenShiftClusterCredentials":

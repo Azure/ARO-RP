@@ -45,6 +45,7 @@ type OpenShiftVersionStaticValidator interface {
 
 // Version is a set of endpoints implemented by each API version
 type Version struct {
+	ClusterManagerConfigurationConverter     ClusterManagerConfigurationConverter
 	OpenShiftClusterConverter                OpenShiftClusterConverter
 	OpenShiftClusterStaticValidator          OpenShiftClusterStaticValidator
 	OpenShiftClusterCredentialsConverter     OpenShiftClusterCredentialsConverter

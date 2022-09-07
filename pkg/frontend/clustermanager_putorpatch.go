@@ -25,14 +25,14 @@ func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, 
 	var header http.Header
 	var b []byte
 
-	if DISABLEOCMAPI {
+	if disableOCMAPI {
 		reply(log, w, nil, []byte("forbidden."), api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "forbidden."))
 		return
 	}
 
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchClusterManagerConfiguration(ctx, log, r, &header, f.apis[vars["api-version"]].ClusterManagerConfigurationConverter())
+		b, err = f._putOrPatchClusterManagerConfiguration(ctx, log, r, &header, f.apis[vars["api-version"]].ClusterManagerConfigurationConverter)
 		return err
 	})
 
@@ -42,8 +42,7 @@ func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, 
 func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, header *http.Header, converter api.ClusterManagerConfigurationConverter) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
-	// TODO implement systemdata
-	// systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
+	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 
 	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
@@ -80,7 +79,7 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 			ClusterManagerConfiguration: &api.ClusterManagerConfiguration{
 				ID:                originalPath,
 				Name:              armResource.SubResource.ResourceName,
-				ClusterResourceId: clusterURL,
+				ClusterResourceID: clusterURL,
 				Properties: api.ClusterManagerConfigurationProperties{
 					Resources: body,
 				},
@@ -100,7 +99,7 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 
 	ocmdoc.CorrelationData = correlationData
 
-	// f.systemDataClusterManagerConfigurationEnricher(ocmdoc, systemData)
+	f.systemDataClusterManagerEnricher(ocmdoc, systemData)
 	ocmdoc, err = f.dbClusterManagerConfiguration.Update(ctx, ocmdoc)
 	if err != nil {
 		return nil, err
@@ -118,26 +117,26 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 
 // enrichClusterManagerSystemData will selectively overwrite systemData fields based on
 // arm inputs
-// func enrichSyncSetSystemData(doc *api.ClusterManagerConfigurationDocument, systemData *api.SystemData) {
-// 	if systemData == nil {
-// 		return
-// 	}
-// 	if systemData.CreatedAt != nil {
-// 		doc.SyncSet.SystemData.CreatedAt = systemData.CreatedAt
-// 	}
-// 	if systemData.CreatedBy != "" {
-// 		doc.SyncSet.SystemData.CreatedBy = systemData.CreatedBy
-// 	}
-// 	if systemData.CreatedByType != "" {
-// 		doc.SyncSet.SystemData.CreatedByType = systemData.CreatedByType
-// 	}
-// 	if systemData.LastModifiedAt != nil {
-// 		doc.SyncSet.SystemData.LastModifiedAt = systemData.LastModifiedAt
-// 	}
-// 	if systemData.LastModifiedBy != "" {
-// 		doc.SyncSet.SystemData.LastModifiedBy = systemData.LastModifiedBy
-// 	}
-// 	if systemData.LastModifiedByType != "" {
-// 		doc.SyncSet.SystemData.LastModifiedByType = systemData.LastModifiedByType
-// 	}
-// }
+func enrichClusterManagerSystemData(doc *api.ClusterManagerConfigurationDocument, systemData *api.SystemData) {
+	if systemData == nil {
+		return
+	}
+	if systemData.CreatedAt != nil {
+		doc.ClusterManagerConfiguration.SystemData.CreatedAt = systemData.CreatedAt
+	}
+	if systemData.CreatedBy != "" {
+		doc.ClusterManagerConfiguration.SystemData.CreatedBy = systemData.CreatedBy
+	}
+	if systemData.CreatedByType != "" {
+		doc.ClusterManagerConfiguration.SystemData.CreatedByType = systemData.CreatedByType
+	}
+	if systemData.LastModifiedAt != nil {
+		doc.ClusterManagerConfiguration.SystemData.LastModifiedAt = systemData.LastModifiedAt
+	}
+	if systemData.LastModifiedBy != "" {
+		doc.ClusterManagerConfiguration.SystemData.LastModifiedBy = systemData.LastModifiedBy
+	}
+	if systemData.LastModifiedByType != "" {
+		doc.ClusterManagerConfiguration.SystemData.LastModifiedByType = systemData.LastModifiedByType
+	}
+}

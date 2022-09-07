@@ -3,8 +3,7 @@
     "api-version": "2022-04-01",
     "subscriptionId": "subscriptionId",
     "resourceGroupName": "resourceGroup",
-    "resourceName": "resourceName",
-    "syncSetResourceName": "syncSetResourceName"
+    "resourceName": "resourceName"
   },
   "responses": {
     "200": {

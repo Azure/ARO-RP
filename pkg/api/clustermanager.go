@@ -5,7 +5,7 @@ package api
 
 // SyncSetList represents a list of SyncSets for a given cluster.
 type SyncSetList struct {
-	Syncsets []*SyncSet `json:"value"`
+	SyncSets []*SyncSet `json:"value"`
 	// The link used to get the next page of operations.
 	NextLink string `json:"nextLink,omitempty"`
 }
@@ -23,38 +23,44 @@ type ClusterManagerConfiguration struct {
 	// ID is the unique identifier for the cluster manager configuration
 	ID                string                                `json:"id,omitempty"`
 	Name              string                                `json:"name,omitempty"`
-	ClusterResourceId string                                `json:"clusterResourceId,omitempty"`
-	Deleting          bool                                  `json:"deleting,omitempty"` // https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
+	ClusterResourceID string                                `json:"clusterResourceId,omitempty"`
 	Properties        ClusterManagerConfigurationProperties `json:"properties,omitempty"`
-	// SystemData metadata from ARM, more info in pkg/api/openshiftcluster.go
-	SystemData *SystemData `json:"systemData,omitempty"`
+	SystemData        *SystemData                           `json:"systemData,omitempty"`
 }
 
+// ClusterManagerConfigurationProperties houses the payloads the frontend receives for all OCM resources
+// we store them as a byte slice in cosmos
 type ClusterManagerConfigurationProperties struct {
 	Resources []byte `json:"resources,omitempty"`
 }
 
 // SyncSet represents a SyncSet for an Azure Red Hat OpenShift Cluster.
 type SyncSet struct {
-	MissingFields
+	// Required resource properties in ARM
+	ID   string `json:"id,omitempty" mutable:"case"`
+	Name string `json:"name,omitempty" mutable:"case"`
+	Type string `json:"type,omitempty" mutable:"case"`
 
-	// ID, Name and Type are cased as the user provided them at create time.
-	// ID, Name, Type and Location are immutable.
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
-	Type string `json:"type,omitempty"`
+	// SystemData metadata relating to this resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
 
-	// The Syncsets properties
+	// The SyncSets properties
 	Properties SyncSetProperties `json:"properties,omitempty"`
 }
 
 // SyncSetProperties represents the properties of a SyncSet
 type SyncSetProperties struct {
-	// The parent Azure Red Hat OpenShift resourceID.
-	ClusterResourceId string `json:"clusterResourceId,omitempty"`
-
 	// Resources represents the SyncSets configuration.
 	Resources string `json:"resources,omitempty"`
+}
+
+// MachinePoolList represents a list of MachinePools
+type MachinePoolList struct {
+	// The list of MachinePools.
+	MachinePools []*MachinePool `json:"value"`
+
+	// The link used to get the next page of operations.
+	NextLink string `json:"nextLink,omitempty"`
 }
 
 // MachinePool represents a MachinePool
@@ -65,18 +71,28 @@ type MachinePool struct {
 	// The resource name.
 	Name string `json:"name,omitempty"`
 
-	// The MachinePool properties.
+	// The resource type.
+	Type string `json:"type,omitempty" mutable:"case"`
+
+	// SystemData metadata relating to this resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
+
+	// The MachinePool Properties
 	Properties MachinePoolProperties `json:"properties,omitempty"`
 }
 
 // MachinePoolProperties represents the properties of a MachinePool
 type MachinePoolProperties struct {
+	Resources string `json:"resources,omitempty"`
+}
 
-	// The parent cluster resourceID.
-	ClusterResourceId string `json:"clusterResourceId,omitempty"`
+// SyncIdentityProviderList represents a list of SyncIdentityProvider
+type SyncIdentityProviderList struct {
+	// The list of SyncIdentityProvider.
+	SyncIdentityProviders []*SyncIdentityProvider `json:"value"`
 
-	// Resources represents the machinepools configuration.
-	Resources []byte `json:"resources,omitempty"`
+	// The link used to get the next page of operations.
+	NextLink string `json:"nextLink,omitempty"`
 }
 
 // SyncIdentityProvider represents a SyncIdentityProvider
@@ -87,26 +103,51 @@ type SyncIdentityProvider struct {
 	// The resource name.
 	Name string `json:"name,omitempty"`
 
-	// The parent cluster resourceID.
-	ClusterResourceId string `json:"clusterResourceId,omitempty"`
+	// The resource type.
+	Type string `json:"type,omitempty" mutable:"case"`
 
-	// The SyncIdentityProvider properties.
+	// SystemData metadata relating to this resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
+
+	// The SyncIdentityProvider Properties
 	Properties SyncIdentityProviderProperties `json:"properties,omitempty"`
 }
 
-// SyncSetProperties represents the properties of a SyncSet
+// SyncIdentityProviderProperties represents the properties of a SyncIdentityProvider
 type SyncIdentityProviderProperties struct {
-	MissingFields
-	Resources []byte `json:"resources,omitempty"`
+	// The SyncIdentityProvider Resources.
+	Resources string `json:"resources,omitempty"`
 }
 
-// // HiveSecret represents a hive secret.
-// type HiveSecret struct {
+// SecretList represents a list of Secrets
+type SecretList struct {
+	// The list of Secrets.
+	Secrets []*Secret `json:"value"`
 
-// }
+	// The link used to get the next page of operations.
+	NextLink string `json:"nextLink,omitempty"`
+}
 
-// // SyncSetProperties represents the properties of a SyncSet
-// type HiveSecretProperties struct {
-// 	MissingFields
-// 	Resources []byte `json:"resources,omitempty"`
-// }
+// Secret represents a secret.
+type Secret struct {
+	// The Resource ID.
+	ID string `json:"id,omitempty"`
+
+	// The resource name.
+	Name string `json:"name,omitempty"`
+
+	// The resource type.
+	Type string `json:"type,omitempty" mutable:"case"`
+
+	// SystemData metadata relating to this resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
+
+	// The Secret Properties
+	Properties SecretProperties `json:"properties,omitempty"`
+}
+
+// SecretProperties represents the properties of a Secret
+type SecretProperties struct {
+	// The Secrets Resources.
+	SecretResources SecureString `json:"secretResources,omitempty"`
+}

@@ -224,7 +224,7 @@ def aro_list_admin_credentials(cmd, client, resource_group_name, resource_name, 
 
 
 def aro_get_versions(client, location):
-    return client.list.install_versions(location)
+    return client.install_versions.list(location)
 
 
 def aro_update(cmd,

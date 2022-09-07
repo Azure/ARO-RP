@@ -40,6 +40,7 @@ type ClusterManagerConfigurationDocument struct {
 	SyncIdentityProvider *SyncIdentityProvider `json:"syncIdentityProvider,omitempty"`
 	SyncSet              *SyncSet              `json:"syncSet,omitempty"`
 	MachinePool          *MachinePool          `json:"machinePool,omitempty"`
+	Secret               *Secret               `json:"secret,omitempty"`
 
 	CorrelationData *CorrelationData `json:"correlationData,omitempty" deep:"-"`
 }
