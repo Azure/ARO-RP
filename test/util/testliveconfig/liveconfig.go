@@ -13,27 +13,35 @@ import (
 )
 
 type testLiveConfig struct {
-	hasHive bool
+	adoptByHive    bool
+	installViaHive bool
 }
 
 func (t *testLiveConfig) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, error) {
-	if t.hasHive {
+	if t.adoptByHive || t.installViaHive {
 		return &rest.Config{}, nil
 	}
 	return nil, errors.New("testLiveConfig does not have a Hive")
 }
 
 func (t *testLiveConfig) InstallViaHive(ctx context.Context) (bool, error) {
-	return t.hasHive, nil
+	return t.installViaHive, nil
+}
+
+func (t *testLiveConfig) AdoptByHive(ctx context.Context) (bool, error) {
+	return t.adoptByHive, nil
 }
 
 func (t *testLiveConfig) DefaultInstallerPullSpecOverride(ctx context.Context) string {
-	if t.hasHive {
+	if t.installViaHive {
 		return "example/pull:spec"
 	}
 	return ""
 }
 
-func NewTestLiveConfig(hasHive bool) liveconfig.Manager {
-	return &testLiveConfig{hasHive: hasHive}
+func NewTestLiveConfig(adoptByHive bool, installViaHive bool) liveconfig.Manager {
+	return &testLiveConfig{
+		adoptByHive:    adoptByHive,
+		installViaHive: installViaHive,
+	}
 }

@@ -28,16 +28,16 @@ func TestAdminUpdateSteps(t *testing.T) {
 
 	for _, tt := range []struct {
 		name           string
-		fixture        func() *api.OpenShiftClusterDocument
+		fixture        func() (*api.OpenShiftClusterDocument, bool)
 		shouldRunSteps []string
 	}{
 		{
 			name: "ARO Operator Update",
-			fixture: func() *api.OpenShiftClusterDocument {
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
 				doc := baseClusterDoc()
 				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskOperator
-				return doc
+				return doc, true
 			},
 			shouldRunSteps: []string{
 				"[Action initializeKubernetesClients-fm]",
@@ -55,11 +55,11 @@ func TestAdminUpdateSteps(t *testing.T) {
 		},
 		{
 			name: "Everything update",
-			fixture: func() *api.OpenShiftClusterDocument {
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
 				doc := baseClusterDoc()
 				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskEverything
-				return doc
+				return doc, true
 			},
 			shouldRunSteps: []string{
 				"[Action initializeKubernetesClients-fm]",
@@ -98,12 +98,52 @@ func TestAdminUpdateSteps(t *testing.T) {
 			},
 		},
 		{
-			name: "Blank (should perform everything)",
-			fixture: func() *api.OpenShiftClusterDocument {
+			name: "Blank, Hive not adopting (should perform everything but Hive)",
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
 				doc := baseClusterDoc()
 				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskEverything
-				return doc
+				return doc, false
+			},
+			shouldRunSteps: []string{
+				"[Action initializeKubernetesClients-fm]",
+				"[Action ensureBillingRecord-fm]",
+				"[Action ensureDefaults-fm]",
+				"[Action fixupClusterSPObjectID-fm]",
+				"[Action fixInfraID-fm]",
+				"[AuthorizationRefreshingAction [Action ensureResourceGroup-fm]]",
+				"[Action createOrUpdateDenyAssignment-fm]",
+				"[AuthorizationRefreshingAction [Action enableServiceEndpoints-fm]]",
+				"[Action populateRegistryStorageAccountName-fm]",
+				"[Action migrateStorageAccounts-fm]",
+				"[Action fixSSH-fm]",
+				"[Action populateDatabaseIntIP-fm]",
+				"[Action startVMs-fm]",
+				"[Condition apiServersReady-fm, timeout 30m0s]",
+				"[Action fixSREKubeconfig-fm]",
+				"[Action fixUserAdminKubeconfig-fm]",
+				"[Action createOrUpdateRouterIPFromCluster-fm]",
+				"[Action fixMCSCert-fm]",
+				"[Action fixMCSUserData-fm]",
+				"[Action ensureGatewayUpgrade-fm]",
+				"[Action configureAPIServerCertificate-fm]",
+				"[Action configureIngressCertificate-fm]",
+				"[Action populateRegistryStorageAccountName-fm]",
+				"[Action ensureMTUSize-fm]",
+				"[Action initializeOperatorDeployer-fm]",
+				"[Action ensureAROOperator-fm]",
+				"[Condition aroDeploymentReady-fm, timeout 20m0s]",
+				"[Condition ensureAROOperatorRunningDesiredVersion-fm, timeout 5m0s]",
+				"[Action updateProvisionedBy-fm]",
+			},
+		},
+		{
+			name: "Blank, Hive performing adopting (should perform everything but Hive)",
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
+				doc := baseClusterDoc()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskEverything
+				return doc, true
 			},
 			shouldRunSteps: []string{
 				"[Action initializeKubernetesClients-fm]",
@@ -143,8 +183,10 @@ func TestAdminUpdateSteps(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			doc, adoptViaHive := tt.fixture()
 			m := &manager{
-				doc: tt.fixture(),
+				doc:          doc,
+				adoptViaHive: adoptViaHive,
 			}
 			toRun := m.adminUpdate()
 

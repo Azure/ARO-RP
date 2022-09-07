@@ -12,12 +12,12 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
@@ -281,7 +281,7 @@ func TestBackendTry(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			log := logrus.NewEntry(logrus.StandardLogger())
-			tlc := testliveconfig.NewTestLiveConfig(false)
+			tlc := testliveconfig.NewTestLiveConfig(false, false)
 
 			controller := gomock.NewController(t)
 			defer controller.Finish()
@@ -302,7 +302,7 @@ func TestBackendTry(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			createManager := func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, database.OpenShiftVersions, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, *rest.Config, metrics.Emitter) (cluster.Interface, error) {
+			createManager := func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, database.OpenShiftVersions, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, hive.ClusterManager, metrics.Emitter) (cluster.Interface, error) {
 				return manager, nil
 			}
 

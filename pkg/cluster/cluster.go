@@ -18,7 +18,6 @@ import (
 	"github.com/sirupsen/logrus"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
@@ -100,6 +99,7 @@ type manager struct {
 	imageregistrycli imageregistryclient.Interface
 
 	installViaHive     bool
+	adoptViaHive       bool
 	hiveClusterManager hive.ClusterManager
 
 	aroOperatorDeployer deploy.Operator
@@ -109,7 +109,7 @@ type manager struct {
 
 // New returns a cluster manager
 func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, dbGateway database.Gateway, dbOpenShiftVersions database.OpenShiftVersions, aead encryption.AEAD,
-	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, hiveRestConfig *rest.Config, metricsEmitter metrics.Emitter) (Interface, error) {
+	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, hiveClusterManager hive.ClusterManager, metricsEmitter metrics.Emitter) (Interface, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -137,13 +137,9 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	// TODO(hive): always set hiveClusterManager once we have Hive everywhere in prod and dev
-	var hr hive.ClusterManager
-	if hiveRestConfig != nil {
-		hr, err = hive.NewFromConfig(log, _env, hiveRestConfig)
-		if err != nil {
-			return nil, err
-		}
+	adoptByHive, err := _env.LiveConfig().AdoptByHive(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	return &manager{
@@ -182,7 +178,8 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		graph:   graph.NewManager(log, aead, storage),
 
 		installViaHive:     installViaHive,
-		hiveClusterManager: hr,
+		adoptViaHive:       adoptByHive,
+		hiveClusterManager: hiveClusterManager,
 		now:                func() time.Time { return time.Now() },
 	}, nil
 }

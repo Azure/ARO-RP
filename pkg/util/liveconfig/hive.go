@@ -18,6 +18,7 @@ const (
 	hiveKubeconfigPathEnvVar  = "HIVE_KUBE_CONFIG_PATH"
 	hiveInstallerEnableEnvVar = "ARO_INSTALL_VIA_HIVE"
 	hiveDefaultPullSpecEnvVar = "ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC"
+	hiveAdoptEnableEnvVar     = "ARO_ADOPT_BY_HIVE"
 )
 
 func parseKubeconfig(credentials []mgmtcontainerservice.CredentialResult) (*rest.Config, error) {
@@ -84,4 +85,13 @@ func (p *prod) InstallViaHive(ctx context.Context) (bool, error) {
 
 func (p *prod) DefaultInstallerPullSpecOverride(ctx context.Context) string {
 	return os.Getenv(hiveDefaultPullSpecEnvVar)
+}
+
+func (p *prod) AdoptByHive(ctx context.Context) (bool, error) {
+	// TODO: Replace with RP Live Service Config (KeyVault)
+	adopt := os.Getenv(hiveAdoptEnableEnvVar)
+	if adopt != "" {
+		return true, nil
+	}
+	return false, nil
 }

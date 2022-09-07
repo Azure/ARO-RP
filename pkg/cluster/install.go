@@ -5,7 +5,6 @@ package cluster
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -95,7 +94,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	}
 
 	// Hive cluster adoption and reconciliation
-	if isEverything {
+	if isEverything && m.adoptViaHive {
 		toRun = append(toRun,
 			steps.Action(m.hiveCreateNamespace),
 			steps.Action(m.hiveEnsureResources),
@@ -116,7 +115,7 @@ func (m *manager) adminUpdate() []steps.Step {
 }
 
 func (m *manager) Update(ctx context.Context) error {
-	steps := []steps.Step{
+	s := []steps.Step{
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
 		steps.Action(m.initializeKubernetesClients), // All init steps are first
 		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
@@ -131,15 +130,20 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.configureIngressCertificate),
 		steps.Action(m.updateOpenShiftSecret),
 		steps.Action(m.updateAROSecret),
-		// Hive reconciliation: we mostly need it to make sure that
-		// hive has the latest credentials after rotation.
-		steps.Action(m.hiveCreateNamespace),
-		steps.Action(m.hiveEnsureResources),
-		steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
-		steps.Action(m.hiveResetCorrelationData),
 	}
 
-	return m.runSteps(ctx, steps, false)
+	if m.adoptViaHive {
+		s = append(s,
+			// Hive reconciliation: we mostly need it to make sure that
+			// hive has the latest credentials after rotation.
+			steps.Action(m.hiveCreateNamespace),
+			steps.Action(m.hiveEnsureResources),
+			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+			steps.Action(m.hiveResetCorrelationData),
+		)
+	}
+
+	return m.runSteps(ctx, s, false)
 }
 
 func (m *manager) runIntegratedInstaller(ctx context.Context) error {
@@ -186,10 +190,12 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureGatewayCreate)),
 		steps.Action(m.createAPIServerPrivateEndpoint),
 		steps.Action(m.createCertificates),
+	}
 
+	if m.adoptViaHive || m.installViaHive {
 		// We will always need a Hive namespace, whether we are installing
 		// via Hive or adopting
-		steps.Action(m.hiveCreateNamespace),
+		s = append(s, steps.Action(m.hiveCreateNamespace))
 	}
 
 	if m.installViaHive {
@@ -205,15 +211,24 @@ func (m *manager) bootstrap() []steps.Step {
 		s = append(s,
 			steps.Action(m.runIntegratedInstaller),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
-			steps.Action(m.hiveEnsureResources),
-			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+		)
+
+		if m.adoptViaHive {
+			s = append(s,
+				steps.Action(m.hiveEnsureResources),
+				steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+			)
+		}
+	}
+
+	if m.adoptViaHive || m.installViaHive {
+		s = append(s,
+			// Reset correlation data whether adopting or installing via Hive
+			steps.Action(m.hiveResetCorrelationData),
 		)
 	}
 
 	s = append(s,
-		// Reset correlation data whether adopting or installing via Hive
-		steps.Action(m.hiveResetCorrelationData),
-
 		steps.Action(m.ensureBillingRecord),
 		steps.Action(m.initializeKubernetesClients),
 		steps.Action(m.initializeOperatorDeployer), // depends on kube clients
@@ -227,10 +242,6 @@ func (m *manager) bootstrap() []steps.Step {
 
 // Install installs an ARO cluster
 func (m *manager) Install(ctx context.Context) error {
-	if m.installViaHive && m.hiveClusterManager == nil {
-		return errors.New("installViaHive was requested but hiveClusterManager is unavailable")
-	}
-
 	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: m.bootstrap(),
 		api.InstallPhaseRemoveBootstrap: {

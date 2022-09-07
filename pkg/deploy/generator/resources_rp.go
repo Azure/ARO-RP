@@ -475,6 +475,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 
 		// TODO: Replace with Live Service Configuration in KeyVault
 		"clustersInstallViaHive",
+		"clustersAdoptByHive",
 		"clusterDefaultInstallerPullspec",
 	} {
 		parts = append(parts,
@@ -740,6 +741,7 @@ RP_FEATURES='$RPFEATURES'
 RPIMAGE='$RPIMAGE'
 ARO_INSTALL_VIA_HIVE='$CLUSTERSINSTALLVIAHIVE'
 ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC='$CLUSTERDEFAULTINSTALLERPULLSPEC'
+ARO_ADOPT_BY_HIVE='$CLUSTERSADOPTBYHIVE'
 EOF
 
 cat >/etc/systemd/system/aro-rp.service <<'EOF'
@@ -775,6 +777,7 @@ ExecStart=/usr/bin/docker run \
   -e RP_FEATURES \
   -e ARO_INSTALL_VIA_HIVE \
   -e ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC \
+  -e ARO_ADOPT_BY_HIVE
   -m 2g \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \
