@@ -53,6 +53,9 @@
         "clusterParentDomainName": {
             "value": ""
         },
+        "clustersAdoptByHive": {
+            "value": ""
+        },
         "clustersInstallViaHive": {
             "value": ""
         },

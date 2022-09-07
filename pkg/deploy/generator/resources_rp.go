@@ -475,8 +475,8 @@ func (g *generator) rpVMSS() *arm.Resource {
 
 		// TODO: Replace with Live Service Configuration in KeyVault
 		"clustersInstallViaHive",
-		"clusterDefaultInstallerPullspec",
 		"clustersAdoptByHive",
+		"clusterDefaultInstallerPullspec",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),

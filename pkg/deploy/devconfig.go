@@ -194,9 +194,9 @@ func DevConfig(_env env.Core) (*Config, error) {
 			VMSize:                            to.StringPtr("Standard_D2s_v3"),
 
 			// TODO: Replace with Live Service Configuration in KeyVault
-			InstallViaHive:           to.BoolPtr(os.Getenv("ARO_INSTALL_VIA_HIVE") != ""),
+			InstallViaHive:           to.StringPtr(os.Getenv("ARO_INSTALL_VIA_HIVE")),
 			DefaultInstallerPullspec: to.StringPtr(os.Getenv("ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC")),
-			AdoptByHive:              to.BoolPtr(os.Getenv("ARO_ADOPT_BY_HIVE") != ""),
+			AdoptByHive:              to.StringPtr(os.Getenv("ARO_ADOPT_BY_HIVE")),
 		},
 	}, nil
 }

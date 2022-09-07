@@ -126,14 +126,10 @@ func (g *generator) rpTemplate() *arm.Template {
 				"uaenorth",
 			}
 
-			// TODO: Replace with Live Service Configuration in KeyVault
-		case "clustersInstallByHive":
-			p.Type = "bool"
-			p.DefaultValue = false
-		case "clustersAdoptByHive":
-			p.Type = "bool"
-			p.DefaultValue = false
-		case "clusterDefaultInstallerPullspec":
+		// TODO: Replace with Live Service Configuration in KeyVault
+		case "clustersInstallViaHive",
+			"clustersAdoptByHive",
+			"clusterDefaultInstallerPullspec":
 			p.DefaultValue = ""
 		}
 		t.Parameters[param] = p
