@@ -132,14 +132,30 @@ func (hr *clusterManager) Delete(ctx context.Context, doc *api.OpenShiftClusterD
 
 func (hr *clusterManager) IsClusterDeploymentReady(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error) {
 	cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
-	if err == nil {
-		for _, cond := range cd.Status.Conditions {
-			if cond.Type == hivev1.ClusterReadyCondition && cond.Status == corev1.ConditionTrue {
-				return true, nil
-			}
+	if err != nil {
+		return false, err
+	}
+
+	if len(cd.Status.Conditions) == 0 {
+		return false, nil
+	}
+
+	checkConditions := map[hivev1.ClusterDeploymentConditionType]corev1.ConditionStatus{
+		hivev1.ProvisionedCondition:                     corev1.ConditionTrue,
+		hivev1.SyncSetFailedCondition:                   corev1.ConditionFalse,
+		hivev1.ControlPlaneCertificateNotFoundCondition: corev1.ConditionFalse,
+		hivev1.UnreachableCondition:                     corev1.ConditionFalse,
+	}
+
+	for _, cond := range cd.Status.Conditions {
+		conditionStatus, found := checkConditions[cond.Type]
+		if found && conditionStatus != cond.Status {
+			hr.log.Infof("clusterdeployment not ready: %s == %s", cond.Type, cond.Status)
+			return false, nil
 		}
 	}
-	return false, err
+
+	return true, nil
 }
 
 func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error) {

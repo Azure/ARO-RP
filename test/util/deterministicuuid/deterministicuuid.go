@@ -17,6 +17,7 @@ const (
 	ASYNCOPERATIONS
 	PORTAL
 	GATEWAY
+	OPENSHIFT_VERSIONS
 )
 
 type gen struct {

@@ -10,6 +10,7 @@ import (
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hivefake "github.com/openshift/hive/pkg/client/clientset/versioned/fake"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -49,8 +50,20 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 				Status: hivev1.ClusterDeploymentStatus{
 					Conditions: []hivev1.ClusterDeploymentCondition{
 						{
-							Type:   hivev1.ClusterReadyCondition,
+							Type:   hivev1.ProvisionedCondition,
 							Status: corev1.ConditionTrue,
+						},
+						{
+							Type:   hivev1.SyncSetFailedCondition,
+							Status: corev1.ConditionFalse,
+						},
+						{
+							Type:   hivev1.ControlPlaneCertificateNotFoundCondition,
+							Status: corev1.ConditionFalse,
+						},
+						{
+							Type:   hivev1.UnreachableCondition,
+							Status: corev1.ConditionFalse,
 						},
 					},
 				},
@@ -58,7 +71,7 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 			wantResult: true,
 		},
 		{
-			name: "is not ready",
+			name: "is not ready: unreachable",
 			cd: &hivev1.ClusterDeployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      ClusterDeploymentName,
@@ -67,7 +80,49 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 				Status: hivev1.ClusterDeploymentStatus{
 					Conditions: []hivev1.ClusterDeploymentCondition{
 						{
-							Type:   hivev1.ClusterReadyCondition,
+							Type:   hivev1.ProvisionedCondition,
+							Status: corev1.ConditionTrue,
+						},
+						{
+							Type:   hivev1.SyncSetFailedCondition,
+							Status: corev1.ConditionFalse,
+						},
+						{
+							Type:   hivev1.ControlPlaneCertificateNotFoundCondition,
+							Status: corev1.ConditionFalse,
+						},
+						{
+							Type:   hivev1.UnreachableCondition,
+							Status: corev1.ConditionTrue,
+						},
+					},
+				},
+			},
+			wantResult: false,
+		},
+		{
+			name: "is not ready: syncset failed",
+			cd: &hivev1.ClusterDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      ClusterDeploymentName,
+					Namespace: fakeNamespace,
+				},
+				Status: hivev1.ClusterDeploymentStatus{
+					Conditions: []hivev1.ClusterDeploymentCondition{
+						{
+							Type:   hivev1.ProvisionedCondition,
+							Status: corev1.ConditionTrue,
+						},
+						{
+							Type:   hivev1.SyncSetFailedCondition,
+							Status: corev1.ConditionTrue,
+						},
+						{
+							Type:   hivev1.ControlPlaneCertificateNotFoundCondition,
+							Status: corev1.ConditionFalse,
+						},
+						{
+							Type:   hivev1.UnreachableCondition,
 							Status: corev1.ConditionFalse,
 						},
 					},
@@ -98,6 +153,7 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 			}
 			c := clusterManager{
 				hiveClientset: fakeClientset,
+				log:           logrus.NewEntry(logrus.StandardLogger()),
 			}
 
 			result, err := c.IsClusterDeploymentReady(context.Background(), doc)

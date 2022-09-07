@@ -28,7 +28,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/rhcos"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.InstallConfig, *releaseimage.Image, error) {
@@ -233,8 +232,8 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 	}
 
 	image := &releaseimage.Image{}
-	if m.oc.Properties.ClusterProfile.Version == version.InstallStream.Version.String() {
-		image.PullSpec = version.InstallStream.PullSpec
+	if m.oc.Properties.ClusterProfile.Version == m.version.Version {
+		image.PullSpec = m.version.OpenShiftPullspec
 	} else {
 		return nil, nil, fmt.Errorf("unimplemented version %q", m.oc.Properties.ClusterProfile.Version)
 	}

@@ -100,7 +100,7 @@ func servicePrincipalSecretForInstall(oc *api.OpenShiftCluster, sub *api.Subscri
 		return nil, err
 	}
 
-	encSub, err := json.Marshal(sub)
+	encSub, err := json.Marshal(sub.Subscription)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,8 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 				"hive.openshift.io/cluster-region":   doc.OpenShiftCluster.Location,
 			},
 			Annotations: map[string]string{
-				"hive.openshift.io/try-install-once": "true",
+				"hive.openshift.io/try-install-once":                "true",
+				"hive.openshift.io/cli-domain-from-installer-image": "true",
 			},
 		},
 		Spec: hivev1.ClusterDeploymentSpec{

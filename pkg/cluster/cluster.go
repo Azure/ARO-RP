@@ -51,10 +51,12 @@ type Interface interface {
 
 // manager contains information needed to install and maintain an ARO cluster
 type manager struct {
-	log               *logrus.Entry
-	env               env.Interface
-	db                database.OpenShiftClusters
-	dbGateway         database.Gateway
+	log                 *logrus.Entry
+	env                 env.Interface
+	db                  database.OpenShiftClusters
+	dbGateway           database.Gateway
+	dbOpenShiftVersions database.OpenShiftVersions
+
 	billing           billing.Manager
 	doc               *api.OpenShiftClusterDocument
 	subscriptionDoc   *api.SubscriptionDocument
@@ -106,7 +108,7 @@ type manager struct {
 }
 
 // New returns a cluster manager
-func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, dbGateway database.Gateway, aead encryption.AEAD,
+func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, dbGateway database.Gateway, dbOpenShiftVersions database.OpenShiftVersions, aead encryption.AEAD,
 	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, hiveRestConfig *rest.Config, metricsEmitter metrics.Emitter) (Interface, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
@@ -149,6 +151,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		env:                   _env,
 		db:                    db,
 		dbGateway:             dbGateway,
+		dbOpenShiftVersions:   dbOpenShiftVersions,
 		billing:               billing,
 		doc:                   doc,
 		subscriptionDoc:       subscriptionDoc,

@@ -4,7 +4,9 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -25,19 +27,36 @@ func (f *frontend) listInstallVersions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	versions := f.getInstallVersions()
+	versions, err := f.getInstallVersions(ctx)
+	if err != nil {
+		log.Error(err)
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Unable to list the available OpenShift versions in this region.")
+		return
+	}
+
 	converter := f.apis[vars["api-version"]].InstallVersionsConverter()
 
 	b, err := json.Marshal(converter.ToExternal((*api.InstallVersions)(&versions)))
 	reply(log, w, nil, b, err)
 }
 
-// Creating this separate method so that it can be reused while doing some other stuff like validating the install version against available version.
-func (f *frontend) getInstallVersions() []string {
-	// TODO: Currently, the versions are hard coded and being pulled from version.UpgradeStreams, but in future they will be pulled from cosmosdb.
-	installStream := version.InstallStream
-	versions := make([]string, 0)
-	versions = append(versions, installStream.Version.String())
+func (f *frontend) getInstallVersions(ctx context.Context) ([]string, error) {
+	docs, err := f.dbOpenShiftVersions.ListAll(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to list the entries in the OpenShift versions database: %s", err.Error())
+	}
 
-	return versions
+	versions := make([]string, 0)
+	for _, doc := range docs.OpenShiftVersionDocuments {
+		if doc.OpenShiftVersion.Enabled {
+			versions = append(versions, doc.OpenShiftVersion.Version)
+		}
+	}
+
+	// add the default from version.InstallStream, when we have no active versions
+	if len(versions) == 0 {
+		versions = append(versions, version.InstallStream.Version.String())
+	}
+
+	return versions, nil
 }

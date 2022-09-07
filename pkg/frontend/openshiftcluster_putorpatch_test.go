@@ -1385,7 +1385,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			ti := newTestInfra(t).
 				WithOpenShiftClusters().
 				WithSubscriptions().
-				WithAsyncOperations()
+				WithAsyncOperations().
+				WithOpenShiftVersions()
 			defer ti.done()
 
 			err := ti.buildFixtures(tt.fixture)
@@ -1393,7 +1394,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, apis, &noop.Noop{}, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, apis, &noop.Noop{}, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
 				return ti.enricher
 			})
 			if err != nil {

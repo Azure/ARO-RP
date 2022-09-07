@@ -14,6 +14,12 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+const (
+	hiveKubeconfigPathEnvVar  = "HIVE_KUBE_CONFIG_PATH"
+	hiveInstallerEnableEnvVar = "ARO_INSTALL_VIA_HIVE"
+	hiveDefaultPullSpecEnvVar = "ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC"
+)
+
 func parseKubeconfig(credentials []mgmtcontainerservice.CredentialResult) (*rest.Config, error) {
 	res := make([]byte, base64.StdEncoding.DecodedLen(len(*credentials[0].Value)))
 	_, err := base64.StdEncoding.Decode(res, *credentials[0].Value)
@@ -69,14 +75,13 @@ func (p *prod) HiveRestConfig(ctx context.Context, index int) (*rest.Config, err
 
 func (p *prod) InstallViaHive(ctx context.Context) (bool, error) {
 	// TODO: Replace with RP Live Service Config (KeyVault)
-	installViaHive := os.Getenv(HIVE_INSTALL_ENV_VARIABLE)
+	installViaHive := os.Getenv(hiveInstallerEnableEnvVar)
 	if installViaHive != "" {
 		return true, nil
 	}
 	return false, nil
 }
 
-func (p *prod) DefaultInstallerPullSpec(ctx context.Context) (string, error) {
-	// TODO: Replace with loading from M6's database always
-	return os.Getenv(HIVE_DEFAULT_INSTALLER_VARIABLE), nil
+func (p *prod) DefaultInstallerPullSpecOverride(ctx context.Context) string {
+	return os.Getenv(hiveDefaultPullSpecEnvVar)
 }
