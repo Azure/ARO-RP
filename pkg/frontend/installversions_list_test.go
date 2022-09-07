@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
@@ -113,7 +114,18 @@ func TestListInstallVersions(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			sort.Slice(*tt.wantResponse, func(i, j int) bool { return i < j })
+			if b != nil {
+				var v []string
+				if err = json.Unmarshal(b, &v); err != nil {
+					t.Error(err)
+				}
+
+				sort.Strings(v)
+				b, err = json.Marshal(v)
+				if err != nil {
+					t.Error(err)
+				}
+			}
 
 			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
 			if err != nil {
