@@ -54,6 +54,11 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 							Name:      "resourceGroupName",
 							Parameter: "resourceGroup",
 						})
+					case "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/parameters/LocationParameter":
+						example.Parameters = append(example.Parameters, NameParameter{
+							Name:      "location",
+							Parameter: "location",
+						})
 					}
 				case Parameter:
 					switch param.Name {
@@ -99,6 +104,8 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 						body = g.exampleOpenShiftClusterListResponse()
 					case "#/definitions/OperationList":
 						body = g.exampleOperationListResponse()
+					case "#/definitions/InstallVersions":
+						body = g.exampleInstallVersions()
 					}
 				}
 

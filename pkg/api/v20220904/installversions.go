@@ -4,4 +4,4 @@ package v20220904
 // Licensed under the Apache License 2.0.
 
 // InstallVersions represents a List of OpenShift installable versions.
-type InstallVersions []string
+type InstallVersions []InstallVersion

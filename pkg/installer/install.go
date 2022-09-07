@@ -48,7 +48,7 @@ func (m *manager) Install(ctx context.Context) error {
 		steps.Condition(m.bootstrapConfigMapReady, 30*time.Minute, true),
 	}
 
-	err := steps.Run(ctx, m.log, 10*time.Second, s)
+	_, err := steps.Run(ctx, m.log, 10*time.Second, s, nil)
 	return err
 }
 

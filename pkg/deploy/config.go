@@ -6,13 +6,14 @@ package deploy
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/x509"
 	"fmt"
 	"io/ioutil"
 	"reflect"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/ghodss/yaml"
+	"golang.org/x/crypto/ssh"
 )
 
 // NOTICE: when modifying the config definition here, don't forget to update
@@ -90,7 +91,6 @@ type Configuration struct {
 	RPMDSDAccount                      *string       `json:"rpMdsdAccount,omitempty" value:"required"`
 	RPMDSDConfigVersion                *string       `json:"rpMdsdConfigVersion,omitempty" value:"required"`
 	RPMDSDNamespace                    *string       `json:"rpMdsdNamespace,omitempty" value:"required"`
-	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty" value:"required"`
 	RPParentDomainName                 *string       `json:"rpParentDomainName,omitempty" value:"required"`
 	RPVMSSCapacity                     *int          `json:"rpVmssCapacity,omitempty"`
 	SSHPublicKey                       *string       `json:"sshPublicKey,omitempty"`
@@ -99,6 +99,11 @@ type Configuration struct {
 	SubscriptionResourceGroupLocation  *string       `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
 	VMSize                             *string       `json:"vmSize,omitempty" value:"required"`
 	VMSSCleanupEnabled                 *bool         `json:"vmssCleanupEnabled,omitempty"`
+
+	// TODO: Replace with Live Service Configuration in KeyVault
+	InstallViaHive           *string `json:"clustersInstallViaHive,omitempty"`
+	DefaultInstallerPullspec *string `json:"clusterDefaultInstallerPullspec,omitempty"`
+	AdoptByHive              *string `json:"clustersAdoptByHive,omitempty"`
 }
 
 // GetConfig return RP configuration from the file
@@ -156,9 +161,12 @@ func (conf *RPConfig) validate() error {
 		if err != nil {
 			return err
 		}
-		pubKey := x509.MarshalPKCS1PublicKey(&key.PublicKey)
-		publicKey := string(pubKey)
-		conf.Configuration.SSHPublicKey = (&publicKey)
+		publicRsaKey, err := ssh.NewPublicKey(&key.PublicKey)
+		if err != nil {
+			return err
+		}
+		publicKeyBytes := ssh.MarshalAuthorizedKey(publicRsaKey)
+		conf.Configuration.SSHPublicKey = to.StringPtr(string(publicKeyBytes))
 	}
 
 	for i := 0; i < v.NumField(); i++ {

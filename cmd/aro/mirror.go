@@ -161,24 +161,19 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.access.redhat.com/ubi8/nodejs-14:latest",
 		"registry.access.redhat.com/ubi7/go-toolset:1.16.12",
 		"registry.access.redhat.com/ubi8/go-toolset:1.17.7",
-	} {
-		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
-		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthRedhat)
-		if err != nil {
-			log.Errorf("%s: %s\n", ref, err)
-			errorOccurred = true
-		}
-	}
+		"mcr.microsoft.com/azure-cli:latest",
 
-	for _, ref := range []string{
-		// Managed Upgrade Operator
 		"quay.io/app-sre/managed-upgrade-operator:v0.1.856-eebbe07",
-
-		// Hive
-		"quay.io/app-sre/hive:2383a88",
+		"quay.io/app-sre/hive:fec14dc",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
-		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthQuay)
+
+		srcAuth := srcAuthRedhat
+		if strings.Index(ref, "quay.io") == 0 {
+			srcAuth = srcAuthQuay
+		}
+
+		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuth)
 		if err != nil {
 			log.Errorf("%s: %s\n", ref, err)
 			errorOccurred = true

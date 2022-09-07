@@ -172,14 +172,20 @@ func Proxy(log *logrus.Entry, w http.ResponseWriter, r *http.Request, sz int) {
 		defer recover.Panic(log)
 		defer wg.Done()
 		defer func() {
-			_ = c2.(*net.TCPConn).CloseWrite()
+			conn2, ok := c2.(*net.TCPConn)
+			if ok {
+				conn2.CloseWrite()
+			}
 		}()
 		_, _ = io.Copy(c2, buf)
 	}()
 
 	// copy from c2->c1.  Call c1.CloseWrite() when done.
 	defer func() {
-		_ = c1.(interface{ CloseWrite() error }).CloseWrite()
+		closeWriter, ok := c1.(interface{ CloseWrite() error })
+		if ok {
+			closeWriter.CloseWrite()
+		}
 	}()
 	_, _ = io.Copy(c1, c2)
 }

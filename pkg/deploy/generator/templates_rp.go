@@ -76,6 +76,11 @@ func (g *generator) rpTemplate() *arm.Template {
 			"vmSize",
 			"vmssCleanupEnabled",
 			"vmssName",
+
+			// TODO: Replace with Live Service Configuration in KeyVault
+			"clustersInstallViaHive",
+			"clusterDefaultInstallerPullspec",
+			"clustersAdoptByHive",
 		)
 	}
 
@@ -120,6 +125,12 @@ func (g *generator) rpTemplate() *arm.Template {
 				"northcentralus",
 				"uaenorth",
 			}
+
+		// TODO: Replace with Live Service Configuration in KeyVault
+		case "clustersInstallViaHive",
+			"clustersAdoptByHive",
+			"clusterDefaultInstallerPullspec":
+			p.DefaultValue = ""
 		}
 		t.Parameters[param] = p
 	}
@@ -266,7 +277,6 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 			"extraPortalKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies",
 			"gatewayResourceGroupName",
-			"rpNsgSourceAddressPrefixes",
 		)
 	} else {
 		params = append(params,
@@ -286,9 +296,6 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 			"extraServiceKeyvaultAccessPolicies":
 			p.Type = "array"
 			p.DefaultValue = []interface{}{}
-		case "rpNsgSourceAddressPrefixes":
-			p.Type = "array"
-			p.DefaultValue = []string{}
 		case "keyvaultPrefix":
 			p.MaxLength = 24 - max(len(env.ClusterKeyvaultSuffix), len(env.ServiceKeyvaultSuffix), len(env.PortalKeyvaultSuffix))
 		}

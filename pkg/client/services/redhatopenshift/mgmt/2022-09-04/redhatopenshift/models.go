@@ -122,6 +122,12 @@ type IngressProfile struct {
 	IP *string `json:"ip,omitempty"`
 }
 
+// ListString ...
+type ListString struct {
+	autorest.Response `json:"-"`
+	Value             *[]string `json:"value,omitempty"`
+}
+
 // MasterProfile masterProfile represents a master profile.
 type MasterProfile struct {
 	// VMSize - The size of the master VMs.
@@ -136,8 +142,6 @@ type MasterProfile struct {
 
 // NetworkProfile networkProfile represents a network profile.
 type NetworkProfile struct {
-	// SoftwareDefinedNetwork - The SDN type used for OpenShift/Kubernetes Pods. Possible values include: 'OVNKubernetes', 'OpenShiftSDN'
-	SoftwareDefinedNetwork SoftwareDefinedNetwork `json:"softwareDefinedNetwork,omitempty"`
 	// PodCidr - The CIDR used for OpenShift/Kubernetes Pods.
 	PodCidr *string `json:"podCidr,omitempty"`
 	// ServiceCidr - The CIDR used for OpenShift/Kubernetes Services.
@@ -452,6 +456,8 @@ type OpenShiftClusterProperties struct {
 	ApiserverProfile *APIServerProfile `json:"apiserverProfile,omitempty"`
 	// IngressProfiles - The cluster ingress profiles.
 	IngressProfiles *[]IngressProfile `json:"ingressProfiles,omitempty"`
+	// InstallVersion - The cluster install version.
+	InstallVersion *string `json:"installVersion,omitempty"`
 }
 
 // OpenShiftClustersCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a
@@ -583,8 +589,6 @@ type OpenShiftClusterUpdate struct {
 	Tags map[string]*string `json:"tags"`
 	// OpenShiftClusterProperties - The cluster properties.
 	*OpenShiftClusterProperties `json:"properties,omitempty"`
-	// InstallVersion - The cluster install version.
-	InstallVersion *string `json:"installVersion,omitempty"`
 	// SystemData - READ-ONLY; The system meta data relating to this resource.
 	SystemData *SystemData `json:"systemData,omitempty"`
 }
@@ -597,9 +601,6 @@ func (oscu OpenShiftClusterUpdate) MarshalJSON() ([]byte, error) {
 	}
 	if oscu.OpenShiftClusterProperties != nil {
 		objectMap["properties"] = oscu.OpenShiftClusterProperties
-	}
-	if oscu.InstallVersion != nil {
-		objectMap["installVersion"] = oscu.InstallVersion
 	}
 	return json.Marshal(objectMap)
 }
@@ -630,15 +631,6 @@ func (oscu *OpenShiftClusterUpdate) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				oscu.OpenShiftClusterProperties = &openShiftClusterProperties
-			}
-		case "installVersion":
-			if v != nil {
-				var installVersion string
-				err = json.Unmarshal(*v, &installVersion)
-				if err != nil {
-					return err
-				}
-				oscu.InstallVersion = &installVersion
 			}
 		case "systemData":
 			if v != nil {
@@ -867,12 +859,6 @@ type ServicePrincipalProfile struct {
 	ClientID *string `json:"clientId,omitempty"`
 	// ClientSecret - The client secret used for the cluster.
 	ClientSecret *string `json:"clientSecret,omitempty"`
-}
-
-// SetObject ...
-type SetObject struct {
-	autorest.Response `json:"-"`
-	Value             interface{} `json:"value,omitempty"`
 }
 
 // SystemData metadata pertaining to creation and last modification of the resource.

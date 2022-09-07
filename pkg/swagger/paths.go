@@ -6,7 +6,9 @@ package swagger
 import (
 	"net/http"
 	"strconv"
-	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // populateParameters populates a parameters block.  Always expect an
@@ -105,16 +107,17 @@ func (g *generator) populateResponses(typ string, isDelete bool, statusCodes ...
 
 // populateTopLevelPaths populates the paths for a top level ARM resource
 func (g *generator) populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName string) (ps Paths) {
+	titleCaser := cases.Title(language.Und, cases.NoLower)
 	ps = Paths{}
 
 	ps["/subscriptions/{subscriptionId}/providers/"+resourceProviderNamespace+"/"+resourceType+"s"] = &PathItem{
 		Get: &Operation{
-			Tags:        []string{strings.Title(resourceType) + "s"},
+			Tags:        []string{titleCaser.String(resourceType) + "s"},
 			Summary:     "Lists " + friendlyName + "s in the specified subscription.",
 			Description: "The operation returns properties of each " + friendlyName + ".",
-			OperationID: strings.Title(resourceType) + "s_List",
-			Parameters:  g.populateParameters(1, strings.Title(resourceType), friendlyName),
-			Responses:   g.populateResponses(strings.Title(resourceType)+"List", false, http.StatusOK),
+			OperationID: titleCaser.String(resourceType) + "s_List",
+			Parameters:  g.populateParameters(1, titleCaser.String(resourceType), friendlyName),
+			Responses:   g.populateResponses(titleCaser.String(resourceType)+"List", false, http.StatusOK),
 			Pageable: &Pageable{
 				NextLinkName: "nextLink",
 			},
@@ -123,12 +126,12 @@ func (g *generator) populateTopLevelPaths(resourceProviderNamespace, resourceTyp
 
 	ps["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/"+resourceProviderNamespace+"/"+resourceType+"s"] = &PathItem{
 		Get: &Operation{
-			Tags:        []string{strings.Title(resourceType) + "s"},
+			Tags:        []string{titleCaser.String(resourceType) + "s"},
 			Summary:     "Lists " + friendlyName + "s in the specified subscription and resource group.",
 			Description: "The operation returns properties of each " + friendlyName + ".",
-			OperationID: strings.Title(resourceType) + "s_ListByResourceGroup",
-			Parameters:  g.populateParameters(2, strings.Title(resourceType), friendlyName),
-			Responses:   g.populateResponses(strings.Title(resourceType)+"List", false, http.StatusOK),
+			OperationID: titleCaser.String(resourceType) + "s_ListByResourceGroup",
+			Parameters:  g.populateParameters(2, titleCaser.String(resourceType), friendlyName),
+			Responses:   g.populateResponses(titleCaser.String(resourceType)+"List", false, http.StatusOK),
 			Pageable: &Pageable{
 				NextLinkName: "nextLink",
 			},
@@ -137,38 +140,38 @@ func (g *generator) populateTopLevelPaths(resourceProviderNamespace, resourceTyp
 
 	ps["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/"+resourceProviderNamespace+"/"+resourceType+"s/{resourceName}"] = &PathItem{
 		Get: &Operation{
-			Tags:        []string{strings.Title(resourceType) + "s"},
+			Tags:        []string{titleCaser.String(resourceType) + "s"},
 			Summary:     "Gets a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description: "The operation returns properties of a " + friendlyName + ".",
-			OperationID: strings.Title(resourceType) + "s_Get",
-			Parameters:  g.populateParameters(3, strings.Title(resourceType), friendlyName),
-			Responses:   g.populateResponses(strings.Title(resourceType), false, http.StatusOK),
+			OperationID: titleCaser.String(resourceType) + "s_Get",
+			Parameters:  g.populateParameters(3, titleCaser.String(resourceType), friendlyName),
+			Responses:   g.populateResponses(titleCaser.String(resourceType), false, http.StatusOK),
 		},
 		Put: &Operation{
-			Tags:                 []string{strings.Title(resourceType) + "s"},
+			Tags:                 []string{titleCaser.String(resourceType) + "s"},
 			Summary:              "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description:          "The operation returns properties of a " + friendlyName + ".",
-			OperationID:          strings.Title(resourceType) + "s_CreateOrUpdate",
-			Parameters:           g.populateParameters(4, strings.Title(resourceType), friendlyName),
-			Responses:            g.populateResponses(strings.Title(resourceType), false, http.StatusOK, http.StatusCreated),
+			OperationID:          titleCaser.String(resourceType) + "s_CreateOrUpdate",
+			Parameters:           g.populateParameters(4, titleCaser.String(resourceType), friendlyName),
+			Responses:            g.populateResponses(titleCaser.String(resourceType), false, http.StatusOK, http.StatusCreated),
 			LongRunningOperation: true,
 		},
 		Delete: &Operation{
-			Tags:                 []string{strings.Title(resourceType) + "s"},
+			Tags:                 []string{titleCaser.String(resourceType) + "s"},
 			Summary:              "Deletes a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description:          "The operation returns nothing.",
-			OperationID:          strings.Title(resourceType) + "s_Delete",
-			Parameters:           g.populateParameters(3, strings.Title(resourceType), friendlyName),
-			Responses:            g.populateResponses(strings.Title(resourceType), true, http.StatusAccepted, http.StatusNoContent),
+			OperationID:          titleCaser.String(resourceType) + "s_Delete",
+			Parameters:           g.populateParameters(3, titleCaser.String(resourceType), friendlyName),
+			Responses:            g.populateResponses(titleCaser.String(resourceType), true, http.StatusAccepted, http.StatusNoContent),
 			LongRunningOperation: true,
 		},
 		Patch: &Operation{
-			Tags:                 []string{strings.Title(resourceType) + "s"},
+			Tags:                 []string{titleCaser.String(resourceType) + "s"},
 			Summary:              "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description:          "The operation returns properties of a " + friendlyName + ".",
-			OperationID:          strings.Title(resourceType) + "s_Update",
-			Parameters:           g.populateParameters(5, strings.Title(resourceType), friendlyName),
-			Responses:            g.populateResponses(strings.Title(resourceType), false, http.StatusOK, http.StatusCreated),
+			OperationID:          titleCaser.String(resourceType) + "s_Update",
+			Parameters:           g.populateParameters(5, titleCaser.String(resourceType), friendlyName),
+			Responses:            g.populateResponses(titleCaser.String(resourceType), false, http.StatusOK, http.StatusCreated),
 			LongRunningOperation: true,
 		},
 	}

@@ -21,5 +21,8 @@ func init() {
 		OpenShiftVersionConverter: func() api.OpenShiftVersionConverter {
 			return &openShiftVersionConverter{}
 		},
+		OpenShiftVersionStaticValidator: func() api.OpenShiftVersionStaticValidator {
+			return &openShiftVersionStaticValidator{}
+		},
 	}
 }

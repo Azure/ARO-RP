@@ -52,6 +52,7 @@ type frontend struct {
 	dbAsyncOperations   database.AsyncOperations
 	dbOpenShiftClusters database.OpenShiftClusters
 	dbSubscriptions     database.Subscriptions
+	dbOpenShiftVersions database.OpenShiftVersions
 
 	apis map[string]*api.Version
 	m    metrics.Emitter
@@ -60,6 +61,7 @@ type frontend struct {
 	kubeActionsFactory  kubeActionsFactory
 	azureActionsFactory azureActionsFactory
 	ocEnricherFactory   ocEnricherFactory
+	adminAction         adminactions.AzureActions
 
 	l net.Listener
 	s *http.Server
@@ -87,6 +89,7 @@ func NewFrontend(ctx context.Context,
 	dbAsyncOperations database.AsyncOperations,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbSubscriptions database.Subscriptions,
+	dbOpenShiftVersions database.OpenShiftVersions,
 	apis map[string]*api.Version,
 	m metrics.Emitter,
 	aead encryption.AEAD,
@@ -100,6 +103,7 @@ func NewFrontend(ctx context.Context,
 		dbAsyncOperations:   dbAsyncOperations,
 		dbOpenShiftClusters: dbOpenShiftClusters,
 		dbSubscriptions:     dbSubscriptions,
+		dbOpenShiftVersions: dbOpenShiftVersions,
 		apis:                apis,
 		m:                   m,
 		aead:                aead,
@@ -311,6 +315,13 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Subrouter()
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterDrainNode).Name("postAdminOpenShiftClusterDrainNode")
+
+	s = r.
+		Path("/admin/versions").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.getAdminOpenShiftVersions).Name("getAdminOpenShiftVersions")
+	s.Methods(http.MethodPut).HandlerFunc(f.putAdminOpenShiftVersion).Name("putAdminOpenShiftVersions")
 
 	// Operations
 	s = r.

@@ -179,14 +179,11 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"DisableReadinessDelay",
 			},
 			// TODO update this to support FF
-			RPImagePrefix:       to.StringPtr(os.Getenv("USER") + "aro.azurecr.io/aro"),
-			RPMDMAccount:        to.StringPtr(version.DevRPGenevaMetricsAccount),
-			RPMDSDAccount:       to.StringPtr(version.DevRPGenevaLoggingAccount),
-			RPMDSDConfigVersion: to.StringPtr(version.DevRPGenevaLoggingConfigVersion),
-			RPMDSDNamespace:     to.StringPtr(version.DevRPGenevaLoggingNamespace),
-			RPNSGSourceAddressPrefixes: []string{
-				"0.0.0.0/0",
-			},
+			RPImagePrefix:                     to.StringPtr(os.Getenv("USER") + "aro.azurecr.io/aro"),
+			RPMDMAccount:                      to.StringPtr(version.DevRPGenevaMetricsAccount),
+			RPMDSDAccount:                     to.StringPtr(version.DevRPGenevaLoggingAccount),
+			RPMDSDConfigVersion:               to.StringPtr(version.DevRPGenevaLoggingConfigVersion),
+			RPMDSDNamespace:                   to.StringPtr(version.DevRPGenevaLoggingNamespace),
 			RPParentDomainName:                to.StringPtr(os.Getenv("USER") + "-rp." + os.Getenv("PARENT_DOMAIN_NAME")),
 			RPVersionStorageAccountName:       to.StringPtr(os.Getenv("USER") + "rpversion"),
 			RPVMSSCapacity:                    to.IntPtr(1),
@@ -195,6 +192,11 @@ func DevConfig(_env env.Core) (*Config, error) {
 			SubscriptionResourceGroupName:     to.StringPtr(os.Getenv("USER") + "-subscription"),
 			VMSSCleanupEnabled:                to.BoolPtr(true),
 			VMSize:                            to.StringPtr("Standard_D2s_v3"),
+
+			// TODO: Replace with Live Service Configuration in KeyVault
+			InstallViaHive:           to.StringPtr(os.Getenv("ARO_INSTALL_VIA_HIVE")),
+			DefaultInstallerPullspec: to.StringPtr(os.Getenv("ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC")),
+			AdoptByHive:              to.StringPtr(os.Getenv("ARO_ADOPT_BY_HIVE")),
 		},
 	}, nil
 }

@@ -25,6 +25,7 @@
                 "permissions": [
                     {
                         "actions": [
+                            "Microsoft.Resources/subscriptions/resourceGroups/read",
                             "Microsoft.Resources/subscriptions/resourceGroups/write"
                         ]
                     }

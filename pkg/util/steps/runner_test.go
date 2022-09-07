@@ -41,6 +41,10 @@ func timingOutCondition(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
+func currentTimeFunc() time.Time {
+	return time.Now()
+}
+
 func TestStepRunner(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
@@ -328,7 +332,7 @@ func TestStepRunner(t *testing.T) {
 			h, log := testlog.New()
 			steps := tt.steps(controller)
 
-			err := Run(ctx, log, 25*time.Millisecond, steps)
+			_, err := Run(ctx, log, 25*time.Millisecond, steps, currentTimeFunc)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -337,6 +341,46 @@ func TestStepRunner(t *testing.T) {
 			err = testlog.AssertLoggingOutput(h, tt.wantEntries)
 			if err != nil {
 				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestStepMetricsTopicNaming(t *testing.T) {
+	for _, tt := range []struct {
+		desc string
+		step Step
+		want string
+	}{
+		{
+			desc: "test action step naming",
+			step: Action(successfulFunc),
+			want: "action.successfulFunc",
+		},
+		{
+			desc: "test condition step naming",
+			step: Condition(alwaysTrueCondition, 1*time.Millisecond, true),
+			want: "condition.alwaysTrueCondition",
+		},
+		{
+			desc: "test refreshing step naming",
+			step: AuthorizationRefreshingAction(nil, Action(successfulFunc)),
+			want: "refreshing.successfulFunc",
+		},
+		{
+			desc: "test anonymous action step naming",
+			step: Action(func(context.Context) error { return nil }),
+			want: "action.func1",
+		},
+		{
+			desc: "test anonymous action step naming",
+			step: AuthorizationRefreshingAction(nil, Action(func(context.Context) error { return nil })),
+			want: "refreshing.func2",
+		},
+	} {
+		t.Run(tt.desc, func(t *testing.T) {
+			if got := tt.step.metricsTopic(); got != tt.want {
+				t.Errorf("incorrect step metrics topic, want: %s, got: %s", tt.want, got)
 			}
 		})
 	}

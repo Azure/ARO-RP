@@ -9,6 +9,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 )
@@ -42,7 +43,7 @@ func (m *manager) configureDefaultStorageClass(ctx context.Context) error {
 
 		encryptedSC := newEncryptedStorageClass(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskEncryptionSetID)
 		_, err = m.kubernetescli.StorageV1().StorageClasses().Create(ctx, encryptedSC, metav1.CreateOptions{})
-		if err != nil {
+		if err != nil && !kerrors.IsAlreadyExists(err) {
 			return err
 		}
 

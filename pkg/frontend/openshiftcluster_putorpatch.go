@@ -64,6 +64,11 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			return nil, err
 		}
 
+		installVersion, err := f.validateAndReturnInstallVersion(ctx, &body)
+		if err != nil {
+			return nil, err
+		}
+
 		doc = &api.OpenShiftClusterDocument{
 			ID:  f.dbOpenShiftClusters.NewUUID(),
 			Key: r.URL.Path,
@@ -78,7 +83,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 					CreatedBy:           version.GitCommit,
 					ProvisionedBy:       version.GitCommit,
 					ClusterProfile: api.ClusterProfile{
-						Version: version.InstallStream.Version.String(),
+						Version: installVersion,
 					},
 				},
 			},
@@ -138,6 +143,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 					ClientSecret: doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret,
 				},
 			},
+			SystemData: doc.OpenShiftCluster.SystemData,
 		})
 
 		// In case of PATCH we take current cluster document, which is enriched

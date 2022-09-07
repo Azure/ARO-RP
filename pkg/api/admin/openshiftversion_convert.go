@@ -38,3 +38,16 @@ func (c *openShiftVersionConverter) ToExternalList(vers []*api.OpenShiftVersion)
 
 	return l
 }
+
+// ToInternal overwrites in place a pre-existing internal object, setting (only)
+// all mapped fields from the external representation. ToInternal modifies its
+// argument; there is no pointer aliasing between the passed and returned
+// objects
+func (c *openShiftVersionConverter) ToInternal(_new interface{}, out *api.OpenShiftVersion) {
+	new := _new.(*OpenShiftVersion)
+
+	out.Enabled = new.Enabled
+	out.InstallerPullspec = new.InstallerPullspec
+	out.OpenShiftPullspec = new.OpenShiftPullspec
+	out.Version = new.Version
+}

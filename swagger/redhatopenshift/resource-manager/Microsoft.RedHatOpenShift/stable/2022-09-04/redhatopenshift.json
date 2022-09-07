@@ -641,8 +641,17 @@
         }
       }
     },
+    "InstallVersion": {
+      "description": "InstallVersion is the OpenShift installation version string.",
+      "type": "string"
+    },
     "InstallVersions": {
-      "description": "InstallVersions represents a List of OpenShift installable versions."
+      "description": "InstallVersions represents a List of OpenShift installable versions.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/InstallVersion"
+      },
+      "x-ms-identifiers": []
     },
     "MasterProfile": {
       "description": "MasterProfile represents a master profile.",
@@ -670,10 +679,6 @@
       "description": "NetworkProfile represents a network profile.",
       "type": "object",
       "properties": {
-        "softwareDefinedNetwork": {
-          "$ref": "#/definitions/SoftwareDefinedNetwork",
-          "description": "The SDN type used for OpenShift/Kubernetes Pods."
-        },
         "podCidr": {
           "description": "The CIDR used for OpenShift/Kubernetes Pods.",
           "type": "string"
@@ -796,6 +801,10 @@
             "$ref": "#/definitions/IngressProfile"
           },
           "x-ms-identifiers": []
+        },
+        "installVersion": {
+          "description": "The cluster install version.",
+          "type": "string"
         }
       }
     },
@@ -811,10 +820,6 @@
           "$ref": "#/definitions/OpenShiftClusterProperties",
           "description": "The cluster properties.",
           "x-ms-client-flatten": true
-        },
-        "installVersion": {
-          "description": "The cluster install version.",
-          "type": "string"
         },
         "systemData": {
           "$ref": "../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
@@ -883,18 +888,6 @@
           "description": "The client secret used for the cluster.",
           "type": "string"
         }
-      }
-    },
-    "SoftwareDefinedNetwork": {
-      "description": "SoftwareDefinedNetwork is a choice of network used for Pods.",
-      "enum": [
-        "OVNKubernetes",
-        "OpenShiftSDN"
-      ],
-      "type": "string",
-      "x-ms-enum": {
-        "name": "SoftwareDefinedNetwork",
-        "modelAsString": true
       }
     },
     "Tags": {

@@ -30,7 +30,7 @@ from .._vendor import _convert_request, _format_url_section
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import,ungrouped-imports
-    from typing import Any, Callable, Dict, Optional, TypeVar
+    from typing import Any, Callable, Dict, List, Optional, TypeVar
     T = TypeVar('T')
     ClsType = Optional[Callable[[PipelineResponse[HttpRequest, HttpResponse], T, Dict[str, Any]], Any]]
 
@@ -101,7 +101,7 @@ class ListOperations(object):
         location,  # type: str
         **kwargs  # type: Any
     ):
-        # type: (...) -> Any
+        # type: (...) -> List[str]
         """Lists all OpenShift versions available to install in the specified location.
 
         The operation returns the installable OpenShift versions as strings.
@@ -109,11 +109,11 @@ class ListOperations(object):
         :param location: The name of Azure region.
         :type location: str
         :keyword callable cls: A custom type or function that will be passed the direct response
-        :return: any, or the result of cls(response)
-        :rtype: any
+        :return: list of str, or the result of cls(response)
+        :rtype: list[str]
         :raises: ~azure.core.exceptions.HttpResponseError
         """
-        cls = kwargs.pop('cls', None)  # type: ClsType[Any]
+        cls = kwargs.pop('cls', None)  # type: ClsType[List[str]]
         error_map = {
             401: ClientAuthenticationError, 404: ResourceNotFoundError, 409: ResourceExistsError
         }
@@ -142,7 +142,7 @@ class ListOperations(object):
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response, error_format=ARMErrorFormat)
 
-        deserialized = self._deserialize('object', pipeline_response)
+        deserialized = self._deserialize('[str]', pipeline_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})

@@ -36,9 +36,6 @@ type OpenShiftCluster struct {
 
 	// The cluster properties.
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
-
-	// The cluster install version.
-	InstallVersion string `json:"installVersion,omitempty"`
 }
 
 // Tags represents an OpenShift cluster's tags.
@@ -72,6 +69,9 @@ type OpenShiftClusterProperties struct {
 
 	// The cluster ingress profiles.
 	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`
+
+	// The cluster install version.
+	InstallVersion string `json:"installVersion,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.
@@ -86,6 +86,9 @@ const (
 	ProvisioningStateSucceeded     ProvisioningState = "Succeeded"
 	ProvisioningStateFailed        ProvisioningState = "Failed"
 )
+
+// InstallVersion is the OpenShift installation version string.
+type InstallVersion string
 
 // FipsValidatedModules determines if FIPS is used.
 type FipsValidatedModules string
@@ -129,19 +132,8 @@ type ServicePrincipalProfile struct {
 	ClientSecret string `json:"clientSecret,omitempty" mutable:"true"`
 }
 
-// SoftwareDefinedNetwork is a choice of network used for Pods.
-type SoftwareDefinedNetwork string
-
-const (
-	SoftwareDefinedNetworkOVNKubernetes SoftwareDefinedNetwork = "OVNKubernetes"
-	SoftwareDefinedNetworkOpenShiftSDN  SoftwareDefinedNetwork = "OpenShiftSDN"
-)
-
 // NetworkProfile represents a network profile.
 type NetworkProfile struct {
-	// The SDN type used for OpenShift/Kubernetes Pods.
-	SoftwareDefinedNetwork SoftwareDefinedNetwork `json:"softwareDefinedNetwork,omitempty"`
-
 	// The CIDR used for OpenShift/Kubernetes Pods.
 	PodCIDR string `json:"podCidr,omitempty"`
 

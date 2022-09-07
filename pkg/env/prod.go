@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -32,6 +33,8 @@ type prod struct {
 	Core
 	proxy.Dialer
 	ARMHelper
+
+	liveConfig liveconfig.Manager
 
 	armClientAuthorizer   clientauthorizer.ClientAuthorizer
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
@@ -210,6 +213,11 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
+	p.liveConfig, err = p.Core.NewLiveConfigManager(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	return p, nil
 }
 
@@ -357,4 +365,8 @@ func (p *prod) VMSku(vmSize string) (*mgmtcompute.ResourceSku, error) {
 		return nil, fmt.Errorf("sku information not found for vm size %q", vmSize)
 	}
 	return vmsku, nil
+}
+
+func (p *prod) LiveConfig() liveconfig.Manager {
+	return p.liveConfig
 }

@@ -1,9 +1,14 @@
 {
   "parameters": {
     "api-version": "2022-09-04",
-    "subscriptionId": "subscriptionId"
+    "subscriptionId": "subscriptionId",
+    "location": "location"
   },
   "responses": {
-    "200": {}
+    "200": {
+      "body": [
+        "4.10.20"
+      ]
+    }
   }
 }
