@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -22,10 +21,10 @@ import (
 
 // These are versions that need to be skipped because they are unable
 // to be mirrored
-var doNotMirrorTags = map[string]struct{}{
-	"4.8.8":  {}, // release points to unreachable link
-	"4.7.27": {}, // release points to unreachable link
-}
+// var doNotMirrorTags = map[string]struct{}{
+// 	"4.8.8":  {}, // release points to unreachable link
+// 	"4.7.27": {}, // release points to unreachable link
+// }
 
 func getAuth(key string) (*types.DockerAuthConfig, error) {
 	b, err := base64.StdEncoding.DecodeString(os.Getenv(key))
@@ -84,52 +83,52 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	var releases []pkgmirror.Node
-	if len(flag.Args()) == 1 {
-		log.Print("reading release graph")
-		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 6))
-		if err != nil {
-			return err
-		}
-	} else {
-		for _, arg := range flag.Args()[1:] {
-			if strings.EqualFold(arg, "latest") {
-				releases = append(releases, pkgmirror.Node{
-					Version: version.InstallStream.Version.String(),
-					Payload: version.InstallStream.PullSpec,
-				})
-			} else {
-				vers, err := version.ParseVersion(arg)
-				if err != nil {
-					return err
-				}
+	// var releases []pkgmirror.Node
+	// if len(flag.Args()) == 1 {
+	// 	log.Print("reading release graph")
+	// 	releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 6))
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// } else {
+	// 	for _, arg := range flag.Args()[1:] {
+	// 		if strings.EqualFold(arg, "latest") {
+	// 			releases = append(releases, pkgmirror.Node{
+	// 				Version: version.InstallStream.Version.String(),
+	// 				Payload: version.InstallStream.PullSpec,
+	// 			})
+	// 		} else {
+	// 			vers, err := version.ParseVersion(arg)
+	// 			if err != nil {
+	// 				return err
+	// 			}
 
-				node, err := pkgmirror.VersionInfo(vers)
-				if err != nil {
-					return err
-				}
+	// 			node, err := pkgmirror.VersionInfo(vers)
+	// 			if err != nil {
+	// 				return err
+	// 			}
 
-				releases = append(releases, pkgmirror.Node{
-					Version: node.Version,
-					Payload: node.Payload,
-				})
-			}
-		}
-	}
+	// 			releases = append(releases, pkgmirror.Node{
+	// 				Version: node.Version,
+	// 				Payload: node.Payload,
+	// 			})
+	// 		}
+	// 	}
+	// }
 
 	var errorOccurred bool
-	for _, release := range releases {
-		if _, ok := doNotMirrorTags[release.Version]; ok {
-			log.Printf("skipping mirror of release %s", release.Version)
-			continue
-		}
-		log.Printf("mirroring release %s", release.Version)
-		err = pkgmirror.Mirror(ctx, log, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
-		if err != nil {
-			log.Errorf("%s: %s\n", release, err)
-			errorOccurred = true
-		}
-	}
+	// for _, release := range releases {
+	// 	if _, ok := doNotMirrorTags[release.Version]; ok {
+	// 		log.Printf("skipping mirror of release %s", release.Version)
+	// 		continue
+	// 	}
+	// 	log.Printf("mirroring release %s", release.Version)
+	// 	err = pkgmirror.Mirror(ctx, log, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
+	// 	if err != nil {
+	// 		log.Errorf("%s: %s\n", release, err)
+	// 		errorOccurred = true
+	// 	}
+	// }
 
 	srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 
