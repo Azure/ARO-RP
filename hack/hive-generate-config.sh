@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # This is the commit sha that the image was built from and ensures we use the correct configs for the release
-HIVE_IMAGE_COMMIT_HASH="56adaaa"
+HIVE_IMAGE_COMMIT_HASH="fec14dc"
 
 # For now we'll use the quay hive image, but this will change to an ACR once the quay.io -> ACR mirroring is setup
 # Note: semi-scientific way to get the latest image: `podman search --list-tags --limit 10000 quay.io/app-sre/hive | tail -n1`
