@@ -47,8 +47,9 @@ func NewSyncSetsClientWithBaseURI(baseURI string, subscriptionID string) SyncSet
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
 // resourceName - the name of the OpenShift cluster resource.
-// syncSetResourceName - the name of the SyncSet resource.
-func (client SyncSetsClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (result SyncSet, err error) {
+// childResourceName - the name of the SyncSet resource.
+// parameters - the SyncSet resource.
+func (client SyncSetsClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string, parameters SyncSet) (result SyncSet, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/SyncSetsClient.CreateOrUpdate")
 		defer func() {
@@ -68,7 +69,7 @@ func (client SyncSetsClient) CreateOrUpdate(ctx context.Context, resourceGroupNa
 		return result, validation.NewError("redhatopenshift.SyncSetsClient", "CreateOrUpdate", err.Error())
 	}
 
-	req, err := client.CreateOrUpdatePreparer(ctx, resourceGroupName, resourceName, syncSetResourceName)
+	req, err := client.CreateOrUpdatePreparer(ctx, resourceGroupName, resourceName, childResourceName, parameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.SyncSetsClient", "CreateOrUpdate", nil, "Failure preparing request")
 		return
@@ -91,12 +92,12 @@ func (client SyncSetsClient) CreateOrUpdate(ctx context.Context, resourceGroupNa
 }
 
 // CreateOrUpdatePreparer prepares the CreateOrUpdate request.
-func (client SyncSetsClient) CreateOrUpdatePreparer(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (*http.Request, error) {
+func (client SyncSetsClient) CreateOrUpdatePreparer(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string, parameters SyncSet) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
-		"resourceGroupName":   autorest.Encode("path", resourceGroupName),
-		"resourceName":        autorest.Encode("path", resourceName),
-		"subscriptionId":      autorest.Encode("path", client.SubscriptionID),
-		"syncSetResourceName": autorest.Encode("path", syncSetResourceName),
+		"childResourceName": autorest.Encode("path", childResourceName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"resourceName":      autorest.Encode("path", resourceName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2022-09-04"
@@ -105,9 +106,11 @@ func (client SyncSetsClient) CreateOrUpdatePreparer(ctx context.Context, resourc
 	}
 
 	preparer := autorest.CreatePreparer(
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{childResourceName}", pathParameters),
+		autorest.WithJSON(parameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
@@ -134,8 +137,8 @@ func (client SyncSetsClient) CreateOrUpdateResponder(resp *http.Response) (resul
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
 // resourceName - the name of the OpenShift cluster resource.
-// syncSetResourceName - the name of the SyncSet resource.
-func (client SyncSetsClient) Delete(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (result autorest.Response, err error) {
+// childResourceName - the name of the SyncSet resource.
+func (client SyncSetsClient) Delete(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string) (result autorest.Response, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/SyncSetsClient.Delete")
 		defer func() {
@@ -155,7 +158,7 @@ func (client SyncSetsClient) Delete(ctx context.Context, resourceGroupName strin
 		return result, validation.NewError("redhatopenshift.SyncSetsClient", "Delete", err.Error())
 	}
 
-	req, err := client.DeletePreparer(ctx, resourceGroupName, resourceName, syncSetResourceName)
+	req, err := client.DeletePreparer(ctx, resourceGroupName, resourceName, childResourceName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.SyncSetsClient", "Delete", nil, "Failure preparing request")
 		return
@@ -178,12 +181,12 @@ func (client SyncSetsClient) Delete(ctx context.Context, resourceGroupName strin
 }
 
 // DeletePreparer prepares the Delete request.
-func (client SyncSetsClient) DeletePreparer(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (*http.Request, error) {
+func (client SyncSetsClient) DeletePreparer(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
-		"resourceGroupName":   autorest.Encode("path", resourceGroupName),
-		"resourceName":        autorest.Encode("path", resourceName),
-		"subscriptionId":      autorest.Encode("path", client.SubscriptionID),
-		"syncSetResourceName": autorest.Encode("path", syncSetResourceName),
+		"childResourceName": autorest.Encode("path", childResourceName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"resourceName":      autorest.Encode("path", resourceName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2022-09-04"
@@ -194,7 +197,7 @@ func (client SyncSetsClient) DeletePreparer(ctx context.Context, resourceGroupNa
 	preparer := autorest.CreatePreparer(
 		autorest.AsDelete(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{childResourceName}", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
@@ -210,7 +213,7 @@ func (client SyncSetsClient) DeleteSender(req *http.Request) (*http.Response, er
 func (client SyncSetsClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent),
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
 	return
@@ -220,8 +223,8 @@ func (client SyncSetsClient) DeleteResponder(resp *http.Response) (result autore
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
 // resourceName - the name of the OpenShift cluster resource.
-// syncSetResourceName - the name of the SyncSet resource.
-func (client SyncSetsClient) Get(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (result SyncSet, err error) {
+// childResourceName - the name of the SyncSet resource.
+func (client SyncSetsClient) Get(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string) (result SyncSet, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/SyncSetsClient.Get")
 		defer func() {
@@ -241,7 +244,7 @@ func (client SyncSetsClient) Get(ctx context.Context, resourceGroupName string, 
 		return result, validation.NewError("redhatopenshift.SyncSetsClient", "Get", err.Error())
 	}
 
-	req, err := client.GetPreparer(ctx, resourceGroupName, resourceName, syncSetResourceName)
+	req, err := client.GetPreparer(ctx, resourceGroupName, resourceName, childResourceName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.SyncSetsClient", "Get", nil, "Failure preparing request")
 		return
@@ -264,12 +267,12 @@ func (client SyncSetsClient) Get(ctx context.Context, resourceGroupName string, 
 }
 
 // GetPreparer prepares the Get request.
-func (client SyncSetsClient) GetPreparer(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (*http.Request, error) {
+func (client SyncSetsClient) GetPreparer(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
-		"resourceGroupName":   autorest.Encode("path", resourceGroupName),
-		"resourceName":        autorest.Encode("path", resourceName),
-		"subscriptionId":      autorest.Encode("path", client.SubscriptionID),
-		"syncSetResourceName": autorest.Encode("path", syncSetResourceName),
+		"childResourceName": autorest.Encode("path", childResourceName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"resourceName":      autorest.Encode("path", resourceName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2022-09-04"
@@ -280,7 +283,7 @@ func (client SyncSetsClient) GetPreparer(ctx context.Context, resourceGroupName 
 	preparer := autorest.CreatePreparer(
 		autorest.AsGet(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{childResourceName}", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
@@ -434,8 +437,9 @@ func (client SyncSetsClient) ListComplete(ctx context.Context, resourceGroupName
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
 // resourceName - the name of the OpenShift cluster resource.
-// syncSetResourceName - the name of the SyncSet resource.
-func (client SyncSetsClient) Update(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (result SyncSet, err error) {
+// childResourceName - the name of the SyncSet resource.
+// parameters - the SyncSet resource.
+func (client SyncSetsClient) Update(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string, parameters SyncSetUpdate) (result SyncSet, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/SyncSetsClient.Update")
 		defer func() {
@@ -455,7 +459,7 @@ func (client SyncSetsClient) Update(ctx context.Context, resourceGroupName strin
 		return result, validation.NewError("redhatopenshift.SyncSetsClient", "Update", err.Error())
 	}
 
-	req, err := client.UpdatePreparer(ctx, resourceGroupName, resourceName, syncSetResourceName)
+	req, err := client.UpdatePreparer(ctx, resourceGroupName, resourceName, childResourceName, parameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.SyncSetsClient", "Update", nil, "Failure preparing request")
 		return
@@ -478,12 +482,12 @@ func (client SyncSetsClient) Update(ctx context.Context, resourceGroupName strin
 }
 
 // UpdatePreparer prepares the Update request.
-func (client SyncSetsClient) UpdatePreparer(ctx context.Context, resourceGroupName string, resourceName string, syncSetResourceName string) (*http.Request, error) {
+func (client SyncSetsClient) UpdatePreparer(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string, parameters SyncSetUpdate) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
-		"resourceGroupName":   autorest.Encode("path", resourceGroupName),
-		"resourceName":        autorest.Encode("path", resourceName),
-		"subscriptionId":      autorest.Encode("path", client.SubscriptionID),
-		"syncSetResourceName": autorest.Encode("path", syncSetResourceName),
+		"childResourceName": autorest.Encode("path", childResourceName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"resourceName":      autorest.Encode("path", resourceName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
 	const APIVersion = "2022-09-04"
@@ -491,10 +495,13 @@ func (client SyncSetsClient) UpdatePreparer(ctx context.Context, resourceGroupNa
 		"api-version": APIVersion,
 	}
 
+	parameters.SystemData = nil
 	preparer := autorest.CreatePreparer(
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{childResourceName}", pathParameters),
+		autorest.WithJSON(parameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }

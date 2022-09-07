@@ -249,6 +249,201 @@ class IngressProfile(msrest.serialization.Model):
         self.ip = kwargs.get('ip', None)
 
 
+class Resource(msrest.serialization.Model):
+    """Common fields that are returned in the response for all Azure Resource Manager resources.
+
+    Variables are only populated by the server, and will be ignored when sending a request.
+
+    :ivar id: Fully qualified resource ID for the resource. Ex -
+     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}.
+    :vartype id: str
+    :ivar name: The name of the resource.
+    :vartype name: str
+    :ivar type: The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or
+     "Microsoft.Storage/storageAccounts".
+    :vartype type: str
+    :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
+     information.
+    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
+    """
+
+    _validation = {
+        'id': {'readonly': True},
+        'name': {'readonly': True},
+        'type': {'readonly': True},
+        'system_data': {'readonly': True},
+    }
+
+    _attribute_map = {
+        'id': {'key': 'id', 'type': 'str'},
+        'name': {'key': 'name', 'type': 'str'},
+        'type': {'key': 'type', 'type': 'str'},
+        'system_data': {'key': 'systemData', 'type': 'SystemData'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        """
+        super(Resource, self).__init__(**kwargs)
+        self.id = None
+        self.name = None
+        self.type = None
+        self.system_data = None
+
+
+class ProxyResource(Resource):
+    """The resource model definition for a Azure Resource Manager proxy resource. It will not have tags and a location.
+
+    Variables are only populated by the server, and will be ignored when sending a request.
+
+    :ivar id: Fully qualified resource ID for the resource. Ex -
+     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}.
+    :vartype id: str
+    :ivar name: The name of the resource.
+    :vartype name: str
+    :ivar type: The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or
+     "Microsoft.Storage/storageAccounts".
+    :vartype type: str
+    :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
+     information.
+    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
+    """
+
+    _validation = {
+        'id': {'readonly': True},
+        'name': {'readonly': True},
+        'type': {'readonly': True},
+        'system_data': {'readonly': True},
+    }
+
+    _attribute_map = {
+        'id': {'key': 'id', 'type': 'str'},
+        'name': {'key': 'name', 'type': 'str'},
+        'type': {'key': 'type', 'type': 'str'},
+        'system_data': {'key': 'systemData', 'type': 'SystemData'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        """
+        super(ProxyResource, self).__init__(**kwargs)
+
+
+class MachinePool(ProxyResource):
+    """MachinePool represents a MachinePool.
+
+    Variables are only populated by the server, and will be ignored when sending a request.
+
+    :ivar id: Fully qualified resource ID for the resource. Ex -
+     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}.
+    :vartype id: str
+    :ivar name: The name of the resource.
+    :vartype name: str
+    :ivar type: The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or
+     "Microsoft.Storage/storageAccounts".
+    :vartype type: str
+    :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
+     information.
+    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
+    :ivar resources:
+    :vartype resources: str
+    """
+
+    _validation = {
+        'id': {'readonly': True},
+        'name': {'readonly': True},
+        'type': {'readonly': True},
+        'system_data': {'readonly': True},
+    }
+
+    _attribute_map = {
+        'id': {'key': 'id', 'type': 'str'},
+        'name': {'key': 'name', 'type': 'str'},
+        'type': {'key': 'type', 'type': 'str'},
+        'system_data': {'key': 'systemData', 'type': 'SystemData'},
+        'resources': {'key': 'properties.resources', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword resources:
+        :paramtype resources: str
+        """
+        super(MachinePool, self).__init__(**kwargs)
+        self.resources = kwargs.get('resources', None)
+
+
+class MachinePoolList(msrest.serialization.Model):
+    """MachinePoolList represents a list of MachinePools.
+
+    :ivar value: The list of Machine Pools.
+    :vartype value: list[~azure.mgmt.redhatopenshift.v2022_09_04.models.MachinePool]
+    :ivar next_link: The link used to get the next page of operations.
+    :vartype next_link: str
+    """
+
+    _attribute_map = {
+        'value': {'key': 'value', 'type': '[MachinePool]'},
+        'next_link': {'key': 'nextLink', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword value: The list of Machine Pools.
+        :paramtype value: list[~azure.mgmt.redhatopenshift.v2022_09_04.models.MachinePool]
+        :keyword next_link: The link used to get the next page of operations.
+        :paramtype next_link: str
+        """
+        super(MachinePoolList, self).__init__(**kwargs)
+        self.value = kwargs.get('value', None)
+        self.next_link = kwargs.get('next_link', None)
+
+
+class MachinePoolUpdate(msrest.serialization.Model):
+    """MachinePool represents a MachinePool.
+
+    Variables are only populated by the server, and will be ignored when sending a request.
+
+    :ivar system_data: The system meta data relating to this resource.
+    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
+    :ivar resources:
+    :vartype resources: str
+    """
+
+    _validation = {
+        'system_data': {'readonly': True},
+    }
+
+    _attribute_map = {
+        'system_data': {'key': 'systemData', 'type': 'SystemData'},
+        'resources': {'key': 'properties.resources', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword resources:
+        :paramtype resources: str
+        """
+        super(MachinePoolUpdate, self).__init__(**kwargs)
+        self.system_data = None
+        self.resources = kwargs.get('resources', None)
+
+
 class MasterProfile(msrest.serialization.Model):
     """MasterProfile represents a master profile.
 
@@ -323,51 +518,6 @@ class NetworkProfile(msrest.serialization.Model):
         super(NetworkProfile, self).__init__(**kwargs)
         self.pod_cidr = kwargs.get('pod_cidr', None)
         self.service_cidr = kwargs.get('service_cidr', None)
-
-
-class Resource(msrest.serialization.Model):
-    """Common fields that are returned in the response for all Azure Resource Manager resources.
-
-    Variables are only populated by the server, and will be ignored when sending a request.
-
-    :ivar id: Fully qualified resource ID for the resource. Ex -
-     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}.
-    :vartype id: str
-    :ivar name: The name of the resource.
-    :vartype name: str
-    :ivar type: The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or
-     "Microsoft.Storage/storageAccounts".
-    :vartype type: str
-    :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
-     information.
-    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
-    """
-
-    _validation = {
-        'id': {'readonly': True},
-        'name': {'readonly': True},
-        'type': {'readonly': True},
-        'system_data': {'readonly': True},
-    }
-
-    _attribute_map = {
-        'id': {'key': 'id', 'type': 'str'},
-        'name': {'key': 'name', 'type': 'str'},
-        'type': {'key': 'type', 'type': 'str'},
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
-    }
-
-    def __init__(
-        self,
-        **kwargs
-    ):
-        """
-        """
-        super(Resource, self).__init__(**kwargs)
-        self.id = None
-        self.name = None
-        self.type = None
-        self.system_data = None
 
 
 class TrackedResource(Resource):
@@ -794,8 +944,8 @@ class OperationList(msrest.serialization.Model):
         self.next_link = kwargs.get('next_link', None)
 
 
-class ProxyResource(Resource):
-    """The resource model definition for a Azure Resource Manager proxy resource. It will not have tags and a location.
+class Secret(ProxyResource):
+    """Secret represents a secret.
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
@@ -810,6 +960,8 @@ class ProxyResource(Resource):
     :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
      information.
     :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
+    :ivar secret_resources: The Secrets Resources.
+    :vartype secret_resources: str
     """
 
     _validation = {
@@ -824,6 +976,7 @@ class ProxyResource(Resource):
         'name': {'key': 'name', 'type': 'str'},
         'type': {'key': 'type', 'type': 'str'},
         'system_data': {'key': 'systemData', 'type': 'SystemData'},
+        'secret_resources': {'key': 'properties.secretResources', 'type': 'str'},
     }
 
     def __init__(
@@ -831,8 +984,73 @@ class ProxyResource(Resource):
         **kwargs
     ):
         """
+        :keyword secret_resources: The Secrets Resources.
+        :paramtype secret_resources: str
         """
-        super(ProxyResource, self).__init__(**kwargs)
+        super(Secret, self).__init__(**kwargs)
+        self.secret_resources = kwargs.get('secret_resources', None)
+
+
+class SecretList(msrest.serialization.Model):
+    """SecretList represents a list of Secrets.
+
+    :ivar value: The list of secrets.
+    :vartype value: list[~azure.mgmt.redhatopenshift.v2022_09_04.models.Secret]
+    :ivar next_link: The link used to get the next page of operations.
+    :vartype next_link: str
+    """
+
+    _attribute_map = {
+        'value': {'key': 'value', 'type': '[Secret]'},
+        'next_link': {'key': 'nextLink', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword value: The list of secrets.
+        :paramtype value: list[~azure.mgmt.redhatopenshift.v2022_09_04.models.Secret]
+        :keyword next_link: The link used to get the next page of operations.
+        :paramtype next_link: str
+        """
+        super(SecretList, self).__init__(**kwargs)
+        self.value = kwargs.get('value', None)
+        self.next_link = kwargs.get('next_link', None)
+
+
+class SecretUpdate(msrest.serialization.Model):
+    """Secret represents a secret.
+
+    Variables are only populated by the server, and will be ignored when sending a request.
+
+    :ivar system_data: The system meta data relating to this resource.
+    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
+    :ivar secret_resources: The Secrets Resources.
+    :vartype secret_resources: str
+    """
+
+    _validation = {
+        'system_data': {'readonly': True},
+    }
+
+    _attribute_map = {
+        'system_data': {'key': 'systemData', 'type': 'SystemData'},
+        'secret_resources': {'key': 'properties.secretResources', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword secret_resources: The Secrets Resources.
+        :paramtype secret_resources: str
+        """
+        super(SecretUpdate, self).__init__(**kwargs)
+        self.system_data = None
+        self.secret_resources = kwargs.get('secret_resources', None)
 
 
 class ServicePrincipalProfile(msrest.serialization.Model):
@@ -864,47 +1082,8 @@ class ServicePrincipalProfile(msrest.serialization.Model):
         self.client_secret = kwargs.get('client_secret', None)
 
 
-class SyncSet(msrest.serialization.Model):
-    """SyncSet represents a SyncSet for an Azure Red Hat OpenShift Cluster.
-
-    Variables are only populated by the server, and will be ignored when sending a request.
-
-    :ivar system_data: The system meta data relating to this resource.
-    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
-    :ivar cluster_resource_id: The parent Azure Red Hat OpenShift resourceID.
-    :vartype cluster_resource_id: str
-    :ivar resources: Resources represents the SyncSets configuration.
-    :vartype resources: str
-    """
-
-    _validation = {
-        'system_data': {'readonly': True},
-    }
-
-    _attribute_map = {
-        'system_data': {'key': 'systemData', 'type': 'SystemData'},
-        'cluster_resource_id': {'key': 'properties.clusterResourceId', 'type': 'str'},
-        'resources': {'key': 'properties.resources', 'type': 'str'},
-    }
-
-    def __init__(
-        self,
-        **kwargs
-    ):
-        """
-        :keyword cluster_resource_id: The parent Azure Red Hat OpenShift resourceID.
-        :paramtype cluster_resource_id: str
-        :keyword resources: Resources represents the SyncSets configuration.
-        :paramtype resources: str
-        """
-        super(SyncSet, self).__init__(**kwargs)
-        self.system_data = None
-        self.cluster_resource_id = kwargs.get('cluster_resource_id', None)
-        self.resources = kwargs.get('resources', None)
-
-
-class SyncSetList(ProxyResource):
-    """SyncSetList represents a list of SyncSets.
+class SyncIdentityProvider(ProxyResource):
+    """SyncIdentityProvider represents a SyncIdentityProvider.
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
@@ -919,10 +1098,8 @@ class SyncSetList(ProxyResource):
     :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
      information.
     :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
-    :ivar value: The list of syncsets.
-    :vartype value: list[~azure.mgmt.redhatopenshift.v2022_09_04.models.SyncSet]
-    :ivar next_link: The link used to get the next page of operations.
-    :vartype next_link: str
+    :ivar resources:
+    :vartype resources: str
     """
 
     _validation = {
@@ -937,6 +1114,140 @@ class SyncSetList(ProxyResource):
         'name': {'key': 'name', 'type': 'str'},
         'type': {'key': 'type', 'type': 'str'},
         'system_data': {'key': 'systemData', 'type': 'SystemData'},
+        'resources': {'key': 'properties.resources', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword resources:
+        :paramtype resources: str
+        """
+        super(SyncIdentityProvider, self).__init__(**kwargs)
+        self.resources = kwargs.get('resources', None)
+
+
+class SyncIdentityProviderList(msrest.serialization.Model):
+    """SyncSetList represents a list of SyncSets.
+
+    :ivar value: The list of sync identity providers.
+    :vartype value: list[~azure.mgmt.redhatopenshift.v2022_09_04.models.SyncIdentityProvider]
+    :ivar next_link: The link used to get the next page of operations.
+    :vartype next_link: str
+    """
+
+    _attribute_map = {
+        'value': {'key': 'value', 'type': '[SyncIdentityProvider]'},
+        'next_link': {'key': 'nextLink', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword value: The list of sync identity providers.
+        :paramtype value: list[~azure.mgmt.redhatopenshift.v2022_09_04.models.SyncIdentityProvider]
+        :keyword next_link: The link used to get the next page of operations.
+        :paramtype next_link: str
+        """
+        super(SyncIdentityProviderList, self).__init__(**kwargs)
+        self.value = kwargs.get('value', None)
+        self.next_link = kwargs.get('next_link', None)
+
+
+class SyncIdentityProviderUpdate(msrest.serialization.Model):
+    """SyncIdentityProvider represents a SyncIdentityProvider.
+
+    Variables are only populated by the server, and will be ignored when sending a request.
+
+    :ivar system_data: The system meta data relating to this resource.
+    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
+    :ivar resources:
+    :vartype resources: str
+    """
+
+    _validation = {
+        'system_data': {'readonly': True},
+    }
+
+    _attribute_map = {
+        'system_data': {'key': 'systemData', 'type': 'SystemData'},
+        'resources': {'key': 'properties.resources', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword resources:
+        :paramtype resources: str
+        """
+        super(SyncIdentityProviderUpdate, self).__init__(**kwargs)
+        self.system_data = None
+        self.resources = kwargs.get('resources', None)
+
+
+class SyncSet(ProxyResource):
+    """SyncSet represents a SyncSet for an Azure Red Hat OpenShift Cluster.
+
+    Variables are only populated by the server, and will be ignored when sending a request.
+
+    :ivar id: Fully qualified resource ID for the resource. Ex -
+     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}.
+    :vartype id: str
+    :ivar name: The name of the resource.
+    :vartype name: str
+    :ivar type: The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or
+     "Microsoft.Storage/storageAccounts".
+    :vartype type: str
+    :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
+     information.
+    :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
+    :ivar resources: Resources represents the SyncSets configuration.
+    :vartype resources: str
+    """
+
+    _validation = {
+        'id': {'readonly': True},
+        'name': {'readonly': True},
+        'type': {'readonly': True},
+        'system_data': {'readonly': True},
+    }
+
+    _attribute_map = {
+        'id': {'key': 'id', 'type': 'str'},
+        'name': {'key': 'name', 'type': 'str'},
+        'type': {'key': 'type', 'type': 'str'},
+        'system_data': {'key': 'systemData', 'type': 'SystemData'},
+        'resources': {'key': 'properties.resources', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword resources: Resources represents the SyncSets configuration.
+        :paramtype resources: str
+        """
+        super(SyncSet, self).__init__(**kwargs)
+        self.resources = kwargs.get('resources', None)
+
+
+class SyncSetList(msrest.serialization.Model):
+    """SyncSetList represents a list of SyncSets.
+
+    :ivar value: The list of syncsets.
+    :vartype value: list[~azure.mgmt.redhatopenshift.v2022_09_04.models.SyncSet]
+    :ivar next_link: The link used to get the next page of operations.
+    :vartype next_link: str
+    """
+
+    _attribute_map = {
         'value': {'key': 'value', 'type': '[SyncSet]'},
         'next_link': {'key': 'nextLink', 'type': 'str'},
     }
@@ -963,8 +1274,6 @@ class SyncSetUpdate(msrest.serialization.Model):
 
     :ivar system_data: The system meta data relating to this resource.
     :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
-    :ivar cluster_resource_id: The parent Azure Red Hat OpenShift resourceID.
-    :vartype cluster_resource_id: str
     :ivar resources: Resources represents the SyncSets configuration.
     :vartype resources: str
     """
@@ -975,7 +1284,6 @@ class SyncSetUpdate(msrest.serialization.Model):
 
     _attribute_map = {
         'system_data': {'key': 'systemData', 'type': 'SystemData'},
-        'cluster_resource_id': {'key': 'properties.clusterResourceId', 'type': 'str'},
         'resources': {'key': 'properties.resources', 'type': 'str'},
     }
 
@@ -984,14 +1292,11 @@ class SyncSetUpdate(msrest.serialization.Model):
         **kwargs
     ):
         """
-        :keyword cluster_resource_id: The parent Azure Red Hat OpenShift resourceID.
-        :paramtype cluster_resource_id: str
         :keyword resources: Resources represents the SyncSets configuration.
         :paramtype resources: str
         """
         super(SyncSetUpdate, self).__init__(**kwargs)
         self.system_data = None
-        self.cluster_resource_id = kwargs.get('cluster_resource_id', None)
         self.resources = kwargs.get('resources', None)
 
 

@@ -25,21 +25,47 @@ func (c clusterManagerConfigurationConverter) ToExternal(ocm *api.ClusterManager
 
 func (c clusterManagerConfigurationConverter) SyncSetToExternal(ocm *api.SyncSet) (interface{}, error) {
 	out := new(SyncSet)
+	out.proxyResource = true
 	out.ID = ocm.ID
 	out.Name = ocm.Name
 	out.Type = ocm.Type
-	out.Properties = SyncSetProperties{
-		ClusterResourceId: ocm.Properties.ClusterResourceId,
-		Resources:         ocm.Properties.Resources,
-	}
+	out.Properties.Resources = ocm.Properties.Resources
+	return out, nil
+}
 
+func (c *clusterManagerConfigurationConverter) MachinePoolToExternal(ocm *api.MachinePool) (interface{}, error) {
+	out := new(MachinePool)
+	out.proxyResource = true
+	out.ID = ocm.ID
+	out.Name = ocm.Name
+	out.Type = ocm.Type
+	out.Properties.Resources = ocm.Properties.Resources
+	return out, nil
+}
+
+func (c *clusterManagerConfigurationConverter) SyncIdentityProviderToExternal(ocm *api.SyncIdentityProvider) (interface{}, error) {
+	out := new(SyncIdentityProvider)
+	out.proxyResource = true
+	out.ID = ocm.ID
+	out.Name = ocm.Name
+	out.Type = ocm.Type
+	out.Properties.Resources = ocm.Properties.Resources
+	return out, nil
+}
+
+func (c *clusterManagerConfigurationConverter) SecretToExternal(ocm *api.Secret) (interface{}, error) {
+	out := new(Secret)
+	out.proxyResource = true
+	out.ID = ocm.ID
+	out.Name = ocm.Name
+	out.Type = ocm.Type
+	out.Properties.SecretResources = ""
 	return out, nil
 }
 
 func (c clusterManagerConfigurationConverter) ToInternal(_ocm interface{}, out *api.ClusterManagerConfiguration) error {
 	ocm := _ocm.(*api.ClusterManagerConfiguration)
 	out.ID = ocm.ID
-
 	return nil
 }
 

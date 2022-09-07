@@ -4,7 +4,6 @@
     "subscriptionId": "subscriptionId",
     "resourceGroupName": "resourceGroup",
     "resourceName": "resourceName",
-    "syncSetResourceName": "syncSetResourceName",
     "parameters": {
       "location": "location",
       "tags": {

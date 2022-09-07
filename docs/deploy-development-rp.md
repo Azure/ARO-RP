@@ -222,8 +222,7 @@
   * You can find example payloads in the projects `./hack/ocm` folder.
 
   ```bash
-  curl -X PUT -k "https://localhost:8443/subscriptions/fe16a035-e540-4ab7-80d9-373fa9a3d6ae/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/syncsets/mySyncSet?api-version=2022-09-04" --header "Content-Type: application/json" -d @./hack/ocm/syncset.json
-  ```
+  curl -X PUT -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/syncsets/mySyncSet?api-version=2022-09-04" --header "Content-Type: application/json" -d @./hack/ocm/syncset.json
 
   
 ## Debugging OpenShift Cluster

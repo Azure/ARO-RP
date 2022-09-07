@@ -19,7 +19,7 @@ func (f *frontend) deleteClusterManagerConfiguration(w http.ResponseWriter, r *h
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 
-	if DISABLEOCMAPI {
+	if disableOCMAPI {
 		reply(log, w, nil, []byte("forbidden."), api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "forbidden."))
 		return
 	}

@@ -80,7 +80,7 @@ def build_get_request(
     subscription_id,  # type: str
     resource_group_name,  # type: str
     resource_name,  # type: str
-    sync_set_resource_name,  # type: str
+    child_resource_name,  # type: str
     **kwargs  # type: Any
 ):
     # type: (...) -> HttpRequest
@@ -88,12 +88,12 @@ def build_get_request(
 
     accept = "application/json"
     # Construct URL
-    _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}")  # pylint: disable=line-too-long
+    _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{childResourceName}")  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, 'str', min_length=1),
         "resourceGroupName": _SERIALIZER.url("resource_group_name", resource_group_name, 'str', max_length=90, min_length=1),
         "resourceName": _SERIALIZER.url("resource_name", resource_name, 'str'),
-        "syncSetResourceName": _SERIALIZER.url("sync_set_resource_name", sync_set_resource_name, 'str'),
+        "childResourceName": _SERIALIZER.url("child_resource_name", child_resource_name, 'str'),
     }
 
     _url = _format_url_section(_url, **path_format_arguments)
@@ -119,20 +119,21 @@ def build_create_or_update_request(
     subscription_id,  # type: str
     resource_group_name,  # type: str
     resource_name,  # type: str
-    sync_set_resource_name,  # type: str
+    child_resource_name,  # type: str
     **kwargs  # type: Any
 ):
     # type: (...) -> HttpRequest
     api_version = kwargs.pop('api_version', "2022-09-04")  # type: str
+    content_type = kwargs.pop('content_type', None)  # type: Optional[str]
 
     accept = "application/json"
     # Construct URL
-    _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}")  # pylint: disable=line-too-long
+    _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{childResourceName}")  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, 'str', min_length=1),
         "resourceGroupName": _SERIALIZER.url("resource_group_name", resource_group_name, 'str', max_length=90, min_length=1),
         "resourceName": _SERIALIZER.url("resource_name", resource_name, 'str'),
-        "syncSetResourceName": _SERIALIZER.url("sync_set_resource_name", sync_set_resource_name, 'str'),
+        "childResourceName": _SERIALIZER.url("child_resource_name", child_resource_name, 'str'),
     }
 
     _url = _format_url_section(_url, **path_format_arguments)
@@ -143,6 +144,8 @@ def build_create_or_update_request(
 
     # Construct headers
     _header_parameters = kwargs.pop("headers", {})  # type: Dict[str, Any]
+    if content_type is not None:
+        _header_parameters['Content-Type'] = _SERIALIZER.header("content_type", content_type, 'str')
     _header_parameters['Accept'] = _SERIALIZER.header("accept", accept, 'str')
 
     return HttpRequest(
@@ -158,7 +161,7 @@ def build_delete_request(
     subscription_id,  # type: str
     resource_group_name,  # type: str
     resource_name,  # type: str
-    sync_set_resource_name,  # type: str
+    child_resource_name,  # type: str
     **kwargs  # type: Any
 ):
     # type: (...) -> HttpRequest
@@ -166,12 +169,12 @@ def build_delete_request(
 
     accept = "application/json"
     # Construct URL
-    _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}")  # pylint: disable=line-too-long
+    _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{childResourceName}")  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, 'str', min_length=1),
         "resourceGroupName": _SERIALIZER.url("resource_group_name", resource_group_name, 'str', max_length=90, min_length=1),
         "resourceName": _SERIALIZER.url("resource_name", resource_name, 'str'),
-        "syncSetResourceName": _SERIALIZER.url("sync_set_resource_name", sync_set_resource_name, 'str'),
+        "childResourceName": _SERIALIZER.url("child_resource_name", child_resource_name, 'str'),
     }
 
     _url = _format_url_section(_url, **path_format_arguments)
@@ -197,20 +200,21 @@ def build_update_request(
     subscription_id,  # type: str
     resource_group_name,  # type: str
     resource_name,  # type: str
-    sync_set_resource_name,  # type: str
+    child_resource_name,  # type: str
     **kwargs  # type: Any
 ):
     # type: (...) -> HttpRequest
     api_version = kwargs.pop('api_version', "2022-09-04")  # type: str
+    content_type = kwargs.pop('content_type', None)  # type: Optional[str]
 
     accept = "application/json"
     # Construct URL
-    _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}")  # pylint: disable=line-too-long
+    _url = kwargs.pop("template_url", "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{childResourceName}")  # pylint: disable=line-too-long
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, 'str', min_length=1),
         "resourceGroupName": _SERIALIZER.url("resource_group_name", resource_group_name, 'str', max_length=90, min_length=1),
         "resourceName": _SERIALIZER.url("resource_name", resource_name, 'str'),
-        "syncSetResourceName": _SERIALIZER.url("sync_set_resource_name", sync_set_resource_name, 'str'),
+        "childResourceName": _SERIALIZER.url("child_resource_name", child_resource_name, 'str'),
     }
 
     _url = _format_url_section(_url, **path_format_arguments)
@@ -221,6 +225,8 @@ def build_update_request(
 
     # Construct headers
     _header_parameters = kwargs.pop("headers", {})  # type: Dict[str, Any]
+    if content_type is not None:
+        _header_parameters['Content-Type'] = _SERIALIZER.header("content_type", content_type, 'str')
     _header_parameters['Accept'] = _SERIALIZER.header("accept", accept, 'str')
 
     return HttpRequest(
@@ -344,7 +350,7 @@ class SyncSetsOperations(object):
         self,
         resource_group_name,  # type: str
         resource_name,  # type: str
-        sync_set_resource_name,  # type: str
+        child_resource_name,  # type: str
         **kwargs  # type: Any
     ):
         # type: (...) -> "_models.SyncSet"
@@ -356,8 +362,8 @@ class SyncSetsOperations(object):
         :type resource_group_name: str
         :param resource_name: The name of the OpenShift cluster resource.
         :type resource_name: str
-        :param sync_set_resource_name: The name of the SyncSet resource.
-        :type sync_set_resource_name: str
+        :param child_resource_name: The name of the SyncSet resource.
+        :type child_resource_name: str
         :keyword callable cls: A custom type or function that will be passed the direct response
         :return: SyncSet, or the result of cls(response)
         :rtype: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SyncSet
@@ -376,7 +382,7 @@ class SyncSetsOperations(object):
             subscription_id=self._config.subscription_id,
             resource_group_name=resource_group_name,
             resource_name=resource_name,
-            sync_set_resource_name=sync_set_resource_name,
+            child_resource_name=child_resource_name,
             api_version=api_version,
             template_url=self.get.metadata['url'],
         )
@@ -401,7 +407,7 @@ class SyncSetsOperations(object):
 
         return deserialized
 
-    get.metadata = {'url': "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}"}  # type: ignore
+    get.metadata = {'url': "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{childResourceName}"}  # type: ignore
 
 
     @distributed_trace
@@ -409,7 +415,8 @@ class SyncSetsOperations(object):
         self,
         resource_group_name,  # type: str
         resource_name,  # type: str
-        sync_set_resource_name,  # type: str
+        child_resource_name,  # type: str
+        parameters,  # type: "_models.SyncSet"
         **kwargs  # type: Any
     ):
         # type: (...) -> "_models.SyncSet"
@@ -421,8 +428,10 @@ class SyncSetsOperations(object):
         :type resource_group_name: str
         :param resource_name: The name of the OpenShift cluster resource.
         :type resource_name: str
-        :param sync_set_resource_name: The name of the SyncSet resource.
-        :type sync_set_resource_name: str
+        :param child_resource_name: The name of the SyncSet resource.
+        :type child_resource_name: str
+        :param parameters: The SyncSet resource.
+        :type parameters: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SyncSet
         :keyword callable cls: A custom type or function that will be passed the direct response
         :return: SyncSet, or the result of cls(response)
         :rtype: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SyncSet
@@ -435,14 +444,18 @@ class SyncSetsOperations(object):
         error_map.update(kwargs.pop('error_map', {}))
 
         api_version = kwargs.pop('api_version', "2022-09-04")  # type: str
+        content_type = kwargs.pop('content_type', "application/json")  # type: Optional[str]
 
-        
+        _json = self._serialize.body(parameters, 'SyncSet')
+
         request = build_create_or_update_request(
             subscription_id=self._config.subscription_id,
             resource_group_name=resource_group_name,
             resource_name=resource_name,
-            sync_set_resource_name=sync_set_resource_name,
+            child_resource_name=child_resource_name,
             api_version=api_version,
+            content_type=content_type,
+            json=_json,
             template_url=self.create_or_update.metadata['url'],
         )
         request = _convert_request(request)
@@ -470,7 +483,7 @@ class SyncSetsOperations(object):
 
         return deserialized
 
-    create_or_update.metadata = {'url': "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}"}  # type: ignore
+    create_or_update.metadata = {'url': "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{childResourceName}"}  # type: ignore
 
 
     @distributed_trace
@@ -478,7 +491,7 @@ class SyncSetsOperations(object):
         self,
         resource_group_name,  # type: str
         resource_name,  # type: str
-        sync_set_resource_name,  # type: str
+        child_resource_name,  # type: str
         **kwargs  # type: Any
     ):
         # type: (...) -> None
@@ -490,8 +503,8 @@ class SyncSetsOperations(object):
         :type resource_group_name: str
         :param resource_name: The name of the OpenShift cluster resource.
         :type resource_name: str
-        :param sync_set_resource_name: The name of the SyncSet resource.
-        :type sync_set_resource_name: str
+        :param child_resource_name: The name of the SyncSet resource.
+        :type child_resource_name: str
         :keyword callable cls: A custom type or function that will be passed the direct response
         :return: None, or the result of cls(response)
         :rtype: None
@@ -510,7 +523,7 @@ class SyncSetsOperations(object):
             subscription_id=self._config.subscription_id,
             resource_group_name=resource_group_name,
             resource_name=resource_name,
-            sync_set_resource_name=sync_set_resource_name,
+            child_resource_name=child_resource_name,
             api_version=api_version,
             template_url=self.delete.metadata['url'],
         )
@@ -524,14 +537,14 @@ class SyncSetsOperations(object):
         )
         response = pipeline_response.http_response
 
-        if response.status_code not in [202, 204]:
+        if response.status_code not in [200, 204]:
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response, error_format=ARMErrorFormat)
 
         if cls:
             return cls(pipeline_response, None, {})
 
-    delete.metadata = {'url': "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}"}  # type: ignore
+    delete.metadata = {'url': "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{childResourceName}"}  # type: ignore
 
 
     @distributed_trace
@@ -539,11 +552,13 @@ class SyncSetsOperations(object):
         self,
         resource_group_name,  # type: str
         resource_name,  # type: str
-        sync_set_resource_name,  # type: str
+        child_resource_name,  # type: str
+        parameters,  # type: "_models.SyncSetUpdate"
         **kwargs  # type: Any
     ):
         # type: (...) -> "_models.SyncSet"
-        """Creates or updates a SyncSet with the specified subscription, resource group and resource name.
+        """Patches (create or update) a SyncSet with the specified subscription, resource group and
+        resource name.
 
         The operation returns properties of a SyncSet.
 
@@ -551,8 +566,10 @@ class SyncSetsOperations(object):
         :type resource_group_name: str
         :param resource_name: The name of the OpenShift cluster resource.
         :type resource_name: str
-        :param sync_set_resource_name: The name of the SyncSet resource.
-        :type sync_set_resource_name: str
+        :param child_resource_name: The name of the SyncSet resource.
+        :type child_resource_name: str
+        :param parameters: The SyncSet resource.
+        :type parameters: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SyncSetUpdate
         :keyword callable cls: A custom type or function that will be passed the direct response
         :return: SyncSet, or the result of cls(response)
         :rtype: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SyncSet
@@ -565,14 +582,18 @@ class SyncSetsOperations(object):
         error_map.update(kwargs.pop('error_map', {}))
 
         api_version = kwargs.pop('api_version', "2022-09-04")  # type: str
+        content_type = kwargs.pop('content_type', "application/json")  # type: Optional[str]
 
-        
+        _json = self._serialize.body(parameters, 'SyncSetUpdate')
+
         request = build_update_request(
             subscription_id=self._config.subscription_id,
             resource_group_name=resource_group_name,
             resource_name=resource_name,
-            sync_set_resource_name=sync_set_resource_name,
+            child_resource_name=child_resource_name,
             api_version=api_version,
+            content_type=content_type,
+            json=_json,
             template_url=self.update.metadata['url'],
         )
         request = _convert_request(request)
@@ -600,5 +621,5 @@ class SyncSetsOperations(object):
 
         return deserialized
 
-    update.metadata = {'url': "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}"}  # type: ignore
+    update.metadata = {'url': "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{childResourceName}"}  # type: ignore
 
