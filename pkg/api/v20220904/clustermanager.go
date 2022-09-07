@@ -19,12 +19,21 @@ type ClusterManagerConfigurationList struct {
 
 type ClusterManagerConfiguration struct {
 	// ID is the unique identifier for the cluster manager configuration
-	ID                string                                `json:"id,omitempty"`
-	Name              string                                `json:"name,omitempty"`
-	ClusterResourceId string                                `json:"clusterResourceId,omitempty"`
-	Deleting          bool                                  `json:"deleting,omitempty"` // https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
-	Properties        ClusterManagerConfigurationProperties `json:"properties,omitempty"`
-	// SystemData metadata from ARM, more info in pkg/api/openshiftcluster.go
+	ID string `json:"id,omitempty"`
+
+	// The resource name
+	Name string `json:"name,omitempty"`
+
+	// The parent cluster resourceId
+	ClusterResourceId string `json:"clusterResourceId,omitempty"`
+
+	// If this object is marked to be deleted
+	Deleting bool `json:"deleting,omitempty"` // https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
+
+	// The ClusterManagerConfigurations properties
+	Properties ClusterManagerConfigurationProperties `json:"properties,omitempty"`
+
+	// SystemData metadata from ARM
 	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
@@ -34,8 +43,6 @@ type ClusterManagerConfigurationProperties struct {
 
 // SyncSetList represents a list of SyncSets
 type SyncSetList struct {
-	proxyResource bool
-
 	// The list of syncsets.
 	SyncSets []*SyncSet `json:"value"`
 
@@ -48,7 +55,7 @@ type SyncSet struct {
 	// This is a flag used during the swagger generation typewalker to
 	// signal that it should be marked as a proxy resource and
 	// not a tracked ARM resource.
-	// proxyResource bool
+	proxyResource bool
 
 	// The resource ID.
 	ID string `json:"id,omitempty" mutable:"case"`
@@ -59,8 +66,8 @@ type SyncSet struct {
 	// The resource type.
 	Type string `json:"type,omitempty" mutable:"case"`
 
-	// // SystemData metadata relating to this resource.
-	// SystemData *SystemData `json:"systemData,omitempty"`
+	// SystemData metadata relating to this resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
 
 	// The Syncsets properties
 	Properties SyncSetProperties `json:"properties,omitempty"`
@@ -68,53 +75,118 @@ type SyncSet struct {
 
 // SyncSetProperties represents the properties of a SyncSet
 type SyncSetProperties struct {
-	// The parent Azure Red Hat OpenShift resourceID.
-	ClusterResourceId string `json:"clusterResourceId,omitempty"`
-
 	// Resources represents the SyncSets configuration.
 	Resources string `json:"resources,omitempty"`
 }
 
+// MachinePoolList represents a list of MachinePools
+type MachinePoolList struct {
+	// The list of Machine Pools.
+	MachinePools []*MachinePool `json:"value"`
+
+	// The link used to get the next page of operations.
+	NextLink string `json:"nextLink,omitempty"`
+}
+
 // MachinePool represents a MachinePool
 type MachinePool struct {
+	// This is a flag used during the swagger generation typewalker to
+	// signal that it should be marked as a proxy resource and
+	// not a tracked ARM resource.
+	proxyResource bool
+
 	// The Resource ID.
 	ID string `json:"id,omitempty"`
 
 	// The resource name.
 	Name string `json:"name,omitempty"`
 
-	// The parent cluster resourceID.
-	ClusterResourceId string `json:"clusterResourceId,omitempty"`
+	// The resource type.
+	Type string `json:"type,omitempty" mutable:"case"`
 
 	// SystemData metadata relating to this resource.
 	SystemData *SystemData `json:"systemData,omitempty"`
 
+	// The MachinePool Properties
 	Properties MachinePoolProperties `json:"properties,omitempty"`
 }
 
 // MachinePoolProperties represents the properties of a MachinePool
 type MachinePoolProperties struct {
-	Resources interface{} `json:"resources,omitempty"`
+	Resources string `json:"resources,omitempty"`
+}
+
+// SyncSetList represents a list of SyncSets
+type SyncIdentityProviderList struct {
+	// The list of sync identity providers
+	SyncIdentityProviders []*SyncIdentityProvider `json:"value"`
+
+	// The link used to get the next page of operations.
+	NextLink string `json:"nextLink,omitempty"`
 }
 
 // SyncIdentityProvider represents a SyncIdentityProvider
 type SyncIdentityProvider struct {
+	// This is a flag used during the swagger generation typewalker to
+	// signal that it should be marked as a proxy resource and
+	// not a tracked ARM resource.
+	proxyResource bool
+
 	// The Resource ID.
 	ID string `json:"id,omitempty"`
 
 	// The resource name.
 	Name string `json:"name,omitempty"`
 
-	// The parent cluster resourceID.
-	ClusterResourceId string `json:"clusterResourceId,omitempty"`
+	// The resource type.
+	Type string `json:"type,omitempty" mutable:"case"`
 
 	// SystemData metadata relating to this resource.
 	SystemData *SystemData `json:"systemData,omitempty"`
 
+	// The SyncIdentityProvider Properties
 	Properties SyncIdentityProviderProperties `json:"properties,omitempty"`
 }
 
 // SyncSetProperties represents the properties of a SyncSet
 type SyncIdentityProviderProperties struct {
-	Resources interface{} `json:"resources,omitempty"`
+	Resources string `json:"resources,omitempty"`
+}
+
+// SecretList represents a list of Secrets
+type SecretList struct {
+	// The list of secrets.
+	Secrets []*Secret `json:"value"`
+
+	// The link used to get the next page of operations.
+	NextLink string `json:"nextLink,omitempty"`
+}
+
+// Secret represents a secret.
+type Secret struct {
+	// This is a flag used during the swagger generation typewalker to
+	// signal that it should be marked as a proxy resource and
+	// not a tracked ARM resource.
+	proxyResource bool
+
+	// The Resource ID.
+	ID string `json:"id,omitempty"`
+
+	// The resource name.
+	Name string `json:"name,omitempty"`
+
+	// The resource type.
+	Type string `json:"type,omitempty" mutable:"case"`
+
+	// SystemData metadata relating to this resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
+
+	// The Secret Properties
+	Properties SecretProperties `json:"properties,omitempty"`
+}
+
+// SecretProperties represents the properties of a Secret
+type SecretProperties struct {
+	// The Secrets Resources.
+	SecretResources string `json:"secretResources,omitempty"`
 }

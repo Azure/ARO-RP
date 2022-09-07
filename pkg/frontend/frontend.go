@@ -32,7 +32,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
-const DISABLEOCMAPI = true
+// TODO this const was put in place to disable the ocm routes
+// once we are ready to begin testing we can remove this bool and related code
+const disableOCMAPI = true
 
 type statusCodeError int
 
@@ -75,8 +77,9 @@ type frontend struct {
 	ready     atomic.Value
 
 	// these helps us to test and mock easier
-	now                          func() time.Time
-	systemDataClusterDocEnricher func(*api.OpenShiftClusterDocument, *api.SystemData)
+	now                              func() time.Time
+	systemDataClusterDocEnricher     func(*api.OpenShiftClusterDocument, *api.SystemData)
+	systemDataClusterManagerEnricher func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
 }
 
 // Runnable represents a runnable object
@@ -120,8 +123,9 @@ func NewFrontend(ctx context.Context,
 
 		startTime: time.Now(),
 
-		now:                          time.Now,
-		systemDataClusterDocEnricher: enrichClusterSystemData,
+		now:                              time.Now,
+		systemDataClusterDocEnricher:     enrichClusterSystemData,
+		systemDataClusterManagerEnricher: enrichClusterManagerSystemData,
 	}
 
 	l, err := f.env.Listen()

@@ -36,6 +36,12 @@ func init() {
 				api.OperationSyncSetsRead,
 				api.OperationSyncSetsWrite,
 				api.OperationSyncSetsDelete,
+				api.OperationMachinePoolsRead,
+				api.OperationMachinePoolsWrite,
+				api.OperationMachinePoolsDelete,
+				api.OperationSyncIdentityProvidersRead,
+				api.OperationSyncIdentityProvidersWrite,
+				api.OperationSyncIdentityProvidersDelete,
 			},
 		},
 	}

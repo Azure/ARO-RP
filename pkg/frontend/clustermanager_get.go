@@ -21,12 +21,12 @@ func (f *frontend) getClusterManagerConfiguration(w http.ResponseWriter, r *http
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	if DISABLEOCMAPI {
+	if disableOCMAPI {
 		reply(log, w, nil, []byte("forbidden."), api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "forbidden."))
 		return
 	}
 
-	b, err := f._getClusterManagerConfiguration(ctx, log, r, f.apis[vars["api-version"]].ClusterManagerConfigurationConverter())
+	b, err := f._getClusterManagerConfiguration(ctx, log, r, f.apis[vars["api-version"]].ClusterManagerConfigurationConverter)
 	reply(log, w, nil, b, err)
 }
 

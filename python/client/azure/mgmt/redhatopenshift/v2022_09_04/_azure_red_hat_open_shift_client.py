@@ -23,7 +23,7 @@ from azure.mgmt.core import ARMPipelineClient
 
 from . import models
 from ._configuration import AzureRedHatOpenShiftClientConfiguration
-from .operations import InstallVersionsOperations, OpenShiftClustersOperations, Operations, SyncSetsOperations
+from .operations import InstallVersionsOperations, MachinePoolsOperations, OpenShiftClustersOperations, Operations, SecretsOperations, SyncIdentityProvidersOperations, SyncSetsOperations
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import,ungrouped-imports
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from azure.core.credentials import TokenCredential
     from azure.core.rest import HttpRequest, HttpResponse
 
-class AzureRedHatOpenShiftClient(object):
+class AzureRedHatOpenShiftClient(object):    # pylint: disable=too-many-instance-attributes
     """Rest API for Azure Red Hat OpenShift 4.
 
     :ivar operations: Operations operations
@@ -43,6 +43,14 @@ class AzureRedHatOpenShiftClient(object):
     :ivar open_shift_clusters: OpenShiftClustersOperations operations
     :vartype open_shift_clusters:
      azure.mgmt.redhatopenshift.v2022_09_04.operations.OpenShiftClustersOperations
+    :ivar machine_pools: MachinePoolsOperations operations
+    :vartype machine_pools:
+     azure.mgmt.redhatopenshift.v2022_09_04.operations.MachinePoolsOperations
+    :ivar secrets: SecretsOperations operations
+    :vartype secrets: azure.mgmt.redhatopenshift.v2022_09_04.operations.SecretsOperations
+    :ivar sync_identity_providers: SyncIdentityProvidersOperations operations
+    :vartype sync_identity_providers:
+     azure.mgmt.redhatopenshift.v2022_09_04.operations.SyncIdentityProvidersOperations
     :ivar sync_sets: SyncSetsOperations operations
     :vartype sync_sets: azure.mgmt.redhatopenshift.v2022_09_04.operations.SyncSetsOperations
     :param credential: Credential needed for the client to connect to Azure.
@@ -76,6 +84,9 @@ class AzureRedHatOpenShiftClient(object):
         self.operations = Operations(self._client, self._config, self._serialize, self._deserialize)
         self.install_versions = InstallVersionsOperations(self._client, self._config, self._serialize, self._deserialize)
         self.open_shift_clusters = OpenShiftClustersOperations(self._client, self._config, self._serialize, self._deserialize)
+        self.machine_pools = MachinePoolsOperations(self._client, self._config, self._serialize, self._deserialize)
+        self.secrets = SecretsOperations(self._client, self._config, self._serialize, self._deserialize)
+        self.sync_identity_providers = SyncIdentityProvidersOperations(self._client, self._config, self._serialize, self._deserialize)
         self.sync_sets = SyncSetsOperations(self._client, self._config, self._serialize, self._deserialize)
 
 

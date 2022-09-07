@@ -52,7 +52,7 @@ func (g *generator) populateParameters(n int, typ, friendlyName string) (s []int
 
 	if n > 2 {
 		temp := friendlyName
-		if temp == "SyncSet" {
+		if contains(proxyResources, temp) {
 			temp = "OpenShift cluster"
 		}
 		s = append(s, Parameter{
@@ -70,16 +70,17 @@ func (g *generator) populateParameters(n int, typ, friendlyName string) (s []int
 	// except when n==10, then its not a required parameter
 	if n >= 7 && n != 10 {
 		s = append(s, Parameter{
-			Name:        "syncSetResourceName",
+			Name:        "childResourceName",
 			In:          "path",
 			Description: "The name of the " + friendlyName + " resource.",
 			Required:    true,
 			Type:        "string",
 		})
-		return
 	}
 
-	if n > 3 && n != 10 {
+	// TODO: refactor this entire function to make sense
+	// so we can stop thinking about what int value builds a proper swagger parameter
+	if n > 3 && n != 7 && n != 10 {
 		s = append(s, Parameter{
 			Name:        "parameters",
 			In:          "body",
@@ -91,7 +92,7 @@ func (g *generator) populateParameters(n int, typ, friendlyName string) (s []int
 		})
 	}
 
-	if n > 4 && friendlyName != "SyncSet" {
+	if n == 5 || n == 9 {
 		s[len(s)-1].(Parameter).Schema.Ref += "Update"
 	}
 	return
@@ -127,7 +128,7 @@ func (g *generator) populateResponses(typ string, isDelete bool, statusCodes ...
 	return
 }
 
-// populateChildResourcePaths populates the paths for a child resource of a top level ARM resource
+// populateChildResourcePaths populates the paths for a child resource of a top level ARM resoure with list and CRUD operations defined for the path item
 func (g *generator) populateChildResourcePaths(ps Paths, resourceProviderNamespace string, resourceType string, childResourceType string, friendlyName string) {
 	titleCaser := cases.Title(language.Und, cases.NoLower)
 	ps["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/"+resourceProviderNamespace+"/"+resourceType+"/{resourceName}/"+childResourceType+"s"] = &PathItem{
@@ -136,14 +137,14 @@ func (g *generator) populateChildResourcePaths(ps Paths, resourceProviderNamespa
 			Summary:     "Lists " + friendlyName + "s that belong to that Azure Red Hat OpenShift Cluster.",
 			Description: "The operation returns properties of each " + friendlyName + ".",
 			OperationID: titleCaser.String(childResourceType) + "s_List",
-			Parameters:  g.populateParameters(10, titleCaser.String(childResourceType), friendlyName),
+			Parameters:  g.populateParameters(3, titleCaser.String(childResourceType), friendlyName),
 			Responses:   g.populateResponses(titleCaser.String(childResourceType)+"List", false, http.StatusOK),
 			Pageable: &Pageable{
 				NextLinkName: "nextLink",
 			},
 		},
 	}
-	ps["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/syncSet/{syncSetResourceName}"] = &PathItem{
+	ps["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openshiftclusters/{resourceName}/"+childResourceType+"/{childResourceName}"] = &PathItem{
 		Get: &Operation{
 			Tags:        []string{titleCaser.String(childResourceType) + "s"},
 			Summary:     "Gets a " + friendlyName + " with the specified subscription, resource group and resource name.",
@@ -166,11 +167,11 @@ func (g *generator) populateChildResourcePaths(ps Paths, resourceProviderNamespa
 			Description: "The operation returns nothing.",
 			OperationID: titleCaser.String(childResourceType) + "s_Delete",
 			Parameters:  g.populateParameters(7, titleCaser.String(childResourceType), friendlyName),
-			Responses:   g.populateResponses(titleCaser.String(childResourceType), true, http.StatusAccepted, http.StatusNoContent),
+			Responses:   g.populateResponses(titleCaser.String(childResourceType), true, http.StatusOK, http.StatusNoContent),
 		},
 		Patch: &Operation{
 			Tags:        []string{titleCaser.String(childResourceType) + "s"},
-			Summary:     "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
+			Summary:     "Patches (create or update) a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description: "The operation returns properties of a " + friendlyName + ".",
 			OperationID: titleCaser.String(childResourceType) + "s_Update",
 			Parameters:  g.populateParameters(9, titleCaser.String(childResourceType), friendlyName),
@@ -180,7 +181,7 @@ func (g *generator) populateChildResourcePaths(ps Paths, resourceProviderNamespa
 }
 
 // populateTopLevelPaths populates the paths for a top level ARM resource
-func (g *generator) populateTopLevelPaths(resourceProviderNamespace string, resourceType string, friendlyName string) (ps Paths) {
+func (g *generator) populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName string) (ps Paths) {
 	titleCaser := cases.Title(language.Und, cases.NoLower)
 	ps = Paths{}
 
