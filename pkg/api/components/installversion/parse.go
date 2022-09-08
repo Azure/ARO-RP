@@ -7,10 +7,10 @@ import (
 	"encoding/json"
 )
 
-func FromExternalBytes(body *[]byte) (*openShiftCluster, error) {
+func FromExternalBytes(body []byte) (*openShiftCluster, error) {
 	r := &openShiftCluster{}
 
-	err := json.Unmarshal(*body, &r)
+	err := json.Unmarshal(body, &r)
 	if err != nil {
 		return nil, err
 	}

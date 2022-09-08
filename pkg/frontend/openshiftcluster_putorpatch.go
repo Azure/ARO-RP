@@ -66,7 +66,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			return nil, err
 		}
 
-		installVersion, err := f.validateAndReturnInstallVersion(ctx, &body)
+		installVersion, err := f.validateAndReturnInstallVersion(ctx, body)
 		if err != nil {
 			return nil, err
 		}
@@ -240,7 +240,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
-	b, err := json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")
+	b, err := json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "\t")
 	if err != nil {
 		return nil, err
 	}
