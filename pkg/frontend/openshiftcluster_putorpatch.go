@@ -40,7 +40,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchOpenShiftCluster(ctx, log, body, correlationData, systemData, r.URL.Path, originalPath, r.Method, referer, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter(), f.apis[vars["api-version"]].OpenShiftClusterStaticValidator(f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), r.URL.Path), mux.Vars(r))
+		b, err = f._putOrPatchOpenShiftCluster(ctx, log, body, correlationData, systemData, r.URL.Path, originalPath, r.Method, referer, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter, f.apis[vars["api-version"]].OpenShiftClusterStaticValidator, mux.Vars(r))
 		return err
 	})
 
@@ -162,9 +162,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	}
 
 	if isCreate {
-		err = staticValidator.Static(ext, nil)
+		err = staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), path)
 	} else {
-		err = staticValidator.Static(ext, doc.OpenShiftCluster)
+		err = staticValidator.Static(ext, doc.OpenShiftCluster, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), path)
 	}
 	if err != nil {
 		return nil, err

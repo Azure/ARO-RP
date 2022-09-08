@@ -13,7 +13,7 @@ type openShiftClusterConverter struct{}
 // reading from the subset of the internal object's fields that appear in the
 // external representation.  ToExternal does not modify its argument; there is
 // no pointer aliasing between the passed and returned objects
-func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interface{} {
+func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interface{} {
 	out := &OpenShiftCluster{
 		ID:       oc.ID,
 		Name:     oc.Name,
@@ -139,7 +139,7 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 
 // ToExternalList returns a slice of external representations of the internal
 // objects
-func (c *openShiftClusterConverter) ToExternalList(ocs []*api.OpenShiftCluster, nextLink string) interface{} {
+func (c openShiftClusterConverter) ToExternalList(ocs []*api.OpenShiftCluster, nextLink string) interface{} {
 	l := &OpenShiftClusterList{
 		OpenShiftClusters: make([]*OpenShiftCluster, 0, len(ocs)),
 		NextLink:          nextLink,
@@ -156,7 +156,7 @@ func (c *openShiftClusterConverter) ToExternalList(ocs []*api.OpenShiftCluster, 
 // all mapped fields from the external representation. ToInternal modifies its
 // argument; there is no pointer aliasing between the passed and returned
 // objects
-func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShiftCluster) {
+func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShiftCluster) {
 	oc := _oc.(*OpenShiftCluster)
 
 	out.ID = oc.ID
