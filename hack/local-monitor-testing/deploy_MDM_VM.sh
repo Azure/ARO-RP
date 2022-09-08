@@ -2,90 +2,83 @@
 set +x
 
 BASE=$( git rev-parse --show-toplevel)
-
-HOSTNAME=$( hostname )
-NAME="mdm"
-MDMIMAGE=linuxgeneva-microsoft.azurecr.io/genevamdm:master_20211120.1
-MDMFRONTENDURL=https://int2.int.microsoftmetrics.com/
-MDMSOURCEENVIRONMENT=$LOCATION
-MDMSOURCEROLE=rp
-MDMSOURCEROLEINSTANCE=$HOSTNAME
+CLOUDUSER="cloud-user"
+MDM_CONTAINER_NAME="mdm"
 
 echo "Using:"
 
-echo "Resourcegroup = $RESOURCEGROUP"
-echo "User          = $USER"
-echo "HOSTNAME      = $HOSTNAME"
-echo "Containername = $NAME"
-echo "Location      = $LOCATION"
-echo "MDM image     = $MDMIMAGE"
-echo "  (version hardcoded. Check against pkg/util/version/const.go if things don't work)"
-echo "Geneva API URL= $MDMFRONTENDURL"
-echo "MDMSOURCEENV  = $MDMSOURCEENVIRONMENT"
-echo "MDMSOURCEROLE  = $MDMSOURCEROLE"
-echo "MDMSOURCEROLEINSTANCE  = $MDMSOURCEROLEINSTANCE"
+echo "RESOURCEGROUP             = $RESOURCEGROUP"
+echo "HOSTNAME                  = $HOSTNAME"
+echo "LOCATION                  = $LOCATION"
+echo "MDM_CONTAINER_NAME        = $MDM_CONTAINER_NAME"
+echo "MDM_FRONTEND_URL          = $MDM_FRONTEND_URL"
+echo "MDM_IMAGE                 = $MDM_IMAGE"
+echo "MDM_SOURCE_ENV            = $MDM_SOURCE_ENVIRONMENT"
+echo "MDM_SOURCE_ROLE           = $MDM_SOURCE_ROLE"
+echo "MDM_SOURCE_ROLE_INSTANCE  = $MDM_SOURCE_ROLE_INSTANCE"
+echo "MDM_VM_NAME               = $MDM_VM_NAME"
+echo "(Check MDM_IMAGE against MdmImage function in pkg/util/version/const.go for latest version)"
 
-VMName="$USER-mdm-link"
-
-CLOUDUSER="cloud-user"
-
-
-
-if [ "$(az vm show -g $RESOURCEGROUP --name $VMName)" = "" ];
+MDM_VM_VNET=""
+if [ "$(az vm show -g $RESOURCEGROUP --name $MDM_VM_NAME)" = "" ];
 then
-  echo "Creating VM $VMName in RG $RESOURCEGROUP"   
-  az vm create -g $RESOURCEGROUP -n $VMName --image RedHat:RHEL:7-LVM:latest --ssh-key-values @~/.ssh/id_rsa.pub --admin-username $CLOUDUSER
+  echo "Creating VM $MDM_VM_NAME in RG $RESOURCEGROUP"
+  if [ "$MDM_VM_PRIVATE" != "" ] || [ "$MDM_VM_PRIVATE" == "null" ];
+  then
+    MDM_VM_VNET="--vnet-name dev-vnet --subnet ToolingSubnet"
+  fi   
+  az vm create -g $RESOURCEGROUP -n $MDM_VM_NAME --image RedHat:RHEL:7-LVM:latest --ssh-key-values @./secrets/mdm_id_rsa.pub --admin-username $CLOUDUSER $MDM_VM_VNET
 else
   echo "VM already exists, skipping..."
 fi
 
+VM_IP_PROPERTY=".[0].virtualMachine.network.publicIpAddresses[0].ipAddress"
+if [ "$MDM_VM_PRIVATE" != "" ] || [ "$MDM_VM_PRIVATE" == "null" ];
+then
+  VM_IP_PROPERTY=".[0].virtualMachine.network.privateIpAddresses[0]"
+fi
+MDM_VM_IP=$( az vm list-ip-addresses --name $MDM_VM_NAME -g $RESOURCEGROUP -o json | jq -r $VM_IP_PROPERTY )
+echo "Found IP $MDM_VM_IP"
 
-PUBLICIP=$( az vm list-ip-addresses --name $VMName -g $RESOURCEGROUP | jq -r '.[0].virtualMachine.network.publicIpAddresses[0].ipAddress' )
+scp -i ./secrets/mdm_id_rsa $BASE/secrets/rp-metrics-int.pem $CLOUDUSER@$MDM_VM_IP:mdm.pem
+scp -i ./secrets/mdm_id_rsa $BASE/hack/local-monitor-testing/configureRemote.sh $CLOUDUSER@$MDM_VM_IP:
 
-echo "Found IP $PUBLICIP"
+ssh -i ./secrets/mdm_id_rsa $CLOUDUSER@$MDM_VM_IP "sudo cp mdm.pem /etc/mdm.pem"
+ssh -i ./secrets/mdm_id_rsa $CLOUDUSER@$MDM_VM_IP "sudo ./configureRemote.sh"
 
-scp $BASE/secrets/rp-metrics-int.pem $CLOUDUSER@$PUBLICIP:mdm.pem
-scp $BASE/hack/local-monitor-testing/configureRemote.sh $CLOUDUSER@$PUBLICIP:
-
-ssh $CLOUDUSER@$PUBLICIP "sudo cp mdm.pem /etc/mdm.pem"
-ssh $CLOUDUSER@$PUBLICIP "sudo ./configureRemote.sh"
-
-
-ssh $CLOUDUSER@$PUBLICIP "sudo docker pull $MDMIMAGE"
+ssh -i ./secrets/mdm_id_rsa $CLOUDUSER@$MDM_VM_IP "sudo docker pull $MDM_IMAGE"
 
 cat <<EOF > $BASE/dockerStartCommand.sh
 docker run \
   --entrypoint /usr/sbin/MetricsExtension \
   --hostname $HOSTNAME \
-  --name $NAME \
+  --name $MDM_CONTAINER_NAME \
   -d \
   --restart=always \
   -m 2g \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
-  $MDMIMAGE \
+  $MDM_IMAGE \
   -CertFile /etc/mdm.pem \
-  -FrontEndUrl $MDMFRONTENDURL \
+  -FrontEndUrl $MDM_FRONTEND_URL \
   -Logger Console \
   -LogLevel Debug \
   -PrivateKeyFile /etc/mdm.pem \
-  -SourceEnvironment $MDMSOURCEENVIRONMENT \
-  -SourceRole $MDMSOURCEROLE \
-  -SourceRoleInstance $MDMSOURCEROLEINSTANCE
+  -SourceEnvironment $MDM_SOURCE_ENVIRONMENT \
+  -SourceRole $MDM_SOURCE_ROLE \
+  -SourceRoleInstance $MDM_SOURCE_ROLE_INSTANCE
 EOF
 
-
 #disable SELINUX (don't shoot me)
-ssh $CLOUDUSER@$PUBLICIP "sudo setenforce 0"
-ssh $CLOUDUSER@$PUBLICIP "sudo getenforce"
+ssh -i ./secrets/mdm_id_rsa $CLOUDUSER@$MDM_VM_IP "sudo setenforce 0"
+ssh -i ./secrets/mdm_id_rsa $CLOUDUSER@$MDM_VM_IP "sudo getenforce"
 
 #make it permanent
-ssh $CLOUDUSER@$PUBLICIP "sudo sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config"
+ssh -i ./secrets/mdm_id_rsa $CLOUDUSER@$MDM_VM_IP "sudo sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config"
 
+ssh -i ./secrets/mdm_id_rsa $CLOUDUSER@$MDM_VM_IP "sudo firewall-cmd --zone=public --add-port=12345/tcp --permanent"
+ssh -i ./secrets/mdm_id_rsa $CLOUDUSER@$MDM_VM_IP "sudo firewall-cmd --reload"
 
-ssh $CLOUDUSER@$PUBLICIP "sudo firewall-cmd --zone=public --add-port=12345/tcp --permanent"
-ssh $CLOUDUSER@$PUBLICIP "sudo firewall-cmd --reload"
-
-scp $BASE/dockerStartCommand.sh $CLOUDUSER@$PUBLICIP:
-ssh $CLOUDUSER@$PUBLICIP "chmod +x dockerStartCommand.sh"
-ssh $CLOUDUSER@$PUBLICIP "sudo ./dockerStartCommand.sh &"
+scp -i ./secrets/mdm_id_rsa $BASE/dockerStartCommand.sh $CLOUDUSER@$MDM_VM_IP:
+ssh -i ./secrets/mdm_id_rsa $CLOUDUSER@$MDM_VM_IP "chmod +x dockerStartCommand.sh"
+ssh -i ./secrets/mdm_id_rsa $CLOUDUSER@$MDM_VM_IP "sudo ./dockerStartCommand.sh &"

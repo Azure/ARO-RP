@@ -5,21 +5,21 @@
 
 ## The Monitor Architecture
 
-The ARO monitor component (the part of the aro binary you activate when you execute ./cmd/aro monitor) collects and emits the various metrics about cluster health (and its own) we want to see in Geneva. 
+The ARO monitor component (the part of the aro binary you activate when you execute ./cmd/aro monitor) collects and emits the various metrics about cluster health, the monitor's own health, and e2e tests we want to see in Geneva.
 
 
 ![Aro Monitor Architecture](img/AROMonitor.png "Aro Monitor Architecture")
 
-To send data to Geneva the monitor uses an instance of a Geneva MDM container as a proxy of the Geneva API. The MDM container accepts statsd formatted data (the Azure Geneva version of statsd, that is) over a UNIX (Domain) socket. The MDM container then forwards the metric data over a https link to the Geneva API. Please note that a Unix socket can only be accessed from the same machine. 
+To send data to Geneva the monitor uses an instance of a Geneva MDM container as a proxy of the Geneva API. The MDM container accepts statsd formatted data (the Azure Geneva version of statsd, that is) over a UNIX (Domain) socket. The MDM container then forwards the metric data over a https link to the Geneva API. Please note that a Unix socket can only be accessed from the same machine.
 
-The monitor picks the required information about which clusters should actually monitor from its corresponding Cosmos DB. If multiple monitor instances run in parallel  (i.e. connect to the same database instance) as is the case in production, they negotiate which instance monitors what cluster (see : [monitoring.md](./monitoring.md)). 
+The monitor picks the required information about which clusters should actually monitor from its corresponding Cosmos DB. If multiple monitor instances run in parallel  (i.e. connect to the same database instance) as is the case in production, they negotiate which instance monitors what cluster (see : [monitoring.md](./monitoring.md)).
 
 
 # Unit Testing Setup
 
 If you work on monitor metrics in local dev mode (RP_MODE=Development) you most likely want to see your data somewhere in Geneva INT (https://jarvis-west-int.cloudapp.net/) before you ship your code.
 
-There are two ways to set to achieve this: 
+There are two ways to set to achieve this:
 - Run the Geneva MDM container locally
 - Spawn a VM, start the Geneva container there and connect/tunnel to it.
 
@@ -27,71 +27,45 @@ and two protocols to chose from:
 - Unix Domain Sockets, which is the way production is currently (April 2022) run
 - or UDP, which is much easier to use and is the way it will be used on kubernetes clusters in the future
 
-## Local Container Setup
+## Common Setup
 
-Before you start, make sure :
-- to run `source ./env`
-- you ran `SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets` before 
-- know which "account" and "namespace" value you want to use on Geneva INT for your metric data and update your env to set the following variables before you start the monitor:
-  - CLUSTER_MDM_ACCOUNT
-  - CLUSTER_MDM_NAMESPACE 
+No matter which of the two methods of running the Geneva MDM container you choose (locally or on a remote VM), make sure you:
+- `az login`  into your subscription
+- run `SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets` to pull the latest env variables, certs, and keys
+- run `source ./env` to set your general RP environment variables
+- run `source ./secrets/mdm_env` to set your MDM related environment variables
 
- The container needs to be provided with the Geneva key and certificate. For the INT instance that is the rp-metrics-int.pem you find in the secrets folder after running the `make secrets` command above.  
+  If the `./secrets/mdm_env` file does not exist, then create it by running:
 
+    ```bash
+  cat >secrets/mdm_env <<EOF
+  export CLUSTER_MDM_ACCOUNT='AzureRedHatOpenShiftCluster'
+  export CLUSTER_MDM_NAMESPACE='<PUT YOUR CLUSTER NAMESPACE HERE>'
+  export HOSTNAME=$( hostname )
+  export MDM_IMAGE='linuxgeneva-microsoft.azurecr.io/genevamdm:master_20221018.2'
+  export MDM_E2E_ACCOUNT='AzureRedHatOpenShiftE2E'
+  export MDM_E2E_NAMESPACE='E2E'
+  export MDM_FRONTEND_URL='https://int2.int.microsoftmetrics.com/'
+  export MDM_SOURCE_ENVIRONMENT="$LOCATION"
+  export MDM_SOURCE_ROLE='rp'
+  export MDM_SOURCE_ROLE_INSTANCE="$HOSTNAME"
+  export MDM_VM_NAME="$RESOURCEGROUP-mdm"
+  export MDM_VM_PRIVATE='true'
+  EOF
+  ```
 
-
-## Remote Container Setup
-If you can't run the container locally (because you run on macOS and your container tooling does not support Unix Sockets, which is true both for Docker for Desktop or podman) and or don't want to, you can bring up the container on a Linux VM and connect via a socat/ssh chain:
-![alt text](img/SOCATConnection.png "SOCAT chain")
-
-Before you start make sure:
-- you can ssh into the cloud-user on your VM without ssh prompting you for anything 
-- run `source ./env`
-- you `az login`  into your subscription
-- you ran `SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets` before 
-- know which "account" and "namespace" value you want to use on Geneva INT for your metric data and
-  update your env to set the 
-  - CLUSTER_MDM_ACCOUNT
-  - CLUSTER_MDM_NAMESPACE
-
-variables before you start the monitor. 
-
-The [deploy script](../hack/local-monitor-testing/deploy_MDM_VM.sh) deploys such a VM called $USER-mdm-link on Azure, configures it and installs the mdm container.
-
-The [start network script](../hack/local-monitor-testing/startMDMNetwork.sh) can then be used to established the network connection as depicted in the diagram. 
-
-The network script will effectively start run three commands (with more error handling):
-````
-
-PUBLICIP=<IP of your VM>
-
-BASE=$( git rev-parse --show-toplevel)
-SOCKETFILE=$BASE/cmd/aro/mdm_statsd.socket
-
-ssh cloud-user@$PUBLICIP 'sudo socat -v TCP-LISTEN:12345,fork UNIX-CONNECT:/var/etw/mdm_statsd.socket'
-
-ssh $CLOUDUSER@$$PUBLICIP -N -L 12345:127.0.0.1:12345
-
-socat -v UNIX-LISTEN:$SOCKETFILE,fork TCP-CONNECT:127.0.0.1:12345
-````
-
-For debugging it might be useful to run these commands manually in three different terminals to see where the connection might break down. The docker log file should show if data flows through or not, too.
-
-
-#### Stopping the Network script
-
-Stop the script with Ctrl-C. The script then will do its best to stop the ssh and socal processes it spawned.
-
-
-
-## Starting the monitor
-
-When starting the monitor , make sure to have your
-
-- CLUSTER_MDM_ACCOUNT
-- CLUSTER_MDM_NAMESPACE
+  Change the `CLUSTER_MDM_ACCOUNT` and `CLUSTER_MDM_NAMESPACE` values as necessary
+- have the correct `./secrets/rp-metrics-int.pem` certificate. If the certificate is not correct or does not exist, then it can be obtained from the `svc` keyvault in public int
   
-environment variables set to Geneva account and namespace where you metrics is supposed to land in Geneva INT (https://jarvis-west-int.cloudapp.net/)
+If any changes were made inside the `./secrets` folder, then please run `make secrets-update` to upload it to your storage account so other people on your team can access it via `make secrets`.
+
+## Method Specific Setup
+
+### Local Setup
+
+There are no additional tasks for setting up a local testing environment, the `Common Setup` tasks cover them all
+
+#### Starting the monitor
 
 Use `go run -tags aro ./cmd/aro monitor`  to start the monitor. You want to check what the current directory of your monitor is, because that's the folder the monitor will use to search for the mdm_statds.socket file and that needs to match where your mdm container or the socat command creates it. Please note that in local dev mode the monitor will silently ignore if it can't connect to the socket.
 
@@ -99,26 +73,61 @@ A VS Code launch config that does the same would look like.
 
 ````
 {
-            "name": "Launch Monitor",
-            "type": "go",
-            "request": "launch",
-            "mode": "auto",
-            "program": "./cmd/aro",
-            "buildFlags": "-tags aro",
-            "console": "integratedTerminal",
-            "args": ["-loglevel=debug",
-                "monitor",
-            ],    
-            "env": {"CLUSTER_MDM_ACCOUNT": "<PUT YOUR ACCOUNT HERE>",
-            "CLUSTER_MDM_NAMESPACE":"<PUT YOUR NAMESPACE HERE>"
-            }    
-        },
+    "name": "Launch Monitor",
+    "type": "go",
+    "request": "launch",
+    "mode": "auto",
+    "program": "./cmd/aro",
+    "buildFlags": "-tags aro",
+    "console": "integratedTerminal",
+    "args": ["-loglevel=debug",
+        "monitor",
+    ],    
+    "env": {"CLUSTER_MDM_ACCOUNT": "<PUT YOUR CLUSTER ACCOUNT HERE>",
+    "CLUSTER_MDM_NAMESPACE":"<PUT YOUR CLUSTER NAMESPACE HERE>",
+    "MDM_E2E_ACCOUNT"="<PUT YOUR E2E ACCOUNT HERE>"
+    "MDM_E2E_NAMESPACE"="<PUT YOUR E2E NAMESPACE HERE>"
+    }    
+},
 ````
 
-## Finding your data
+### Remote Container Setup
 
-If all goes well, you should see your metric data  in the Jarvis metrics list (Geneva INT (https://jarvis-west-int.cloudapp.net/) -> Manage ->  Metrics) under the account and namespace you specified in CLUSTER_MDM_ACCOUNT and CLUSTER_MDM_NAMESPACE and also be available is the dashboard settings.
+If you can't run the container locally (because you run on macOS and your container tooling does not support Unix Sockets, which is true both for Docker for Desktop or podman) and or don't want to, you can bring up the container on a Linux VM and connect via a socat/ssh chain:
+![alt text](img/SOCATConnection.png "SOCAT chain")
 
+The [deploy script](../hack/local-monitor-testing/deploy_MDM_VM.sh) deploys such a VM called $RESOURCEGROUP-mdm on Azure, configures it and installs the mdm container.
+
+The [start network script](../hack/local-monitor-testing/startMDMNetwork.sh) can then be used to established the network connection as depicted in the diagram.
+
+Each script will use the `./secrets/mdm_id_rsa` ssh key to connect to the VM. If this key does not exist, a new one can be generated by running
+```bash
+ssh-keygen -f secrets/mdm_id_rsa -N ''
+```
+`make secrets-update` can then be used to upload the key to your storage account so other people on your team can access it via `make secrets`.
+
+The network script will effectively start run three commands (with more error handling):
+
+```bash
+MDM_VM_IP=<Either public or private IP of your VM, depending on whether $MDM_VM_PRIVATE is set or not>
+
+BASE=$( git rev-parse --show-toplevel)
+SOCKETFILE=$BASE/cmd/aro/mdm_statsd.socket
+
+ssh -i ./secrets/mdm_id_rsa cloud-user@$MDM_VM_IP 'sudo socat -v TCP-LISTEN:12345,fork UNIX-CONNECT:/var/etw/mdm_statsd.socket'
+
+ssh -i ./secrets/mdm_id_rsa cloud-user@$MDM_VM_IP -N -L 12345:127.0.0.1:12345
+
+socat -v UNIX-LISTEN:$SOCKETFILE,fork TCP-CONNECT:127.0.0.1:12345
+```
+
+For debugging it might be useful to run these commands manually in three different terminals to see where the connection might break down. The docker log file should show if data flows through or not, too.
+
+If this VM is not going to have a public IP address, and only be available over VPN, then please ensure you are connected the the appropriate VPN before running either script.
+
+#### Stopping the Network script
+
+Stop the script with Ctrl-C. The script then will do its best to stop the ssh and socal processes it spawned.
 
 ## Injecting Test Data into Geneva INT
 
@@ -184,3 +193,10 @@ done
 
 ````
 
+## Injecting E2E Test Metric Data into Geneva INT
+
+With the the mdm container running, either locally or remote with a socat link, running `make test-e2e` with the `MDM_E2E_ACCOUNT` and `MDM_E2E_NAMESPACE` environment variables set will send metric data to Geneva.
+
+## Finding your data
+
+If all goes well, you should see your cluster metric data in the Jarvis metrics list (Geneva INT (https://jarvis-west-int.cloudapp.net/) -> Manage ->  Metrics) under the account and namespace you specified in `CLUSTER_MDM_ACCOUNT` and `CLUSTER_MDM_NAMESPACE` and also be available is the dashboard settings. E2E metric data will be present in the account and namespace you specified with `MDM_E2E_ACCOUNT` and `MDM_E2E_NAMESPACE`.

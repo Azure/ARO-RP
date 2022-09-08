@@ -16,7 +16,7 @@ function killProcesses() {
 
     for pid in ${rempids[*]}; do
         echo -n "Stopping remote PID: $pid"
-        ssh $CLOUDUSER@$PUBLICIP sudo kill $pid
+        ssh -i ./secrets/mdm_id_rsa $CLOUDUSER@$MDM_VM_IP sudo kill $pid
         echo " stopped."
     done
     
@@ -24,31 +24,32 @@ function killProcesses() {
     exit 1
 }
 
-
 BASE=$( git rev-parse --show-toplevel)
 SOCKETFILE="$BASE/cmd/aro/mdm_statsd.socket"
+CLOUDUSER="cloud-user"
 
 echo "Using:"
 
 echo "Resourcegroup = $RESOURCEGROUP"
-echo "User          = $USER"
+echo "MDM_VM_NAME   = mdm-$LOCATION"
 
-VMName="$USER-mdm-link"
-CLOUDUSER="cloud-user"
+echo "Looking for a VM called $MDM_VM_NAME and its Private IP"
+VM_IP_PROPERTY=".[0].virtualMachine.network.publicIpAddresses[0].ipAddress"
+if [ "$MDM_VM_PRIVATE" != "" ] || [ "$MDM_VM_PRIVATE" == "null" ];
+then
+    VM_IP_PROPERTY=".[0].virtualMachine.network.privateIpAddresses[0]"
+fi   
+MDM_VM_IP=$( az vm list-ip-addresses --name $MDM_VM_NAME -g $RESOURCEGROUP -o json | jq -r $VM_IP_PROPERTY )
 
-echo "Looking for a VM called $VMName and its public IP"
-PUBLICIP=$( az vm list-ip-addresses --name $VMName -g $RESOURCEGROUP | jq -r '.[0].virtualMachine.network.publicIpAddresses[0].ipAddress' )
-
-if [ "$PUBLICIP" == "" ] || [ "$PUBLICIP" == "null" ]; then
-    echo "ERR: no PUBLICIP IP address found for $VMName. Giving up."
-    
+if [ "$MDM_VM_IP" == "" ] || [ "$MDM_VM_IP" == "null" ]; then
+    echo "ERR: no IP address found for $MDM_VM_NAME. Giving up."
     exit 2
 fi
 
-echo -n "Found IP $PUBLICIP, starting socat on the mdm-link vm"
-ssh $CLOUDUSER@$PUBLICIP 'sudo socat -v TCP-LISTEN:12345,fork UNIX-CONNECT:/var/etw/mdm_statsd.socket'  &
+echo -n "Found IP $MDM_VM_IP, starting socat on the mdm-link vm"
+ssh -i ./secrets/mdm_id_rsa $CLOUDUSER@$MDM_VM_IP 'sudo socat -v TCP-LISTEN:12345,fork UNIX-CONNECT:/var/etw/mdm_statsd.socket'  &
 sleep 2
-REMPS=$( ssh $CLOUDUSER@$PUBLICIP 'ps aux | grep "socat -v TCP-LISTEN:12345,fork UNIX-CONNECT:/var/etw/mdm_statsd.socket" | grep -v sudo | grep -v grep' )
+REMPS=$( ssh -i ./secrets/mdm_id_rsa $CLOUDUSER@$MDM_VM_IP 'ps aux | grep "socat -v TCP-LISTEN:12345,fork UNIX-CONNECT:/var/etw/mdm_statsd.socket" | grep -v sudo | grep -v grep' )
 REMPID=$( echo $REMPS |  awk '{print $2}' )
 if [ "$REMPID" == "" ]; then
     echo ""
@@ -57,11 +58,10 @@ if [ "$REMPID" == "" ]; then
     exit 1
 fi
 
-
 rempids[0]=$REMPID
 echo "...remote socat started."
 echo -n "Starting SSH Tunnel..." 
-ssh $CLOUDUSER@$PUBLICIP -N -L 12345:127.0.0.1:12345 -o ConnectTimeout=4 &
+ssh -i ./secrets/mdm_id_rsa $CLOUDUSER@$MDM_VM_IP -N -L 12345:127.0.0.1:12345 -o ConnectTimeout=4 &
 pids[0]=$!
 sleep 5
 kill -0 ${pids[0]}
@@ -93,7 +93,6 @@ else
     echo "Killed."
     exit 1
 fi
-
 
 echo ""
 echo "**********************************************************************"

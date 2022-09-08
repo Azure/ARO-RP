@@ -33,3 +33,4 @@ gomock_reflect_*
 /hack/hive-config/crds
 /hack/hive-config/hive-deployment.yaml
 cmd/aro/__debug_bin
+/dockerStartCommand.sh
