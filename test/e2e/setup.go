@@ -34,6 +34,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api/latest"
 
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
+	e2emetrics "github.com/Azure/ARO-RP/pkg/metrics/statsd/e2e"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -42,6 +46,7 @@ import (
 	redhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-04-01/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	e2elogging "github.com/Azure/ARO-RP/pkg/util/log/e2e"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
@@ -75,8 +80,8 @@ var (
 	vnetResourceGroup string
 	clusterName       string
 	clients           *clientSet
-
-	dockerSucceeded bool
+	dockerSucceeded   bool
+	metricsEmitter    metrics.Emitter
 )
 
 func skipIfNotInDevelopmentEnv() {
@@ -377,6 +382,16 @@ func setup(ctx context.Context) error {
 		return err
 	}
 
+	metricsEmitter = statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("MDM_E2E_ACCOUNT"), os.Getenv("MDM_E2E_NAMESPACE"), os.Getenv("MDM_E2E_STATSD_SOCKET"))
+	e2eHook := e2elogging.NewE2EHook(metricsEmitter)
+	log.Logger.AddHook(&e2eHook)
+	g, err := golang.NewMetrics(log.WithField("component", "e2emetrics"), metricsEmitter)
+	if err != nil {
+		return err
+	}
+
+	go g.Run()
+
 	vnetResourceGroup = os.Getenv("RESOURCEGROUP") // TODO: remove this when we deploy and peer a vnet per cluster create
 	if os.Getenv("CI") != "" {
 		vnetResourceGroup = os.Getenv("CLUSTER")
@@ -422,4 +437,18 @@ var _ = AfterSuite(func() {
 	if err := tearDownSelenium(context.Background()); err != nil {
 		log.Printf(err.Error())
 	}
+})
+
+var _ = JustAfterEach(func() {
+	gsc := CurrentSpecReport()
+	metricName := strings.Replace(gsc.ContainerHierarchyTexts[0], " ", ".", -1)
+
+	log.WithFields(logrus.Fields{
+		e2emetrics.LogEntryIsE2EEmittableMetric: true,
+		e2emetrics.LogEntryMetricName:           metricName,
+		e2emetrics.LogEntryMetricStatus:         !gsc.Failed(),
+		e2emetrics.DimensionARMResourceID:       resourceIDFromEnv(),
+		e2emetrics.DimensionARMGeoLocation:      _env.Location(),
+		e2emetrics.DimensionResourceType:        "openShiftClusters",
+	}).Info("Emitting Metric: " + metricName)
 })
