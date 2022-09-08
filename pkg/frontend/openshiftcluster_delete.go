@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -51,7 +52,7 @@ func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request,
 	doc.CorrelationData = correlationData
 	doc.Dequeues = 0
 
-	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, r, doc)
+	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, mux.Vars(r), doc)
 	if err != nil {
 		return err
 	}
@@ -66,7 +67,7 @@ func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request,
 	u.Path = f.operationResultsPath(r, doc.AsyncOperationID)
 	(*header)["Location"] = []string{u.String()}
 
-	u.Path = f.operationsPath(r, doc.AsyncOperationID)
+	u.Path = f.operationsPath(mux.Vars(r), doc.AsyncOperationID)
 	(*header)["Azure-AsyncOperation"] = []string{u.String()}
 
 	return nil
