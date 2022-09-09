@@ -35,12 +35,12 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	It("Should be able to populate cluster data correctly", func() {
 		err := wd.Wait(ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 
 		cluster, err := wd.FindElement(ByCSSSelector, "div[data-automation-key='name']")
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 
 		Expect(cluster.Text()).To(Equal(os.Getenv("CLUSTER")))
@@ -51,7 +51,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 
 		filter, err := wd.FindElement(ByCSSSelector, "input[placeholder='Filter on resource ID']")
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 
 		// Set filter so it doesn't match cluster name
@@ -60,7 +60,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		wd.Wait(ElementIsLocated(ByID, "ClusterCount"))
 		text, err := wd.FindElement(ByID, "ClusterCount")
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 
 		Expect(text.Text()).To(Equal("Showing 0 items"))
@@ -71,27 +71,27 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 
 		err := wd.Wait(ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 
 		cluster, err := wd.FindElement(ByCSSSelector, "div[data-automation-key='name']")
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 
 		err = cluster.Click()
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 
 		err = wd.WaitWithTimeout(ElementIsLocated(ByID, "ClusterDetailCell"), 2*time.Minute)
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 
 		panelSpans, err := wd.FindElements(ByID, "ClusterDetailCell")
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 
 		Expect(len(panelSpans)).To(Equal(CLUSTER_INFO_HEADINGS * 3))
@@ -103,7 +103,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		for _, panelField := range panelFields {
 			panelText, err := panelField.Text()
 			if err != nil {
-				TakeScreenshot(wd, err)
+				SaveScreenshotAndExit(wd, err)
 			}
 
 			Expect(panelText).To(Not(Equal("")))
@@ -112,7 +112,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		for _, panelField := range panelColons {
 			panelText, err := panelField.Text()
 			if err != nil {
-				TakeScreenshot(wd, err)
+				SaveScreenshotAndExit(wd, err)
 			}
 
 			Expect(panelText).To(Equal(":"))
@@ -121,7 +121,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		for _, panelField := range panelValues {
 			panelText, err := panelField.Text()
 			if err != nil {
-				TakeScreenshot(wd, err)
+				SaveScreenshotAndExit(wd, err)
 			}
 
 			Expect(panelText).To(Not(Equal("")))
@@ -133,14 +133,14 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 
 		button, err := wd.FindElement(ByCSSSelector, "button[aria-label='Copy Resource ID']")
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 
 		button.Click()
 
 		filter, err := wd.FindElement(ByCSSSelector, "input[placeholder='Filter on resource ID']")
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 
 		// Paste clipboard
@@ -149,7 +149,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		resourceId, err := filter.GetAttribute("value")
 
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 
 		Expect(resourceId).To(ContainSubstring("/providers/Microsoft.RedHatOpenShift/openShiftClusters/" + os.Getenv("CLUSTER")))
@@ -160,7 +160,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 
 		button, err := wd.FindElement(ByCSSSelector, "button[aria-label='SSH']")
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 
 		button.Click()
@@ -170,7 +170,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 
 		sshDropdown, err := wd.FindElement(ByID, "sshDropdown")
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 
 		sshDropdown.Click()
@@ -178,7 +178,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		wd.Wait(ElementIsLocated(ByID, "sshDropdown-list0"))
 		machine, err := wd.FindElement(ByID, "sshDropdown-list0")
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 
 		machine.Click()
@@ -186,7 +186,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		wd.Wait(ElementIsLocated(ByID, "sshButton"))
 		requestBtn, err := wd.FindElement(ByID, "sshButton")
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 
 		requestBtn.Click()
@@ -194,7 +194,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		// Test fails if these labels aren't present
 		err = wd.Wait(ElementIsLocated(ByID, "sshCommand"))
 		if err != nil {
-			TakeScreenshot(wd, err)
+			SaveScreenshotAndExit(wd, err)
 		}
 	})
 })

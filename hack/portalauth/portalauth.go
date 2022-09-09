@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/gob"
 	"flag"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -73,12 +72,10 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	session.Values[SessionKeyGroups] = strings.Split(*groups, ",")
 	session.Values[SessionKeyExpires] = time.Now().Add(time.Hour)
 
-	encoded, err := securecookie.EncodeMulti(session.Name(), session.Values, store.Codecs...)
+	_, err = securecookie.EncodeMulti(session.Name(), session.Values, store.Codecs...)
 	if err != nil {
 		return err
 	}
-
-	fmt.Printf("%s", encoded)
 
 	return nil
 }

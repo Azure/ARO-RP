@@ -51,7 +51,6 @@ jobs:
       deploy_e2e_db
 
       run_portal
-      sleep 120
       validate_portal_running
       run_rp
       validate_rp_running
