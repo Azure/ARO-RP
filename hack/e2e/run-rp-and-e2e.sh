@@ -5,6 +5,7 @@ validate_rp_running() {
     echo "########## ？Checking ARO RP Status ##########"
     ELAPSED=0
     while true; do
+        sleep 2
         http_code=$(curl -k -s -o /dev/null -w '%{http_code}' https://localhost:8443/healthz/ready || true)
         case $http_code in
             "200")
@@ -41,6 +42,7 @@ validate_portal_running() {
     echo "########## ？Checking Admin Portal Status ##########"
     ELAPSED=0
     while true; do
+        sleep 2
         http_code=$(curl -k -s -o /dev/null -w '%{http_code}' https://localhost:8444/api/info)
         case $http_code in
             "403")
