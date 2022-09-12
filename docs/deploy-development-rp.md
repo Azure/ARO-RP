@@ -186,7 +186,7 @@
   curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/skus" --header "Content-Type: application/json" -d "{}"
   ```
 
-* Reize master node of a dev cluster
+* Resize master node of a dev cluster
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
   VMSIZE="Standard_D16s_v3"
