@@ -12,14 +12,13 @@ import (
 )
 
 const (
-	RoleACRPull                                = "7f951dda-4ed3-4680-a7ca-43fe172d538d"
-	RoleContributor                            = "b24988ac-6180-42a0-ab88-20f7382dd24c"
-	RoleDocumentDBAccountContributor           = "5bd9cd88-fe45-4216-938b-f97437e15450"
-	RoleDNSZoneContributor                     = "befefa01-2a29-4197-83a8-272ff33ce314"
-	RoleNetworkContributor                     = "4d97b98b-1d4f-4787-a291-c67834d212e7"
-	RoleOwner                                  = "8e3af657-a8ff-443c-a75c-2fe8c4bcb635"
-	RoleReader                                 = "acdd72a7-3385-48ef-bd42-f606fba81ae7"
-	RoleAzureKubernetesServiceClusterAdminRole = "0ab0b1a8-8aac-4efd-b8c2-3ee1fb270be8"
+	RoleACRPull                      = "7f951dda-4ed3-4680-a7ca-43fe172d538d"
+	RoleContributor                  = "b24988ac-6180-42a0-ab88-20f7382dd24c"
+	RoleDocumentDBAccountContributor = "5bd9cd88-fe45-4216-938b-f97437e15450"
+	RoleDNSZoneContributor           = "befefa01-2a29-4197-83a8-272ff33ce314"
+	RoleNetworkContributor           = "4d97b98b-1d4f-4787-a291-c67834d212e7"
+	RoleOwner                        = "8e3af657-a8ff-443c-a75c-2fe8c4bcb635"
+	RoleReader                       = "acdd72a7-3385-48ef-bd42-f606fba81ae7"
 )
 
 // ResourceRoleAssignment returns a Resource granting roleID on the resource of
