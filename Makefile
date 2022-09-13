@@ -184,8 +184,8 @@ lint-go:
 	hack/lint-go.sh
 
 lint-admin-portal:
-	docker build --platform=linux/amd64 --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.portal_lint . -t linter
-	docker run --platform=linux/amd64 -it --rm localhost/linter ./src --ext .ts
+	docker build --platform=linux/amd64 --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.portal_lint . -t linter:latest --no-cache
+	docker run --platform=linux/amd64 -t --rm linter:latest
 
 test-python: pyenv az
 	. pyenv/bin/activate && \

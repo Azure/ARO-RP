@@ -5,7 +5,6 @@ package cluster
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -127,7 +126,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	}
 
 	// Hive cluster adoption and reconciliation
-	if isEverything {
+	if isEverything && m.adoptViaHive {
 		toRun = append(toRun,
 			steps.Action(m.hiveCreateNamespace),
 			steps.Action(m.hiveEnsureResources),
@@ -148,7 +147,7 @@ func (m *manager) adminUpdate() []steps.Step {
 }
 
 func (m *manager) Update(ctx context.Context) error {
-	steps := []steps.Step{
+	s := []steps.Step{
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
 		steps.Action(m.initializeKubernetesClients), // All init steps are first
 		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
@@ -163,39 +162,42 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.configureIngressCertificate),
 		steps.Action(m.updateOpenShiftSecret),
 		steps.Action(m.updateAROSecret),
-		// Hive reconciliation: we mostly need it to make sure that
-		// hive has the latest credentials after rotation.
-		steps.Action(m.hiveCreateNamespace),
-		steps.Action(m.hiveEnsureResources),
-		steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
-		steps.Action(m.hiveResetCorrelationData),
 	}
 
-	return m.runSteps(ctx, steps, false)
+	if m.adoptViaHive {
+		s = append(s,
+			// Hive reconciliation: we mostly need it to make sure that
+			// hive has the latest credentials after rotation.
+			steps.Action(m.hiveCreateNamespace),
+			steps.Action(m.hiveEnsureResources),
+			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+			steps.Action(m.hiveResetCorrelationData),
+		)
+	}
+
+	return m.runSteps(ctx, s, false)
 }
 
 func (m *manager) runIntegratedInstaller(ctx context.Context) error {
-	i := installer.NewInstaller(m.log, m.env, m.doc.ID, m.doc.OpenShiftCluster, m.subscriptionDoc.Subscription, m.fpAuthorizer, m.deployments, m.graph)
-	return i.Install(ctx)
-}
-
-func (m *manager) runHiveInstaller(ctx context.Context) error {
-	// TODO: Load from M6 database
-	installerPullspec, err := m.env.LiveConfig().DefaultInstallerPullSpec(ctx)
+	version, err := m.openShiftVersionFromVersion(ctx)
 	if err != nil {
 		return err
 	}
 
-	v := &api.OpenShiftVersion{
-		Version:           version.InstallStream.Version.String(),
-		OpenShiftPullspec: version.InstallStream.PullSpec,
-		InstallerPullspec: installerPullspec,
+	i := installer.NewInstaller(m.log, m.env, m.doc.ID, m.doc.OpenShiftCluster, m.subscriptionDoc.Subscription, version, m.fpAuthorizer, m.deployments, m.graph)
+	return i.Install(ctx)
+}
+
+func (m *manager) runHiveInstaller(ctx context.Context) error {
+	version, err := m.openShiftVersionFromVersion(ctx)
+	if err != nil {
+		return err
 	}
 
 	// Run installer. For M5/M6 we will persist the graph inside the installer
 	// code since it's easier, but in the future, this data should be collected
 	// from Hive's outputs where needed.
-	return m.hiveClusterManager.Install(ctx, m.subscriptionDoc, m.doc, v)
+	return m.hiveClusterManager.Install(ctx, m.subscriptionDoc, m.doc, version)
 }
 
 func (m *manager) bootstrap() []steps.Step {
@@ -220,35 +222,45 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureGatewayCreate)),
 		steps.Action(m.createAPIServerPrivateEndpoint),
 		steps.Action(m.createCertificates),
+	}
 
+	if m.adoptViaHive || m.installViaHive {
 		// We will always need a Hive namespace, whether we are installing
 		// via Hive or adopting
-		steps.Action(m.hiveCreateNamespace),
+		s = append(s, steps.Action(m.hiveCreateNamespace))
 	}
 
 	if m.installViaHive {
 		s = append(s,
-			steps.Action(m.hiveCreateNamespace),
 			steps.Action(m.runHiveInstaller),
 			// Give Hive 60 minutes to install the cluster, since this includes
 			// all of bootstrapping being complete
 			steps.Condition(m.hiveClusterInstallationComplete, 60*time.Minute, true),
 			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
 		)
 	} else {
 		s = append(s,
 			steps.Action(m.runIntegratedInstaller),
-			steps.Action(m.hiveCreateNamespace),
-			steps.Action(m.hiveEnsureResources),
-			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
+		)
+
+		if m.adoptViaHive {
+			s = append(s,
+				steps.Action(m.hiveEnsureResources),
+				steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
+			)
+		}
+	}
+
+	if m.adoptViaHive || m.installViaHive {
+		s = append(s,
+			// Reset correlation data whether adopting or installing via Hive
+			steps.Action(m.hiveResetCorrelationData),
 		)
 	}
 
 	s = append(s,
-		// Reset correlation data whether adopting or installing via Hive
-		steps.Action(m.hiveResetCorrelationData),
-
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
 		steps.Action(m.ensureBillingRecord),
 		steps.Action(m.initializeKubernetesClients),
 		steps.Action(m.initializeOperatorDeployer), // depends on kube clients
@@ -262,10 +274,6 @@ func (m *manager) bootstrap() []steps.Step {
 
 // Install installs an ARO cluster
 func (m *manager) Install(ctx context.Context) error {
-	if m.installViaHive && m.hiveClusterManager == nil {
-		return errors.New("installViaHive was requested but hiveClusterManager is unavailable")
-	}
-
 	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: m.bootstrap(),
 		api.InstallPhaseRemoveBootstrap: {
