@@ -31,7 +31,7 @@ import (
 
 type dummyOpenShiftClusterValidator struct{}
 
-func (*dummyOpenShiftClusterValidator) Static(interface{}, *api.OpenShiftCluster) error {
+func (*dummyOpenShiftClusterValidator) Static(interface{}, *api.OpenShiftCluster, string, string, bool, string) error {
 	return nil
 }
 
@@ -645,10 +645,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 
 	apis := map[string]*api.Version{
 		"2020-04-30": {
-			OpenShiftClusterConverter: api.APIs["2020-04-30"].OpenShiftClusterConverter,
-			OpenShiftClusterStaticValidator: func(string, string, bool, string) api.OpenShiftClusterStaticValidator {
-				return &dummyOpenShiftClusterValidator{}
-			},
+			OpenShiftClusterConverter:            api.APIs["2020-04-30"].OpenShiftClusterConverter,
+			OpenShiftClusterStaticValidator:      &dummyOpenShiftClusterValidator{},
 			OpenShiftClusterCredentialsConverter: api.APIs["2020-04-30"].OpenShiftClusterCredentialsConverter,
 		},
 	}

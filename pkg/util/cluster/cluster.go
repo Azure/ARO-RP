@@ -454,7 +454,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 	}
 
-	ext := api.APIs[v20220401.APIVersion].OpenShiftClusterConverter().ToExternal(&oc)
+	ext := api.APIs[v20220401.APIVersion].OpenShiftClusterConverter.ToExternal(&oc)
 	data, err := json.Marshal(ext)
 	if err != nil {
 		return err

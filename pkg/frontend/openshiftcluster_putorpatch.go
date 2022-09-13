@@ -31,26 +31,29 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 
 	var header http.Header
 	var b []byte
+
+	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
+	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
+	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
+	originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
+	referer := r.Header.Get("Referer")
+
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchOpenShiftCluster(ctx, log, r, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter(), f.apis[vars["api-version"]].OpenShiftClusterStaticValidator(f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), r.URL.Path))
+		b, err = f._putOrPatchOpenShiftCluster(ctx, log, body, correlationData, systemData, r.URL.Path, originalPath, r.Method, referer, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter, f.apis[vars["api-version"]].OpenShiftClusterStaticValidator, mux.Vars(r))
 		return err
 	})
 
 	reply(log, w, header, b, err)
 }
 
-func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, r *http.Request, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator) ([]byte, error) {
-	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
-	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
-	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
-
-	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
+func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, body []byte, correlationData *api.CorrelationData, systemData *api.SystemData, path, originalPath, method, referer string, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator, vars map[string]string) ([]byte, error) {
+	_, err := f.validateSubscriptionState(ctx, path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, err
 	}
 
-	doc, err := f.dbOpenShiftClusters.Get(ctx, r.URL.Path)
+	doc, err := f.dbOpenShiftClusters.Get(ctx, path)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
 	}
@@ -58,20 +61,19 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	isCreate := doc == nil
 
 	if isCreate {
-		originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
 		originalR, err := azure.ParseResourceID(originalPath)
 		if err != nil {
 			return nil, err
 		}
 
-		installVersion, err := f.validateAndReturnInstallVersion(ctx, &body)
+		installVersion, err := f.validateAndReturnInstallVersion(ctx, body)
 		if err != nil {
 			return nil, err
 		}
 
 		doc = &api.OpenShiftClusterDocument{
 			ID:  f.dbOpenShiftClusters.NewUUID(),
-			Key: r.URL.Path,
+			Key: path,
 			OpenShiftCluster: &api.OpenShiftCluster{
 				ID:   originalPath,
 				Name: originalR.ResourceName,
@@ -124,7 +126,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	}
 
 	var ext interface{}
-	switch r.Method {
+	switch method {
 	// In case of PUT we will take customer request payload and store into database
 	// Our base structure for unmarshal is skeleton document with values we
 	// think is required. We expect payload to have everything else required.
@@ -160,9 +162,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	}
 
 	if isCreate {
-		err = staticValidator.Static(ext, nil)
+		err = staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), path)
 	} else {
-		err = staticValidator.Static(ext, doc.OpenShiftCluster)
+		err = staticValidator.Static(ext, doc.OpenShiftCluster, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), path)
 	}
 	if err != nil {
 		return nil, err
@@ -193,7 +195,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 
 		// TODO: Get rid of the special case
-		vars := mux.Vars(r)
 		if vars["api-version"] == admin.APIVersion {
 			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
 			doc.OpenShiftCluster.Properties.LastAdminUpdateError = ""
@@ -206,17 +207,17 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// SetDefaults will set defaults on cluster document
 	api.SetDefaults(doc)
 
-	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, r, doc)
+	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, vars, doc)
 	if err != nil {
 		return nil, err
 	}
 
-	u, err := url.Parse(r.Header.Get("Referer"))
+	u, err := url.Parse(referer)
 	if err != nil {
 		return nil, err
 	}
 
-	u.Path = f.operationsPath(r, doc.AsyncOperationID)
+	u.Path = f.operationsPath(vars, doc.AsyncOperationID)
 	*header = http.Header{
 		"Azure-AsyncOperation": []string{u.String()},
 	}
@@ -239,7 +240,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
-	b, err := json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")
+	b, err := json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "\t")
 	if err != nil {
 		return nil, err
 	}

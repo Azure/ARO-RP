@@ -10,7 +10,7 @@ type OpenShiftClusterConverter interface {
 }
 
 type OpenShiftClusterStaticValidator interface {
-	Static(interface{}, *OpenShiftCluster) error
+	Static(interface{}, *OpenShiftCluster, string, string, bool, string) error
 }
 
 type OpenShiftClusterCredentialsConverter interface {
@@ -37,13 +37,13 @@ type OpenShiftVersionStaticValidator interface {
 
 // Version is a set of endpoints implemented by each API version
 type Version struct {
-	OpenShiftClusterConverter                func() OpenShiftClusterConverter
-	OpenShiftClusterStaticValidator          func(string, string, bool, string) OpenShiftClusterStaticValidator
-	OpenShiftClusterCredentialsConverter     func() OpenShiftClusterCredentialsConverter
-	OpenShiftClusterAdminKubeconfigConverter func() OpenShiftClusterAdminKubeconfigConverter
-	OpenShiftVersionConverter                func() OpenShiftVersionConverter
-	OpenShiftVersionStaticValidator          func() OpenShiftVersionStaticValidator
-	InstallVersionsConverter                 func() InstallVersionsConverter
+	OpenShiftClusterConverter                OpenShiftClusterConverter
+	OpenShiftClusterStaticValidator          OpenShiftClusterStaticValidator
+	OpenShiftClusterCredentialsConverter     OpenShiftClusterCredentialsConverter
+	OpenShiftClusterAdminKubeconfigConverter OpenShiftClusterAdminKubeconfigConverter
+	OpenShiftVersionConverter                OpenShiftVersionConverter
+	OpenShiftVersionStaticValidator          OpenShiftVersionStaticValidator
+	InstallVersionsConverter                 InstallVersionsConverter
 	OperationList                            OperationList
 }
 

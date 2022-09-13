@@ -22,7 +22,7 @@ func (f *frontend) getAdminOpenShiftVersions(w http.ResponseWriter, r *http.Requ
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	converter := f.apis[admin.APIVersion].OpenShiftVersionConverter()
+	converter := f.apis[admin.APIVersion].OpenShiftVersionConverter
 
 	docs, err := f.dbOpenShiftVersions.ListAll(ctx)
 	if err != nil {

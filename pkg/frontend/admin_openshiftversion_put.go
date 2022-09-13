@@ -20,8 +20,8 @@ func (f *frontend) putAdminOpenShiftVersion(w http.ResponseWriter, r *http.Reque
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	converter := f.apis[admin.APIVersion].OpenShiftVersionConverter()
-	staticValidator := f.apis[admin.APIVersion].OpenShiftVersionStaticValidator()
+	converter := f.apis[admin.APIVersion].OpenShiftVersionConverter
+	staticValidator := f.apis[admin.APIVersion].OpenShiftVersionStaticValidator
 
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	if len(body) == 0 || !json.Valid(body) {

@@ -25,7 +25,7 @@ func TestParsePreInstallAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ver, err := FromExternalBytes(&b)
+	ver, err := FromExternalBytes(b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestParsePostInstallAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ver, err := FromExternalBytes(&b)
+	ver, err := FromExternalBytes(b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestParsePostInstallAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ver, err = FromExternalBytes(&b)
+	ver, err = FromExternalBytes(b)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -34,7 +34,7 @@ func (f *frontend) listInstallVersions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	converter := f.apis[vars["api-version"]].InstallVersionsConverter()
+	converter := f.apis[vars["api-version"]].InstallVersionsConverter
 
 	b, err := json.Marshal(converter.ToExternal((*api.InstallVersions)(&versions)))
 	reply(log, w, nil, b, err)

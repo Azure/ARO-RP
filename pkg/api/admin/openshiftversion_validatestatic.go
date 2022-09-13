@@ -13,7 +13,7 @@ import (
 type openShiftVersionStaticValidator struct{}
 
 // Validate validates an OpenShift cluster
-func (sv *openShiftVersionStaticValidator) Static(_new interface{}, _current *api.OpenShiftVersion) error {
+func (sv openShiftVersionStaticValidator) Static(_new interface{}, _current *api.OpenShiftVersion) error {
 	new := _new.(*OpenShiftVersion)
 
 	var current *OpenShiftVersion
@@ -33,7 +33,7 @@ func (sv *openShiftVersionStaticValidator) Static(_new interface{}, _current *ap
 	return sv.validateDelta(new, current)
 }
 
-func (sv *openShiftVersionStaticValidator) validate(new *OpenShiftVersion, isCreate bool) error {
+func (sv openShiftVersionStaticValidator) validate(new *OpenShiftVersion, isCreate bool) error {
 	if new.Version == "" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "version", "Must be provided")
 	}
@@ -48,7 +48,7 @@ func (sv *openShiftVersionStaticValidator) validate(new *OpenShiftVersion, isCre
 	return nil
 }
 
-func (sv *openShiftVersionStaticValidator) validateDelta(new, current *OpenShiftVersion) error {
+func (sv openShiftVersionStaticValidator) validateDelta(new, current *OpenShiftVersion) error {
 	err := immutable.Validate("", new, current)
 	if err != nil {
 		err := err.(*immutable.ValidationError)

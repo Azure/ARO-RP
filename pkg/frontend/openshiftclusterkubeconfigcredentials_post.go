@@ -36,7 +36,7 @@ func (f *frontend) postOpenShiftClusterKubeConfigCredentials(w http.ResponseWrit
 
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	b, err := f._postOpenShiftClusterKubeConfigCredentials(ctx, r, f.apis[vars["api-version"]].OpenShiftClusterAdminKubeconfigConverter())
+	b, err := f._postOpenShiftClusterKubeConfigCredentials(ctx, r, f.apis[vars["api-version"]].OpenShiftClusterAdminKubeconfigConverter)
 
 	reply(log, w, nil, b, err)
 }

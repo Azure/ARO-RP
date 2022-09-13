@@ -167,7 +167,7 @@ func validateAdminVMSize(vmSize string) error {
 	return nil
 }
 
-func (f *frontend) validateAndReturnInstallVersion(ctx context.Context, body *[]byte) (string, error) {
+func (f *frontend) validateAndReturnInstallVersion(ctx context.Context, body []byte) (string, error) {
 	oc, err := installversion.FromExternalBytes(body)
 	if err != nil {
 		return "", api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)

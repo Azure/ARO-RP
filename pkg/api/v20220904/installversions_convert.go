@@ -7,6 +7,6 @@ import "github.com/Azure/ARO-RP/pkg/api"
 
 type installVersionsConverter struct{}
 
-func (*installVersionsConverter) ToExternal(installVersions *api.InstallVersions) interface{} {
+func (installVersionsConverter) ToExternal(installVersions *api.InstallVersions) interface{} {
 	return installVersions
 }
