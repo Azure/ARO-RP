@@ -31,7 +31,7 @@ type SubResource struct {
 }
 
 // ParentResourcetoString returns a string of the parent object in form of azureResourceID
-func (r ArmResource) ParentResourceToString() string {
+func (r ArmResource) ParentResource() string {
 	return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/%s/%s/%s", r.SubscriptionID, r.ResourceGroup, r.Provider, r.ResourceType, r.ResourceName)
 }
 
@@ -41,7 +41,7 @@ func (r ArmResource) String() string {
 }
 
 // ParseArmResourceId take the resourceID of a child resource to an OpenShiftCluster
-// TODO
+// TODO refactor this function to support an additional layer of child resources if we ever get to that point, right now only supports 1 child resource
 func ParseArmResourceId(resourceId string) (*ArmResource, error) {
 	const resourceIDPatternText = `(?i)subscriptions/(.+)/resourceGroups/(.+)/providers/(.+?)/(.+?)/(.+?)/(.+?)/(.+)`
 	resourceIDPattern := regexp.MustCompile(resourceIDPatternText)

@@ -12,10 +12,7 @@ func exampleSyncSet() *SyncSet {
 	doc.SyncSet.ID = ""
 	doc.SyncSet.Type = ""
 	doc.SyncSet.Name = ""
-	ext, err := (&clusterManagerConfigurationConverter{}).SyncSetToExternal(doc.SyncSet)
-	if err != nil {
-		panic(err)
-	}
+	ext := (&clusterManagerConfigurationConverter{}).SyncSetToExternal(doc.SyncSet)
 	return ext.(*SyncSet)
 }
 
@@ -44,10 +41,8 @@ func exampleMachinePool() *MachinePool {
 	doc.MachinePool.ID = ""
 	doc.MachinePool.Type = ""
 	doc.MachinePool.Name = ""
-	ext, err := (&clusterManagerConfigurationConverter{}).MachinePoolToExternal(doc.MachinePool)
-	if err != nil {
-		panic(err)
-	}
+	ext := (&clusterManagerConfigurationConverter{}).MachinePoolToExternal(doc.MachinePool)
+
 	return ext.(*MachinePool)
 }
 
@@ -76,10 +71,7 @@ func exampleSyncIdentityProvider() *SyncIdentityProvider {
 	doc.SyncIdentityProvider.ID = ""
 	doc.SyncIdentityProvider.Type = ""
 	doc.SyncIdentityProvider.Name = ""
-	ext, err := (&clusterManagerConfigurationConverter{}).SyncIdentityProviderToExternal(doc.SyncIdentityProvider)
-	if err != nil {
-		panic(err)
-	}
+	ext := (&clusterManagerConfigurationConverter{}).SyncIdentityProviderToExternal(doc.SyncIdentityProvider)
 	return ext.(*SyncIdentityProvider)
 }
 
@@ -108,10 +100,7 @@ func exampleSecret() *Secret {
 	doc.Secret.ID = ""
 	doc.Secret.Type = ""
 	doc.Secret.Name = ""
-	ext, err := (&clusterManagerConfigurationConverter{}).SecretToExternal(doc.Secret)
-	if err != nil {
-		panic(err)
-	}
+	ext := (&clusterManagerConfigurationConverter{}).SecretToExternal(doc.Secret)
 	return ext.(*Secret)
 }
 

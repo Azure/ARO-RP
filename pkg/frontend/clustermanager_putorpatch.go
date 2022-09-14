@@ -43,6 +43,7 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
+	vars := mux.Vars(r)
 
 	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
@@ -54,15 +55,14 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 	if err != nil {
 		return nil, err
 	}
-	clusterURL := strings.ToLower(armResource.ParentResourceToString())
 
-	ocp, err := f.dbOpenShiftClusters.Get(ctx, clusterURL)
+	ocp, err := f.dbOpenShiftClusters.Get(ctx, armResource.ParentResource())
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
 	}
 
 	if ocp == nil || cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "cluster does not exist.")
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
 	}
 
 	ocmdoc, _ := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
@@ -79,19 +79,23 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 			ClusterManagerConfiguration: &api.ClusterManagerConfiguration{
 				ID:                originalPath,
 				Name:              armResource.SubResource.ResourceName,
-				ClusterResourceID: clusterURL,
+				ClusterResourceID: strings.ToLower(armResource.ParentResource()),
 				Properties: api.ClusterManagerConfigurationProperties{
 					Resources: body,
 				},
 			},
 		}
 
-		newdoc, err := f.dbClusterManagerConfiguration.Create(ctx, ocmdoc)
-		if err != nil {
-			return nil, err
-		}
+		var newdoc *api.ClusterManagerConfigurationDocument
+		err = cosmosdb.RetryOnPreconditionFailed(func() error {
+			newdoc, err = f.dbClusterManagerConfiguration.Create(ctx, ocmdoc)
+			return err
+		})
 		ocmdoc = newdoc
 	} else {
+		if ocmdoc.Deleting {
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on a resource marked for deletion.")
+		}
 		if ocmdoc.ClusterManagerConfiguration != nil {
 			ocmdoc.ClusterManagerConfiguration.Properties.Resources = body
 		}
@@ -115,6 +119,7 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 	return b, err
 }
 
+// TODO once we hit go1.18 we can refactor to use generics for any document using systemData
 // enrichClusterManagerSystemData will selectively overwrite systemData fields based on
 // arm inputs
 func enrichClusterManagerSystemData(doc *api.ClusterManagerConfigurationDocument, systemData *api.SystemData) {

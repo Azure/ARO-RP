@@ -36,9 +36,14 @@ func (f *frontend) _getClusterManagerConfiguration(ctx context.Context, log *log
 	doc, err := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' was not found.", vars["resourceType"], vars["resourceName"], vars["clusterManagerKind"], vars["ocmResourceName"])
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
+			vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
 	case err != nil:
 		return nil, err
+	}
+
+	if doc.Deleting {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on a resource marked for deletion.")
 	}
 
 	ext, err := converter.ToExternal(doc.ClusterManagerConfiguration)

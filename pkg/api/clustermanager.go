@@ -6,20 +6,14 @@ package api
 // SyncSetList represents a list of SyncSets for a given cluster.
 type SyncSetList struct {
 	SyncSets []*SyncSet `json:"value"`
-	// The link used to get the next page of operations.
-	NextLink string `json:"nextLink,omitempty"`
 }
 
 type ClusterManagerConfigurationList struct {
 	ClusterManagerConfigurations []*ClusterManagerConfiguration `json:"value"`
-
-	NextLink string `json:"nextLink,omitempty"`
 }
 
 // ClusterManagerConfiguration represents the configuration from OpenShift Cluster Manager (OCM)
 type ClusterManagerConfiguration struct {
-	MissingFields
-
 	// ID is the unique identifier for the cluster manager configuration
 	ID                string                                `json:"id,omitempty"`
 	Name              string                                `json:"name,omitempty"`
@@ -37,9 +31,9 @@ type ClusterManagerConfigurationProperties struct {
 // SyncSet represents a SyncSet for an Azure Red Hat OpenShift Cluster.
 type SyncSet struct {
 	// Required resource properties in ARM
-	ID   string `json:"id,omitempty" mutable:"case"`
-	Name string `json:"name,omitempty" mutable:"case"`
-	Type string `json:"type,omitempty" mutable:"case"`
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
+	Type string `json:"type,omitempty"`
 
 	// SystemData metadata relating to this resource.
 	SystemData *SystemData `json:"systemData,omitempty"`
@@ -58,9 +52,6 @@ type SyncSetProperties struct {
 type MachinePoolList struct {
 	// The list of MachinePools.
 	MachinePools []*MachinePool `json:"value"`
-
-	// The link used to get the next page of operations.
-	NextLink string `json:"nextLink,omitempty"`
 }
 
 // MachinePool represents a MachinePool
@@ -72,7 +63,7 @@ type MachinePool struct {
 	Name string `json:"name,omitempty"`
 
 	// The resource type.
-	Type string `json:"type,omitempty" mutable:"case"`
+	Type string `json:"type,omitempty"`
 
 	// SystemData metadata relating to this resource.
 	SystemData *SystemData `json:"systemData,omitempty"`
@@ -90,9 +81,6 @@ type MachinePoolProperties struct {
 type SyncIdentityProviderList struct {
 	// The list of SyncIdentityProvider.
 	SyncIdentityProviders []*SyncIdentityProvider `json:"value"`
-
-	// The link used to get the next page of operations.
-	NextLink string `json:"nextLink,omitempty"`
 }
 
 // SyncIdentityProvider represents a SyncIdentityProvider
@@ -104,7 +92,7 @@ type SyncIdentityProvider struct {
 	Name string `json:"name,omitempty"`
 
 	// The resource type.
-	Type string `json:"type,omitempty" mutable:"case"`
+	Type string `json:"type,omitempty"`
 
 	// SystemData metadata relating to this resource.
 	SystemData *SystemData `json:"systemData,omitempty"`
@@ -123,9 +111,6 @@ type SyncIdentityProviderProperties struct {
 type SecretList struct {
 	// The list of Secrets.
 	Secrets []*Secret `json:"value"`
-
-	// The link used to get the next page of operations.
-	NextLink string `json:"nextLink,omitempty"`
 }
 
 // Secret represents a secret.
@@ -137,7 +122,7 @@ type Secret struct {
 	Name string `json:"name,omitempty"`
 
 	// The resource type.
-	Type string `json:"type,omitempty" mutable:"case"`
+	Type string `json:"type,omitempty"`
 
 	// SystemData metadata relating to this resource.
 	SystemData *SystemData `json:"systemData,omitempty"`

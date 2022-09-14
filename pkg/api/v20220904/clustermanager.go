@@ -3,14 +3,7 @@ package v20220904
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// OCM Kinds supported
-const (
-	MachinePoolKind          = "MachinePool"
-	SyncIdentityProviderKind = "SyncIdentityProvider"
-	SyncSetKind              = "SyncSet"
-	SecretKind               = "Secret"
-)
-
+// ClusterManagerConfigurationList represents a list of ClusterManagerConfigurations
 type ClusterManagerConfigurationList struct {
 	ClusterManagerConfigurations []*ClusterManagerConfiguration `json:"value"`
 
@@ -25,10 +18,7 @@ type ClusterManagerConfiguration struct {
 	Name string `json:"name,omitempty"`
 
 	// The parent cluster resourceId
-	ClusterResourceId string `json:"clusterResourceId,omitempty"`
-
-	// If this object is marked to be deleted
-	Deleting bool `json:"deleting,omitempty"` // https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
+	ClusterResourceID string `json:"clusterResourceId,omitempty"`
 
 	// The ClusterManagerConfigurations properties
 	Properties ClusterManagerConfigurationProperties `json:"properties,omitempty"`

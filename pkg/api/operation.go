@@ -139,6 +139,7 @@ var OperationSyncSetsRead = Operation{
 	},
 	Origin: "user,system",
 }
+
 var OperationSyncSetsWrite = Operation{
 	Name: "Microsoft.RedHatOpenShift/openShiftClusters/syncSets/write",
 	Display: Display{
@@ -148,6 +149,7 @@ var OperationSyncSetsWrite = Operation{
 	},
 	Origin: "user,system",
 }
+
 var OperationSyncSetsDelete = Operation{
 	Name: "Microsoft.RedHatOpenShift/openShiftClusters/syncSets/delete",
 	Display: Display{
@@ -204,6 +206,7 @@ var OperationSyncIdentityProvidersWrite = Operation{
 	},
 	Origin: "user,system",
 }
+
 var OperationSyncIdentityProvidersDelete = Operation{
 	Name: "Microsoft.RedHatOpenShift/openShiftClusters/syncIdentityProviders/delete",
 	Display: Display{

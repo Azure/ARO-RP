@@ -29,7 +29,7 @@ func (f *frontend) deleteClusterManagerConfiguration(w http.ResponseWriter, r *h
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		err = statusCodeError(http.StatusNoContent)
 	case err == nil:
-		err = statusCodeError(http.StatusAccepted)
+		err = statusCodeError(http.StatusOK)
 	}
 	reply(log, w, nil, nil, err)
 }
@@ -37,20 +37,26 @@ func (f *frontend) deleteClusterManagerConfiguration(w http.ResponseWriter, r *h
 func (f *frontend) _deleteClusterManagerConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request) error {
 	vars := mux.Vars(r)
 
-	doc, err := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
-	switch {
-	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
-	case err != nil:
-		return err
-	}
-
-	doc.Deleting = true
-	_, err = f.dbClusterManagerConfiguration.Update(ctx, doc)
+	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered, api.SubscriptionStateSuspended, api.SubscriptionStateWarned)
 	if err != nil {
 		return err
 	}
 
-	err = f.dbClusterManagerConfiguration.Delete(ctx, doc)
+	doc, err := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
+	switch {
+	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
+			vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
+	case err != nil:
+		return err
+	}
+
+	// Right now we are going to assume that the backend will delete the document, we will just mark for deletion.
+	doc.Deleting = true
+	err = cosmosdb.RetryOnPreconditionFailed(func() error {
+		var err error
+		_, err = f.dbClusterManagerConfiguration.Update(ctx, doc)
+		return err
+	})
 	return err
 }
