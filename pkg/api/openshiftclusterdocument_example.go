@@ -39,7 +39,7 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 				ClusterProfile: ClusterProfile{
 					PullSecret:      `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
 					Domain:          "cluster.location.aroapp.io",
-					Version:         "4.3.0",
+					Version:         "4.11.0",
 					ResourceGroupID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup",
 				},
 				ConsoleProfile: ConsoleProfile{

@@ -567,7 +567,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, apis, &noop.Noop{}, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, apis, &noop.Noop{}, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
 				return ti.enricher
 			})
 			if err != nil {
@@ -575,9 +575,9 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			}
 			f.(*frontend).bucketAllocator = bucket.Fixed(1)
 
-			var systemDataEnricherCalled bool
-			f.(*frontend).systemDataEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
-				systemDataEnricherCalled = true
+			var systemDataClusterDocEnricherCalled bool
+			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+				systemDataClusterDocEnricherCalled = true
 			}
 
 			go f.Run(ctx, nil, nil)
@@ -633,8 +633,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				t.Error(err)
 			}
 
-			if tt.wantSystemDataEnriched != systemDataEnricherCalled {
-				t.Error(systemDataEnricherCalled)
+			if tt.wantSystemDataEnriched != systemDataClusterDocEnricherCalled {
+				t.Error(systemDataClusterDocEnricherCalled)
 			}
 		})
 	}
@@ -1392,7 +1392,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, apis, &noop.Noop{}, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, apis, &noop.Noop{}, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
 				return ti.enricher
 			})
 			if err != nil {
@@ -1401,9 +1401,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			f.(*frontend).bucketAllocator = bucket.Fixed(1)
 			f.(*frontend).now = func() time.Time { return mockCurrentTime }
 
-			var systemDataEnricherCalled bool
-			f.(*frontend).systemDataEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
-				systemDataEnricherCalled = true
+			var systemDataClusterDocEnricherCalled bool
+			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+				systemDataClusterDocEnricherCalled = true
 			}
 
 			go f.Run(ctx, nil, nil)
@@ -1457,8 +1457,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				}
 			}
 
-			if tt.wantSystemDataEnriched != systemDataEnricherCalled {
-				t.Error(systemDataEnricherCalled)
+			if tt.wantSystemDataEnriched != systemDataClusterDocEnricherCalled {
+				t.Error(systemDataClusterDocEnricherCalled)
 			}
 		})
 	}
@@ -1694,7 +1694,7 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
 				return ti.enricher
 			})
 			if err != nil {
@@ -1703,10 +1703,10 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 			f.(*frontend).bucketAllocator = bucket.Fixed(1)
 			f.(*frontend).now = func() time.Time { return mockCurrentTime }
 
-			var systemDataEnricherCalled bool
-			f.(*frontend).systemDataEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
-				enrichSystemData(doc, systemData)
-				systemDataEnricherCalled = true
+			var systemDataClusterDocEnricherCalled bool
+			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+				enrichClusterSystemData(doc, systemData)
+				systemDataClusterDocEnricherCalled = true
 			}
 
 			go f.Run(ctx, nil, nil)
@@ -1769,14 +1769,14 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 				}
 			}
 
-			if tt.wantSystemDataEnriched != systemDataEnricherCalled {
-				t.Error(systemDataEnricherCalled)
+			if tt.wantSystemDataEnriched != systemDataClusterDocEnricherCalled {
+				t.Error(systemDataClusterDocEnricherCalled)
 			}
 		})
 	}
 }
 
-func TestEnrichSystemData(t *testing.T) {
+func TestEnrichClusterSystemData(t *testing.T) {
 	accountID1 := "00000000-0000-0000-0000-000000000001"
 	accountID2 := "00000000-0000-0000-0000-000000000002"
 	timestampString := "2021-01-23T12:34:54.0000000Z"
@@ -1865,7 +1865,7 @@ func TestEnrichSystemData(t *testing.T) {
 			doc := &api.OpenShiftClusterDocument{
 				OpenShiftCluster: &api.OpenShiftCluster{},
 			}
-			enrichSystemData(doc, tt.systemData)
+			enrichClusterSystemData(doc, tt.systemData)
 
 			if !reflect.DeepEqual(doc, tt.expected) {
 				t.Error(cmp.Diff(doc, tt.expected))

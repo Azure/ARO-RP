@@ -15,11 +15,19 @@
 # --------------------------------------------------------------------------
 
 from ._operations import Operations
-from ._list_operations import ListOperations
+from ._install_versions_operations import InstallVersionsOperations
 from ._open_shift_clusters_operations import OpenShiftClustersOperations
+from ._machine_pools_operations import MachinePoolsOperations
+from ._secrets_operations import SecretsOperations
+from ._sync_identity_providers_operations import SyncIdentityProvidersOperations
+from ._sync_sets_operations import SyncSetsOperations
 
 __all__ = [
     'Operations',
-    'ListOperations',
+    'InstallVersionsOperations',
     'OpenShiftClustersOperations',
+    'MachinePoolsOperations',
+    'SecretsOperations',
+    'SyncIdentityProvidersOperations',
+    'SyncSetsOperations',
 ]

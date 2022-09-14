@@ -1673,6 +1673,29 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
 				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
 					Resource: &mgmtdocumentdb.SQLContainerResource{
+						ID: to.StringPtr("ClusterManagerConfigurations"),
+						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
+							Paths: &[]string{
+								"/partitionKey",
+							},
+							Kind: mgmtdocumentdb.PartitionKindHash,
+						},
+					},
+					Options: &mgmtdocumentdb.CreateUpdateOptions{},
+				},
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/ClusterManagerConfigurations')]"),
+				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: to.StringPtr("[resourceGroup().location]"),
+			},
+			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+			DependsOn: []string{
+				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+			},
+		},
+		{
+			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
+				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
+					Resource: &mgmtdocumentdb.SQLContainerResource{
 						ID: to.StringPtr("Billing"),
 						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
 							Paths: &[]string{
@@ -1770,6 +1793,15 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 								"/id",
 							},
 							Kind: mgmtdocumentdb.PartitionKindHash,
+						},
+						UniqueKeyPolicy: &mgmtdocumentdb.UniqueKeyPolicy{
+							UniqueKeys: &[]mgmtdocumentdb.UniqueKey{
+								{
+									Paths: &[]string{
+										"/key",
+									},
+								},
+							},
 						},
 					},
 					Options: &mgmtdocumentdb.CreateUpdateOptions{},
