@@ -33,7 +33,7 @@ func (c clusterManagerConfigurationConverter) SyncSetToExternal(ocm *api.SyncSet
 	return out, nil
 }
 
-func (c *clusterManagerConfigurationConverter) MachinePoolToExternal(ocm *api.MachinePool) (interface{}, error) {
+func (c clusterManagerConfigurationConverter) MachinePoolToExternal(ocm *api.MachinePool) (interface{}, error) {
 	out := new(MachinePool)
 	out.proxyResource = true
 	out.ID = ocm.ID
@@ -43,7 +43,7 @@ func (c *clusterManagerConfigurationConverter) MachinePoolToExternal(ocm *api.Ma
 	return out, nil
 }
 
-func (c *clusterManagerConfigurationConverter) SyncIdentityProviderToExternal(ocm *api.SyncIdentityProvider) (interface{}, error) {
+func (c clusterManagerConfigurationConverter) SyncIdentityProviderToExternal(ocm *api.SyncIdentityProvider) (interface{}, error) {
 	out := new(SyncIdentityProvider)
 	out.proxyResource = true
 	out.ID = ocm.ID
@@ -53,7 +53,7 @@ func (c *clusterManagerConfigurationConverter) SyncIdentityProviderToExternal(oc
 	return out, nil
 }
 
-func (c *clusterManagerConfigurationConverter) SecretToExternal(ocm *api.Secret) (interface{}, error) {
+func (c clusterManagerConfigurationConverter) SecretToExternal(ocm *api.Secret) (interface{}, error) {
 	out := new(Secret)
 	out.proxyResource = true
 	out.ID = ocm.ID

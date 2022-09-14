@@ -26,7 +26,7 @@ func (f *frontend) getClusterManagerConfiguration(w http.ResponseWriter, r *http
 		return
 	}
 
-	b, err := f._getClusterManagerConfiguration(ctx, log, r, f.apis[vars["api-version"]].ClusterManagerConfigurationConverter())
+	b, err := f._getClusterManagerConfiguration(ctx, log, r, f.apis[vars["api-version"]].ClusterManagerConfigurationConverter)
 	reply(log, w, nil, b, err)
 }
 

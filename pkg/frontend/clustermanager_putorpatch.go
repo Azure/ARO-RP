@@ -32,7 +32,7 @@ func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, 
 
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchClusterManagerConfiguration(ctx, log, r, &header, f.apis[vars["api-version"]].ClusterManagerConfigurationConverter())
+		b, err = f._putOrPatchClusterManagerConfiguration(ctx, log, r, &header, f.apis[vars["api-version"]].ClusterManagerConfigurationConverter)
 		return err
 	})
 
