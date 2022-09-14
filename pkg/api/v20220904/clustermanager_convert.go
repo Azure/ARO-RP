@@ -1,13 +1,13 @@
 package v20220904
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"encoding/json"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 )
-
-// Copyright (c) Microsoft Corporation.
-// Licensed under the Apache License 2.0.
 
 type clusterManagerConfigurationConverter struct{}
 
@@ -23,44 +23,44 @@ func (c clusterManagerConfigurationConverter) ToExternal(ocm *api.ClusterManager
 	return out, nil
 }
 
-func (c clusterManagerConfigurationConverter) SyncSetToExternal(ocm *api.SyncSet) (interface{}, error) {
+func (c clusterManagerConfigurationConverter) SyncSetToExternal(ocm *api.SyncSet) interface{} {
 	out := new(SyncSet)
 	out.proxyResource = true
 	out.ID = ocm.ID
 	out.Name = ocm.Name
 	out.Type = ocm.Type
 	out.Properties.Resources = ocm.Properties.Resources
-	return out, nil
+	return out
 }
 
-func (c clusterManagerConfigurationConverter) MachinePoolToExternal(ocm *api.MachinePool) (interface{}, error) {
+func (c clusterManagerConfigurationConverter) MachinePoolToExternal(ocm *api.MachinePool) interface{} {
 	out := new(MachinePool)
 	out.proxyResource = true
 	out.ID = ocm.ID
 	out.Name = ocm.Name
 	out.Type = ocm.Type
 	out.Properties.Resources = ocm.Properties.Resources
-	return out, nil
+	return out
 }
 
-func (c clusterManagerConfigurationConverter) SyncIdentityProviderToExternal(ocm *api.SyncIdentityProvider) (interface{}, error) {
+func (c clusterManagerConfigurationConverter) SyncIdentityProviderToExternal(ocm *api.SyncIdentityProvider) interface{} {
 	out := new(SyncIdentityProvider)
 	out.proxyResource = true
 	out.ID = ocm.ID
 	out.Name = ocm.Name
 	out.Type = ocm.Type
 	out.Properties.Resources = ocm.Properties.Resources
-	return out, nil
+	return out
 }
 
-func (c clusterManagerConfigurationConverter) SecretToExternal(ocm *api.Secret) (interface{}, error) {
+func (c clusterManagerConfigurationConverter) SecretToExternal(ocm *api.Secret) interface{} {
 	out := new(Secret)
 	out.proxyResource = true
 	out.ID = ocm.ID
 	out.Name = ocm.Name
 	out.Type = ocm.Type
 	out.Properties.SecretResources = ""
-	return out, nil
+	return out
 }
 
 func (c clusterManagerConfigurationConverter) ToInternal(_ocm interface{}, out *api.ClusterManagerConfiguration) error {
