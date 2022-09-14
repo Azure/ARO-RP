@@ -322,7 +322,7 @@ func TestGetCloudAwareRegistries(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := getCloudAwareRegistries(tt.instance)
+			result, err := GetCloudAwareRegistries(tt.instance)
 
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {

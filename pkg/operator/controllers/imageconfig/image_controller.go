@@ -62,7 +62,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// Check for cloud type
-	requiredRegistries, err := getCloudAwareRegistries(instance)
+	requiredRegistries, err := GetCloudAwareRegistries(instance)
 	if err != nil {
 		// Not returning error as it will requeue again
 		return reconcile.Result{}, nil
@@ -118,7 +118,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // Switch case to ensure the correct registries are added depending on the cloud environment (Gov or Public cloud)
-func getCloudAwareRegistries(instance *arov1alpha1.Cluster) ([]string, error) {
+func GetCloudAwareRegistries(instance *arov1alpha1.Cluster) ([]string, error) {
 	var replicationRegistry string
 	var dnsSuffix string
 

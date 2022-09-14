@@ -30,8 +30,8 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	imageController "github.com/Azure/ARO-RP/pkg/operator/controllers/imageconfig"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -434,29 +434,6 @@ var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 	var requiredRegistries []string
 	var imageconfig *configv1.Image
 
-	// Reimplementation of function from image config controller
-	getCloudAwareRegistries := func(instance *arov1alpha1.Cluster) ([]string, error) {
-		var replicationRegistry string
-		var dnsSuffix string
-
-		acrDomain := instance.Spec.ACRDomain
-		acrSubdomain := strings.Split(acrDomain, ".")[0]
-		if acrDomain == "" || acrSubdomain == "" {
-			return nil, fmt.Errorf("azure container registry domain is not present or is malformed")
-		}
-
-		switch instance.Spec.AZEnvironment {
-		case azureclient.PublicCloud.Environment.Name:
-			dnsSuffix = azure.PublicCloud.ContainerRegistryDNSSuffix
-		case azureclient.USGovernmentCloud.Environment.Name:
-			dnsSuffix = azure.USGovernmentCloud.ContainerRegistryDNSSuffix
-		default:
-			return nil, fmt.Errorf("cloud environment %s is not supported", instance.Spec.AZEnvironment)
-		}
-		replicationRegistry = fmt.Sprintf("%s.%s.data.%s", acrSubdomain, instance.Spec.Location, dnsSuffix)
-		return []string{acrDomain, replicationRegistry}, nil
-	}
-
 	sliceEqual := func(a, b []string) bool {
 		if len(a) != len(b) {
 			return false
@@ -495,7 +472,7 @@ var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 		imageconfig, err = clients.ConfigClient.ConfigV1().Images().Get(ctx, "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		requiredRegistries, err = getCloudAwareRegistries(instance)
+		requiredRegistries, err = imageController.GetCloudAwareRegistries(instance)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
