@@ -37,6 +37,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	task := m.doc.OpenShiftCluster.Properties.MaintenanceTask
 	isEverything := task == api.MaintenanceTaskEverything || task == ""
 	isOperator := task == api.MaintenanceTaskOperator
+	isRenewCerts := task == api.MaintenanceTaskRenewCerts
 
 	// Generic fix-up or setup actions that are fairly safe to always take, and
 	// don't require a running cluster
@@ -48,6 +49,16 @@ func (m *manager) adminUpdate() []steps.Step {
 		steps.Action(m.fixInfraID), // Old clusters lacks infraID in the database. Which makes code prone to errors.
 	}
 
+	if isRenewCerts {
+		toRun = append(toRun,
+			steps.Action(m.fixMCSCert),
+			steps.Action(m.configureAPIServerCertificate),
+			steps.Action(m.configureIngressCertificate),
+			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
+			steps.Action(m.renewMDSDCerts),
+		)
+	}
+
 	if isEverything {
 		toRun = append(toRun,
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)), // re-create RP RBAC if needed after tenant migration
@@ -57,7 +68,7 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Action(m.migrateStorageAccounts),
 			steps.Action(m.fixSSH),
 			steps.Action(m.populateDatabaseIntIP),
-			//steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
+			steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
 		)
 	}
 
@@ -91,6 +102,7 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
 			steps.Condition(m.ensureAROOperatorRunningDesiredVersion, 5*time.Minute, true),
 		)
+
 	}
 
 	// Hive cluster adoption and reconciliation
