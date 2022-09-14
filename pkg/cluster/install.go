@@ -68,7 +68,7 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Action(m.migrateStorageAccounts),
 			steps.Action(m.fixSSH),
 			steps.Action(m.populateDatabaseIntIP),
-			steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
+			//steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
 		)
 	}
 
