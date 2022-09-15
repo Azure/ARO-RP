@@ -51,14 +51,17 @@ func (m *manager) adminUpdate() []steps.Step {
 
 	if isRenewCerts {
 		toRun = append(toRun,
+			steps.Action(m.startVMs),
+			steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Action(m.fixMCSCert),
 			steps.Action(m.configureAPIServerCertificate),
 			steps.Action(m.configureIngressCertificate),
 			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
-			steps.Action(m.renewMDSDCerts),
+			steps.Action(m.renewMDSDCertificate),
 		)
+		// return early, because we only want to run the certificate actions using the existing operator
+		return toRun
 	}
-
 	if isEverything {
 		toRun = append(toRun,
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)), // re-create RP RBAC if needed after tenant migration

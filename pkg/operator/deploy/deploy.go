@@ -50,7 +50,7 @@ type Operator interface {
 	CreateOrUpdate(context.Context) error
 	IsReady(context.Context) (bool, error)
 	IsRunningDesiredVersion(context.Context) (bool, error)
-	RenewMDSDCerts(context.Context) error
+	renewMDSDCertificate(context.Context) error
 }
 
 type operator struct {
@@ -365,7 +365,7 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 	return nil
 }
 
-func (o *operator) RenewMDSDCerts(ctx context.Context) error {
+func (o *operator) renewMDSDCertificate(ctx context.Context) error {
 	key, cert := o.env.ClusterGenevaLoggingSecret()
 	gcsKeyBytes, err := utiltls.PrivateKeyAsBytes(key)
 	if err != nil {

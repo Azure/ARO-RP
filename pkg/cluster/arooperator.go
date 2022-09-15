@@ -50,6 +50,6 @@ func (m *manager) ensureAROOperatorRunningDesiredVersion(ctx context.Context) (b
 	return true, nil
 }
 
-func (m *manager) renewMDSDCerts(ctx context.Context) error {
-	return m.aroOperatorDeployer.RenewMDSDCerts(ctx)
+func (m *manager) renewMDSDCertificate(ctx context.Context) error {
+	return m.aroOperatorDeployer.renewMDSDCertificate(ctx)
 }
