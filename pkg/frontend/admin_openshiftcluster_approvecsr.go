@@ -54,8 +54,8 @@ func (f *frontend) _postAdminOpenShiftClusterApproveCSR(ctx context.Context, r *
 	}
 
 	if csrName != "" {
-		return k.RunCertificateApprove(ctx, csrName)
+		return k.ApproveCsr(ctx, csrName)
 	}
 
-	return k.RunCertificateMassApprove(ctx)
+	return k.ApproveAllCsrs(ctx)
 }

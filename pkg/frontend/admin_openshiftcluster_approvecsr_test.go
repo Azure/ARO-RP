@@ -44,7 +44,7 @@ func TestAdminApproveCSR(t *testing.T) {
 			csrName:    "aro-csr",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
-					RunCertificateApprove(gomock.Any(), tt.csrName).
+					ApproveCsr(gomock.Any(), tt.csrName).
 					Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
@@ -55,7 +55,7 @@ func TestAdminApproveCSR(t *testing.T) {
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
-					RunCertificateMassApprove(gomock.Any()).
+					ApproveAllCsrs(gomock.Any()).
 					Return(nil)
 			},
 			wantStatusCode: http.StatusOK,

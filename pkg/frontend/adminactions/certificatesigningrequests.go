@@ -15,22 +15,25 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-func (k *kubeActions) RunCertificateApprove(ctx context.Context, csrName string) error {
+func (k *kubeActions) ApproveCsr(ctx context.Context, csrName string) error {
 	csr, err := k.kubecli.CertificatesV1().CertificateSigningRequests().Get(ctx, csrName, metav1.GetOptions{})
-	if kerrors.IsNotFound(err) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceNotFound, "", "certificate signing request '%s' was not found.", csrName)
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceNotFound, "", "certificate signing request '%s' was not found.", csrName)
+		}
+		return err
 	}
 
-	return k.RunCertificateApprovalUpdate(ctx, csr)
+	return k.updateCsr(ctx, csr)
 }
 
-func (k *kubeActions) RunCertificateMassApprove(ctx context.Context) error {
+func (k *kubeActions) ApproveAllCsrs(ctx context.Context) error {
 	csrs, err := k.kubecli.CertificatesV1().CertificateSigningRequests().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
 	for _, csr := range csrs.Items {
-		err = k.RunCertificateApprovalUpdate(ctx, &csr)
+		err = k.updateCsr(ctx, &csr)
 		if err != nil {
 			return err
 		}
@@ -38,7 +41,7 @@ func (k *kubeActions) RunCertificateMassApprove(ctx context.Context) error {
 	return nil
 }
 
-func (k *kubeActions) RunCertificateApprovalUpdate(ctx context.Context, csr *certificatesv1.CertificateSigningRequest) error {
+func (k *kubeActions) updateCsr(ctx context.Context, csr *certificatesv1.CertificateSigningRequest) error {
 	modifiedCSR, hasCondition, err := addConditionIfNeeded(csr, string(certificatesv1.CertificateDenied), string(certificatesv1.CertificateApproved), "AROSupportApprove", "This CSR was approved by ARO support personnel.")
 
 	if err != nil {
