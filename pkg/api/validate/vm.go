@@ -74,6 +74,11 @@ var supportedWorkerVMSizes = map[api.VMSize]bool{
 	api.VMSizeStandardL32sV2: true,
 	api.VMSizeStandardL48sV2: true,
 	api.VMSizeStandardL64sV2: true,
+	// GPU
+	api.VMSizeStandardNC4asT4V3:  true,
+	api.VMSizeStandardNC8asT4V3:  true,
+	api.VMSizeStandardNC16asT4V3: true,
+	api.VMSizeStandardNC64asT4V3: true,
 }
 
 func DiskSizeIsValid(sizeGB int) bool {
