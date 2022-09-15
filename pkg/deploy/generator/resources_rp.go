@@ -777,7 +777,7 @@ ExecStart=/usr/bin/docker run \
   -e RP_FEATURES \
   -e ARO_INSTALL_VIA_HIVE \
   -e ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC \
-  -e ARO_ADOPT_BY_HIVE
+  -e ARO_ADOPT_BY_HIVE \
   -m 2g \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \
