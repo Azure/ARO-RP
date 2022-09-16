@@ -31,7 +31,7 @@ func (m *manager) clusterNSG(infraID, location string) *arm.Resource {
 					SourceAddressPrefix:      to.StringPtr("*"),
 					DestinationAddressPrefix: to.StringPtr("*"),
 					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-					Priority:                 to.Int32Ptr(101),
+					Priority:                 to.Int32Ptr(120),
 					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 				},
 				Name: to.StringPtr("apiserver_in"),

@@ -76,6 +76,16 @@ clean_e2e_db(){
         --resource-group $RESOURCEGROUP >/dev/null
 }
 
+run_vpn() {
+    sudo openvpn --config secrets/$VPN --daemon --writepid vpnpid
+    sleep 10
+}
+
+kill_vpn() {
+    while read pid; do sudo kill $pid; done < vpnpid
+}
+
+
 # TODO: CLUSTER and is also recalculated in multiple places
 # in the billing pipelines :-(
 
