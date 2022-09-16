@@ -225,15 +225,6 @@
                             "/id"
                         ],
                         "kind": "Hash"
-                    },
-                    "uniqueKeyPolicy": {
-                        "uniqueKeys": [
-                            {
-                                "paths": [
-                                    "/key"
-                                ]
-                            }
-                        ]
                     }
                 },
                 "options": {}

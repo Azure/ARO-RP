@@ -1794,15 +1794,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 							},
 							Kind: mgmtdocumentdb.PartitionKindHash,
 						},
-						UniqueKeyPolicy: &mgmtdocumentdb.UniqueKeyPolicy{
-							UniqueKeys: &[]mgmtdocumentdb.UniqueKey{
-								{
-									Paths: &[]string{
-										"/key",
-									},
-								},
-							},
-						},
 					},
 					Options: &mgmtdocumentdb.CreateUpdateOptions{},
 				},
