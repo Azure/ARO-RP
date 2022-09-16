@@ -37,6 +37,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	task := m.doc.OpenShiftCluster.Properties.MaintenanceTask
 	isEverything := task == api.MaintenanceTaskEverything || task == ""
 	isOperator := task == api.MaintenanceTaskOperator
+	isRenewCerts := task == api.MaintenanceTaskRenewCerts
 
 	// Generic fix-up or setup actions that are fairly safe to always take, and
 	// don't require a running cluster
@@ -91,6 +92,20 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
 			steps.Condition(m.ensureAROOperatorRunningDesiredVersion, 5*time.Minute, true),
 		)
+	}
+
+	if isRenewCerts {
+		toRun = append(toRun,
+			steps.Action(m.startVMs),
+			steps.Condition(m.apiServersReady, 30*time.Minute, true),
+			steps.Action(m.fixMCSCert),
+			steps.Action(m.configureAPIServerCertificate),
+			steps.Action(m.configureIngressCertificate),
+			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
+			steps.Action(m.renewMDSDCertificate),
+		)
+		// return early, because we only want to run the certificate actions using the existing operator
+		return toRun
 	}
 
 	// Hive cluster adoption and reconciliation
