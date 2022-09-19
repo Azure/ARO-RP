@@ -30,7 +30,7 @@ from .._vendor import _convert_request, _format_url_section
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import,ungrouped-imports
-    from typing import Any, Callable, Dict, List, Optional, TypeVar
+    from typing import Any, Callable, Dict, Optional, TypeVar
     T = TypeVar('T')
     ClsType = Optional[Callable[[PipelineResponse[HttpRequest, HttpResponse], T, Dict[str, Any]], Any]]
 
@@ -73,8 +73,8 @@ def build_list_request(
     )
 
 # fmt: on
-class InstallVersionsOperations(object):
-    """InstallVersionsOperations operations.
+class OpenShiftVersionsOperations(object):
+    """OpenShiftVersionsOperations operations.
 
     You should not instantiate this class directly. Instead, you should create a Client instance that
     instantiates it for you and attaches it as an attribute.
@@ -101,7 +101,7 @@ class InstallVersionsOperations(object):
         location,  # type: str
         **kwargs  # type: Any
     ):
-        # type: (...) -> List[str]
+        # type: (...) -> "_models.OpenShiftVersionList"
         """Lists all OpenShift versions available to install in the specified location.
 
         The operation returns the installable OpenShift versions as strings.
@@ -109,11 +109,11 @@ class InstallVersionsOperations(object):
         :param location: The name of Azure region.
         :type location: str
         :keyword callable cls: A custom type or function that will be passed the direct response
-        :return: list of str, or the result of cls(response)
-        :rtype: list[str]
+        :return: OpenShiftVersionList, or the result of cls(response)
+        :rtype: ~azure.mgmt.redhatopenshift.v2022_09_04.models.OpenShiftVersionList
         :raises: ~azure.core.exceptions.HttpResponseError
         """
-        cls = kwargs.pop('cls', None)  # type: ClsType[List[str]]
+        cls = kwargs.pop('cls', None)  # type: ClsType["_models.OpenShiftVersionList"]
         error_map = {
             401: ClientAuthenticationError, 404: ResourceNotFoundError, 409: ResourceExistsError
         }
@@ -142,7 +142,7 @@ class InstallVersionsOperations(object):
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response, error_format=ARMErrorFormat)
 
-        deserialized = self._deserialize('[str]', pipeline_response)
+        deserialized = self._deserialize('OpenShiftVersionList', pipeline_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})

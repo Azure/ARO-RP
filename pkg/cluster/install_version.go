@@ -23,7 +23,7 @@ func (m *manager) openShiftVersionFromVersion(ctx context.Context) (*api.OpenShi
 
 	activeOpenShiftVersions := make([]*api.OpenShiftVersion, 0)
 	for _, doc := range docs.OpenShiftVersionDocuments {
-		if doc.OpenShiftVersion.Enabled {
+		if doc.OpenShiftVersion.Properties.Enabled {
 			activeOpenShiftVersions = append(activeOpenShiftVersions, doc.OpenShiftVersion)
 		}
 	}
@@ -48,17 +48,18 @@ func (m *manager) openShiftVersionFromVersion(ctx context.Context) (*api.OpenShi
 		}
 
 		return &api.OpenShiftVersion{
-			Version:           version.InstallStream.Version.String(),
-			OpenShiftPullspec: openshiftPullSpec,
-			InstallerPullspec: installerPullSpec,
-			Enabled:           true,
-		}, nil
+			Properties: api.OpenShiftVersionProperties{
+				Version:           version.InstallStream.Version.String(),
+				OpenShiftPullspec: openshiftPullSpec,
+				InstallerPullspec: installerPullSpec,
+				Enabled:           true,
+			}}, nil
 	}
 
 	for _, active := range activeOpenShiftVersions {
-		if requestedInstallVersion == active.Version {
+		if requestedInstallVersion == active.Properties.Version {
 			if m.installViaHive {
-				active.OpenShiftPullspec = strings.Replace(active.OpenShiftPullspec, "quay.io", m.env.ACRDomain(), 1)
+				active.Properties.OpenShiftPullspec = strings.Replace(active.Properties.OpenShiftPullspec, "quay.io", m.env.ACRDomain(), 1)
 			}
 			return active, nil
 		}
