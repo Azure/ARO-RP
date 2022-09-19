@@ -86,7 +86,7 @@ type ClusterProfile struct {
 	PullSecret *string `json:"pullSecret,omitempty"`
 	// Domain - The domain for the cluster.
 	Domain *string `json:"domain,omitempty"`
-	// Version - The version of the cluster.
+	// Version - The current version of the cluster.
 	Version *string `json:"version,omitempty"`
 	// ResourceGroupID - The ID of the cluster resource group.
 	ResourceGroupID *string `json:"resourceGroupId,omitempty"`
@@ -122,10 +122,42 @@ type IngressProfile struct {
 	IP *string `json:"ip,omitempty"`
 }
 
-// ListString ...
-type ListString struct {
+// InstallVersion installVersion is going to be a proxy resource in our versioned API's
+type InstallVersion struct {
 	autorest.Response `json:"-"`
-	Value             *[]string `json:"value,omitempty"`
+	// Properties - The InstallVersion properties
+	Properties *InstallVersionProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
+	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Azure Resource Manager metadata containing createdBy and modifiedBy information.
+	SystemData *SystemData `json:"systemData,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for InstallVersion.
+func (iv InstallVersion) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if iv.Properties != nil {
+		objectMap["properties"] = iv.Properties
+	}
+	return json.Marshal(objectMap)
+}
+
+// InstallVersionList installVersionList represents a List of OpenShift installable versions.
+type InstallVersionList struct {
+	// Value - List of InstallVersion
+	Value *[]InstallVersion `json:"value,omitempty"`
+	// NextLink - The link used to get the next page of operations.
+	NextLink *string `json:"nextLink,omitempty"`
+}
+
+// InstallVersionProperties ...
+type InstallVersionProperties struct {
+	// Version - Version is the available OpenShift version to install.
+	Version *string `json:"version,omitempty"`
 }
 
 // MachinePool machinePool represents a MachinePool
@@ -754,7 +786,7 @@ type OpenShiftClusterProperties struct {
 	ApiserverProfile *APIServerProfile `json:"apiserverProfile,omitempty"`
 	// IngressProfiles - The cluster ingress profiles.
 	IngressProfiles *[]IngressProfile `json:"ingressProfiles,omitempty"`
-	// InstallVersion - The cluster install version.
+	// InstallVersion - The version cluster was installed at.
 	InstallVersion *string `json:"installVersion,omitempty"`
 }
 

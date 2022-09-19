@@ -21,6 +21,9 @@ try:
     from ._models_py3 import ConsoleProfile
     from ._models_py3 import Display
     from ._models_py3 import IngressProfile
+    from ._models_py3 import InstallVersion
+    from ._models_py3 import InstallVersionList
+    from ._models_py3 import InstallVersionProperties
     from ._models_py3 import MachinePool
     from ._models_py3 import MachinePoolList
     from ._models_py3 import MachinePoolUpdate
@@ -55,6 +58,9 @@ except (SyntaxError, ImportError):
     from ._models import ConsoleProfile  # type: ignore
     from ._models import Display  # type: ignore
     from ._models import IngressProfile  # type: ignore
+    from ._models import InstallVersion  # type: ignore
+    from ._models import InstallVersionList  # type: ignore
+    from ._models import InstallVersionProperties  # type: ignore
     from ._models import MachinePool  # type: ignore
     from ._models import MachinePoolList  # type: ignore
     from ._models import MachinePoolUpdate  # type: ignore
@@ -98,6 +104,9 @@ __all__ = [
     'ConsoleProfile',
     'Display',
     'IngressProfile',
+    'InstallVersion',
+    'InstallVersionList',
+    'InstallVersionProperties',
     'MachinePool',
     'MachinePoolList',
     'MachinePoolUpdate',

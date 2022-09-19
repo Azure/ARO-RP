@@ -53,7 +53,7 @@
         }
       }
     },
-    "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/listinstallversions": {
+    "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/listInstallVersions": {
       "get": {
         "tags": [
           "InstallVersions"
@@ -76,7 +76,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/InstallVersions"
+              "$ref": "#/definitions/InstallVersion"
             }
           },
           "default": {
@@ -1714,7 +1714,7 @@
           "type": "string"
         },
         "version": {
-          "description": "The version of the cluster.",
+          "description": "The current version of the cluster.",
           "type": "string"
         },
         "resourceGroupId": {
@@ -1802,16 +1802,54 @@
       }
     },
     "InstallVersion": {
-      "description": "InstallVersion is the OpenShift installation version string.",
-      "type": "string"
+      "description": "InstallVersion is going to be a proxy resource in our versioned API's",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "../../../../../common-types/resource-management/v3/types.json#/definitions/ProxyResource"
+        }
+      ],
+      "properties": {
+        "name": {
+          "description": "The resource name.",
+          "type": "string"
+        },
+        "id": {
+          "description": "The ID is the unique identifier for the installversion",
+          "type": "string"
+        },
+        "properties": {
+          "$ref": "#/definitions/InstallVersionProperties",
+          "description": "The InstallVersion properties"
+        }
+      }
     },
-    "InstallVersions": {
-      "description": "InstallVersions represents a List of OpenShift installable versions.",
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/InstallVersion"
-      },
-      "x-ms-identifiers": []
+    "InstallVersionList": {
+      "description": "InstallVersionList represents a List of OpenShift installable versions.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "List of InstallVersion",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InstallVersion"
+          },
+          "x-ms-identifiers": []
+        },
+        "nextLink": {
+          "description": "The link used to get the next page of operations.",
+          "type": "string"
+        }
+      }
+    },
+    "InstallVersionProperties": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "description": "Version is the available OpenShift version to install.",
+          "type": "string"
+        }
+      }
     },
     "MachinePool": {
       "description": "MachinePool represents a MachinePool",
@@ -2027,7 +2065,7 @@
           "x-ms-identifiers": []
         },
         "installVersion": {
-          "description": "The cluster install version.",
+          "description": "The version cluster was installed at.",
           "type": "string"
         }
       }

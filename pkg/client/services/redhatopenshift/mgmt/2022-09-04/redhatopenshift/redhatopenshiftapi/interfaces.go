@@ -35,7 +35,7 @@ var _ OperationsClientAPI = (*redhatopenshift.OperationsClient)(nil)
 
 // InstallVersionsClientAPI contains the set of methods on the InstallVersionsClient type.
 type InstallVersionsClientAPI interface {
-	List(ctx context.Context, location string) (result redhatopenshift.ListString, err error)
+	List(ctx context.Context, location string) (result redhatopenshift.InstallVersion, err error)
 }
 
 var _ InstallVersionsClientAPI = (*redhatopenshift.InstallVersionsClient)(nil)

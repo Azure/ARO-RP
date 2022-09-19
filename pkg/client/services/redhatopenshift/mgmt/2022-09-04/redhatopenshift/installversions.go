@@ -46,7 +46,7 @@ func NewInstallVersionsClientWithBaseURI(baseURI string, subscriptionID string) 
 // List the operation returns the installable OpenShift versions as strings.
 // Parameters:
 // location - the name of Azure region.
-func (client InstallVersionsClient) List(ctx context.Context, location string) (result ListString, err error) {
+func (client InstallVersionsClient) List(ctx context.Context, location string) (result InstallVersion, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/InstallVersionsClient.List")
 		defer func() {
@@ -102,7 +102,7 @@ func (client InstallVersionsClient) ListPreparer(ctx context.Context, location s
 	preparer := autorest.CreatePreparer(
 		autorest.AsGet(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/listinstallversions", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/listInstallVersions", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
@@ -115,11 +115,11 @@ func (client InstallVersionsClient) ListSender(req *http.Request) (*http.Respons
 
 // ListResponder handles the response to the List request. The method always
 // closes the http.Response Body.
-func (client InstallVersionsClient) ListResponder(resp *http.Response) (result ListString, err error) {
+func (client InstallVersionsClient) ListResponder(resp *http.Response) (result InstallVersion, err error) {
 	err = autorest.Respond(
 		resp,
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
-		autorest.ByUnmarshallingJSON(&result.Value),
+		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
 	result.Response = autorest.Response{Response: resp}
 	return
