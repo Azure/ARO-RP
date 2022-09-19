@@ -37,7 +37,7 @@ type OpenShiftVersionConverter interface {
 
 type InstallVersionsConverter interface {
 	ToExternal(*InstallVersion) interface{}
-	ToExternalList([]*InstallVersion, string) interface{}
+	ToExternalList([]*InstallVersion) interface{}
 }
 
 type OpenShiftVersionStaticValidator interface {

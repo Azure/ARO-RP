@@ -21,10 +21,9 @@ func (i installVersionsConverter) ToExternal(installVersion *api.InstallVersion)
 	return out
 }
 
-func (i installVersionsConverter) ToExternalList(installVersions []*api.InstallVersion, nextLink string) interface{} {
+func (i installVersionsConverter) ToExternalList(installVersions []*api.InstallVersion) interface{} {
 	l := &InstallVersionList{
 		InstallVersions: make([]*InstallVersion, 0, len(installVersions)),
-		NextLink:        nextLink,
 	}
 
 	for _, v := range installVersions {

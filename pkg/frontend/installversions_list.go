@@ -36,26 +36,36 @@ func (f *frontend) listInstallVersions(w http.ResponseWriter, r *http.Request) {
 
 	converter := f.apis[vars["api-version"]].InstallVersionsConverter
 
-	b, err := json.Marshal(converter.ToExternal((*api.InstallVersions)(&versions)))
+	b, err := json.Marshal(converter.ToExternalList(versions))
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) getInstallVersions(ctx context.Context) ([]string, error) {
+func (f *frontend) getInstallVersions(ctx context.Context) ([]*api.InstallVersion, error) {
 	docs, err := f.dbOpenShiftVersions.ListAll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to list the entries in the OpenShift versions database: %s", err.Error())
 	}
 
-	versions := make([]string, 0)
+	versions := make([]*api.InstallVersion, 0)
 	for _, doc := range docs.OpenShiftVersionDocuments {
 		if doc.OpenShiftVersion.Enabled {
-			versions = append(versions, doc.OpenShiftVersion.Version)
+			v := &api.InstallVersion{
+				Properties: api.InstallVersionProperties{
+					Version: doc.OpenShiftVersion.Version,
+				},
+			}
+			versions = append(versions, v)
 		}
 	}
 
 	// add the default from version.InstallStream, when we have no active versions
 	if len(versions) == 0 {
-		versions = append(versions, version.InstallStream.Version.String())
+		v := &api.InstallVersion{
+			Properties: api.InstallVersionProperties{
+				Version: version.InstallStream.Version.String(),
+			},
+		}
+		versions = append(versions, v)
 	}
 
 	return versions, nil

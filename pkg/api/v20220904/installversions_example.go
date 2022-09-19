@@ -14,8 +14,8 @@ func ExampleInstallVersionResponse() interface{} {
 	return version
 }
 
-// ExampleInstallVersions returns an example
-// InstallVersions object i.e []string that the RP would return to an end-user.
+// ExampleInstallVersion returns an example
+// InstallVersion object i.e []string that the RP would return to an end-user.
 func ExampleInstallVersionListResponse() interface{} {
 	return &InstallVersionList{
 		InstallVersions: []*InstallVersion{

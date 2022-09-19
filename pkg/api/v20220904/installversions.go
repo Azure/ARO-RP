@@ -12,7 +12,7 @@ type InstallVersionList struct {
 	NextLink string `json:"nextLink,omitempty"`
 }
 
-// InstallVersion is going to be a proxy resource in our versioned API's
+// InstallVersion represents an available OpenShift version to create your cluster.
 type InstallVersion struct {
 	// this is an "unused" bool the type walker keys off during swagger generation
 	// TODO refactor this logic to be contained within the swagger package not api packages

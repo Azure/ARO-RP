@@ -28,7 +28,7 @@ func TestListInstallVersions(t *testing.T) {
 		name           string
 		fixture        func(f *testdatabase.Fixture)
 		wantStatusCode int
-		wantResponse   *v20220904.InstallVersions
+		wantResponse   []*v20220904.InstallVersion
 		wantError      string
 	}
 
@@ -47,7 +47,7 @@ func TestListInstallVersions(t *testing.T) {
 				})
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: &v20220904.InstallVersions{
+			wantResponse: &v20220904.InstallVersion{
 				v20220904.InstallVersion((v20220904.InstallVersion)(version.InstallStream.Version.String())),
 			},
 		},
