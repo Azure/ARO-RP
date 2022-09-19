@@ -12,7 +12,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/components/installversion"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	utilnamespace "github.com/Azure/ARO-RP/pkg/util/namespace"
@@ -167,42 +166,41 @@ func validateAdminVMSize(vmSize string) error {
 	return nil
 }
 
-func (f *frontend) validateAndReturnInstallVersion(ctx context.Context, body []byte) (string, error) {
-	oc, err := installversion.FromExternalBytes(body)
-	if err != nil {
-		return "", api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
-	}
-
+// validateInstallVersion validates the install version set in the clusterprofile.version
+// TODO convert this into static validation instead of this receiver function in the vaidate for frontend.
+func (f *frontend) validateInstallVersion(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
+	oc := doc.OpenShiftCluster
 	// If this request is from an older API or the user never specified
 	// the version to install we default to the InstallStream.Version
-	if len(oc.Properties.InstallVersion) == 0 {
-		return version.InstallStream.Version.String(), nil
+	if oc.Properties.ClusterProfile.Version == "" {
+		oc.Properties.ClusterProfile.Version = version.InstallStream.Version.String()
+		return nil
 	}
 
-	errInvalidVersion := api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.installversion", "The requested OpenShift version '%s' is invalid.", oc.Properties.InstallVersion)
+	errInvalidVersion := api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", "The requested OpenShift version '%s' is invalid.", oc.Properties.ClusterProfile.Version)
 
-	if !validate.RxInstallVersion.MatchString(oc.Properties.InstallVersion) {
-		return "", errInvalidVersion
+	if !validate.RxInstallVersion.MatchString(oc.Properties.ClusterProfile.Version) {
+		return errInvalidVersion
 	}
 
 	docs, err := f.dbOpenShiftVersions.ListAll(ctx)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// If we have no OpenShiftVersion entries in CosmoDB, default to using the InstallStream.Version
 	if len(docs.OpenShiftVersionDocuments) == 0 {
-		if oc.Properties.InstallVersion != version.InstallStream.Version.String() {
-			return "", errInvalidVersion
+		if oc.Properties.ClusterProfile.Version != version.InstallStream.Version.String() {
+			return errInvalidVersion
 		}
-		return version.InstallStream.Version.String(), nil
+		return nil
 	}
 
 	for _, doc := range docs.OpenShiftVersionDocuments {
-		if oc.Properties.InstallVersion == doc.OpenShiftVersion.Version {
-			return oc.Properties.InstallVersion, nil
+		if oc.Properties.ClusterProfile.Version == doc.OpenShiftVersion.Properties.Version {
+			return nil
 		}
 	}
 
-	return "", errInvalidVersion
+	return errInvalidVersion
 }

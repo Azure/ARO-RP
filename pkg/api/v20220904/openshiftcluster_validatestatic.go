@@ -151,10 +151,6 @@ func (sv openShiftClusterStaticValidator) validateClusterProfile(path string, cp
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
 	}
 
-	if isCreate && !validate.RxInstallVersion.MatchString(cp.Version) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".version", "The provided version '%s' is invalid.", cp.Version)
-	}
-
 	if !validate.RxResourceGroupID.MatchString(cp.ResourceGroupID) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".resourceGroupId", "The provided resource group '%s' is invalid.", cp.ResourceGroupID)
 	}
