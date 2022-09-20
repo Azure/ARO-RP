@@ -62,6 +62,7 @@ jobs:
     steps:
       - name: Prepare environment
         run: |
+          sudo apt-get update
           sudo apt-get install libgpgme-dev libgpgme11
       - name: Checkout code
         uses: actions/checkout@v3
@@ -73,12 +74,5 @@ jobs:
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
         shell: bash
       - name: Run govulncheck
-        run: |
-          if GOMEMLIMIT=10GiB govulncheck ./... | grep -q 'No vulnerabilities found'; then
-            echo "No vulnerabilities found."
-            exit 0
-          else
-            echo "Vulnerabilities found, please run `govulncheck ./...` locally and fix before merging."
-            exit 1
-          fi
+        run: bash ${GITHUB_WORKSPACE}/hack/github-actions/govulncheck.sh
         shell: bash
