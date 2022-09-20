@@ -1,4 +1,3 @@
-
 # Hack - wait on create because the WALinuxAgent sometimes conflicts with the yum update -y below
 sleep 60
 

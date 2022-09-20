@@ -47,6 +47,14 @@ EOF
 
 systemctl enable proxy.service
 
+cat >/etc/cron.weekly/pull-image <<'EOF'
+#!/bin/bash
+
+docker pull $PROXYIMAGE
+systemctl restart proxy.service
+EOF
+chmod +x /etc/cron.weekly/pull-image
+
 cat >/etc/cron.weekly/yumupdate <<'EOF'
 #!/bin/bash
 

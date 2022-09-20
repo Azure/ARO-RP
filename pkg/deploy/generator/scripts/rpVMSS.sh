@@ -1,4 +1,3 @@
-
 yum -y update
 
 lvextend -l +50%FREE /dev/rootvg/rootlv
