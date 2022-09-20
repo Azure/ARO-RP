@@ -56,3 +56,9 @@ jobs:
           go-version: 1.17
       - uses: actions/checkout@v3
       - run: make validate-go-action
+  test-script:
+    name: testscript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: bash ${GITHUB_WORKSPACE}/testscript.sh
