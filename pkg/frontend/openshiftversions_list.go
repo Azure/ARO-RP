@@ -36,7 +36,7 @@ func (f *frontend) listInstallVersions(w http.ResponseWriter, r *http.Request) {
 
 	converter := f.apis[vars["api-version"]].OpenShiftVersionConverter
 
-	b, err := json.Marshal(converter.ToExternalList(([]*api.OpenShiftVersion)(versions)))
+	b, err := json.MarshalIndent(converter.ToExternalList(([]*api.OpenShiftVersion)(versions)), "", "    ")
 	reply(log, w, nil, b, err)
 }
 

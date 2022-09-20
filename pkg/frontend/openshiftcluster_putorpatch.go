@@ -236,7 +236,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
-	b, err := json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "\t")
+	b, err := json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")
 	if err != nil {
 		return nil, err
 	}
