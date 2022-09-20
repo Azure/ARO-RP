@@ -19,11 +19,6 @@ func (f *frontend) deleteClusterManagerConfiguration(w http.ResponseWriter, r *h
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 
-	if disableOCMAPI {
-		reply(log, w, nil, []byte("forbidden."), api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "forbidden."))
-		return
-	}
-
 	err := f._deleteClusterManagerConfiguration(ctx, log, r)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):

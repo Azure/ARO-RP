@@ -25,11 +25,6 @@ func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, 
 	var header http.Header
 	var b []byte
 
-	if disableOCMAPI {
-		reply(log, w, nil, []byte("forbidden."), api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "forbidden."))
-		return
-	}
-
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
 		b, err = f._putOrPatchClusterManagerConfiguration(ctx, log, r, &header, f.apis[vars["api-version"]].ClusterManagerConfigurationConverter)
