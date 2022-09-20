@@ -76,4 +76,3 @@ jobs:
             echo "Vulnerabilities found, please run `govulncheck ./...` locally and fix before merging."
             exit 1
           fi
-        shell: run
