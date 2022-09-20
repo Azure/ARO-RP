@@ -143,13 +143,13 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 					case "#/definitions/SyncSetList":
 						body = g.exampleSyncSetListResponse()
 					case "#/definitions/MachinePool":
-						body = g.exampleSyncSetResponse()
+						body = g.exampleMachinePoolResponse()
 					case "#/definitions/MachinePoolList":
-						body = g.exampleSyncSetListResponse()
+						body = g.exampleMachinePoolListResponse()
 					case "#/definitions/SyncIdentityProvider":
-						body = g.exampleSyncSetResponse()
+						body = g.exampleSyncIdentityProviderResponse()
 					case "#/definitions/SyncIdentityProviderList":
-						body = g.exampleSyncSetListResponse()
+						body = g.exampleSyncIdentityProviderListResponse()
 					case "#/definitions/Secret":
 						body = g.exampleSecretResponse()
 					case "#/definitions/SecretList":
