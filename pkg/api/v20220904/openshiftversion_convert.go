@@ -1,4 +1,4 @@
-package admin
+package v20220904
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -16,11 +16,9 @@ type openShiftVersionConverter struct{}
 // returned objects.
 func (openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) interface{} {
 	out := &OpenShiftVersion{
+		proxyResource: true,
 		Properties: OpenShiftVersionProperties{
-			Version:           v.Properties.Version,
-			OpenShiftPullspec: v.Properties.OpenShiftPullspec,
-			InstallerPullspec: v.Properties.InstallerPullspec,
-			Enabled:           v.Properties.Enabled,
+			Version: v.Properties.Version,
 		},
 	}
 
@@ -47,9 +45,5 @@ func (c openShiftVersionConverter) ToExternalList(vers []*api.OpenShiftVersion) 
 // objects
 func (c openShiftVersionConverter) ToInternal(_new interface{}, out *api.OpenShiftVersion) {
 	new := _new.(*OpenShiftVersion)
-
-	out.Properties.Enabled = new.Properties.Enabled
-	out.Properties.InstallerPullspec = new.Properties.InstallerPullspec
-	out.Properties.OpenShiftPullspec = new.Properties.OpenShiftPullspec
 	out.Properties.Version = new.Properties.Version
 }

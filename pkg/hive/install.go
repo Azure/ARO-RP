@@ -187,8 +187,8 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 				Name: pullsecretSecretName,
 			},
 			Provisioning: &hivev1.Provisioning{
-				InstallerImageOverride: version.InstallerPullspec,
-				ReleaseImage:           version.OpenShiftPullspec,
+				InstallerImageOverride: version.Properties.InstallerPullspec,
+				ReleaseImage:           version.Properties.OpenShiftPullspec,
 				InstallConfigSecretRef: &corev1.LocalObjectReference{
 					Name: installConfigName,
 				},

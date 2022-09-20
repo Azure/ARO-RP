@@ -9,19 +9,20 @@ import (
 
 func exampleSyncSet() *SyncSet {
 	doc := api.ExampleClusterManagerConfigurationDocumentSyncSet()
-	doc.SyncSet.ID = ""
-	doc.SyncSet.Type = ""
-	doc.SyncSet.Name = ""
 	ext := (&clusterManagerConfigurationConverter{}).SyncSetToExternal(doc.SyncSet)
 	return ext.(*SyncSet)
 }
 
 func ExampleSyncSetPutParameter() interface{} {
-	return exampleSyncSet()
+	ss := exampleSyncSet()
+	ss.ID = ""
+	ss.Type = ""
+	ss.Name = ""
+	return ss
 }
 
 func ExampleSyncSetPatchParameter() interface{} {
-	return exampleSyncSet()
+	return ExampleSyncSetPutParameter()
 }
 
 func ExampleSyncSetResponse() interface{} {
@@ -38,20 +39,20 @@ func ExampleSyncSetListResponse() interface{} {
 
 func exampleMachinePool() *MachinePool {
 	doc := api.ExampleClusterManagerConfigurationDocumentMachinePool()
-	doc.MachinePool.ID = ""
-	doc.MachinePool.Type = ""
-	doc.MachinePool.Name = ""
 	ext := (&clusterManagerConfigurationConverter{}).MachinePoolToExternal(doc.MachinePool)
-
 	return ext.(*MachinePool)
 }
 
 func ExampleMachinePoolPutParameter() interface{} {
-	return exampleMachinePool()
+	mp := exampleMachinePool()
+	mp.ID = ""
+	mp.Type = ""
+	mp.Name = ""
+	return mp
 }
 
 func ExampleMachinePoolPatchParameter() interface{} {
-	return exampleMachinePool()
+	return ExampleMachinePoolPutParameter()
 }
 
 func ExampleMachinePoolResponse() interface{} {
@@ -68,19 +69,20 @@ func ExampleMachinePoolListResponse() interface{} {
 
 func exampleSyncIdentityProvider() *SyncIdentityProvider {
 	doc := api.ExampleClusterManagerConfigurationDocumentSyncIdentityProvider()
-	doc.SyncIdentityProvider.ID = ""
-	doc.SyncIdentityProvider.Type = ""
-	doc.SyncIdentityProvider.Name = ""
 	ext := (&clusterManagerConfigurationConverter{}).SyncIdentityProviderToExternal(doc.SyncIdentityProvider)
 	return ext.(*SyncIdentityProvider)
 }
 
 func ExampleSyncIdentityProviderPutParameter() interface{} {
-	return exampleSyncIdentityProvider()
+	sip := exampleSyncIdentityProvider()
+	sip.ID = ""
+	sip.Type = ""
+	sip.Name = ""
+	return sip
 }
 
 func ExampleSyncIdentityProviderPatchParameter() interface{} {
-	return exampleSyncIdentityProvider()
+	return ExampleSyncIdentityProviderPutParameter()
 }
 
 func ExampleSyncIdentityProviderResponse() interface{} {
@@ -97,19 +99,20 @@ func ExampleSyncIdentityProviderListResponse() interface{} {
 
 func exampleSecret() *Secret {
 	doc := api.ExampleClusterManagerConfigurationDocumentSecret()
-	doc.Secret.ID = ""
-	doc.Secret.Type = ""
-	doc.Secret.Name = ""
 	ext := (&clusterManagerConfigurationConverter{}).SecretToExternal(doc.Secret)
 	return ext.(*Secret)
 }
 
 func ExampleSecretPutParameter() interface{} {
-	return exampleSecret()
+	s := exampleSecret()
+	s.ID = ""
+	s.Type = ""
+	s.Name = ""
+	return s
 }
 
 func ExampleSecretPatchParameter() interface{} {
-	return exampleSecret()
+	return ExampleSecretPutParameter()
 }
 
 func ExampleSecretResponse() interface{} {

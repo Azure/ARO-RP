@@ -11,6 +11,8 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/coreos/go-semver/semver"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
@@ -28,7 +30,7 @@ func TestListInstallVersions(t *testing.T) {
 		name           string
 		fixture        func(f *testdatabase.Fixture)
 		wantStatusCode int
-		wantResponse   *v20220904.InstallVersions
+		wantResponse   v20220904.OpenShiftVersionList
 		wantError      string
 	}
 
@@ -47,8 +49,14 @@ func TestListInstallVersions(t *testing.T) {
 				})
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: &v20220904.InstallVersions{
-				v20220904.InstallVersion((v20220904.InstallVersion)(version.InstallStream.Version.String())),
+			wantResponse: v20220904.OpenShiftVersionList{
+				OpenShiftVersions: []*v20220904.OpenShiftVersion{
+					{
+						Properties: v20220904.OpenShiftVersionProperties{
+							Version: version.InstallStream.Version.String(),
+						},
+					},
+				},
 			},
 		},
 		{
@@ -66,27 +74,43 @@ func TestListInstallVersions(t *testing.T) {
 				f.AddOpenShiftVersionDocuments(
 					&api.OpenShiftVersionDocument{
 						OpenShiftVersion: &api.OpenShiftVersion{
-							Version: "4.10.20",
-							Enabled: false,
+							Properties: api.OpenShiftVersionProperties{
+								Version: "4.10.20",
+								Enabled: false,
+							},
 						},
 					}, &api.OpenShiftVersionDocument{
 						OpenShiftVersion: &api.OpenShiftVersion{
-							Version: "4.10.27",
-							Enabled: true,
+							Properties: api.OpenShiftVersionProperties{
+								Version: "4.10.27",
+								Enabled: true,
+							},
 						},
 					},
 					&api.OpenShiftVersionDocument{
 						OpenShiftVersion: &api.OpenShiftVersion{
-							Version: "4.11.5",
-							Enabled: true,
+							Properties: api.OpenShiftVersionProperties{
+								Version: "4.11.5",
+								Enabled: true,
+							},
 						},
 					},
 				)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: &v20220904.InstallVersions{
-				"4.10.27",
-				"4.11.5",
+			wantResponse: v20220904.OpenShiftVersionList{
+				OpenShiftVersions: []*v20220904.OpenShiftVersion{
+					{
+						Properties: v20220904.OpenShiftVersionProperties{
+							Version: "4.10.27",
+						},
+					},
+					{
+						Properties: v20220904.OpenShiftVersionProperties{
+							Version: "4.11.5",
+						},
+					},
+				},
 			},
 		},
 	} {
@@ -114,20 +138,31 @@ func TestListInstallVersions(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			// sort the response as the version order might be changed
 			if b != nil {
-				var v []string
+				var v v20220904.OpenShiftVersionList
 				if err = json.Unmarshal(b, &v); err != nil {
 					t.Error(err)
 				}
 
-				sort.Strings(v)
+				sort.Slice(v.OpenShiftVersions, func(i, j int) bool {
+					return semver.New(v.OpenShiftVersions[i].Properties.Version).LessThan(*semver.New(v.OpenShiftVersions[j].Properties.Version))
+				})
+
 				b, err = json.Marshal(v)
 				if err != nil {
 					t.Error(err)
 				}
 			}
 
-			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
+			// marshal the expected response into a []byte otherwise
+			// it will compare zero values to omitempty json tags
+			want, err := json.Marshal(tt.wantResponse)
+			if err != nil {
+				t.Error(err)
+			}
+
+			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, want)
 			if err != nil {
 				t.Error(err)
 			}

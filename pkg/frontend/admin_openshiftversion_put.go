@@ -47,7 +47,7 @@ func (f *frontend) putAdminOpenShiftVersion(w http.ResponseWriter, r *http.Reque
 
 	if docs != nil {
 		for _, doc := range docs.OpenShiftVersionDocuments {
-			if doc.OpenShiftVersion.Version == version.Version {
+			if doc.OpenShiftVersion.Properties.Version == version.Properties.Version {
 				versionDoc = doc
 				break
 			}

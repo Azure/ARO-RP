@@ -65,11 +65,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			return nil, err
 		}
 
-		installVersion, err := f.validateAndReturnInstallVersion(ctx, body)
-		if err != nil {
-			return nil, err
-		}
-
 		doc = &api.OpenShiftClusterDocument{
 			ID:  f.dbOpenShiftClusters.NewUUID(),
 			Key: path,
@@ -83,9 +78,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 					CreatedAt:           f.now().UTC(),
 					CreatedBy:           version.GitCommit,
 					ProvisionedBy:       version.GitCommit,
-					ClusterProfile: api.ClusterProfile{
-						Version: installVersion,
-					},
 				},
 			},
 		}
@@ -178,6 +170,11 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	f.systemDataClusterDocEnricher(doc, systemData)
 
 	if isCreate {
+		err = f.validateInstallVersion(ctx, doc)
+		if err != nil {
+			return nil, err
+		}
+
 		// on create, make the cluster resourcegroup ID lower case to work
 		// around LB/PLS bug
 		doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID = strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
@@ -239,7 +236,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
-	b, err := json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "\t")
+	b, err := json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")
 	if err != nil {
 		return nil, err
 	}

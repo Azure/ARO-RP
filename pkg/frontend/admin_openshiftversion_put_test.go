@@ -34,34 +34,42 @@ func TestOpenShiftVersionPut(t *testing.T) {
 				f.AddOpenShiftVersionDocuments(
 					&api.OpenShiftVersionDocument{
 						OpenShiftVersion: &api.OpenShiftVersion{
-							Version:           "4.10.0",
-							Enabled:           true,
-							OpenShiftPullspec: "a:a/b",
+							Properties: api.OpenShiftVersionProperties{
+								Version:           "4.10.0",
+								Enabled:           true,
+								OpenShiftPullspec: "a:a/b",
+							},
 						},
 					},
 				)
 			},
 			body: &admin.OpenShiftVersion{
-				Version:           "4.10.0",
-				Enabled:           false,
-				OpenShiftPullspec: "c:c/d",
-				InstallerPullspec: "d:d/e",
+				Properties: admin.OpenShiftVersionProperties{
+					Version:           "4.10.0",
+					Enabled:           false,
+					OpenShiftPullspec: "c:c/d",
+					InstallerPullspec: "d:d/e",
+				},
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: &admin.OpenShiftVersion{
-				Version:           "4.10.0",
-				Enabled:           false,
-				OpenShiftPullspec: "c:c/d",
-				InstallerPullspec: "d:d/e",
+				Properties: admin.OpenShiftVersionProperties{
+					Version:           "4.10.0",
+					Enabled:           false,
+					OpenShiftPullspec: "c:c/d",
+					InstallerPullspec: "d:d/e",
+				},
 			},
 			wantDocuments: []*api.OpenShiftVersionDocument{
 				{
 					ID: "07070707-0707-0707-0707-070707070001",
 					OpenShiftVersion: &api.OpenShiftVersion{
-						Version:           "4.10.0",
-						Enabled:           false,
-						OpenShiftPullspec: "c:c/d",
-						InstallerPullspec: "d:d/e",
+						Properties: api.OpenShiftVersionProperties{
+							Version:           "4.10.0",
+							Enabled:           false,
+							OpenShiftPullspec: "c:c/d",
+							InstallerPullspec: "d:d/e",
+						},
 					},
 				},
 			},
@@ -72,42 +80,52 @@ func TestOpenShiftVersionPut(t *testing.T) {
 				f.AddOpenShiftVersionDocuments(
 					&api.OpenShiftVersionDocument{
 						OpenShiftVersion: &api.OpenShiftVersion{
-							Version:           "4.10.0",
-							Enabled:           true,
-							OpenShiftPullspec: "a:a/b",
+							Properties: api.OpenShiftVersionProperties{
+								Version:           "4.10.0",
+								Enabled:           true,
+								OpenShiftPullspec: "a:a/b",
+							},
 						},
 					},
 				)
 			},
 			body: &admin.OpenShiftVersion{
-				Version:           "4.10.1",
-				Enabled:           true,
-				OpenShiftPullspec: "f:f/g",
-				InstallerPullspec: "g:g/h",
+				Properties: admin.OpenShiftVersionProperties{
+					Version:           "4.10.1",
+					Enabled:           true,
+					OpenShiftPullspec: "f:f/g",
+					InstallerPullspec: "g:g/h",
+				},
 			},
 			wantStatusCode: http.StatusCreated,
 			wantResponse: &admin.OpenShiftVersion{
-				Version:           "4.10.1",
-				Enabled:           true,
-				OpenShiftPullspec: "f:f/g",
-				InstallerPullspec: "g:g/h",
+				Properties: admin.OpenShiftVersionProperties{
+					Version:           "4.10.1",
+					Enabled:           true,
+					OpenShiftPullspec: "f:f/g",
+					InstallerPullspec: "g:g/h",
+				},
 			},
 			wantDocuments: []*api.OpenShiftVersionDocument{
 				{
 					ID: "07070707-0707-0707-0707-070707070001",
 					OpenShiftVersion: &api.OpenShiftVersion{
-						Version:           "4.10.0",
-						Enabled:           true,
-						OpenShiftPullspec: "a:a/b",
+						Properties: api.OpenShiftVersionProperties{
+							Version:           "4.10.0",
+							Enabled:           true,
+							OpenShiftPullspec: "a:a/b",
+						},
 					},
 				},
 				{
 					ID: "07070707-0707-0707-0707-070707070002",
 					OpenShiftVersion: &api.OpenShiftVersion{
-						Version:           "4.10.1",
-						Enabled:           true,
-						OpenShiftPullspec: "f:f/g",
-						InstallerPullspec: "g:g/h",
+						Properties: api.OpenShiftVersionProperties{
+							Version:           "4.10.1",
+							Enabled:           true,
+							OpenShiftPullspec: "f:f/g",
+							InstallerPullspec: "g:g/h",
+						},
 					},
 				},
 			},
@@ -118,18 +136,22 @@ func TestOpenShiftVersionPut(t *testing.T) {
 				f.AddOpenShiftVersionDocuments(
 					&api.OpenShiftVersionDocument{
 						OpenShiftVersion: &api.OpenShiftVersion{
-							Version:           "4.10.0",
-							Enabled:           true,
-							OpenShiftPullspec: "a:a/b",
-							InstallerPullspec: "d:d/e",
+							Properties: api.OpenShiftVersionProperties{
+								Version:           "4.10.0",
+								Enabled:           true,
+								OpenShiftPullspec: "a:a/b",
+								InstallerPullspec: "d:d/e",
+							},
 						},
 					},
 				)
 			},
 			body: &admin.OpenShiftVersion{
-				Version:           "4.10.0",
-				Enabled:           true,
-				OpenShiftPullspec: "c:c/d",
+				Properties: admin.OpenShiftVersionProperties{
+					Version:           "4.10.0",
+					Enabled:           true,
+					OpenShiftPullspec: "c:c/d",
+				},
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: InvalidParameter: installerPullspec: Must be provided",
@@ -137,10 +159,12 @@ func TestOpenShiftVersionPut(t *testing.T) {
 				{
 					ID: "07070707-0707-0707-0707-070707070001",
 					OpenShiftVersion: &api.OpenShiftVersion{
-						Version:           "4.10.0",
-						Enabled:           true,
-						OpenShiftPullspec: "a:a/b",
-						InstallerPullspec: "d:d/e",
+						Properties: api.OpenShiftVersionProperties{
+							Version:           "4.10.0",
+							Enabled:           true,
+							OpenShiftPullspec: "a:a/b",
+							InstallerPullspec: "d:d/e",
+						},
 					},
 				},
 			},
@@ -151,18 +175,22 @@ func TestOpenShiftVersionPut(t *testing.T) {
 				f.AddOpenShiftVersionDocuments(
 					&api.OpenShiftVersionDocument{
 						OpenShiftVersion: &api.OpenShiftVersion{
-							Version:           "4.10.0",
-							Enabled:           true,
-							OpenShiftPullspec: "a:a/b",
-							InstallerPullspec: "d:d/e",
+							Properties: api.OpenShiftVersionProperties{
+								Version:           "4.10.0",
+								Enabled:           true,
+								OpenShiftPullspec: "a:a/b",
+								InstallerPullspec: "d:d/e",
+							},
 						},
 					},
 				)
 			},
 			body: &admin.OpenShiftVersion{
-				Version:           "4.10.0",
-				Enabled:           true,
-				InstallerPullspec: "c:c/d",
+				Properties: admin.OpenShiftVersionProperties{
+					Version:           "4.10.0",
+					Enabled:           true,
+					InstallerPullspec: "c:c/d",
+				},
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: InvalidParameter: openShiftPullspec: Must be provided",
@@ -170,10 +198,12 @@ func TestOpenShiftVersionPut(t *testing.T) {
 				{
 					ID: "07070707-0707-0707-0707-070707070001",
 					OpenShiftVersion: &api.OpenShiftVersion{
-						Version:           "4.10.0",
-						Enabled:           true,
-						OpenShiftPullspec: "a:a/b",
-						InstallerPullspec: "d:d/e",
+						Properties: api.OpenShiftVersionProperties{
+							Version:           "4.10.0",
+							Enabled:           true,
+							OpenShiftPullspec: "a:a/b",
+							InstallerPullspec: "d:d/e",
+						},
 					},
 				},
 			},

@@ -56,11 +56,11 @@
     "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/listinstallversions": {
       "get": {
         "tags": [
-          "InstallVersions"
+          "OpenShiftVersions"
         ],
         "summary": "Lists all OpenShift versions available to install in the specified location.",
         "description": "The operation returns the installable OpenShift versions as strings.",
-        "operationId": "InstallVersions_List",
+        "operationId": "OpenShiftVersions_List",
         "parameters": [
           {
             "$ref": "../../../../../common-types/resource-management/v3/types.json#/parameters/ApiVersionParameter"
@@ -76,7 +76,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/InstallVersions"
+              "$ref": "#/definitions/OpenShiftVersionList"
             }
           },
           "default": {
@@ -88,7 +88,7 @@
         },
         "x-ms-examples": {
           "Lists all OpenShift versions available to install in the specified location.": {
-            "$ref": "./examples/InstallVersions_List.json"
+            "$ref": "./examples/OpenShiftVersions_List.json"
           }
         }
       }
@@ -1801,18 +1801,6 @@
         }
       }
     },
-    "InstallVersion": {
-      "description": "InstallVersion is the OpenShift installation version string.",
-      "type": "string"
-    },
-    "InstallVersions": {
-      "description": "InstallVersions represents a List of OpenShift installable versions.",
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/InstallVersion"
-      },
-      "x-ms-identifiers": []
-    },
     "MachinePool": {
       "description": "MachinePool represents a MachinePool",
       "type": "object",
@@ -2025,10 +2013,6 @@
             "$ref": "#/definitions/IngressProfile"
           },
           "x-ms-identifiers": []
-        },
-        "installVersion": {
-          "description": "The cluster install version.",
-          "type": "string"
         }
       }
     },
@@ -2049,6 +2033,61 @@
           "$ref": "../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
           "description": "The system meta data relating to this resource.",
           "readOnly": true
+        }
+      }
+    },
+    "OpenShiftVersion": {
+      "description": "OpenShiftVersion represents an OpenShift version that can be installed.",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "../../../../../common-types/resource-management/v3/types.json#/definitions/ProxyResource"
+        }
+      ],
+      "properties": {
+        "id": {
+          "description": "The ID for the resource.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name of the resource.",
+          "type": "string"
+        },
+        "type": {
+          "description": "The resource type.",
+          "type": "string"
+        },
+        "properties": {
+          "$ref": "#/definitions/OpenShiftVersionProperties",
+          "description": "The properties for the OpenShiftVersion resource."
+        }
+      }
+    },
+    "OpenShiftVersionList": {
+      "description": "OpenShiftVersionList represents a List of available versions.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "The List of available versions.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/OpenShiftVersion"
+          },
+          "x-ms-identifiers": []
+        },
+        "nextLink": {
+          "description": "Next Link to next operation.",
+          "type": "string"
+        }
+      }
+    },
+    "OpenShiftVersionProperties": {
+      "description": "OpenShiftVersionProperties represents the properties of an OpenShiftVersion.",
+      "type": "object",
+      "properties": {
+        "version": {
+          "description": "Version represents the version to create the cluster at.",
+          "type": "string"
         }
       }
     },
