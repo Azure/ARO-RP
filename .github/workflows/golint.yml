@@ -57,9 +57,11 @@ jobs:
       - uses: actions/checkout@v3
       - run: make validate-go-action
   govulncheck:
-    name: Prepare environment to run govulncheck
+    name: govulncheck
     runs-on: ubuntu-latest
     steps:
+      - run: |
+          sudo apt-get install libgpgme-dev libgpgme11
       - name: Checkout out code
         uses: actions/checkout@v3
       - name: Set up Go
