@@ -253,16 +253,17 @@ func (m *manager) deleteResources(ctx context.Context) error {
 
 func deleteByIdCloudError(err error) error {
 	detailedError, ok := err.(autorest.DetailedError)
-	if ok {
-		switch {
-		case strings.Contains(detailedError.Original.Error(), "CannotDeleteLoadBalancerWithPrivateLinkService"):
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeCannotDeleteLoadBalancerByID,
-				"features.ResourcesClient#DeleteByID", detailedError.Original.Error())
+	if !ok {
+		return err
+	}
+	switch {
+	case strings.Contains(detailedError.Original.Error(), "CannotDeleteLoadBalancerWithPrivateLinkService"):
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeCannotDeleteLoadBalancerByID,
+			"features.ResourcesClient#DeleteByID", detailedError.Original.Error())
 
-		case strings.Contains(detailedError.Original.Error(), "AuthorizationFailed"):
-			return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden,
-				"features.ResourcesClient#DeleteByID", detailedError.Original.Error())
-		}
+	case strings.Contains(detailedError.Original.Error(), "AuthorizationFailed"):
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden,
+			"features.ResourcesClient#DeleteByID", detailedError.Original.Error())
 	}
 	return err
 }
