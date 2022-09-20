@@ -130,8 +130,8 @@ func TestGetOpenShiftVersionFromVersion(t *testing.T) {
 
 			if tt.want != nil {
 				assert.Equal(t, tt.want.Properties.Version, version.Properties.Version, "Version does not match")
-				assert.Equal(t, tt.want.Properties.OpenShiftPullspec, version.Properties.OpenShiftPullspec, "OpenShiftPullspec does not match")
-				assert.Equal(t, tt.want.Properties.InstallerPullspec, version.Properties.InstallerPullspec, "InstallerPullspec does not match")
+				assert.Equal(t, tt.want.Properties.OpenShiftPullspec, version.Properties.OpenShiftPullspec, "properties.OpenShiftPullspec does not match")
+				assert.Equal(t, tt.want.Properties.InstallerPullspec, version.Properties.InstallerPullspec, "properties.InstallerPullspec does not match")
 			}
 		})
 	}

@@ -6,7 +6,6 @@ package frontend
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -27,33 +26,22 @@ func (f *frontend) listInstallVersions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	versions, err := f.getEnabledInstallVersions(ctx)
-	if err != nil {
-		log.Error(err)
-		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Unable to list the available OpenShift versions in this region.")
-		return
-	}
-
+	versions := f.getEnabledInstallVersions(ctx)
 	converter := f.apis[vars["api-version"]].OpenShiftVersionConverter
 
 	b, err := json.MarshalIndent(converter.ToExternalList(([]*api.OpenShiftVersion)(versions)), "", "    ")
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) getEnabledInstallVersions(ctx context.Context) ([]*api.OpenShiftVersion, error) {
-	docs, err := f.dbOpenShiftVersions.ListAll(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("unable to list the entries in the OpenShift versions database: %s", err.Error())
-	}
-
+func (f *frontend) getEnabledInstallVersions(ctx context.Context) []*api.OpenShiftVersion {
 	versions := make([]*api.OpenShiftVersion, 0)
-	for _, doc := range docs.OpenShiftVersionDocuments {
-		if doc.OpenShiftVersion.Properties.Enabled {
-			versions = append(versions, doc.OpenShiftVersion)
-		}
-	}
 
-	// add the default from version.InstallStream, when we have no active versions
+	f.mu.RLock()
+	for _, v := range f.enabledOcpVersions {
+		versions = append(versions, v)
+	}
+	f.mu.RUnlock()
+
 	if len(versions) == 0 {
 		versions = append(versions, &api.OpenShiftVersion{
 			Properties: api.OpenShiftVersionProperties{
@@ -62,5 +50,5 @@ func (f *frontend) getEnabledInstallVersions(ctx context.Context) ([]*api.OpenSh
 		})
 	}
 
-	return versions, nil
+	return versions
 }
