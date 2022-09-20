@@ -216,6 +216,15 @@
   curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/kubernetespodlogs?podname=$POD&namespace=$NAMESPACE&container=$CONTAINER"
   ```
 
+## OpenShift Version 
+
+* We have a cosmos container which contains supported installable OCP versions, more information on the definition in `pkg/api/openshiftversion.go`.
+
+* Populate the `OpenShiftVersions` container via admin api
+```bash
+curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.10.0", "enabled": true, "openShiftPullspec": "test.com/a:b", "installerPullspec": "test.com/a:b" }}'
+```
+
 ## OpenShift Cluster Manager (OCM) Configuration API Actions
 
 * Create a new OCM configuration

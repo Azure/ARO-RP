@@ -22,40 +22,44 @@ func (f *frontend) listInstallVersions(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 
-	if f.apis[vars["api-version"]].InstallVersionsConverter == nil {
+	if f.apis[vars["api-version"]].OpenShiftVersionConverter == nil {
 		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The endpoint could not be found in the namespace '%s' for api version '%s'.", vars["resourceProviderNamespace"], vars["api-version"])
 		return
 	}
 
-	versions, err := f.getInstallVersions(ctx)
+	versions, err := f.getEnabledInstallVersions(ctx)
 	if err != nil {
 		log.Error(err)
 		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Unable to list the available OpenShift versions in this region.")
 		return
 	}
 
-	converter := f.apis[vars["api-version"]].InstallVersionsConverter
+	converter := f.apis[vars["api-version"]].OpenShiftVersionConverter
 
-	b, err := json.Marshal(converter.ToExternal((*api.InstallVersions)(&versions)))
+	b, err := json.MarshalIndent(converter.ToExternalList(([]*api.OpenShiftVersion)(versions)), "", "    ")
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) getInstallVersions(ctx context.Context) ([]string, error) {
+func (f *frontend) getEnabledInstallVersions(ctx context.Context) ([]*api.OpenShiftVersion, error) {
 	docs, err := f.dbOpenShiftVersions.ListAll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to list the entries in the OpenShift versions database: %s", err.Error())
 	}
 
-	versions := make([]string, 0)
+	versions := make([]*api.OpenShiftVersion, 0)
 	for _, doc := range docs.OpenShiftVersionDocuments {
-		if doc.OpenShiftVersion.Enabled {
-			versions = append(versions, doc.OpenShiftVersion.Version)
+		if doc.OpenShiftVersion.Properties.Enabled {
+			versions = append(versions, doc.OpenShiftVersion)
 		}
 	}
 
 	// add the default from version.InstallStream, when we have no active versions
 	if len(versions) == 0 {
-		versions = append(versions, version.InstallStream.Version.String())
+		versions = append(versions, &api.OpenShiftVersion{
+			Properties: api.OpenShiftVersionProperties{
+				Version: version.InstallStream.Version.String(),
+			},
+		})
 	}
 
 	return versions, nil

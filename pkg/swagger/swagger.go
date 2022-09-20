@@ -22,6 +22,7 @@ var proxyResources = []string{
 	"SyncIdentityProvider",
 	"MachinePool",
 	"Secret",
+	"OpenShiftVersion",
 }
 
 func Run(api, outputDir string) error {
@@ -102,12 +103,12 @@ func Run(api, outputDir string) error {
 	if g.installVersionList {
 		s.Paths["/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/listinstallversions"] = &PathItem{
 			Get: &Operation{
-				Tags:        []string{"InstallVersions"},
+				Tags:        []string{"OpenShiftVersions"},
 				Summary:     "Lists all OpenShift versions available to install in the specified location.",
 				Description: "The operation returns the installable OpenShift versions as strings.",
-				OperationID: "InstallVersions_List",
-				Parameters:  g.populateParameters(6, "InstallVersions", "Install Versions"),
-				Responses:   g.populateResponses("InstallVersions", false, http.StatusOK),
+				OperationID: "OpenShiftVersions_List",
+				Parameters:  g.populateParameters(6, "OpenShiftVersionList", "OpenShift Versions"),
+				Responses:   g.populateResponses("OpenShiftVersionList", false, http.StatusOK),
 			},
 		}
 	}
@@ -127,7 +128,7 @@ func Run(api, outputDir string) error {
 	}
 
 	if g.installVersionList {
-		names = append(names, "InstallVersions")
+		names = append(names, "OpenShiftVersionList")
 	}
 
 	if g.clusterManager {

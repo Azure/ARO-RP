@@ -6,9 +6,15 @@
   },
   "responses": {
     "200": {
-      "body": [
-        "4.10.20"
-      ]
+      "body": {
+        "value": [
+          {
+            "properties": {
+              "version": "4.10.20"
+            }
+          }
+        ]
+      }
     }
   }
 }

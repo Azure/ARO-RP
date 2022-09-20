@@ -122,12 +122,6 @@ type IngressProfile struct {
 	IP *string `json:"ip,omitempty"`
 }
 
-// ListString ...
-type ListString struct {
-	autorest.Response `json:"-"`
-	Value             *[]string `json:"value,omitempty"`
-}
-
 // MachinePool machinePool represents a MachinePool
 type MachinePool struct {
 	autorest.Response `json:"-"`
@@ -754,8 +748,6 @@ type OpenShiftClusterProperties struct {
 	ApiserverProfile *APIServerProfile `json:"apiserverProfile,omitempty"`
 	// IngressProfiles - The cluster ingress profiles.
 	IngressProfiles *[]IngressProfile `json:"ingressProfiles,omitempty"`
-	// InstallVersion - The cluster install version.
-	InstallVersion *string `json:"installVersion,omitempty"`
 }
 
 // OpenShiftClustersCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a
@@ -943,6 +935,44 @@ func (oscu *OpenShiftClusterUpdate) UnmarshalJSON(body []byte) error {
 	}
 
 	return nil
+}
+
+// OpenShiftVersion openShiftVersion represents an OpenShift version that can be installed.
+type OpenShiftVersion struct {
+	// Properties - The properties for the OpenShiftVersion resource.
+	Properties *OpenShiftVersionProperties `json:"properties,omitempty"`
+	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
+	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Azure Resource Manager metadata containing createdBy and modifiedBy information.
+	SystemData *SystemData `json:"systemData,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for OpenShiftVersion.
+func (osv OpenShiftVersion) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if osv.Properties != nil {
+		objectMap["properties"] = osv.Properties
+	}
+	return json.Marshal(objectMap)
+}
+
+// OpenShiftVersionList openShiftVersionList represents a List of available versions.
+type OpenShiftVersionList struct {
+	autorest.Response `json:"-"`
+	// Value - The List of available versions.
+	Value *[]OpenShiftVersion `json:"value,omitempty"`
+	// NextLink - Next Link to next operation.
+	NextLink *string `json:"nextLink,omitempty"`
+}
+
+// OpenShiftVersionProperties openShiftVersionProperties represents the properties of an OpenShiftVersion.
+type OpenShiftVersionProperties struct {
+	// Version - Version represents the version to create the cluster at.
+	Version *string `json:"version,omitempty"`
 }
 
 // Operation operation represents an RP operation.

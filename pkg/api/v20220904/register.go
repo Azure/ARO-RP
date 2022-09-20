@@ -21,7 +21,7 @@ func init() {
 		OpenShiftClusterStaticValidator:          openShiftClusterStaticValidator{},
 		OpenShiftClusterCredentialsConverter:     openShiftClusterCredentialsConverter{},
 		OpenShiftClusterAdminKubeconfigConverter: openShiftClusterAdminKubeconfigConverter{},
-		InstallVersionsConverter:                 installVersionsConverter{},
+		OpenShiftVersionConverter:                openShiftVersionConverter{},
 		OperationList: api.OperationList{
 			Operations: []api.Operation{
 				api.OperationResultsRead,
