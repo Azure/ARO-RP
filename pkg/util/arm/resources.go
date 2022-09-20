@@ -32,18 +32,18 @@ type SubResource struct {
 
 // ParentResourcetoString returns a string of the parent object in form of azureResourceID
 func (r ArmResource) ParentResource() string {
-	return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/%s/%s/%s", r.SubscriptionID, r.ResourceGroup, r.Provider, r.ResourceType, r.ResourceName)
+	return fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s", r.SubscriptionID, r.ResourceGroup, r.Provider, r.ResourceType, r.ResourceName)
 }
 
 // String function returns a string in form of azureResourceID
 func (r ArmResource) String() string {
-	return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/%s/%s/%s/%s/%s", r.SubscriptionID, r.ResourceGroup, r.Provider, r.ResourceType, r.ResourceName, r.SubResource.ResourceType, r.SubResource.ResourceName)
+	return fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/%s/%s", r.SubscriptionID, r.ResourceGroup, r.Provider, r.ResourceType, r.ResourceName, r.SubResource.ResourceType, r.SubResource.ResourceName)
 }
 
 // ParseArmResourceId take the resourceID of a child resource to an OpenShiftCluster
 // TODO refactor this function to support an additional layer of child resources if we ever get to that point, right now only supports 1 child resource
 func ParseArmResourceId(resourceId string) (*ArmResource, error) {
-	const resourceIDPatternText = `(?i)subscriptions/(.+)/resourceGroups/(.+)/providers/(.+?)/(.+?)/(.+?)/(.+?)/(.+)`
+	const resourceIDPatternText = `(?i)subscriptions/(.+)/resourcegroups/(.+)/providers/(.+?)/(.+?)/(.+?)/(.+?)/(.+)`
 	resourceIDPattern := regexp.MustCompile(resourceIDPatternText)
 	match := resourceIDPattern.FindStringSubmatch(resourceId)
 

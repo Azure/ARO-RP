@@ -18,6 +18,12 @@ import (
 func (f *frontend) deleteClusterManagerConfiguration(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
+	vars := mux.Vars(r)
+
+	if f.apis[vars["api-version"]].ClusterManagerConfigurationConverter == nil {
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
+		return
+	}
 
 	err := f._deleteClusterManagerConfiguration(ctx, log, r)
 	switch {

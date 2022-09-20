@@ -25,6 +25,11 @@ func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, 
 	var header http.Header
 	var b []byte
 
+	if f.apis[vars["api-version"]].ClusterManagerConfigurationConverter == nil {
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
+		return
+	}
+
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
 		b, err = f._putOrPatchClusterManagerConfiguration(ctx, log, r, &header, f.apis[vars["api-version"]].ClusterManagerConfigurationConverter)
@@ -65,6 +70,12 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 		return nil, err
 	}
 
+	var resources string
+	err = json.Unmarshal(body, &resources)
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
+	}
+
 	isCreate := ocmdoc == nil
 	uuid := f.dbClusterManagerConfiguration.NewUUID()
 	if isCreate {
@@ -76,7 +87,7 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 				Name:              armResource.SubResource.ResourceName,
 				ClusterResourceID: strings.ToLower(armResource.ParentResource()),
 				Properties: api.ClusterManagerConfigurationProperties{
-					Resources: body,
+					Resources: []byte(resources),
 				},
 			},
 		}
@@ -92,7 +103,7 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on a resource marked for deletion.")
 		}
 		if ocmdoc.ClusterManagerConfiguration != nil {
-			ocmdoc.ClusterManagerConfiguration.Properties.Resources = body
+			ocmdoc.ClusterManagerConfiguration.Properties.Resources = []byte(resources)
 		}
 	}
 
