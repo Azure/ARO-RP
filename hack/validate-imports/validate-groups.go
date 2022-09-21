@@ -4,9 +4,11 @@ package main
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/token"
+	"os"
 	"sort"
 	"strings"
 )
@@ -40,6 +42,15 @@ func typeForImport(imp *ast.ImportSpec) importType {
 }
 
 func validateGroups(path string, fset *token.FileSet, f *ast.File) (errs []error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		errs = append(errs, err)
+		return
+	}
+	// some generated files are conflicting with this rule so we exclude those
+	if bytes.Contains(b, []byte("DO NOT EDIT.")) {
+		return
+	}
 	var groups [][]*ast.ImportSpec
 
 	for i, imp := range f.Imports {
