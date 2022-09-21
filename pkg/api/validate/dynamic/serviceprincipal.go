@@ -5,11 +5,9 @@ package dynamic
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/form3tech-oss/jwt-go"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 )
@@ -28,12 +26,6 @@ func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, clientID, clien
 	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
 	if err != nil {
 		return err
-	}
-
-	for _, role := range c.Roles {
-		if role == "Application.ReadWrite.OwnedBy" {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal must not have the Application.ReadWrite.OwnedBy permission.")
-		}
 	}
 
 	return nil
