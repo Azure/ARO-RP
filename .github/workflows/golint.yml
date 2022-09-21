@@ -59,6 +59,8 @@ jobs:
   govulncheck:
     name: govulncheck
     runs-on: ubuntu-latest
+    env:
+      GOMEMLIMIT: 10GiB
     steps:
       - name: Prepare environment
         run: |
