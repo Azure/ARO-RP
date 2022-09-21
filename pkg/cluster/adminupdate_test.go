@@ -181,6 +181,29 @@ func TestAdminUpdateSteps(t *testing.T) {
 				"[Action updateProvisionedBy-fm]",
 			},
 		},
+		{
+			name: "Rotate in-cluster MDSD/Ingress/API certs",
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
+				doc := baseClusterDoc()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskRenewCerts
+				return doc, true
+			},
+			shouldRunSteps: []string{
+				"[Action initializeKubernetesClients-fm]",
+				"[Action ensureBillingRecord-fm]",
+				"[Action ensureDefaults-fm]",
+				"[Action fixupClusterSPObjectID-fm]",
+				"[Action fixInfraID-fm]",
+				"[Action startVMs-fm]",
+				"[Condition apiServersReady-fm, timeout 30m0s]",
+				"[Action fixMCSCert-fm]",
+				"[Action configureAPIServerCertificate-fm]",
+				"[Action configureIngressCertificate-fm]",
+				"[Action initializeOperatorDeployer-fm]",
+				"[Action renewMDSDCertificate-fm]",
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			doc, adoptViaHive := tt.fixture()

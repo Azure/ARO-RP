@@ -96,8 +96,6 @@ func (m *manager) adminUpdate() []steps.Step {
 
 	if isRenewCerts {
 		toRun = append(toRun,
-			steps.Action(m.startVMs),
-			steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Action(m.fixMCSCert),
 			steps.Action(m.configureAPIServerCertificate),
 			steps.Action(m.configureIngressCertificate),
