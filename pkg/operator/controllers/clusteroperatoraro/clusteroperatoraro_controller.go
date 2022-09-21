@@ -5,6 +5,7 @@ package clusteroperatoraro
 
 import (
 	"context"
+	"fmt"
 
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -23,6 +24,7 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
@@ -156,6 +158,12 @@ func (r *Reconciler) defaultOperator() *configv1.ClusterOperator {
 			Name: clusterOperatorName,
 		},
 		Status: configv1.ClusterOperatorStatus{
+			Versions: []configv1.OperandVersion{
+				{
+					Name:    "operator",
+					Version: fmt.Sprintf("1.0-%s", version.GitCommit),
+				},
+			},
 			Conditions: []configv1.ClusterOperatorStatusCondition{
 				{
 					Type:               configv1.OperatorAvailable,
