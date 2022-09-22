@@ -61,6 +61,4 @@ jobs:
 
       make test-e2e
 
-      kill_vpn
-
   - template: ./templates/template-az-cli-logout.yml
