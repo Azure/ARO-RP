@@ -2,7 +2,7 @@ SHELL = /bin/bash
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
-E2E_FLAGS ?= -test.timeout 180m -test.v -ginkgo.v -ginkgo.noColor
+E2E_FLAGS ?= -test.timeout 180m -test.v -ginkgo.v -ginkgo.noColor --ginkgo.flakeAttempts=2
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
 FLUENTBIT_VERSION = 1.9.4-1
