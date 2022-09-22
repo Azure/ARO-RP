@@ -6,7 +6,7 @@ package hive
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"os"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
@@ -112,17 +112,17 @@ func servicePrincipalSecretForInstall(oc *api.OpenShiftCluster, sub *api.Subscri
 	if isDevelopment {
 		// In development mode, load in the proxy certificates so that clusters
 		// can be accessed from a local (not in Azure) Hive
-		proxyCert, err := ioutil.ReadFile("secrets/proxy.crt")
+		proxyCert, err := os.ReadFile("secrets/proxy.crt")
 		if err != nil {
 			return nil, err
 		}
 
-		proxyClientCert, err := ioutil.ReadFile("secrets/proxy-client.crt")
+		proxyClientCert, err := os.ReadFile("secrets/proxy-client.crt")
 		if err != nil {
 			return nil, err
 		}
 
-		proxyClientKey, err := ioutil.ReadFile("secrets/proxy-client.key")
+		proxyClientKey, err := os.ReadFile("secrets/proxy-client.key")
 		if err != nil {
 			return nil, err
 		}

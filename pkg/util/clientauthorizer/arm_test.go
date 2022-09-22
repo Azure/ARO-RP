@@ -8,7 +8,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"reflect"
 	"strings"
@@ -38,7 +38,7 @@ func TestARMRefreshOnce(t *testing.T) {
 					Header: http.Header{
 						"Content-Type": []string{"application/json; charset=utf-8"},
 					},
-					Body: ioutil.NopCloser(strings.NewReader(
+					Body: io.NopCloser(strings.NewReader(
 						`{
 							"clientCertificates": [
 								{
@@ -60,7 +60,7 @@ func TestARMRefreshOnce(t *testing.T) {
 					Header: http.Header{
 						"Content-Type": []string{"application/json; charset=utf-8"},
 					},
-					Body: ioutil.NopCloser(strings.NewReader(
+					Body: io.NopCloser(strings.NewReader(
 						`{
 							"clientCertificates": [
 								{
@@ -82,7 +82,7 @@ func TestARMRefreshOnce(t *testing.T) {
 					Header: http.Header{
 						"Content-Type": []string{"application/json; charset=utf-8"},
 					},
-					Body: ioutil.NopCloser(strings.NewReader(
+					Body: io.NopCloser(strings.NewReader(
 						`{
 							"clientCertificates": [
 								{
@@ -105,7 +105,7 @@ func TestARMRefreshOnce(t *testing.T) {
 					Header: http.Header{
 						"Content-Type": []string{"application/json"},
 					},
-					Body: ioutil.NopCloser(strings.NewReader("not JSON")),
+					Body: io.NopCloser(strings.NewReader("not JSON")),
 				}, nil
 			},
 			wantErr: "invalid character 'o' in literal null (expecting 'u')",
@@ -124,7 +124,7 @@ func TestARMRefreshOnce(t *testing.T) {
 			do: func(*http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusBadGateway,
-					Body:       ioutil.NopCloser(nil),
+					Body:       io.NopCloser(nil),
 				}, nil
 			},
 			wantErr: "unexpected status code 502",
@@ -138,7 +138,7 @@ func TestARMRefreshOnce(t *testing.T) {
 					Header: http.Header{
 						"Content-Type": []string{"text/plain"},
 					},
-					Body: ioutil.NopCloser(nil),
+					Body: io.NopCloser(nil),
 				}, nil
 			},
 			wantErr: `unexpected content type "text/plain"`,

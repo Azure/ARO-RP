@@ -6,7 +6,6 @@ package deploy
 import (
 	"crypto/x509"
 	"encoding/pem"
-	"io/ioutil"
 	"os"
 
 	"github.com/Azure/go-autorest/autorest/to"
@@ -58,12 +57,12 @@ func deployKeyvaultAccessPolicy(_env env.Core) map[string]interface{} {
 }
 
 func DevConfig(_env env.Core) (*Config, error) {
-	ca, err := ioutil.ReadFile("secrets/dev-ca.crt")
+	ca, err := os.ReadFile("secrets/dev-ca.crt")
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := ioutil.ReadFile("secrets/dev-client.crt")
+	client, err := os.ReadFile("secrets/dev-client.crt")
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +77,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 		sshPublicKeyPath = os.Getenv("HOME") + "/.ssh/id_rsa.pub"
 	}
 
-	sshPublicKey, err := ioutil.ReadFile(sshPublicKeyPath)
+	sshPublicKey, err := os.ReadFile(sshPublicKeyPath)
 	if err != nil {
 		return nil, err
 	}

@@ -8,9 +8,9 @@ import (
 	"crypto/x509"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -36,7 +36,7 @@ func (s *Server) Run() error {
 	}
 	s.subnet = subnet
 
-	b, err := ioutil.ReadFile(s.ClientCertFile)
+	b, err := os.ReadFile(s.ClientCertFile)
 	if err != nil {
 		return err
 	}
@@ -49,12 +49,12 @@ func (s *Server) Run() error {
 	pool := x509.NewCertPool()
 	pool.AddCert(clientCert)
 
-	cert, err := ioutil.ReadFile(s.CertFile)
+	cert, err := os.ReadFile(s.CertFile)
 	if err != nil {
 		return err
 	}
 
-	b, err = ioutil.ReadFile(s.KeyFile)
+	b, err = os.ReadFile(s.KeyFile)
 	if err != nil {
 		return err
 	}
