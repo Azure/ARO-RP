@@ -27,66 +27,6 @@ import (
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
-func TestCheckClusterResourceGroupAlreadyExists(t *testing.T) {
-	ctx := context.Background()
-	resourceGroupName := "fakeResourceGroup"
-	resourceGroup := fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s", resourceGroupName)
-
-	for _, tt := range []struct {
-		name    string
-		mocks   func(*mock_features.MockResourceGroupsClient)
-		wantErr error
-	}{
-		{
-			name: "CRG doesn't exist",
-			mocks: func(rg *mock_features.MockResourceGroupsClient) {
-				rg.EXPECT().
-					CheckExistence(ctx, resourceGroupName).
-					Return(autorest.Response{Response: &http.Response{StatusCode: http.StatusNotFound}}, nil)
-			},
-			wantErr: nil,
-		},
-		{
-			name: "CRG already exist",
-			mocks: func(rg *mock_features.MockResourceGroupsClient) {
-				rg.EXPECT().
-					CheckExistence(ctx, resourceGroupName).
-					Return(autorest.Response{Response: &http.Response{StatusCode: http.StatusOK}}, nil)
-			},
-			wantErr: api.NewCloudError(
-				http.StatusBadRequest, api.CloudErrorCodeClusterResourceGroupAlreadyExists,
-				"", "Cluster-resource-group '%s' resource group must not exist.", resourceGroupName),
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			resourceGroupsClient := mock_features.NewMockResourceGroupsClient(controller)
-			tt.mocks(resourceGroupsClient)
-
-			m := &manager{
-				resourceGroups: resourceGroupsClient,
-				doc: &api.OpenShiftClusterDocument{
-					OpenShiftCluster: &api.OpenShiftCluster{
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: resourceGroup,
-							},
-						},
-					},
-				},
-			}
-
-			err := m.checkClusterResourceGroupAlreadyExists(ctx)
-			if err != nil && err.Error() != tt.wantErr.Error() ||
-				err == nil && tt.wantErr != nil {
-				t.Error(err)
-			}
-		})
-	}
-}
-
 func TestEnsureResourceGroup(t *testing.T) {
 	ctx := context.Background()
 	clusterID := "test-cluster"
@@ -103,6 +43,10 @@ func TestEnsureResourceGroup(t *testing.T) {
 	groupWithTags.Tags = map[string]*string{
 		"yeet": to.StringPtr("yote"),
 	}
+
+	resourceGroupManagedByMismatch := autorest.NewErrorWithError(&azure.RequestError{
+		ServiceError: &azure.ServiceError{Code: "ResourceGroupManagedByMismatch"},
+	}, "", "", nil, "")
 
 	disallowedByPolicy := autorest.NewErrorWithError(&azure.RequestError{
 		ServiceError: &azure.ServiceError{Code: "RequestDisallowedByPolicy"},
@@ -187,6 +131,23 @@ func TestEnsureResourceGroup(t *testing.T) {
 			wantErr: "generic error",
 		},
 		{
+			name: "fail - CreateOrUpdate returns resourcegroupmanagedbymismatch",
+			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				rg.EXPECT().
+					Get(gomock.Any(), resourceGroupName).
+					Return(group, autorest.DetailedError{StatusCode: http.StatusNotFound})
+
+				rg.EXPECT().
+					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
+					Return(group, resourceGroupManagedByMismatch)
+
+				env.EXPECT().
+					IsLocalDevelopmentMode().
+					Return(false)
+			},
+			wantErr: "400: ClusterResourceGroupAlreadyExists: : Resource group " + resourceGroup + " must not already exist.",
+		},
+		{
 			name: "fail - CreateOrUpdate returns requestdisallowedbypolicy",
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
 				rg.EXPECT().
@@ -249,7 +210,6 @@ func TestEnsureResourceGroup(t *testing.T) {
 			}
 
 			err := m.ensureResourceGroup(ctx)
-
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

@@ -41,20 +41,6 @@ func (m *manager) ensureInfraID(ctx context.Context) (err error) {
 	return err
 }
 
-func (m *manager) checkClusterResourceGroupAlreadyExists(ctx context.Context) error {
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-
-	clusterResourceGroupExistenceResult, err := m.resourceGroups.CheckExistence(ctx, resourceGroup)
-	if err != nil {
-		return err
-	}
-
-	if clusterResourceGroupExistenceResult.StatusCode != 404 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeClusterResourceGroupAlreadyExists, "", "Cluster-resource-group '%s' resource group must not exist.", resourceGroup)
-	}
-	return nil
-}
-
 func (m *manager) ensureResourceGroup(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
@@ -95,6 +81,16 @@ func (m *manager) ensureResourceGroup(ctx context.Context) error {
 		serviceError = requestErr.ServiceError
 	}
 
+	if serviceError != nil && serviceError.Code == "ResourceGroupManagedByMismatch" {
+		return &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code: api.CloudErrorCodeClusterResourceGroupAlreadyExists,
+				Message: "Resource group " + m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID +
+					" must not already exist.",
+			},
+		}
+	}
 	if serviceError != nil && serviceError.Code == "RequestDisallowedByPolicy" {
 		// if request was disallowed by policy, inform user so they can take appropriate action
 		b, _ := json.Marshal(serviceError)
