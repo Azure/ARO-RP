@@ -4,8 +4,6 @@ package v20220904
 // Licensed under the Apache License 2.0.
 
 import (
-	"encoding/json"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
@@ -14,12 +12,8 @@ type clusterManagerConfigurationConverter struct{}
 func (c clusterManagerConfigurationConverter) ToExternal(ocm *api.ClusterManagerConfiguration) (interface{}, error) {
 	out := new(ClusterManagerConfiguration)
 	out.ID = ocm.ID
-	var data interface{}
-	err := json.Unmarshal(ocm.Properties.Resources, &data)
-	if err != nil {
-		return nil, err
-	}
-	out.Properties.Resources = data
+	out.Name = ocm.Name
+	out.Properties.Resources = string(ocm.Properties.Resources)
 	return out, nil
 }
 
