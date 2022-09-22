@@ -81,6 +81,16 @@ func (m *manager) ensureResourceGroup(ctx context.Context) error {
 		serviceError = requestErr.ServiceError
 	}
 
+	if serviceError != nil && serviceError.Code == "ResourceGroupManagedByMismatch" {
+		return &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code: api.CloudErrorCodeClusterResourceGroupAlreadyExists,
+				Message: "Resource group " + m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID +
+					" must not already exist.",
+			},
+		}
+	}
 	if serviceError != nil && serviceError.Code == "RequestDisallowedByPolicy" {
 		// if request was disallowed by policy, inform user so they can take appropriate action
 		b, _ := json.Marshal(serviceError)
