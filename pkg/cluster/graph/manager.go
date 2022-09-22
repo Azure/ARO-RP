@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
@@ -98,7 +98,7 @@ func (m *manager) LoadPersisted(ctx context.Context, resourceGroup, account stri
 	}
 	defer rc.Close()
 
-	b, err := ioutil.ReadAll(rc)
+	b, err := io.ReadAll(rc)
 	if err != nil {
 		return nil, err
 	}

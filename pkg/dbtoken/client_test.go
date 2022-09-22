@@ -5,7 +5,7 @@ package dbtoken
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -52,7 +52,7 @@ func TestClient(t *testing.T) {
 					Header: http.Header{
 						"Content-Type": []string{"application/json"},
 					},
-					Body: ioutil.NopCloser(strings.NewReader(`{"token":"token"}`)),
+					Body: io.NopCloser(strings.NewReader(`{"token":"token"}`)),
 				},
 			},
 			wantToken: "token",
@@ -64,7 +64,7 @@ func TestClient(t *testing.T) {
 				wantURL:    "https://localhost/token?permission=permission",
 				resp: &http.Response{
 					StatusCode: http.StatusNotFound,
-					Body:       ioutil.NopCloser(strings.NewReader("")),
+					Body:       io.NopCloser(strings.NewReader("")),
 				},
 			},
 			wantErr: "unexpected status code 404",
@@ -76,7 +76,7 @@ func TestClient(t *testing.T) {
 				wantURL:    "https://localhost/token?permission=permission",
 				resp: &http.Response{
 					StatusCode: http.StatusOK,
-					Body:       ioutil.NopCloser(strings.NewReader("")),
+					Body:       io.NopCloser(strings.NewReader("")),
 				},
 			},
 			wantErr: `unexpected content type ""`,

@@ -5,7 +5,7 @@ package generator
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
@@ -115,7 +115,7 @@ func (g *generator) writeTemplate(t *arm.Template, output string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(output, b, 0666)
+	return os.WriteFile(output, b, 0666)
 }
 
 func (g *generator) writeParameters(p *arm.Parameters, output string) error {
@@ -125,5 +125,5 @@ func (g *generator) writeParameters(p *arm.Parameters, output string) error {
 	}
 	b = append(b, byte('\n'))
 
-	return ioutil.WriteFile(output, b, 0666)
+	return os.WriteFile(output, b, 0666)
 }
