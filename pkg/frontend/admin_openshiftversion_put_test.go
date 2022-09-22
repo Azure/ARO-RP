@@ -11,6 +11,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -154,7 +155,7 @@ func TestOpenShiftVersionPut(t *testing.T) {
 				},
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      "400: InvalidParameter: installerPullspec: Must be provided",
+			wantError:      "400: InvalidParameter: properties.installerPullspec: Must be provided",
 			wantDocuments: []*api.OpenShiftVersionDocument{
 				{
 					ID: "07070707-0707-0707-0707-070707070001",
@@ -193,7 +194,7 @@ func TestOpenShiftVersionPut(t *testing.T) {
 				},
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      "400: InvalidParameter: openShiftPullspec: Must be provided",
+			wantError:      "400: InvalidParameter: properties.openShiftPullspec: Must be provided",
 			wantDocuments: []*api.OpenShiftVersionDocument{
 				{
 					ID: "07070707-0707-0707-0707-070707070001",
@@ -213,8 +214,46 @@ func TestOpenShiftVersionPut(t *testing.T) {
 			fixture:        func(f *testdatabase.Fixture) {},
 			body:           &admin.OpenShiftVersion{},
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      "400: InvalidParameter: version: Must be provided",
+			wantError:      "400: InvalidParameter: properties.version: Must be provided",
 			wantDocuments:  []*api.OpenShiftVersionDocument{},
+		},
+		{
+			name: "can not disable default install version",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftVersionDocuments(
+					&api.OpenShiftVersionDocument{
+						OpenShiftVersion: &api.OpenShiftVersion{
+							Properties: api.OpenShiftVersionProperties{
+								Version:           version.InstallStream.Version.String(),
+								Enabled:           true,
+								OpenShiftPullspec: "a:a/b",
+							},
+						},
+					},
+				)
+			},
+			body: &admin.OpenShiftVersion{
+				Properties: admin.OpenShiftVersionProperties{
+					Version:           version.InstallStream.Version.String(),
+					Enabled:           false,
+					OpenShiftPullspec: "c:c/d",
+					InstallerPullspec: "d:d/e",
+				},
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      "400: InvalidParameter: properties.enabled: You cannot disable the default installation version.",
+			wantDocuments: []*api.OpenShiftVersionDocument{
+				{
+					ID: "07070707-0707-0707-0707-070707070001",
+					OpenShiftVersion: &api.OpenShiftVersion{
+						Properties: api.OpenShiftVersionProperties{
+							Version:           version.InstallStream.Version.String(),
+							Enabled:           true,
+							OpenShiftPullspec: "a:a/b",
+						},
+					},
+				},
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

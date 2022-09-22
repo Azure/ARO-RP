@@ -167,7 +167,7 @@ func validateAdminVMSize(vmSize string) error {
 }
 
 // validateInstallVersion validates the install version set in the clusterprofile.version
-// TODO convert this into static validation instead of this receiver function in the vaidate for frontend.
+// TODO convert this into static validation instead of this receiver function in the validation for frontend.
 func (f *frontend) validateInstallVersion(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
 	oc := doc.OpenShiftCluster
 	// If this request is from an older API or the user never specified
@@ -177,30 +177,14 @@ func (f *frontend) validateInstallVersion(ctx context.Context, doc *api.OpenShif
 		return nil
 	}
 
-	errInvalidVersion := api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", "The requested OpenShift version '%s' is invalid.", oc.Properties.ClusterProfile.Version)
+	f.mu.RLock()
+	// we add the default installation version to the enabled ocp versions so no special case
+	_, ok := f.enabledOcpVersions[oc.Properties.ClusterProfile.Version]
+	f.mu.RUnlock()
 
-	if !validate.RxInstallVersion.MatchString(oc.Properties.ClusterProfile.Version) {
-		return errInvalidVersion
+	if !ok || !validate.RxInstallVersion.MatchString(oc.Properties.ClusterProfile.Version) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", "The requested OpenShift version '%s' is invalid.", oc.Properties.ClusterProfile.Version)
 	}
 
-	docs, err := f.dbOpenShiftVersions.ListAll(ctx)
-	if err != nil {
-		return err
-	}
-
-	// If we have no OpenShiftVersion entries in CosmoDB, default to using the InstallStream.Version
-	if len(docs.OpenShiftVersionDocuments) == 0 {
-		if oc.Properties.ClusterProfile.Version != version.InstallStream.Version.String() {
-			return errInvalidVersion
-		}
-		return nil
-	}
-
-	for _, doc := range docs.OpenShiftVersionDocuments {
-		if oc.Properties.ClusterProfile.Version == doc.OpenShiftVersion.Properties.Version {
-			return nil
-		}
-	}
-
-	return errInvalidVersion
+	return nil
 }

@@ -19,6 +19,7 @@ type openShiftVersions struct {
 }
 
 type OpenShiftVersions interface {
+	ChangeFeed() cosmosdb.OpenShiftVersionDocumentIterator
 	Create(context.Context, *api.OpenShiftVersionDocument) (*api.OpenShiftVersionDocument, error)
 	Delete(context.Context, *api.OpenShiftVersionDocument) error
 	Get(context.Context, string) (*api.OpenShiftVersionDocument, error)
@@ -45,6 +46,10 @@ func NewOpenShiftVersionsWithProvidedClient(client cosmosdb.OpenShiftVersionDocu
 		c:    client,
 		uuid: uuid,
 	}
+}
+
+func (c *openShiftVersions) ChangeFeed() cosmosdb.OpenShiftVersionDocumentIterator {
+	return c.c.ChangeFeed(nil)
 }
 
 func (c *openShiftVersions) Create(ctx context.Context, doc *api.OpenShiftVersionDocument) (*api.OpenShiftVersionDocument, error) {

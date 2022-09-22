@@ -24,6 +24,7 @@ func (f *frontend) getAdminOpenShiftVersions(w http.ResponseWriter, r *http.Requ
 
 	converter := f.apis[admin.APIVersion].OpenShiftVersionConverter
 
+	// changefeed only tracks the enabled versions so use ListAll here
 	docs, err := f.dbOpenShiftVersions.ListAll(ctx)
 	if err != nil {
 		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")

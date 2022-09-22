@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 // TODO this const was put in place to disable the ocm routes
@@ -59,7 +61,12 @@ type frontend struct {
 	dbSubscriptions               database.Subscriptions
 	dbOpenShiftVersions           database.OpenShiftVersions
 
-	apis map[string]*api.Version
+	enabledOcpVersions map[string]*api.OpenShiftVersion
+	apis               map[string]*api.Version
+
+	lastChangefeed atomic.Value //time.Time
+	mu             sync.RWMutex
+
 	m    metrics.Emitter
 	aead encryption.AEAD
 
@@ -118,6 +125,16 @@ func NewFrontend(ctx context.Context,
 		kubeActionsFactory:            kubeActionsFactory,
 		azureActionsFactory:           azureActionsFactory,
 		ocEnricherFactory:             ocEnricherFactory,
+
+		// add default installation version so it's always supported
+		enabledOcpVersions: map[string]*api.OpenShiftVersion{
+			version.InstallStream.Version.String(): {
+				Properties: api.OpenShiftVersionProperties{
+					Version: version.InstallStream.Version.String(),
+					Enabled: true,
+				},
+			},
+		},
 
 		bucketAllocator: &bucket.Random{},
 
@@ -392,6 +409,7 @@ func (f *frontend) setupRouter() *mux.Router {
 
 func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) {
 	defer recover.Panic(f.baseLog)
+	go f.changefeed(ctx)
 
 	if stop != nil {
 		go func() {

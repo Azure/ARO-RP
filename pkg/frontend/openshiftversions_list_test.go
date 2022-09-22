@@ -17,18 +17,17 @@ import (
 	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/version"
-	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 func TestListInstallVersions(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
-	mockTenantID := "00000000-0000-0000-0000-000000000000"
 	method := http.MethodGet
 	ctx := context.Background()
 
 	type test struct {
 		name           string
-		fixture        func(f *testdatabase.Fixture)
+		changeFeed     map[string]*api.OpenShiftVersion
+		apiVersion     string
 		wantStatusCode int
 		wantResponse   v20220904.OpenShiftVersionList
 		wantError      string
@@ -36,18 +35,28 @@ func TestListInstallVersions(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			name: "default InstallStream version",
-			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: mockTenantID,
-						},
+			name: "return multiple versions",
+			changeFeed: map[string]*api.OpenShiftVersion{
+				version.InstallStream.Version.String(): {
+					Properties: api.OpenShiftVersionProperties{
+						Version: version.InstallStream.Version.String(),
+						Enabled: true,
 					},
-				})
+				},
+				"4.10.27": {
+					Properties: api.OpenShiftVersionProperties{
+						Version: "4.10.27",
+						Enabled: true,
+					},
+				},
+				"4.11.5": {
+					Properties: api.OpenShiftVersionProperties{
+						Version: "4.11.5",
+						Enabled: true,
+					},
+				},
 			},
+			apiVersion:     "2022-09-04",
 			wantStatusCode: http.StatusOK,
 			wantResponse: v20220904.OpenShiftVersionList{
 				OpenShiftVersions: []*v20220904.OpenShiftVersion{
@@ -56,50 +65,6 @@ func TestListInstallVersions(t *testing.T) {
 							Version: version.InstallStream.Version.String(),
 						},
 					},
-				},
-			},
-		},
-		{
-			name: "only enabled versions",
-			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: mockTenantID,
-						},
-					},
-				})
-				f.AddOpenShiftVersionDocuments(
-					&api.OpenShiftVersionDocument{
-						OpenShiftVersion: &api.OpenShiftVersion{
-							Properties: api.OpenShiftVersionProperties{
-								Version: "4.10.20",
-								Enabled: false,
-							},
-						},
-					}, &api.OpenShiftVersionDocument{
-						OpenShiftVersion: &api.OpenShiftVersion{
-							Properties: api.OpenShiftVersionProperties{
-								Version: "4.10.27",
-								Enabled: true,
-							},
-						},
-					},
-					&api.OpenShiftVersionDocument{
-						OpenShiftVersion: &api.OpenShiftVersion{
-							Properties: api.OpenShiftVersionProperties{
-								Version: "4.11.5",
-								Enabled: true,
-							},
-						},
-					},
-				)
-			},
-			wantStatusCode: http.StatusOK,
-			wantResponse: v20220904.OpenShiftVersionList{
-				OpenShiftVersions: []*v20220904.OpenShiftVersion{
 					{
 						Properties: v20220904.OpenShiftVersionProperties{
 							Version: "4.10.27",
@@ -113,33 +78,38 @@ func TestListInstallVersions(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:           "api does not exist",
+			apiVersion:     "invalid",
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      "400: InvalidResourceType: : The resource type '' could not be found in the namespace 'microsoft.redhatopenshift' for api version 'invalid'.",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).WithSubscriptions().WithOpenShiftVersions()
 			defer ti.done()
 
-			err := ti.buildFixtures(tt.fixture)
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, nil, nil, nil, nil, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
-
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			go f.Run(ctx, nil, nil)
 
+			frontend, _ := f.(*frontend)
+			frontend.mu.Lock()
+			frontend.enabledOcpVersions = tt.changeFeed
+			frontend.mu.Unlock()
+
 			resp, b, err := ti.request(method,
-				fmt.Sprintf("https://server/subscriptions/%s/providers/Microsoft.RedHatOpenShift/locations/%s/listinstallversions?api-version=2022-09-04", mockSubID, ti.env.Location()),
+				fmt.Sprintf("https://server/subscriptions/%s/providers/Microsoft.RedHatOpenShift/locations/%s/listinstallversions?api-version=%s", mockSubID, ti.env.Location(), tt.apiVersion),
 				nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			// sort the response as the version order might be changed
-			if b != nil {
+			if b != nil && resp.StatusCode == http.StatusOK {
 				var v v20220904.OpenShiftVersionList
 				if err = json.Unmarshal(b, &v); err != nil {
 					t.Error(err)
