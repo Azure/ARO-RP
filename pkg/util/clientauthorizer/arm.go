@@ -5,9 +5,11 @@ package clientauthorizer
 
 import (
 	"bytes"
-	"crypto/tls"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"reflect"
 	"strings"
@@ -32,6 +34,17 @@ type clientCertificate struct {
 	Certificate []byte    `json:"certificate,omitempty"`
 }
 
+type server struct {
+	containerClient Client
+	verboseLogging  bool
+}
+
+type errTokenValidation struct {
+	StatusCode       int
+	ErrorDescription []string
+	WWWAuthenticate  []string
+}
+
 type arm struct {
 	log *logrus.Entry
 	im  instancemetadata.InstanceMetadata
@@ -42,6 +55,8 @@ type arm struct {
 	m  metadata
 
 	lastSuccessfulRefresh time.Time
+
+	s server
 }
 
 func NewARM(log *logrus.Entry, im instancemetadata.InstanceMetadata) ClientAuthorizer {
@@ -56,6 +71,10 @@ func NewARM(log *logrus.Entry, im instancemetadata.InstanceMetadata) ClientAutho
 		im:  im,
 		now: time.Now,
 		do:  c.Do,
+		s: server{
+			containerClient: NewMise(http.DefaultClient, "http://localhost:5000/ValidateRequest"),
+			verboseLogging:  false,
+		},
 	}
 
 	go a.refresh()
@@ -63,7 +82,13 @@ func NewARM(log *logrus.Entry, im instancemetadata.InstanceMetadata) ClientAutho
 	return a
 }
 
-func (a *arm) IsAuthorized(cs *tls.ConnectionState) bool {
+func (a *arm) IsAuthorized(r *http.Request) bool {
+
+	if a.authenticatedHandler(r) {
+		return true
+	}
+
+	cs := r.TLS
 	if cs == nil || len(cs.PeerCertificates) == 0 {
 		return false
 	}
@@ -173,4 +198,91 @@ func (a *arm) IsReady() bool {
 	}
 
 	return false
+}
+
+func (e *errTokenValidation) Error() string {
+	return fmt.Sprintf("StatusCode: %d, ErrorDescription: %v, WWWAuthenticate: %v", e.StatusCode, e.ErrorDescription, e.WWWAuthenticate)
+}
+
+func (a *arm) delegateAuthToContainer(authHeader, uri, method, ipAddr string) (Result, error) {
+	if a.s.verboseLogging {
+		a.log.Printf(
+			"VERBOSE: Original request Information:\nURL:%s, method:%s, original IP address:%s",
+			uri,
+			method,
+			ipAddr,
+		)
+	}
+
+	start := time.Now()
+
+	result, err := a.s.containerClient.ValidateRequest(context.Background(), Input{
+		OriginalUri:         uri,
+		OriginalMethod:      method,
+		OriginalIPAddress:   ipAddr,
+		AuthorizationHeader: authHeader,
+		// Replace SubjectClaimsToReturn with ReturnAllSubjectClaims
+		// to return all claims in the subject token instead of just an allow list.
+		ReturnAllSubjectClaims: true,
+		//SubjectClaimsToReturn: []string{"Preferred_username"},
+	})
+
+	end := time.Now()
+	elapsed := end.Sub(start)
+
+	log.Default().Printf("time elapsed in mise container + adapter: %d", elapsed.Milliseconds())
+
+	if err != nil {
+		return Result{}, fmt.Errorf("error while validating token: %w", err)
+	}
+
+	if a.s.verboseLogging {
+		json, err := json.MarshalIndent(result, "", "   ")
+		if err != nil {
+			log.Default().Printf("error marshalling json of result object err=%v\n", err)
+		} else {
+			log.Default().Printf("VERBOSE: result struct:\n%s", string(json))
+		}
+	}
+
+	if result.StatusCode == http.StatusOK {
+		return result, nil
+	} else {
+		return Result{}, &errTokenValidation{
+			StatusCode:       result.StatusCode,
+			ErrorDescription: result.ErrorDescription,
+			WWWAuthenticate:  result.WWWAuthenticate,
+		}
+	}
+}
+
+func (a *arm) authenticatedHandler(r *http.Request) bool {
+	authHeaders := r.Header["Authorization"]
+
+	if len(authHeaders) != 1 {
+		return false
+	}
+
+	authHeader := authHeaders[0]
+	if authHeader == "" {
+		//w.WriteHeader(http.StatusUnauthorized)
+		return false
+	}
+
+	fullUriString := fmt.Sprintf("http://%s%s", r.Host, r.URL.String())
+
+	_, err := a.delegateAuthToContainer(authHeader, fullUriString, r.Method, r.RemoteAddr)
+	if err != nil {
+		var validationErr *errTokenValidation
+		if errors.As(err, &validationErr) {
+			// can access validationErr.ErrorDescription, validationErr.WWWAuthenticate, validationErr.StatusCode
+			a.log.Printf("token validation err:%v", validationErr)
+		} else {
+			a.log.Printf("error while delegating auth:%v", err)
+		}
+
+		return false
+	}
+
+	return true
 }

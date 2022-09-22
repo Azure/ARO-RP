@@ -4,10 +4,10 @@ package clientauthorizer
 // Licensed under the Apache License 2.0.
 
 import (
-	"crypto/tls"
+	"net/http"
 )
 
 type ClientAuthorizer interface {
-	IsAuthorized(*tls.ConnectionState) bool
+	IsAuthorized(*http.Request) bool
 	IsReady() bool
 }

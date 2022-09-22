@@ -27,7 +27,7 @@ func Authenticated(env env.Interface) func(http.Handler) http.Handler {
 				clientAuthorizer = env.ArmClientAuthorizer()
 			}
 
-			if !clientAuthorizer.IsAuthorized(r.TLS) {
+			if !clientAuthorizer.IsAuthorized(r) {
 				api.WriteError(w, http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Forbidden.")
 				return
 			}

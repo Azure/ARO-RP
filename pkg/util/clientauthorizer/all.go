@@ -4,7 +4,7 @@ package clientauthorizer
 // Licensed under the Apache License 2.0.
 
 import (
-	"crypto/tls"
+	"net/http"
 )
 
 type all struct{}
@@ -13,7 +13,7 @@ func NewAll() ClientAuthorizer {
 	return &all{}
 }
 
-func (all) IsAuthorized(*tls.ConnectionState) bool {
+func (all) IsAuthorized(*http.Request) bool {
 	return true
 }
 
