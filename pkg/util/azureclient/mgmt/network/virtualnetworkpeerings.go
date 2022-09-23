@@ -4,8 +4,6 @@ package network
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
-
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest"
 
@@ -13,8 +11,6 @@ import (
 )
 
 type VirtualNetworkPeeringsClient interface {
-	CreateOrUpdate(ctx context.Context, resourceGroupName string, virtualNetworkName string, virtualNetworkPeeringName string, virtualNetworkPeeringParameters mgmtnetwork.VirtualNetworkPeering) (result mgmtnetwork.VirtualNetworkPeeringsCreateOrUpdateFuture, err error)
-	Delete(ctx context.Context, resourceGroupName string, virtualNetworkName string, virtualNetworkPeeringName string) (result mgmtnetwork.VirtualNetworkPeeringsDeleteFuture, err error)
 	VirtualNetworkPeeringsAddons
 }
 

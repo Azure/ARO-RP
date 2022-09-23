@@ -456,8 +456,6 @@ each of the bash functions below.
    deploy_rp_dev
    # Deploy the proxy and VPN
    deploy_env_dev
-   # Deploy AKS resources for Hive
-   deploy_aks_dev
    ```
 
    If you encounter a "VirtualNetworkGatewayCannotUseStandardPublicIP" error
