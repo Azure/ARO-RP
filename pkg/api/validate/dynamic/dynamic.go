@@ -26,7 +26,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/permissions"
-	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -75,7 +74,7 @@ const (
 	AuthorizerClusterServicePrincipal AuthorizerType = "cluster"
 )
 
-func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizer refreshable.Authorizer, authorizerType AuthorizerType, tokenClient aad.TokenClient) (Dynamic, error) {
+func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer, authorizerType AuthorizerType, tokenClient aad.TokenClient) (Dynamic, error) {
 	return &dynamic{
 		log:            log,
 		authorizerType: authorizerType,

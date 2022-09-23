@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -22,7 +23,7 @@ type OpenShiftClusterDynamicValidator interface {
 }
 
 // NewOpenShiftClusterDynamicValidator creates a new OpenShiftClusterDynamicValidator
-func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, fpAuthorizer refreshable.Authorizer) OpenShiftClusterDynamicValidator {
+func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, fpAuthorizer autorest.Authorizer) OpenShiftClusterDynamicValidator {
 	return &openShiftClusterDynamicValidator{
 		log: log,
 		env: env,
@@ -39,7 +40,7 @@ type openShiftClusterDynamicValidator struct {
 
 	oc              *api.OpenShiftCluster
 	subscriptionDoc *api.SubscriptionDocument
-	fpAuthorizer    refreshable.Authorizer
+	fpAuthorizer    autorest.Authorizer
 }
 
 // Dynamic validates an OpenShift cluster

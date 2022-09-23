@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/sirupsen/logrus"
 
@@ -84,7 +85,7 @@ func (d *dev) Listen() (net.Listener, error) {
 	return net.Listen("tcp", "localhost:8443")
 }
 
-func (d *dev) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {
+func (d *dev) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {
 	oauthConfig, err := adal.NewOAuthConfig(d.Environment().ActiveDirectoryEndpoint, tenantID)
 	if err != nil {
 		return nil, err

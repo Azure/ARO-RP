@@ -18,7 +18,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
-	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
@@ -47,13 +46,13 @@ import (
 // In INT/PROD I believe it is invisible.
 
 type ARMHelper interface {
-	EnsureARMResourceGroupRoleAssignment(context.Context, refreshable.Authorizer, string) error
+	EnsureARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, string) error
 }
 
 // noopARMHelper is used in INT and PROD.  It does nothing.
 type noopARMHelper struct{}
 
-func (*noopARMHelper) EnsureARMResourceGroupRoleAssignment(context.Context, refreshable.Authorizer, string) error {
+func (*noopARMHelper) EnsureARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, string) error {
 	return nil
 }
 
@@ -123,7 +122,7 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 	}, nil
 }
 
-func (ah *armHelper) EnsureARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer refreshable.Authorizer, resourceGroup string) error {
+func (ah *armHelper) EnsureARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer autorest.Authorizer, resourceGroup string) error {
 	ah.log.Print("ensuring resource group role assignment")
 
 	res, err := ah.applications.GetServicePrincipalsIDByAppID(ctx, ah.env.FPClientID())

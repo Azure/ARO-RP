@@ -16,6 +16,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
@@ -320,7 +321,7 @@ func (p *prod) FeatureIsSet(f Feature) bool {
 	return p.features[f]
 }
 
-func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {
+func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {
 	oauthConfig, err := adal.NewOAuthConfig(p.Environment().ActiveDirectoryEndpoint, tenantID)
 	if err != nil {
 		return nil, err
