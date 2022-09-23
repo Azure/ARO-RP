@@ -60,7 +60,7 @@ type azureActions struct {
 func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster,
 	subscriptionDoc *api.SubscriptionDocument) (AzureActions, error) {
 	fpAuth, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID,
-		env.Environment().ResourceManagerEndpoint)
+		env.Environment().ResourceManagerEndpoint+"/.default")
 	if err != nil {
 		return nil, err
 	}

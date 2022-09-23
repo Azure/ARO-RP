@@ -19,7 +19,7 @@ import (
 // etc.)
 type Core interface {
 	IsLocalDevelopmentMode() bool
-	NewMSIAuthorizer(MSIContext, string) (autorest.Authorizer, error)
+	NewMSIAuthorizer(MSIContext, ...string) (autorest.Authorizer, error)
 	NewLiveConfigManager(context.Context) (liveconfig.Manager, error)
 	instancemetadata.InstanceMetadata
 }
@@ -35,7 +35,7 @@ func (c *core) IsLocalDevelopmentMode() bool {
 }
 
 func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, error) {
-	msiAuthorizer, err := c.NewMSIAuthorizer(MSIContextRP, c.Environment().ResourceManagerEndpoint)
+	msiAuthorizer, err := c.NewMSIAuthorizer(MSIContextRP, c.Environment().ResourceManagerEndpoint+"/.default")
 	if err != nil {
 		return nil, err
 	}

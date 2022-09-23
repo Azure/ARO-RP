@@ -69,12 +69,12 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		}
 	}
 
-	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerEndpoint)
+	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerEndpoint+"/.default")
 	if err != nil {
 		return nil, fmt.Errorf("MSI Authorizer failed with: %s", err.Error())
 	}
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceIdentifiers.KeyVault)
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceIdentifiers.KeyVault+"/.default")
 	if err != nil {
 		return nil, fmt.Errorf("MSI KeyVault Authorizer failed with: %s", err.Error())
 	}

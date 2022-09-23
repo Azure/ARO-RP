@@ -64,7 +64,7 @@ func storageClient(env env.Interface, billing database.Billing, sub database.Sub
 		return nil, err
 	}
 
-	localFPAuthorizer, err := env.FPAuthorizer(env.TenantID(), env.Environment().ResourceManagerEndpoint)
+	localFPAuthorizer, err := env.FPAuthorizer(env.TenantID(), env.Environment().ResourceManagerEndpoint+"/.default")
 	if err != nil {
 		return nil, err
 	}
