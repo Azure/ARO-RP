@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest/adal"
@@ -376,13 +375,10 @@ func (p *prod) LiveConfig() liveconfig.Manager {
 func (p *prod) FPNewClientCertificateCredential(tenantID string) (*azidentity.ClientCertificateCredential, error) {
 	fpPrivateKey, fpCertificates := p.fpCertificateRefresher.GetCertificates()
 
-	credential, err := azidentity.NewClientCertificateCredential(tenantID, p.fpClientID, fpCertificates, fpPrivateKey, &azidentity.ClientCertificateCredentialOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: p.Environment().Cloud,
-		},
-		SendCertificateChain: true,
-	})
+	options := p.Environment().ClientCertificateCredentialOptions()
+	options.SendCertificateChain = true
 
+	credential, err := azidentity.NewClientCertificateCredential(tenantID, p.fpClientID, fpCertificates, fpPrivateKey, options)
 	if err != nil {
 		return nil, err
 	}
