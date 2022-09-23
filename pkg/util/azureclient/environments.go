@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest/azure"
 )
 
@@ -74,4 +76,38 @@ func EnvironmentFromName(name string) (AROEnvironment, error) {
 		return USGovernmentCloud, nil
 	}
 	return AROEnvironment{}, fmt.Errorf("cloud environment %q is unsupported by ARO", name)
+}
+
+func (e *AROEnvironment) ClientCertificateCredentialOptions() *azidentity.ClientCertificateCredentialOptions {
+	return &azidentity.ClientCertificateCredentialOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: e.Cloud,
+		},
+		// Required for Subject Name/Issuer (SNI) authentication
+		SendCertificateChain: true,
+	}
+}
+
+func (e *AROEnvironment) ClientSecretCredentialOptions() *azidentity.ClientSecretCredentialOptions {
+	return &azidentity.ClientSecretCredentialOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: e.Cloud,
+		},
+	}
+}
+
+func (e *AROEnvironment) EnvironmentCredentialOptions() *azidentity.EnvironmentCredentialOptions {
+	return &azidentity.EnvironmentCredentialOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: e.Cloud,
+		},
+	}
+}
+
+func (e *AROEnvironment) ManagedIdentityCredentialOptions() *azidentity.ManagedIdentityCredentialOptions {
+	return &azidentity.ManagedIdentityCredentialOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: e.Cloud,
+		},
+	}
 }
