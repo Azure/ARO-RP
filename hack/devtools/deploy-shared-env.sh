@@ -48,7 +48,6 @@ deploy_env_dev_ci() {
             "proxyImage=arointsvc.azurecr.io/proxy:latest" \
             "proxyImageAuth=$(jq -r '.auths["arointsvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
             "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
-            "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" \
             "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" >/dev/null
 }
 
@@ -78,7 +77,8 @@ deploy_aks_dev() {
         --parameters \
             "adminObjectId=$ADMIN_OBJECT_ID" \
             "dnsZone=$DOMAIN_NAME" \
-            "sshRSAPublicKey=$(<secrets/proxy_id_rsa.pub)" >/dev/null
+            "sshRSAPublicKey=$(<secrets/proxy_id_rsa.pub)" \
+            "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
 }
 
 deploy_env_dev_override() {

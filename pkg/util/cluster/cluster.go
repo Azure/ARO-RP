@@ -20,7 +20,6 @@ import (
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
@@ -47,10 +46,9 @@ import (
 )
 
 type Cluster struct {
-	log          *logrus.Entry
-	env          env.Core
-	ci           bool
-	ciParentVnet string
+	log *logrus.Entry
+	env env.Core
+	ci  bool
 
 	deployments                       features.DeploymentsClient
 	groups                            features.ResourceGroupsClient
@@ -65,7 +63,6 @@ type Cluster struct {
 	routetables                       network.RouteTablesClient
 	roleassignments                   authorization.RoleAssignmentsClient
 	peerings                          network.VirtualNetworkPeeringsClient
-	ciParentVnetPeerings              network.VirtualNetworkPeeringsClient
 	vaultsClient                      keyvaultclient.VaultsClient
 }
 
@@ -122,17 +119,6 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		roleassignments:                   authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		peerings:                          network.NewVirtualNetworkPeeringsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		vaultsClient:                      keyvaultclient.NewVaultsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-	}
-
-	// Only peer if CI=true and cluster is PublicCloud
-	if ci {
-		c.ciParentVnet = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vpn-vnet", c.env.SubscriptionID(), c.env.ResourceGroup())
-		r, err := azure.ParseResourceID(c.ciParentVnet)
-		if err != nil {
-			return nil, err
-		}
-
-		c.ciParentVnetPeerings = network.NewVirtualNetworkPeeringsClient(environment.Environment(), r.SubscriptionID, authorizer)
 	}
 
 	return c, nil
@@ -322,12 +308,6 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		if err != nil {
 			return err
 		}
-
-		c.log.Info("peering subnets to CI infra")
-		err = c.peerSubnetsToCI(ctx, vnetResourceGroup, clusterName)
-		if err != nil {
-			return err
-		}
 	}
 
 	c.log.Info("done")
@@ -335,15 +315,13 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 }
 
 func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, workerSubnet string) {
-	// pick a random 23 in range [10.3.0.0, 10.127.255.0]
-	// 10.0.0.0 is used by dev-vnet to host CI
-	// 10.1.0.0 is used by rp-vnet to host Proxy VM
-	// 10.2.0.0 is used by dev-vpn-vnet to host VirtualNetworkGateway
+	// pick a random /23 in the range [10.0.2.0, 10.128.0.0).  10.0.0.0 is used
+	// by dev-vnet to host CI; 10.128.0.0+ is used for pods.
 	var x, y int
-	rand.Seed(time.Now().UnixNano())
 	for x == 0 && y == 0 {
-		x, y = rand.Intn((124))+3, 2*rand.Intn(128)
+		x, y = rand.Intn(128), 2*rand.Intn(128)
 	}
+
 	vnetPrefix = fmt.Sprintf("10.%d.%d.0/23", x, y)
 	masterSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y)
 	workerSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y+1)
@@ -380,14 +358,6 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			if err != nil {
 				errs = append(errs, err)
 			}
-		}
-		// Only do this if CI=true and cloud = Public Cloud
-		r, err := azure.ParseResourceID(c.ciParentVnet)
-		if err == nil {
-			err = c.ciParentVnetPeerings.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, vnetResourceGroup+"-peer")
-		}
-		if err != nil {
-			errs = append(errs, err)
 		}
 	} else {
 		// Deleting the deployment does not clean up the associated resources
@@ -603,42 +573,4 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, 
 	}
 
 	return nil
-}
-
-func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup, clusterName string) error {
-	cluster := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet", c.env.SubscriptionID(), vnetResourceGroup)
-
-	r, err := azure.ParseResourceID(c.ciParentVnet)
-	if err != nil {
-		return err
-	}
-
-	clusterProp := &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
-		RemoteVirtualNetwork: &mgmtnetwork.SubResource{
-			ID: &c.ciParentVnet,
-		},
-		AllowVirtualNetworkAccess: to.BoolPtr(true),
-		AllowForwardedTraffic:     to.BoolPtr(true),
-		UseRemoteGateways:         to.BoolPtr(true),
-	}
-	rpProp := &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
-		RemoteVirtualNetwork: &mgmtnetwork.SubResource{
-			ID: &cluster,
-		},
-		AllowVirtualNetworkAccess: to.BoolPtr(true),
-		AllowForwardedTraffic:     to.BoolPtr(true),
-		AllowGatewayTransit:       to.BoolPtr(true),
-	}
-
-	err = c.peerings.CreateOrUpdateAndWait(ctx, vnetResourceGroup, "dev-vnet", r.ResourceGroup+"-peer", mgmtnetwork.VirtualNetworkPeering{VirtualNetworkPeeringPropertiesFormat: clusterProp})
-	if err != nil {
-		return err
-	}
-
-	err = c.ciParentVnetPeerings.CreateOrUpdateAndWait(ctx, r.ResourceGroup, r.ResourceName, vnetResourceGroup+"-peer", mgmtnetwork.VirtualNetworkPeering{VirtualNetworkPeeringPropertiesFormat: rpProp})
-	if err != nil {
-		return err
-	}
-
-	return err
 }
