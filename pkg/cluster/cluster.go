@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
@@ -36,7 +37,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
-	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -59,8 +59,8 @@ type manager struct {
 	billing           billing.Manager
 	doc               *api.OpenShiftClusterDocument
 	subscriptionDoc   *api.SubscriptionDocument
-	fpAuthorizer      refreshable.Authorizer
-	localFpAuthorizer refreshable.Authorizer
+	fpAuthorizer      autorest.Authorizer
+	localFpAuthorizer autorest.Authorizer
 	metricsEmitter    metrics.Emitter
 
 	spApplications        graphrbac.ApplicationsClient

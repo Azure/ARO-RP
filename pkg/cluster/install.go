@@ -52,9 +52,9 @@ func (m *manager) adminUpdate() []steps.Step {
 
 	if isEverything {
 		toRun = append(toRun,
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)), // re-create RP RBAC if needed after tenant migration
+			steps.Action(m.ensureResourceGroup), // re-create RP RBAC if needed after tenant migration
 			steps.Action(m.createOrUpdateDenyAssignment),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
+			steps.Action(m.enableServiceEndpoints),
 			steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
 			steps.Action(m.migrateStorageAccounts),
 			steps.Action(m.fixSSH),
@@ -161,7 +161,7 @@ func (m *manager) clusterWasCreatedByHive() bool {
 
 func (m *manager) Update(ctx context.Context) error {
 	s := []steps.Step{
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
+		steps.Action(m.validateResources),
 		steps.Action(m.initializeKubernetesClients), // All init steps are first
 		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
 		steps.Action(m.initializeClusterSPClients),
@@ -229,7 +229,7 @@ func setFieldCreatedByHive(createdByHive bool) database.OpenShiftClusterDocument
 
 func (m *manager) bootstrap() []steps.Step {
 	s := []steps.Step{
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
+		steps.Action(m.validateResources),
 		steps.Action(m.ensureACRToken),
 		steps.Action(m.ensureInfraID),
 		steps.Action(m.ensureSSHKey),
@@ -240,14 +240,14 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.createDNS),
 		steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
 		steps.Action(m.clusterSPObjectID),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies)),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.deployBaseResourceTemplate)),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGs)),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.updateAPIIPEarly)),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.createOrUpdateRouterIPEarly)),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureGatewayCreate)),
+		steps.Action(m.ensureResourceGroup),
+		steps.Action(m.enableServiceEndpoints),
+		steps.Action(m.setMasterSubnetPolicies),
+		steps.Action(m.deployBaseResourceTemplate),
+		steps.Action(m.attachNSGs),
+		steps.Action(m.updateAPIIPEarly),
+		steps.Action(m.createOrUpdateRouterIPEarly),
+		steps.Action(m.ensureGatewayCreate),
 		steps.Action(m.createAPIServerPrivateEndpoint),
 		steps.Action(m.createCertificates),
 	}
@@ -265,12 +265,12 @@ func (m *manager) bootstrap() []steps.Step {
 			// all of bootstrapping being complete
 			steps.Condition(m.hiveClusterInstallationComplete, 60*time.Minute, true),
 			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
+			steps.Action(m.generateKubeconfigs),
 		)
 	} else {
 		s = append(s,
 			steps.Action(m.runIntegratedInstaller),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
+			steps.Action(m.generateKubeconfigs),
 		)
 
 		if m.adoptViaHive {

@@ -13,13 +13,13 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
-	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 type Feature int
@@ -81,7 +81,7 @@ type Interface interface {
 	ClusterKeyvault() keyvault.Manager
 	Domain() string
 	FeatureIsSet(Feature) bool
-	FPAuthorizer(string, string) (refreshable.Authorizer, error)
+	FPAuthorizer(string, string) (autorest.Authorizer, error)
 	FPNewClientCertificateCredential(string) (*azidentity.ClientCertificateCredential, error)
 	FPClientID() string
 	Listen() (net.Listener, error)

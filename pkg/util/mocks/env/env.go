@@ -21,7 +21,6 @@ import (
 	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	keyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
 	liveconfig "github.com/Azure/ARO-RP/pkg/util/liveconfig"
-	refreshable "github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 // MockCore is a mock of Core interface.
@@ -383,7 +382,7 @@ func (mr *MockInterfaceMockRecorder) Domain() *gomock.Call {
 }
 
 // EnsureARMResourceGroupRoleAssignment mocks base method.
-func (m *MockInterface) EnsureARMResourceGroupRoleAssignment(arg0 context.Context, arg1 refreshable.Authorizer, arg2 string) error {
+func (m *MockInterface) EnsureARMResourceGroupRoleAssignment(arg0 context.Context, arg1 autorest.Authorizer, arg2 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureARMResourceGroupRoleAssignment", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
@@ -411,10 +410,10 @@ func (mr *MockInterfaceMockRecorder) Environment() *gomock.Call {
 }
 
 // FPAuthorizer mocks base method.
-func (m *MockInterface) FPAuthorizer(arg0, arg1 string) (refreshable.Authorizer, error) {
+func (m *MockInterface) FPAuthorizer(arg0, arg1 string) (autorest.Authorizer, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FPAuthorizer", arg0, arg1)
-	ret0, _ := ret[0].(refreshable.Authorizer)
+	ret0, _ := ret[0].(autorest.Authorizer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
