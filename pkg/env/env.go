@@ -81,7 +81,7 @@ type Interface interface {
 	ClusterKeyvault() keyvault.Manager
 	Domain() string
 	FeatureIsSet(Feature) bool
-	FPAuthorizer(string, string) (autorest.Authorizer, error)
+	FPAuthorizer(string, ...string) (autorest.Authorizer, error)
 	FPNewClientCertificateCredential(string) (*azidentity.ClientCertificateCredential, error)
 	FPClientID() string
 	Listen() (net.Listener, error)

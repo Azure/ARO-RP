@@ -87,7 +87,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		RequestLatency: k8s.NewLatency(m),
 	})
 
-	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerEndpoint)
+	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerEndpoint+"/.default")
 	if err != nil {
 		return err
 	}

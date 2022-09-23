@@ -17,8 +17,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/proxy"
@@ -27,7 +27,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
-	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -127,12 +126,12 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		}
 	}
 
-	msiAuthorizer, err := p.NewMSIAuthorizer(MSIContextRP, p.Environment().ResourceManagerEndpoint)
+	msiAuthorizer, err := p.NewMSIAuthorizer(MSIContextRP, p.Environment().ResourceManagerEndpoint+"/.default")
 	if err != nil {
 		return nil, err
 	}
 
-	msiKVAuthorizer, err := p.NewMSIAuthorizer(MSIContextRP, p.Environment().ResourceIdentifiers.KeyVault)
+	msiKVAuthorizer, err := p.NewMSIAuthorizer(MSIContextRP, p.Environment().ResourceIdentifiers.KeyVault+"/.default")
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +155,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
-	localFPKVAuthorizer, err := p.FPAuthorizer(p.TenantID(), p.Environment().ResourceIdentifiers.KeyVault)
+	localFPKVAuthorizer, err := p.FPAuthorizer(p.TenantID(), p.Environment().ResourceIdentifiers.KeyVault+"/.default")
 	if err != nil {
 		return nil, err
 	}
@@ -321,20 +320,13 @@ func (p *prod) FeatureIsSet(f Feature) bool {
 	return p.features[f]
 }
 
-func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {
-	oauthConfig, err := adal.NewOAuthConfig(p.Environment().ActiveDirectoryEndpoint, tenantID)
+func (p *prod) FPAuthorizer(tenantID string, scopes ...string) (autorest.Authorizer, error) {
+	tokenCredential, err := p.FPNewClientCertificateCredential(tenantID)
 	if err != nil {
 		return nil, err
 	}
 
-	fpPrivateKey, fpCertificates := p.fpCertificateRefresher.GetCertificates()
-
-	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, p.fpClientID, fpCertificates[0], fpPrivateKey, resource)
-	if err != nil {
-		return nil, err
-	}
-
-	return refreshable.NewAuthorizer(sp), nil
+	return azidext.NewTokenCredentialAdapter(tokenCredential, scopes), nil
 }
 
 func (p *prod) FPClientID() string {
@@ -377,8 +369,6 @@ func (p *prod) FPNewClientCertificateCredential(tenantID string) (*azidentity.Cl
 	fpPrivateKey, fpCertificates := p.fpCertificateRefresher.GetCertificates()
 
 	options := p.Environment().ClientCertificateCredentialOptions()
-	options.SendCertificateChain = true
-
 	credential, err := azidentity.NewClientCertificateCredential(tenantID, p.fpClientID, fpCertificates, fpPrivateKey, options)
 	if err != nil {
 		return nil, err
