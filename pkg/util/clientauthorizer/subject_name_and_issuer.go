@@ -7,7 +7,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/sirupsen/logrus"
 )
@@ -25,7 +25,7 @@ func NewSubjectNameAndIssuer(log *logrus.Entry, caBundlePath, clientCertCommonNa
 		clientCertCommonName: clientCertCommonName,
 
 		log:      log,
-		readFile: ioutil.ReadFile,
+		readFile: os.ReadFile,
 	}
 
 	err := authorizer.readCABundle(caBundlePath)

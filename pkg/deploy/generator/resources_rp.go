@@ -52,6 +52,19 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 			},
 			Name: to.StringPtr("rp_in_arm"),
 		},
+		{
+			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+				SourcePortRange:          to.StringPtr("*"),
+				DestinationPortRange:     to.StringPtr("443"),
+				SourceAddressPrefix:      to.StringPtr("GenevaActions"),
+				DestinationAddressPrefix: to.StringPtr("*"),
+				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+				Priority:                 to.Int32Ptr(130),
+				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+			},
+			Name: to.StringPtr("rp_in_geneva"),
+		},
 	}
 
 	if !g.production {
@@ -111,19 +124,6 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 				},
 				Name: to.StringPtr("deny_in_gateway"),
-			},
-			mgmtnetwork.SecurityRule{
-				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-					SourcePortRange:          to.StringPtr("*"),
-					DestinationPortRange:     to.StringPtr("443"),
-					SourceAddressPrefixes:    to.StringSlicePtr([]string{}),
-					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-					DestinationAddressPrefix: to.StringPtr("*"),
-					Priority:                 to.Int32Ptr(130),
-					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-				},
-				Name: to.StringPtr("rp_in_geneva"),
 			},
 		)
 	}
@@ -472,6 +472,11 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"rpMdsdConfigVersion",
 		"rpMdsdNamespace",
 		"rpParentDomainName",
+
+		// TODO: Replace with Live Service Configuration in KeyVault
+		"clustersInstallViaHive",
+		"clustersAdoptByHive",
+		"clusterDefaultInstallerPullspec",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
@@ -514,7 +519,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 	)
 
 	trailer := base64.StdEncoding.EncodeToString([]byte(`
-yum -y update -x WALinuxAgent
+yum -y update
 
 lvextend -l +50%FREE /dev/rootvg/rootlv
 xfs_growfs /
@@ -734,6 +739,9 @@ MDM_NAMESPACE=RP
 MDSD_ENVIRONMENT='$MDSDENVIRONMENT'
 RP_FEATURES='$RPFEATURES'
 RPIMAGE='$RPIMAGE'
+ARO_INSTALL_VIA_HIVE='$CLUSTERSINSTALLVIAHIVE'
+ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC='$CLUSTERDEFAULTINSTALLERPULLSPEC'
+ARO_ADOPT_BY_HIVE='$CLUSTERSADOPTBYHIVE'
 EOF
 
 cat >/etc/systemd/system/aro-rp.service <<'EOF'
@@ -767,6 +775,9 @@ ExecStart=/usr/bin/docker run \
   -e MDM_NAMESPACE \
   -e MDSD_ENVIRONMENT \
   -e RP_FEATURES \
+  -e ARO_INSTALL_VIA_HIVE \
+  -e ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC \
+  -e ARO_ADOPT_BY_HIVE \
   -m 2g \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \
@@ -1645,11 +1656,34 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 							},
 							Kind: mgmtdocumentdb.PartitionKindHash,
 						},
-						DefaultTTL: to.Int32Ptr(7 * 86400), // 7 days
+						DefaultTTL: to.Int32Ptr(-1),
 					},
 					Options: &mgmtdocumentdb.CreateUpdateOptions{},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/OpenShiftVersions')]"),
+				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: to.StringPtr("[resourceGroup().location]"),
+			},
+			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+			DependsOn: []string{
+				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+			},
+		},
+		{
+			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
+				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
+					Resource: &mgmtdocumentdb.SQLContainerResource{
+						ID: to.StringPtr("ClusterManagerConfigurations"),
+						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
+							Paths: &[]string{
+								"/partitionKey",
+							},
+							Kind: mgmtdocumentdb.PartitionKindHash,
+						},
+					},
+					Options: &mgmtdocumentdb.CreateUpdateOptions{},
+				},
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/ClusterManagerConfigurations')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},

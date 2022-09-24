@@ -8,28 +8,38 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type Fixture struct {
-	openshiftClusterDocuments []*api.OpenShiftClusterDocument
-	subscriptionDocuments     []*api.SubscriptionDocument
-	billingDocuments          []*api.BillingDocument
-	asyncOperationDocuments   []*api.AsyncOperationDocument
-	portalDocuments           []*api.PortalDocument
-	gatewayDocuments          []*api.GatewayDocument
-	openShiftVersionDocuments []*api.OpenShiftVersionDocument
+	openshiftClusterDocuments            []*api.OpenShiftClusterDocument
+	subscriptionDocuments                []*api.SubscriptionDocument
+	billingDocuments                     []*api.BillingDocument
+	asyncOperationDocuments              []*api.AsyncOperationDocument
+	portalDocuments                      []*api.PortalDocument
+	gatewayDocuments                     []*api.GatewayDocument
+	openShiftVersionDocuments            []*api.OpenShiftVersionDocument
+	clusterManagerConfigurationDocuments []*api.ClusterManagerConfigurationDocument
 
-	openShiftClustersDatabase database.OpenShiftClusters
-	billingDatabase           database.Billing
-	subscriptionsDatabase     database.Subscriptions
-	asyncOperationsDatabase   database.AsyncOperations
-	portalDatabase            database.Portal
-	gatewayDatabase           database.Gateway
-	openShiftVersionsDatabase database.OpenShiftVersions
+	openShiftClustersDatabase            database.OpenShiftClusters
+	billingDatabase                      database.Billing
+	subscriptionsDatabase                database.Subscriptions
+	asyncOperationsDatabase              database.AsyncOperations
+	portalDatabase                       database.Portal
+	gatewayDatabase                      database.Gateway
+	openShiftVersionsDatabase            database.OpenShiftVersions
+	clusterManagerConfigurationsDatabase database.ClusterManagerConfigurations
+
+	openShiftVersionsUUID uuid.Generator
 }
 
 func NewFixture() *Fixture {
 	return &Fixture{}
+}
+
+func (f *Fixture) WithClusterManagerConfigurations(db database.ClusterManagerConfigurations) *Fixture {
+	f.clusterManagerConfigurationsDatabase = db
+	return f
 }
 
 func (f *Fixture) WithOpenShiftClusters(db database.OpenShiftClusters) *Fixture {
@@ -62,8 +72,9 @@ func (f *Fixture) WithGateway(db database.Gateway) *Fixture {
 	return f
 }
 
-func (f *Fixture) WithOpenShiftVersions(db database.OpenShiftVersions) *Fixture {
+func (f *Fixture) WithOpenShiftVersions(db database.OpenShiftVersions, uuid uuid.Generator) *Fixture {
 	f.openShiftVersionsDatabase = db
+	f.openShiftVersionsUUID = uuid
 	return f
 }
 
@@ -193,7 +204,20 @@ func (f *Fixture) Create() error {
 	}
 
 	for _, i := range f.openShiftVersionDocuments {
+		if i.ID == "" {
+			i.ID = f.openShiftVersionsDatabase.NewUUID()
+		}
 		_, err := f.openShiftVersionsDatabase.Create(ctx, i)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, i := range f.clusterManagerConfigurationDocuments {
+		if i.ID == "" {
+			i.ID = f.clusterManagerConfigurationsDatabase.NewUUID()
+		}
+		_, err := f.clusterManagerConfigurationsDatabase.Create(ctx, i)
 		if err != nil {
 			return err
 		}

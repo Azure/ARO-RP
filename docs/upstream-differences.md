@@ -102,6 +102,45 @@ the fix or feature it carries in full, without a need to cherry-pick additional 
 This makes it easier to understand the nature of the patch as well as contribute our carry patches
 back to the upstream installer.
 
+## Update Installer Fork Again
+
+In the far or near future after you have [initially patched the installer](#update-installer-fork), you may need to pull in additional upstream changes that have happened since you patched the installer (e.g. upstream added a bugfix since your cherry-picking). The easiest way to pull in these changes safely is:
+
+```sh
+git fetch upstream -a
+git checkout release-X.Y-azure
+git pull upstream/release-X.Y --rebase=interactive
+```
+
+When you get to the editor mode to set up your rebase, you should do a few things:
+
+1. after each `pick` line, add the verification commands with:
+    ```text
+    exec ./hack/build.sh
+    exec ./hack/go-test.sh
+    ```
+1. change the line for commit `data/assets_vfsdata.go` from `pick` to `edit` so you can regenerate assets as outlined [above](#update-installer-fork), and verify it manually.
+
+By the end of this editing process, you should have a rebase file that looks something like:
+
+```text
+pick abc123 patch A
+exec ./hack/build.sh
+exec ./hack/go-test.sh
+pick def234 patch B
+exec ./hack/build.sh
+exec ./hack/go-test.sh
+edit ghi345 patch data/assets_vfsdata.go
+exec ./hack/build.sh
+exec ./hack/go-test.sh
+pick jkl456 patch C
+exec ./hack/build.sh
+exec ./hack/go-test.sh
+{...}
+```
+
+When you are finished, you can write/close the file editor to perform the rebase on the upstream differences while verifying that every patch still works along the way.
+
 # Update ARO-RP
 
 Once installer fork is ready:

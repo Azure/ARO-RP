@@ -62,7 +62,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// Check for cloud type
-	requiredRegistries, err := getCloudAwareRegistries(instance)
+	requiredRegistries, err := GetCloudAwareRegistries(instance)
 	if err != nil {
 		// Not returning error as it will requeue again
 		return reconcile.Result{}, nil
@@ -118,19 +118,26 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // Switch case to ensure the correct registries are added depending on the cloud environment (Gov or Public cloud)
-func getCloudAwareRegistries(instance *arov1alpha1.Cluster) ([]string, error) {
-	var requiredRegistries []string
+func GetCloudAwareRegistries(instance *arov1alpha1.Cluster) ([]string, error) {
+	var replicationRegistry string
+	var dnsSuffix string
+
+	acrDomain := instance.Spec.ACRDomain
+	acrSubdomain := strings.Split(acrDomain, ".")[0]
+	if acrDomain == "" || acrSubdomain == "" {
+		return nil, fmt.Errorf("azure container registry domain is not present or is malformed")
+	}
+
 	switch instance.Spec.AZEnvironment {
 	case azureclient.PublicCloud.Environment.Name:
-		requiredRegistries = []string{instance.Spec.ACRDomain, "arosvc." + instance.Spec.Location + ".data." + azure.PublicCloud.ContainerRegistryDNSSuffix}
-
+		dnsSuffix = azure.PublicCloud.ContainerRegistryDNSSuffix
 	case azureclient.USGovernmentCloud.Environment.Name:
-		requiredRegistries = []string{instance.Spec.ACRDomain, "arosvc." + instance.Spec.Location + ".data." + azure.USGovernmentCloud.ContainerRegistryDNSSuffix}
-
+		dnsSuffix = azure.USGovernmentCloud.ContainerRegistryDNSSuffix
 	default:
 		return nil, fmt.Errorf("cloud environment %s is not supported", instance.Spec.AZEnvironment)
 	}
-	return requiredRegistries, nil
+	replicationRegistry = fmt.Sprintf("%s.%s.data.%s", acrSubdomain, instance.Spec.Location, dnsSuffix)
+	return []string{acrDomain, replicationRegistry}, nil
 }
 
 // Helper function that filters registries to make sure they are added in consistent order

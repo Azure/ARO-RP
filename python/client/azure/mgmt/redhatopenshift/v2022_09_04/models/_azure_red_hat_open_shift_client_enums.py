@@ -53,13 +53,6 @@ class ProvisioningState(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     SUCCEEDED = "Succeeded"
     UPDATING = "Updating"
 
-class SoftwareDefinedNetwork(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
-    """SoftwareDefinedNetwork is a choice of network used for Pods.
-    """
-
-    OVN_KUBERNETES = "OVNKubernetes"
-    OPEN_SHIFT_SDN = "OpenShiftSDN"
-
 class Visibility(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     """Visibility represents visibility.
     """

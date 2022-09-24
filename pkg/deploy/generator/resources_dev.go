@@ -38,7 +38,7 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 		)
 	}
 
-	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
+	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update
 yum -y install docker
 
 firewall-cmd --add-port=443/tcp --permanent
@@ -312,9 +312,40 @@ func (g *generator) devCIPool() *arm.Resource {
 sleep 60
 
 for attempt in {1..5}; do
-  yum -y update -x WALinuxAgent && break
+  yum -y update && break
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
+
+DEVICE_PARTITION=$(pvs | grep '/dev/' | awk '{print $1}' | grep -oP '[a-z]{3}[0-9]$')
+DEVICE=$(echo $DEVICE_PARTITION | grep -oP '^[a-z]{3}')
+PARTITION=$(echo $DEVICE_PARTITION | grep -oP '[0-9]$')
+
+# Fix the "GPT PMBR size mismatch (134217727 != 268435455)"
+echo "w" | fdisk /dev/${DEVICE}
+
+# Steps from https://access.redhat.com/solutions/5808001
+# 1. Delete the LVM partition "d\n2\n"
+# 2. Recreate the partition "n\n2\n"
+# 3. Accept the default start and end sectors (2 x \n)
+# 4. LVM2_member signature remains by default
+# 5. Change type to Linux LVM "t\n2\n31\n
+# 6. Write new table "w\n"
+
+fdisk /dev/${DEVICE} <<EOF
+d
+${PARTITION}
+n
+${PARTITION}
+
+
+t
+${PARTITION}
+31
+w
+EOF
+
+partx -u /dev/${DEVICE}
+pvresize /dev/${DEVICE_PARTITION}
 
 lvextend -l +50%FREE /dev/rootvg/homelv
 xfs_growfs /home
@@ -338,13 +369,13 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel htop go-toolset-1.17.7-1.module+el8.6.0+14297+32a15e19 openvpn
+yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel htop go-toolset-1.17.12-1.module+el8.6.0+16014+a372c00b openvpn
 
 # Suppress emulation output for podman instead of docker for az acr compatability
 mkdir -p /etc/containers/
 touch /etc/containers/nodocker
 
-VSTS_AGENT_VERSION=2.193.1
+VSTS_AGENT_VERSION=2.206.1
 mkdir /home/cloud-user/agent
 pushd /home/cloud-user/agent
 curl -s https://vstsagentpackage.azureedge.net/agent/${VSTS_AGENT_VERSION}/vsts-agent-linux-x64-${VSTS_AGENT_VERSION}.tar.gz | tar -xz

@@ -6,7 +6,6 @@ package portforward
 import (
 	"errors"
 	"io"
-	"io/ioutil"
 	"net"
 	"time"
 
@@ -49,7 +48,7 @@ func NewStreamConn(log *logrus.Entry, c httpstream.Connection, dataStream, error
 func (s *streamConn) readErrorStream() {
 	defer recover.Panic(s.log)
 
-	message, err := ioutil.ReadAll(s.errorStream)
+	message, err := io.ReadAll(s.errorStream)
 	if err != nil {
 		s.errch <- err
 	} else if len(message) > 0 {

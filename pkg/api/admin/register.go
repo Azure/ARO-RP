@@ -12,14 +12,9 @@ const APIVersion = "admin"
 
 func init() {
 	api.APIs[APIVersion] = &api.Version{
-		OpenShiftClusterConverter: func() api.OpenShiftClusterConverter {
-			return &openShiftClusterConverter{}
-		},
-		OpenShiftClusterStaticValidator: func(string, string, bool, string) api.OpenShiftClusterStaticValidator {
-			return &openShiftClusterStaticValidator{}
-		},
-		OpenShiftVersionConverter: func() api.OpenShiftVersionConverter {
-			return &openShiftVersionConverter{}
-		},
+		OpenShiftClusterConverter:       openShiftClusterConverter{},
+		OpenShiftClusterStaticValidator: openShiftClusterStaticValidator{},
+		OpenShiftVersionConverter:       openShiftVersionConverter{},
+		OpenShiftVersionStaticValidator: openShiftVersionStaticValidator{},
 	}
 }

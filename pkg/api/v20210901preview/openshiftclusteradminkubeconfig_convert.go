@@ -14,7 +14,7 @@ type openShiftClusterAdminKubeconfigConverter struct{}
 // fields that appear in the external representation.  ToExternal does not
 // modify its argument; there is no pointer aliasing between the passed and
 // returned objects.
-func (*openShiftClusterAdminKubeconfigConverter) ToExternal(oc *api.OpenShiftCluster) interface{} {
+func (openShiftClusterAdminKubeconfigConverter) ToExternal(oc *api.OpenShiftCluster) interface{} {
 	return &OpenShiftClusterAdminKubeconfig{
 		Kubeconfig: oc.Properties.UserAdminKubeconfig,
 	}

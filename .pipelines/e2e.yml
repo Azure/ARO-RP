@@ -38,12 +38,15 @@ jobs:
       set -o pipefail
 
       . secrets/env
+      export HIVEKUBECONFIGPATH="secrets/e2e-aks-kubeconfig"
 
       az account set -s $AZURE_SUBSCRIPTION_ID
 
       set -x
       . ./hack/e2e/run-rp-and-e2e.sh
-      trap 'set +e; kill_rp; clean_e2e_db' EXIT
+      trap 'set +e; kill_rp; clean_e2e_db; kill_vpn' EXIT
+
+      run_vpn
 
       deploy_e2e_db
 

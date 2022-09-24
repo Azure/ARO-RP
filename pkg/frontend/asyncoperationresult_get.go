@@ -23,7 +23,7 @@ func (f *frontend) getAsyncOperationResult(w http.ResponseWriter, r *http.Reques
 	vars := mux.Vars(r)
 
 	header := http.Header{}
-	b, err := f._getAsyncOperationResult(ctx, r, header, f.apis[vars["api-version"]].OpenShiftClusterConverter())
+	b, err := f._getAsyncOperationResult(ctx, r, header, f.apis[vars["api-version"]].OpenShiftClusterConverter)
 
 	reply(log, w, header, b, err)
 }

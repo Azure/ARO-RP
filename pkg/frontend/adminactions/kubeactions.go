@@ -31,6 +31,8 @@ type KubeActions interface {
 	KubeDelete(ctx context.Context, groupKind, namespace, name string, force bool) error
 	CordonNode(ctx context.Context, nodeName string, unschedulable bool) error
 	DrainNode(ctx context.Context, nodeName string) error
+	ApproveCsr(ctx context.Context, csrName string) error
+	ApproveAllCsrs(ctx context.Context) error
 	Upgrade(ctx context.Context, upgradeY bool) error
 	KubeGetPodLogs(ctx context.Context, namespace, name, containerName string) ([]byte, error)
 }

@@ -133,7 +133,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 					(&openShiftClusterConverter{}).ToInternal(validOCForTest(), current)
 				}
 
-				err := v.Static(oc, current)
+				err := v.Static(oc, current, v.location, v.domain, tt.requireD2sV3Workers, v.resourceID)
 				if err == nil {
 					if tt.wantErr != "" {
 						t.Error(err)
@@ -316,13 +316,6 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.ClusterProfile.PullSecret = ""
 			},
-		},
-		{
-			name: "version invalid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "invalid"
-			},
-			wantErr: "400: InvalidParameter: properties.clusterProfile.version: The provided version 'invalid' is invalid.",
 		},
 		{
 			name: "leading digit domain invalid",

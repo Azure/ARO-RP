@@ -32,6 +32,7 @@ import (
 	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
 	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
 	redhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-04-01/redhatopenshift"
+	redhatopenshift20220904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-09-04/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
@@ -43,6 +44,8 @@ type clientSet struct {
 	Operationsv20210901preview        redhatopenshift20210901preview.OperationsClient
 	OpenshiftClustersv20220401        redhatopenshift20220401.OpenShiftClustersClient
 	Operationsv20220401               redhatopenshift20220401.OperationsClient
+	OpenshiftClustersv20220904        redhatopenshift20220904.OpenShiftClustersClient
+	Operationsv20220904               redhatopenshift20220904.OperationsClient
 
 	VirtualMachines       compute.VirtualMachinesClient
 	Resources             features.ResourcesClient

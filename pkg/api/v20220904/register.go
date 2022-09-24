@@ -17,25 +17,33 @@ const (
 
 func init() {
 	api.APIs[APIVersion] = &api.Version{
-		OpenShiftClusterConverter: func() api.OpenShiftClusterConverter {
-			return &openShiftClusterConverter{}
-		},
-		OpenShiftClusterStaticValidator: func(location, domain string, requireD2sV3Workers bool, resourceID string) api.OpenShiftClusterStaticValidator {
-			return &openShiftClusterStaticValidator{
-				location:            location,
-				domain:              domain,
-				requireD2sV3Workers: requireD2sV3Workers,
-				resourceID:          resourceID,
-			}
-		},
-		OpenShiftClusterCredentialsConverter: func() api.OpenShiftClusterCredentialsConverter {
-			return &openShiftClusterCredentialsConverter{}
-		},
-		OpenShiftClusterAdminKubeconfigConverter: func() api.OpenShiftClusterAdminKubeconfigConverter {
-			return &openShiftClusterAdminKubeconfigConverter{}
-		},
-		InstallVersionsConverter: func() api.InstallVersionsConverter {
-			return &installVersionsConverter{}
+		ClusterManagerConfigurationConverter:     clusterManagerConfigurationConverter{},
+		OpenShiftClusterConverter:                openShiftClusterConverter{},
+		OpenShiftClusterStaticValidator:          openShiftClusterStaticValidator{},
+		OpenShiftClusterCredentialsConverter:     openShiftClusterCredentialsConverter{},
+		OpenShiftClusterAdminKubeconfigConverter: openShiftClusterAdminKubeconfigConverter{},
+		OpenShiftVersionConverter:                openShiftVersionConverter{},
+		OperationList: api.OperationList{
+			Operations: []api.Operation{
+				api.OperationResultsRead,
+				api.OperationStatusRead,
+				api.OperationRead,
+				api.OperationOpenShiftClusterRead,
+				api.OperationOpenShiftClusterWrite,
+				api.OperationOpenShiftClusterDelete,
+				api.OperationOpenShiftClusterListCredentials,
+				api.OperationOpenShiftClusterListAdminCredentials,
+				api.OperationListInstallVersions,
+				api.OperationSyncSetsRead,
+				api.OperationSyncSetsWrite,
+				api.OperationSyncSetsDelete,
+				api.OperationMachinePoolsRead,
+				api.OperationMachinePoolsWrite,
+				api.OperationMachinePoolsDelete,
+				api.OperationSyncIdentityProvidersRead,
+				api.OperationSyncIdentityProvidersWrite,
+				api.OperationSyncIdentityProvidersDelete,
+			},
 		},
 	}
 }

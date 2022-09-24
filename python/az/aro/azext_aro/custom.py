@@ -5,7 +5,7 @@ import random
 import os
 from base64 import b64decode
 
-import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2022_04_01.models as openshiftcluster
+import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2022_09_04.models as openshiftcluster
 
 from azure.cli.command_modules.role import GraphError
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
@@ -58,6 +58,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                apiserver_visibility=None,
                ingress_visibility=None,
                tags=None,
+               install_version=None,
                no_wait=False):
     if not rp_mode_development():
         resource_client = get_mgmt_service_client(
@@ -105,6 +106,8 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
             resource_group_id=(f"/subscriptions/{subscription_id}"
                                f"/resourceGroups/{cluster_resource_group or 'aro-' + random_id}"),
             fips_validated_modules='Enabled' if fips_validated_modules else 'Disabled',
+            install_version=install_version or '',
+
         ),
         service_principal_profile=openshiftcluster.ServicePrincipalProfile(
             client_id=client_id,
@@ -146,7 +149,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     sp_obj_ids = [client_sp_id, rp_client_sp_id]
     ensure_resource_permissions(cmd.cli_ctx, oc, True, sp_obj_ids)
 
-    return sdk_no_wait(no_wait, client.begin_create_or_update,
+    return sdk_no_wait(no_wait, client.open_shift_clusters.begin_create_or_update,
                        resource_group_name=resource_group_name,
                        resource_name=resource_name,
                        parameters=oc)
@@ -157,7 +160,7 @@ def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
     rp_client_sp_id = None
 
     try:
-        oc = client.get(resource_group_name, resource_name)
+        oc = client.open_shift_clusters.get(resource_group_name, resource_name)
     except CloudError as e:
         if e.status_code == 404:
             raise ResourceNotFoundError(e.message) from e
@@ -180,23 +183,23 @@ def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
     if rp_client_sp_id:
         ensure_resource_permissions(cmd.cli_ctx, oc, False, [rp_client_sp_id])
 
-    return sdk_no_wait(no_wait, client.begin_delete,
+    return sdk_no_wait(no_wait, client.open_shift_clusters.begin_delete,
                        resource_group_name=resource_group_name,
                        resource_name=resource_name)
 
 
 def aro_list(client, resource_group_name=None):
     if resource_group_name:
-        return client.list_by_resource_group(resource_group_name)
-    return client.list()
+        return client.open_shift_clusters.list_by_resource_group(resource_group_name)
+    return client.open_shift_clusters.list()
 
 
 def aro_show(client, resource_group_name, resource_name):
-    return client.get(resource_group_name, resource_name)
+    return client.open_shift_clusters.get(resource_group_name, resource_name)
 
 
 def aro_list_credentials(client, resource_group_name, resource_name):
-    return client.list_credentials(resource_group_name, resource_name)
+    return client.open_shift_clusters.list_credentials(resource_group_name, resource_name)
 
 
 def aro_list_admin_credentials(cmd, client, resource_group_name, resource_name, file="kubeconfig"):
@@ -210,7 +213,7 @@ def aro_list_admin_credentials(cmd, client, resource_group_name, resource_name, 
     if feature.properties.state not in accepted_states:
         logger.warning("This operation requires the Microsoft.RedHatOpenShift/AdminKubeconfig feature to be registered")
         logger.warning("To register run: az feature register --namespace Microsoft.RedHatOpenShift -n AdminKubeconfig")
-    query_result = client.list_admin_credentials(resource_group_name, resource_name)
+    query_result = client.open_shift_clusters.list_admin_credentials(resource_group_name, resource_name)
     file_mode = "x"
     yaml_data = b64decode(query_result.kubeconfig).decode('UTF-8')
     try:
@@ -219,6 +222,14 @@ def aro_list_admin_credentials(cmd, client, resource_group_name, resource_name, 
     except FileExistsError as e:
         raise FileOperationError(f"File {file} already exists.") from e
     logger.info("Kubeconfig written to file: %s", file)
+
+
+def aro_get_versions(client, location):
+    openshift_verions = client.open_shift_versions.list(location)
+    versions = []
+    for ver in openshift_verions.additional_properties["value"]:
+        versions.append(ver["properties"]["version"])
+    return sorted(versions)
 
 
 def aro_update(cmd,
@@ -230,7 +241,7 @@ def aro_update(cmd,
                client_secret=None,
                no_wait=False):
     # if we can't read cluster spec, we will not be able to do much. Fail.
-    oc = client.get(resource_group_name, resource_name)
+    oc = client.open_shift_clusters.get(resource_group_name, resource_name)
 
     ocUpdate = openshiftcluster.OpenShiftClusterUpdate()
 
@@ -246,7 +257,7 @@ def aro_update(cmd,
         if client_id is not None:
             ocUpdate.service_principal_profile.client_id = client_id
 
-    return sdk_no_wait(no_wait, client.begin_update,
+    return sdk_no_wait(no_wait, client.open_shift_clusters.begin_update,
                        resource_group_name=resource_group_name,
                        resource_name=resource_name,
                        parameters=ocUpdate)

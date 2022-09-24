@@ -5,7 +5,7 @@ package checker
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -45,14 +45,14 @@ var (
 	okResp = &fakeResponse{
 		httpResponse: &http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(nil),
+			Body:       io.NopCloser(nil),
 		},
 	}
 
 	badReq = &fakeResponse{
 		httpResponse: &http.Response{
 			StatusCode: http.StatusBadRequest,
-			Body:       ioutil.NopCloser(nil),
+			Body:       io.NopCloser(nil),
 		},
 	}
 
