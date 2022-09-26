@@ -105,6 +105,7 @@ type Configuration struct {
 	InstallViaHive           *string `json:"clustersInstallViaHive,omitempty"`
 	DefaultInstallerPullspec *string `json:"clusterDefaultInstallerPullspec,omitempty"`
 	AdoptByHive              *string `json:"clustersAdoptByHive,omitempty"`
+	ValidOCMClientIDs        *string `json:"validOCMClientIDs,omitempty"`
 }
 
 // GetConfig return RP configuration from the file

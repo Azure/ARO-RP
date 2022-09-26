@@ -116,3 +116,11 @@ func (p *prod) AdoptByHive(ctx context.Context) (bool, error) {
 	}
 	return false, nil
 }
+
+func (p *prod) OCMValidClientIDs() ([]string, error) {
+	// TODO: Replace with RP Live Service Config (KeyVault)
+	// until then, IDs can be added to RP-Config `configuration.validOCMClientIDs: `"[\"id1\", \"id2\"]"`
+	// this 'text array' format is so we can have multiple IDs configured in a single env var. The escape of the inner quotes
+	// is important when converting from yaml (RP-Config) to the bash env var during ev2generation/deployment.
+	return validOCMClientIDsFromEnv()
+}

@@ -164,6 +164,9 @@
         "subscriptionResourceGroupName": {
             "value": ""
         },
+        "validOCMClientIDs": {
+            "value": ""
+        },
         "vmSize": {
             "value": "Standard_D2s_v3"
         },

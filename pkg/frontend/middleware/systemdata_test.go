@@ -71,7 +71,7 @@ func TestSystemData(t *testing.T) {
 			}
 
 			r.Header = http.Header{
-				"X-Ms-Arm-Resource-System-Data": []string{tt.systemData},
+				ArmSystemDataHeaderKey: []string{tt.systemData},
 			}
 
 			w := httptest.NewRecorder()

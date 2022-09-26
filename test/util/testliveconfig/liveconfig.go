@@ -39,6 +39,10 @@ func (t *testLiveConfig) DefaultInstallerPullSpecOverride(ctx context.Context) s
 	return ""
 }
 
+func (t *testLiveConfig) OCMValidClientIDs() ([]string, error) {
+	return []string{}, nil
+}
+
 func NewTestLiveConfig(adoptByHive bool, installViaHive bool) liveconfig.Manager {
 	return &testLiveConfig{
 		adoptByHive:    adoptByHive,

@@ -5,6 +5,7 @@ package liveconfig
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -64,10 +65,27 @@ func (d *dev) DefaultInstallerPullSpecOverride(ctx context.Context) string {
 	return os.Getenv(hiveDefaultPullSpecEnvVar)
 }
 
-func (p *dev) AdoptByHive(ctx context.Context) (bool, error) {
+func (d *dev) AdoptByHive(ctx context.Context) (bool, error) {
 	adopt := os.Getenv(hiveAdoptEnableEnvVar)
 	if adopt != "" {
 		return true, nil
 	}
 	return false, nil
+}
+
+func (d *dev) OCMValidClientIDs() ([]string, error) {
+	return validOCMClientIDsFromEnv()
+}
+
+func validOCMClientIDsFromEnv() ([]string, error) {
+	ocmValidClientIDString := os.Getenv(ocmValidClientIDs)
+	if ocmValidClientIDString == "" {
+		return []string{}, nil
+	}
+	var clientIDs []string
+	err := json.Unmarshal([]byte(ocmValidClientIDString), &clientIDs)
+	if err != nil {
+		return nil, err
+	}
+	return clientIDs, nil
 }

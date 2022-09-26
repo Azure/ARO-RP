@@ -73,6 +73,7 @@ type Interface interface {
 	InitializeAuthorizers() error
 	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
 	AdminClientAuthorizer() clientauthorizer.ClientAuthorizer
+	ValidateOCMClientID(string) bool
 	ClusterGenevaLoggingAccount() string
 	ClusterGenevaLoggingConfigVersion() string
 	ClusterGenevaLoggingEnvironment() string

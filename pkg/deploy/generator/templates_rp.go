@@ -84,6 +84,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clustersInstallViaHive",
 			"clusterDefaultInstallerPullspec",
 			"clustersAdoptByHive",
+			"validOCMClientIDs",
 		)
 	}
 
@@ -133,7 +134,8 @@ func (g *generator) rpTemplate() *arm.Template {
 		// TODO: Replace with Live Service Configuration in KeyVault
 		case "clustersInstallViaHive",
 			"clustersAdoptByHive",
-			"clusterDefaultInstallerPullspec":
+			"clusterDefaultInstallerPullspec",
+			"validOCMClientIDs":
 			p.DefaultValue = ""
 		}
 		t.Parameters[param] = p

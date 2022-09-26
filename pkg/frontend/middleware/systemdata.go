@@ -13,9 +13,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
+const ArmSystemDataHeaderKey string = "X-Ms-Arm-Resource-System-Data"
+
 func SystemData(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		data := r.Header.Get("X-Ms-Arm-Resource-System-Data")
+		data := r.Header.Get(ArmSystemDataHeaderKey)
 		if data != "" {
 			var systemData *api.SystemData
 			err := json.Unmarshal([]byte(data), &systemData)

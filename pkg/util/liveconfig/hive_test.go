@@ -6,6 +6,8 @@ package liveconfig
 import (
 	"context"
 	"embed"
+	"os"
+	"reflect"
 	"testing"
 
 	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
@@ -98,5 +100,54 @@ func TestProdHiveAdmin(t *testing.T) {
 
 	if restConfig2.BearerToken != "admin" {
 		t.Error("Invalid admin BearerToken returned for test 2")
+	}
+}
+
+func TestOCMValidClientIDs(t *testing.T) {
+	for _, tt := range []struct {
+		name          string
+		setupEnv      func(string)
+		envIds        string
+		wantClientIds []string
+		wantErr       string
+	}{
+		{
+			name: "env not set, empty array returned",
+			setupEnv: func(clientIds string) {
+				// no op
+			},
+			envIds:        "",
+			wantClientIds: []string{},
+			wantErr:       "",
+		},
+		{
+			name: "env set, clientIds returned",
+			setupEnv: func(clientIds string) {
+				os.Setenv(ocmValidClientIDs, clientIds)
+			},
+			envIds:        `["abc"]`,
+			wantClientIds: []string{"abc"},
+			wantErr:       "",
+		},
+		{
+			name: "invalid value for clientIds, error returned",
+			setupEnv: func(clientIds string) {
+				os.Setenv(ocmValidClientIDs, clientIds)
+			},
+			envIds:  `what is going on`,
+			wantErr: "invalid character 'w' looking for beginning of value",
+		},
+	} {
+		tt.setupEnv(tt.envIds)
+		prod := &prod{}
+		clientIds, err := prod.OCMValidClientIDs()
+
+		if tt.wantErr != "" && tt.wantErr != err.Error() || tt.wantErr == "" && err != nil {
+			t.Fatalf("Failed: expected error: %q but got: %q", tt.wantErr, err)
+		}
+
+		if !reflect.DeepEqual(clientIds, tt.wantClientIds) {
+			t.Fatalf("clientIds do not match. Wanted: %q, got: %q", tt.wantClientIds, clientIds)
+		}
 	}
 }
