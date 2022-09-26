@@ -54,6 +54,7 @@ type OpenShiftClusterProperties struct {
 	ImageRegistryStorageAccountName string                  `json:"imageRegistryStorageAccountName,omitempty"`
 	InfraID                         string                  `json:"infraId,omitempty"`
 	HiveProfile                     HiveProfile             `json:"hiveProfile,omitempty"`
+	SecretVersion                   string                  `json:"secretVersion,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.

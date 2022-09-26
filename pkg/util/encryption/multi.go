@@ -5,19 +5,27 @@ package encryption
 
 import (
 	"context"
+	"encoding/base64"
+	"path/filepath"
 
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 type multi struct {
-	sealer  AEAD
-	openers []AEAD
+	sealer      AEAD
+	openers     []AEAD
+	sealVersion string
 }
 
 var _ AEAD = (*multi)(nil)
 
 func NewMulti(ctx context.Context, serviceKeyvault keyvault.Manager, secretName, legacySecretName string) (AEAD, error) {
-	key, err := serviceKeyvault.GetBase64Secret(ctx, secretName, "")
+	secret, err := serviceKeyvault.GetSecret(ctx, secretName, "")
+	if err != nil {
+		return nil, err
+	}
+
+	key, err := base64.StdEncoding.DecodeString(*secret.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +36,8 @@ func NewMulti(ctx context.Context, serviceKeyvault keyvault.Manager, secretName,
 	}
 
 	m := &multi{
-		sealer: aead,
+		sealer:      aead,
+		sealVersion: filepath.Base(*secret.ID),
 	}
 
 	for _, x := range []struct {
@@ -69,4 +78,8 @@ func (c *multi) Open(input []byte) (b []byte, err error) {
 
 func (c *multi) Seal(input []byte) ([]byte, error) {
 	return c.sealer.Seal(input)
+}
+
+func (c *multi) SealSecretVersion() string {
+	return c.sealVersion
 }

@@ -53,3 +53,7 @@ func (c *xChaCha20Poly1305) Seal(input []byte) ([]byte, error) {
 
 	return append(nonce, c.aead.Seal(nil, nonce, input, nil)...), nil
 }
+
+func (c *xChaCha20Poly1305) SealSecretVersion() string {
+	return ""
+}

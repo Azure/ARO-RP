@@ -72,6 +72,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 			StorageSuffix:                   oc.Properties.StorageSuffix,
 			ImageRegistryStorageAccountName: oc.Properties.ImageRegistryStorageAccountName,
 			InfraID:                         oc.Properties.InfraID,
+			SecretVersion:                   oc.Properties.SecretVersion,
 		},
 	}
 

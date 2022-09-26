@@ -70,7 +70,7 @@ func (m *manager) createCertificates(ctx context.Context) error {
 }
 
 func (m *manager) ensureSecret(ctx context.Context, secrets corev1client.SecretInterface, certificateName string) error {
-	bundle, err := m.env.ClusterKeyvault().GetSecret(ctx, certificateName)
+	bundle, err := m.env.ClusterKeyvault().GetSecret(ctx, certificateName, "")
 	if err != nil {
 		return err
 	}

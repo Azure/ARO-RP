@@ -27,7 +27,7 @@ func NewFakeOpenShiftClusters() (db database.OpenShiftClusters, client *cosmosdb
 	coll := &fakeCollectionClient{}
 	client = cosmosdb.NewFakeOpenShiftClusterDocumentClient(jsonHandle)
 	injectOpenShiftClusters(client)
-	db = database.NewOpenShiftClustersWithProvidedClient(client, coll, "", uuid)
+	db = database.NewOpenShiftClustersWithProvidedClient(client, coll, "", uuid, "")
 	return db, client
 }
 

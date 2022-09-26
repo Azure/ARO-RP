@@ -18,3 +18,7 @@ func (fakeAEAD) Seal(in []byte) ([]byte, error) {
 func NewFakeAEAD() *fakeAEAD {
 	return &fakeAEAD{}
 }
+
+func (fakeAEAD) SealSecretVersion() string {
+	return ""
+}

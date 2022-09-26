@@ -114,18 +114,18 @@ func (mr *MockManagerMockRecorder) GetCertificateSecret(arg0, arg1 interface{}) 
 }
 
 // GetSecret mocks base method.
-func (m *MockManager) GetSecret(arg0 context.Context, arg1 string) (keyvault0.SecretBundle, error) {
+func (m *MockManager) GetSecret(arg0 context.Context, arg1, arg2 string) (keyvault0.SecretBundle, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSecret", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetSecret", arg0, arg1, arg2)
 	ret0, _ := ret[0].(keyvault0.SecretBundle)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetSecret indicates an expected call of GetSecret.
-func (mr *MockManagerMockRecorder) GetSecret(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockManagerMockRecorder) GetSecret(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*MockManager)(nil).GetSecret), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*MockManager)(nil).GetSecret), arg0, arg1, arg2)
 }
 
 // GetSecrets mocks base method.
