@@ -33,7 +33,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -125,14 +124,10 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		vaultsClient:                      keyvaultclient.NewVaultsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 	}
 
-	// Only peer if CI=true and cluster is PublicCloud
 	if ci {
+		// Only peer if CI=true and RP_MODE=development
 		if env.IsLocalDevelopmentMode() {
 			c.ciParentVnet = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vpn-vnet", c.env.SubscriptionID(), c.env.ResourceGroup())
-		} else {
-			if environment.Environment().Name == azureclient.PublicCloud.Name {
-				c.ciParentVnet = "/subscriptions/26c7e39e-2dfa-4854-90f0-6bc88f7a0fb8/resourceGroups/v4ss-eastus/providers/Microsoft.Network/virtualNetworks/dev-vpn-vnet"
-			}
 		}
 
 		r, err := azure.ParseResourceID(c.ciParentVnet)
@@ -389,13 +384,15 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 				errs = append(errs, err)
 			}
 		}
-		// Only do this if CI=true and cloud = Public Cloud
-		r, err := azure.ParseResourceID(c.ciParentVnet)
-		if err == nil {
-			err = c.ciParentVnetPeerings.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, vnetResourceGroup+"-peer")
-		}
-		if err != nil {
-			errs = append(errs, err)
+		// Only peer if CI=true and RP_MODE=development
+		if env.IsLocalDevelopmentMode() {
+			r, err := azure.ParseResourceID(c.ciParentVnet)
+			if err == nil {
+				err = c.ciParentVnetPeerings.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, vnetResourceGroup+"-peer")
+			}
+			if err != nil {
+				errs = append(errs, err)
+			}
 		}
 	} else {
 		// Deleting the deployment does not clean up the associated resources
