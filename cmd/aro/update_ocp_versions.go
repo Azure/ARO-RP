@@ -31,10 +31,12 @@ func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShi
 	var (
 		OpenshiftVersions = []api.OpenShiftVersion{
 			{
-				Version:           version.InstallStream.Version.String(),
-				OpenShiftPullspec: version.InstallStream.PullSpec,
-				InstallerPullspec: dstRepo + "/aro-installer:release-4.10",
-				Enabled:           true,
+				Properties: api.OpenShiftVersionProperties{
+					Version:           version.InstallStream.Version.String(),
+					OpenShiftPullspec: version.InstallStream.PullSpec,
+					InstallerPullspec: dstRepo + "/aro-installer:release-4.10",
+					Enabled:           true,
+				},
 			},
 		}
 	)
@@ -121,13 +123,13 @@ func updateOpenShiftVersions(ctx context.Context, dbOpenShiftVersions database.O
 
 	newVersions := make(map[string]api.OpenShiftVersion)
 	for _, doc := range latestVersions {
-		newVersions[doc.Version] = doc
+		newVersions[doc.Properties.Version] = doc
 	}
 
 	for _, doc := range existingVersions.OpenShiftVersionDocuments {
-		existing, found := newVersions[doc.OpenShiftVersion.Version]
+		existing, found := newVersions[doc.OpenShiftVersion.Properties.Version]
 		if found {
-			log.Printf("Found Version %q, patching", existing.Version)
+			log.Printf("Found Version %q, patching", existing.Properties.Version)
 			_, err := dbOpenShiftVersions.Patch(ctx, doc.ID, func(inFlightDoc *api.OpenShiftVersionDocument) error {
 				inFlightDoc.OpenShiftVersion = &existing
 				return nil
@@ -135,12 +137,12 @@ func updateOpenShiftVersions(ctx context.Context, dbOpenShiftVersions database.O
 			if err != nil {
 				return err
 			}
-			log.Printf("Version %q found", existing.Version)
-			delete(newVersions, existing.Version)
+			log.Printf("Version %q found", existing.Properties.Version)
+			delete(newVersions, existing.Properties.Version)
 			continue
 		}
 
-		log.Printf("Version %q not found, deleting", doc.OpenShiftVersion.Version)
+		log.Printf("Version %q not found, deleting", doc.OpenShiftVersion.Properties.Version)
 		err := dbOpenShiftVersions.Delete(ctx, doc)
 		if err != nil {
 			return err
@@ -148,7 +150,7 @@ func updateOpenShiftVersions(ctx context.Context, dbOpenShiftVersions database.O
 	}
 
 	for _, doc := range newVersions {
-		log.Printf("Version %q not found in database, creating", doc.Version)
+		log.Printf("Version %q not found in database, creating", doc.Properties.Version)
 		newDoc := api.OpenShiftVersionDocument{
 			ID:               dbOpenShiftVersions.NewUUID(),
 			OpenShiftVersion: &doc,

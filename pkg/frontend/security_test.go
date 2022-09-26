@@ -80,7 +80,10 @@ func TestSecurity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.(*frontend).startTime = time.Time{} // enable /healthz to return 200
+
+	// enable /healthz to return 200
+	f.(*frontend).startTime = time.Time{}
+	f.(*frontend).lastChangefeed.Store(time.Time{})
 
 	go f.Run(ctx, nil, nil)
 

@@ -21,7 +21,10 @@ func (f *frontend) checkReady() bool {
 		return false
 	}
 
-	return f.ready.Load().(bool) &&
+	_, ok := f.lastChangefeed.Load().(time.Time)
+
+	return ok &&
+		f.ready.Load().(bool) &&
 		f.env.ArmClientAuthorizer().IsReady() &&
 		f.env.AdminClientAuthorizer().IsReady()
 }

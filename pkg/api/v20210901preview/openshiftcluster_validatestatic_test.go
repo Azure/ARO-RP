@@ -335,13 +335,6 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 			},
 		},
 		{
-			name: "version invalid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "invalid"
-			},
-			wantErr: "400: InvalidParameter: properties.clusterProfile.version: The provided version 'invalid' is invalid.",
-		},
-		{
 			name: "leading digit domain invalid",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "4k7f9clk"

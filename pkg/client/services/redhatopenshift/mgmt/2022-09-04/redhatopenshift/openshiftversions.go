@@ -27,28 +27,29 @@ import (
 	"github.com/Azure/go-autorest/tracing"
 )
 
-// InstallVersionsClient is the rest API for Azure Red Hat OpenShift 4
-type InstallVersionsClient struct {
+// OpenShiftVersionsClient is the rest API for Azure Red Hat OpenShift 4
+type OpenShiftVersionsClient struct {
 	BaseClient
 }
 
-// NewInstallVersionsClient creates an instance of the InstallVersionsClient client.
-func NewInstallVersionsClient(subscriptionID string) InstallVersionsClient {
-	return NewInstallVersionsClientWithBaseURI(DefaultBaseURI, subscriptionID)
+// NewOpenShiftVersionsClient creates an instance of the OpenShiftVersionsClient client.
+func NewOpenShiftVersionsClient(subscriptionID string) OpenShiftVersionsClient {
+	return NewOpenShiftVersionsClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewInstallVersionsClientWithBaseURI creates an instance of the InstallVersionsClient client using a custom endpoint.
-// Use this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure stack).
-func NewInstallVersionsClientWithBaseURI(baseURI string, subscriptionID string) InstallVersionsClient {
-	return InstallVersionsClient{NewWithBaseURI(baseURI, subscriptionID)}
+// NewOpenShiftVersionsClientWithBaseURI creates an instance of the OpenShiftVersionsClient client using a custom
+// endpoint.  Use this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure
+// stack).
+func NewOpenShiftVersionsClientWithBaseURI(baseURI string, subscriptionID string) OpenShiftVersionsClient {
+	return OpenShiftVersionsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
 // List the operation returns the installable OpenShift versions as strings.
 // Parameters:
 // location - the name of Azure region.
-func (client InstallVersionsClient) List(ctx context.Context, location string) (result ListString, err error) {
+func (client OpenShiftVersionsClient) List(ctx context.Context, location string) (result OpenShiftVersionList, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/InstallVersionsClient.List")
+		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftVersionsClient.List")
 		defer func() {
 			sc := -1
 			if result.Response.Response != nil {
@@ -62,25 +63,25 @@ func (client InstallVersionsClient) List(ctx context.Context, location string) (
 			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: location,
 			Constraints: []validation.Constraint{{Target: "location", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
-		return result, validation.NewError("redhatopenshift.InstallVersionsClient", "List", err.Error())
+		return result, validation.NewError("redhatopenshift.OpenShiftVersionsClient", "List", err.Error())
 	}
 
 	req, err := client.ListPreparer(ctx, location)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "redhatopenshift.InstallVersionsClient", "List", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftVersionsClient", "List", nil, "Failure preparing request")
 		return
 	}
 
 	resp, err := client.ListSender(req)
 	if err != nil {
 		result.Response = autorest.Response{Response: resp}
-		err = autorest.NewErrorWithError(err, "redhatopenshift.InstallVersionsClient", "List", resp, "Failure sending request")
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftVersionsClient", "List", resp, "Failure sending request")
 		return
 	}
 
 	result, err = client.ListResponder(resp)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "redhatopenshift.InstallVersionsClient", "List", resp, "Failure responding to request")
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftVersionsClient", "List", resp, "Failure responding to request")
 		return
 	}
 
@@ -88,7 +89,7 @@ func (client InstallVersionsClient) List(ctx context.Context, location string) (
 }
 
 // ListPreparer prepares the List request.
-func (client InstallVersionsClient) ListPreparer(ctx context.Context, location string) (*http.Request, error) {
+func (client OpenShiftVersionsClient) ListPreparer(ctx context.Context, location string) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"location":       autorest.Encode("path", location),
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
@@ -109,17 +110,17 @@ func (client InstallVersionsClient) ListPreparer(ctx context.Context, location s
 
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
-func (client InstallVersionsClient) ListSender(req *http.Request) (*http.Response, error) {
+func (client OpenShiftVersionsClient) ListSender(req *http.Request) (*http.Response, error) {
 	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListResponder handles the response to the List request. The method always
 // closes the http.Response Body.
-func (client InstallVersionsClient) ListResponder(resp *http.Response) (result ListString, err error) {
+func (client OpenShiftVersionsClient) ListResponder(resp *http.Response) (result OpenShiftVersionList, err error) {
 	err = autorest.Respond(
 		resp,
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
-		autorest.ByUnmarshallingJSON(&result.Value),
+		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
 	result.Response = autorest.Response{Response: resp}
 	return

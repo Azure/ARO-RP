@@ -50,9 +50,11 @@ func TestGetOpenShiftVersionFromVersion(t *testing.T) {
 			},
 			wantErrString: "",
 			want: &api.OpenShiftVersion{
-				Version:           version.InstallStream.Version.String(),
-				OpenShiftPullspec: version.InstallStream.PullSpec,
-				InstallerPullspec: fmt.Sprintf("%s/aro-installer:release-%d.%d", testACRDomain, version.InstallStream.Version.V[0], version.InstallStream.Version.V[1]),
+				Properties: api.OpenShiftVersionProperties{
+					Version:           version.InstallStream.Version.String(),
+					OpenShiftPullspec: version.InstallStream.PullSpec,
+					InstallerPullspec: fmt.Sprintf("%s/aro-installer:release-%d.%d", testACRDomain, version.InstallStream.Version.V[0], version.InstallStream.Version.V[1]),
+				},
 			},
 		},
 		{
@@ -61,13 +63,17 @@ func TestGetOpenShiftVersionFromVersion(t *testing.T) {
 				f.AddOpenShiftVersionDocuments(
 					&api.OpenShiftVersionDocument{
 						OpenShiftVersion: &api.OpenShiftVersion{
-							Version: "4.10.20",
-							Enabled: true,
+							Properties: api.OpenShiftVersionProperties{
+								Version: "4.10.20",
+								Enabled: true,
+							},
 						},
 					}, &api.OpenShiftVersionDocument{
 						OpenShiftVersion: &api.OpenShiftVersion{
-							Version: "4.10.27",
-							Enabled: true,
+							Properties: api.OpenShiftVersionProperties{
+								Version: "4.10.27",
+								Enabled: true,
+							},
 						},
 					},
 				)
@@ -123,9 +129,9 @@ func TestGetOpenShiftVersionFromVersion(t *testing.T) {
 			}
 
 			if tt.want != nil {
-				assert.Equal(t, tt.want.Version, version.Version, "Version does not match")
-				assert.Equal(t, tt.want.OpenShiftPullspec, version.OpenShiftPullspec, "OpenShiftPullspec does not match")
-				assert.Equal(t, tt.want.InstallerPullspec, version.InstallerPullspec, "InstallerPullspec does not match")
+				assert.Equal(t, tt.want.Properties.Version, version.Properties.Version, "Version does not match")
+				assert.Equal(t, tt.want.Properties.OpenShiftPullspec, version.Properties.OpenShiftPullspec, "properties.OpenShiftPullspec does not match")
+				assert.Equal(t, tt.want.Properties.InstallerPullspec, version.Properties.InstallerPullspec, "properties.InstallerPullspec does not match")
 			}
 		})
 	}

@@ -10,7 +10,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -127,7 +126,7 @@ func NewDialer(isLocalDevelopmentMode bool) (Dialer, error) {
 		return nil, err
 	}
 
-	b, err := ioutil.ReadFile(path.Join(basepath, "secrets/proxy.crt"))
+	b, err := os.ReadFile(path.Join(basepath, "secrets/proxy.crt"))
 	if err != nil {
 		return nil, err
 	}
@@ -140,12 +139,12 @@ func NewDialer(isLocalDevelopmentMode bool) (Dialer, error) {
 	d.proxyPool = x509.NewCertPool()
 	d.proxyPool.AddCert(cert)
 
-	d.proxyClientCert, err = ioutil.ReadFile(path.Join(basepath, "secrets/proxy-client.crt"))
+	d.proxyClientCert, err = os.ReadFile(path.Join(basepath, "secrets/proxy-client.crt"))
 	if err != nil {
 		return nil, err
 	}
 
-	b, err = ioutil.ReadFile(path.Join(basepath, "secrets/proxy-client.key"))
+	b, err = os.ReadFile(path.Join(basepath, "secrets/proxy-client.key"))
 	if err != nil {
 		return nil, err
 	}

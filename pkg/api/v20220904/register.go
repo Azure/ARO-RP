@@ -17,11 +17,12 @@ const (
 
 func init() {
 	api.APIs[APIVersion] = &api.Version{
+		ClusterManagerConfigurationConverter:     clusterManagerConfigurationConverter{},
 		OpenShiftClusterConverter:                openShiftClusterConverter{},
 		OpenShiftClusterStaticValidator:          openShiftClusterStaticValidator{},
 		OpenShiftClusterCredentialsConverter:     openShiftClusterCredentialsConverter{},
 		OpenShiftClusterAdminKubeconfigConverter: openShiftClusterAdminKubeconfigConverter{},
-		InstallVersionsConverter:                 installVersionsConverter{},
+		OpenShiftVersionConverter:                openShiftVersionConverter{},
 		OperationList: api.OperationList{
 			Operations: []api.Operation{
 				api.OperationResultsRead,

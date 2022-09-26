@@ -16,10 +16,12 @@ type openShiftVersionConverter struct{}
 // returned objects.
 func (openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) interface{} {
 	out := &OpenShiftVersion{
-		Version:           v.Version,
-		OpenShiftPullspec: v.OpenShiftPullspec,
-		InstallerPullspec: v.InstallerPullspec,
-		Enabled:           v.Enabled,
+		Properties: OpenShiftVersionProperties{
+			Version:           v.Properties.Version,
+			OpenShiftPullspec: v.Properties.OpenShiftPullspec,
+			InstallerPullspec: v.Properties.InstallerPullspec,
+			Enabled:           v.Properties.Enabled,
+		},
 	}
 
 	return out
@@ -46,8 +48,8 @@ func (c openShiftVersionConverter) ToExternalList(vers []*api.OpenShiftVersion) 
 func (c openShiftVersionConverter) ToInternal(_new interface{}, out *api.OpenShiftVersion) {
 	new := _new.(*OpenShiftVersion)
 
-	out.Enabled = new.Enabled
-	out.InstallerPullspec = new.InstallerPullspec
-	out.OpenShiftPullspec = new.OpenShiftPullspec
-	out.Version = new.Version
+	out.Properties.Enabled = new.Properties.Enabled
+	out.Properties.InstallerPullspec = new.Properties.InstallerPullspec
+	out.Properties.OpenShiftPullspec = new.Properties.OpenShiftPullspec
+	out.Properties.Version = new.Properties.Version
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func (f *frontend) putAdminOpenShiftVersion(w http.ResponseWriter, r *http.Request) {
@@ -29,11 +30,16 @@ func (f *frontend) putAdminOpenShiftVersion(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var version *admin.OpenShiftVersion
-
-	err := json.Unmarshal(body, &version)
+	var ext *admin.OpenShiftVersion
+	err := json.Unmarshal(body, &ext)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content could not be deserialized: "+err.Error())
+		return
+	}
+
+	// prevent disabling of the default installation version
+	if ext.Properties.Version == version.InstallStream.Version.String() && !ext.Properties.Enabled {
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.enabled", "You cannot disable the default installation version.")
 		return
 	}
 
@@ -44,33 +50,31 @@ func (f *frontend) putAdminOpenShiftVersion(w http.ResponseWriter, r *http.Reque
 	}
 
 	var versionDoc *api.OpenShiftVersionDocument
-
 	if docs != nil {
 		for _, doc := range docs.OpenShiftVersionDocuments {
-			if doc.OpenShiftVersion.Version == version.Version {
+			if doc.OpenShiftVersion.Properties.Version == ext.Properties.Version {
 				versionDoc = doc
 				break
 			}
 		}
 	}
 
-	isCreate := false
-	if versionDoc == nil {
-		isCreate = true
-		err = staticValidator.Static(version, nil)
+	isCreate := versionDoc == nil
+	if isCreate {
+		err = staticValidator.Static(ext, nil)
 		versionDoc = &api.OpenShiftVersionDocument{
 			ID:               f.dbOpenShiftVersions.NewUUID(),
 			OpenShiftVersion: &api.OpenShiftVersion{},
 		}
 	} else {
-		err = staticValidator.Static(version, versionDoc.OpenShiftVersion)
+		err = staticValidator.Static(ext, versionDoc.OpenShiftVersion)
 	}
 	if err != nil {
 		adminReply(log, w, nil, []byte{}, err)
 		return
 	}
 
-	converter.ToInternal(version, versionDoc.OpenShiftVersion)
+	converter.ToInternal(ext, versionDoc.OpenShiftVersion)
 
 	if isCreate {
 		versionDoc, err = f.dbOpenShiftVersions.Create(ctx, versionDoc)

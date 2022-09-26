@@ -330,6 +330,12 @@ const (
 	VMSizeStandardL32sV2 VMSize = "Standard_L32s_v2"
 	VMSizeStandardL48sV2 VMSize = "Standard_L48s_v2"
 	VMSizeStandardL64sV2 VMSize = "Standard_L64s_v2"
+
+	// GPU VMs
+	VMSizeStandardNC4asT4V3  VMSize = "Standard_NC4as_T4_v3"
+	VMSizeStandardNC8asT4V3  VMSize = "Standard_NC8as_T4_v3"
+	VMSizeStandardNC16asT4V3 VMSize = "Standard_NC16as_T4_v3"
+	VMSizeStandardNC64asT4V3 VMSize = "Standard_NC64as_T4_v3"
 )
 
 // WorkerProfile represents a worker profile

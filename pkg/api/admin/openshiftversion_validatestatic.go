@@ -34,16 +34,16 @@ func (sv openShiftVersionStaticValidator) Static(_new interface{}, _current *api
 }
 
 func (sv openShiftVersionStaticValidator) validate(new *OpenShiftVersion, isCreate bool) error {
-	if new.Version == "" {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "version", "Must be provided")
+	if new.Properties.Version == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.version", "Must be provided")
 	}
 
-	if new.InstallerPullspec == "" {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "installerPullspec", "Must be provided")
+	if new.Properties.InstallerPullspec == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.installerPullspec", "Must be provided")
 	}
 
-	if new.OpenShiftPullspec == "" {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "openShiftPullspec", "Must be provided")
+	if new.Properties.OpenShiftPullspec == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.openShiftPullspec", "Must be provided")
 	}
 	return nil
 }

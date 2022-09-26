@@ -7,7 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"strings"
 
@@ -108,7 +108,7 @@ type Configuration struct {
 
 // GetConfig return RP configuration from the file
 func GetConfig(path, location string) (*RPConfig, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

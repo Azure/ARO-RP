@@ -24,6 +24,7 @@ func (f *frontend) getAdminOpenShiftVersions(w http.ResponseWriter, r *http.Requ
 
 	converter := f.apis[admin.APIVersion].OpenShiftVersionConverter
 
+	// changefeed only tracks the enabled versions so use ListAll here
 	docs, err := f.dbOpenShiftVersions.ListAll(ctx)
 	if err != nil {
 		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
@@ -37,7 +38,9 @@ func (f *frontend) getAdminOpenShiftVersions(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	sort.Slice(vers, func(i, j int) bool { return semver.New(vers[i].Version).LessThan(*semver.New(vers[j].Version)) })
+	sort.Slice(vers, func(i, j int) bool {
+		return semver.New(vers[i].Properties.Version).LessThan(*semver.New(vers[j].Properties.Version))
+	})
 
 	b, err := json.MarshalIndent(converter.ToExternalList(vers), "", "    ")
 	adminReply(log, w, nil, b, err)

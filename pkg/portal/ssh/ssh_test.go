@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -81,7 +81,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "empty request",
 			r: func(r *http.Request) {
-				r.Body = ioutil.NopCloser(bytes.NewReader(nil))
+				r.Body = io.NopCloser(bytes.NewReader(nil))
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       "Bad Request\n",
@@ -89,7 +89,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "junk request",
 			r: func(r *http.Request) {
-				r.Body = ioutil.NopCloser(strings.NewReader("{{"))
+				r.Body = io.NopCloser(strings.NewReader("{{"))
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       "Bad Request\n",
@@ -173,7 +173,7 @@ func TestNew(t *testing.T) {
 				t.Error(resp.Header.Get("Content-Type"))
 			}
 
-			b, err := ioutil.ReadAll(resp.Body)
+			b, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}

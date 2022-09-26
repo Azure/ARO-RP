@@ -232,8 +232,8 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 	}
 
 	image := &releaseimage.Image{}
-	if m.oc.Properties.ClusterProfile.Version == m.version.Version {
-		image.PullSpec = m.version.OpenShiftPullspec
+	if m.oc.Properties.ClusterProfile.Version == m.version.Properties.Version {
+		image.PullSpec = m.version.Properties.OpenShiftPullspec
 	} else {
 		return nil, nil, fmt.Errorf("unimplemented version %q", m.oc.Properties.ClusterProfile.Version)
 	}

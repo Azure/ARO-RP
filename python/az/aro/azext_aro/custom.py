@@ -221,6 +221,8 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
             resource_group_id=(f"/subscriptions/{subscription_id}"
                                f"/resourceGroups/{cluster_resource_group or 'aro-' + random_id}"),
             fips_validated_modules='Enabled' if fips_validated_modules else 'Disabled',
+            install_version=install_version or '',
+
         ),
         service_principal_profile=openshiftcluster.ServicePrincipalProfile(
             client_id=client_id,
@@ -257,7 +259,6 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                 visibility=ingress_visibility or 'Public',
             )
         ],
-        install_version=install_version or '',
     )
 
     sp_obj_ids = [client_sp_id, rp_client_sp_id]
@@ -339,7 +340,11 @@ def aro_list_admin_credentials(cmd, client, resource_group_name, resource_name, 
 
 
 def aro_get_versions(client, location):
-    return client.install_versions.list(location)
+    openshift_verions = client.open_shift_versions.list(location)
+    versions = []
+    for ver in openshift_verions.additional_properties["value"]:
+        versions.append(ver["properties"]["version"])
+    return sorted(versions)
 
 
 def aro_update(cmd,

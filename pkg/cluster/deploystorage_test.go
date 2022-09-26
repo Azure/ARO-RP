@@ -44,6 +44,10 @@ func TestEnsureResourceGroup(t *testing.T) {
 		"yeet": to.StringPtr("yote"),
 	}
 
+	resourceGroupManagedByMismatch := autorest.NewErrorWithError(&azure.RequestError{
+		ServiceError: &azure.ServiceError{Code: "ResourceGroupManagedByMismatch"},
+	}, "", "", nil, "")
+
 	disallowedByPolicy := autorest.NewErrorWithError(&azure.RequestError{
 		ServiceError: &azure.ServiceError{Code: "RequestDisallowedByPolicy"},
 	}, "", "", nil, "")
@@ -127,6 +131,23 @@ func TestEnsureResourceGroup(t *testing.T) {
 			wantErr: "generic error",
 		},
 		{
+			name: "fail - CreateOrUpdate returns resourcegroupmanagedbymismatch",
+			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				rg.EXPECT().
+					Get(gomock.Any(), resourceGroupName).
+					Return(group, autorest.DetailedError{StatusCode: http.StatusNotFound})
+
+				rg.EXPECT().
+					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
+					Return(group, resourceGroupManagedByMismatch)
+
+				env.EXPECT().
+					IsLocalDevelopmentMode().
+					Return(false)
+			},
+			wantErr: "400: ClusterResourceGroupAlreadyExists: : Resource group " + resourceGroup + " must not already exist.",
+		},
+		{
 			name: "fail - CreateOrUpdate returns requestdisallowedbypolicy",
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
 				rg.EXPECT().
@@ -189,7 +210,6 @@ func TestEnsureResourceGroup(t *testing.T) {
 			}
 
 			err := m.ensureResourceGroup(ctx)
-
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

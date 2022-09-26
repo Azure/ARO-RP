@@ -37,7 +37,6 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 	oc.Properties.APIServerProfile.IP = ""
 	oc.Properties.IngressProfiles[0].IP = ""
 	oc.Properties.MasterProfile.EncryptionAtHost = EncryptionAtHost(EncryptionAtHostEnabled)
-	oc.Properties.InstallVersion = ""
 	oc.SystemData = nil
 
 	return oc

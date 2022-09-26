@@ -33,12 +33,12 @@ type OperationsClientAPI interface {
 
 var _ OperationsClientAPI = (*redhatopenshift.OperationsClient)(nil)
 
-// InstallVersionsClientAPI contains the set of methods on the InstallVersionsClient type.
-type InstallVersionsClientAPI interface {
-	List(ctx context.Context, location string) (result redhatopenshift.ListString, err error)
+// OpenShiftVersionsClientAPI contains the set of methods on the OpenShiftVersionsClient type.
+type OpenShiftVersionsClientAPI interface {
+	List(ctx context.Context, location string) (result redhatopenshift.OpenShiftVersionList, err error)
 }
 
-var _ InstallVersionsClientAPI = (*redhatopenshift.InstallVersionsClient)(nil)
+var _ OpenShiftVersionsClientAPI = (*redhatopenshift.OpenShiftVersionsClient)(nil)
 
 // OpenShiftClustersClientAPI contains the set of methods on the OpenShiftClustersClient type.
 type OpenShiftClustersClientAPI interface {

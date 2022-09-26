@@ -35,10 +35,6 @@ type OpenShiftVersionConverter interface {
 	ToInternal(interface{}, *OpenShiftVersion)
 }
 
-type InstallVersionsConverter interface {
-	ToExternal(*InstallVersions) interface{}
-}
-
 type OpenShiftVersionStaticValidator interface {
 	Static(interface{}, *OpenShiftVersion) error
 }
@@ -52,7 +48,6 @@ type Version struct {
 	OpenShiftClusterAdminKubeconfigConverter OpenShiftClusterAdminKubeconfigConverter
 	OpenShiftVersionConverter                OpenShiftVersionConverter
 	OpenShiftVersionStaticValidator          OpenShiftVersionStaticValidator
-	InstallVersionsConverter                 InstallVersionsConverter
 	OperationList                            OperationList
 }
 

@@ -38,6 +38,34 @@ func (m *MockKubeActions) EXPECT() *MockKubeActionsMockRecorder {
 	return m.recorder
 }
 
+// ApproveAllCsrs mocks base method.
+func (m *MockKubeActions) ApproveAllCsrs(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApproveAllCsrs", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApproveAllCsrs indicates an expected call of ApproveAllCsrs.
+func (mr *MockKubeActionsMockRecorder) ApproveAllCsrs(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApproveAllCsrs", reflect.TypeOf((*MockKubeActions)(nil).ApproveAllCsrs), arg0)
+}
+
+// ApproveCsr mocks base method.
+func (m *MockKubeActions) ApproveCsr(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApproveCsr", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApproveCsr indicates an expected call of ApproveCsr.
+func (mr *MockKubeActionsMockRecorder) ApproveCsr(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApproveCsr", reflect.TypeOf((*MockKubeActions)(nil).ApproveCsr), arg0, arg1)
+}
+
 // CordonNode mocks base method.
 func (m *MockKubeActions) CordonNode(arg0 context.Context, arg1 string, arg2 bool) error {
 	m.ctrl.T.Helper()
