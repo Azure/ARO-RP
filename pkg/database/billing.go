@@ -135,7 +135,7 @@ func (c *billing) MarkForDeletion(ctx context.Context, id string) (*api.BillingD
 	}, &cosmosdb.Options{PreTriggers: []string{"setDeletionBillingTimeStamp"}})
 }
 
-//List produces and iterator for paging through all billing documents.
+// List produces and iterator for paging through all billing documents.
 func (c *billing) List(continuation string) cosmosdb.BillingDocumentIterator {
 	return c.c.List(&cosmosdb.Options{Continuation: continuation})
 }

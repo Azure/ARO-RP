@@ -9,7 +9,7 @@ import (
 
 const OperatorFailing configv1.ClusterStatusConditionType = "Failing"
 
-//TODO: this is duplicate from clusterversioncondition.go
+// TODO: this is duplicate from clusterversioncondition.go
 var clusterVersionConditionsHealthy = map[configv1.ClusterStatusConditionType]configv1.ConditionStatus{
 	configv1.OperatorAvailable:   configv1.ConditionTrue,
 	configv1.OperatorProgressing: configv1.ConditionFalse,

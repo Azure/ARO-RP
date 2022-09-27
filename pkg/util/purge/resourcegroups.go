@@ -32,10 +32,10 @@ func (rc *ResourceCleaner) CleanResourceGroups(ctx context.Context) error {
 }
 
 // cleanResourceGroup checkes whether the resource group can be deleted if yes proceed to clean the group in an order:
-//     - unassign subnets
-//     - clean private links
-//     - checks ARO presence -> store app object ID for futher use
-//     - deletes resource group
+//   - unassign subnets
+//   - clean private links
+//   - checks ARO presence -> store app object ID for futher use
+//   - deletes resource group
 func (rc *ResourceCleaner) cleanResourceGroup(ctx context.Context, resourceGroup mgmtfeatures.ResourceGroup) error {
 	if rc.shouldDelete(resourceGroup, rc.log) {
 		rc.log.Printf("Deleting ResourceGroup: %s", *resourceGroup.Name)
