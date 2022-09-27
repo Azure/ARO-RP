@@ -198,6 +198,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				"[Action startVMs-fm]",
 				"[Condition apiServersReady-fm, timeout 30m0s]",
 				"[Action fixMCSCert-fm]",
+				"[Action fixMCSUserData-fm]",
 				"[Action configureAPIServerCertificate-fm]",
 				"[Action configureIngressCertificate-fm]",
 				"[Action initializeOperatorDeployer-fm]",
