@@ -147,7 +147,7 @@ type NetworkProfile struct {
 	PodCIDR      string       `json:"podCidr,omitempty"`
 	ServiceCIDR  string       `json:"serviceCidr,omitempty"`
 	MTUSize      MTUSize      `json:"mtuSize,omitempty"`
-	OutboundType OutboundType `json:"userDefinedRouting,omitempty"`
+	OutboundType OutboundType `json:"outboundType,omitempty" mutable:"true"`
 
 	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
 	GatewayPrivateEndpointIP   string `json:"gatewayPrivateEndpointIp,omitempty"`
