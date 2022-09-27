@@ -125,7 +125,7 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 		}
 
 		if strings.HasPrefix(acc.GetName(), "gatekeeper") {
-			dh.log.Printf("ignore changes for %s@%s::%s\n", acc.GetName(), acc.GetNamespace(), diff)
+			dh.log.Printf("\x1b[%dm %s@%s:: ignore changes: %s\x1b[0m\n", 36, acc.GetName(), acc.GetNamespace(), diff)
 			return nil
 		}
 		dh.log.Printf("Update %s: %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()), diff)
@@ -189,6 +189,9 @@ func merge(old, new kruntime.Object) (kruntime.Object, bool, string, error) {
 
 	case *corev1.ServiceAccount:
 		old, new := old.(*corev1.ServiceAccount), new.(*corev1.ServiceAccount)
+		// if len(old.Secrets) > 0 {
+		// 	logrus.Printf("\x1b[%dm overwriting secret!! %s with %s\x1b[0m", 31, old.Secrets[0].Name, new.Secrets)
+		// }
 		new.Secrets = old.Secrets
 		new.ImagePullSecrets = old.ImagePullSecrets
 

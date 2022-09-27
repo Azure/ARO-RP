@@ -22,6 +22,7 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
+	templatesv1beta1 "github.com/open-policy-agent/frameworks/constraint/pkg/apis/templates/v1beta1"
 )
 
 func init() {
@@ -43,4 +44,5 @@ func init() {
 	utilruntime.Must(monitoringv1.AddToScheme(scheme.Scheme))
 	// AzureMachineProviderSpec is not registered by default
 	scheme.Scheme.AddKnownTypes(machinev1beta1.GroupVersion, &machinev1beta1.AzureMachineProviderSpec{})
+	utilruntime.Must(templatesv1beta1.AddToScheme(scheme.Scheme))
 }

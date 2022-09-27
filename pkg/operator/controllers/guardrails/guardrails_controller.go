@@ -29,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/version"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -74,8 +75,10 @@ func NewReconciler(arocli aroclient.Interface, kubernetescli kubernetes.Interfac
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	logrus.Printf("\x1b[%dm guardrails::Reconcile enter 0\x1b[0m", 31)
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
+		logrus.Printf("\x1b[%dm guardrails:: reconcile error getting %s\x1b[0m", 31, err.Error())
 		return reconcile.Result{}, err
 	}
 
@@ -106,6 +109,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// Deploy the GateKeeper manifests and config
 		err = r.deployer.CreateOrUpdate(ctx, instance, config)
 		if err != nil {
+			logrus.Printf("\x1b[%dm guardrails:: reconcile error updating %s\x1b[0m", 31, err.Error())
 			return reconcile.Result{}, err
 		}
 
@@ -125,6 +129,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	} else if strings.EqualFold(managed, "false") {
 		err := r.deployer.Remove(ctx, config.GuardRailsDeploymentConfig{Namespace: instance.Spec.OperatorFlags.GetWithDefault(controllerNamespace, defaultNamespace)})
 		if err != nil {
+			logrus.Printf("\x1b[%dm guardrails:: reconcile error removing %s\x1b[0m", 31, err.Error())
 			return reconcile.Result{}, err
 		}
 	}
