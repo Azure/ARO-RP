@@ -14,9 +14,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
-	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -34,9 +32,6 @@ func (m *manager) Install(ctx context.Context) error {
 			var err error
 			installConfig, image, err = m.generateInstallConfig(ctx)
 			return err
-		}),
-		steps.Action(func(ctx context.Context) error {
-			return m.determineOutboundType(m.oc, m.sub)
 		}),
 		steps.Action(func(ctx context.Context) error {
 			var err error
@@ -95,15 +90,4 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 
 	m.kubernetescli, err = kubernetes.NewForConfig(r)
 	return err
-}
-
-func (m *manager) determineOutboundType(oc *api.OpenShiftCluster, sub *api.Subscription) error {
-	// Determine if this is a cluster with user defined routing
-	oc.Properties.NetworkProfile.OutboundType = api.OutboundTypeLoadbalancer
-	if oc.Properties.APIServerProfile.Visibility == api.VisibilityPrivate &&
-		oc.Properties.IngressProfiles[0].Visibility == api.VisibilityPrivate &&
-		feature.IsRegisteredForFeature(sub.Properties, api.FeatureFlagUserDefinedRouting) {
-		oc.Properties.NetworkProfile.OutboundType = api.OutboundTypeUserDefinedRouting
-	}
-	return nil
 }
