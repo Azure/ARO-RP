@@ -20,6 +20,7 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 	ctx := context.Background()
 
 	mockSubscriptionId := "00000000-0000-0000-0000-000000000000"
+	tenantId := "11111111-1111-1111-1111-111111111111"
 	resourcePayload := "eyAKICAiYXBpVmVyc2lvbiI6ICJoaXZlLm9wZW5zaGlmdC5pby92MSIsCiAgImtpbmQiOiAiU3luY1NldCIsCiAgIm1ldGFkYXRhIjogewogICAgIm5hbWUiOiAic2FtcGxlIiwKICAgICJuYW1lc3BhY2UiOiAiYXJvLWY2MGFlOGEyLWJjYTEtNDk4Ny05MDU2LWYyZjZhMTgzN2NhYSIKICB9LAogICJzcGVjIjogewogICAgImNsdXN0ZXJEZXBsb3ltZW50UmVmcyI6IFtdLAogICAgInJlc291cmNlcyI6IFsKICAgICAgewogICAgICAgICJhcGlWZXJzaW9uIjogInYxIiwKICAgICAgICAia2luZCI6ICJDb25maWdNYXAiLAogICAgICAgICJtZXRhZGF0YSI6IHsKICAgICAgICAgICJuYW1lIjogIm15Y29uZmlnbWFwIgogICAgICAgIH0KICAgICAgfQogICAgXQogIH0KfQo="
 	modifiedPayload := "modified"
 
@@ -42,7 +43,7 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 			Subscription: &api.Subscription{
 				State: api.SubscriptionStateRegistered,
 				Properties: &api.SubscriptionProperties{
-					TenantID: "11111111-1111-1111-1111-111111111111",
+					TenantID: tenantId,
 				},
 			},
 		})
@@ -118,7 +119,7 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
-							TenantID: "11111111-1111-1111-1111-111111111111",
+							TenantID: tenantId,
 						},
 					},
 				})
