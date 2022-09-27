@@ -55,5 +55,6 @@ jobs:
       register_sub
 
       export CI=true
+      export E2E_DELETE_CLUSTER=false
       make test-e2e
   - template: ./templates/template-az-cli-logout.yml
