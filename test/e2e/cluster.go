@@ -155,7 +155,7 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface) error {
 						AccessModes: []corev1.PersistentVolumeAccessMode{
 							corev1.ReadWriteOnce,
 						},
-						StorageClassName: to.StringPtr("managed-premium"),
+						StorageClassName: to.StringPtr("managed-csi"),
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceStorage: pvcStorage,

@@ -6,7 +6,6 @@ package cluster
 import (
 	"context"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -15,8 +14,8 @@ import (
 )
 
 const (
-	defaultStorageClassName          = "managed-premium"
-	defaultEncryptedStorageClassName = "managed-premium-encrypted-cmk"
+	defaultStorageClassName          = "managed-csi"
+	defaultEncryptedStorageClassName = "managed-csi-encrypted-cmk"
 )
 
 // configureDefaultStorageClass replaces default storage class provided by OCP with
@@ -61,13 +60,11 @@ func newEncryptedStorageClass(diskEncryptionSetID string) *storagev1.StorageClas
 				"storageclass.kubernetes.io/is-default-class": "true",
 			},
 		},
-		Provisioner:          "kubernetes.io/azure-disk",
-		VolumeBindingMode:    &volumeBindingMode,
-		AllowVolumeExpansion: to.BoolPtr(true),
-		ReclaimPolicy:        &reclaimPolicy,
+		Provisioner:       "disk.csi.azure.com",
+		VolumeBindingMode: &volumeBindingMode,
+		ReclaimPolicy:     &reclaimPolicy,
 		Parameters: map[string]string{
-			"kind":                "Managed",
-			"storageaccounttype":  "Premium_LRS",
+			"storageAccountType":  "Premium_LRS",
 			"diskEncryptionSetID": diskEncryptionSetID,
 		},
 	}

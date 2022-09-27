@@ -39,7 +39,7 @@ func TestConfigureStorageClass(t *testing.T) {
 			desID: "fake-des-id",
 			mocks: func(kubernetescli *fake.Clientset) {
 				kubernetescli.PrependReactor("get", "storageclasses", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
-					if action.(ktesting.GetAction).GetName() != "managed-premium" {
+					if action.(ktesting.GetAction).GetName() != "managed-csi" {
 						return false, nil, nil
 					}
 					return true, nil, errors.New("fake error from get of old StorageClass")
@@ -53,7 +53,7 @@ func TestConfigureStorageClass(t *testing.T) {
 			mocks: func(kubernetescli *fake.Clientset) {
 				kubernetescli.PrependReactor("update", "storageclasses", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					obj := action.(ktesting.UpdateAction).GetObject().(*storagev1.StorageClass)
-					if obj.Name != "managed-premium" {
+					if obj.Name != "managed-csi" {
 						return false, nil, nil
 					}
 					return true, nil, errors.New("fake error from update of old StorageClass")
@@ -67,7 +67,7 @@ func TestConfigureStorageClass(t *testing.T) {
 			mocks: func(kubernetescli *fake.Clientset) {
 				kubernetescli.PrependReactor("create", "storageclasses", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					obj := action.(ktesting.CreateAction).GetObject().(*storagev1.StorageClass)
-					if obj.Name != "managed-premium-encrypted-cmk" {
+					if obj.Name != "managed-csi-encrypted-cmk" {
 						return false, nil, nil
 					}
 					return true, nil, errors.New("fake error while creating encrypted StorageClass")
@@ -81,7 +81,7 @@ func TestConfigureStorageClass(t *testing.T) {
 			kubernetescli := fake.NewSimpleClientset(
 				&storagev1.StorageClass{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "managed-premium",
+						Name: "managed-csi",
 						Annotations: map[string]string{
 							"storageclass.kubernetes.io/is-default-class": "true",
 						},
@@ -115,7 +115,7 @@ func TestConfigureStorageClass(t *testing.T) {
 			}
 
 			if tt.wantNewSC {
-				oldSC, err := kubernetescli.StorageV1().StorageClasses().Get(ctx, "managed-premium", metav1.GetOptions{})
+				oldSC, err := kubernetescli.StorageV1().StorageClasses().Get(ctx, "managed-csi", metav1.GetOptions{})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -125,7 +125,7 @@ func TestConfigureStorageClass(t *testing.T) {
 					t.Error(oldSC.Annotations["storageclass.kubernetes.io/is-default-class"])
 				}
 
-				encryptedSC, err := kubernetescli.StorageV1().StorageClasses().Get(ctx, "managed-premium-encrypted-cmk", metav1.GetOptions{})
+				encryptedSC, err := kubernetescli.StorageV1().StorageClasses().Get(ctx, "managed-csi-encrypted-cmk", metav1.GetOptions{})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -140,7 +140,7 @@ func TestConfigureStorageClass(t *testing.T) {
 					t.Error(encryptedSC.Parameters["diskEncryptionSetID"])
 				}
 			} else {
-				_, err := kubernetescli.StorageV1().StorageClasses().Get(ctx, "managed-premium-encrypted-cmk", metav1.GetOptions{})
+				_, err := kubernetescli.StorageV1().StorageClasses().Get(ctx, "managed-csi-encrypted-cmk", metav1.GetOptions{})
 				if !kerrors.IsNotFound(err) {
 					t.Error(err)
 				}

@@ -103,7 +103,7 @@ var _ = Describe("Disk encryption at rest", func() {
 		}
 
 		By("making sure the encrypted storage class is default")
-		sc, err := clients.Kubernetes.StorageV1().StorageClasses().Get(ctx, "managed-premium-encrypted-cmk", metav1.GetOptions{})
+		sc, err := clients.Kubernetes.StorageV1().StorageClasses().Get(ctx, "managed-csi-encrypted-cmk", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(sc).NotTo(BeNil())
 		Expect(sc.Annotations).NotTo(BeNil())

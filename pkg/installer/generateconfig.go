@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
+	configv1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
@@ -153,6 +154,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 						Zones:            masterZones,
 						InstanceType:     string(m.oc.Properties.MasterProfile.VMSize),
 						EncryptionAtHost: m.oc.Properties.MasterProfile.EncryptionAtHost == api.EncryptionAtHostEnabled,
+						VMNetworkingType: "Basic",
 						OSDisk: azuretypes.OSDisk{
 							DiskEncryptionSet: &azuretypes.DiskEncryptionSet{
 								SubscriptionID: masterDiskEncryptionSet.SubscriptionID,
@@ -176,6 +178,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 							Zones:            workerZones,
 							InstanceType:     string(m.oc.Properties.WorkerProfiles[0].VMSize),
 							EncryptionAtHost: m.oc.Properties.WorkerProfiles[0].EncryptionAtHost == api.EncryptionAtHostEnabled,
+							VMNetworkingType: "Basic",
 							OSDisk: azuretypes.OSDisk{
 								DiskEncryptionSet: &azuretypes.DiskEncryptionSet{
 									SubscriptionID: workerDiskEncryptionSet.SubscriptionID,
@@ -226,6 +229,14 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 				},
 			},
 			Publish: types.ExternalPublishingStrategy,
+			Capabilities: &types.Capabilities{
+				// don't include the baremetal capability (in the baseline default)
+				BaselineCapabilitySet: configv1.ClusterVersionCapabilitySetNone,
+				AdditionalEnabledCapabilities: []configv1.ClusterVersionCapability{
+					configv1.ClusterVersionCapabilityMarketplace,
+					configv1.ClusterVersionCapabilityOpenShiftSamples,
+				},
+			},
 		},
 		Azure: icazure.NewMetadataWithCredentials(
 			azuretypes.CloudEnvironment(m.env.Environment().Name),
