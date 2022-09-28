@@ -5,7 +5,6 @@ package swagger
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -183,7 +182,7 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 
 			b = append(b, '\n')
 
-			err = ioutil.WriteFile(outputDir+"/examples/"+op.OperationID+".json", b, 0666)
+			err = os.WriteFile(outputDir+"/examples/"+op.OperationID+".json", b, 0666)
 			if err != nil {
 				return err
 			}

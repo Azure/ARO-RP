@@ -10,10 +10,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -38,12 +38,12 @@ func run(ctx context.Context, l *logrus.Entry) error {
 
 	flag.Parse()
 
-	cert, err := ioutil.ReadFile(*certFile)
+	cert, err := os.ReadFile(*certFile)
 	if err != nil {
 		panic(err)
 	}
 
-	b, err := ioutil.ReadFile(*keyFile)
+	b, err := os.ReadFile(*keyFile)
 	if err != nil {
 		panic(err)
 	}
