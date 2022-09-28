@@ -624,6 +624,10 @@
                     "version": "v1"
                 },
                 {
+                    "groupVersion": "monitoring.coreos.com/v1beta1",
+                    "version": "v1beta1"
+                },
+                {
                     "groupVersion": "monitoring.coreos.com/v1alpha1",
                     "version": "v1alpha1"
                 }
@@ -681,6 +685,27 @@
             ]
         },
         {
+            "name": "performance.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "performance.openshift.io/v2",
+                "version": "v2"
+            },
+            "versions": [
+                {
+                    "groupVersion": "performance.openshift.io/v2",
+                    "version": "v2"
+                },
+                {
+                    "groupVersion": "performance.openshift.io/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "performance.openshift.io/v1alpha1",
+                    "version": "v1alpha1"
+                }
+            ]
+        },
+        {
             "name": "samples.operator.openshift.io",
             "preferredVersion": {
                 "groupVersion": "samples.operator.openshift.io/v1",
@@ -716,10 +741,6 @@
                 {
                     "groupVersion": "snapshot.storage.k8s.io/v1",
                     "version": "v1"
-                },
-                {
-                    "groupVersion": "snapshot.storage.k8s.io/v1beta1",
-                    "version": "v1beta1"
                 }
             ]
         },
@@ -758,19 +779,6 @@
             "versions": [
                 {
                     "groupVersion": "controlplane.operator.openshift.io/v1alpha1",
-                    "version": "v1alpha1"
-                }
-            ]
-        },
-        {
-            "name": "metal3.io",
-            "preferredVersion": {
-                "groupVersion": "metal3.io/v1alpha1",
-                "version": "v1alpha1"
-            },
-            "versions": [
-                {
-                    "groupVersion": "metal3.io/v1alpha1",
                     "version": "v1alpha1"
                 }
             ]

@@ -1,0 +1,35 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "performance.openshift.io/v1",
+    "resources": [
+        {
+            "name": "performanceprofiles",
+            "singularName": "performanceprofile",
+            "namespaced": false,
+            "kind": "PerformanceProfile",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "+AfVMGb9Yeo="
+        },
+        {
+            "name": "performanceprofiles/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "PerformanceProfile",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}
