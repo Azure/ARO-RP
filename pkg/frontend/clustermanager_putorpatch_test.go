@@ -9,6 +9,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -160,7 +161,7 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ti := newTestInfra(t).WithClusterManagerConfigurations().WithSubscriptions().WithOpenShiftClusters()
+			ti := newTestInfraWithFeatures(t, map[env.Feature]bool{env.FeatureRequireD2sV3Workers: false, env.FeatureDisableReadinessDelay: false, env.FeatureEnableOCMEndpoints: true}).WithClusterManagerConfigurations().WithSubscriptions().WithOpenShiftClusters()
 			defer ti.done()
 
 			resourceKey := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename/%s/%s",

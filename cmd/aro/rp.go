@@ -110,12 +110,9 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	var dbClusterManagerConfiguration database.ClusterManagerConfigurations
-	if os.Getenv("ENABLE_OCM") == "1" {
-		dbClusterManagerConfiguration, err = database.NewClusterManagerConfigurations(ctx, _env.IsLocalDevelopmentMode(), dbc)
-		if err != nil {
-			return err
-		}
+	dbClusterManagerConfiguration, err := database.NewClusterManagerConfigurations(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	if err != nil {
+		return err
 	}
 
 	dbBilling, err := database.NewBilling(ctx, _env.IsLocalDevelopmentMode(), dbc)

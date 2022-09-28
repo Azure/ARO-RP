@@ -201,7 +201,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodPatch).HandlerFunc(f.putOrPatchOpenShiftCluster).Name("putOrPatchOpenShiftCluster")
 	s.Methods(http.MethodPut).HandlerFunc(f.putOrPatchOpenShiftCluster).Name("putOrPatchOpenShiftCluster")
 
-	if f.dbClusterManagerConfiguration != nil {
+	if f.env.FeatureIsSet(env.FeatureEnableOCMEndpoints) {
 		s = r.
 			Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/{ocmResourceType}/{ocmResourceName}").
 			Queries("api-version", "{api-version}").
