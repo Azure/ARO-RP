@@ -147,7 +147,7 @@ func (a *aad) AAD(h http.Handler) http.Handler {
 				cookie := &http.Cookie{
 					Name:    SessionName,
 					Path:    "/",
-					Expires: time.Now().Add(-1),
+					Expires: time.Unix(0, 0),
 				}
 				http.SetCookie(w, cookie)
 				http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
