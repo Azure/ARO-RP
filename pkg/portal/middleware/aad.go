@@ -142,7 +142,8 @@ func (a *aad) AAD(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		session, err := a.store.Get(r, SessionName)
 		if err != nil {
-			cookieError := err.(securecookie.Error)
+                        cookieError, ok := err.(securecookie.Error)
+                        if ok && cookieError != nil && cookieError.IsDecode() {
 			if cookieError != nil && cookieError.IsDecode() {
 				cookie := &http.Cookie{
 					Name:    SessionName,
