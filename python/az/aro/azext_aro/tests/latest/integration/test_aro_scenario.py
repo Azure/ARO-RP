@@ -26,6 +26,11 @@ class AroScenarioTest(ScenarioTest):
                 self.check('name', '{name}')
             ])
 
+        # Test aro_validate_permissions
+        with mock.patch('azure.cli.command_modules.aro._rbac._gen_uuid', side_effect=self.create_guid):
+            validated_permissions_output = self.cmd('aro validate_permissions -g {rg}')
+            self.assertTrue(validated_permissions_output, '')
+
         self.cmd('aro update -g {rg} -n {name} --tags foo=boo', checks=[
             self.check('tags.foo', 'boo')
         ])

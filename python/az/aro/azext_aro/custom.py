@@ -29,51 +29,8 @@ logger = get_logger(__name__)
 
 FP_CLIENT_ID = 'f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875'
 
-def aro_validate_permissions(cmd,  # pylint: disable=too-many-locals
-               client,
-               resource_group_name,
-              #  resource_name,
-               master_subnet,
-               worker_subnet,
-               vnet=None,  # pylint: disable=unused-argument
-               vnet_resource_group_name=None,  # pylint: disable=unused-argument
-               location=None,
-               pull_secret=None,
-               domain=None,
-               cluster_resource_group=None,
-               fips_validated_modules=None,
-               client_id=None,
-               client_secret=None,
-               pod_cidr=None,
-               service_cidr=None,
-               software_defined_network=None,
-               disk_encryption_set=None,
-               master_encryption_at_host=False,
-               master_vm_size=None,
-               worker_encryption_at_host=False,
-               worker_vm_size=None,
-               worker_vm_disk_size_gb=None,
-               worker_count=None,
-               apiserver_visibility=None,
-               ingress_visibility=None,
-               tags=None,
-               install_version=None,
-               no_wait=False):
-    if not rp_mode_development():
-        resource_client = get_mgmt_service_client(
-            cmd.cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES)
-        provider = resource_client.providers.get('Microsoft.RedHatOpenShift')
-        if provider.registration_state != 'Registered':
-            raise UnauthorizedError('Microsoft.RedHatOpenShift provider is not registered.',
-                                    'Run `az provider register -n Microsoft.RedHatOpenShift --wait`.')
 
-    random_id = generate_random_id()
-    sp_obj_ids, client_id, client_secret = set_sp_obj_ids(cmd, client_id, client_secret, cluster_resource_group, random_id)
-    oc = create_openshift_cluster(**locals())
-
-    return ensure_resource_permissions(cmd.cli_ctx, oc, True, sp_obj_ids)
-
-
+# pylint: disable=unused-argument
 def aro_create(cmd,  # pylint: disable=too-many-locals
                client,
                resource_group_name,
@@ -103,7 +60,8 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                ingress_visibility=None,
                tags=None,
                install_version=None,
-               no_wait=False):
+               no_wait=False,
+               validate_only=False):
     if not rp_mode_development():
         resource_client = get_mgmt_service_client(
             cmd.cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES)
@@ -112,15 +70,34 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
             raise UnauthorizedError('Microsoft.RedHatOpenShift provider is not registered.',
                                     'Run `az provider register -n Microsoft.RedHatOpenShift --wait`.')
     random_id = generate_random_id()
-    sp_obj_ids, client_id, client_secret = set_sp_obj_ids(cmd, client_id, client_secret, cluster_resource_group, random_id)
+    sp_obj_ids, client_id, client_secret = set_sp_obj_ids(cmd,
+                                                          client_id,
+                                                          client_secret,
+                                                          cluster_resource_group,
+                                                          random_id)
     oc = create_openshift_cluster(**locals())
 
     ensure_resource_permissions(cmd.cli_ctx, oc, True, sp_obj_ids)
+
+    if validate_only:
+        return ensure_resource_permissions(cmd.cli_ctx, oc, True, sp_obj_ids)
 
     return sdk_no_wait(no_wait, client.open_shift_clusters.begin_create_or_update,
                        resource_group_name=resource_group_name,
                        resource_name=resource_name,
                        parameters=oc)
+
+
+def aro_validate_permissions(cmd,
+                             client,
+                             resource_group_name,
+                             master_subnet,
+                             worker_subnet,
+                             vnet,
+                             resource_name=None,
+                             vnet_resource_group_name=None,
+                             validate_only=True):
+    aro_create(**locals())
 
 
 def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
@@ -412,6 +389,7 @@ def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
                 if not resource_contributor_exists:
                     assign_role_to_resource(cli_ctx, resource, sp_id, role)
 
+
 def set_sp_obj_ids(cmd, client_id, client_secret, cluster_resource_group, random_id):
     aad = AADManager(cmd.cli_ctx)
     if client_id is None:
@@ -426,6 +404,7 @@ def set_sp_obj_ids(cmd, client_id, client_secret, cluster_resource_group, random
         raise ResourceNotFoundError("RP service principal not found.")
 
     return [client_sp_id, rp_client_sp_id], client_id, client_secret
+
 
 def create_openshift_cluster(**kwargs):
     validate_subnets(kwargs['master_subnet'], kwargs['worker_subnet'])
@@ -443,49 +422,49 @@ def create_openshift_cluster(**kwargs):
         kwargs['ingress_visibility'] = kwargs['ingress_visibility'].capitalize()
 
     return openshiftcluster.OpenShiftCluster(
-      location=kwargs['location'],
-      tags=kwargs['tags'],
-      cluster_profile=openshiftcluster.ClusterProfile(
-          pull_secret=kwargs['pull_secret'] or "",
-          domain=kwargs['domain'] or kwargs['random_id'],
-          resource_group_id=(f"/subscriptions/{subscription_id}"
-                              f"/resourceGroups/{kwargs['cluster_resource_group'] or 'aro-' + kwargs['random_id']}"),
-          fips_validated_modules='Enabled' if kwargs['fips_validated_modules'] else 'Disabled',
-      ),
-      service_principal_profile=openshiftcluster.ServicePrincipalProfile(
-          client_id=kwargs['client_id'],
-          client_secret=kwargs['client_secret'],
-      ),
-      network_profile=openshiftcluster.NetworkProfile(
-          pod_cidr=kwargs['pod_cidr'] or '10.128.0.0/14',
-          service_cidr=kwargs['service_cidr'] or '172.30.0.0/16',
-          software_defined_network=kwargs['software_defined_network'] or 'OpenShiftSDN'
-      ),
-      master_profile=openshiftcluster.MasterProfile(
-          vm_size=kwargs['master_vm_size'] or 'Standard_D8s_v3',
-          subnet_id=kwargs['master_subnet'],
-          encryption_at_host='Enabled' if kwargs['master_encryption_at_host'] else 'Disabled',
-          disk_encryption_set_id=kwargs['disk_encryption_set'],
-      ),
-      worker_profiles=[
-          openshiftcluster.WorkerProfile(
-              name='worker',  # TODO: 'worker' should not be hard-coded
-              vm_size=worker_vm_size,
-              disk_size_gb=kwargs['worker_vm_disk_size_gb'] or 128,
-              subnet_id=kwargs['worker_subnet'],
-              count=kwargs['worker_count'] or 3,
-              encryption_at_host='Enabled' if kwargs['worker_encryption_at_host'] else 'Disabled',
-              disk_encryption_set_id=kwargs['disk_encryption_set'],
-          )
-      ],
-      apiserver_profile=openshiftcluster.APIServerProfile(
-          visibility=kwargs['apiserver_visibility'] or 'Public',
-      ),
-      ingress_profiles=[
-          openshiftcluster.IngressProfile(
-              name='default',  # TODO: 'default' should not be hard-coded
-              visibility=kwargs['ingress_visibility'] or 'Public',
-          )
-      ],
-      install_version=kwargs['install_version'] or '',
+        location=kwargs['location'],
+        tags=kwargs['tags'],
+        cluster_profile=openshiftcluster.ClusterProfile(
+            pull_secret=kwargs['pull_secret'] or "",
+            domain=kwargs['domain'] or kwargs['random_id'],
+            resource_group_id=(f"/subscriptions/{subscription_id}"
+                               f"/resourceGroups/{kwargs['cluster_resource_group'] or 'aro-' + kwargs['random_id']}"),
+            fips_validated_modules='Enabled' if kwargs['fips_validated_modules'] else 'Disabled',
+        ),
+        service_principal_profile=openshiftcluster.ServicePrincipalProfile(
+            client_id=kwargs['client_id'],
+            client_secret=kwargs['client_secret'],
+        ),
+        network_profile=openshiftcluster.NetworkProfile(
+            pod_cidr=kwargs['pod_cidr'] or '10.128.0.0/14',
+            service_cidr=kwargs['service_cidr'] or '172.30.0.0/16',
+            software_defined_network=kwargs['software_defined_network'] or 'OpenShiftSDN'
+        ),
+        master_profile=openshiftcluster.MasterProfile(
+            vm_size=kwargs['master_vm_size'] or 'Standard_D8s_v3',
+            subnet_id=kwargs['master_subnet'],
+            encryption_at_host='Enabled' if kwargs['master_encryption_at_host'] else 'Disabled',
+            disk_encryption_set_id=kwargs['disk_encryption_set'],
+        ),
+        worker_profiles=[
+            openshiftcluster.WorkerProfile(
+                name='worker',  # TODO: 'worker' should not be hard-coded
+                vm_size=worker_vm_size,
+                disk_size_gb=kwargs['worker_vm_disk_size_gb'] or 128,
+                subnet_id=kwargs['worker_subnet'],
+                count=kwargs['worker_count'] or 3,
+                encryption_at_host='Enabled' if kwargs['worker_encryption_at_host'] else 'Disabled',
+                disk_encryption_set_id=kwargs['disk_encryption_set'],
+            )
+        ],
+        apiserver_profile=openshiftcluster.APIServerProfile(
+            visibility=kwargs['apiserver_visibility'] or 'Public',
+        ),
+        ingress_profiles=[
+            openshiftcluster.IngressProfile(
+                name='default',  # TODO: 'default' should not be hard-coded
+                visibility=kwargs['ingress_visibility'] or 'Public',
+            )
+        ],
+        install_version=kwargs['install_version'] or '',
     )
