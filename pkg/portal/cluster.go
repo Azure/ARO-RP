@@ -190,3 +190,28 @@ func (p *portal) machineSets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(b)
 }
+
+func (p *portal) regions(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	fetcher, err := p.makeFetcher(ctx, r)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	res, err := fetcher.Regions(ctx)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	b, err := json.MarshalIndent(res, "", "    ")
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(b)
+}
