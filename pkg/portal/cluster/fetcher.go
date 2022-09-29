@@ -18,6 +18,7 @@ import (
 // information about clusters. It returns frontend-suitable data structures.
 type FetchClient interface {
 	ClusterOperators(context.Context) (*ClusterOperatorsInformation, error)
+	Regions(context.Context) (RegionInfo, error)
 }
 
 // client is an implementation of FetchClient. It currently contains a "fetcher"
