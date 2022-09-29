@@ -7,9 +7,7 @@ import (
 	"context"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/proxy"
@@ -19,10 +17,8 @@ import (
 // FetchClient is the interface that the Admin Portal Frontend uses to gather
 // information about clusters. It returns frontend-suitable data structures.
 type FetchClient interface {
-	Nodes(context.Context) (*NodeListInformation, error)
 	ClusterOperators(context.Context) (*ClusterOperatorsInformation, error)
-	Machines(context.Context) (*MachineListInformation, error)
-	MachineSets(context.Context) (*MachineSetListInformation, error)
+	Regions(context.Context) (RegionInfo, error)
 }
 
 // client is an implementation of FetchClient. It currently contains a "fetcher"
@@ -41,10 +37,8 @@ type client struct {
 // contains Kubernetes clients and returns the frontend-suitable data
 // structures. The concrete implementation of FetchClient wraps this.
 type realFetcher struct {
-	log           *logrus.Entry
-	configCli     configclient.Interface
-	kubernetesCli kubernetes.Interface
-	machineClient machineclient.Interface
+	log       *logrus.Entry
+	configcli configclient.Interface
 }
 
 func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument) (*realFetcher, error) {
@@ -54,28 +48,14 @@ func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftCl
 		return nil, err
 	}
 
-	configCli, err := configclient.NewForConfig(restConfig)
+	configcli, err := configclient.NewForConfig(restConfig)
 	if err != nil {
-		return nil, err
-	}
-
-	kubernetesCli, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-
-	machineClient, err := machineclient.NewForConfig(restConfig)
-	if err != nil {
-		log.Error(err)
 		return nil, err
 	}
 
 	return &realFetcher{
-		log:           log,
-		configCli:     configCli,
-		kubernetesCli: kubernetesCli,
-		machineClient: machineClient,
+		log:       log,
+		configcli: configcli,
 	}, nil
 }
 
