@@ -283,6 +283,7 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 
 	// Cluster-specific routes
 	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{name}/clusteroperators").HandlerFunc(p.clusterOperators)
+	r.NewRoute().PathPrefix("/api/regions").HandlerFunc(p.regions)
 	r.NewRoute().Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{name}").HandlerFunc(p.clusterInfo)
 }
 
