@@ -34,6 +34,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api/latest"
 
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -59,6 +60,9 @@ type clientSet struct {
 	Disks                 compute.DisksClient
 	NetworkSecurityGroups network.SecurityGroupsClient
 	Subnet                network.SubnetsClient
+
+	HiveAKS            kubernetes.Interface
+	HiveClusterManager hive.ClusterManager
 
 	RestConfig    *rest.Config
 	Kubernetes    kubernetes.Interface
@@ -289,6 +293,26 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	liveCfg, err := _env.NewLiveConfigManager(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	aksCfg, err := liveCfg.HiveRestConfig(ctx, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	hiveAKS, err := kubernetes.NewForConfig(aksCfg)
+	if err != nil {
+		return nil, err
+	}
+
+	hiveCM, err := hive.NewFromConfig(log, _env, aksCfg)
+	if err != nil {
+		return nil, err
+	}
+
 	return &clientSet{
 		OpenshiftClustersv20200430: redhatopenshift20200430.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Operationsv20200430:        redhatopenshift20200430.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
@@ -301,6 +325,9 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		DiskEncryptionSets:    compute.NewDiskEncryptionSetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Subnet:                network.NewSubnetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		NetworkSecurityGroups: network.NewSecurityGroupsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+
+		HiveAKS:            hiveAKS,
+		HiveClusterManager: hiveCM,
 
 		RestConfig:    restconfig,
 		Kubernetes:    cli,
