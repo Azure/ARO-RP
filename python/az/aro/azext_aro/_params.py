@@ -100,7 +100,7 @@ def load_arguments(self, _):
                    help='Ingress visibility.',
                    validator=validate_visibility('ingress_visibility'))
 
-        c.argument('validate_only', arg_type=get_enum_type(['Private', 'Public']),
+        c.argument('validate_only',
                    help='Boolean to create cluster or validate permissions only')
 
         c.argument('vnet_resource_group_name',
