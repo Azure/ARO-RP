@@ -31,9 +31,9 @@ func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
 			},
 		},
 	}
-
 	return &doc
 }
+
 func TestSetDefaults(t *testing.T) {
 	for _, tt := range []struct {
 		name  string
@@ -116,14 +116,18 @@ func TestSetDefaults(t *testing.T) {
 			},
 		},
 		{
-			name: "preserve flags",
+			// TODO: Once the operatorflags are changed from strings to consts, we can correctly
+			// modify a single flag, until then it's hardcoded
+			name: "merge flags",
 			want: func() *OpenShiftClusterDocument {
 				doc := validOpenShiftClusterDocument()
-				doc.OpenShiftCluster.Properties.OperatorFlags = OperatorFlags{}
+				doc.OpenShiftCluster.Properties.OperatorFlags["rh.srep.muo.managed"] = "false"
 				return doc
 			},
 			input: func(base *OpenShiftClusterDocument) {
-				base.OpenShiftCluster.Properties.OperatorFlags = OperatorFlags{}
+				base.OpenShiftCluster.Properties.OperatorFlags = DefaultOperatorFlags()
+				base.OpenShiftCluster.Properties.OperatorFlags["rh.srep.muo.managed"] = "false"
+				delete(base.OpenShiftCluster.Properties.OperatorFlags, "aro.alertwebhook.enabled")
 			},
 		},
 	} {

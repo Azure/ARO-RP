@@ -36,9 +36,18 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 				doc.OpenShiftCluster.Properties.MaintenanceTask = MaintenanceTaskEverything
 			}
 		}
+
 		// If there's no operator flags, set the default ones
 		if doc.OpenShiftCluster.Properties.OperatorFlags == nil {
 			doc.OpenShiftCluster.Properties.OperatorFlags = DefaultOperatorFlags()
+		} else {
+			// Merge operator flags with existing ones
+			defaultOperatorFlags := DefaultOperatorFlags()
+			for k, v := range defaultOperatorFlags {
+				if _, ok := doc.OpenShiftCluster.Properties.OperatorFlags[k]; !ok {
+					doc.OpenShiftCluster.Properties.OperatorFlags[k] = v
+				}
+			}
 		}
 	}
 }
