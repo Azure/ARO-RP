@@ -176,6 +176,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"EnableDevelopmentAuthorizer",
 				"RequireD2sV3Workers",
 				"DisableReadinessDelay",
+				"EnableOCMEndpoints",
 			},
 			// TODO update this to support FF
 			RPImagePrefix:                     to.StringPtr(os.Getenv("USER") + "aro.azurecr.io/aro"),

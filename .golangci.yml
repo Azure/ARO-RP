@@ -21,7 +21,7 @@ linters-settings:
     # Refer https://staticcheck.io/docs/options#checks for details
     checks: ["all", "-ST1000", "-ST1003", "-ST1016", "-ST1020", "-ST1021", "-ST1022"]
     dot-import-whitelist:
-      - github.com/onsi/ginkgo
+      - github.com/onsi/ginkgo/v2
       - github.com/onsi/gomega
 
 linters:

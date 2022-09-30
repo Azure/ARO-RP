@@ -45,3 +45,6 @@ feature flags defined in pkg/env/env.go.  At the time of writing these include:
 
 * RequireD2sV3Workers: require cluster worker VMs to be Standard_D2s_v3 SKU.
   Used in development only (to save money :-).
+
+* EnableOCMEndpoints: Register the OCM endpoints in the frontend. Otherwise the
+  endpoints are not available at all.

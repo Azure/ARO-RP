@@ -118,8 +118,8 @@ func (c *clusterManagerConfiguration) Update(ctx context.Context, doc *api.Clust
 }
 
 func (c *clusterManagerConfiguration) update(ctx context.Context, doc *api.ClusterManagerConfigurationDocument, options *cosmosdb.Options) (*api.ClusterManagerConfigurationDocument, error) {
-	if doc.Key != strings.ToLower(doc.Key) {
-		return nil, fmt.Errorf("key %q is not lower case", doc.Key)
+	if doc.ID != strings.ToLower(doc.ID) {
+		return nil, fmt.Errorf("id %q is not lower case", doc.ID)
 	}
 
 	return c.c.Replace(ctx, doc.PartitionKey, doc, options)
