@@ -151,5 +151,5 @@ oc -n openshift-config get secrets/pull-secret -o template='{{index .data ".dock
 ### How to run operator e2e tests
 
 ```sh
-go test ./test/e2e -v -ginkgo.v -ginkgo.focus="ARO Operator" -tags e2e
+go test ./test/e2e -tags e2e -test.v --ginkgo.v --ginkgo.focus="ARO Operator"
 ```
