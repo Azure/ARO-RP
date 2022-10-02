@@ -64,12 +64,12 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli 
 // Reconcile will make sure that the ACR part of the pull secret is correct. The
 // conditions under which Reconcile is called are slightly unusual and are as
 // follows:
-// * If the Cluster object changes, we'll see the *Cluster* object requested.
-// * If a Secret object owned by the Cluster object changes (e.g., but not
-//   limited to, the configuration Secret, we'll see the *Cluster* object
-//   requested).
-// * If the pull Secret object (which is not owned by the Cluster object)
-//   changes, we'll see the pull Secret object requested.
+//   - If the Cluster object changes, we'll see the *Cluster* object requested.
+//   - If a Secret object owned by the Cluster object changes (e.g., but not
+//     limited to, the configuration Secret, we'll see the *Cluster* object
+//     requested).
+//   - If the pull Secret object (which is not owned by the Cluster object)
+//     changes, we'll see the pull Secret object requested.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
@@ -203,6 +203,7 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 //   - redhat.registry.io
 //   - cloud.openshift.com
 //   - registry.connect.redhat.com
+//
 // if present, return error when the parsing fail, which means broken secret
 func (r *Reconciler) parseRedHatKeys(secret *corev1.Secret) (foundKeys []string, err error) {
 	// parse keys and validate JSON
