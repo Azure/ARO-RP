@@ -5,11 +5,9 @@ package e2e
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -407,30 +405,6 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 		}
 
 		err := wait.PollImmediate(30*time.Second, 10*time.Minute, muoIsDeployed)
-		Expect(err).NotTo(HaveOccurred())
-	})
-})
-
-var _ = Describe("ARO Operator - MHC Deployment", func() {
-	It("must be deployed and managed by default", func() {
-		mhcIsDeployed := func() (bool, error) {
-			By("getting ARO operator config")
-			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(context.Background(), "cluster", metav1.GetOptions{})
-			if err != nil {
-				return false, err
-			}
-
-			By("checking ARO operator flags")
-			mhcEnabled, _ := strconv.ParseBool(co.Spec.OperatorFlags.GetWithDefault("aro.machinehealthcheck.enabled", "false"))
-			mhcManaged, _ := strconv.ParseBool(co.Spec.OperatorFlags.GetWithDefault("aro.machinehealthcheck.managed", "false"))
-
-			if mhcEnabled && mhcManaged {
-				return true, nil
-			}
-			return false, errors.New("mhc should be enabled and managed by default")
-		}
-
-		err := wait.PollImmediate(30*time.Second, 10*time.Minute, mhcIsDeployed)
 		Expect(err).NotTo(HaveOccurred())
 	})
 })
