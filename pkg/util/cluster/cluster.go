@@ -15,14 +15,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -93,15 +94,17 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		}
 	}
 
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	options := environment.Environment().EnvironmentCredentialOptions()
+	tokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
 		return nil, err
 	}
 
-	graphAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(environment.Environment().GraphEndpoint)
-	if err != nil {
-		return nil, err
-	}
+	scopes := []string{environment.Environment().GraphEndpoint + "/.default"}
+	graphAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
+
+	scopes = []string{environment.Environment().ResourceManagerEndpoint + "/.default"}
+	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
 	c := &Cluster{
 		log: log,
