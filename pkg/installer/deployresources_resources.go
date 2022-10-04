@@ -25,7 +25,7 @@ func (m *manager) networkBootstrapNIC(installConfig *installconfig.InstallConfig
 			ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", m.oc.Properties.InfraID)),
 		},
 	}
-	if m.oc.Properties.NetworkProfile.OutboundType == api.OutboundTypeUserDefinedRouting {
+	if m.oc.Properties.NetworkProfile.OutboundType == api.OutboundTypeLoadbalancer {
 		*lbBackendAddressPool = append(*lbBackendAddressPool, mgmtnetwork.BackendAddressPool{
 			ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.oc.Properties.InfraID)),
 		})
@@ -63,7 +63,7 @@ func (m *manager) networkMasterNICs(installConfig *installconfig.InstallConfig) 
 			ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', concat('ssh-', copyIndex()))]", m.oc.Properties.InfraID)),
 		},
 	}
-	if m.oc.Properties.NetworkProfile.OutboundType == api.OutboundTypeUserDefinedRouting {
+	if m.oc.Properties.NetworkProfile.OutboundType == api.OutboundTypeLoadbalancer {
 		*lbBackendAddressPool = append(*lbBackendAddressPool, mgmtnetwork.BackendAddressPool{
 			ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.oc.Properties.InfraID)),
 		})

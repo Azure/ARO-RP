@@ -68,7 +68,6 @@ func (m *manager) determineOutboundType(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPrivate &&
 		m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPrivate &&
 		feature.IsRegisteredForFeature(m.subscriptionDoc.Subscription.Properties, api.FeatureFlagUserDefinedRouting) {
-		m.doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType = api.OutboundTypeUserDefinedRouting
 		outboundType = api.OutboundTypeUserDefinedRouting
 	}
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
