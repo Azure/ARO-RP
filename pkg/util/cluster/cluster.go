@@ -124,11 +124,9 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		vaultsClient:                      keyvaultclient.NewVaultsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 	}
 
-	if ci {
+	if ci && env.IsLocalDevelopmentMode() {
 		// Only peer if CI=true and RP_MODE=development
-		if env.IsLocalDevelopmentMode() {
-			c.ciParentVnet = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vpn-vnet", c.env.SubscriptionID(), c.env.ResourceGroup())
-		}
+		c.ciParentVnet = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vpn-vnet", c.env.SubscriptionID(), c.env.ResourceGroup())
 
 		r, err := azure.ParseResourceID(c.ciParentVnet)
 		if err != nil {
@@ -326,10 +324,12 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 			return err
 		}
 
-		c.log.Info("peering subnets to CI infra")
-		err = c.peerSubnetsToCI(ctx, vnetResourceGroup, clusterName)
-		if err != nil {
-			return err
+		if env.IsLocalDevelopmentMode() {
+			c.log.Info("peering subnets to CI infra")
+			err = c.peerSubnetsToCI(ctx, vnetResourceGroup, clusterName)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -384,7 +384,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 				errs = append(errs, err)
 			}
 		}
-		// Only peer if CI=true and RP_MODE=development
+		// Only delete peering if CI=true and RP_MODE=development
 		if env.IsLocalDevelopmentMode() {
 			r, err := azure.ParseResourceID(c.ciParentVnet)
 			if err == nil {
