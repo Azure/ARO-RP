@@ -16,17 +16,18 @@
     . ./env
     ```
 
-1. Generate the development RP configuration
-    ```bash
-    make dev-config.yaml
-    ```
-
 1. Create a full environment file, which overrides some default `./env` options when sourced
     ```bash
     cp env-int.example env-int
     vi env-int
     . ./env-int
     ```
+
+1. Generate the development RP configuration
+    ```bash
+    make dev-config.yaml
+    ```
+
 
 1. Run `make deploy`
     > __NOTE:__ This will fail on the first attempt to run due to certificate and container mirroring requirements.
@@ -59,9 +60,9 @@
     1. Push the ARO and Fluentbit images to your ACR
 
         > If running this step from a VM separate from your workstation, ensure the commit tag used to build the image matches the commit tag where `make deploy` is run.
- 
+
         > Due to security compliance requirements, `make publish-image-*` targets pull from `arointsvc.azurecr.io`. You can either authenticate to this registry using `az acr login --name arointsvc` to pull the image, or modify the $RP_IMAGE_ACR environment variable locally to point to `registry.access.redhat.com` instead.
-        
+
         ```bash
         make publish-image-aro-multistage
         make publish-image-fluentbit
@@ -204,6 +205,21 @@
 
 ## Deploy a Cluster
 
+1. Add a NSG rule to allow tunneling to the RP instance
+
+    ```bash
+    az network nsg rule create \
+        --name tunnel-to-rp \
+        --resource-group $RESOURCEGROUP \
+        --nsg-name rp-nsg \
+        --access Allow \
+        --priority 499 \
+        --source-address-prefixes "$(curl --silent ipecho.net/plain)/32" \
+        --protocol Tcp \
+        --destination-port-ranges 443
+    ```
+
+
 1. Run the tunnel program to tunnel to the RP
     ```bash
     make tunnel
@@ -247,9 +263,24 @@
         --service-endpoints Microsoft.ContainerRegistry
     ```
 
+1. Register your subscription with the resource provider (post directly to subscription cosmosdb container)
+    ```bash
+    curl -k -X PUT   -H 'Content-Type: application/json'   -d '{
+        "state": "Registered",
+        "properties": {
+            "tenantId": "'"$AZURE_TENANT_ID"'",
+            "registeredFeatures": [
+                {
+                    "name": "Microsoft.RedHatOpenShift/RedHatEngineering",
+                    "state": "Registered"
+                }
+            ]
+        }
+    }' "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0"
+    ```
+
 1. Create the cluster
     ```bash
-    export NO_INTERNET=true
     export CLUSTER=$USER
 
     az aro create \
