@@ -916,6 +916,17 @@
       }
     }
   },
+  "parameters": {
+    "api-version": {
+      "name": "api-version",
+      "in": "query",
+      "description": "The version of the API the caller wants to use.",
+      "required": true,
+      "type": "string",
+      "pattern": "^\\d{2}-\\d{2}-\\d{4}(-preview)?$",
+      "x-ms-parameter-location": "client"
+    }
+  },
   "securityDefinitions": {
     "azure_auth": {
       "type": "oauth2",

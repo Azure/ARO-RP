@@ -35,7 +35,8 @@ var _ OperationsClientAPI = (*redhatopenshift.OperationsClient)(nil)
 
 // OpenShiftVersionsClientAPI contains the set of methods on the OpenShiftVersionsClient type.
 type OpenShiftVersionsClientAPI interface {
-	List(ctx context.Context, location string) (result redhatopenshift.OpenShiftVersionList, err error)
+	List(ctx context.Context, location string) (result redhatopenshift.OpenShiftVersionListPage, err error)
+	ListComplete(ctx context.Context, location string) (result redhatopenshift.OpenShiftVersionListIterator, err error)
 }
 
 var _ OpenShiftVersionsClientAPI = (*redhatopenshift.OpenShiftVersionsClient)(nil)

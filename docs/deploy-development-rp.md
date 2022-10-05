@@ -232,7 +232,7 @@
 
 * List the enabled OpenShift installation versions within a region
   ```bash
-  curl -X GET -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/Microsoft.RedHatOpenShift/locations/$LOCATION/listinstallversions?api-version=2022-09-04"
+  curl -X GET -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/Microsoft.RedHatOpenShift/locations/$LOCATION/openshiftversions?api-version=2022-09-04"
   ```
 
 ## OpenShift Cluster Manager (OCM) Configuration API Actions
