@@ -113,13 +113,13 @@
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
-                        "10.0.4.0/22"
+                        "10.0.3.0/22"
                     ]
                 },
                 "subnets": [
                     {
                         "properties": {
-                            "addressPrefix": "10.0.4.0/22",
+                            "addressPrefix": "10.0.3.0/22",
                             "networkSecurityGroup": {
                                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]",
                                 "tags": null
