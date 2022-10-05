@@ -42,6 +42,16 @@ export const FetchInfo = async (): Promise<AxiosResponse | null> => {
   }
 }
 
+export const FetchRegions = async (): Promise<AxiosResponse | null> => {
+  try {
+    const result = await axios("/api/regions")
+    return result
+  } catch (e: any) {
+    let err = e.response as AxiosResponse
+    return OnError(err)
+  }
+}
+
 export const ProcessLogOut = async (): Promise<any> => {
   try {
     const result = await axios({ method: "POST", url: "/api/logout" })
