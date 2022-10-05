@@ -1,11 +1,12 @@
-package cluster
+package portal
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 )
 
 var (
@@ -62,27 +63,24 @@ type RegionInfo struct {
 	Regions []Region `json:"regions"`
 }
 
-func regionListFromRegions(regions []string) RegionInfo {
-	final := &RegionInfo{
-		Regions: make([]Region, 0, len(regions)),
+func (p *portal) regions(w http.ResponseWriter, r *http.Request) {
+	resp := &RegionInfo{
+		Regions: make([]Region, 0, len(PROD_REGIONS)),
 	}
 
-	for _, region := range regions {
-		final.Regions = append(final.Regions, Region{
+	for _, region := range PROD_REGIONS {
+		resp.Regions = append(resp.Regions, Region{
 			Name: region,
-			URL:  fmt.Sprintf("%s.admin.aro.azure.com", region),
+			URL:  fmt.Sprintf("https://%s.admin.aro.azure.com", region),
 		})
 	}
 
-	return *final
-}
+	b, err := json.MarshalIndent(resp, "", "    ")
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
 
-func (f *realFetcher) Regions(ctx context.Context) (RegionInfo, error) {
-	// TODO: Add dynamic method of returning regions
-
-	return regionListFromRegions(PROD_REGIONS), nil
-}
-
-func (c *client) Regions(ctx context.Context) (RegionInfo, error) {
-	return c.fetcher.Regions(ctx)
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(b)
 }
