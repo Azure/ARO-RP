@@ -46,10 +46,9 @@ func TestDeleteClusterManagerConfiguration(t *testing.T) {
 			&api.ClusterManagerConfigurationDocument{
 				ID:  mockSubscriptionId,
 				Key: resourceKey,
-				ClusterManagerConfiguration: &api.ClusterManagerConfiguration{
-					Name: tt.ocmResourceName,
-					Properties: api.ClusterManagerConfigurationProperties{
-						Resources: []byte(resourcePayload),
+				SyncSet: &api.SyncSet{
+					Properties: api.SyncSetProperties{
+						Resources: resourcePayload,
 					},
 				},
 			},
@@ -87,14 +86,24 @@ func TestDeleteClusterManagerConfiguration(t *testing.T) {
 			wantError:      "404: ResourceNotFound: : The Resource 'openshiftclusters/resourcename/syncset/deletesyncset' under resource group 'resourcegroup' was not found.",
 		},
 		{
-			name:            "wrong version",
+			name:            "unsupported api version",
 			ocmResourceType: "syncSet",
 			ocmResourceName: "deleteSyncSet",
 			clusterName:     "myCluster",
 			apiVersion:      "2022-04-01",
 			fixture:         createSingleDocument,
 			wantStatusCode:  http.StatusBadRequest,
-			wantError:       "400: InvalidResourceType: : The resource type 'openshiftclusters' could not be found in the namespace 'microsoft.redhatopenshift' for api version '2022-04-01'.",
+			wantError:       "400: InvalidResourceType: : the resource type 'syncset' could not be found in the namespace 'microsoft.redhatopenshift' for api version '2022-04-01'",
+		},
+		{
+			name:            "unsupported resource type",
+			ocmResourceType: "unsupported",
+			ocmResourceName: "deleteSyncSet",
+			clusterName:     "myCluster",
+			apiVersion:      "2022-09-04",
+			fixture:         createSingleDocument,
+			wantStatusCode:  http.StatusBadRequest,
+			wantError:       "400: InvalidResourceType: : the resource type 'unsupported' is not supported for api version '2022-09-04'",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

@@ -19,23 +19,27 @@ func (f *frontend) deleteClusterManagerConfiguration(w http.ResponseWriter, r *h
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
+	var err error
 
-	if f.apis[vars["api-version"]].ClusterManagerConfigurationConverter == nil {
-		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
+	err = f.readOcmResourceType(vars)
+	if err != nil {
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", err.Error())
 		return
 	}
 
-	err := f._deleteClusterManagerConfiguration(ctx, log, r)
+	err = f._deleteClusterManagerConfigurationDocument(ctx, log, r)
+
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		err = statusCodeError(http.StatusNoContent)
 	case err == nil:
 		err = statusCodeError(http.StatusOK)
 	}
+
 	reply(log, w, nil, nil, err)
 }
 
-func (f *frontend) _deleteClusterManagerConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request) error {
+func (f *frontend) _deleteClusterManagerConfigurationDocument(ctx context.Context, log *logrus.Entry, r *http.Request) error {
 	vars := mux.Vars(r)
 
 	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered, api.SubscriptionStateSuspended, api.SubscriptionStateWarned)

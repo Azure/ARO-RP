@@ -17,7 +17,6 @@ const (
 
 func init() {
 	api.APIs[APIVersion] = &api.Version{
-		ClusterManagerConfigurationConverter:     clusterManagerConfigurationConverter{},
 		OpenShiftClusterConverter:                openShiftClusterConverter{},
 		OpenShiftClusterStaticValidator:          openShiftClusterStaticValidator{},
 		OpenShiftClusterCredentialsConverter:     openShiftClusterCredentialsConverter{},
@@ -45,5 +44,10 @@ func init() {
 				api.OperationSyncIdentityProvidersDelete,
 			},
 		},
+		SyncSetConverter:              syncSetConverter{},
+		MachinePoolConverter:          machinePoolConverter{},
+		SyncIdentityProviderConverter: syncIdentityProviderConverter{},
+		SecretConverter:               secretConverter{},
+		ClusterManagerStaticValidator: clusterManagerStaticValidator{},
 	}
 }
