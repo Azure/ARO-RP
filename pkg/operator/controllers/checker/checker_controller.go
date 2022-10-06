@@ -47,7 +47,6 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli 
 			NewServicePrincipalChecker(log, arocli, kubernetescli, machinecli, role),
 			NewIngressCertificateChecker(log, arocli, operatorcli, configcli, role),
 			NewClusterDNSChecker(log, arocli, operatorcli, role),
-			NewIngressReplicaChecker(arocli, operatorcli, role),
 		)
 	}
 
