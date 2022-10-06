@@ -23,7 +23,7 @@ const (
 	minimumReplicas                     = 2
 )
 
-// Reconciler spots openshift ingress controllers with 0 replica
+// Reconciler spots openshift ingress controllers has abnormal replica counts (less than 2)
 // when happens, it tries to rescale the controller to 2 replicas, i.e., the minimum required replicas
 type Reconciler struct {
 	log *logrus.Entry
