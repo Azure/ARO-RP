@@ -66,6 +66,7 @@ func DefaultOperatorFlags() OperatorFlags {
 		"aro.dnsmasq.enabled":                      flagTrue,
 		"aro.genevalogging.enabled":                flagTrue,
 		"aro.imageconfig.enabled":                  flagTrue,
+		"aro.ingress.enabled":                      flagTrue,
 		"aro.machine.enabled":                      flagTrue,
 		"aro.machineset.enabled":                   flagTrue,
 		"aro.machinehealthcheck.enabled":           flagTrue,

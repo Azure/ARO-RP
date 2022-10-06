@@ -27,7 +27,6 @@ const (
 
 	// advisor checks
 	DefaultIngressCertificate = "DefaultIngressCertificate"
-	DefaultIngressReplica     = "DefaultIngressReplica"
 	DefaultClusterDNS         = "DefaultClusterDNS"
 )
 
@@ -41,7 +40,6 @@ func AllConditionTypes() []string {
 		ServicePrincipalValid,
 		ManagedUpgradeOperatorStatus,
 		DefaultIngressCertificate,
-		DefaultIngressReplica,
 		DefaultClusterDNS,
 	}
 }
