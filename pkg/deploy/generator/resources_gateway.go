@@ -263,6 +263,42 @@ for attempt in {1..5}; do
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
+cat >/etc/logrotate.conf <<'EOF'
+# see "man logrotate" for details
+# rotate log files weekly
+weekly
+
+# keep 2 weeks worth of backlogs
+rotate 2
+
+# create new (empty) log files after rotating old ones
+create
+
+# use date as a suffix of the rotated file
+dateext
+
+# uncomment this if you want your log files compressed
+compress
+
+# RPM packages drop log rotation information into this directory
+include /etc/logrotate.d
+
+# no packages own wtmp and btmp -- we'll rotate them here
+/var/log/wtmp {
+    monthly
+    create 0664 root utmp
+        minsize 1M
+    rotate 1
+}
+
+/var/log/btmp {
+    missingok
+    monthly
+    create 0600 root utmp
+    rotate 1
+}
+EOF
+
 cat >/etc/yum.repos.d/azure.repo <<'EOF'
 [azure-cli]
 name=azure-cli
