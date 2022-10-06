@@ -348,7 +348,12 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 	var x, y int
 	rand.Seed(time.Now().UnixNano())
 	for x == 0 && y == 0 {
-		x, y = rand.Intn((124))+2, 2*rand.Intn(128)
+		// Dev clusters are limited to /16
+		if !c.ci {
+			x, y = 0, 2*rand.Intn(128)
+		} else {
+			x, y = rand.Intn((124))+4, 2*rand.Intn(128)
+		}
 	}
 	vnetPrefix = fmt.Sprintf("10.%d.%d.0/23", x, y)
 	masterSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y)
