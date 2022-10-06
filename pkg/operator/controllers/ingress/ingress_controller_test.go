@@ -1,18 +1,21 @@
 package ingress
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	operatorv1 "github.com/openshift/api/operator/v1"
+	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
-	"github.com/Azure/go-autorest/autorest/to"
-	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 )
 
 func TestReconciler(t *testing.T) {
@@ -44,21 +47,6 @@ func TestReconciler(t *testing.T) {
 			expectedError:            "ingresscontrollers.operator.openshift.io \"default\" not found",
 		},
 		{
-			name:                     "openshift ingress controller has 2 replicas (minimum required replicas)",
-			aroCluster:               fakeCluster,
-			aroIngressControllerFlag: "true",
-			ingressController: &operatorv1.IngressController{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      openshiftIngressControllerName,
-					Namespace: openshiftIngressControllerNamespace,
-				},
-				Spec: operatorv1.IngressControllerSpec{
-					Replicas: to.Int32Ptr(minimumReplicas),
-				},
-			},
-			expectedReplica: minimumReplicas,
-		},
-		{
 			name:                     "openshift ingress controller has 3 replicas",
 			aroCluster:               fakeCluster,
 			aroIngressControllerFlag: "true",
@@ -72,6 +60,21 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			expectedReplica: 3,
+		},
+		{
+			name:                     "openshift ingress controller has 2 replicas (minimum required replicas)",
+			aroCluster:               fakeCluster,
+			aroIngressControllerFlag: "true",
+			ingressController: &operatorv1.IngressController{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      openshiftIngressControllerName,
+					Namespace: openshiftIngressControllerNamespace,
+				},
+				Spec: operatorv1.IngressControllerSpec{
+					Replicas: to.Int32Ptr(minimumReplicas),
+				},
+			},
+			expectedReplica: minimumReplicas,
 		},
 		{
 			name:                     "openshift ingress controller has 1 replica",
