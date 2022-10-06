@@ -264,7 +264,7 @@ type NetworkProfile struct {
 	ServiceCIDR            string                 `json:"serviceCidr,omitempty"`
 	SoftwareDefinedNetwork SoftwareDefinedNetwork `json:"softwareDefinedNetwork,omitempty"`
 	MTUSize                MTUSize                `json:"mtuSize,omitempty"`
-	OutboundType           OutboundType           `json:"OutboundType,omitempty"`
+	OutboundType           OutboundType           `json:"outboundType,omitempty"`
 
 	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
 	GatewayPrivateEndpointIP   string `json:"gatewayPrivateEndpointIp,omitempty"`
