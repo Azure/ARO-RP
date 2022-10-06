@@ -8,9 +8,9 @@ import (
 	"crypto/x509"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -36,7 +36,7 @@ func (s *Server) Run() error {
 	}
 	s.subnet = subnet
 
-	b, err := ioutil.ReadFile(s.ClientCertFile)
+	b, err := os.ReadFile(s.ClientCertFile)
 	if err != nil {
 		return err
 	}
@@ -49,12 +49,12 @@ func (s *Server) Run() error {
 	pool := x509.NewCertPool()
 	pool.AddCert(clientCert)
 
-	cert, err := ioutil.ReadFile(s.CertFile)
+	cert, err := os.ReadFile(s.CertFile)
 	if err != nil {
 		return err
 	}
 
-	b, err = ioutil.ReadFile(s.KeyFile)
+	b, err = os.ReadFile(s.KeyFile)
 	if err != nil {
 		return err
 	}
@@ -172,14 +172,20 @@ func Proxy(log *logrus.Entry, w http.ResponseWriter, r *http.Request, sz int) {
 		defer recover.Panic(log)
 		defer wg.Done()
 		defer func() {
-			_ = c2.(*net.TCPConn).CloseWrite()
+			conn2, ok := c2.(*net.TCPConn)
+			if ok {
+				conn2.CloseWrite()
+			}
 		}()
 		_, _ = io.Copy(c2, buf)
 	}()
 
 	// copy from c2->c1.  Call c1.CloseWrite() when done.
 	defer func() {
-		_ = c1.(interface{ CloseWrite() error }).CloseWrite()
+		closeWriter, ok := c1.(interface{ CloseWrite() error })
+		if ok {
+			closeWriter.CloseWrite()
+		}
 	}()
 	_, _ = io.Copy(c1, c2)
 }

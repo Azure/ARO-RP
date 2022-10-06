@@ -40,25 +40,33 @@ func TestOpenShiftVersionList(t *testing.T) {
 				f.AddOpenShiftVersionDocuments(
 					&api.OpenShiftVersionDocument{
 						OpenShiftVersion: &api.OpenShiftVersion{
-							Version:           "4.10.0",
-							Enabled:           true,
-							OpenShiftPullspec: "a:a/b",
+							Properties: api.OpenShiftVersionProperties{
+								Version:           "4.10.0",
+								Enabled:           true,
+								OpenShiftPullspec: "a:a/b",
+							},
 						},
 					},
 					&api.OpenShiftVersionDocument{
 						OpenShiftVersion: &api.OpenShiftVersion{
-							Version:           "4.9.9",
-							Enabled:           true,
-							OpenShiftPullspec: "a:a/b",
-							InstallerPullspec: "b:b/c",
+							Properties: api.OpenShiftVersionProperties{
+
+								Version:           "4.9.9",
+								Enabled:           true,
+								OpenShiftPullspec: "a:a/b",
+								InstallerPullspec: "b:b/c",
+							},
 						},
 					},
 					&api.OpenShiftVersionDocument{
 						OpenShiftVersion: &api.OpenShiftVersion{
-							Version:           "4.10.1",
-							Enabled:           false,
-							OpenShiftPullspec: "a:a/b",
-							InstallerPullspec: "b:b/c",
+							Properties: api.OpenShiftVersionProperties{
+
+								Version:           "4.10.1",
+								Enabled:           false,
+								OpenShiftPullspec: "a:a/b",
+								InstallerPullspec: "b:b/c",
+							},
 						},
 					},
 				)
@@ -67,21 +75,27 @@ func TestOpenShiftVersionList(t *testing.T) {
 			wantResponse: &admin.OpenShiftVersionList{
 				OpenShiftVersions: []*admin.OpenShiftVersion{
 					{
-						Version:           "4.9.9",
-						Enabled:           true,
-						OpenShiftPullspec: "a:a/b",
-						InstallerPullspec: "b:b/c",
+						Properties: admin.OpenShiftVersionProperties{
+							Version:           "4.9.9",
+							Enabled:           true,
+							OpenShiftPullspec: "a:a/b",
+							InstallerPullspec: "b:b/c",
+						},
 					},
 					{
-						Version:           "4.10.0",
-						Enabled:           true,
-						OpenShiftPullspec: "a:a/b",
+						Properties: admin.OpenShiftVersionProperties{
+							Version:           "4.10.0",
+							Enabled:           true,
+							OpenShiftPullspec: "a:a/b",
+						},
 					},
 					{
-						Version:           "4.10.1",
-						Enabled:           false,
-						OpenShiftPullspec: "a:a/b",
-						InstallerPullspec: "b:b/c",
+						Properties: admin.OpenShiftVersionProperties{
+							Version:           "4.10.1",
+							Enabled:           false,
+							OpenShiftPullspec: "a:a/b",
+							InstallerPullspec: "b:b/c",
+						},
 					},
 				},
 			},
@@ -96,7 +110,7 @@ func TestOpenShiftVersionList(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, nil, nil, nil, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, nil, nil, nil, nil, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
 
 			if err != nil {
 				t.Fatal(err)

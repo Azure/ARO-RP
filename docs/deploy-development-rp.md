@@ -186,7 +186,7 @@
   curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/skus" --header "Content-Type: application/json" -d "{}"
   ```
 
-* Reize master node of a dev cluster
+* Resize master node of a dev cluster
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
   VMSIZE="Standard_D16s_v3"
@@ -215,6 +215,34 @@
   CONTAINER=<container-name>
   curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/kubernetespodlogs?podname=$POD&namespace=$NAMESPACE&container=$CONTAINER"
   ```
+
+## OpenShift Version
+
+* We have a cosmos container which contains supported installable OCP versions, more information on the definition in `pkg/api/openshiftversion.go`.
+
+* Admin - List OpenShift installation versions
+  ```bash
+  curl -X GET -k "https://localhost:8443/admin/versions"
+  ```
+
+* Admin - Put a new OpenShift installation version
+  ```bash
+  curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.10.0", "enabled": true, "openShiftPullspec": "test.com/a:b", "installerPullspec": "test.com/a:b" }}'
+  ```
+
+* List the enabled OpenShift installation versions within a region
+  ```bash
+  curl -X GET -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/Microsoft.RedHatOpenShift/locations/$LOCATION/listinstallversions?api-version=2022-09-04"
+  ```
+
+## OpenShift Cluster Manager (OCM) Configuration API Actions
+
+* Create a new OCM configuration
+  * You can find example payloads in the projects `./hack/ocm` folder.
+
+  ```bash
+  curl -X PUT -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/syncsets/mySyncSet?api-version=2022-09-04" --header "Content-Type: application/json" -d @./hack/ocm/syncset.b64
+
 
 ## Debugging OpenShift Cluster
 

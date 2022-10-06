@@ -231,7 +231,7 @@ func (m *manager) deleteResources(ctx context.Context) error {
 			m.log.Printf("deleting %s", *resource.ID)
 			future, err := m.resources.DeleteByID(ctx, *resource.ID, apiVersion)
 			if err != nil {
-				return err
+				return deleteByIdCloudError(err)
 			}
 
 			futures = append(futures, future)
@@ -249,6 +249,23 @@ func (m *manager) deleteResources(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func deleteByIdCloudError(err error) error {
+	detailedError, ok := err.(autorest.DetailedError)
+	if !ok {
+		return err
+	}
+	switch {
+	case strings.Contains(detailedError.Original.Error(), "CannotDeleteLoadBalancerWithPrivateLinkService"):
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeCannotDeleteLoadBalancerByID,
+			"features.ResourcesClient#DeleteByID", detailedError.Original.Error())
+
+	case strings.Contains(detailedError.Original.Error(), "AuthorizationFailed"):
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden,
+			"features.ResourcesClient#DeleteByID", detailedError.Original.Error())
+	}
+	return err
 }
 
 func (m *manager) deleteRoleAssignments(ctx context.Context) error {
@@ -456,11 +473,13 @@ func (m *manager) Delete(ctx context.Context) error {
 		}
 	}
 
-	// Don't fail the deletion because of hive
-	// This should change when/if we start using hive for cluster deletion
-	err = m.hiveDeleteResources(ctx)
-	if err != nil {
-		m.log.Info(err)
+	if m.adoptViaHive || m.installViaHive {
+		// Don't fail the deletion because of hive
+		// This should change when/if we start using hive for cluster deletion
+		err = m.hiveDeleteResources(ctx)
+		if err != nil {
+			m.log.Info(err)
+		}
 	}
 
 	return m.billing.Delete(ctx, m.doc)

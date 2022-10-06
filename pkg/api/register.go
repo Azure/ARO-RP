@@ -3,6 +3,14 @@ package api
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
+type ClusterManagerConfigurationConverter interface {
+	ToExternal(*ClusterManagerConfiguration) (interface{}, error)
+	ToExternalList([]*ClusterManagerConfiguration, string) (interface{}, error)
+	ToInternal(interface{}, *ClusterManagerConfiguration) error
+}
+type ClusterManagerConfigurationStaticValidator interface {
+	Static(interface{}, *ClusterManagerConfiguration) error
+}
 type OpenShiftClusterConverter interface {
 	ToExternal(*OpenShiftCluster) interface{}
 	ToExternalList([]*OpenShiftCluster, string) interface{}
@@ -10,7 +18,7 @@ type OpenShiftClusterConverter interface {
 }
 
 type OpenShiftClusterStaticValidator interface {
-	Static(interface{}, *OpenShiftCluster) error
+	Static(interface{}, *OpenShiftCluster, string, string, bool, string) error
 }
 
 type OpenShiftClusterCredentialsConverter interface {
@@ -27,23 +35,19 @@ type OpenShiftVersionConverter interface {
 	ToInternal(interface{}, *OpenShiftVersion)
 }
 
-type InstallVersionsConverter interface {
-	ToExternal(*InstallVersions) interface{}
-}
-
 type OpenShiftVersionStaticValidator interface {
 	Static(interface{}, *OpenShiftVersion) error
 }
 
 // Version is a set of endpoints implemented by each API version
 type Version struct {
-	OpenShiftClusterConverter                func() OpenShiftClusterConverter
-	OpenShiftClusterStaticValidator          func(string, string, bool, string) OpenShiftClusterStaticValidator
-	OpenShiftClusterCredentialsConverter     func() OpenShiftClusterCredentialsConverter
-	OpenShiftClusterAdminKubeconfigConverter func() OpenShiftClusterAdminKubeconfigConverter
-	OpenShiftVersionConverter                func() OpenShiftVersionConverter
-	OpenShiftVersionStaticValidator          func() OpenShiftVersionStaticValidator
-	InstallVersionsConverter                 func() InstallVersionsConverter
+	ClusterManagerConfigurationConverter     ClusterManagerConfigurationConverter
+	OpenShiftClusterConverter                OpenShiftClusterConverter
+	OpenShiftClusterStaticValidator          OpenShiftClusterStaticValidator
+	OpenShiftClusterCredentialsConverter     OpenShiftClusterCredentialsConverter
+	OpenShiftClusterAdminKubeconfigConverter OpenShiftClusterAdminKubeconfigConverter
+	OpenShiftVersionConverter                OpenShiftVersionConverter
+	OpenShiftVersionStaticValidator          OpenShiftVersionStaticValidator
 	OperationList                            OperationList
 }
 

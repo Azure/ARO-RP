@@ -12,18 +12,20 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/hive"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	mock_cluster "github.com/Azure/ARO-RP/pkg/util/mocks/cluster"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	"github.com/Azure/ARO-RP/test/util/testliveconfig"
 )
 
@@ -279,7 +281,7 @@ func TestBackendTry(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			log := logrus.NewEntry(logrus.StandardLogger())
-			tlc := testliveconfig.NewTestLiveConfig(false)
+			tlc := testliveconfig.NewTestLiveConfig(false, false)
 
 			controller := gomock.NewController(t)
 			defer controller.Finish()
@@ -289,6 +291,8 @@ func TestBackendTry(t *testing.T) {
 
 			dbOpenShiftClusters, clientOpenShiftClusters := testdatabase.NewFakeOpenShiftClusters()
 			dbSubscriptions, _ := testdatabase.NewFakeSubscriptions()
+			uuidGen := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.OPENSHIFT_VERSIONS)
+			dbOpenShiftVersions, _ := testdatabase.NewFakeOpenShiftVersions(uuidGen)
 
 			f := testdatabase.NewFixture().WithOpenShiftClusters(dbOpenShiftClusters).WithSubscriptions(dbSubscriptions)
 			tt.mocks(manager, dbOpenShiftClusters)
@@ -298,11 +302,11 @@ func TestBackendTry(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			createManager := func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, *rest.Config) (cluster.Interface, error) {
+			createManager := func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, database.OpenShiftVersions, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, hive.ClusterManager, metrics.Emitter) (cluster.Interface, error) {
 				return manager, nil
 			}
 
-			b, err := newBackend(ctx, log, _env, nil, nil, nil, dbOpenShiftClusters, dbSubscriptions, nil, &noop.Noop{})
+			b, err := newBackend(ctx, log, _env, nil, nil, nil, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, nil, &noop.Noop{})
 			if err != nil {
 				t.Fatal(err)
 			}

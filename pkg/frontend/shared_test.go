@@ -10,7 +10,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"reflect"
@@ -74,6 +74,8 @@ type testInfra struct {
 	asyncOperationsDatabase   database.AsyncOperations
 	billingClient             *cosmosdb.FakeBillingDocumentClient
 	billingDatabase           database.Billing
+	clusterManagerClient      *cosmosdb.FakeClusterManagerConfigurationDocumentClient
+	clusterManagerDatabase    database.ClusterManagerConfigurations
 	subscriptionsClient       *cosmosdb.FakeSubscriptionDocumentClient
 	subscriptionsDatabase     database.Subscriptions
 	openShiftVersionsClient   *cosmosdb.FakeOpenShiftVersionDocumentClient
@@ -169,6 +171,12 @@ func (ti *testInfra) WithOpenShiftVersions() *testInfra {
 	return ti
 }
 
+func (ti *testInfra) WithClusterManagerConfigurations() *testInfra {
+	ti.clusterManagerDatabase, ti.clusterManagerClient = testdatabase.NewFakeClusterManager()
+	ti.fixture.WithClusterManagerConfigurations(ti.clusterManagerDatabase)
+	return ti
+}
+
 func (ti *testInfra) done() {
 	ti.controller.Finish()
 	ti.cli.CloseIdleConnections()
@@ -209,7 +217,7 @@ func (ti *testInfra) request(method, url string, header http.Header, in interfac
 	}
 	defer resp.Body.Close()
 
-	b, err = ioutil.ReadAll(resp.Body)
+	b, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -34,7 +34,7 @@ func (dv *dynamic) ValidateProviders(ctx context.Context) error {
 	} {
 		if providerMap[provider].RegistrationState == nil ||
 			*providerMap[provider].RegistrationState != "Registered" {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", provider)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", provider)
 		}
 	}
 

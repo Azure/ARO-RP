@@ -6,7 +6,7 @@ package prometheus
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"mime"
 	"net"
 	"net/http"
@@ -108,7 +108,7 @@ func (p *prometheus) modifyResponse(r *http.Response) error {
 		return nil
 	}
 
-	b, err := ioutil.ReadAll(r.Body)
+	b, err := io.ReadAll(r.Body)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (p *prometheus) modifyResponse(r *http.Response) error {
 		r.Header.Set("Content-Length", strconv.FormatInt(int64(buf.Len()), 10))
 	}
 
-	r.Body = ioutil.NopCloser(buf)
+	r.Body = io.NopCloser(buf)
 
 	return nil
 }

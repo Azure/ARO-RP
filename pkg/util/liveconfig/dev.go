@@ -12,20 +12,16 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-const (
-	HIVE_ENV_VARIABLE = "HIVEKUBECONFIGPATH"
-)
-
 func (d *dev) HiveRestConfig(ctx context.Context, index int) (*rest.Config, error) {
 	// Indexes above 0 have _index appended to them
-	envVar := HIVE_ENV_VARIABLE
+	envVar := hiveKubeconfigPathEnvVar
 	if index != 0 {
-		envVar = fmt.Sprintf("%s_%d", HIVE_ENV_VARIABLE, index)
+		envVar = fmt.Sprintf("%s_%d", hiveKubeconfigPathEnvVar, index)
 	}
 
 	kubeConfigPath := os.Getenv(envVar)
 	if kubeConfigPath == "" {
-		return nil, fmt.Errorf("missing %s env variable", HIVE_ENV_VARIABLE)
+		return nil, fmt.Errorf("missing %s env variable", hiveKubeconfigPathEnvVar)
 	}
 
 	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
@@ -34,4 +30,24 @@ func (d *dev) HiveRestConfig(ctx context.Context, index int) (*rest.Config, erro
 	}
 
 	return restConfig, nil
+}
+
+func (d *dev) InstallViaHive(ctx context.Context) (bool, error) {
+	installViaHive := os.Getenv(hiveInstallerEnableEnvVar)
+	if installViaHive != "" {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (d *dev) DefaultInstallerPullSpecOverride(ctx context.Context) string {
+	return os.Getenv(hiveDefaultPullSpecEnvVar)
+}
+
+func (p *dev) AdoptByHive(ctx context.Context) (bool, error) {
+	adopt := os.Getenv(hiveAdoptEnableEnvVar)
+	if adopt != "" {
+		return true, nil
+	}
+	return false, nil
 }

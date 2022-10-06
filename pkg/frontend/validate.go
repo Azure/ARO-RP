@@ -12,8 +12,10 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	utilnamespace "github.com/Azure/ARO-RP/pkg/util/namespace"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func validateTerminalProvisioningState(state api.ProvisioningState) error {
@@ -161,5 +163,28 @@ func validateAdminVMSize(vmSize string) error {
 	if vmSize == "" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmSize '%s' is invalid.", vmSize)
 	}
+	return nil
+}
+
+// validateInstallVersion validates the install version set in the clusterprofile.version
+// TODO convert this into static validation instead of this receiver function in the validation for frontend.
+func (f *frontend) validateInstallVersion(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
+	oc := doc.OpenShiftCluster
+	// If this request is from an older API or the user never specified
+	// the version to install we default to the InstallStream.Version
+	if oc.Properties.ClusterProfile.Version == "" {
+		oc.Properties.ClusterProfile.Version = version.InstallStream.Version.String()
+		return nil
+	}
+
+	f.mu.RLock()
+	// we add the default installation version to the enabled ocp versions so no special case
+	_, ok := f.enabledOcpVersions[oc.Properties.ClusterProfile.Version]
+	f.mu.RUnlock()
+
+	if !ok || !validate.RxInstallVersion.MatchString(oc.Properties.ClusterProfile.Version) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", "The requested OpenShift version '%s' is invalid.", oc.Properties.ClusterProfile.Version)
+	}
+
 	return nil
 }

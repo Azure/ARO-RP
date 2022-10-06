@@ -154,12 +154,17 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 				}
 				s.Properties = append(s.Properties, ns)
 			}
+			if field.Name() == "proxyResource" {
+				s.AllOf = []Schema{
+					{
+						Ref: "../../../../../common-types/resource-management/v3/types.json#/definitions/ProxyResource",
+					},
+				}
+			}
 		}
-
 	default:
 		panic(t)
 	}
-
 	return
 }
 
@@ -173,7 +178,6 @@ func (tw *typeWalker) _define(definitions Definitions, t *types.Named) {
 	if path != nil {
 		s.Description = strings.Trim(path[len(path)-2].(*ast.GenDecl).Doc.Text(), "\n")
 		s.Enum = tw.enums[t]
-
 		// Enum extensions allows non-breaking api changes
 		// https://github.com/Azure/autorest/tree/master/docs/extensions#x-ms-enum
 		c := strings.Split(t.String(), ".")
@@ -200,7 +204,6 @@ func (tw *typeWalker) _define(definitions Definitions, t *types.Named) {
 // define adds a Definition for the named type
 func (tw *typeWalker) define(definitions Definitions, name string) {
 	o := tw.pkg.Types.Scope().Lookup(name)
-
 	tw._define(definitions, o.(*types.TypeName).Type().(*types.Named))
 }
 
@@ -214,6 +217,5 @@ func define(definitions Definitions, pkgname string, xmsEnumList, xmsSecretList 
 	for _, name := range names {
 		th.define(definitions, name)
 	}
-
 	return nil
 }

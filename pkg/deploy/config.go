@@ -7,7 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"strings"
 
@@ -91,7 +91,6 @@ type Configuration struct {
 	RPMDSDAccount                      *string       `json:"rpMdsdAccount,omitempty" value:"required"`
 	RPMDSDConfigVersion                *string       `json:"rpMdsdConfigVersion,omitempty" value:"required"`
 	RPMDSDNamespace                    *string       `json:"rpMdsdNamespace,omitempty" value:"required"`
-	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty" value:"required"`
 	RPParentDomainName                 *string       `json:"rpParentDomainName,omitempty" value:"required"`
 	RPVMSSCapacity                     *int          `json:"rpVmssCapacity,omitempty"`
 	SSHPublicKey                       *string       `json:"sshPublicKey,omitempty"`
@@ -100,11 +99,16 @@ type Configuration struct {
 	SubscriptionResourceGroupLocation  *string       `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
 	VMSize                             *string       `json:"vmSize,omitempty" value:"required"`
 	VMSSCleanupEnabled                 *bool         `json:"vmssCleanupEnabled,omitempty"`
+
+	// TODO: Replace with Live Service Configuration in KeyVault
+	InstallViaHive           *string `json:"clustersInstallViaHive,omitempty"`
+	DefaultInstallerPullspec *string `json:"clusterDefaultInstallerPullspec,omitempty"`
+	AdoptByHive              *string `json:"clustersAdoptByHive,omitempty"`
 }
 
 // GetConfig return RP configuration from the file
 func GetConfig(path, location string) (*RPConfig, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

@@ -7,10 +7,18 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"os"
 
 	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+)
+
+const (
+	hiveKubeconfigPathEnvVar  = "HIVE_KUBE_CONFIG_PATH"
+	hiveInstallerEnableEnvVar = "ARO_INSTALL_VIA_HIVE"
+	hiveDefaultPullSpecEnvVar = "ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC"
+	hiveAdoptEnableEnvVar     = "ARO_ADOPT_BY_HIVE"
 )
 
 func parseKubeconfig(credentials []mgmtcontainerservice.CredentialResult) (*rest.Config, error) {
@@ -64,4 +72,26 @@ func (p *prod) HiveRestConfig(ctx context.Context, index int) (*rest.Config, err
 
 	p.cachedCredentials[index] = parsed
 	return rest.CopyConfig(parsed), nil
+}
+
+func (p *prod) InstallViaHive(ctx context.Context) (bool, error) {
+	// TODO: Replace with RP Live Service Config (KeyVault)
+	installViaHive := os.Getenv(hiveInstallerEnableEnvVar)
+	if installViaHive != "" {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (p *prod) DefaultInstallerPullSpecOverride(ctx context.Context) string {
+	return os.Getenv(hiveDefaultPullSpecEnvVar)
+}
+
+func (p *prod) AdoptByHive(ctx context.Context) (bool, error) {
+	// TODO: Replace with RP Live Service Config (KeyVault)
+	adopt := os.Getenv(hiveAdoptEnableEnvVar)
+	if adopt != "" {
+		return true, nil
+	}
+	return false, nil
 }

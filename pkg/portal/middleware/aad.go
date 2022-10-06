@@ -9,7 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/gob"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -341,7 +341,7 @@ func (a *aad) clientAssertion(req *http.Request) (*http.Response, error) {
 
 	form := req.Form.Encode()
 
-	req.Body = ioutil.NopCloser(strings.NewReader(form))
+	req.Body = io.NopCloser(strings.NewReader(form))
 	req.ContentLength = int64(len(form))
 
 	return a.rt.RoundTrip(req)

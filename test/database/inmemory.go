@@ -71,3 +71,11 @@ func NewFakeOpenShiftVersions(uuid uuid.Generator) (db database.OpenShiftVersion
 	db = database.NewOpenShiftVersionsWithProvidedClient(client, uuid)
 	return db, client
 }
+
+func NewFakeClusterManager() (db database.ClusterManagerConfigurations, client *cosmosdb.FakeClusterManagerConfigurationDocumentClient) {
+	uuid := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.CLUSTERMANAGER)
+	client = cosmosdb.NewFakeClusterManagerConfigurationDocumentClient(jsonHandle)
+	coll := &fakeCollectionClient{}
+	db = database.NewClusterManagerConfigurationsWithProvidedClient(client, coll, "", uuid)
+	return db, client
+}
