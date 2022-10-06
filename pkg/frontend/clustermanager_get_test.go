@@ -30,7 +30,7 @@ func TestGetClusterManagerConfiguration(t *testing.T) {
 		apiVersion      string
 		fixture         func(*testdatabase.Fixture, *test, string)
 		wantStatusCode  int
-		wantResponse    *v20220904.ClusterManagerConfiguration
+		wantResponse    *v20220904.SyncSet
 		wantError       string
 	}
 	createSingleDocument := func(f *testdatabase.Fixture, tt *test, resourceKey string) {
@@ -38,10 +38,10 @@ func TestGetClusterManagerConfiguration(t *testing.T) {
 			&api.ClusterManagerConfigurationDocument{
 				ID:  mockSubscriptionId,
 				Key: resourceKey,
-				ClusterManagerConfiguration: &api.ClusterManagerConfiguration{
+				SyncSet: &api.SyncSet{
 					Name: tt.ocmResourceName,
-					Properties: api.ClusterManagerConfigurationProperties{
-						Resources: []byte(resourcePayload),
+					Properties: api.SyncSetProperties{
+						Resources: resourcePayload,
 					},
 				},
 			},
@@ -57,9 +57,9 @@ func TestGetClusterManagerConfiguration(t *testing.T) {
 			apiVersion:      "2022-09-04",
 			fixture:         createSingleDocument,
 			wantStatusCode:  http.StatusOK,
-			wantResponse: &v20220904.ClusterManagerConfiguration{
+			wantResponse: &v20220904.SyncSet{
 				Name: "mySyncSet",
-				Properties: v20220904.ClusterManagerConfigurationProperties{
+				Properties: v20220904.SyncSetProperties{
 					Resources: resourcePayload,
 				},
 			},
@@ -76,10 +76,10 @@ func TestGetClusterManagerConfiguration(t *testing.T) {
 						ID:       mockSubscriptionId,
 						Key:      resourceKey,
 						Deleting: true,
-						ClusterManagerConfiguration: &api.ClusterManagerConfiguration{
+						SyncSet: &api.SyncSet{
 							Name: tt.ocmResourceName,
-							Properties: api.ClusterManagerConfigurationProperties{
-								Resources: []byte(resourcePayload),
+							Properties: api.SyncSetProperties{
+								Resources: resourcePayload,
 							},
 						},
 					},
@@ -90,28 +90,23 @@ func TestGetClusterManagerConfiguration(t *testing.T) {
 		},
 		{
 			name:            "wrong version",
-			ocmResourceType: "syncSet",
+			ocmResourceType: "syncset",
 			ocmResourceName: "mySyncSet",
 			clusterName:     "myCluster",
 			apiVersion:      "2022-04-01",
 			fixture:         createSingleDocument,
 			wantStatusCode:  http.StatusBadRequest,
-			wantError:       "400: InvalidResourceType: : The resource type 'openshiftclusters' could not be found in the namespace 'microsoft.redhatopenshift' for api version '2022-04-01'.",
+			wantError:       "400: InvalidResourceType: : the resource type 'syncset' could not be found in the namespace 'microsoft.redhatopenshift' for api version '2022-04-01'",
 		},
 		{
-			name:            "fixme - this should fail",
+			name:            "unsupported resource type",
 			ocmResourceType: "unsupported",
 			ocmResourceName: "invalidResourceType",
 			clusterName:     "myCluster",
 			apiVersion:      "2022-09-04",
 			fixture:         createSingleDocument,
-			wantStatusCode:  http.StatusOK,
-			wantResponse: &v20220904.ClusterManagerConfiguration{
-				Name: "invalidResourceType",
-				Properties: v20220904.ClusterManagerConfigurationProperties{
-					Resources: resourcePayload,
-				},
-			},
+			wantStatusCode:  http.StatusBadRequest,
+			wantError:       "400: InvalidResourceType: : the resource type 'unsupported' is not supported for api version '2022-09-04'",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

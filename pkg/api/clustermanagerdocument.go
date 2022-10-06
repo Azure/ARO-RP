@@ -35,8 +35,6 @@ type ClusterManagerConfigurationDocument struct {
 	PartitionKey string `json:"partitionKey,omitempty" deep:"-"`
 	Deleting     bool   `json:"deleting,omitempty"` // https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
 
-	ClusterManagerConfiguration *ClusterManagerConfiguration `json:"clusterManagerConfiguration,omitempty"`
-
 	SyncIdentityProvider *SyncIdentityProvider `json:"syncIdentityProvider,omitempty"`
 	SyncSet              *SyncSet              `json:"syncSet,omitempty"`
 	MachinePool          *MachinePool          `json:"machinePool,omitempty"`

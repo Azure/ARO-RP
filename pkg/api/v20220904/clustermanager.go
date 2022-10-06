@@ -3,34 +3,6 @@ package v20220904
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// ClusterManagerConfigurationList represents a list of ClusterManagerConfigurations
-type ClusterManagerConfigurationList struct {
-	ClusterManagerConfigurations []*ClusterManagerConfiguration `json:"value"`
-
-	NextLink string `json:"nextLink,omitempty"`
-}
-
-type ClusterManagerConfiguration struct {
-	// ID is the unique identifier for the cluster manager configuration
-	ID string `json:"id,omitempty"`
-
-	// The resource name
-	Name string `json:"name,omitempty"`
-
-	// The parent cluster resourceId
-	ClusterResourceID string `json:"clusterResourceId,omitempty"`
-
-	// The ClusterManagerConfigurations properties
-	Properties ClusterManagerConfigurationProperties `json:"properties,omitempty"`
-
-	// SystemData metadata from ARM
-	SystemData *SystemData `json:"systemData,omitempty"`
-}
-
-type ClusterManagerConfigurationProperties struct {
-	Resources interface{} `json:"resources,omitempty"`
-}
-
 // SyncSetList represents a list of SyncSets
 type SyncSetList struct {
 	// The list of syncsets.
