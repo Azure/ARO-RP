@@ -77,13 +77,13 @@
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
-                        "10.1.0.0/24"
+                        "10.1.0.0/23"
                     ]
                 },
                 "subnets": [
                     {
                         "properties": {
-                            "addressPrefix": "10.1.0.0/24",
+                            "addressPrefix": "10.1.0.0/23",
                             "networkSecurityGroup": {
                                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]",
                                 "tags": null
@@ -113,13 +113,13 @@
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
-                        "10.0.3.0/22"
+                        "10.1.4.0/22"
                     ]
                 },
                 "subnets": [
                     {
                         "properties": {
-                            "addressPrefix": "10.0.3.0/22",
+                            "addressPrefix": "10.1.4.0/22",
                             "networkSecurityGroup": {
                                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]",
                                 "tags": null

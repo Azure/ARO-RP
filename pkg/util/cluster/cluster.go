@@ -338,15 +338,17 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 }
 
 func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, workerSubnet string) {
-	// pick a random 23 in range [10.4.0.0, 10.127.255.0]
-	// 10.0.0.0 is used by dev-vnet to host CI
-	// 10.1.0.0 is used by rp-vnet to host Proxy VM
-	// 10.2.0.0 is used by dev-vpn-vnet to host VirtualNetworkGateway
-	// 10.3.0.0 is used by rp-pe-vnet-001
+	// Current Vnet Address Space usage:
+	// 10.0.0.0/16 is used by dev-vnet to host CI
+	// 10.1.0.0/23 is used by rp-vnet
+	// 10.1.2.0/23 is used by dev-vpn-vnet
+	// 10.1.4.0/22 is used by rp-pe-vnet-001
+	// 10.128.0.0/9 is used by aks-vnet
+
 	var x, y int
 	rand.Seed(time.Now().UnixNano())
 	for x == 0 && y == 0 {
-		x, y = rand.Intn((124))+4, 2*rand.Intn(128)
+		x, y = rand.Intn((124))+2, 2*rand.Intn(128)
 	}
 	vnetPrefix = fmt.Sprintf("10.%d.%d.0/23", x, y)
 	masterSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y)

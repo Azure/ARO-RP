@@ -27,8 +27,8 @@
             "properties": {
                 "allowVirtualNetworkAccess": true,
                 "allowForwardedTraffic": true,
-                "allowGatewayTransit": true,
-                "useRemoteGateways": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
                 "remoteVirtualNetwork": {
                     "id": "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]"
                 }

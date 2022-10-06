@@ -59,12 +59,6 @@ deploy_env_dev() {
         -n env-development \
         --template-file pkg/deploy/assets/env-development.json \
         --parameters \
-            "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
-            "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
-            "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
-            "proxyImage=arointsvc.azurecr.io/proxy:latest" \
-            "proxyImageAuth=$(jq -r '.auths["arointsvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
-            "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
             "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
             "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
 }
