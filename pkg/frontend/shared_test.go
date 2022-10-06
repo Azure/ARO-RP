@@ -83,6 +83,10 @@ type testInfra struct {
 }
 
 func newTestInfra(t *testing.T) *testInfra {
+	return newTestInfraWithFeatures(t, map[env.Feature]bool{env.FeatureRequireD2sV3Workers: false, env.FeatureDisableReadinessDelay: false, env.FeatureEnableOCMEndpoints: false})
+}
+
+func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *testInfra {
 	pool := x509.NewCertPool()
 	pool.AddCert(servercerts[0])
 
@@ -103,8 +107,9 @@ func newTestInfra(t *testing.T) *testInfra {
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
 	_env.EXPECT().Domain().AnyTimes().Return("aro.example")
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
-	_env.EXPECT().FeatureIsSet(env.FeatureRequireD2sV3Workers).AnyTimes().Return(false)
-	_env.EXPECT().FeatureIsSet(env.FeatureDisableReadinessDelay).AnyTimes().Return(false)
+	for f, val := range features {
+		_env.EXPECT().FeatureIsSet(f).AnyTimes().Return(val)
+	}
 
 	_, auditEntry := testlog.NewAudit()
 	log := logrus.NewEntry(logrus.StandardLogger())

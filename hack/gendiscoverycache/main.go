@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -61,7 +60,7 @@ func writeVersion(ctx context.Context, restconfig *rest.Config) error {
 	}
 
 	versionPath := filepath.Join(discoveryCacheDir, "assets_version")
-	return ioutil.WriteFile(versionPath, []byte(clusterVersion.String()+"\n"), 0666)
+	return os.WriteFile(versionPath, []byte(clusterVersion.String()+"\n"), 0666)
 }
 
 func main() {

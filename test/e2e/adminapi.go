@@ -9,7 +9,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -48,7 +48,7 @@ func adminRequest(ctx context.Context, method, path string, params url.Values, i
 		if err != nil {
 			return nil, err
 		}
-		req.Body = ioutil.NopCloser(buf)
+		req.Body = io.NopCloser(buf)
 		req.Header.Set("Content-Type", "application/json")
 	}
 
@@ -72,7 +72,7 @@ func adminRequest(ctx context.Context, method, path string, params url.Values, i
 		return resp, json.NewDecoder(resp.Body).Decode(&out)
 	} else if out != nil && resp.Header.Get("Content-Type") == "text/plain" {
 		strOut := out.(*string)
-		p, err := ioutil.ReadAll(resp.Body)
+		p, err := io.ReadAll(resp.Body)
 		if err == nil {
 			*strOut = string(p)
 		}

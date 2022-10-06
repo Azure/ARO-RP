@@ -31,6 +31,7 @@ const (
 	FeatureEnableDevelopmentAuthorizer
 	FeatureRequireD2sV3Workers
 	FeatureDisableReadinessDelay
+	FeatureEnableOCMEndpoints
 )
 
 const (

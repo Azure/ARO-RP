@@ -10,7 +10,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 
@@ -48,7 +47,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return fmt.Errorf("usage: %s IP", os.Args[0])
 	}
 
-	certb, err := ioutil.ReadFile(*certFile)
+	certb, err := os.ReadFile(*certFile)
 	if err != nil {
 		return err
 	}
@@ -61,7 +60,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	pool := x509.NewCertPool()
 	pool.AddCert(cert)
 
-	keyb, err := ioutil.ReadFile(*keyFile)
+	keyb, err := os.ReadFile(*keyFile)
 	if err != nil {
 		return err
 	}
@@ -71,12 +70,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	clientCertb, err := ioutil.ReadFile(*clientCertFile)
+	clientCertb, err := os.ReadFile(*clientCertFile)
 	if err != nil {
 		return err
 	}
 
-	clientKeyb, err := ioutil.ReadFile(*clientKeyFile)
+	clientKeyb, err := os.ReadFile(*clientKeyFile)
 	if err != nil {
 		return err
 	}

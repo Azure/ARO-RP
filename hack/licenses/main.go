@@ -8,7 +8,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -67,7 +66,7 @@ func applyGoLicense() error {
 			return nil
 		}
 
-		b, err := ioutil.ReadFile(path)
+		b, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
@@ -86,7 +85,7 @@ func applyGoLicense() error {
 			bb = append(bb, goLicense...)
 			bb = append(bb, b[i:]...)
 
-			err = ioutil.WriteFile(path, bb, 0666)
+			err = os.WriteFile(path, bb, 0666)
 			if err != nil {
 				return err
 			}
@@ -115,7 +114,7 @@ func applyPythonLicense() error {
 			return nil
 		}
 
-		b, err := ioutil.ReadFile(path)
+		b, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
@@ -136,7 +135,7 @@ func applyPythonLicense() error {
 				bb = append(bb, b...)
 			}
 
-			err = ioutil.WriteFile(path, bb, 0666)
+			err = os.WriteFile(path, bb, 0666)
 			if err != nil {
 				return err
 			}
@@ -146,7 +145,7 @@ func applyPythonLicense() error {
 	})
 }
 
-//returns the lists of files that don't have a license but should
+// returns the lists of files that don't have a license but should
 func validateGoLicenses(ignored map[string]bool, dirs []string) []string {
 	unlicensedFiles := make([]string, 0)
 	for _, dir := range dirs {
@@ -163,7 +162,7 @@ func validateGoLicenses(ignored map[string]bool, dirs []string) []string {
 				return nil
 			}
 
-			b, err := ioutil.ReadFile(path)
+			b, err := os.ReadFile(path)
 			if err != nil {
 				return err
 			}
@@ -182,7 +181,7 @@ func validateGoLicenses(ignored map[string]bool, dirs []string) []string {
 	return unlicensedFiles
 }
 
-//returns the lists of files that don't have a license but should
+// returns the lists of files that don't have a license but should
 func validatePythonLicenses(ignored map[string]bool, dirs []string) []string {
 	unlicensedFiles := make([]string, 0)
 
@@ -204,7 +203,7 @@ func validatePythonLicenses(ignored map[string]bool, dirs []string) []string {
 				return nil
 			}
 
-			b, err := ioutil.ReadFile(path)
+			b, err := os.ReadFile(path)
 			if err != nil {
 				return err
 			}

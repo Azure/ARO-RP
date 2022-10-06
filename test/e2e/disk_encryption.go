@@ -6,7 +6,7 @@ package e2e
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -20,7 +20,7 @@ var _ = Describe("Encryption at host should be enabled", func() {
 		ctx := context.Background()
 
 		By("getting the resource group where the VM instances live in")
-		oc, err := clients.OpenshiftClustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClustersv20220401.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 		clusterResourceGroup := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
 
@@ -44,7 +44,7 @@ var _ = Describe("Disk encryption at rest should be enabled with customer manage
 		ctx := context.Background()
 
 		By("getting the resource group where the VM instances live in")
-		oc, err := clients.OpenshiftClustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClustersv20220401.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 		clusterResourceGroup := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
 

@@ -137,7 +137,7 @@ func TestAAD(t *testing.T) {
 					},
 				}, nil
 			},
-			wantStatusCode: http.StatusInternalServerError,
+			wantStatusCode: http.StatusForbidden,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
