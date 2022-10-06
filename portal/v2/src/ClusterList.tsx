@@ -275,7 +275,7 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
         <div className={classNames.controlWrapper}>
           <TextField placeholder="Filter on resource ID" onChange={this._onChangeText} />
         </div>
-        <Text id="ClusterCount" className={classNames.itemsCount}>Showing {items.length} items</Text>
+        <Text className={classNames.itemsCount}>Showing {items.length} items</Text>
         <DetailsList
           items={items}
           columns={columns}

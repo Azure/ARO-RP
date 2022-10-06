@@ -152,8 +152,8 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({ csrfToken }, ref) => {
   const selectionField = (): any => {
     return (
       <Stack tokens={{ childrenGap: 15 }}>
-        <Dropdown id ="sshDropdown" label={`Machine Selection`} onChange={onChange} options={machineOptions} />
-        <PrimaryButton onClick={requestSSH} id="sshButton" text="Request" disabled={!requestable} />
+        <Dropdown label={`Machine Selection`} onChange={onChange} options={machineOptions} />
+        <PrimaryButton onClick={requestSSH} text="Request" disabled={!requestable} />
       </Stack>
     )
   }
@@ -161,7 +161,7 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({ csrfToken }, ref) => {
   const dataResult = (): any => {
     return (
       <div>
-        <Stack id="sshCommand">
+        <Stack>
           <Stack horizontal verticalAlign={"end"}>
             <Stack.Item grow>
               <TextField label="Command" value={data?.command} readOnly />
@@ -213,7 +213,7 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({ csrfToken }, ref) => {
         onDismiss={hideModal}
         isModeless={true}
         containerClassName={contentStyles.container}>
-        <div className={contentStyles.header} id="sshModal">
+        <div className={contentStyles.header}>
           <span id={titleId}>SSH Access</span>
           <IconButton
             styles={iconButtonStyles}

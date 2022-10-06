@@ -43,6 +43,9 @@ jobs:
       az account set -s $AZURE_SUBSCRIPTION_ID
 
       set -x
+
+      export PRIVATE_CLUSTER=true
+
       . ./hack/e2e/run-rp-and-e2e.sh
       trap 'set +e; kill_rp; kill_portal; clean_e2e_db; kill_vpn' EXIT
 
