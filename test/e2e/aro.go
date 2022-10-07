@@ -33,25 +33,16 @@ var _ = Describe("ARO Cluster", func() {
 			"99-worker-ssh",
 		}
 
-		By("getting the test cluster resource")
-		oc, err := clients.OpenshiftClustersv20220401.Get(ctx, vnetResourceGroup, clusterName)
-		Expect(err).NotTo(HaveOccurred())
-
-		if string(oc.ClusterProfile.FipsValidatedModules) == string(api.FipsValidatedModulesEnabled) {
-			By("adding FIPS machine configs to the list of expected configs")
-			expectedMachineConfigs = append(expectedMachineConfigs, "99-master-fips", "99-worker-fips")
-		}
-
-		By("listing machine config pools")
+		By("listing machine configs")
 		mcs, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().List(ctx, metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
-
-		By("verifying that ARO-specific machine configs exist")
 		actualMachineConfigNames := []string{}
 		for _, mc := range mcs.Items {
 			actualMachineConfigNames = append(actualMachineConfigNames, mc.Name)
 		}
-		Expect(actualMachineConfigNames).To(ContainElements())
+
+		By("verifying that ARO-specific machine configs exist")
+		Expect(actualMachineConfigNames).To(ContainElements(expectedMachineConfigs))
 	})
 
 	It("must have ARO-specific custom resource", func() {
