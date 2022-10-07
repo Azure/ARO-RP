@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -42,19 +41,14 @@ func (m *manager) ensureInfraID(ctx context.Context) (err error) {
 	return err
 }
 
-func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
+func (m *manager) ensureResourceGroup(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	group := mgmtfeatures.ResourceGroup{}
 
-	// The FPSP's role definition does not have read on a resource group
-	// if the resource group does not exist.
 	// Retain the existing resource group configuration (such as tags) if it exists
-	if m.doc.OpenShiftCluster.Properties.ProvisioningState != api.ProvisioningStateCreating {
-		group, err = m.resourceGroups.Get(ctx, resourceGroup)
-		if err != nil {
-			if detailedErr, ok := err.(autorest.DetailedError); !ok || detailedErr.StatusCode != http.StatusNotFound {
-				return err
-			}
+	group, err := m.resourceGroups.Get(ctx, resourceGroup)
+	if err != nil {
+		if detailedErr, ok := err.(autorest.DetailedError); !ok || detailedErr.StatusCode != http.StatusNotFound {
+			return err
 		}
 	}
 
@@ -87,16 +81,6 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 		serviceError = requestErr.ServiceError
 	}
 
-	if serviceError != nil && serviceError.Code == "ResourceGroupManagedByMismatch" {
-		return &api.CloudError{
-			StatusCode: http.StatusBadRequest,
-			CloudErrorBody: &api.CloudErrorBody{
-				Code: api.CloudErrorCodeClusterResourceGroupAlreadyExists,
-				Message: "Resource group " + m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID +
-					" must not already exist.",
-			},
-		}
-	}
 	if serviceError != nil && serviceError.Code == "RequestDisallowedByPolicy" {
 		// if request was disallowed by policy, inform user so they can take appropriate action
 		b, _ := json.Marshal(serviceError)

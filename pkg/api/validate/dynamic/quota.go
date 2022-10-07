@@ -60,12 +60,6 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 		api.VMSizeStandardL32sV2: {CoreCount: 32, Family: "standardLsv2Family"},
 		api.VMSizeStandardL48sV2: {CoreCount: 48, Family: "standardLsv2Family"},
 		api.VMSizeStandardL64sV2: {CoreCount: 64, Family: "standardLsv2Family"},
-
-		// GPU nodes
-		api.VMSizeStandardNC4asT4V3:  {CoreCount: 4, Family: "Standard_NC4as_T4_v3"},
-		api.VMSizeStandardNC8asT4V3:  {CoreCount: 8, Family: "Standard_NC8as_T4_v3"},
-		api.VMSizeStandardNC16asT4V3: {CoreCount: 16, Family: "Standard_NC16as_T4_v3"},
-		api.VMSizeStandardNC64asT4V3: {CoreCount: 64, Family: "Standard_NC64as_T4_v3"},
 	}
 
 	vm, ok := vmTypesMap[vmSize]
