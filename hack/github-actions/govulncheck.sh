@@ -1,6 +1,6 @@
 #!/bin/bash
 
-GOMEMLIMIT=10GiB govulncheck ./...
+GOMEMLIMIT=6GiB govulncheck ./...
 
 # if GOMEMLIMIT=10GiB govulncheck ./... | grep -q 'No vulnerabilities found'; then
 #   echo "No vulnerabilities found."
