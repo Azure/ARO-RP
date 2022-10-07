@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo"     //nolint
+	. "github.com/onsi/ginkgo/v2"  //nolint
 	. "github.com/onsi/gomega"     //nolint
 	. "github.com/tebeka/selenium" //nolint
 
@@ -39,23 +39,16 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
-	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
 	redhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-04-01/redhatopenshift"
-	redhatopenshift20220904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-09-04/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
 type clientSet struct {
-	OpenshiftClustersv20200430        redhatopenshift20200430.OpenShiftClustersClient
-	Operationsv20200430               redhatopenshift20200430.OperationsClient
-	OpenshiftClustersv20210901preview redhatopenshift20210901preview.OpenShiftClustersClient
-	Operationsv20210901preview        redhatopenshift20210901preview.OperationsClient
-	OpenshiftClustersv20220401        redhatopenshift20220401.OpenShiftClustersClient
-	Operationsv20220401               redhatopenshift20220401.OperationsClient
-	OpenshiftClustersv20220904        redhatopenshift20220904.OpenShiftClustersClient
-	Operationsv20220904               redhatopenshift20220904.OperationsClient
+	OpenshiftClustersv20200430 redhatopenshift20200430.OpenShiftClustersClient
+	Operationsv20200430        redhatopenshift20200430.OperationsClient
+	OpenshiftClustersv20220401 redhatopenshift20220401.OpenShiftClustersClient
 
 	VirtualMachines       compute.VirtualMachinesClient
 	Resources             features.ResourcesClient
@@ -294,12 +287,9 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}
 
 	return &clientSet{
-		OpenshiftClustersv20200430:        redhatopenshift20200430.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Operationsv20200430:               redhatopenshift20200430.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		OpenshiftClustersv20210901preview: redhatopenshift20210901preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Operationsv20210901preview:        redhatopenshift20210901preview.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		OpenshiftClustersv20220401:        redhatopenshift20220401.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Operationsv20220401:               redhatopenshift20220401.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClustersv20200430: redhatopenshift20200430.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Operationsv20200430:        redhatopenshift20200430.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClustersv20220401: redhatopenshift20220401.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		VirtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Resources:             features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),

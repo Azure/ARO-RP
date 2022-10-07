@@ -118,7 +118,6 @@ func (m *manager) adminUpdate() []steps.Step {
 	// Update the ARO Operator
 	if isEverything || isOperator {
 		toRun = append(toRun,
-			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 			steps.Action(m.ensureAROOperator),
 			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
 			steps.Condition(m.ensureAROOperatorRunningDesiredVersion, 5*time.Minute, true),

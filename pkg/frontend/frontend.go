@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type statusCodeError int
@@ -49,12 +51,18 @@ type frontend struct {
 	baseLog  *logrus.Entry
 	env      env.Interface
 
-	dbAsyncOperations   database.AsyncOperations
-	dbOpenShiftClusters database.OpenShiftClusters
-	dbSubscriptions     database.Subscriptions
-	dbOpenShiftVersions database.OpenShiftVersions
+	dbAsyncOperations             database.AsyncOperations
+	dbClusterManagerConfiguration database.ClusterManagerConfigurations
+	dbOpenShiftClusters           database.OpenShiftClusters
+	dbSubscriptions               database.Subscriptions
+	dbOpenShiftVersions           database.OpenShiftVersions
 
-	apis map[string]*api.Version
+	enabledOcpVersions map[string]*api.OpenShiftVersion
+	apis               map[string]*api.Version
+
+	lastChangefeed atomic.Value //time.Time
+	mu             sync.RWMutex
+
 	m    metrics.Emitter
 	aead encryption.AEAD
 
@@ -72,8 +80,9 @@ type frontend struct {
 	ready     atomic.Value
 
 	// these helps us to test and mock easier
-	now                func() time.Time
-	systemDataEnricher func(*api.OpenShiftClusterDocument, *api.SystemData)
+	now                              func() time.Time
+	systemDataClusterDocEnricher     func(*api.OpenShiftClusterDocument, *api.SystemData)
+	systemDataClusterManagerEnricher func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
 }
 
 // Runnable represents a runnable object
@@ -87,6 +96,7 @@ func NewFrontend(ctx context.Context,
 	baseLog *logrus.Entry,
 	_env env.Interface,
 	dbAsyncOperations database.AsyncOperations,
+	dbClusterManagerConfiguration database.ClusterManagerConfigurations,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbSubscriptions database.Subscriptions,
 	dbOpenShiftVersions database.OpenShiftVersions,
@@ -97,26 +107,38 @@ func NewFrontend(ctx context.Context,
 	azureActionsFactory azureActionsFactory,
 	ocEnricherFactory ocEnricherFactory) (Runnable, error) {
 	f := &frontend{
-		auditLog:            auditLog,
-		baseLog:             baseLog,
-		env:                 _env,
-		dbAsyncOperations:   dbAsyncOperations,
-		dbOpenShiftClusters: dbOpenShiftClusters,
-		dbSubscriptions:     dbSubscriptions,
-		dbOpenShiftVersions: dbOpenShiftVersions,
-		apis:                apis,
-		m:                   m,
-		aead:                aead,
-		kubeActionsFactory:  kubeActionsFactory,
-		azureActionsFactory: azureActionsFactory,
-		ocEnricherFactory:   ocEnricherFactory,
+		auditLog:                      auditLog,
+		baseLog:                       baseLog,
+		env:                           _env,
+		dbAsyncOperations:             dbAsyncOperations,
+		dbClusterManagerConfiguration: dbClusterManagerConfiguration,
+		dbOpenShiftClusters:           dbOpenShiftClusters,
+		dbSubscriptions:               dbSubscriptions,
+		dbOpenShiftVersions:           dbOpenShiftVersions,
+		apis:                          apis,
+		m:                             m,
+		aead:                          aead,
+		kubeActionsFactory:            kubeActionsFactory,
+		azureActionsFactory:           azureActionsFactory,
+		ocEnricherFactory:             ocEnricherFactory,
+
+		// add default installation version so it's always supported
+		enabledOcpVersions: map[string]*api.OpenShiftVersion{
+			version.InstallStream.Version.String(): {
+				Properties: api.OpenShiftVersionProperties{
+					Version: version.InstallStream.Version.String(),
+					Enabled: true,
+				},
+			},
+		},
 
 		bucketAllocator: &bucket.Random{},
 
 		startTime: time.Now(),
 
-		now:                time.Now,
-		systemDataEnricher: enrichSystemData,
+		now:                              time.Now,
+		systemDataClusterDocEnricher:     enrichClusterSystemData,
+		systemDataClusterManagerEnricher: enrichClusterManagerSystemData,
 	}
 
 	l, err := f.env.Listen()
@@ -179,6 +201,18 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodPatch).HandlerFunc(f.putOrPatchOpenShiftCluster).Name("putOrPatchOpenShiftCluster")
 	s.Methods(http.MethodPut).HandlerFunc(f.putOrPatchOpenShiftCluster).Name("putOrPatchOpenShiftCluster")
 
+	if f.env.FeatureIsSet(env.FeatureEnableOCMEndpoints) {
+		s = r.
+			Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/{ocmResourceType}/{ocmResourceName}").
+			Queries("api-version", "{api-version}").
+			Subrouter()
+
+		s.Methods(http.MethodDelete).HandlerFunc(f.deleteClusterManagerConfiguration).Name("deleteClusterManagerConfiguration")
+		s.Methods(http.MethodGet).HandlerFunc(f.getClusterManagerConfiguration).Name("getClusterManagerConfiguration")
+		s.Methods(http.MethodPatch).HandlerFunc(f.putOrPatchClusterManagerConfiguration).Name("putOrPatchClusterManagerConfiguration")
+		s.Methods(http.MethodPut).HandlerFunc(f.putOrPatchClusterManagerConfiguration).Name("putOrPatchClusterManagerConfiguration")
+	}
+
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}").
 		Queries("api-version", "{api-version}").
@@ -236,6 +270,12 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodGet).HandlerFunc(f.getAdminKubernetesObjects).Name("getAdminKubernetesObjects")
 	s.Methods(http.MethodPost).HandlerFunc(f.postAdminKubernetesObjects).Name("postAdminKubernetesObjects")
 	s.Methods(http.MethodDelete).HandlerFunc(f.deleteAdminKubernetesObjects).Name("deleteAdminKubernetesObjects")
+
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/approvecsr").
+		Subrouter()
+
+	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterApproveCSR).Name("postAdminOpenShiftClusterApproveCSR")
 
 	// Pod logs
 	s = r.
@@ -367,6 +407,7 @@ func (f *frontend) setupRouter() *mux.Router {
 
 func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) {
 	defer recover.Panic(f.baseLog)
+	go f.changefeed(ctx)
 
 	if stop != nil {
 		go func() {
