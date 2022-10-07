@@ -65,12 +65,6 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
 							TenantID: "11111111-1111-1111-1111-111111111111",
-							RegisteredFeatures: []api.RegisteredFeatureProfile{
-								{
-									Name:  api.FeatureFlagAdminKubeconfig,
-									State: "Registered",
-								},
-							},
 						},
 					},
 				})
@@ -83,7 +77,7 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 			},
 		},
 		{
-			name:       "cluster exists in db but no feature flag",
+			name:       "cluster exists in db with legacy feature flag",
 			resourceID: resourceID,
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
@@ -104,12 +98,22 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
 							TenantID: "11111111-1111-1111-1111-111111111111",
+							RegisteredFeatures: []api.RegisteredFeatureProfile{
+								{
+									Name:  api.FeatureFlagAdminKubeconfig,
+									State: "Registered",
+								},
+							},
 						},
 					},
 				})
 			},
-			wantStatusCode: http.StatusForbidden,
-			wantError:      `403: Forbidden: : Subscription feature flag 'Microsoft.RedHatOpenShift/AdminKubeconfig' is not enabled on this subscription to use this API.`,
+			wantStatusCode: http.StatusOK,
+			wantResponse: func(tt *test) *v20210901preview.OpenShiftClusterAdminKubeconfig {
+				return &v20210901preview.OpenShiftClusterAdminKubeconfig{
+					Kubeconfig: []byte("{kubeconfig}"),
+				}
+			},
 		},
 		{
 			name:           "credentials request is not allowed in the API version",
