@@ -14,44 +14,30 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-const (
-	wFips = "99-worker-fips"
-	mFips = "99-master-fips"
-)
-
 var _ = Describe("FIPS Mode", func() {
 	ctx := context.Background()
 	It("must be set correctly", func() {
-		By("listing machine configs")
-		mcp, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{})
-		Expect(err).NotTo(HaveOccurred())
-
-		By("searching for master and worker FIPS machine configs")
-		masterFips, workerFips := false, false
-		for _, m := range mcp.Items {
-			for _, mc := range m.Spec.Configuration.Source {
-				if mc.Name == wFips {
-					workerFips = true
-				}
-				if mc.Name == mFips {
-					masterFips = true
-				}
-			}
-		}
+		expectedFIPSMachineConfigs := []string{"99-worker-fips", "99-master-fips"}
 
 		By("getting the test cluster resource")
 		oc, err := clients.OpenshiftClustersv20220401.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
+		By("listing machine configs")
+		mcs, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().List(ctx, metav1.ListOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		actualMachineConfigNames := []string{}
+		for _, mc := range mcs.Items {
+			actualMachineConfigNames = append(actualMachineConfigNames, mc.Name)
+		}
+
 		By("checking if FipsValidatedModules is enabled or disabled")
 		if string(oc.ClusterProfile.FipsValidatedModules) == string(api.FipsValidatedModulesEnabled) {
 			By("checking FIPS machine configs exist on master and worker")
-			Expect(masterFips).To(BeTrue())
-			Expect(workerFips).To(BeTrue())
+			Expect(actualMachineConfigNames).To(ContainElements(expectedFIPSMachineConfigs))
 		} else {
 			By("checking FIPS machine configs do not exist on master and worker")
-			Expect(masterFips).To(BeFalse())
-			Expect(workerFips).To(BeFalse())
+			Expect(actualMachineConfigNames).NotTo(ContainElements(expectedFIPSMachineConfigs))
 		}
 	})
 })
