@@ -1,5 +1,5 @@
 import { Component } from "react"
-import { Nav, INavLinkGroup, INavStyles, IRenderGroupHeaderProps, IRenderFunction } from "@fluentui/react"
+import { Nav, INavLinkGroup, INavStyles, IRenderGroupHeaderProps, IRenderFunction, Stack, Text } from "@fluentui/react"
 
 const navStyles: Partial<INavStyles> = {
   chevronIcon: {
@@ -44,7 +44,10 @@ export class RegionComponent extends Component<
       }
     ]
     return (
-      <Nav onRenderGroupHeader={_onRenderGroupHeader} styles={navStyles} groups={navGroups}  />
+      <Stack>
+        <Nav onRenderGroupHeader={_onRenderGroupHeader} styles={navStyles} groups={navGroups}  />
+        <Text>{this.props.item.regions.length == 0 && "No extra regions within this cloud"}</Text>
+      </Stack>
     )
   }
 }

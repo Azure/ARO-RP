@@ -7,6 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 var (
@@ -68,11 +71,20 @@ func (p *portal) regions(w http.ResponseWriter, r *http.Request) {
 		Regions: make([]Region, 0, len(PROD_REGIONS)),
 	}
 
-	for _, region := range PROD_REGIONS {
-		resp.Regions = append(resp.Regions, Region{
-			Name: region,
-			URL:  fmt.Sprintf("https://%s.admin.aro.azure.com", region),
-		})
+	if value, found := os.LookupEnv("AZURE_ENVIRONMENT"); found {
+		var err error
+		if err != nil {
+			p.internalServerError(w, err)
+			return
+		}
+		if value == azureclient.PublicCloud.Environment.Name {
+			for _, region := range PROD_REGIONS {
+				resp.Regions = append(resp.Regions, Region{
+					Name: region,
+					URL:  fmt.Sprintf("https://%s.admin.aro.azure.com", region),
+				})
+			}
+		}
 	}
 
 	b, err := json.MarshalIndent(resp, "", "    ")
