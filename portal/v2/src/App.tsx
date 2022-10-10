@@ -182,7 +182,7 @@ function App() {
       FetchInfo().then(onData)
       FetchRegions().then(onRegions)
     }
-  }, [fetching, error, data])
+  }, [fetching, error, data, regions])
 
   const onRenderNavigationContent: IRenderFunction<IPanelProps> = useCallback(
     () => (
