@@ -17,6 +17,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
+const name_suffix = "go-18"
+
 func (g *generator) devProxyVMSS() *arm.Resource {
 	parts := []string{
 		fmt.Sprintf("base64ToString('%s')", base64.StdEncoding.EncodeToString([]byte("set -ex\n\n"))),
@@ -114,7 +116,7 @@ chmod +x /etc/cron.weekly/yumupdate
 				},
 				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
 					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
-						ComputerNamePrefix: to.StringPtr("dev-proxy-"),
+						ComputerNamePrefix: to.StringPtr("dev-proxy"),
 						AdminUsername:      to.StringPtr("cloud-user"),
 						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
 							DisablePasswordAuthentication: to.BoolPtr(true),
@@ -369,7 +371,23 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel htop go-toolset-1.17.12-1.module+el8.6.0+16014+a372c00b openvpn
+yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel htop openvpn
+
+# go-toolset-1.18.X is not available to us. We have to build from source.
+GO_BOOTSTRAP_VERSION=1.18.4
+curl -s https://dl.google.com/go/go${GO_BOOTSTRAP_VERSION}.linux-amd64.tar.gz | tar -xz -C /usr/local/
+ln -sf /usr/local/go/bin/go /usr/local/bin/go
+ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt
+# Fetch and build the Golang BoringSSL release for FIPS support
+MSFT_GO_FIPS_VERSION="v1.18.7-1-fips/go.20221004.10"
+mkdir -p /tmp/go-build
+wget -qO- https://github.com/microsoft/go/releases/download/${MSFT_GO_FIPS_VERSION}.src.tar.gz | tar xz -C /tmp/go-build
+pushd /tmp/go-build/go/src
+echo "go1.18.4-fips" > ../VERSION
+HOME=~/ GOROOT_BOOTSTRAP=/usr/local/go GOPATH=~/go/ ./make.bash
+popd
+mv /usr/local/go /usr/local/go-$GO_BOOTSTRAP_VERSION
+mv /tmp/go-build/go /usr/local/go
 
 # Suppress emulation output for podman instead of docker for az acr compatability
 mkdir -p /etc/containers/
@@ -390,10 +408,10 @@ cat >/home/cloud-user/agent/.path <<'EOF'
 /usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/cloud-user/.local/bin:/home/cloud-user/bin
 EOF
 
-# Set the agent's "System capabilities" for tests (go-1.17 and GOLANG_FIPS) in the agent's .env file
+# Set the agent's "System capabilities" for tests (go-1.18 and GOLANG_FIPS) in the agent's .env file
 # and add a HACK for XDG_RUNTIME_DIR: https://github.com/containers/podman/issues/427
 cat >/home/cloud-user/agent/.env <<'EOF'
-go-1.17=true
+go-1.18=true
 GOLANG_FIPS=1
 XDG_RUNTIME_DIR=/run/user/1000
 EOF
@@ -468,7 +486,7 @@ rm cron
 				},
 				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
 					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
-						ComputerNamePrefix: to.StringPtr("ci-"),
+						ComputerNamePrefix: to.StringPtr("ci-" + name_suffix + "-"),
 						AdminUsername:      to.StringPtr("cloud-user"),
 						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
 							DisablePasswordAuthentication: to.BoolPtr(true),
@@ -515,7 +533,7 @@ rm cron
 													Name: to.StringPtr("ci-vmss-pip"),
 													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
 														DNSSettings: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationDNSSettings{
-															DomainNameLabel: to.StringPtr("aro-ci"),
+															DomainNameLabel: to.StringPtr("aro-ci-" + name_suffix),
 														},
 													},
 												},
@@ -546,7 +564,7 @@ rm cron
 				},
 				Overprovision: to.BoolPtr(false),
 			},
-			Name:     to.StringPtr("ci-vmss"),
+			Name:     to.StringPtr("ci-vmss-" + name_suffix),
 			Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},

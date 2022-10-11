@@ -40,11 +40,11 @@ deploy_env_dev_ci() {
         --template-file pkg/deploy/assets/env-development.json \
         --parameters \
             "ciAzpToken=$AZPTOKEN" \
-            "ciCapacity=6" \
+            "ciCapacity=10" \
             "ciPoolName=ARO-CI" \
             "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
             "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
-            "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
+            "proxyDomainNameLabel=go18-$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
             "proxyImage=arointsvc.azurecr.io/proxy:latest" \
             "proxyImageAuth=$(jq -r '.auths["arointsvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
             "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
