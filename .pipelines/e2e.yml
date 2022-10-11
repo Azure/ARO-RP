@@ -58,6 +58,10 @@ jobs:
     condition: failed()
   - script: |
       export CI=true
+
+      # Normally, CI clusters are deleted. Uncomment the following line to preserve the cluster for later inspection.
+      # export E2E_DELETE_CLUSTER=false
+
       . ./hack/e2e/run-rp-and-e2e.sh
 
       delete_e2e_cluster
