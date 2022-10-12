@@ -28,7 +28,7 @@ func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, 
 		err    error
 	)
 
-	err = f.readOcmResourceType(vars)
+	err = f.validateOcmResourceType(vars)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", err.Error())
 		return
@@ -58,24 +58,9 @@ func (f *frontend) _putOrPatchSyncSet(ctx context.Context, log *logrus.Entry, r 
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 	vars := mux.Vars(r)
 
-	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
+	originalPath, err := f.extractOriginalPath(ctx, r, vars)
 	if err != nil {
 		return nil, err
-	}
-
-	originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
-	armResource, err := arm.ParseArmResourceId(originalPath)
-	if err != nil {
-		return nil, err
-	}
-
-	ocp, err := f.dbOpenShiftClusters.Get(ctx, armResource.ParentResource())
-	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return nil, err
-	}
-
-	if ocp == nil || cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
 	}
 
 	ocmdoc, _ := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
@@ -142,24 +127,9 @@ func (f *frontend) _putOrPatchMachinePool(ctx context.Context, log *logrus.Entry
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 	vars := mux.Vars(r)
 
-	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
+	originalPath, err := f.extractOriginalPath(ctx, r, vars)
 	if err != nil {
 		return nil, err
-	}
-
-	originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
-	armResource, err := arm.ParseArmResourceId(originalPath)
-	if err != nil {
-		return nil, err
-	}
-
-	ocp, err := f.dbOpenShiftClusters.Get(ctx, armResource.ParentResource())
-	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return nil, err
-	}
-
-	if ocp == nil || cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
 	}
 
 	ocmdoc, _ := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
@@ -226,24 +196,9 @@ func (f *frontend) _putOrPatchSyncIdentityProvider(ctx context.Context, log *log
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 	vars := mux.Vars(r)
 
-	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
+	originalPath, err := f.extractOriginalPath(ctx, r, vars)
 	if err != nil {
 		return nil, err
-	}
-
-	originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
-	armResource, err := arm.ParseArmResourceId(originalPath)
-	if err != nil {
-		return nil, err
-	}
-
-	ocp, err := f.dbOpenShiftClusters.Get(ctx, armResource.ParentResource())
-	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return nil, err
-	}
-
-	if ocp == nil || cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
 	}
 
 	ocmdoc, _ := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
@@ -310,24 +265,9 @@ func (f *frontend) _putOrPatchSecret(ctx context.Context, log *logrus.Entry, r *
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 	vars := mux.Vars(r)
 
-	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
+	originalPath, err := f.extractOriginalPath(ctx, r, vars)
 	if err != nil {
 		return nil, err
-	}
-
-	originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
-	armResource, err := arm.ParseArmResourceId(originalPath)
-	if err != nil {
-		return nil, err
-	}
-
-	ocp, err := f.dbOpenShiftClusters.Get(ctx, armResource.ParentResource())
-	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return nil, err
-	}
-
-	if ocp == nil || cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
 	}
 
 	ocmdoc, _ := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
@@ -386,6 +326,30 @@ func (f *frontend) _putOrPatchSecret(ctx context.Context, log *logrus.Entry, r *
 	ext := converter.ToExternal(ocmdoc.Secret)
 	b, err := json.MarshalIndent(ext, "", "  ")
 	return b, err
+}
+
+func (f *frontend) extractOriginalPath(ctx context.Context, r *http.Request, vars map[string]string) (string, error) {
+	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
+	if err != nil {
+		return "", err
+	}
+
+	originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
+	armResource, err := arm.ParseArmResourceId(originalPath)
+	if err != nil {
+		return "", err
+	}
+
+	ocp, err := f.dbOpenShiftClusters.Get(ctx, armResource.ParentResource())
+	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+		return "", err
+	}
+
+	if ocp == nil || cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+		return "", api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+	}
+
+	return originalPath, err
 }
 
 // TODO once we hit go1.18 we can refactor to use generics for any document using systemData

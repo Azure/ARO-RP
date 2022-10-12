@@ -26,7 +26,7 @@ func (f *frontend) getClusterManagerConfiguration(w http.ResponseWriter, r *http
 		err error
 	)
 
-	err = f.readOcmResourceType(vars)
+	err = f.validateOcmResourceType(vars)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", err.Error())
 		return
