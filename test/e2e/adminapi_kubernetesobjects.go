@@ -308,7 +308,7 @@ func testConfigMapDeleteForbidden(objName, namespace string) {
 
 func testPodCreateOK(containerName, objName, namespace string) {
 	By("creating a new pod via RP admin API")
-	obj := mockPod(containerName, objName, namespace)
+	obj := mockPod(containerName, objName, namespace, "")
 	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", nil, obj, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))

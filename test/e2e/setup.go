@@ -378,25 +378,6 @@ func setup(ctx context.Context) error {
 	return nil
 }
 
-func done(ctx context.Context) error {
-	// terminate early if delete flag is set to false
-	if os.Getenv("CI") != "" && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
-		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
-		if err != nil {
-			return err
-		}
-
-		err = cluster.Delete(ctx, vnetResourceGroup, clusterName)
-		if err != nil {
-			return err
-		}
-	}
-
-	adminPortalSessionTearDown()
-
-	return nil
-}
-
 var _ = BeforeSuite(func() {
 	log.Info("BeforeSuite")
 
@@ -410,8 +391,4 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
-
-	if err := done(context.Background()); err != nil {
-		panic(err)
-	}
 })
