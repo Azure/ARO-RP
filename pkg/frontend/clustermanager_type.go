@@ -7,13 +7,13 @@ import (
 	"fmt"
 )
 
-func (f *frontend) readOcmResourceType(vars map[string]string) error {
-	badRequestError := fmt.Errorf("the resource type '%s' could not be found in the namespace '%s' for api version '%s'", vars["ocmResourceType"], vars["resourceProviderNamespace"], vars["api-version"])
+func (f *frontend) validateOcmResourceType(vars map[string]string) error {
+	badRequestError := fmt.Errorf("the resource type '%s' is not valid for api version '%s'", vars["ocmResourceType"], vars["api-version"])
 
 	switch vars["ocmResourceType"] {
 	case "syncset":
 		if f.apis[vars["api-version"]].SyncSetConverter == nil {
-			return fmt.Errorf("the resource type '%s' could not be found in the namespace '%s' for api version '%s'", vars["ocmResourceType"], vars["resourceProviderNamespace"], vars["api-version"])
+			return badRequestError
 		}
 	case "machinepool":
 		if f.apis[vars["api-version"]].MachinePoolConverter == nil {
@@ -28,7 +28,7 @@ func (f *frontend) readOcmResourceType(vars map[string]string) error {
 			return badRequestError
 		}
 	default:
-		return fmt.Errorf("the resource type '%s' is not supported for api version '%s'", vars["ocmResourceType"], vars["api-version"])
+		return badRequestError
 	}
 
 	return nil

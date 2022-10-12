@@ -93,7 +93,7 @@ func TestDeleteClusterManagerConfiguration(t *testing.T) {
 			apiVersion:      "2022-04-01",
 			fixture:         createSingleDocument,
 			wantStatusCode:  http.StatusBadRequest,
-			wantError:       "400: InvalidResourceType: : the resource type 'syncset' could not be found in the namespace 'microsoft.redhatopenshift' for api version '2022-04-01'",
+			wantError:       "400: InvalidResourceType: : the resource type 'syncset' is not valid for api version '2022-04-01'",
 		},
 		{
 			name:            "unsupported resource type",
@@ -103,7 +103,7 @@ func TestDeleteClusterManagerConfiguration(t *testing.T) {
 			apiVersion:      "2022-09-04",
 			fixture:         createSingleDocument,
 			wantStatusCode:  http.StatusBadRequest,
-			wantError:       "400: InvalidResourceType: : the resource type 'unsupported' is not supported for api version '2022-09-04'",
+			wantError:       "400: InvalidResourceType: : the resource type 'unsupported' is not valid for api version '2022-09-04'",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
