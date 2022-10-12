@@ -217,15 +217,6 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 	return host, &wd
 }
 
-func adminPortalSessionTearDown() {
-	log.Infof("Stopping Selenium Grid")
-	cmd := exec.Command("docker", "rm", "--force", "selenium-edge-standalone")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Fatalf("Error occurred stopping selenium grid\n Output: %s\n Error: %s\n", output, err)
-	}
-}
-
 func resourceIDFromEnv() string {
 	return fmt.Sprintf(
 		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
