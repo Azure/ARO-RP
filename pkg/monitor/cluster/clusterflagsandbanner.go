@@ -1,5 +1,8 @@
 package cluster
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
 
@@ -8,8 +11,8 @@ import (
 )
 
 const (
-	operatorFlagMetricsTopic  = "cluster.nonstandard.aro.operator.featureflags"
-	supportBannerMetricsTopic = "cluster.nonstandard.aro.contact.support.banner"
+	operatorFlagMetricsTopic  = "cluster.nonstandard.operator.featureflags"
+	supportBannerMetricsTopic = "cluster.nonstandard.contact.support.banner"
 )
 
 func (mon *Monitor) emitOperatorFlagsAndSupportBanner(ctx context.Context) error {
@@ -22,6 +25,7 @@ func (mon *Monitor) emitOperatorFlagsAndSupportBanner(ctx context.Context) error
 		if cluster.Spec.OperatorFlags != nil {
 			defualtFlags := api.DefaultOperatorFlags()
 			nonStandardOperatorFlags := make(map[string]string)
+			//check if the current set flags matches the default ones
 			for flag, status := range cluster.Spec.OperatorFlags {
 				if defualtFlags[flag] != status {
 					nonStandardOperatorFlags[flag] = status
@@ -31,6 +35,8 @@ func (mon *Monitor) emitOperatorFlagsAndSupportBanner(ctx context.Context) error
 				mon.emitGauge(operatorFlagMetricsTopic, 1, nonStandardOperatorFlags)
 			}
 		}
+
+		//check if the contact support banner is activated
 		if cluster.Spec.Banner.Content == arov1alpha1.BannerContactSupport {
 			mon.emitGauge(supportBannerMetricsTopic, 1, nil)
 		}
