@@ -34,6 +34,13 @@ def validate_cidr(key):
     return _validate_cidr
 
 
+def validate_outbound_type(key):
+    if key in {'userdefinedrouting', 'loadbalancer', ''}:
+        return
+    else:
+        raise InvalidArgumentValueError('Outbound type must be "userdefinedrouting" or "loadbalancer"')
+
+
 def validate_client_id(namespace):
     if namespace.client_id is None:
         return
@@ -100,7 +107,7 @@ def validate_pull_secret(namespace):
     if namespace.pull_secret is None:
         # TODO: add aka.ms link here
         warning = "No --pull-secret provided: cluster will not include samples or operators from " + \
-            "Red Hat or from certified partners."
+                  "Red Hat or from certified partners."
 
         logger.warning(warning)
         return
@@ -252,7 +259,8 @@ def validate_refresh_cluster_credentials(namespace):
     if not namespace.refresh_cluster_credentials:
         return
     if namespace.client_secret is not None or namespace.client_id is not None:
-        raise RequiredArgumentMissingError('--client-id and --client-secret must be not set with --refresh-credentials.')  # pylint: disable=line-too-long
+        raise RequiredArgumentMissingError(
+            '--client-id and --client-secret must be not set with --refresh-credentials.')  # pylint: disable=line-too-long
 
 
 def validate_install_version_format(namespace):

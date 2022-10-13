@@ -3,16 +3,17 @@
 
 from unittest.mock import Mock, patch
 from azext_aro._validators import (
-    validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group,
-    validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn, validate_subnet, validate_subnets,
-    validate_visibility, validate_vnet_resource_group_name, validate_worker_count, validate_worker_vm_disk_size_gb, validate_refresh_cluster_credentials
+    validate_cidr, validate_outbound_type, validate_client_id, validate_client_secret, validate_cluster_resource_group,
+    validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn, validate_subnet,
+    validate_subnets,
+    validate_visibility, validate_vnet_resource_group_name, validate_worker_count, validate_worker_vm_disk_size_gb,
+    validate_refresh_cluster_credentials
 )
 from azure.cli.core.azclierror import (
     InvalidArgumentValueError, RequiredArgumentMissingError, RequiredArgumentMissingError, CLIInternalError
 )
 from azure.core.exceptions import ResourceNotFoundError
 import pytest
-
 
 test_validate_cidr_data = [
     (
@@ -182,7 +183,8 @@ test_validate_cluster_resource_group_data = [
     ids=[i[0] for i in test_validate_cluster_resource_group_data]
 )
 @patch('azext_aro._validators.get_mgmt_service_client')
-def test_validate_cluster_resource_group(get_mgmt_service_client_mock, test_description, client_mock, cmd_mock, namespace, expected_exception):
+def test_validate_cluster_resource_group(get_mgmt_service_client_mock, test_description, client_mock, cmd_mock,
+                                         namespace, expected_exception):
     get_mgmt_service_client_mock.return_value = client_mock
     if expected_exception is None:
         validate_cluster_resource_group(cmd_mock, namespace)
@@ -231,14 +233,14 @@ test_validate_disk_encryption_set_data = [
 @patch('azext_aro._validators.parse_resource_id')
 @patch('azext_aro._validators.is_valid_resource_id')
 def test_validate_disk_encryption_set(
-    # Mocks:
-    is_valid_resource_id_mock,
-    parse_resource_id_mock,
-    get_mgmt_service_client_mock,
+        # Mocks:
+        is_valid_resource_id_mock,
+        parse_resource_id_mock,
+        get_mgmt_service_client_mock,
 
-    # Test cases parameters:
-    test_description, cmd_mock, namespace, is_valid_resource_id_return_value,
-    compute_client_mock, expected_exception, parse_resource_id_mock_return_value
+        # Test cases parameters:
+        test_description, cmd_mock, namespace, is_valid_resource_id_return_value,
+        compute_client_mock, expected_exception, parse_resource_id_mock_return_value
 ):
     is_valid_resource_id_mock.return_value = is_valid_resource_id_return_value
     parse_resource_id_mock.return_value = parse_resource_id_mock_return_value
@@ -549,23 +551,23 @@ test_validate_subnet_data = [
 ]
 
 
-@ pytest.mark.parametrize(
+@pytest.mark.parametrize(
     "test_description, namespace, key, is_valid_resource_id_mock_return_value, parse_resource_id_mock_return_value, get_subscription_id_mock_return_value, get_mgmt_service_client_mock_return_value, cmd, expected_exception",
     test_validate_subnet_data,
     ids=[i[0] for i in test_validate_subnet_data]
 )
-@ patch('azext_aro._validators.get_mgmt_service_client')
-@ patch('azext_aro._validators.get_subscription_id')
-@ patch('azext_aro._validators.parse_resource_id')
-@ patch('azext_aro._validators.is_valid_resource_id')
+@patch('azext_aro._validators.get_mgmt_service_client')
+@patch('azext_aro._validators.get_subscription_id')
+@patch('azext_aro._validators.parse_resource_id')
+@patch('azext_aro._validators.is_valid_resource_id')
 def test_validate_subnet(
-    # Mocked functions:
-    is_valid_resource_id_mock, parse_resource_id_mock, get_subscription_id_mock, get_mgmt_service_client_mock,
+        # Mocked functions:
+        is_valid_resource_id_mock, parse_resource_id_mock, get_subscription_id_mock, get_mgmt_service_client_mock,
 
-    # Test cases parameters:
-    test_description, namespace, key, is_valid_resource_id_mock_return_value,
-    parse_resource_id_mock_return_value, get_subscription_id_mock_return_value,
-    get_mgmt_service_client_mock_return_value, cmd, expected_exception
+        # Test cases parameters:
+        test_description, namespace, key, is_valid_resource_id_mock_return_value,
+        parse_resource_id_mock_return_value, get_subscription_id_mock_return_value,
+        get_mgmt_service_client_mock_return_value, cmd, expected_exception
 ):
     is_valid_resource_id_mock.return_value = is_valid_resource_id_mock_return_value
     parse_resource_id_mock.return_value = parse_resource_id_mock_return_value
@@ -709,8 +711,8 @@ test_validate_vnet_resource_group_name_data = [
 )
 def test_validate_vnet_resource_group_name(test_description, namespace, expected_namespace_vnet_resource_group_name):
     validate_vnet_resource_group_name(namespace)
-    assert(namespace.vnet_resource_group_name ==
-           expected_namespace_vnet_resource_group_name)
+    assert (namespace.vnet_resource_group_name ==
+            expected_namespace_vnet_resource_group_name)
 
 
 test_validate_worker_count_data = [
@@ -817,3 +819,40 @@ def test_validate_refresh_cluster_credentials(test_description, namespace, expec
     else:
         with pytest.raises(expected_exception):
             validate_refresh_cluster_credentials(namespace)
+
+
+test_validate_outbound_type_data = [
+    (
+        "Should not raise exception when key is loadbalancer.",
+        'loadbalancer',
+        None
+    ),
+    (
+        "Should not raise exception when key is userdefinedrouting.",
+        'userdefinedrouting',
+        None
+    ),
+    (
+        "Should not raise exception when key is empty.",
+        '',
+        None
+    ),
+    (
+        "Should raise exception when key is a different value.",
+        'testFail',
+        InvalidArgumentValueError
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    "test_description, key, expected_exception",
+    test_validate_outbound_type_data,
+    ids=[i[0] for i in test_validate_outbound_type_data]
+)
+def test_validate_outbound_type(test_description, key, expected_exception):
+    if expected_exception is None:
+        validate_outbound_type(key)
+    else:
+        with pytest.raises(expected_exception):
+            validate_outbound_type(key)

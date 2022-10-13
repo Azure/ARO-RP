@@ -2,6 +2,7 @@
 # Licensed under the Apache License 2.0.
 
 from azext_aro._validators import validate_cidr
+from azext_aro._validators import validate_outbound_type
 from azext_aro._validators import validate_client_id
 from azext_aro._validators import validate_cluster_resource_group
 from azext_aro._validators import validate_disk_encryption_set
@@ -64,6 +65,9 @@ def load_arguments(self, _):
         c.argument('service_cidr',
                    help='CIDR of service network. Must be a minimum of /18 or larger.',
                    validator=validate_cidr('service_cidr'))
+        c.argument('outbound_type',
+                   help='Outbound type of cluster. Must be "loadbalancer" (default) or "userdefinedrouting".',
+                   validator=validate_outbound_type('outbound_type'))
         c.argument('software_defined_network', arg_type=get_enum_type(['OVNKubernetes', 'OpenShiftSDN']),
                    options_list=['--software-defined-network-type', '--sdn-type'],
                    help='SDN type either "OpenShiftSDN" (default) or "OVNKubernetes"',
