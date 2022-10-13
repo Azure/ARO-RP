@@ -50,6 +50,7 @@ type Operator interface {
 	CreateOrUpdate(context.Context) error
 	IsReady(context.Context) (bool, error)
 	IsRunningDesiredVersion(context.Context) (bool, error)
+	RenewMDSDCertificate(context.Context) error
 }
 
 type operator struct {
@@ -360,6 +361,31 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+func (o *operator) RenewMDSDCertificate(ctx context.Context) error {
+	key, cert := o.env.ClusterGenevaLoggingSecret()
+	gcsKeyBytes, err := utiltls.PrivateKeyAsBytes(key)
+	if err != nil {
+		return err
+	}
+	gcsCertBytes, err := utiltls.CertAsBytes(cert)
+	if err != nil {
+		return err
+	}
+
+	s, err := o.kubernetescli.CoreV1().Secrets(pkgoperator.Namespace).Get(ctx, pkgoperator.SecretName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	s.Data["gcscert.pem"] = gcsCertBytes
+	s.Data["gcskey.pem"] = gcsKeyBytes
+
+	_, err = o.kubernetescli.CoreV1().Secrets(pkgoperator.Namespace).Update(ctx, s, metav1.UpdateOptions{})
+	if err != nil {
+		return err
 	}
 	return nil
 }

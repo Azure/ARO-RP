@@ -6,7 +6,7 @@ package e2e
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -15,14 +15,17 @@ import (
 )
 
 var _ = Describe("Monitor", func() {
-	Specify("a monitor run should not return any errors", func() {
+	// This is more of an integration test rather than E2E.
+	It("must run and must not return any errors", func() {
 		ctx := context.Background()
 
+		By("creating a new monitor instance for the test cluster")
 		mon, err := cluster.NewMonitor(ctx, log, clients.RestConfig, &api.OpenShiftCluster{
 			ID: resourceIDFromEnv(),
 		}, &noop.Noop{}, nil, true)
 		Expect(err).NotTo(HaveOccurred())
 
+		By("running the monitor once")
 		errs := mon.Monitor(ctx)
 		Expect(errs).To(HaveLen(0))
 	})

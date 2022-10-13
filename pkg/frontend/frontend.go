@@ -34,10 +34,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-// TODO this const was put in place to disable the ocm routes
-// once we are ready to begin testing we can remove this bool and related code
-const disableOCMAPI = true
-
 type statusCodeError int
 
 func (err statusCodeError) Error() string {
@@ -205,15 +201,17 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodPatch).HandlerFunc(f.putOrPatchOpenShiftCluster).Name("putOrPatchOpenShiftCluster")
 	s.Methods(http.MethodPut).HandlerFunc(f.putOrPatchOpenShiftCluster).Name("putOrPatchOpenShiftCluster")
 
-	s = r.
-		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/{ocmResourceType}/{ocmResourceName}").
-		Queries("api-version", "{api-version}").
-		Subrouter()
+	if f.env.FeatureIsSet(env.FeatureEnableOCMEndpoints) {
+		s = r.
+			Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/{ocmResourceType}/{ocmResourceName}").
+			Queries("api-version", "{api-version}").
+			Subrouter()
 
-	s.Methods(http.MethodDelete).HandlerFunc(f.deleteClusterManagerConfiguration).Name("deleteClusterManagerConfiguration")
-	s.Methods(http.MethodGet).HandlerFunc(f.getClusterManagerConfiguration).Name("getClusterManagerConfiguration")
-	s.Methods(http.MethodPatch).HandlerFunc(f.putOrPatchClusterManagerConfiguration).Name("putOrPatchClusterManagerConfiguration")
-	s.Methods(http.MethodPut).HandlerFunc(f.putOrPatchClusterManagerConfiguration).Name("putOrPatchClusterManagerConfiguration")
+		s.Methods(http.MethodDelete).HandlerFunc(f.deleteClusterManagerConfiguration).Name("deleteClusterManagerConfiguration")
+		s.Methods(http.MethodGet).HandlerFunc(f.getClusterManagerConfiguration).Name("getClusterManagerConfiguration")
+		s.Methods(http.MethodPatch).HandlerFunc(f.putOrPatchClusterManagerConfiguration).Name("putOrPatchClusterManagerConfiguration")
+		s.Methods(http.MethodPut).HandlerFunc(f.putOrPatchClusterManagerConfiguration).Name("putOrPatchClusterManagerConfiguration")
+	}
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}").

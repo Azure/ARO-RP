@@ -155,6 +155,17 @@ func (f *Fixture) AddOpenShiftVersionDocuments(docs ...*api.OpenShiftVersionDocu
 	}
 }
 
+func (f *Fixture) AddClusterManagerConfigurationDocuments(docs ...*api.ClusterManagerConfigurationDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.clusterManagerConfigurationDocuments = append(f.clusterManagerConfigurationDocuments, docCopy.(*api.ClusterManagerConfigurationDocument))
+	}
+}
+
 func (f *Fixture) Create() error {
 	ctx := context.Background()
 

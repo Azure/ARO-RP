@@ -65,6 +65,7 @@ func TestSecurity(t *testing.T) {
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validadminclientcerts[0].Raw))
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 	_env.EXPECT().FeatureIsSet(env.FeatureDisableReadinessDelay).AnyTimes().Return(false)
+	_env.EXPECT().FeatureIsSet(env.FeatureEnableOCMEndpoints).AnyTimes().Return(true)
 
 	invalidclientkey, invalidclientcerts, err := utiltls.GenerateKeyAndCertificate("invalidclient", nil, nil, false, true)
 	if err != nil {

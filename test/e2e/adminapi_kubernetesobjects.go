@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
@@ -308,7 +308,7 @@ func testConfigMapDeleteForbidden(objName, namespace string) {
 
 func testPodCreateOK(containerName, objName, namespace string) {
 	By("creating a new pod via RP admin API")
-	obj := mockPod(containerName, objName, namespace)
+	obj := mockPod(containerName, objName, namespace, "")
 	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", nil, obj, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))

@@ -5,8 +5,8 @@ package swagger
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"reflect"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -221,7 +221,7 @@ func Run(api, outputDir string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(outputDir+"/redhatopenshift.json", b, 0666)
+	return os.WriteFile(outputDir+"/redhatopenshift.json", b, 0666)
 }
 
 func deepCopy(v interface{}) (interface{}, error) {
