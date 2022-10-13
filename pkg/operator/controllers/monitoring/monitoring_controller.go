@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 )
@@ -31,7 +32,9 @@ import (
 const (
 	ControllerName = "Monitoring"
 
-	controllerEnabled = "aro.monitoring.enabled"
+	controllerEnabled         = "aro.monitoring.enabled"
+	operatorFlagMetricsTopic  = "cluster.nonstandard.aro.operator.featureflags"
+	supportBannerMetricsTopic = "cluster.nonstandard.aro.contact.support.banner"
 )
 
 var (
@@ -58,18 +61,20 @@ type Config struct {
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli        aroclient.Interface
-	kubernetescli kubernetes.Interface
+	arocli         aroclient.Interface
+	kubernetescli  kubernetes.Interface
+	metricsEmitter metrics.Emitter
 
 	jsonHandle *codec.JsonHandle
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, metricsEmitter metrics.Emitter) *Reconciler {
 	return &Reconciler{
-		arocli:        arocli,
-		kubernetescli: kubernetescli,
-		log:           log,
-		jsonHandle:    new(codec.JsonHandle),
+		arocli:         arocli,
+		kubernetescli:  kubernetescli,
+		log:            log,
+		metricsEmitter: metricsEmitter,
+		jsonHandle:     new(codec.JsonHandle),
 	}
 }
 
@@ -93,6 +98,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return result, err
 		}
 	}
+
+	r.monitoringOperatorFlagsAndBanner(instance)
+
 	return reconcile.Result{}, nil
 }
 
@@ -191,6 +199,24 @@ func (r *Reconciler) monitoringConfigMap(ctx context.Context) (*corev1.ConfigMap
 		return nil, false, err
 	}
 	return cm, false, nil
+}
+
+func (r *Reconciler) monitoringOperatorFlagsAndBanner(instance *arov1alpha1.Cluster) {
+	if instance.Spec.OperatorFlags != nil {
+		defualtFlags := api.DefaultOperatorFlags()
+		nonStandardOperatorFlags := make(map[string]string)
+		for flag, status := range instance.Spec.OperatorFlags {
+			if defualtFlags[flag] != status {
+				nonStandardOperatorFlags[flag] = status
+			}
+		}
+		if len(nonStandardOperatorFlags) > 0 {
+			r.metricsEmitter.EmitGauge(operatorFlagMetricsTopic, 1, nonStandardOperatorFlags)
+		}
+	}
+	if instance.Spec.Banner.Content == arov1alpha1.BannerContactSupport {
+		r.metricsEmitter.EmitGauge(supportBannerMetricsTopic, 1, nil)
+	}
 }
 
 // SetupWithManager setup the manager
