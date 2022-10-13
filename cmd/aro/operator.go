@@ -56,13 +56,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	default:
 		return fmt.Errorf("invalid role %s", role)
 	}
-
-	_env, err := env.NewEnv(ctx, log)
-	if err != nil {
-		return err
-	}
-
-	isLocalDevelopmentMode := _env.IsLocalDevelopmentMode()
+	isLocalDevelopmentMode := env.IsLocalDevelopmentMode()
 	if isLocalDevelopmentMode {
 		log.Info("running in local development mode")
 	}
