@@ -124,7 +124,6 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			expectBannerMetricsValue: 1,
 		},
 	} {
-
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			if tt.operatorFlags != nil {
@@ -155,7 +154,6 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			if fm.Metrics[supportBannerMetricsTopic].Value != tt.expectBannerMetricsValue {
 				t.Errorf("incorrect support banner metrics value, want: %d, got: %d", tt.expectBannerMetricsValue, fm.Metrics[supportBannerMetricsTopic].Value)
 			}
-
 		})
 	}
 }
