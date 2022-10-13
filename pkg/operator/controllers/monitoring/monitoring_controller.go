@@ -24,7 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/metrics"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 )
@@ -59,9 +58,8 @@ type Config struct {
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli         aroclient.Interface
-	kubernetescli  kubernetes.Interface
-	metricsEmitter metrics.Emitter
+	arocli        aroclient.Interface
+	kubernetescli kubernetes.Interface
 
 	jsonHandle *codec.JsonHandle
 }
