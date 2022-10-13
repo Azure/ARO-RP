@@ -7,7 +7,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"os"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	consoleclient "github.com/openshift/client-go/console/clientset/versioned"
@@ -18,15 +17,10 @@ import (
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
-	kmetrics "k8s.io/client-go/tools/metrics"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
-	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
-	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
-	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/alertwebhook"
@@ -52,7 +46,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/workaround"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	"github.com/Azure/go-autorest/tracing"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -80,21 +73,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-
-	m := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
-
-	g, err := golang.NewMetrics(log.WithField("component", "metrics"), m)
-	if err != nil {
-		return err
-	}
-
-	go g.Run()
-
-	tracing.Register(azure.New(m))
-	kmetrics.Register(kmetrics.RegisterOpts{
-		RequestResult:  k8s.NewResult(m),
-		RequestLatency: k8s.NewLatency(m),
-	})
 
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
 		HealthProbeBindAddress: ":8080",
@@ -181,7 +159,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (monitoring.NewReconciler(
 			log.WithField("controller", monitoring.ControllerName),
-			arocli, kubernetescli, m)).SetupWithManager(mgr); err != nil {
+			arocli, kubernetescli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", monitoring.ControllerName, err)
 		}
 		if err = (rbac.NewReconciler(
