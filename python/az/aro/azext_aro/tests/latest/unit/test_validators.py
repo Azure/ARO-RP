@@ -5,9 +5,8 @@ from unittest.mock import Mock, patch
 from azext_aro._validators import (
     validate_cidr, validate_outbound_type, validate_client_id, validate_client_secret, validate_cluster_resource_group,
     validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn, validate_subnet,
-    validate_subnets,
-    validate_visibility, validate_vnet_resource_group_name, validate_worker_count, validate_worker_vm_disk_size_gb,
-    validate_refresh_cluster_credentials
+    validate_subnets,validate_visibility, validate_vnet_resource_group_name, validate_worker_count,
+    validate_worker_vm_disk_size_gb, validate_refresh_cluster_credentials
 )
 from azure.cli.core.azclierror import (
     InvalidArgumentValueError, RequiredArgumentMissingError, RequiredArgumentMissingError, CLIInternalError
