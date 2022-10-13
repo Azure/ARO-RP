@@ -33,8 +33,13 @@ jobs:
 
       run_vpn
       deploy_e2e_db
+
+      run_portal
+      validate_portal_running
+
       run_rp
       validate_rp_running
+
       register_sub
 
       make test-e2e
@@ -56,6 +61,17 @@ jobs:
     artifact: must-gather
     displayName: Append must-gather to Pipeline
     condition: failed()
+  - task: CopyFiles@2
+    condition: succeededOrFailed()
+    inputs:
+      contents: $(Build.SourcesDirectory)/*.png
+      targetFolder: $(Build.ArtifactStagingDirectory)
+
+  - task: PublishBuildArtifacts@1
+    condition: succeededOrFailed()
+    inputs:
+      pathToPublish: $(Build.ArtifactStagingDirectory)
+      artifactName: Screenshots
   - script: |
       export CI=true
       . ./hack/e2e/run-rp-and-e2e.sh
@@ -63,6 +79,7 @@ jobs:
       delete_e2e_cluster
       clean_e2e_db
       kill_rp
+      kill_portal
       kill_vpn
     displayName: Cleanup
     condition: always()

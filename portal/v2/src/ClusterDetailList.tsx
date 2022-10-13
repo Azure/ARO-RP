@@ -102,7 +102,7 @@ const ValueStyle: IStackItemStyles = {
 function ClusterDetailCell(value: any): any {
   if (typeof value.value == typeof " ") {
     return (
-      <Stack.Item styles={value.style}>
+      <Stack.Item id="ClusterDetailCell" styles={value.style}>
         <Text styles={value.style} variant={"medium"}>
           {value.value}
         </Text>
@@ -128,13 +128,13 @@ export class ClusterDetailComponent extends Component<
             return (
               <Stack styles={contentStackStylesNormal}>
                 <Stack horizontal>
-                  <Stack styles={KeyColumnStyle}>
+                  <Stack id="Headers" styles={KeyColumnStyle}>
                     {headerEntries.map((value: any, index: number) => (
                       <ClusterDetailCell style={KeyStyle} key={index} value={value[1]} />
                     ))}
                   </Stack>
 
-                  <Stack styles={KeyColumnStyle}>
+                  <Stack id="Colons" styles={KeyColumnStyle}>
                     {Array(headerEntries.length)
                       .fill(":")
                       .map((value: any, index: number) => (
@@ -142,7 +142,7 @@ export class ClusterDetailComponent extends Component<
                       ))}
                   </Stack>
 
-                  <Stack styles={ValueColumnStyle}>
+                  <Stack id="Values"styles={ValueColumnStyle}>
                     {headerEntries.map((value: [any, any], index: number) => (
                       <ClusterDetailCell
                         style={ValueStyle}
