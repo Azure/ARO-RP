@@ -62,10 +62,12 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 		api.VMSizeStandardL64sV2: {CoreCount: 64, Family: "standardLsv2Family"},
 
 		// GPU nodes
-		api.VMSizeStandardNC4asT4V3:  {CoreCount: 4, Family: "Standard_NC4as_T4_v3"},
-		api.VMSizeStandardNC8asT4V3:  {CoreCount: 8, Family: "Standard_NC8as_T4_v3"},
-		api.VMSizeStandardNC16asT4V3: {CoreCount: 16, Family: "Standard_NC16as_T4_v3"},
-		api.VMSizeStandardNC64asT4V3: {CoreCount: 64, Family: "Standard_NC64as_T4_v3"},
+		// the formatting of the ncasv3_t4 family is different.  This can be seen through a
+		// az vm list-usage -l eastus
+		api.VMSizeStandardNC4asT4V3:  {CoreCount: 4, Family: "Standard NCASv3_T4 Family"},
+		api.VMSizeStandardNC8asT4V3:  {CoreCount: 8, Family: "Standard NCASv3_T4 Family"},
+		api.VMSizeStandardNC16asT4V3: {CoreCount: 16, Family: "Standard NCASv3_T4 Family"},
+		api.VMSizeStandardNC64asT4V3: {CoreCount: 64, Family: "Standard NCASv3_T4 Family"},
 	}
 
 	vm, ok := vmTypesMap[vmSize]
