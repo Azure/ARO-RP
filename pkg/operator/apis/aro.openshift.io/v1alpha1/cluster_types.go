@@ -28,6 +28,7 @@ const (
 	// advisor checks
 	DefaultIngressCertificate = "DefaultIngressCertificate"
 	DefaultClusterDNS         = "DefaultClusterDNS"
+	GuardRailsStatus          = "GuardRailsStatus"
 )
 
 // AllConditionTypes is a operator conditions currently in use, any condition not in this list is not
@@ -41,6 +42,7 @@ func AllConditionTypes() []string {
 		ManagedUpgradeOperatorStatus,
 		DefaultIngressCertificate,
 		DefaultClusterDNS,
+		GuardRailsStatus,
 	}
 }
 

@@ -125,6 +125,10 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 			return err
 		}
 
+		if strings.HasPrefix(acc.GetName(), "gatekeeper") {
+			dh.log.Printf("\x1b[%dm %s@%s:: ignore changes: %s\x1b[0m\n", 36, acc.GetName(), acc.GetNamespace(), diff)
+			return nil
+		}
 		dh.log.Printf("Update %s: %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()), diff)
 		return dh.restcli.Put().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Body(new).Do(ctx).Error()
 	})
