@@ -104,7 +104,8 @@ func (d *dev) FPNewClientCertificateCredential(tenantID string) (*azidentity.Cli
 	fpPrivateKey, fpCertificates := d.fpCertificateRefresher.GetCertificates()
 
 	credential, err := azidentity.NewClientCertificateCredential(tenantID, d.fpClientID, fpCertificates, fpPrivateKey, &azidentity.ClientCertificateCredentialOptions{
-		AuthorityHost: d.Environment().AuthorityHost,
+		AuthorityHost:        d.Environment().AuthorityHost,
+		SendCertificateChain: true,
 	})
 
 	if err != nil {
