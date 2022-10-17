@@ -20,7 +20,7 @@ jobs:
   condition: startsWith(variables['build.sourceBranch'], 'refs/tags/v2')
   pool:
     name: ARO-CI
-    demands: go-1.17
+    demands: go-1.18
 
   steps:
   - template: ./templates/template-checkout.yml

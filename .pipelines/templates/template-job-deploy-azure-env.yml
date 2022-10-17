@@ -22,7 +22,7 @@ jobs:
     - template: ../vars.yml
     pool:
       name: ARO-CI
-      demands: go-1.17
+      demands: go-1.18
     environment: ${{ parameters.environment }}
     strategy:
       runOnce:
