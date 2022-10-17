@@ -23,7 +23,7 @@ func (mon *Monitor) emitOperatorFlagsAndSupportBanner(ctx context.Context) error
 
 	for _, cluster := range cs.Items {
 		if cluster.Spec.OperatorFlags != nil {
-			defualtFlags := api.DefaultOperatorFlags()
+                        defaultFlags := api.DefaultOperatorFlags()
 			nonStandardOperatorFlags := make(map[string]string)
 			//check if the current set flags matches the default ones
 			for flag, status := range cluster.Spec.OperatorFlags {
