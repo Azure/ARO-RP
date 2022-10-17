@@ -321,6 +321,24 @@ func setupSelenium(ctx context.Context) error {
 	return err
 }
 
+func tearDownSelenium(ctx context.Context) error {
+	log.Infof("Stopping Selenium Grid")
+	cmd := exec.CommandContext(ctx, "docker", "stop", "selenium-edge-standalone")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Fatalf("Error occurred stopping selenium container\n Output: %s\n Error: %s\n", output, err)
+	}
+
+	log.Infof("Removing Selenium Grid container")
+	cmd = exec.CommandContext(ctx, "docker", "rm", "selenium-edge-standalone")
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		log.Fatalf("Error occurred removing selenium grid container\n Output: %s\n Error: %s\n", output, err)
+	}
+
+	return nil
+}
+
 func setup(ctx context.Context) error {
 	for _, key := range []string{
 		"AZURE_CLIENT_ID",
@@ -369,6 +387,10 @@ func setup(ctx context.Context) error {
 	return nil
 }
 
+func tearDown(ctx context.Context) error {
+	return tearDownSelenium(context.Background())
+}
+
 var _ = BeforeSuite(func() {
 	log.Info("BeforeSuite")
 
@@ -382,4 +404,8 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
+
+	if err := tearDown(context.Background()); err != nil {
+		panic(err)
+	}
 })
