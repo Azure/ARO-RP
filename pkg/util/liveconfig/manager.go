@@ -5,11 +5,14 @@ package liveconfig
 
 import (
 	"context"
+	"fmt"
 	"sync"
+	"time"
 
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
+	"github.com/sirupsen/logrus"
 )
 
 type Manager interface {
@@ -35,11 +38,58 @@ type prod struct {
 	cachedCredentials    map[int]*rest.Config
 }
 
-func NewProd(location string, managedClustersClient containerservice.ManagedClustersClient) Manager {
-	return &prod{
+func NewProd(location string, managedClustersClient containerservice.ManagedClustersClient, log *logrus.Entry) Manager {
+	p := &prod{
 		location:              location,
 		managedClustersClient: managedClustersClient,
 		cachedCredentials:     make(map[int]*rest.Config),
 		hiveCredentialsMutex:  &sync.RWMutex{},
 	}
+	go p.hiveConfigRetrieveLoop(1, log)
+	return p
+}
+
+func (p *prod) hiveConfigRetrieveLoop(index int, log *logrus.Entry) {
+
+	successWaitTime := 360 * time.Second
+	failureWaitTime := 60 * time.Second
+	apiCallTimeout := 10 * time.Second
+
+	for {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, apiCallTimeout)
+
+		timeToSleep := successWaitTime
+		if !p.hiveConfigOne(ctx, index, log) {
+			timeToSleep = failureWaitTime
+		}
+
+		cancel() // can't defer
+		time.Sleep(timeToSleep)
+
+	}
+}
+
+func (p *prod) hiveConfigOne(ctx context.Context, index int, log *logrus.Entry) bool {
+
+	rpResourceGroup := fmt.Sprintf("rp-%s", p.location)
+	rpResourceName := fmt.Sprintf("aro-aks-cluster-%03d", index)
+
+	res, err := p.managedClustersClient.ListClusterUserCredentials(ctx, rpResourceGroup, rpResourceName, "")
+	if err != nil {
+		return false
+	}
+
+	parsed, err := parseKubeconfig(*res.Kubeconfigs)
+	if err != nil {
+		log.Info(err)
+		return false
+	}
+
+	p.hiveCredentialsMutex.Lock()
+	p.cachedCredentials[index] = parsed
+	p.hiveCredentialsMutex.Unlock()
+
+	return true
+
 }

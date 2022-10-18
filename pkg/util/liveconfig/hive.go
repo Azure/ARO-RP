@@ -6,7 +6,7 @@ package liveconfig
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
+	"errors"
 	"os"
 
 	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
@@ -52,26 +52,8 @@ func (p *prod) HiveRestConfig(ctx context.Context, index int) (*rest.Config, err
 		return rest.CopyConfig(cached), nil
 	}
 
-	// Lock the RWMutex as we're starting to fetch so that new readers will wait
-	// for the existing Azure API call to be done.
-	p.hiveCredentialsMutex.Lock()
-	defer p.hiveCredentialsMutex.Unlock()
+	return nil, errors.New("no HiveRestConfig available")
 
-	rpResourceGroup := fmt.Sprintf("rp-%s", p.location)
-	rpResourceName := fmt.Sprintf("aro-aks-cluster-%03d", index)
-
-	res, err := p.managedClustersClient.ListClusterUserCredentials(ctx, rpResourceGroup, rpResourceName, "")
-	if err != nil {
-		return nil, err
-	}
-
-	parsed, err := parseKubeconfig(*res.Kubeconfigs)
-	if err != nil {
-		return nil, err
-	}
-
-	p.cachedCredentials[index] = parsed
-	return rest.CopyConfig(parsed), nil
 }
 
 func (p *prod) InstallViaHive(ctx context.Context) (bool, error) {
