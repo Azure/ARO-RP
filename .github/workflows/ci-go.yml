@@ -36,4 +36,4 @@ jobs:
       - run: |
           go mod vendor
           go mod tidy -compat=1.17
-          git status
+          hack/ci-utils/isClean.sh
