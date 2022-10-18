@@ -32,6 +32,7 @@ func getAksKubeconfig(ctx context.Context, managedClustersClient containerservic
 	}
 
 	var aksCluster *mgmtcontainerservice.ManagedCluster
+
 outerLoop:
 	for aksClusters.NotDone() {
 		for _, cluster := range aksClusters.Values() {
@@ -52,7 +53,7 @@ outerLoop:
 
 	aksResourceGroup := strings.Replace(*aksCluster.NodeResourceGroup, fmt.Sprintf("-aks%d", index), "", 1)
 
-	res, err := managedClustersClient.ListClusterAdminCredentials(ctx, aksResourceGroup, *aksCluster.Name, "public")
+	res, err := managedClustersClient.ListClusterAdminCredentials(ctx, aksResourceGroup, aksClusterName, "public")
 	if err != nil {
 		return nil, err
 	}
