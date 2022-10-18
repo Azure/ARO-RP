@@ -29,7 +29,7 @@ var (
 		ActualCloudName:          "AzureCloud",
 		GenevaMonitoringEndpoint: "https://gcs.prod.monitoring.core.windows.net/",
 		AppSuffix:                "aro.azure.com",
-		AppLensEndpoint:          "https://diag-runtimehost-staging.azurefd.net/api/invoke",
+		AppLensEndpoint:          "https://diag-runtimehost-prod.trafficmanager.net/api/invoke",
 		AppLensScope:             "b9a1efcd-32ee-4330-834c-c04eb00f4b33",
 		AuthorityHost:            azidentity.AzurePublicCloud,
 	}
