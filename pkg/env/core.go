@@ -12,6 +12,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
 // Core collects basic configuration information which is expected to be
@@ -43,9 +44,9 @@ func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, er
 	if err != nil {
 		return nil, err
 	}
-
+	log := utillog.GetLogger()
 	mcc := containerservice.NewManagedClustersClient(c.Environment(), c.SubscriptionID(), msiAuthorizer)
-	return liveconfig.NewProd(c.Location(), mcc), nil
+	return liveconfig.NewProd(c.Location(), mcc, log), nil
 }
 
 func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {

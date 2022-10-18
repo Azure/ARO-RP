@@ -53,7 +53,6 @@ func (p *prod) HiveRestConfig(ctx context.Context, index int) (*rest.Config, err
 	}
 
 	return nil, errors.New("no HiveRestConfig available")
-
 }
 
 func (p *prod) InstallViaHive(ctx context.Context) (bool, error) {

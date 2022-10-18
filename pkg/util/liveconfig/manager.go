@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
-	"github.com/sirupsen/logrus"
 )
 
 type Manager interface {
@@ -50,7 +50,6 @@ func NewProd(location string, managedClustersClient containerservice.ManagedClus
 }
 
 func (p *prod) hiveConfigRetrieveLoop(index int, log *logrus.Entry) {
-
 	successWaitTime := 360 * time.Second
 	failureWaitTime := 60 * time.Second
 	apiCallTimeout := 10 * time.Second
@@ -66,12 +65,10 @@ func (p *prod) hiveConfigRetrieveLoop(index int, log *logrus.Entry) {
 
 		cancel() // can't defer
 		time.Sleep(timeToSleep)
-
 	}
 }
 
 func (p *prod) hiveConfigOne(ctx context.Context, index int, log *logrus.Entry) bool {
-
 	rpResourceGroup := fmt.Sprintf("rp-%s", p.location)
 	rpResourceName := fmt.Sprintf("aro-aks-cluster-%03d", index)
 
@@ -91,5 +88,4 @@ func (p *prod) hiveConfigOne(ctx context.Context, index int, log *logrus.Entry) 
 	p.hiveCredentialsMutex.Unlock()
 
 	return true
-
 }
