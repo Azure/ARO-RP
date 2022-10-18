@@ -5,13 +5,15 @@ package liveconfig
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"os"
+	"strings"
 
 	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
 )
 
 const (
@@ -21,14 +23,45 @@ const (
 	hiveAdoptEnableEnvVar     = "ARO_ADOPT_BY_HIVE"
 )
 
-func parseKubeconfig(credentials []mgmtcontainerservice.CredentialResult) (*rest.Config, error) {
-	res := make([]byte, base64.StdEncoding.DecodedLen(len(*credentials[0].Value)))
-	_, err := base64.StdEncoding.Decode(res, *credentials[0].Value)
+func getAksKubeconfig(ctx context.Context, managedClustersClient containerservice.ManagedClustersClient, index int, location string) (*rest.Config, error) {
+	aksClusterName := fmt.Sprintf("aro-aks-cluster-%03d", index)
+
+	aksClusters, err := managedClustersClient.List(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	clientconfig, err := clientcmd.NewClientConfigFromBytes(res)
+	var aksCluster *mgmtcontainerservice.ManagedCluster
+outerLoop:
+	for aksClusters.NotDone() {
+		for _, cluster := range aksClusters.Values() {
+			if *cluster.Name == aksClusterName && *cluster.Location == location {
+				aksCluster = &cluster
+				break outerLoop
+			}
+		}
+		err = aksClusters.NextWithContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if aksCluster == nil {
+		return nil, fmt.Errorf("failed to find the AKS cluster %s in %s", aksClusterName, location)
+	}
+
+	aksResourceGroup := strings.Replace(*aksCluster.NodeResourceGroup, fmt.Sprintf("-aks%d", index), "", 1)
+
+	res, err := managedClustersClient.ListClusterAdminCredentials(ctx, aksResourceGroup, *aksCluster.Name, "public")
+	if err != nil {
+		return nil, err
+	}
+
+	return parseKubeconfig(*res.Kubeconfigs)
+}
+
+func parseKubeconfig(credentials []mgmtcontainerservice.CredentialResult) (*rest.Config, error) {
+	clientconfig, err := clientcmd.NewClientConfigFromBytes(*credentials[0].Value)
 	if err != nil {
 		return nil, err
 	}
@@ -57,21 +90,13 @@ func (p *prod) HiveRestConfig(ctx context.Context, index int) (*rest.Config, err
 	p.hiveCredentialsMutex.Lock()
 	defer p.hiveCredentialsMutex.Unlock()
 
-	rpResourceGroup := fmt.Sprintf("rp-%s", p.location)
-	rpResourceName := fmt.Sprintf("aro-aks-cluster-%03d", index)
-
-	res, err := p.managedClustersClient.ListClusterUserCredentials(ctx, rpResourceGroup, rpResourceName, "")
+	kubeConfig, err := getAksKubeconfig(ctx, p.managedClustersClient, index, p.location)
 	if err != nil {
 		return nil, err
 	}
 
-	parsed, err := parseKubeconfig(*res.Kubeconfigs)
-	if err != nil {
-		return nil, err
-	}
-
-	p.cachedCredentials[index] = parsed
-	return rest.CopyConfig(parsed), nil
+	p.cachedCredentials[index] = kubeConfig
+	return rest.CopyConfig(kubeConfig), nil
 }
 
 func (p *prod) InstallViaHive(ctx context.Context) (bool, error) {

@@ -19,17 +19,38 @@ func (d *dev) HiveRestConfig(ctx context.Context, index int) (*rest.Config, erro
 		envVar = fmt.Sprintf("%s_%d", hiveKubeconfigPathEnvVar, index)
 	}
 
+	// Use an override kubeconfig path if one is provided
 	kubeConfigPath := os.Getenv(envVar)
-	if kubeConfigPath == "" {
-		return nil, fmt.Errorf("missing %s env variable", hiveKubeconfigPathEnvVar)
+	if kubeConfigPath != "" {
+		restConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
+		if err != nil {
+			return nil, err
+		}
+		return restConfig, nil
 	}
 
-	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
+	// NOTE: This RWMutex locks on a fetch for any index for simplicity, rather
+	// than a more granular per-index lock. As of the time of writing, multiple
+	// Hive shards are planned but unimplemented elsewhere.
+	d.hiveCredentialsMutex.RLock()
+	cached, ext := d.cachedCredentials[index]
+	d.hiveCredentialsMutex.RUnlock()
+	if ext {
+		return rest.CopyConfig(cached), nil
+	}
+
+	// Lock the RWMutex as we're starting to fetch so that new readers will wait
+	// for the existing Azure API call to be done.
+	d.hiveCredentialsMutex.Lock()
+	defer d.hiveCredentialsMutex.Unlock()
+
+	kubeConfig, err := getAksKubeconfig(ctx, d.managedClustersClient, index, d.location)
 	if err != nil {
 		return nil, err
 	}
 
-	return restConfig, nil
+	d.cachedCredentials[index] = kubeConfig
+	return rest.CopyConfig(kubeConfig), nil
 }
 
 func (d *dev) InstallViaHive(ctx context.Context) (bool, error) {

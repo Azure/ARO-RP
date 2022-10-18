@@ -11,9 +11,14 @@ import (
 
 // RegistriesAddons contains addons for RegistriesClient
 type ManagedClustersAddons interface {
-	ListClusterUserCredentials(ctx context.Context, resourceGroupName string, resourceName string, serverFqdn string) (mgmtcontainerservice.CredentialResults, error)
+	ListClusterAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string, serverFqdn string) (mgmtcontainerservice.CredentialResults, error)
+	List(ctx context.Context) (mgmtcontainerservice.ManagedClusterListResultPage, error)
 }
 
-func (r *managedClustersClient) ListClusterUserCredentials(ctx context.Context, resourceGroupName string, resourceName string, serverFqdn string) (mgmtcontainerservice.CredentialResults, error) {
-	return r.ManagedClustersClient.ListClusterUserCredentials(ctx, resourceGroupName, resourceName, serverFqdn)
+func (r *managedClustersClient) ListClusterAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string, serverFqdn string) (mgmtcontainerservice.CredentialResults, error) {
+	return r.ManagedClustersClient.ListClusterAdminCredentials(ctx, resourceGroupName, resourceName, serverFqdn)
+}
+
+func (r *managedClustersClient) List(ctx context.Context) (mgmtcontainerservice.ManagedClusterListResultPage, error) {
+	return r.ManagedClustersClient.List(ctx)
 }
