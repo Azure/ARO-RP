@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
@@ -116,7 +117,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 	var hr hive.ClusterManager
 	if installViaHive || adoptViaHive {
 		hiveShard := 1
-		hiveRestConfig, err := ocb.env.LiveConfig().HiveRestConfig(ctx, hiveShard)
+		hiveRestConfig, err := ocb.env.LiveConfig().HiveRestConfig(ctx, hiveShard, liveconfig.AdminCredentials)
 		if err != nil {
 			return fmt.Errorf("failed getting RESTConfig for Hive shard %d: %w", hiveShard, err)
 		}

@@ -23,7 +23,7 @@ const (
 	hiveAdoptEnableEnvVar     = "ARO_ADOPT_BY_HIVE"
 )
 
-func getAksKubeconfig(ctx context.Context, managedClustersClient containerservice.ManagedClustersClient, index int, location string) (*rest.Config, error) {
+func getAksKubeconfig(ctx context.Context, managedClustersClient containerservice.ManagedClustersClient, location string, index int, credentialType AksCredentialType) (*rest.Config, error) {
 	aksClusterName := fmt.Sprintf("aro-aks-cluster-%03d", index)
 
 	aksClusters, err := managedClustersClient.List(ctx)
@@ -53,7 +53,13 @@ outerLoop:
 
 	aksResourceGroup := strings.Replace(*aksCluster.NodeResourceGroup, fmt.Sprintf("-aks%d", index), "", 1)
 
-	res, err := managedClustersClient.ListClusterAdminCredentials(ctx, aksResourceGroup, aksClusterName, "public")
+	var res mgmtcontainerservice.CredentialResults
+	if credentialType == AdminCredentials {
+		res, err = managedClustersClient.ListClusterAdminCredentials(ctx, aksResourceGroup, aksClusterName, "public")
+	} else {
+		res, err = managedClustersClient.ListClusterUserCredentials(ctx, aksResourceGroup, aksClusterName, "public")
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -75,15 +81,20 @@ func parseKubeconfig(credentials []mgmtcontainerservice.CredentialResult) (*rest
 	return restConfig, nil
 }
 
-func (p *prod) HiveRestConfig(ctx context.Context, index int) (*rest.Config, error) {
+func (p *prod) HiveRestConfig(ctx context.Context, index int, credentialType AksCredentialType) (*rest.Config, error) {
 	// NOTE: This RWMutex locks on a fetch for any index for simplicity, rather
 	// than a more granular per-index lock. As of the time of writing, multiple
 	// Hive shards are planned but unimplemented elsewhere.
 	p.hiveCredentialsMutex.RLock()
-	cached, ext := p.cachedCredentials[index]
-	p.hiveCredentialsMutex.RUnlock()
-	if ext {
-		return rest.CopyConfig(cached), nil
+	credentialCache, exists := p.cachedCredentials[credentialType]
+	if exists {
+		cached, exists := credentialCache[index]
+		p.hiveCredentialsMutex.RUnlock()
+		if exists {
+			return rest.CopyConfig(cached), nil
+		}
+	} else {
+		p.hiveCredentialsMutex.RUnlock()
 	}
 
 	// Lock the RWMutex as we're starting to fetch so that new readers will wait
@@ -91,12 +102,15 @@ func (p *prod) HiveRestConfig(ctx context.Context, index int) (*rest.Config, err
 	p.hiveCredentialsMutex.Lock()
 	defer p.hiveCredentialsMutex.Unlock()
 
-	kubeConfig, err := getAksKubeconfig(ctx, p.managedClustersClient, index, p.location)
+	kubeConfig, err := getAksKubeconfig(ctx, p.managedClustersClient, p.location, index, credentialType)
 	if err != nil {
 		return nil, err
 	}
 
-	p.cachedCredentials[index] = kubeConfig
+	p.cachedCredentials[credentialType] = map[int]*rest.Config{
+		index: kubeConfig,
+	}
+
 	return rest.CopyConfig(kubeConfig), nil
 }
 

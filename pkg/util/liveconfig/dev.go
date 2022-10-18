@@ -12,7 +12,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func (d *dev) HiveRestConfig(ctx context.Context, index int) (*rest.Config, error) {
+func (d *dev) HiveRestConfig(ctx context.Context, index int, credentialType AksCredentialType) (*rest.Config, error) {
 	// Indexes above 0 have _index appended to them
 	envVar := hiveKubeconfigPathEnvVar
 	if index != 0 {
@@ -33,10 +33,15 @@ func (d *dev) HiveRestConfig(ctx context.Context, index int) (*rest.Config, erro
 	// than a more granular per-index lock. As of the time of writing, multiple
 	// Hive shards are planned but unimplemented elsewhere.
 	d.hiveCredentialsMutex.RLock()
-	cached, ext := d.cachedCredentials[index]
-	d.hiveCredentialsMutex.RUnlock()
-	if ext {
-		return rest.CopyConfig(cached), nil
+	credentialCache, exists := d.cachedCredentials[credentialType]
+	if exists {
+		cached, exists := credentialCache[index]
+		d.hiveCredentialsMutex.RUnlock()
+		if exists {
+			return rest.CopyConfig(cached), nil
+		}
+	} else {
+		d.hiveCredentialsMutex.RUnlock()
 	}
 
 	// Lock the RWMutex as we're starting to fetch so that new readers will wait
@@ -44,12 +49,14 @@ func (d *dev) HiveRestConfig(ctx context.Context, index int) (*rest.Config, erro
 	d.hiveCredentialsMutex.Lock()
 	defer d.hiveCredentialsMutex.Unlock()
 
-	kubeConfig, err := getAksKubeconfig(ctx, d.managedClustersClient, index, d.location)
+	kubeConfig, err := getAksKubeconfig(ctx, d.managedClustersClient, d.location, index, credentialType)
 	if err != nil {
 		return nil, err
 	}
 
-	d.cachedCredentials[index] = kubeConfig
+	d.cachedCredentials[credentialType] = map[int]*rest.Config{
+		index: kubeConfig,
+	}
 	return rest.CopyConfig(kubeConfig), nil
 }
 
