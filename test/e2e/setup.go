@@ -45,6 +45,8 @@ import (
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
+const seleniumContainerName = "selenium-edge-standalone"
+
 type clientSet struct {
 	OpenshiftClustersv20200430 redhatopenshift20200430.OpenShiftClustersClient
 	Operationsv20200430        redhatopenshift20200430.OperationsClient
@@ -310,7 +312,7 @@ func setupSelenium(ctx context.Context) error {
 
 	log.Infof("Selenium Image Pull Output : %s\n", output)
 
-	cmd = exec.CommandContext(ctx, "docker", "run", "-d", "-p", "4444:4444", "--name", "selenium-edge-standalone", "--network=host", "--shm-size=2g", "selenium/standalone-edge:latest")
+	cmd = exec.CommandContext(ctx, "docker", "run", "-d", "-p", "4444:4444", "--name", seleniumContainerName, "--network=host", "--shm-size=2g", "selenium/standalone-edge:latest")
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("Error occurred starting selenium grid\n Output: %s\n Error: %s\n", output, err)
@@ -323,14 +325,14 @@ func setupSelenium(ctx context.Context) error {
 
 func tearDownSelenium(ctx context.Context) error {
 	log.Infof("Stopping Selenium Grid")
-	cmd := exec.CommandContext(ctx, "docker", "stop", "selenium-edge-standalone")
+	cmd := exec.CommandContext(ctx, "docker", "stop", seleniumContainerName)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("Error occurred stopping selenium container\n Output: %s\n Error: %s\n", output, err)
 	}
 
 	log.Infof("Removing Selenium Grid container")
-	cmd = exec.CommandContext(ctx, "docker", "rm", "selenium-edge-standalone")
+	cmd = exec.CommandContext(ctx, "docker", "rm", seleniumContainerName)
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("Error occurred removing selenium grid container\n Output: %s\n Error: %s\n", output, err)
