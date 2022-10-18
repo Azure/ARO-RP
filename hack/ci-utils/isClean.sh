@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -xe
 if [[ ! -z "$(git status -s)" ]]
 then
     echo "there are some modified files"
