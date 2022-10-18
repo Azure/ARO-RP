@@ -7,6 +7,9 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"path"
+	"path/filepath"
+	"runtime"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
@@ -112,17 +115,24 @@ func servicePrincipalSecretForInstall(oc *api.OpenShiftCluster, sub *api.Subscri
 	if isDevelopment {
 		// In development mode, load in the proxy certificates so that clusters
 		// can be accessed from a local (not in Azure) Hive
-		proxyCert, err := os.ReadFile("secrets/proxy.crt")
+		// This assumes we are running from an ARO-RP checkout in development
+		_, curmod, _, _ := runtime.Caller(0)
+		basepath, err := filepath.Abs(filepath.Join(filepath.Dir(curmod), "../.."))
 		if err != nil {
 			return nil, err
 		}
 
-		proxyClientCert, err := os.ReadFile("secrets/proxy-client.crt")
+		proxyCert, err := os.ReadFile(path.Join(basepath, "secrets/proxy.crt"))
 		if err != nil {
 			return nil, err
 		}
 
-		proxyClientKey, err := os.ReadFile("secrets/proxy-client.key")
+		proxyClientCert, err := os.ReadFile(path.Join(basepath, "secrets/proxy-client.crt"))
+		if err != nil {
+			return nil, err
+		}
+
+		proxyClientKey, err := os.ReadFile(path.Join(basepath, "secrets/proxy-client.key"))
 		if err != nil {
 			return nil, err
 		}
