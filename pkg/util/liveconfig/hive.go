@@ -23,8 +23,8 @@ const (
 	hiveAdoptEnableEnvVar     = "ARO_ADOPT_BY_HIVE"
 )
 
-func getAksKubeconfig(ctx context.Context, managedClustersClient containerservice.ManagedClustersClient, location string, index int, credentialType AksCredentialType) (*rest.Config, error) {
-	aksClusterName := fmt.Sprintf("aro-aks-cluster-%03d", index)
+func getAksKubeconfig(ctx context.Context, managedClustersClient containerservice.ManagedClustersClient, location string, shard int) (*rest.Config, error) {
+	aksClusterName := fmt.Sprintf("aro-aks-cluster-%03d", shard)
 
 	aksClusters, err := managedClustersClient.List(ctx)
 	if err != nil {
@@ -51,15 +51,9 @@ outerLoop:
 		return nil, fmt.Errorf("failed to find the AKS cluster %s in %s", aksClusterName, location)
 	}
 
-	aksResourceGroup := strings.Replace(*aksCluster.NodeResourceGroup, fmt.Sprintf("-aks%d", index), "", 1)
+	aksResourceGroup := strings.Replace(*aksCluster.NodeResourceGroup, fmt.Sprintf("-aks%d", shard), "", 1)
 
-	var res mgmtcontainerservice.CredentialResults
-	if credentialType == AdminCredentials {
-		res, err = managedClustersClient.ListClusterAdminCredentials(ctx, aksResourceGroup, aksClusterName, "public")
-	} else {
-		res, err = managedClustersClient.ListClusterUserCredentials(ctx, aksResourceGroup, aksClusterName, "public")
-	}
-
+	res, err := managedClustersClient.ListClusterAdminCredentials(ctx, aksResourceGroup, aksClusterName, "public")
 	if err != nil {
 		return nil, err
 	}
@@ -81,29 +75,26 @@ func parseKubeconfig(credentials []mgmtcontainerservice.CredentialResult) (*rest
 	return restConfig, nil
 }
 
-func (p *prod) HiveRestConfig(ctx context.Context, index int, credentialType AksCredentialType) (*rest.Config, error) {
+func (p *prod) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, error) {
 	// Hive shards are planned but not implemented yet
 	p.hiveCredentialsMutex.RLock()
-	credentialCache, exists := p.cachedCredentials[credentialType]
+	cached, exists := p.cachedCredentials[shard]
+	p.hiveCredentialsMutex.RUnlock()
 	if exists {
-		cached, exists := credentialCache[index]
-		p.hiveCredentialsMutex.RUnlock()
-		if exists {
-			return rest.CopyConfig(cached), nil
-		}
-	} else {
-		p.hiveCredentialsMutex.RUnlock()
+		return rest.CopyConfig(cached), nil
 	}
 
-	kubeConfig, err := getAksKubeconfig(ctx, p.managedClustersClient, p.location, index, credentialType)
+	// Lock the RWMutex as we're starting to fetch so that new readers will wait
+	// for the existing Azure API call to be done.
+	p.hiveCredentialsMutex.Lock()
+
+	kubeConfig, err := getAksKubeconfig(ctx, p.managedClustersClient, p.location, shard)
 	if err != nil {
+		p.hiveCredentialsMutex.Unlock()
 		return nil, err
 	}
 
-	p.hiveCredentialsMutex.Lock()
-	p.cachedCredentials[credentialType] = map[int]*rest.Config{
-		index: kubeConfig,
-	}
+	p.cachedCredentials[shard] = kubeConfig
 	p.hiveCredentialsMutex.Unlock()
 
 	return rest.CopyConfig(kubeConfig), nil

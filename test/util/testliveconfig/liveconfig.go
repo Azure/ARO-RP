@@ -17,7 +17,7 @@ type testLiveConfig struct {
 	installViaHive bool
 }
 
-func (t *testLiveConfig) HiveRestConfig(ctx context.Context, shard int, credentialType liveconfig.AksCredentialType) (*rest.Config, error) {
+func (t *testLiveConfig) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, error) {
 	if t.adoptByHive || t.installViaHive {
 		return &rest.Config{}, nil
 	}

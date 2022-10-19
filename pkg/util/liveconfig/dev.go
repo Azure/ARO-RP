@@ -12,11 +12,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func (d *dev) HiveRestConfig(ctx context.Context, index int, credentialType AksCredentialType) (*rest.Config, error) {
+func (d *dev) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, error) {
 	// Indexes above 0 have _index appended to them
 	envVar := hiveKubeconfigPathEnvVar
-	if index != 0 {
-		envVar = fmt.Sprintf("%s_%d", hiveKubeconfigPathEnvVar, index)
+	if shard != 0 {
+		envVar = fmt.Sprintf("%s_%d", hiveKubeconfigPathEnvVar, shard)
 	}
 
 	// Use an override kubeconfig path if one is provided
@@ -31,26 +31,23 @@ func (d *dev) HiveRestConfig(ctx context.Context, index int, credentialType AksC
 
 	// Hive shards are planned but not deployed or implemented yet
 	d.hiveCredentialsMutex.RLock()
-	credentialCache, exists := d.cachedCredentials[credentialType]
+	cached, exists := d.cachedCredentials[shard]
+	d.hiveCredentialsMutex.RUnlock()
 	if exists {
-		cached, exists := credentialCache[index]
-		d.hiveCredentialsMutex.RUnlock()
-		if exists {
-			return rest.CopyConfig(cached), nil
-		}
-	} else {
-		d.hiveCredentialsMutex.RUnlock()
+		return rest.CopyConfig(cached), nil
 	}
 
-	kubeConfig, err := getAksKubeconfig(ctx, d.managedClustersClient, d.location, index, credentialType)
+	// Lock the RWMutex as we're starting to fetch so that new readers will wait
+	// for the existing Azure API call to be done.
+	d.hiveCredentialsMutex.Lock()
+
+	kubeConfig, err := getAksKubeconfig(ctx, d.managedClustersClient, d.location, shard)
 	if err != nil {
+		d.hiveCredentialsMutex.Unlock()
 		return nil, err
 	}
 
-	d.hiveCredentialsMutex.Lock()
-	d.cachedCredentials[credentialType] = map[int]*rest.Config{
-		index: kubeConfig,
-	}
+	d.cachedCredentials[shard] = kubeConfig
 	d.hiveCredentialsMutex.Unlock()
 
 	return rest.CopyConfig(kubeConfig), nil

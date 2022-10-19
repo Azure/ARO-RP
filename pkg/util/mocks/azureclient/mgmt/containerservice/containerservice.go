@@ -64,18 +64,3 @@ func (mr *MockManagedClustersClientMockRecorder) ListClusterAdminCredentials(arg
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListClusterAdminCredentials", reflect.TypeOf((*MockManagedClustersClient)(nil).ListClusterAdminCredentials), arg0, arg1, arg2, arg3)
 }
-
-// ListClusterUserCredentials mocks base method.
-func (m *MockManagedClustersClient) ListClusterUserCredentials(arg0 context.Context, arg1, arg2, arg3 string) (containerservice.CredentialResults, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListClusterUserCredentials", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(containerservice.CredentialResults)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListClusterUserCredentials indicates an expected call of ListClusterUserCredentials.
-func (mr *MockManagedClustersClientMockRecorder) ListClusterUserCredentials(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListClusterUserCredentials", reflect.TypeOf((*MockManagedClustersClient)(nil).ListClusterUserCredentials), arg0, arg1, arg2, arg3)
-}

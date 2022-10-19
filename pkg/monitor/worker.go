@@ -13,7 +13,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
-	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -199,7 +198,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		return
 	}
 
-	hiveRestConfig, err := mon.liveConfig.HiveRestConfig(ctx, 1, liveconfig.UserCredentials)
+	hiveRestConfig, err := mon.liveConfig.HiveRestConfig(ctx, 1)
 	if err != nil {
 		// TODO(hive): Update to fail once we have Hive everywhere in prod and dev
 		log.Warn(err)
