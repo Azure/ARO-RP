@@ -202,7 +202,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	hiveRestConfig, err := mon.liveConfig.HiveRestConfig(ctx, 1, liveconfig.UserCredentials)
 	if err != nil {
 		// TODO(hive): Update to fail once we have Hive everywhere in prod and dev
-		log.Info(err)
+		log.Warn(err)
 	}
 
 	c, err := cluster.NewMonitor(ctx, log, restConfig, doc.OpenShiftCluster, mon.clusterm, hiveRestConfig, hourlyRun)
