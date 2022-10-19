@@ -83,7 +83,7 @@ func TestProdHiveAdmin(t *testing.T) {
 	}
 
 	if restConfig.BearerToken != "admin" {
-		t.Error("Invalid admin BearerToken returned for test 2")
+		t.Error("Invalid admin BearerToken returned for test 1")
 	}
 
 	// Make a second call, so that it uses the cache
