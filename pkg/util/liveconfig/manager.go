@@ -12,13 +12,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
 )
 
-type AksCredentialType int64
-
-const (
-	UserCredentials  AksCredentialType = 0
-	AdminCredentials AksCredentialType = 1
-)
-
 type Manager interface {
 	HiveRestConfig(context.Context, int) (*rest.Config, error)
 	InstallViaHive(context.Context) (bool, error)
