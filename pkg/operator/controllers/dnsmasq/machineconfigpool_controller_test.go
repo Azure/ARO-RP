@@ -1,5 +1,8 @@
 package dnsmasq
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
 	"testing"
@@ -247,5 +250,4 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 			}
 		})
 	}
-
 }
