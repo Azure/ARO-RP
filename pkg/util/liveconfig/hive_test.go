@@ -96,7 +96,7 @@ func TestProdHiveAdmin(t *testing.T) {
 		t.Error("Invalid credentials returned for test 2")
 	}
 
-	if restConfig.BearerToken != "admin" {
+	if restConfig2.BearerToken != "admin" {
 		t.Error("Invalid admin BearerToken returned for test 2")
 	}
 }
