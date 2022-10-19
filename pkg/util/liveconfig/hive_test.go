@@ -48,6 +48,8 @@ func TestProdHiveAdmin(t *testing.T) {
 	resultPage := mgmtcontainerservice.NewManagedClusterListResultPage(managedClustersList, func(ctx context.Context, mclr mgmtcontainerservice.ManagedClusterListResult) (mgmtcontainerservice.ManagedClusterListResult, error) {
 		return mgmtcontainerservice.ManagedClusterListResult{}, nil
 	})
+	// Note that ".AnyTimes()" is not added to the 'List' function below to ensure it can only
+	// run once, which ensures that the caching for the credentials is taking place successfully
 	mcc.EXPECT().List(gomock.Any()).Return(resultPage, nil)
 
 	kc, err := hiveEmbeddedFiles.ReadFile("testdata/kubeconfigAdmin")
@@ -125,6 +127,8 @@ func TestProdHiveUser(t *testing.T) {
 	resultPage := mgmtcontainerservice.NewManagedClusterListResultPage(managedClustersList, func(ctx context.Context, mclr mgmtcontainerservice.ManagedClusterListResult) (mgmtcontainerservice.ManagedClusterListResult, error) {
 		return mgmtcontainerservice.ManagedClusterListResult{}, nil
 	})
+	// Note that ".AnyTimes()" is not added to the 'List' function below to ensure it can only
+	// run once, which ensures that the caching for the credentials is taking place successfully
 	mcc.EXPECT().List(gomock.Any()).Return(resultPage, nil)
 
 	kc, err := hiveEmbeddedFiles.ReadFile("testdata/kubeconfigUser")
