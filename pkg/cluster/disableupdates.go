@@ -22,7 +22,7 @@ func (m *manager) disableUpdates(ctx context.Context) error {
 		cv.Spec.Upstream = ""
 		cv.Spec.Channel = ""
 
-		// when installing via Hive we end up with an ACR image pullspec and we should leave it for the customer as quay.io
+		// when installing via Hive we replace the quay.io domain with the ACR domain, so now we set it back to the expected domain
 		if m.installViaHive {
 			version, err := m.openShiftVersionFromVersion(ctx)
 			if err != nil {
