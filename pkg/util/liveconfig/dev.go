@@ -29,9 +29,7 @@ func (d *dev) HiveRestConfig(ctx context.Context, index int, credentialType AksC
 		return restConfig, nil
 	}
 
-	// NOTE: This RWMutex locks on a fetch for any index for simplicity, rather
-	// than a more granular per-index lock. As of the time of writing, multiple
-	// Hive shards are planned but unimplemented elsewhere.
+	// Hive shards are planned but not deployed or implemented yet
 	d.hiveCredentialsMutex.RLock()
 	credentialCache, exists := d.cachedCredentials[credentialType]
 	if exists {
@@ -44,19 +42,17 @@ func (d *dev) HiveRestConfig(ctx context.Context, index int, credentialType AksC
 		d.hiveCredentialsMutex.RUnlock()
 	}
 
-	// Lock the RWMutex as we're starting to fetch so that new readers will wait
-	// for the existing Azure API call to be done.
-	d.hiveCredentialsMutex.Lock()
-	defer d.hiveCredentialsMutex.Unlock()
-
 	kubeConfig, err := getAksKubeconfig(ctx, d.managedClustersClient, d.location, index, credentialType)
 	if err != nil {
 		return nil, err
 	}
 
+	d.hiveCredentialsMutex.Lock()
 	d.cachedCredentials[credentialType] = map[int]*rest.Config{
 		index: kubeConfig,
 	}
+	d.hiveCredentialsMutex.Unlock()
+
 	return rest.CopyConfig(kubeConfig), nil
 }
 
