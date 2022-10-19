@@ -5,6 +5,7 @@ package dnsmasq
 
 import (
 	"context"
+	"fmt"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
@@ -12,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -63,10 +65,41 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 		return reconcile.Result{}, err
 	}
 
+	isMarkedToBeDeleted := mcp.GetDeletionTimestamp() != nil
+	if isMarkedToBeDeleted {
+		if !controllerutil.ContainsFinalizer(mcp, MachineConfigPoolControllerName) {
+			return reconcile.Result{}, nil
+		}
+
+		err = r.finalize(ctx, mcp)
+		if err != nil {
+			r.log.Error(err)
+			return reconcile.Result{}, err
+		}
+
+		controllerutil.RemoveFinalizer(mcp, MachineConfigPoolControllerName)
+		err = r.dh.Ensure(ctx, mcp)
+		if err != nil {
+			r.log.Error(err)
+			return reconcile.Result{}, err
+		}
+
+		return reconcile.Result{}, nil
+	}
+
 	err = reconcileMachineConfigs(ctx, instance, r.dh, request.Name)
+
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
+	}
+
+	if !controllerutil.ContainsFinalizer(mcp, MachineConfigPoolControllerName) {
+		err = r.addFinalizer(ctx, mcp)
+		if err != nil {
+			r.log.Error(err)
+			return reconcile.Result{}, err
+		}
 	}
 
 	return reconcile.Result{}, nil
@@ -78,4 +111,14 @@ func (r *MachineConfigPoolReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&mcv1.MachineConfigPool{}).
 		Named(MachineConfigPoolControllerName).
 		Complete(r)
+}
+
+func (r *MachineConfigPoolReconciler) addFinalizer(ctx context.Context, mcp *mcv1.MachineConfigPool) error {
+	controllerutil.AddFinalizer(mcp, MachineConfigPoolControllerName)
+	return r.dh.Ensure(ctx, mcp)
+}
+
+func (r *MachineConfigPoolReconciler) finalize(ctx context.Context, mcp *mcv1.MachineConfigPool) error {
+	machineConfigName := fmt.Sprintf("99-%s-aro-dns", mcp.Name)
+	return r.dh.EnsureDeleted(ctx, "MachineConfig", "", machineConfigName)
 }

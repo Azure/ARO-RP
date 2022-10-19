@@ -67,7 +67,9 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 
 	roles := make([]string, 0, len(mcps.Items))
 	for _, mcp := range mcps.Items {
-		roles = append(roles, mcp.Name)
+		if mcp.GetDeletionTimestamp() == nil {
+			roles = append(roles, mcp.Name)
+		}
 	}
 
 	err = reconcileMachineConfigs(ctx, instance, r.dh, roles...)
