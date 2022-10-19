@@ -8,24 +8,24 @@ import (
 	"testing"
 	"time"
 
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	"github.com/golang/mock/gomock"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 )
 
 func TestClusterReconciler(t *testing.T) {
-	fakeAro := func(objects ...runtime.Object) *arofake.Clientset {
+	fakeAro := func(objects ...kruntime.Object) *arofake.Clientset {
 		return arofake.NewSimpleClientset(objects...)
 	}
-	fakeMco := func(objects ...runtime.Object) *mcofake.Clientset {
+	fakeMco := func(objects ...kruntime.Object) *mcofake.Clientset {
 		return mcofake.NewSimpleClientset(objects...)
 	}
 	fakeDh := func(controller *gomock.Controller) *mock_dynamichelper.MockInterface {
