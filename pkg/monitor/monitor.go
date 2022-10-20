@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -44,7 +45,9 @@ type monitor struct {
 	lastChangefeed atomic.Value //time.Time
 	startTime      time.Time
 
-	liveConfig liveconfig.Manager
+	liveConfig       liveconfig.Manager
+	hiveShardConfigs map[int]*rest.Config
+	shardMutex       sync.RWMutex
 }
 
 type Runnable interface {
@@ -71,6 +74,8 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Moni
 		startTime: time.Now(),
 
 		liveConfig: liveConfig,
+
+		hiveShardConfigs: map[int]*rest.Config{},
 	}
 }
 

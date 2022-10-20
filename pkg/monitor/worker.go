@@ -18,6 +18,23 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
+// This function will recurse until such time as it has a config to add to the global Hive shard map
+// Note that because the mon.hiveShardConfigs[shard] is set to `nil` when its created the cluster
+// monitors will simply ignore Hive stats until this function populates the config
+func (mon *monitor) populateHiveShardRestConfig(ctx context.Context, shard int) {
+	hiveRestConfig, err := mon.liveConfig.HiveRestConfig(ctx, shard)
+	if err != nil {
+		mon.baseLog.Printf("error fetching Hive kubeconfig for shard %d: %s", shard, err.Error())
+		mon.baseLog.Printf("pausing for a minute before retrying...")
+		time.Sleep(time.Duration(60 * time.Second))
+		mon.populateHiveShardRestConfig(ctx, shard)
+		return
+	}
+	mon.shardMutex.Lock()
+	mon.hiveShardConfigs[shard] = hiveRestConfig
+	mon.shardMutex.Unlock()
+}
+
 // listBuckets reads our bucket allocation from the master
 func (mon *monitor) listBuckets(ctx context.Context) error {
 	buckets, err := mon.dbMonitors.ListBuckets(ctx)
@@ -80,6 +97,21 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 							fps == api.ProvisioningStateDeleting):
 					mon.deleteDoc(doc)
 				default:
+					// check if we have a Hive shard config and if not start the recursive auth call
+					// in the future we will have the shard index set on the api.OpenShiftClusterDocument
+					// but for now we simply select Hive (AKS) shard 1
+					// e.g. shard := mon.hiveShardConfigs[doc.shardIndex]
+					shard := 1
+
+					mon.shardMutex.RLock()
+					_, exists := mon.hiveShardConfigs[shard]
+					mon.shardMutex.RUnlock()
+					if !exists {
+						// set this to `nil` so cluster monitors will ignore it until its populated with config
+						mon.hiveShardConfigs[shard] = nil
+						go mon.populateHiveShardRestConfig(ctx, shard)
+					}
+
 					// TODO: improve memory usage by storing a subset of doc in mon.docs
 					mon.upsertDoc(doc)
 				}
@@ -198,10 +230,15 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		return
 	}
 
-	hiveRestConfig, err := mon.liveConfig.HiveRestConfig(ctx, 1)
-	if err != nil {
-		// TODO(hive): Update to fail once we have Hive everywhere in prod and dev
-		log.Warn(err)
+	// in the future we will have the shard index set on the api.OpenShiftClusterDocument but for
+	// now we simply select Hive (AKS) shard 1 because we only have one and sharding is yet to come
+	// e.g. shard := mon.hiveShardConfigs[doc.shardIndex]
+	shard := 1
+	mon.shardMutex.RLock()
+	hiveRestConfig, exists := mon.hiveShardConfigs[shard]
+	mon.shardMutex.RUnlock()
+	if !exists {
+		log.Error("no hiveShardConfigs set for shard %d", shard)
 	}
 
 	c, err := cluster.NewMonitor(ctx, log, restConfig, doc.OpenShiftCluster, mon.clusterm, hiveRestConfig, hourlyRun)
