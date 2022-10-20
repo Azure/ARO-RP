@@ -12,7 +12,7 @@ variables:
 jobs:
 - job: Clean_subscription
   pool:
-    name: ARO-CI 
+    name: ARO-CI
 
   steps:
   - template: ./templates/template-checkout.yml
