@@ -13,7 +13,7 @@ import (
 )
 
 func (d *dev) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, error) {
-	// Indexes above 0 have _index appended to them
+	// shards above 0 have _shard appended to it
 	envVar := hiveKubeconfigPathEnvVar
 	if shard != 0 {
 		envVar = fmt.Sprintf("%s_%d", hiveKubeconfigPathEnvVar, shard)
