@@ -27,8 +27,6 @@ func (mon *monitor) populateHiveShardRestConfig(ctx context.Context, shard int) 
 	var hiveRestConfig *rest.Config
 	var err error
 
-	time.Sleep(time.Duration(120 * time.Second))
-
 	for {
 		hiveRestConfig, err = mon.liveConfig.HiveRestConfig(ctx, shard)
 		if hiveRestConfig != nil {
@@ -115,7 +113,6 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 
 					_, exists := mon.getHiveShardConfig(shard)
 					if !exists {
-						fmt.Printf("adding %s", doc.ID)
 						// set this to `nil` so cluster monitors will ignore it until its populated with config
 						mon.setHiveShardConfig(shard, nil)
 						go mon.populateHiveShardRestConfig(ctx, shard)
@@ -196,8 +193,6 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 
 	h := time.Now().Hour()
 
-	fmt.Printf("STARTING monitoring %s", id)
-
 out:
 	for {
 		mon.mu.RLock()
@@ -208,8 +203,6 @@ out:
 		if v == nil {
 			break
 		}
-
-		fmt.Printf("STILL monitoring %s", id)
 
 		newh := time.Now().Hour()
 
