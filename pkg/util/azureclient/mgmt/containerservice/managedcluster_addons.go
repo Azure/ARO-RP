@@ -9,7 +9,7 @@ import (
 	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
 )
 
-// RegistriesAddons contains addons for RegistriesClient
+// ManagedClustersAddons is a minimal interface for azure ManagedClustersAddons
 type ManagedClustersAddons interface {
 	ListClusterAdminCredentials(ctx context.Context, resourceGroupName string, resourceName string, serverFqdn string) (mgmtcontainerservice.CredentialResults, error)
 	List(ctx context.Context) (mgmtcontainerservice.ManagedClusterListResultPage, error)
