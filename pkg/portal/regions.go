@@ -72,11 +72,6 @@ func (p *portal) regions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if value, found := os.LookupEnv("AZURE_ENVIRONMENT"); found {
-		var err error
-		if err != nil {
-			p.internalServerError(w, err)
-			return
-		}
 		if value == azureclient.PublicCloud.Environment.Name {
 			for _, region := range PROD_REGIONS {
 				resp.Regions = append(resp.Regions, Region{
