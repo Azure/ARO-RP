@@ -203,4 +203,39 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 			SaveScreenshotAndExit(wd, err)
 		}
 	})
+
+	It("Should be able to navigate to other regions", func() {
+		NUMBER_OF_REGIONS := 40
+		err := wd.WaitWithTimeout(ElementIsLocated(ByID, "RegionNavButton"), time.Second*30)
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		button, err := wd.FindElement(ByID, "RegionNavButton")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		button.Click()
+
+		panel, err := wd.FindElement(ByID, "RegionsPanel")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		regionList, err := panel.FindElement(ByTagName, "ul")
+
+		regions, err := regionList.FindElements(ByTagName, "li")
+
+		Expect(len(regions)).To(Equal(NUMBER_OF_REGIONS))
+
+		for _, region := range regions {
+			link, err := region.FindElement(ByTagName, "a")
+			if err != nil {
+				SaveScreenshotAndExit(wd, err)
+			}
+
+			Expect(link.GetAttribute("href")).To(MatchRegexp(`https://([a-z]|[0-9])+\.admin\.aro\.azure\.com`))
+		}
+	})
 })

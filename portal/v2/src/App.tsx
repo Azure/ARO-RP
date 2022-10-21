@@ -219,6 +219,7 @@ function App() {
     <>
       <Stack styles={stackStyles} tokens={containerStackTokens} horizontalAlign={"stretch"}>
         <Panel
+          id="RegionsPanel"
           isLightDismiss
           styles={navPanelStyles}
           type={PanelType.smallFixedNear}
@@ -238,6 +239,7 @@ function App() {
             styles={stackNavStyles}>
             <Stack.Item>
               <IconButton
+                id="RegionNavButton"
                 iconProps={{ iconName: "GlobalNavButton" }}
                 onClick={openPanel}
                 styles={MenuButtonStyles}
