@@ -83,15 +83,14 @@ func (p *prod) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, err
 	// Lock the RWMutex as we're starting to fetch so that new readers will wait
 	// for the existing Azure API call to be done.
 	p.hiveCredentialsMutex.Lock()
+	defer p.hiveCredentialsMutex.Unlock()
 
 	kubeConfig, err := getAksShardKubeconfig(ctx, p.managedClustersClient, p.location, shard)
 	if err != nil {
-		p.hiveCredentialsMutex.Unlock()
 		return nil, err
 	}
 
 	p.cachedCredentials[shard] = kubeConfig
-	p.hiveCredentialsMutex.Unlock()
 
 	return rest.CopyConfig(kubeConfig), nil
 }

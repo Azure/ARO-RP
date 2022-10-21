@@ -32,7 +32,7 @@ type dev struct {
 	location              string
 	managedClustersClient containerservice.ManagedClustersClient
 
-	hiveCredentialsMutex *sync.RWMutex
+	hiveCredentialsMutex sync.RWMutex
 	cachedCredentials    map[int]*rest.Config
 }
 
@@ -40,7 +40,7 @@ func NewDev(location string, managedClustersClient containerservice.ManagedClust
 	return &dev{location: location,
 		managedClustersClient: managedClustersClient,
 		cachedCredentials:     make(map[int]*rest.Config),
-		hiveCredentialsMutex:  &sync.RWMutex{},
+		hiveCredentialsMutex:  sync.RWMutex{},
 	}
 }
 
@@ -48,7 +48,7 @@ type prod struct {
 	location              string
 	managedClustersClient containerservice.ManagedClustersClient
 
-	hiveCredentialsMutex *sync.RWMutex
+	hiveCredentialsMutex sync.RWMutex
 	cachedCredentials    map[int]*rest.Config
 }
 
@@ -57,6 +57,6 @@ func NewProd(location string, managedClustersClient containerservice.ManagedClus
 		location:              location,
 		managedClustersClient: managedClustersClient,
 		cachedCredentials:     make(map[int]*rest.Config),
-		hiveCredentialsMutex:  &sync.RWMutex{},
+		hiveCredentialsMutex:  sync.RWMutex{},
 	}
 }
