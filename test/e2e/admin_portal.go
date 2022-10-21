@@ -224,8 +224,14 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		}
 
 		regionList, err := panel.FindElement(ByTagName, "ul")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
 
 		regions, err := regionList.FindElements(ByTagName, "li")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
 
 		Expect(len(regions)).To(Equal(NUMBER_OF_REGIONS))
 
