@@ -41,7 +41,7 @@ func (d *dev) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, erro
 	// for the existing Azure API call to be done.
 	d.hiveCredentialsMutex.Lock()
 
-	kubeConfig, err := getAksKubeconfig(ctx, d.managedClustersClient, d.location, shard)
+	kubeConfig, err := getAksShardKubeconfig(ctx, d.managedClustersClient, d.location, shard)
 	if err != nil {
 		d.hiveCredentialsMutex.Unlock()
 		return nil, err

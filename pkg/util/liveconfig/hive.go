@@ -16,14 +16,22 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
 )
 
-const (
-	hiveKubeconfigPathEnvVar  = "HIVE_KUBE_CONFIG_PATH"
-	hiveInstallerEnableEnvVar = "ARO_INSTALL_VIA_HIVE"
-	hiveDefaultPullSpecEnvVar = "ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC"
-	hiveAdoptEnableEnvVar     = "ARO_ADOPT_BY_HIVE"
-)
+func getAksClusterByNameAndLocation(ctx context.Context, aksClusters mgmtcontainerservice.ManagedClusterListResultPage, aksClusterName, location string) (*mgmtcontainerservice.ManagedCluster, error) {
+	for aksClusters.NotDone() {
+		for _, cluster := range aksClusters.Values() {
+			if *cluster.Name == aksClusterName && *cluster.Location == location {
+				return &cluster, nil
+			}
+		}
+		err := aksClusters.NextWithContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return nil, nil
+}
 
-func getAksKubeconfig(ctx context.Context, managedClustersClient containerservice.ManagedClustersClient, location string, shard int) (*rest.Config, error) {
+func getAksShardKubeconfig(ctx context.Context, managedClustersClient containerservice.ManagedClustersClient, location string, shard int) (*rest.Config, error) {
 	aksClusterName := fmt.Sprintf("aro-aks-cluster-%03d", shard)
 
 	aksClusters, err := managedClustersClient.List(ctx)
@@ -31,22 +39,10 @@ func getAksKubeconfig(ctx context.Context, managedClustersClient containerservic
 		return nil, err
 	}
 
-	var aksCluster *mgmtcontainerservice.ManagedCluster
-
-outerLoop:
-	for aksClusters.NotDone() {
-		for _, cluster := range aksClusters.Values() {
-			if *cluster.Name == aksClusterName && *cluster.Location == location {
-				aksCluster = &cluster
-				break outerLoop
-			}
-		}
-		err = aksClusters.NextWithContext(ctx)
-		if err != nil {
-			return nil, err
-		}
+	aksCluster, err := getAksClusterByNameAndLocation(ctx, aksClusters, aksClusterName, location)
+	if err != nil {
+		return nil, err
 	}
-
 	if aksCluster == nil {
 		return nil, fmt.Errorf("failed to find the AKS cluster %s in %s", aksClusterName, location)
 	}
@@ -88,7 +84,7 @@ func (p *prod) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, err
 	// for the existing Azure API call to be done.
 	p.hiveCredentialsMutex.Lock()
 
-	kubeConfig, err := getAksKubeconfig(ctx, p.managedClustersClient, p.location, shard)
+	kubeConfig, err := getAksShardKubeconfig(ctx, p.managedClustersClient, p.location, shard)
 	if err != nil {
 		p.hiveCredentialsMutex.Unlock()
 		return nil, err

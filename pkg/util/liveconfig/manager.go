@@ -12,6 +12,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
 )
 
+const (
+	hiveKubeconfigPathEnvVar  = "HIVE_KUBE_CONFIG_PATH"
+	hiveInstallerEnableEnvVar = "ARO_INSTALL_VIA_HIVE"
+	hiveDefaultPullSpecEnvVar = "ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC"
+	hiveAdoptEnableEnvVar     = "ARO_ADOPT_BY_HIVE"
+)
+
 type Manager interface {
 	HiveRestConfig(context.Context, int) (*rest.Config, error)
 	InstallViaHive(context.Context) (bool, error)
