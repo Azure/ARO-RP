@@ -137,3 +137,16 @@ func (mon *monitor) checkReady() bool {
 		(time.Since(lastChangefeedTime) < time.Minute) && // did we process the change feed recently?
 		(time.Since(mon.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
 }
+
+func (mon *monitor) getHiveShardConfig(shard int) (*rest.Config, bool) {
+	mon.shardMutex.RLock()
+	hiveRestConfig, exists := mon.hiveShardConfigs[shard]
+	mon.shardMutex.RUnlock()
+	return hiveRestConfig, exists
+}
+
+func (mon *monitor) setHiveShardConfig(shard int, config *rest.Config) {
+	mon.shardMutex.Lock()
+	mon.hiveShardConfigs[shard] = config
+	mon.shardMutex.Unlock()
+}

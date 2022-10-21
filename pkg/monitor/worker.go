@@ -5,11 +5,13 @@ package monitor
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
@@ -18,21 +20,30 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
-// This function will recurse until such time as it has a config to add to the global Hive shard map
-// Note that because the mon.hiveShardConfigs[shard] is set to `nil` when its created the cluster
+// This function will continue to run until such time as it has a config to add to the global Hive shard map
+// Note that because the mon.hiveShardConfigs[shard] is set to `nil` when its created, the cluster
 // monitors will simply ignore Hive stats until this function populates the config
 func (mon *monitor) populateHiveShardRestConfig(ctx context.Context, shard int) {
-	hiveRestConfig, err := mon.liveConfig.HiveRestConfig(ctx, shard)
-	if err != nil {
-		mon.baseLog.Printf("error fetching Hive kubeconfig for shard %d: %s", shard, err.Error())
-		mon.baseLog.Printf("pausing for a minute before retrying...")
+	var hiveRestConfig *rest.Config
+	var err error
+
+	time.Sleep(time.Duration(120 * time.Second))
+
+	for {
+		hiveRestConfig, err = mon.liveConfig.HiveRestConfig(ctx, shard)
+		if hiveRestConfig != nil {
+			mon.setHiveShardConfig(shard, hiveRestConfig)
+			return
+		}
+
+		mon.baseLog.Warn(fmt.Sprintf("error fetching Hive kubeconfig for shard %d", shard))
+		if err != nil {
+			mon.baseLog.Error(err.Error())
+		}
+
+		mon.baseLog.Info("pausing for a minute before retrying...")
 		time.Sleep(time.Duration(60 * time.Second))
-		mon.populateHiveShardRestConfig(ctx, shard)
-		return
 	}
-	mon.shardMutex.Lock()
-	mon.hiveShardConfigs[shard] = hiveRestConfig
-	mon.shardMutex.Unlock()
 }
 
 // listBuckets reads our bucket allocation from the master
@@ -97,18 +108,16 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 							fps == api.ProvisioningStateDeleting):
 					mon.deleteDoc(doc)
 				default:
-					// check if we have a Hive shard config and if not start the recursive auth call
 					// in the future we will have the shard index set on the api.OpenShiftClusterDocument
 					// but for now we simply select Hive (AKS) shard 1
 					// e.g. shard := mon.hiveShardConfigs[doc.shardIndex]
 					shard := 1
 
-					mon.shardMutex.RLock()
-					_, exists := mon.hiveShardConfigs[shard]
-					mon.shardMutex.RUnlock()
+					_, exists := mon.getHiveShardConfig(shard)
 					if !exists {
+						fmt.Printf("adding %s", doc.ID)
 						// set this to `nil` so cluster monitors will ignore it until its populated with config
-						mon.hiveShardConfigs[shard] = nil
+						mon.setHiveShardConfig(shard, nil)
 						go mon.populateHiveShardRestConfig(ctx, shard)
 					}
 
@@ -187,6 +196,8 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 
 	h := time.Now().Hour()
 
+	fmt.Printf("STARTING monitoring %s", id)
+
 out:
 	for {
 		mon.mu.RLock()
@@ -197,6 +208,8 @@ out:
 		if v == nil {
 			break
 		}
+
+		fmt.Printf("STILL monitoring %s", id)
 
 		newh := time.Now().Hour()
 
@@ -230,13 +243,10 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		return
 	}
 
-	// in the future we will have the shard index set on the api.OpenShiftClusterDocument but for
-	// now we simply select Hive (AKS) shard 1 because we only have one and sharding is yet to come
+	// once sharding is implemented, we will have the shard set on the api.OpenShiftClusterDocument
 	// e.g. shard := mon.hiveShardConfigs[doc.shardIndex]
 	shard := 1
-	mon.shardMutex.RLock()
-	hiveRestConfig, exists := mon.hiveShardConfigs[shard]
-	mon.shardMutex.RUnlock()
+	hiveRestConfig, exists := mon.getHiveShardConfig(shard)
 	if !exists {
 		log.Errorf("no hiveShardConfigs set for shard %d", shard)
 	}
