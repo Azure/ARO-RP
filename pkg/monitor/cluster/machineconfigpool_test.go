@@ -77,7 +77,7 @@ func TestEmitMachineConfigPoolUnmanagedNodes(t *testing.T) {
 				cli:    cli,
 			}
 
-			m.EXPECT().EmitGauge("machineconfigpool.unmanagednodescount", int64(tt.expect), map[string]string{})
+			m.EXPECT().EmitGauge("machineconfigpool.unmanagednodescount", tt.expect, map[string]string{})
 
 			err := mon.emitMachineConfigPoolUnmanagedNodeCounts(ctx)
 			if err != nil {

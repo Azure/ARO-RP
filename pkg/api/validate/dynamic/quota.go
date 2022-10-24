@@ -135,7 +135,7 @@ func (dv *dynamic) ValidateQuota(ctx context.Context, oc *api.OpenShiftCluster) 
 
 	for _, netUsage := range netUsages {
 		required, present := requiredResources[*netUsage.Name.Value]
-		if present && int64(required) > (*netUsage.Limit-int64(*netUsage.CurrentValue)) {
+		if present && int64(required) > (*netUsage.Limit-*netUsage.CurrentValue) {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceQuotaExceeded, "", "Resource quota of %s exceeded. Maximum allowed: %d, Current in use: %d, Additional requested: %d.", *netUsage.Name.Value, *netUsage.Limit, *netUsage.CurrentValue, required)
 		}
 	}
