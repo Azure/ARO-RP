@@ -6,7 +6,6 @@ package liveconfig
 import (
 	"context"
 	"embed"
-	"encoding/base64"
 	"testing"
 
 	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
@@ -19,7 +18,7 @@ import (
 //go:embed testdata
 var hiveEmbeddedFiles embed.FS
 
-func TestProdHive(t *testing.T) {
+func TestProdHiveAdmin(t *testing.T) {
 	ctx := context.Background()
 
 	controller := gomock.NewController(t)
@@ -27,17 +26,41 @@ func TestProdHive(t *testing.T) {
 
 	mcc := mock_containerservice.NewMockManagedClustersClient(controller)
 
-	kc, err := hiveEmbeddedFiles.ReadFile("testdata/kubeconfig")
+	managedClustersList := mgmtcontainerservice.ManagedClusterListResult{
+		Value: &[]mgmtcontainerservice.ManagedCluster{
+			{
+				Name:     to.StringPtr("aro-aks-cluster-001"),
+				Location: to.StringPtr("eastus"),
+				ManagedClusterProperties: &mgmtcontainerservice.ManagedClusterProperties{
+					NodeResourceGroup: to.StringPtr("rp-eastus-aks1"),
+				},
+			},
+			{
+				Name:     to.StringPtr("aro-aks-cluster-002"),
+				Location: to.StringPtr("eastus"),
+				ManagedClusterProperties: &mgmtcontainerservice.ManagedClusterProperties{
+					NodeResourceGroup: to.StringPtr("rp-eastus-aks2"),
+				},
+			},
+		},
+	}
+
+	resultPage := mgmtcontainerservice.NewManagedClusterListResultPage(managedClustersList, func(ctx context.Context, mclr mgmtcontainerservice.ManagedClusterListResult) (mgmtcontainerservice.ManagedClusterListResult, error) {
+		return mgmtcontainerservice.ManagedClusterListResult{}, nil
+	})
+	// Note that ".AnyTimes()" is not added to the 'List' function below to ensure it can only
+	// run once, which ensures that the caching for the credentials is taking place successfully
+	mcc.EXPECT().List(gomock.Any()).Return(resultPage, nil)
+
+	kc, err := hiveEmbeddedFiles.ReadFile("testdata/kubeconfigAdmin")
 	if err != nil {
 		t.Fatal(err)
 	}
-	enc := make([]byte, base64.StdEncoding.EncodedLen(len(kc)))
-	base64.StdEncoding.Encode(enc, kc)
 
 	kcresp := &[]mgmtcontainerservice.CredentialResult{
 		{
-			Name:  to.StringPtr("example"),
-			Value: to.ByteSlicePtr(enc),
+			Name:  to.StringPtr("admin config"),
+			Value: to.ByteSlicePtr(kc),
 		},
 	}
 
@@ -45,7 +68,7 @@ func TestProdHive(t *testing.T) {
 		Kubeconfigs: kcresp,
 	}
 
-	mcc.EXPECT().ListClusterUserCredentials(gomock.Any(), "rp-eastus", "aro-aks-cluster-001", "").Return(resp, nil)
+	mcc.EXPECT().ListClusterAdminCredentials(gomock.Any(), "rp-eastus", "aro-aks-cluster-001", "public").Return(resp, nil)
 
 	lc := NewProd("eastus", mcc)
 
@@ -55,12 +78,12 @@ func TestProdHive(t *testing.T) {
 	}
 
 	// rudimentary loading checks
-	if restConfig.Host != "https://api.crc.testing:6443" {
-		t.Error(restConfig.String())
+	if restConfig.Host != "https://api.admin.testing:6443" {
+		t.Error("Invalid credentials returned for test 1")
 	}
 
-	if restConfig.BearerToken != "none" {
-		t.Error(restConfig.String())
+	if restConfig.BearerToken != "admin" {
+		t.Error("Invalid admin BearerToken returned for test 1")
 	}
 
 	// Make a second call, so that it uses the cache
@@ -69,7 +92,11 @@ func TestProdHive(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if restConfig2.Host != "https://api.crc.testing:6443" {
-		t.Error(restConfig2.String())
+	if restConfig2.Host != "https://api.admin.testing:6443" {
+		t.Error("Invalid credentials returned for test 2")
+	}
+
+	if restConfig2.BearerToken != "admin" {
+		t.Error("Invalid admin BearerToken returned for test 2")
 	}
 }
