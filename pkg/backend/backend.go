@@ -11,6 +11,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
@@ -22,18 +23,25 @@ import (
 const (
 	maxWorkers      = 100
 	maxDequeueCount = 5
+	tickerPeriod    = 10 // seconds
+
+	// A backend will try to acquire the backend lease at a
+	// slower period than the backend ticker by counting ticks.
+	tryLeasePeriod = database.BackendsLeaseTTL / tickerPeriod
 )
 
 type backend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
 
-	dbAsyncOperations   database.AsyncOperations
-	dbBilling           database.Billing
-	dbGateway           database.Gateway
-	dbOpenShiftClusters database.OpenShiftClusters
-	dbSubscriptions     database.Subscriptions
-	dbOpenShiftVersions database.OpenShiftVersions
+	dbAsyncOperations              database.AsyncOperations
+	dbBilling                      database.Billing
+	dbGateway                      database.Gateway
+	dbOpenShiftClusters            database.OpenShiftClusters
+	dbSubscriptions                database.Subscriptions
+	dbOpenShiftVersions            database.OpenShiftVersions
+	dbBackends                     database.Backends
+	dbClusterManagerConfigurations database.ClusterManagerConfigurations
 
 	aead    encryption.AEAD
 	m       metrics.Emitter
@@ -44,8 +52,11 @@ type backend struct {
 	workers  int32
 	stopping atomic.Value
 
+	tryLeaseTimer int32
+
 	ocb *openShiftClusterBackend
 	sb  *subscriptionBackend
+	cmc *clusterManagerConfigurationBackend
 }
 
 // Runnable represents a runnable object
@@ -54,18 +65,19 @@ type Runnable interface {
 }
 
 // NewBackend returns a new runnable backend
-func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbGateway database.Gateway, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, dbOpenShiftVersions database.OpenShiftVersions, aead encryption.AEAD, m metrics.Emitter) (Runnable, error) {
-	b, err := newBackend(ctx, log, env, dbAsyncOperations, dbBilling, dbGateway, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, aead, m)
+func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbGateway database.Gateway, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, dbOpenShiftVersions database.OpenShiftVersions, dbBackends database.Backends, dbClusterManagerConfigurations database.ClusterManagerConfigurations, aead encryption.AEAD, m metrics.Emitter) (Runnable, error) {
+	b, err := newBackend(ctx, log, env, dbAsyncOperations, dbBilling, dbGateway, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, dbBackends, dbClusterManagerConfigurations, aead, m)
 	if err != nil {
 		return nil, err
 	}
 
 	b.ocb = newOpenShiftClusterBackend(b)
 	b.sb = newSubscriptionBackend(b)
+	b.cmc = newClusterManagerConfigurationBackend(b)
 	return b, nil
 }
 
-func newBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbGateway database.Gateway, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, dbOpenShiftVersions database.OpenShiftVersions, aead encryption.AEAD, m metrics.Emitter) (*backend, error) {
+func newBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbGateway database.Gateway, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, dbOpenShiftVersions database.OpenShiftVersions, dbBackends database.Backends, dbClusterManagerConfigurations database.ClusterManagerConfigurations, aead encryption.AEAD, m metrics.Emitter) (*backend, error) {
 	billing, err := billing.NewManager(env, dbBilling, dbSubscriptions, log)
 	if err != nil {
 		return nil, err
@@ -75,12 +87,14 @@ func newBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsy
 		baseLog: log,
 		env:     env,
 
-		dbAsyncOperations:   dbAsyncOperations,
-		dbBilling:           dbBilling,
-		dbGateway:           dbGateway,
-		dbOpenShiftClusters: dbOpenShiftClusters,
-		dbSubscriptions:     dbSubscriptions,
-		dbOpenShiftVersions: dbOpenShiftVersions,
+		dbAsyncOperations:              dbAsyncOperations,
+		dbBilling:                      dbBilling,
+		dbGateway:                      dbGateway,
+		dbOpenShiftClusters:            dbOpenShiftClusters,
+		dbSubscriptions:                dbSubscriptions,
+		dbOpenShiftVersions:            dbOpenShiftVersions,
+		dbBackends:                     dbBackends,
+		dbClusterManagerConfigurations: dbClusterManagerConfigurations,
 
 		billing: billing,
 		aead:    aead,
@@ -94,7 +108,7 @@ func newBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsy
 func (b *backend) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) {
 	defer recover.Panic(b.baseLog)
 
-	t := time.NewTicker(10 * time.Second)
+	t := time.NewTicker(tickerPeriod * time.Second)
 	defer t.Stop()
 
 	if stop != nil {
@@ -108,6 +122,13 @@ func (b *backend) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		}()
 	}
 
+	err := b.dbBackends.Initialize(ctx)
+	if err != nil {
+		b.baseLog.Error(err)
+	}
+
+	var hadBackendDoc bool
+
 	for {
 		b.mu.Lock()
 		for atomic.LoadInt32(&b.workers) >= maxWorkers && !b.stopping.Load().(bool) {
@@ -117,6 +138,32 @@ func (b *backend) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 
 		if b.stopping.Load().(bool) {
 			break
+		}
+
+		// Currently the lease only applies to the
+		// ClusterManagerConfigurationBackend, but
+		// a future backend type could potentially
+		// use this too.
+		var backendDoc *api.BackendDocument
+		if b.tryLeaseTimer > 0 {
+			// This means we previously failed to get
+			// the backend lease, so decrement a tick
+			// counter to zero before trying again.
+			b.tryLeaseTimer--
+		} else {
+			backendDoc, err = b.dbBackends.TryLease(ctx)
+			if err != nil {
+				b.baseLog.Error(err)
+			} else if backendDoc == nil {
+				// Did not get the backend lease.
+				// Reset timer to try again later.
+				b.tryLeaseTimer = tryLeasePeriod
+			}
+		}
+		if backendDoc != nil && !hadBackendDoc {
+			b.baseLog.Info("Got the backend lease")
+		} else if backendDoc == nil && hadBackendDoc {
+			b.baseLog.Info("Lost the backend lease")
 		}
 
 		ocbDidWork, err := b.ocb.try(ctx)
@@ -129,9 +176,16 @@ func (b *backend) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 			b.baseLog.Error(err)
 		}
 
-		if !(ocbDidWork || sbDidWork) {
+		cmcDidWork, err := b.cmc.try(ctx, backendDoc)
+		if err != nil {
+			b.baseLog.Error(err)
+		}
+
+		if !(ocbDidWork || sbDidWork || cmcDidWork) {
 			<-t.C
 		}
+
+		hadBackendDoc = (backendDoc != nil)
 	}
 
 	if !b.env.FeatureIsSet(env.FeatureDisableReadinessDelay) {
@@ -139,6 +193,16 @@ func (b *backend) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 	}
 	b.baseLog.Print("exiting")
 	close(done)
+}
+
+func (b *backend) patchWithLease(ctx context.Context, cb func(*api.BackendDocument) error) (*api.BackendDocument, error) {
+	doc, err := b.dbBackends.PatchWithLease(ctx, cb)
+	if err != nil && err.Error() == "lost lease" {
+		b.baseLog.Info("Lost the backend lease")
+		b.tryLeaseTimer = tryLeasePeriod
+		return nil, nil
+	}
+	return doc, err
 }
 
 func (b *backend) waitForWorkerCompletion() {

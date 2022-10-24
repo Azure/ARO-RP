@@ -32,7 +32,7 @@ type ClusterManagerConfigurations interface {
 	Get(context.Context, string) (*api.ClusterManagerConfigurationDocument, error)
 	Update(context.Context, *api.ClusterManagerConfigurationDocument) (*api.ClusterManagerConfigurationDocument, error)
 	Delete(context.Context, *api.ClusterManagerConfigurationDocument) error
-	ChangeFeed() cosmosdb.ClusterManagerConfigurationDocumentIterator
+	ChangeFeed(*cosmosdb.Options) cosmosdb.ClusterManagerConfigurationDocumentIterator
 	NewUUID() string
 }
 
@@ -133,8 +133,8 @@ func (c *clusterManagerConfiguration) Delete(ctx context.Context, doc *api.Clust
 	return c.c.Delete(ctx, doc.PartitionKey, doc, &cosmosdb.Options{NoETag: true})
 }
 
-func (c *clusterManagerConfiguration) ChangeFeed() cosmosdb.ClusterManagerConfigurationDocumentIterator {
-	return c.c.ChangeFeed(nil)
+func (c *clusterManagerConfiguration) ChangeFeed(options *cosmosdb.Options) cosmosdb.ClusterManagerConfigurationDocumentIterator {
+	return c.c.ChangeFeed(options)
 }
 
 func (c *clusterManagerConfiguration) partitionKey(key string) (string, error) {

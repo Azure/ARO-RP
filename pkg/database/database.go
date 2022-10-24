@@ -27,6 +27,7 @@ import (
 
 const (
 	collAsyncOperations   = "AsyncOperations"
+	collBackends          = "Backends"
 	collBilling           = "Billing"
 	collClusterManager    = "ClusterManagerConfigurations"
 	collGateway           = "Gateway"

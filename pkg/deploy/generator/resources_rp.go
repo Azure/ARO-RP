@@ -1102,10 +1102,35 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 							},
 							Kind: mgmtdocumentdb.PartitionKindHash,
 						},
+						DefaultTTL: to.Int32Ptr(-1),
 					},
 					Options: &mgmtdocumentdb.CreateUpdateOptions{},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/ClusterManagerConfigurations')]"),
+				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: to.StringPtr("[resourceGroup().location]"),
+			},
+			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+			DependsOn: []string{
+				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+			},
+		},
+		{
+			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
+				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
+					Resource: &mgmtdocumentdb.SQLContainerResource{
+						ID: to.StringPtr("Backends"),
+						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
+							Paths: &[]string{
+								"/id",
+							},
+							Kind: mgmtdocumentdb.PartitionKindHash,
+						},
+						DefaultTTL: to.Int32Ptr(7 * 86400), // 7 days
+					},
+					Options: &mgmtdocumentdb.CreateUpdateOptions{},
+				},
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Backends')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},

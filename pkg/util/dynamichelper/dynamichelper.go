@@ -72,6 +72,7 @@ func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace
 		return err
 	}
 
+	dh.log.Printf("Delete %s", keyFunc(schema.ParseGroupKind(groupKind), namespace, name))
 	err = dh.restcli.Delete().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Error()
 	if kerrors.IsNotFound(err) {
 		err = nil
