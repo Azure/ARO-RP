@@ -79,6 +79,7 @@ validate_portal_running() {
 
 run_portal() {
     echo "########## 🚀 Run Admin Portal in background ##########"
+    export AZURE_ENVIRONMENT=AzurePublicCloud
     ./aro portal &
 }
 
