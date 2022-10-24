@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -44,7 +45,9 @@ type monitor struct {
 	lastChangefeed atomic.Value //time.Time
 	startTime      time.Time
 
-	liveConfig liveconfig.Manager
+	liveConfig       liveconfig.Manager
+	hiveShardConfigs map[int]*rest.Config
+	shardMutex       sync.RWMutex
 }
 
 type Runnable interface {
@@ -71,6 +74,8 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Moni
 		startTime: time.Now(),
 
 		liveConfig: liveConfig,
+
+		hiveShardConfigs: map[int]*rest.Config{},
 	}
 }
 
@@ -131,4 +136,17 @@ func (mon *monitor) checkReady() bool {
 	return (time.Since(lastBucketTime) < time.Minute) && // did we list buckets successfully recently?
 		(time.Since(lastChangefeedTime) < time.Minute) && // did we process the change feed recently?
 		(time.Since(mon.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
+}
+
+func (mon *monitor) getHiveShardConfig(shard int) (*rest.Config, bool) {
+	mon.shardMutex.RLock()
+	hiveRestConfig, exists := mon.hiveShardConfigs[shard]
+	mon.shardMutex.RUnlock()
+	return hiveRestConfig, exists
+}
+
+func (mon *monitor) setHiveShardConfig(shard int, config *rest.Config) {
+	mon.shardMutex.Lock()
+	mon.hiveShardConfigs[shard] = config
+	mon.shardMutex.Unlock()
 }
