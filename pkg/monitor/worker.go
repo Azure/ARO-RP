@@ -241,7 +241,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	shard := 1
 	hiveRestConfig, exists := mon.getHiveShardConfig(shard)
 	if !exists {
-		log.Errorf("no hiveShardConfigs set for shard %d", shard)
+		log.Warnf("no hiveShardConfigs set for shard %d", shard)
 	}
 
 	c, err := cluster.NewMonitor(ctx, log, restConfig, doc.OpenShiftCluster, mon.clusterm, hiveRestConfig, hourlyRun)
