@@ -10,15 +10,13 @@ import (
 	"github.com/form3tech-oss/jwt-go"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 )
 
 func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string) error {
-	// TODO: once aad.GetToken is mockable, write a unit test for this function
 	dv.log.Print("ValidateServicePrincipal")
 
-	token, err := aad.GetToken(ctx, dv.log, clientID, clientSecret, tenantID, dv.azEnv.ActiveDirectoryEndpoint, dv.azEnv.GraphEndpoint)
+	token, err := dv.tokenClient.GetToken(ctx, dv.log, clientID, clientSecret, tenantID, dv.azEnv.ActiveDirectoryEndpoint, dv.azEnv.GraphEndpoint)
 	if err != nil {
 		return err
 	}

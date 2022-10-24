@@ -57,7 +57,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	// FP validation
-	fpDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, dv.fpAuthorizer, dynamic.AuthorizerFirstParty)
+	fpDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, dv.fpAuthorizer, dynamic.AuthorizerFirstParty, aad.NewTokenClient())
 	if err != nil {
 		return err
 	}
@@ -73,14 +73,15 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	spp := dv.oc.Properties.ServicePrincipalProfile
-	token, err := aad.GetToken(ctx, dv.log, spp.ClientID, string(spp.ClientSecret), dv.subscriptionDoc.Subscription.Properties.TenantID, dv.env.Environment().ActiveDirectoryEndpoint, dv.env.Environment().ResourceManagerEndpoint)
+	tokenClient := aad.NewTokenClient()
+	token, err := tokenClient.GetToken(ctx, dv.log, spp.ClientID, string(spp.ClientSecret), dv.subscriptionDoc.Subscription.Properties.TenantID, dv.env.Environment().ActiveDirectoryEndpoint, dv.env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return err
 	}
 
 	spAuthorizer := refreshable.NewAuthorizer(token)
 
-	spDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, spAuthorizer, dynamic.AuthorizerClusterServicePrincipal)
+	spDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, spAuthorizer, dynamic.AuthorizerClusterServicePrincipal, aad.NewTokenClient())
 	if err != nil {
 		return err
 	}
