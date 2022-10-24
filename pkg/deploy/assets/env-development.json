@@ -167,7 +167,7 @@
                 },
                 "virtualMachineProfile": {
                     "osProfile": {
-                        "computerNamePrefix": "ci-go-18-",
+                        "computerNamePrefix": "ci-",
                         "adminUsername": "cloud-user",
                         "linuxConfiguration": {
                             "disablePasswordAuthentication": true,
@@ -214,7 +214,7 @@
                                                     "name": "ci-vmss-pip",
                                                     "properties": {
                                                         "dnsSettings": {
-                                                            "domainNameLabel": "aro-ci-go-18"
+                                                            "domainNameLabel": "aro-ci"
                                                         }
                                                     }
                                                 }
@@ -245,7 +245,7 @@
                 },
                 "overprovision": false
             },
-            "name": "ci-vmss-go-18",
+            "name": "ci-vmss",
             "type": "Microsoft.Compute/virtualMachineScaleSets",
             "location": "[resourceGroup().location]",
             "condition": "[greater(parameters('ciCapacity'), 0)]",
@@ -339,7 +339,7 @@
                 },
                 "virtualMachineProfile": {
                     "osProfile": {
-                        "computerNamePrefix": "dev-proxy",
+                        "computerNamePrefix": "dev-proxy-",
                         "adminUsername": "cloud-user",
                         "linuxConfiguration": {
                             "disablePasswordAuthentication": true,
