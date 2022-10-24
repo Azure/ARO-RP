@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the Apache License 2.0.
 
+from distutils.log import error
 import random
 import os
 from base64 import b64decode
@@ -12,12 +13,13 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
-from azure.cli.core.azclierror import FileOperationError, ResourceNotFoundError, UnauthorizedError
+from azure.cli.core.azclierror import FileOperationError, ResourceNotFoundError, UnauthorizedError, ValidationError
 from azext_aro._aad import AADManager
 from azext_aro._rbac import assign_role_to_resource, \
     has_role_assignment_on_resource
 from azext_aro._rbac import ROLE_NETWORK_CONTRIBUTOR, ROLE_READER
 from azext_aro._validators import validate_subnets
+from azext_aro._dynamic_validators import validate_cluster_create
 
 from knack.log import get_logger
 
@@ -76,27 +78,27 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                                                           cluster_resource_group,
                                                           random_id)
     oc = create_openshift_cluster(**locals())
-
     ensure_resource_permissions(cmd.cli_ctx, oc, True, sp_obj_ids)
 
     if validate_only:
-        return ensure_resource_permissions(cmd.cli_ctx, oc, True, sp_obj_ids)
+        error_object = validate_cluster_create(cmd, client, oc, resource_group_name, master_subnet, worker_subnet, vnet)
+        return print(error_object)
 
-    return sdk_no_wait(no_wait, client.open_shift_clusters.begin_create_or_update,
-                       resource_group_name=resource_group_name,
-                       resource_name=resource_name,
-                       parameters=oc)
+    # return sdk_no_wait(no_wait, client.open_shift_clusters.begin_create_or_update,
+    #                    resource_group_name=resource_group_name,
+    #                    resource_name=resource_name,
+    #                    parameters=oc)
 
 
-def aro_validate_permissions(cmd,
-                             client,
-                             resource_group_name,
-                             master_subnet,
-                             worker_subnet,
-                             vnet,
-                             resource_name=None,
-                             vnet_resource_group_name=None,
-                             validate_only=True):
+def aro_validate(cmd,
+                 client,
+                 resource_group_name,
+                 master_subnet,
+                 worker_subnet,
+                 vnet,
+                 resource_name=None,
+                 vnet_resource_group_name=None,
+                 validate_only=True):
     aro_create(**locals())
 
 

@@ -108,7 +108,7 @@ func (dv *dynamic) ValidateVnet(ctx context.Context, location string, subnets []
 		return fmt.Errorf("no subnets provided")
 	}
 
-	// each subnet is threated individually as it would be from the different vnet
+	// each subnet is treated individually as it would be from the different vnet
 	// During cluster runtime worker profile gets enriched and contains multiple
 	// duplicate values for multiple worker pools. We care only about
 	// unique subnet value in the functions below.

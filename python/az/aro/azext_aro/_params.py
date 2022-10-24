@@ -17,6 +17,9 @@ from azext_aro._validators import validate_worker_count
 from azext_aro._validators import validate_worker_vm_disk_size_gb
 from azext_aro._validators import validate_refresh_cluster_credentials
 from azext_aro._validators import validate_install_version_format
+
+from azext_aro._dynamic_validators import dyn_validate_subnet
+
 from azure.cli.core.commands.parameters import name_type
 from azure.cli.core.commands.parameters import get_enum_type, get_three_state_flag
 from azure.cli.core.commands.parameters import resource_group_name_type
