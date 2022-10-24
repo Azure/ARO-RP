@@ -21,6 +21,7 @@ import (
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/previewfeature/nsgflowlogs"
+	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
@@ -77,7 +78,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// create refreshable authorizer from token
-	authorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(ctx, r.log, &azEnv, r.kubernetescli)
+	azRefreshAuthorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(r.log, &azEnv, r.kubernetescli, aad.NewTokenClient())
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	authorizer, err := azRefreshAuthorizer.NewRefreshableAuthorizerToken(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

@@ -18,9 +18,19 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
+type TokenClient interface {
+	GetToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, tenantID string, aadEndpoint, resource string) (*adal.ServicePrincipalToken, error)
+}
+
+type tokenClient struct{}
+
+func NewTokenClient() TokenClient {
+	return &tokenClient{}
+}
+
 // GetToken authenticates in the customer's tenant as the cluster service
 // principal and returns a token.
-func GetToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, tenantID string, aadEndpoint, resource string) (*adal.ServicePrincipalToken, error) {
+func (tc *tokenClient) GetToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, tenantID string, aadEndpoint, resource string) (*adal.ServicePrincipalToken, error) {
 	conf := auth.ClientCredentialsConfig{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
