@@ -12,6 +12,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
 )
 
+const (
+	hiveKubeconfigPathEnvVar  = "HIVE_KUBE_CONFIG_PATH"
+	hiveInstallerEnableEnvVar = "ARO_INSTALL_VIA_HIVE"
+	hiveDefaultPullSpecEnvVar = "ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC"
+	hiveAdoptEnableEnvVar     = "ARO_ADOPT_BY_HIVE"
+)
+
 type Manager interface {
 	HiveRestConfig(context.Context, int) (*rest.Config, error)
 	InstallViaHive(context.Context) (bool, error)
@@ -21,17 +28,27 @@ type Manager interface {
 	DefaultInstallerPullSpecOverride(context.Context) string
 }
 
-type dev struct{}
+type dev struct {
+	location              string
+	managedClustersClient containerservice.ManagedClustersClient
 
-func NewDev() Manager {
-	return &dev{}
+	hiveCredentialsMutex sync.RWMutex
+	cachedCredentials    map[int]*rest.Config
+}
+
+func NewDev(location string, managedClustersClient containerservice.ManagedClustersClient) Manager {
+	return &dev{location: location,
+		managedClustersClient: managedClustersClient,
+		cachedCredentials:     make(map[int]*rest.Config),
+		hiveCredentialsMutex:  sync.RWMutex{},
+	}
 }
 
 type prod struct {
 	location              string
 	managedClustersClient containerservice.ManagedClustersClient
 
-	hiveCredentialsMutex *sync.RWMutex
+	hiveCredentialsMutex sync.RWMutex
 	cachedCredentials    map[int]*rest.Config
 }
 
@@ -40,6 +57,6 @@ func NewProd(location string, managedClustersClient containerservice.ManagedClus
 		location:              location,
 		managedClustersClient: managedClustersClient,
 		cachedCredentials:     make(map[int]*rest.Config),
-		hiveCredentialsMutex:  &sync.RWMutex{},
+		hiveCredentialsMutex:  sync.RWMutex{},
 	}
 }

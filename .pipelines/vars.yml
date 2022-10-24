@@ -1,2 +1,3 @@
 variables:
   GOPATH: $(Agent.BuildDirectory)/go
+  OpenShiftVersion: 4.10.20

@@ -5,11 +5,13 @@ package monitor
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
@@ -17,6 +19,30 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
+
+// This function will continue to run until such time as it has a config to add to the global Hive shard map
+// Note that because the mon.hiveShardConfigs[shard] is set to `nil` when its created, the cluster
+// monitors will simply ignore Hive stats until this function populates the config
+func (mon *monitor) populateHiveShardRestConfig(ctx context.Context, shard int) {
+	var hiveRestConfig *rest.Config
+	var err error
+
+	for {
+		hiveRestConfig, err = mon.liveConfig.HiveRestConfig(ctx, shard)
+		if hiveRestConfig != nil {
+			mon.setHiveShardConfig(shard, hiveRestConfig)
+			return
+		}
+
+		mon.baseLog.Warn(fmt.Sprintf("error fetching Hive kubeconfig for shard %d", shard))
+		if err != nil {
+			mon.baseLog.Error(err.Error())
+		}
+
+		mon.baseLog.Info("pausing for a minute before retrying...")
+		time.Sleep(time.Duration(60 * time.Second))
+	}
+}
 
 // listBuckets reads our bucket allocation from the master
 func (mon *monitor) listBuckets(ctx context.Context) error {
@@ -80,6 +106,18 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 							fps == api.ProvisioningStateDeleting):
 					mon.deleteDoc(doc)
 				default:
+					// in the future we will have the shard index set on the api.OpenShiftClusterDocument
+					// but for now we simply select Hive (AKS) shard 1
+					// e.g. shard := mon.hiveShardConfigs[doc.shardIndex]
+					shard := 1
+
+					_, exists := mon.getHiveShardConfig(shard)
+					if !exists {
+						// set this to `nil` so cluster monitors will ignore it until its populated with config
+						mon.setHiveShardConfig(shard, nil)
+						go mon.populateHiveShardRestConfig(ctx, shard)
+					}
+
 					// TODO: improve memory usage by storing a subset of doc in mon.docs
 					mon.upsertDoc(doc)
 				}
@@ -198,13 +236,15 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		return
 	}
 
-	hiveRestConfig, err := mon.liveConfig.HiveRestConfig(ctx, 1)
-	if err != nil {
-		// TODO(hive): Update to fail once we have Hive everywhere in prod and dev
-		log.Info(err)
+	// once sharding is implemented, we will have the shard set on the api.OpenShiftClusterDocument
+	// e.g. shard := mon.hiveShardConfigs[doc.shardIndex]
+	shard := 1
+	hiveRestConfig, exists := mon.getHiveShardConfig(shard)
+	if !exists {
+		log.Warnf("no hiveShardConfigs set for shard %d", shard)
 	}
 
-	c, err := cluster.NewMonitor(ctx, log, restConfig, doc.OpenShiftCluster, mon.clusterm, hiveRestConfig, hourlyRun)
+	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.clusterm, hiveRestConfig, hourlyRun)
 	if err != nil {
 		log.Error(err)
 		return
