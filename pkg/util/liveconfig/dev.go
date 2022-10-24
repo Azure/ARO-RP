@@ -44,7 +44,6 @@ func (d *dev) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, erro
 
 	kubeConfig, err := getAksShardKubeconfig(ctx, d.managedClustersClient, d.location, shard)
 	if err != nil {
-
 		return nil, err
 	}
 
