@@ -29,7 +29,6 @@ linters:
   enable:
     - gofmt
     - unused
-    - deadcode
     - gosimple
     - govet
     - staticcheck

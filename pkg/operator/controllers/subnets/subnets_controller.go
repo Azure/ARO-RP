@@ -68,7 +68,7 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli 
 	}
 }
 
-//Reconcile fixes the Network Security Groups
+// Reconcile fixes the Network Security Groups
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {

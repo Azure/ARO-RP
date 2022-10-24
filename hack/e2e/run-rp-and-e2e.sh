@@ -1,10 +1,25 @@
 #!/bin/bash -e
 ######## Helper file to run E2e either locally or using Azure DevOps Pipelines ########
 
+if [[ $CI ]] ; then
+    set -o pipefail
+    set -x
+    az account set -s $AZURE_SUBSCRIPTION_ID
+    export SECRET_SA_ACCOUNT_NAME=e2earosecrets
+    make secrets
+    . secrets/env
+    echo "##vso[task.setvariable variable=RP_MODE]$RP_MODE"
+    export HIVEKUBECONFIGPATH="secrets/e2e-aks-kubeconfig"
+    export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+    export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+    export PRIVATE_CLUSTER=true
+fi
+
 validate_rp_running() {
     echo "########## ？Checking ARO RP Status ##########"
     ELAPSED=0
     while true; do
+        sleep 5
         http_code=$(curl -k -s -o /dev/null -w '%{http_code}' https://localhost:8443/healthz/ready || true)
         case $http_code in
             "200")
@@ -30,19 +45,59 @@ run_rp() {
     ./aro rp &
 }
 
-kill_rp(){
+kill_rp() {
     echo "########## Kill the RP running in background ##########"
     rppid=$(lsof -t -i :8443)
     kill $rppid
     wait $rppid
 }
 
+validate_portal_running() {
+    echo "########## ？Checking Admin Portal Status ##########"
+    ELAPSED=0
+    while true; do
+        sleep 5
+        http_code=$(curl -k -s -o /dev/null -w '%{http_code}' https://localhost:8444/api/info)
+        case $http_code in
+            "403")
+            echo "########## ✅ ARO Admin Portal Running ##########"
+            break
+            ;;
+            *)
+            echo "Attempt $ELAPSED - local Admin Portal is NOT up. Code : $http_code, waiting"
+            sleep 2
+            # after 40 secs return exit 1 to not block ci
+            ELAPSED=$((ELAPSED+1))
+            if [ $ELAPSED -eq 20 ]
+            then
+                exit 1
+            fi
+            ;;
+        esac
+    done
+}
+
+run_portal() {
+    echo "########## 🚀 Run Admin Portal in background ##########"
+    ./aro portal &
+}
+
+kill_portal(){
+    echo "########## Kill the Admin Portal running in background ##########"
+    rppid=$(lsof -t -i :8444)
+    kill $rppid
+    wait $rppid
+}
+
 run_vpn() {
+    echo "########## 🚀 Run OpenVPN in background ##########"
+    echo "Using Secret secrets/$VPN"
     sudo openvpn --config secrets/$VPN --daemon --writepid vpnpid
     sleep 10
 }
 
 kill_vpn() {
+    echo "########## Kill the OpenVPN running in background ##########"
     while read pid; do sudo kill $pid; done < vpnpid
 }
 
@@ -68,7 +123,7 @@ register_sub() {
       "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0"
 }
 
-clean_e2e_db(){
+clean_e2e_db() {
     echo "########## 🧹 Deleting DB $DATABASE_NAME ##########"
     az cosmosdb sql database delete --name $DATABASE_NAME \
         --yes \
@@ -76,23 +131,30 @@ clean_e2e_db(){
         --resource-group $RESOURCEGROUP >/dev/null
 }
 
+delete_e2e_cluster() {
+    echo "########## 🧹 Deleting Cluster $CLUSTER ##########"
+    go run ./hack/cluster delete
+}
+
+run_vpn() {
+    sudo openvpn --config secrets/$VPN --daemon --writepid vpnpid
+    sleep 10
+}
+
+kill_vpn() {
+    while read pid; do sudo kill $pid; done < vpnpid
+}
+
+
 # TODO: CLUSTER and is also recalculated in multiple places
 # in the billing pipelines :-(
 
-
-# if LOCAL_E2E is set, set the value with the local test names
-# If it it not set, it defaults to the build ID
-if [ -z "${LOCAL_E2E}" ] ; then
-    export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-    export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-fi
-
-if [ -z "${CLUSTER}" ] ; then
+if [[ -z $CLUSTER ]] ; then
     echo "CLUSTER is not set, aborting"
     return 1
 fi
 
-if [ -z "${DATABASE_NAME}" ] ; then
+if [[ -z $DATABASE_NAME ]] ; then
     echo "DATABASE_NAME is not set, aborting"
     return 1
 fi
@@ -116,11 +178,9 @@ echo
 echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
 echo "######################################"
 
-[ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; return 128 )
-[ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set; please validate your ./secrets/env"; return 128 )
-[ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set; please validate your ./secrets/env"; return 128 )
-[ "$DATABASE_ACCOUNT_NAME" ] || ( echo ">> DATABASE_ACCOUNT_NAME is not set; please validate your ./secrets/env"; return 128 )
-[ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set; please validate your ./secrets/env"; return 128 )
-[ "$AZURE_SUBSCRIPTION_ID" ] || ( echo ">> AZURE_SUBSCRIPTION_ID is not set; please validate your ./secrets/env"; return 128 )
-
-az account set -s $AZURE_SUBSCRIPTION_ID >/dev/null
+[[ $LOCATION ]] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; return 128 )
+[[ $RESOURCEGROUP ]] || ( echo ">> RESOURCEGROUP is not set; please validate your ./secrets/env"; return 128 )
+[[ $PROXY_HOSTNAME ]] || ( echo ">> PROXY_HOSTNAME is not set; please validate your ./secrets/env"; return 128 )
+[[ $DATABASE_ACCOUNT_NAME ]] || ( echo ">> DATABASE_ACCOUNT_NAME is not set; please validate your ./secrets/env"; return 128 )
+[[ $DATABASE_NAME ]] || ( echo ">> DATABASE_NAME is not set; please validate your ./secrets/env"; return 128 )
+[[ $AZURE_SUBSCRIPTION_ID ]] || ( echo ">> AZURE_SUBSCRIPTION_ID is not set; please validate your ./secrets/env"; return 128 )

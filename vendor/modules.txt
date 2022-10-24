@@ -240,6 +240,9 @@ github.com/beorn7/perks/quantile
 # github.com/bkielbasa/cyclop v1.2.0
 ## explicit; go 1.15
 github.com/bkielbasa/cyclop/pkg/analyzer
+# github.com/blang/semver v3.5.1+incompatible
+## explicit
+github.com/blang/semver
 # github.com/bombsimon/wsl/v3 v3.3.0
 ## explicit; go 1.12
 github.com/bombsimon/wsl/v3
@@ -1334,6 +1337,9 @@ github.com/sanposhiho/wastedassign/v2
 github.com/securego/gosec/v2
 github.com/securego/gosec/v2/cwe
 github.com/securego/gosec/v2/rules
+# github.com/serge1peshcoff/selenium-go-conditions v0.0.0-20170824121757-5afbdb74596b
+## explicit
+github.com/serge1peshcoff/selenium-go-conditions
 # github.com/shazow/go-diff v0.0.0-20160112020656-b6b7b6733b8c
 ## explicit
 github.com/shazow/go-diff/difflib
@@ -1391,6 +1397,13 @@ github.com/syndtr/gocapability/capability
 # github.com/tdakkota/asciicheck v0.0.0-20200416200610-e657995f937b
 ## explicit; go 1.13
 github.com/tdakkota/asciicheck
+# github.com/tebeka/selenium v0.9.9
+## explicit; go 1.12
+github.com/tebeka/selenium
+github.com/tebeka/selenium/chrome
+github.com/tebeka/selenium/firefox
+github.com/tebeka/selenium/internal/zip
+github.com/tebeka/selenium/log
 # github.com/tetafro/godot v1.4.9
 ## explicit; go 1.16
 github.com/tetafro/godot

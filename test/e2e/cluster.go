@@ -26,47 +26,58 @@ const (
 	testNamespace = "test-e2e"
 )
 
-var _ = Describe("Cluster smoke test", func() {
+var _ = Describe("Cluster", func() {
 	var p project.Project
 
 	var _ = BeforeEach(func() {
+		By("creating a test namespace")
 		p = project.NewProject(clients.Kubernetes, clients.Project, testNamespace)
 		err := p.Create(context.Background())
 		Expect(err).NotTo(HaveOccurred(), "Failed to create test namespace")
 
+		By("verifying the namespace is ready")
 		Eventually(func() error {
 			return p.Verify(context.Background())
 		}).Should(BeNil())
 	})
 
 	var _ = AfterEach(func() {
+		By("deleting a test namespace")
 		err := p.Delete(context.Background())
 		Expect(err).NotTo(HaveOccurred(), "Failed to delete test namespace")
 
+		By("verifying the namespace is deleted")
 		Eventually(func() error {
 			return p.VerifyProjectIsDeleted(context.Background())
 		}, 5*time.Minute, 10*time.Second).Should(BeNil())
 	})
 
-	Specify("Can run a stateful set which is using Azure Disk storage", func() {
+	It("can run a stateful set which is using Azure Disk storage", func() {
 		ctx := context.Background()
+
+		By("creating stateful set")
 		err := createStatefulSet(ctx, clients.Kubernetes)
 		Expect(err).NotTo(HaveOccurred())
 
+		By("verifying the stateful set is ready")
 		err = wait.PollImmediate(10*time.Second, 15*time.Minute, ready.CheckStatefulSetIsReady(ctx, clients.Kubernetes.AppsV1().StatefulSets(testNamespace), "busybox"))
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	Specify("Can create load balancer services", func() {
+	It("can create load balancer services", func() {
 		ctx := context.Background()
+
+		By("creating an external load balancer service")
 		err := createLoadBalancerService(ctx, clients.Kubernetes, "elb", map[string]string{})
 		Expect(err).NotTo(HaveOccurred())
 
+		By("creating an internal load balancer service")
 		err = createLoadBalancerService(ctx, clients.Kubernetes, "ilb", map[string]string{
 			"service.beta.kubernetes.io/azure-load-balancer-internal": "true",
 		})
 		Expect(err).NotTo(HaveOccurred())
 
+		By("verifying the external load balancer service is ready")
 		Eventually(func() bool {
 			svc, err := clients.Kubernetes.CoreV1().Services(testNamespace).Get(context.Background(), "elb", metav1.GetOptions{})
 			if err != nil {
@@ -75,6 +86,7 @@ var _ = Describe("Cluster smoke test", func() {
 			return ready.ServiceIsReady(svc)
 		}, 5*time.Minute, 10*time.Second).Should(BeTrue())
 
+		By("verifying the internal load balancer service is ready")
 		Eventually(func() bool {
 			svc, err := clients.Kubernetes.CoreV1().Services(testNamespace).Get(context.Background(), "ilb", metav1.GetOptions{})
 			if err != nil {
@@ -86,12 +98,15 @@ var _ = Describe("Cluster smoke test", func() {
 
 	// mainly we want to test the gateway/egress functionality - this request for the image will travel from
 	// node > gateway > storage account of the registry.
-	Specify("Can access and use the internal container registry", func() {
+	It("can access and use the internal container registry", func() {
 		ctx := context.Background()
 		deployName := "internal-registry-deploy"
+
+		By("creating a test deployment from an internal container registry")
 		err := createContainerFromInternalContainerRegistryImage(ctx, clients.Kubernetes, deployName)
 		Expect(err).NotTo(HaveOccurred())
 
+		By("verifying the deployment is ready")
 		err = wait.PollImmediate(10*time.Second, 5*time.Minute, ready.CheckDeploymentIsReady(ctx, clients.Kubernetes.AppsV1().Deployments(testNamespace), deployName))
 		Expect(err).NotTo(HaveOccurred())
 	})

@@ -37,6 +37,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	task := m.doc.OpenShiftCluster.Properties.MaintenanceTask
 	isEverything := task == api.MaintenanceTaskEverything || task == ""
 	isOperator := task == api.MaintenanceTaskOperator
+	isRenewCerts := task == api.MaintenanceTaskRenewCerts
 
 	// Generic fix-up or setup actions that are fairly safe to always take, and
 	// don't require a running cluster
@@ -73,20 +74,50 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Action(m.fixSREKubeconfig),
 			steps.Action(m.fixUserAdminKubeconfig),
 			steps.Action(m.createOrUpdateRouterIPFromCluster),
+		)
+	}
+
+	if isEverything || isRenewCerts {
+		toRun = append(toRun,
 			steps.Action(m.fixMCSCert),
 			steps.Action(m.fixMCSUserData),
+		)
+	}
+
+	if isEverything {
+		toRun = append(toRun,
 			steps.Action(m.ensureGatewayUpgrade),
+		)
+	}
+
+	if isEverything || isRenewCerts {
+		toRun = append(toRun,
 			steps.Action(m.configureAPIServerCertificate),
 			steps.Action(m.configureIngressCertificate),
+		)
+	}
+
+	if isEverything {
+		toRun = append(toRun,
 			steps.Action(m.populateRegistryStorageAccountName),
 			steps.Action(m.ensureMTUSize),
+		)
+	}
+
+	if isEverything || isOperator || isRenewCerts {
+		toRun = append(toRun,
+			steps.Action(m.initializeOperatorDeployer))
+	}
+
+	if isRenewCerts {
+		toRun = append(toRun,
+			steps.Action(m.renewMDSDCertificate),
 		)
 	}
 
 	// Update the ARO Operator
 	if isEverything || isOperator {
 		toRun = append(toRun,
-			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 			steps.Action(m.ensureAROOperator),
 			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
 			steps.Condition(m.ensureAROOperatorRunningDesiredVersion, 5*time.Minute, true),

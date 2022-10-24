@@ -16,6 +16,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
@@ -141,7 +142,18 @@ func (a *aad) AAD(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		session, err := a.store.Get(r, SessionName)
 		if err != nil {
-			a.internalServerError(w, err)
+			cookieError, ok := err.(securecookie.Error)
+			if ok && cookieError != nil && cookieError.IsDecode() {
+				cookie := &http.Cookie{
+					Name:    SessionName,
+					Path:    "/",
+					Expires: time.Unix(0, 0),
+				}
+				http.SetCookie(w, cookie)
+				http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+			} else {
+				a.internalServerError(w, err)
+			}
 			return
 		}
 

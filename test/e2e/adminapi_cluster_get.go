@@ -13,12 +13,12 @@ import (
 var _ = Describe("[Admin API] Get cluster action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
-	It("should be able to return single cluster with admin fields", func() {
+	It("must return single cluster with admin fields", func() {
 		ctx := context.Background()
 		resourceID := resourceIDFromEnv()
 
 		By("requesting the cluster document via RP admin API")
-		oc := getCluster(ctx, resourceID)
+		oc := adminGetCluster(ctx, resourceID)
 
 		By("checking that we received the expected cluster")
 		Expect(oc.ID).To(Equal(resourceID))
