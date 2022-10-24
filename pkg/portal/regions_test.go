@@ -7,15 +7,17 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/go-test/deep"
 	"github.com/gorilla/mux"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
-func TestRegionList(t *testing.T) {
+func TestRegionListPublic(t *testing.T) {
 	dbOpenShiftClusters, _ := testdatabase.NewFakeOpenShiftClusters()
 
 	fixture := testdatabase.NewFixture().
@@ -29,6 +31,8 @@ func TestRegionList(t *testing.T) {
 	p := &portal{
 		dbOpenShiftClusters: dbOpenShiftClusters,
 	}
+
+	os.Setenv("AZURE_ENVIRONMENT", azureclient.PublicCloud.Environment.Name)
 
 	req, err := http.NewRequest("GET", "/api/regions", nil)
 	if err != nil {
@@ -213,6 +217,52 @@ func TestRegionList(t *testing.T) {
 				URL:  "https://westus3.admin.aro.azure.com",
 			},
 		},
+	}
+
+	for _, l := range deep.Equal(expected, r) {
+		t.Error(l)
+	}
+}
+
+func TestRegionListFF(t *testing.T) {
+	dbOpenShiftClusters, _ := testdatabase.NewFakeOpenShiftClusters()
+
+	fixture := testdatabase.NewFixture().
+		WithOpenShiftClusters(dbOpenShiftClusters)
+
+	err := fixture.Create()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p := &portal{
+		dbOpenShiftClusters: dbOpenShiftClusters,
+	}
+
+	os.Setenv("AZURE_ENVIRONMENT", azureclient.USGovernmentCloud.Environment.Name)
+
+	req, err := http.NewRequest("GET", "/api/regions", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	aadAuthenticatedRouter := mux.NewRouter()
+	p.aadAuthenticatedRoutes(aadAuthenticatedRouter)
+	w := httptest.NewRecorder()
+	aadAuthenticatedRouter.ServeHTTP(w, req)
+
+	if w.Header().Get("Content-Type") != "application/json" {
+		t.Error(w.Header().Get("Content-Type"))
+	}
+
+	var r RegionInfo
+	err = json.NewDecoder(w.Body).Decode(&r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := RegionInfo{
+		Regions: []Region{},
 	}
 
 	for _, l := range deep.Equal(expected, r) {
