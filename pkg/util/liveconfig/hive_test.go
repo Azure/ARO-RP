@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_containerservice "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/containerservice"
 )
 
@@ -46,8 +47,8 @@ func TestProdHive(t *testing.T) {
 	}
 
 	mcc.EXPECT().ListClusterUserCredentials(gomock.Any(), "rp-eastus", "aro-aks-cluster-001", "").Return(resp, nil)
-
-	lc := NewProd("eastus", mcc)
+	log := utillog.GetLogger()
+	lc := NewProd("eastus", mcc, log.WithField("component", "monitor"))
 
 	restConfig, err := lc.HiveRestConfig(ctx, 1)
 	if err != nil {
