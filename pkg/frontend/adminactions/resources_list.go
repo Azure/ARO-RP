@@ -185,8 +185,6 @@ func (a *azureActions) appendAzureDiskEncryptionSetResources(ctx context.Context
 
 func (a *azureActions) WriteToStream(ctx context.Context, writer io.WriteCloser) error {
 	resources, err := a.GroupResourceList(ctx)
-	go func() {
-		a.ResourcesList(ctx, resources, writer)
-	}()
+	go a.ResourcesList(ctx, resources, writer)
 	return err
 }
