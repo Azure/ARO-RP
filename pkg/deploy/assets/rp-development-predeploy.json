@@ -292,18 +292,6 @@
                     },
                     {
                         "tenantId": "[subscription().tenantId]",
-                        "objectId": "[reference(resourceId('Microsoft.ContainerService/managedClusters', 'aro-aks-cluster-001'), '2020-12-01', 'Full').properties.identityProfile.kubeletidentity.objectId]",
-                        "permissions": {
-                            "secrets": [
-                                "get"
-                            ],
-                            "certificates": [
-                                "get"
-                            ]
-                        }
-                    },
-                    {
-                        "tenantId": "[subscription().tenantId]",
                         "objectId": "[parameters('adminObjectId')]",
                         "permissions": {
                             "secrets": [
