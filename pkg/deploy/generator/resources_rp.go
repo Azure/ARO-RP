@@ -721,18 +721,6 @@ func (g *generator) rpServiceKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolic
 				},
 			},
 		},
-		{
-			TenantID: &tenantUUIDHack,
-			ObjectID: to.StringPtr("[reference(resourceId('Microsoft.ContainerService/managedClusters', 'aro-aks-cluster-001'), '2020-12-01', 'Full').properties.identityProfile.kubeletidentity.objectId]"),
-			Permissions: &mgmtkeyvault.Permissions{
-				Secrets: &[]mgmtkeyvault.SecretPermissions{
-					mgmtkeyvault.SecretPermissionsGet,
-				},
-				Certificates: &[]mgmtkeyvault.CertificatePermissions{
-					mgmtkeyvault.Get,
-				},
-			},
-		},
 	}
 }
 
