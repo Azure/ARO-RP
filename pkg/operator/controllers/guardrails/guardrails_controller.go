@@ -4,24 +4,17 @@ package guardrails
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
 	"context"
 	"embed"
 	"fmt"
-	"path/filepath"
 	"strings"
-	"text/template"
 	"time"
 
-	"github.com/ghodss/yaml"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,62 +28,73 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
-	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/sirupsen/logrus"
 )
 
 const (
-	ControllerName      = "GuardRails"
-	controllerEnabled   = "aro.guardrails.enabled"        // boolean, false by default
-	controllerNamespace = "aro.guardrails.namespace"      // string
-	controllerManaged   = "aro.guardrails.deploy.managed" // trinary, do-nothing by default
-	controllerPullSpec  = "aro.guardrails.deploy.pullspec"
-	// controllerRequestCPU            = "aro.guardrails.deploy.requests.cpu"
-	// controllerRequestMem            = "aro.guardrails.deploy.requests.mem"
-	// controllerLimitCPU              = "aro.guardrails.deploy.limits.cpu"
-	// controllerLimitMem              = "aro.guardrails.deploy.limits.mem"
+	ControllerName               = "GuardRails"
+	controllerEnabled            = "aro.guardrails.enabled"        // boolean, false by default
+	controllerNamespace          = "aro.guardrails.namespace"      // string
+	controllerManaged            = "aro.guardrails.deploy.managed" // trinary, do-nothing by default
+	controllerPullSpec           = "aro.guardrails.deploy.pullspec"
+	controllerManagerRequestsCPU = "aro.guardrails.deploy.manager.requests.cpu"
+	controllerManagerRequestsMem = "aro.guardrails.deploy.manager.requests.mem"
+	controllerManagerLimitCPU    = "aro.guardrails.deploy.manager.limit.cpu"
+	controllerManagerLimitMem    = "aro.guardrails.deploy.manager.limit.mem"
+	controllerAuditRequestsCPU   = "aro.guardrails.deploy.audit.requests.cpu"
+	controllerAuditRequestsMem   = "aro.guardrails.deploy.audit.requests.mem"
+	controllerAuditLimitCPU      = "aro.guardrails.deploy.audit.limit.cpu"
+	controllerAuditLimitMem      = "aro.guardrails.deploy.audit.limit.mem"
 	// controllerWebhookManaged        = "aro.guardrails.webhook.managed"        // trinary, do-nothing by default
 	// controllerWebhookTimeout        = "aro.guardrails.webhook.timeoutSeconds" // int, 3 by default (as per upstream)
 	// controllerReconciliationMinutes = "aro.guardrails.reconciliationMinutes"  // int, 60 by default.
 
 	defaultNamespace = "openshift-azure-guardrails"
-	templatePath     = "gkpolicies/templates"
-	constraintspath  = "gkpolicies/constraints"
+
+	defaultManagerRequestsCPU = "100m"
+	defaultManagerLimitCPU    = "1000m"
+	defaultManagerRequestsMem = "256Mi"
+	defaultManagerLimitMem    = "512Mi"
+
+	defaultAuditRequestsCPU = "100m"
+	defaultAuditLimitCPU    = "1000m"
+	defaultAuditRequestsMem = "256Mi"
+	defaultAuditLimitMem    = "512Mi"
 )
 
 //go:embed staticresources
 var staticFiles embed.FS
 
-//go:embed gkpolicies
-var policyFiles embed.FS
+//go:embed gktemplates
+var gkPolicyTemplates embed.FS
+
+//go:embed gkcontraints
+var gkPolicyConraints embed.FS
 
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
 
 type Reconciler struct {
-	arocli        aroclient.Interface
-	kubernetescli kubernetes.Interface
-	deployer      deployer.Deployer
-	gkPolicy      deployer.Deployer
+	arocli             aroclient.Interface
+	kubernetescli      kubernetes.Interface
+	deployer           deployer.Deployer
+	gkPolicyTemplate   deployer.Deployer
+	gkPolicyConstraint deployer.Deployer
 
 	readinessPollTime time.Duration
 	readinessTimeout  time.Duration
-	//log               logr.Logger
-	restConfig *rest.Config
-	// used to invoke dynamichelper.NewGVRResolver()
-	logentry *logrus.Entry
 }
 
 func NewReconciler(arocli aroclient.Interface, kubernetescli kubernetes.Interface, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
-		arocli:        arocli,
-		kubernetescli: kubernetescli,
-		deployer:      deployer.NewDeployer(kubernetescli, dh, staticFiles, "staticresources"),
-		gkPolicy:      deployer.NewDeployer(kubernetescli, dh, policyFiles, "gkpolicies"),
+		arocli:             arocli,
+		kubernetescli:      kubernetescli,
+		deployer:           deployer.NewDeployer(kubernetescli, dh, staticFiles, "staticresources"),
+		gkPolicyTemplate:   deployer.NewDeployer(kubernetescli, dh, gkPolicyTemplates, "gktemplates"),
+		gkPolicyConstraint: deployer.NewDeployer(kubernetescli, dh, gkPolicyConraints, "gkcontraints"),
 
 		readinessPollTime: 10 * time.Second,
 		readinessTimeout:  5 * time.Minute,
-		logentry:          utillog.GetLogger(), // anyway to get a logrus entry?
 	}
 }
 
@@ -116,12 +120,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		if pullSpec == "" {
 			pullSpec = version.GateKeeperImage(instance.Spec.ACRDomain)
 		}
-		// apply the default namespace if the flag is empty or missing
-		namespace := instance.Spec.OperatorFlags.GetWithDefault(controllerNamespace, defaultNamespace)
 
 		deployConfig := &config.GuardRailsDeploymentConfig{
 			Pullspec:  pullSpec,
-			Namespace: namespace,
+			Namespace: instance.Spec.OperatorFlags.GetWithDefault(controllerNamespace, defaultNamespace),
+
+			ManagerRequestsCPU: instance.Spec.OperatorFlags.GetWithDefault(controllerManagerRequestsCPU, defaultManagerRequestsCPU),
+			ManagerLimitCPU:    instance.Spec.OperatorFlags.GetWithDefault(controllerManagerLimitCPU, defaultManagerLimitCPU),
+			ManagerRequestsMem: instance.Spec.OperatorFlags.GetWithDefault(controllerManagerRequestsMem, defaultManagerRequestsMem),
+			ManagerLimitMem:    instance.Spec.OperatorFlags.GetWithDefault(controllerManagerLimitMem, defaultManagerLimitMem),
+
+			AuditRequestsCPU: instance.Spec.OperatorFlags.GetWithDefault(controllerAuditRequestsCPU, defaultAuditRequestsCPU),
+			AuditLimitCPU:    instance.Spec.OperatorFlags.GetWithDefault(controllerAuditLimitCPU, defaultAuditLimitCPU),
+			AuditRequestsMem: instance.Spec.OperatorFlags.GetWithDefault(controllerAuditRequestsMem, defaultAuditRequestsMem),
+			AuditLimitMem:    instance.Spec.OperatorFlags.GetWithDefault(controllerAuditLimitMem, defaultAuditLimitMem),
 		}
 
 		// Deploy the GateKeeper manifests and config
@@ -145,65 +157,58 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{}, fmt.Errorf("GateKeeper deployment timed out on Ready: %w", err)
 		}
 
-		// TODO: check if can move setup/remove logic to deployer
-		// policyConfig := &config.GuardRailsPolicyConfig{}
-
-		// Deploy the GateKeeper policies
-		// err = r.gkPolicy.CreateOrUpdate(ctx, instance, policyConfig)
-		// if err != nil {
-		// 	return reconcile.Result{}, err
-		// }
-
-		err = r.setupPolicy(templatePath)
-		if err != nil {
-			logrus.Printf("\x1b[%dm guardrails:: reconcile error setup template %s\x1b[0m", 31, err.Error())
-			return reconcile.Result{}, err
+		policyConfig := &config.GuardRailsPolicyConfig{}
+		if r.gkPolicyTemplate != nil && r.gkPolicyConstraint != nil {
+			logrus.Printf("\x1b[%dm guardrails:: creating gkPolicyTemplate for %v\x1b[0m", 31, r.gkPolicyTemplate)
+			// Deploy the GateKeeper policies templates
+			err = r.gkPolicyTemplate.CreateOrUpdate(ctx, instance, policyConfig)
+			if err != nil {
+				logrus.Printf("\x1b[%dm guardrails:: reconcile error setup template %s\x1b[0m", 31, err.Error())
+				return reconcile.Result{}, err
+			}
+			logrus.Printf("\x1b[%dm guardrails:: creating gkPolicyConstraint for %v\x1b[0m", 31, r.gkPolicyConstraint)
+			// Deploy the GateKeeper policies contraints
+			err = r.gkPolicyConstraint.CreateOrUpdate(ctx, instance, policyConfig)
+			if err != nil {
+				logrus.Printf("\x1b[%dm guardrails:: reconcile error setup constraints %s\x1b[0m", 31, err.Error())
+				return reconcile.Result{}, err
+			}
 		}
-
-		err = r.setupPolicy(constraintspath)
-		if err != nil {
-			logrus.Printf("\x1b[%dm guardrails:: reconcile error setup constraints %s\x1b[0m", 31, err.Error())
-			return reconcile.Result{}, err
-		}
-
-		// // Check that GuardRails has become ready, wait up to readinessTimeout (default 5min)
-		// timeoutCtx, cancel = context.WithTimeout(ctx, r.readinessTimeout)
+		// TODO: need to find a way to check if gatekeeper policies have been deployed successfully
+		// Check that GuardRails policies has become ready, wait up to readinessTimeout (default 5min)
+		// timeoutPolicyCtx, cancel := context.WithTimeout(ctx, r.readinessTimeout)
 		// defer cancel()
 
 		// err = wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
-		// 	// TODO: fix policy checks
-		// 	if ready, err := r.gkPolicy.IsReady(ctx, policyConfig.Namespace, "gk-policy-1"); !ready || err != nil {
+		// 	if ready, err := r.gkPolicyTemplate.IsReady(ctx, "", "arodenylabels"); !ready || err != nil { //  ConstraintTemplate
 		// 		return ready, err
 		// 	}
-		// 	return r.gkPolicy.IsReady(ctx, policyConfig.Namespace, "gk-policy-2")
-		// }, timeoutCtx.Done())
+		// 	return r.gkPolicyConstraint.IsReady(ctx, "", "aro-machines-deny") // arodenylabels
+		// }, timeoutPolicyCtx.Done())
 		// if err != nil {
 		// 	return reconcile.Result{}, fmt.Errorf("GateKeeper policy timed out on Ready: %w", err)
 		// }
 
+		// todo: start a timer to periodically re-enforce gatekeeper policies, in case they are deleted by users?
+
 	} else if strings.EqualFold(managed, "false") {
-		// TODO: check if can move setup/remove logic to deployer
-		// err := r.gkPolicy.Remove(ctx, config.GuardRailsPolicyConfig{})
-		// if err != nil {
-		// 	return reconcile.Result{}, err
-		// }
-		err = r.removePolicy(constraintspath)
-		if err != nil {
-			logrus.Printf("\x1b[%dm guardrails:: reconcile error removing constraints %s\x1b[0m", 31, err.Error())
-			return reconcile.Result{}, err
+		if r.gkPolicyTemplate != nil && r.gkPolicyConstraint != nil {
+			err := r.gkPolicyConstraint.Remove(ctx, config.GuardRailsPolicyConfig{})
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+			err = r.gkPolicyTemplate.Remove(ctx, config.GuardRailsPolicyConfig{})
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 		}
-
-		err = r.removePolicy(templatePath)
-		if err != nil {
-			logrus.Printf("\x1b[%dm guardrails:: reconcile error removing template %s\x1b[0m", 31, err.Error())
-			return reconcile.Result{}, err
-		}
-
 		err = r.deployer.Remove(ctx, config.GuardRailsDeploymentConfig{Namespace: instance.Spec.OperatorFlags.GetWithDefault(controllerNamespace, defaultNamespace)})
 		if err != nil {
 			logrus.Printf("\x1b[%dm guardrails:: reconcile error removing deployment %s\x1b[0m", 31, err.Error())
 			return reconcile.Result{}, err
 		}
+
+		// todo: disable the gatekeeper policies
 	}
 
 	return reconcile.Result{}, nil
@@ -212,8 +217,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 // SetupWithManager setup our manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
-	r.restConfig = mgr.GetConfig()
-	// r.log = mgr.GetLogger()
 	pullSecretPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return (o.GetName() == pullSecretName.Name && o.GetNamespace() == pullSecretName.Namespace)
 	})
@@ -249,116 +252,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r); err != nil {
 		logrus.Printf("\x1b[%dm guardrails::SetupWithManager deployment failed %v 0\x1b[0m", 31, err)
 		return err
-	}
-	return nil
-}
-
-func (r *Reconciler) setupPolicy(path string) error {
-	ctx := context.Background()
-	template, err := template.ParseFS(policyFiles, filepath.Join(path, "*"))
-	if err != nil {
-		return err
-	}
-
-	buffer := new(bytes.Buffer)
-	for _, templ := range template.Templates() {
-		err := templ.Execute(buffer, nil)
-		if err != nil {
-			return err
-		}
-		//logrus.Printf("\x1b[%dm buffer %v \x1b[0m", 31, buffer.String())
-		// data, err := io.ReadAll(buffer)
-		// if err != nil {
-		// 	return err
-		// }
-		data := buffer.Bytes()
-		logrus.Printf("\x1b[%dm guardrails:: setting up template %v: %s \x1b[0m", 31, templ, string(data))
-		obj := &unstructured.Unstructured{}
-		json, err := yaml.YAMLToJSON(data)
-		if err != nil {
-			return err
-		}
-		err = obj.UnmarshalJSON(json)
-		if err != nil {
-			return err
-		}
-		logrus.Println("Unmarshal result: \n", obj)
-
-		// TODO fix logrus.Entry
-		// is it ok to use 	log := utillog.GetLogger()  ???
-		// as it seems no way to convert logr.logger to logrus.Entry?
-		gvrResolver, err := dynamichelper.NewGVRResolver(r.logentry, r.restConfig)
-		if err != nil {
-			return err
-		}
-
-		dyn, err := dynamic.NewForConfig(r.restConfig)
-		if err != nil {
-			return err
-		}
-
-		gvr, err := gvrResolver.Resolve(obj.GroupVersionKind().GroupKind().String(), obj.GroupVersionKind().Version)
-		if err != nil {
-			return err
-		}
-
-		// is update needed here?
-		// _, err = dyn.Resource(*gvr).Namespace(obj.GetNamespace()).Update(ctx, obj, metav1.UpdateOptions{})
-		// if !kerrors.IsNotFound(err) {
-		// 	return err
-		// }
-		if _, err = dyn.Resource(*gvr).Namespace(obj.GetNamespace()).Create(ctx, obj, metav1.CreateOptions{}); err != nil && !strings.Contains(err.Error(), "already exists") {
-			return err
-		}
-	}
-	return nil
-}
-
-func (r *Reconciler) removePolicy(path string) error {
-	ctx := context.Background()
-	template, err := template.ParseFS(policyFiles, filepath.Join(path, "*"))
-	if err != nil {
-		return err
-	}
-
-	buffer := new(bytes.Buffer)
-	for _, templ := range template.Templates() {
-		err := templ.Execute(buffer, nil)
-		if err != nil {
-			return err
-		}
-		data := buffer.Bytes()
-		logrus.Printf("\x1b[%dm guardrails:: removing template %v: %s \x1b[0m", 31, templ, string(data))
-		obj := &unstructured.Unstructured{}
-		json, err := yaml.YAMLToJSON(data)
-		if err != nil {
-			return err
-		}
-		err = obj.UnmarshalJSON(json)
-		if err != nil {
-			return err
-		}
-		logrus.Println("Unmarshal result: \n", obj)
-
-		// TODO fix logrus.Entry
-		gvrResolver, err := dynamichelper.NewGVRResolver(r.logentry, r.restConfig)
-		if err != nil {
-			return err
-		}
-
-		dyn, err := dynamic.NewForConfig(r.restConfig)
-		if err != nil {
-			return err
-		}
-
-		gvr, err := gvrResolver.Resolve(obj.GroupVersionKind().GroupKind().String(), obj.GroupVersionKind().Version)
-		if err != nil {
-			return err
-		}
-
-		if err = dyn.Resource(*gvr).Namespace(obj.GetNamespace()).Delete(ctx, obj.GetName(), metav1.DeleteOptions{}); err != nil {
-			return err
-		}
 	}
 	return nil
 }

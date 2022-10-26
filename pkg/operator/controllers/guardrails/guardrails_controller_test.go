@@ -39,15 +39,31 @@ func TestGuardRailsReconciler(t *testing.T) {
 		{
 			name: "managed",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:   "true",
-				controllerManaged:   "true",
-				controllerPullSpec:  "wonderfulPullspec",
-				controllerNamespace: "wonderful-namespace",
+				controllerEnabled:            "true",
+				controllerManaged:            "true",
+				controllerPullSpec:           "wonderfulPullspec",
+				controllerNamespace:          "wonderful-namespace",
+				controllerManagerRequestsCPU: "10m",
+				controllerManagerLimitCPU:    "100m",
+				controllerManagerRequestsMem: "25Mi",
+				controllerManagerLimitMem:    "51Mi",
+				controllerAuditRequestsCPU:   "10m",
+				controllerAuditLimitCPU:      "100m",
+				controllerAuditRequestsMem:   "25Mi",
+				controllerAuditLimitMem:      "51Mi",
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.GuardRailsDeploymentConfig{
-					Pullspec:  "wonderfulPullspec",
-					Namespace: "wonderful-namespace",
+					Pullspec:           "wonderfulPullspec",
+					Namespace:          "wonderful-namespace",
+					ManagerRequestsCPU: "10m",
+					ManagerLimitCPU:    "100m",
+					ManagerRequestsMem: "25Mi",
+					ManagerLimitMem:    "51Mi",
+					AuditRequestsCPU:   "10m",
+					AuditLimitCPU:      "100m",
+					AuditRequestsMem:   "25Mi",
+					AuditLimitMem:      "51Mi",
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), "wonderful-namespace", "gatekeeper-audit").Return(true, nil)
@@ -62,8 +78,16 @@ func TestGuardRailsReconciler(t *testing.T) {
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.GuardRailsDeploymentConfig{
-					Pullspec:  "quay.io/jeyuan/gatekeeper",
-					Namespace: "openshift-azure-guardrails",
+					Pullspec:           "quay.io/jeyuan/gatekeeper",
+					Namespace:          "openshift-azure-guardrails",
+					ManagerRequestsCPU: "100m",
+					ManagerLimitCPU:    "1000m",
+					ManagerRequestsMem: "256Mi",
+					ManagerLimitMem:    "512Mi",
+					AuditRequestsCPU:   "100m",
+					AuditLimitCPU:      "1000m",
+					AuditRequestsMem:   "256Mi",
+					AuditLimitMem:      "512Mi",
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), "openshift-azure-guardrails", "gatekeeper-audit").Return(true, nil)
@@ -79,8 +103,16 @@ func TestGuardRailsReconciler(t *testing.T) {
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.GuardRailsDeploymentConfig{
-					Pullspec:  "wonderfulPullspec",
-					Namespace: "openshift-azure-guardrails",
+					Pullspec:           "wonderfulPullspec",
+					Namespace:          "openshift-azure-guardrails",
+					ManagerRequestsCPU: "100m",
+					ManagerLimitCPU:    "1000m",
+					ManagerRequestsMem: "256Mi",
+					ManagerLimitMem:    "512Mi",
+					AuditRequestsCPU:   "100m",
+					AuditLimitCPU:      "1000m",
+					AuditRequestsMem:   "256Mi",
+					AuditLimitMem:      "512Mi",
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
@@ -154,9 +186,11 @@ func TestGuardRailsReconciler(t *testing.T) {
 			}
 
 			r := &Reconciler{
-				arocli:            arocli,
-				kubernetescli:     kubecli,
-				deployer:          deployer,
+				arocli:        arocli,
+				kubernetescli: kubecli,
+				deployer:      deployer,
+				// gkPolicyTemplate:   mock_deployer.NewMockDeployer(controller),
+				// gkPolicyConstraint: mock_deployer.NewMockDeployer(controller),
 				readinessTimeout:  0 * time.Second,
 				readinessPollTime: 1 * time.Second,
 			}

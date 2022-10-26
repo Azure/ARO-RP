@@ -23,6 +23,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
+	"github.com/sirupsen/logrus"
 )
 
 type Deployer interface {
@@ -68,9 +69,16 @@ func (depl *deployer) Template(data interface{}, fsys fs.FS) ([]kruntime.Object,
 
 		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(bytes, nil, nil)
 		if err != nil {
-			return nil, err
+			// for unrecognised ones try unstructured way
+			uns := dynamichelper.UnstructuredObj{}
+			err := uns.DecodeUnstructured(bytes)
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, uns)
+		} else {
+			results = append(results, obj)
 		}
-		results = append(results, obj)
 		buffer.Reset()
 	}
 
@@ -80,16 +88,21 @@ func (depl *deployer) Template(data interface{}, fsys fs.FS) ([]kruntime.Object,
 func (depl *deployer) CreateOrUpdate(ctx context.Context, cluster *arov1alpha1.Cluster, config interface{}) error {
 	resources, err := depl.Template(config, depl.fs)
 	if err != nil {
+		logrus.Printf("\x1b[%dm Template failed %v\x1b[0m", 31, err)
 		return err
 	}
 
-	err = dynamichelper.SetControllerReferences(resources, cluster)
-	if err != nil {
-		return err
-	}
+	// this guy fails with "object does not implement the Object interfaces"
+	// how do deal with this? is it necessary?
+	// err = dynamichelper.SetControllerReferences(resources, cluster)
+	// if err != nil {
+	// 	logrus.Printf("\x1b[%dm SetControllerReferences failed %v\x1b[0m", 31, err)
+	// 	return err
+	// }
 
 	err = dynamichelper.Prepare(resources)
 	if err != nil {
+		logrus.Printf("\x1b[%dm Prepare failed %v\x1b[0m", 31, err)
 		return err
 	}
 
@@ -106,7 +119,16 @@ func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
 	for _, obj := range resources {
 		// delete any deployments we have
 		if deployment, ok := obj.(*appsv1.Deployment); ok {
+			logrus.Printf("\x1b[%dm guardrails:: deployer removing %s ns %s\x1b[0m", 31, deployment.Name, deployment.Namespace)
 			err := depl.dh.EnsureDeleted(ctx, "Deployment", deployment.Namespace, deployment.Name)
+			// Don't error out because then we might delete some resources and not others
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+		if uns, ok := obj.(dynamichelper.UnstructuredObj); ok {
+			logrus.Printf("\x1b[%dm guardrails:: deployer removing UnstructuredObj kind %s name %s\x1b[0m", 31, uns.GroupVersionKind().GroupKind().String(), uns.GetName())
+			err := depl.dh.EnsureDeleted(ctx, uns.GroupVersionKind().GroupKind().String(), uns.GetNamespace(), uns.GetName())
 			// Don't error out because then we might delete some resources and not others
 			if err != nil {
 				errs = append(errs, err)
@@ -115,7 +137,7 @@ func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
 	}
 
 	if len(errs) != 0 {
-		errContent := []string{"error removing deployment:"}
+		errContent := []string{"error removing deployment/unstructured:"}
 		for _, err := range errs {
 			errContent = append(errContent, err.Error())
 		}

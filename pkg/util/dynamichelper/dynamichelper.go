@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
@@ -39,8 +40,9 @@ type Interface interface {
 type dynamicHelper struct {
 	GVRResolver
 
-	log     *logrus.Entry
-	restcli rest.Interface
+	log           *logrus.Entry
+	restcli       rest.Interface
+	dynamicClient dynamic.Interface
 }
 
 func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
@@ -50,6 +52,11 @@ func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 
 	var err error
 	dh.GVRResolver, err = NewGVRResolver(log, restconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	dh.dynamicClient, err = dynamic.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
 	}
@@ -66,15 +73,45 @@ func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 	return dh, nil
 }
 
+func (dh *dynamicHelper) resolve(groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
+
+	if err := dh.Refresh(); err != nil {
+		logrus.Printf("\x1b[%dm dynamicHelper Refresh failed with %v\x1b[0m", 31, err)
+		return nil, err
+	}
+	return dh.Resolve(groupKind, optionalVersion)
+}
+
 func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error {
-	gvr, err := dh.Resolve(groupKind, "")
+	gvr, err := dh.resolve(groupKind, "")
 	if err != nil {
 		return err
 	}
 
+	// gatekeeper policies is unstructured and should be deleted differently
+	if isKindUnstructured(groupKind) {
+		logrus.Printf("\x1b[%dm guardrails:: EnsureDeleted deleteUnstructuredObj deleting %s ns %s kind %s\x1b[0m", 31, name, namespace, groupKind)
+		err = dh.deleteUnstructuredObj(ctx, groupKind, namespace, name)
+		if err == nil {
+			logrus.Printf("\x1b[%dm guardrails:: EnsureDeleted deletion succeed for %s\x1b[0m", 31, name)
+			return nil
+		}
+
+		if kerrors.IsNotFound(err) {
+			logrus.Printf("\x1b[%dm guardrails:: EnsureDeleted deletion obj not found for %s\x1b[0m", 31, name)
+			return nil
+		}
+
+		logrus.Printf("\x1b[%dm guardrails:: EnsureDeleted deleteUnstructuredObj failed with %v, try old way now\x1b[0m", 31, err)
+		return err
+	}
+	logrus.Printf("\x1b[%dm guardrails:: EnsureDeleted restcli.Delete deleting %s ns %s kind %s\x1b[0m", 31, name, namespace, groupKind)
 	err = dh.restcli.Delete().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Error()
 	if kerrors.IsNotFound(err) {
 		err = nil
+	}
+	if err != nil {
+		logrus.Printf("\x1b[%dm guardrails:: EnsureDeleted old way failed with %v\x1b[0m", 31, err)
 	}
 	return err
 }
@@ -83,12 +120,57 @@ func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace
 // objects that need to be updated.
 func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) error {
 	for _, o := range objs {
+		if un, ok := o.(UnstructuredObj); ok {
+			err := dh.createUnstructuredObj(ctx, &un)
+			if err != nil {
+				logrus.Printf("\x1b[%dm createUnstructuredObj failed %v\x1b[0m", 31, err)
+				return err
+			}
+			continue
+		}
 		err := dh.ensureOne(ctx, o)
 		if err != nil {
+			logrus.Printf("\x1b[%dm ensureOne failed %v\x1b[0m", 31, err)
 			return err
 		}
 	}
 
+	return nil
+}
+
+func (dh *dynamicHelper) createUnstructuredObj(ctx context.Context, o *UnstructuredObj) error {
+	logrus.Printf("\x1b[%dm guardrails:: createUnstructuredObj setup policy %v\x1b[0m", 31, o.obj)
+
+	gvr, err := dh.resolve(o.obj.GroupVersionKind().GroupKind().String(), o.obj.GroupVersionKind().Version)
+	if err != nil {
+		return err
+	}
+
+	// is update needed here?
+	// _, err = dh.dynamicClient.Resource(*gvr).Namespace(o.obj.GetNamespace()).Update(ctx, obj, metav1.UpdateOptions{})
+	// if !kerrors.IsNotFound(err) {
+	// 	return err
+	// }
+
+	if _, err = dh.dynamicClient.Resource(*gvr).Namespace(o.obj.GetNamespace()).Create(ctx, &o.obj, metav1.CreateOptions{}); err != nil && !strings.Contains(err.Error(), "already exists") {
+		logrus.Printf("\x1b[%dm createUnstructuredObj Create failed %v\x1b[0m", 31, err)
+		return err
+	}
+	return nil
+}
+
+func (dh *dynamicHelper) deleteUnstructuredObj(ctx context.Context, groupKind, namespace, name string) error {
+
+	gvr, err := dh.resolve(groupKind, "")
+	if err != nil {
+		logrus.Printf("\x1b[%dm deleteUnstructuredObj Resolve failed %v\x1b[0m", 31, err)
+		return err
+	}
+
+	if err = dh.dynamicClient.Resource(*gvr).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil && !kerrors.IsNotFound(err) {
+		logrus.Printf("\x1b[%dm deleteUnstructuredObj Resource delete failed %v\x1b[0m", 31, err)
+		return err
+	}
 	return nil
 }
 

@@ -63,11 +63,11 @@ spec:
             port: 9090
         resources:
           limits:
-            cpu: 1000m
-            memory: 512Mi
+            cpu: {{.AuditLimitCPU}}
+            memory: {{.AuditLimitMem}}
           requests:
-            cpu: 100m
-            memory: 256Mi
+            cpu: {{.AuditRequestsCPU}}
+            memory: {{.AuditRequestsMem}}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
