@@ -171,7 +171,6 @@ function App() {
     const onRegions = (result: AxiosResponse | null) => {
       if (result?.status === 200) {
         setRegions(result.data)
-        csrfRef.current = result.data.csrf
       } else {
         setError(result)
       }
