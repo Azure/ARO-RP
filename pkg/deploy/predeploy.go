@@ -126,11 +126,7 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 	// key the decision to deploy NSGs on the existence of the gateway
 	// predeploy.  We do this in order to refresh the RP NSGs when the gateway
 	// is deployed for the first time.
-
-	// TODO: *** REVERT AFTER RELEASE ***
-	// *** Forcing this to true here to ensure the rp_in_geneva NSG gets updated with GenevaActions service tag.
-	// *** Once the NSGs get updated, revert this change (set the isCreate declaration back to `var isCreate bool`) so that the NSGs aren't getting redeployed every release.
-	var isCreate = true
+	isCreate := false
 	_, err = d.deployments.Get(ctx, d.config.GatewayResourceGroupName, strings.TrimSuffix(generator.FileGatewayProductionPredeploy, ".json"))
 	if isDeploymentNotFoundError(err) {
 		isCreate = true
