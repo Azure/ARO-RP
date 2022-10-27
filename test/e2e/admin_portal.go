@@ -15,7 +15,12 @@ import (
 )
 
 var _ = Describe("Admin Portal E2E Testing", func() {
-	BeforeEach(skipIfNotInDevelopmentEnv)
+	BeforeEach(
+		func() {
+			skipIfNotInDevelopmentEnv()
+			skipIfDockerNotWorking()
+		},
+	)
 	var wdPoint *selenium.WebDriver
 	var wd selenium.WebDriver
 	var host string
