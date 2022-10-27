@@ -17,9 +17,8 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"  //nolint
-	. "github.com/onsi/gomega"     //nolint
-	. "github.com/tebeka/selenium" //nolint
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -27,6 +26,7 @@ import (
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	"github.com/tebeka/selenium"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -83,7 +83,7 @@ func skipIfNotInDevelopmentEnv() {
 	}
 }
 
-func SaveScreenshotAndExit(wd WebDriver, e error) {
+func SaveScreenshotAndExit(wd selenium.WebDriver, e error) {
 	log.Infof("Error : %s", e.Error())
 	log.Info("Taking Screenshot and saving page source")
 	imageBytes, err := wd.Screenshot()
@@ -151,7 +151,7 @@ func SaveScreenshotAndExit(wd WebDriver, e error) {
 	panic(e)
 }
 
-func adminPortalSessionSetup() (string, *WebDriver) {
+func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 	const (
 		hubPort  = 4444
 		hostPort = 8444
@@ -159,11 +159,11 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 
 	os.Setenv("SE_SESSION_REQUEST_TIMEOUT", "9000")
 
-	caps := Capabilities{
+	caps := selenium.Capabilities{
 		"browserName":         "MicrosoftEdge",
 		"acceptInsecureCerts": true,
 	}
-	wd := WebDriver(nil)
+	wd := selenium.WebDriver(nil)
 
 	_, err := url.ParseRequestURI(fmt.Sprintf("https://localhost:%d", hubPort))
 	if err != nil {
@@ -171,7 +171,7 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 	}
 
 	for i := 0; i < 10; i++ {
-		wd, err = NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", hubPort))
+		wd, err = selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", hubPort))
 		if wd != nil {
 			err = nil
 			break
@@ -207,7 +207,7 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 
 	log.Infof("Session Output : %s\n", os.Getenv("SESSION"))
 
-	cookie := &Cookie{
+	cookie := &selenium.Cookie{
 		Name:   "session",
 		Value:  os.Getenv("SESSION"),
 		Expiry: math.MaxUint32,

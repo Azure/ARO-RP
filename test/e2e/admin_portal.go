@@ -7,16 +7,17 @@ import (
 	"os"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"                        //nolint
-	. "github.com/onsi/gomega"                           //nolint
-	. "github.com/serge1peshcoff/selenium-go-conditions" //nolint
-	. "github.com/tebeka/selenium"                       //nolint
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	conditions "github.com/serge1peshcoff/selenium-go-conditions"
+	"github.com/tebeka/selenium"
 )
 
 var _ = Describe("Admin Portal E2E Testing", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
-	var wdPoint *WebDriver
-	var wd WebDriver
+	var wdPoint *selenium.WebDriver
+	var wd selenium.WebDriver
 	var host string
 
 	JustBeforeEach(func() {
@@ -33,12 +34,12 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	})
 
 	It("Should be able to populate cluster data correctly", func() {
-		err := wd.Wait(ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))
+		err := wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[data-automation-key='name']"))
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
 
-		cluster, err := wd.FindElement(ByCSSSelector, "div[data-automation-key='name']")
+		cluster, err := wd.FindElement(selenium.ByCSSSelector, "div[data-automation-key='name']")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
@@ -47,9 +48,9 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	})
 
 	It("Should be able to filter cluster data correctly", func() {
-		wd.Wait(ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))
+		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[data-automation-key='name']"))
 
-		filter, err := wd.FindElement(ByCSSSelector, "input[placeholder='Filter on resource ID']")
+		filter, err := wd.FindElement(selenium.ByCSSSelector, "input[placeholder='Filter on resource ID']")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
@@ -57,8 +58,8 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		// Set filter so it doesn't match cluster name
 		filter.SendKeys("Incorrect Cluster")
 
-		wd.Wait(ElementIsLocated(ByID, "ClusterCount"))
-		text, err := wd.FindElement(ByID, "ClusterCount")
+		wd.Wait(conditions.ElementIsLocated(selenium.ByID, "ClusterCount"))
+		text, err := wd.FindElement(selenium.ByID, "ClusterCount")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
@@ -69,12 +70,12 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	It("Should be able to populate cluster info panel correctly", func() {
 		const CLUSTER_INFO_HEADINGS = 17
 
-		err := wd.Wait(ElementIsLocated(ByCSSSelector, "div[data-automation-key='name']"))
+		err := wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[data-automation-key='name']"))
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
 
-		cluster, err := wd.FindElement(ByCSSSelector, "div[data-automation-key='name']")
+		cluster, err := wd.FindElement(selenium.ByCSSSelector, "div[data-automation-key='name']")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
@@ -84,12 +85,12 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 			SaveScreenshotAndExit(wd, err)
 		}
 
-		err = wd.WaitWithTimeout(ElementIsLocated(ByID, "ClusterDetailCell"), 2*time.Minute)
+		err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailCell"), 2*time.Minute)
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
 
-		panelSpans, err := wd.FindElements(ByID, "ClusterDetailCell")
+		panelSpans, err := wd.FindElements(selenium.ByID, "ClusterDetailCell")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
@@ -129,23 +130,23 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	})
 
 	It("Should be able to copy cluster resource id", func() {
-		wd.Wait(ElementIsLocated(ByCSSSelector, "button[aria-label='Copy Resource ID']"))
+		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "button[aria-label='Copy Resource ID']"))
 
-		button, err := wd.FindElement(ByCSSSelector, "button[aria-label='Copy Resource ID']")
+		button, err := wd.FindElement(selenium.ByCSSSelector, "button[aria-label='Copy Resource ID']")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
 
 		button.Click()
 
-		filter, err := wd.FindElement(ByCSSSelector, "input[placeholder='Filter on resource ID']")
+		filter, err := wd.FindElement(selenium.ByCSSSelector, "input[placeholder='Filter on resource ID']")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
 
 		// Paste clipboard
 		filter.Click()
-		filter.SendKeys(ControlKey + "v")
+		filter.SendKeys(selenium.ControlKey + "v")
 		resourceId, err := filter.GetAttribute("value")
 
 		if err != nil {
@@ -156,35 +157,35 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	})
 
 	It("Should be able to open ssh panel and get ssh details", func() {
-		wd.Wait(ElementIsLocated(ByCSSSelector, "button[aria-label='SSH']"))
+		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "button[aria-label='SSH']"))
 
-		button, err := wd.FindElement(ByCSSSelector, "button[aria-label='SSH']")
+		button, err := wd.FindElement(selenium.ByCSSSelector, "button[aria-label='SSH']")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
 
 		button.Click()
 
-		wd.Wait(ElementIsLocated(ByID, "sshModal"))
-		wd.Wait(ElementIsLocated(ByID, "sshDropdown"))
+		wd.Wait(conditions.ElementIsLocated(selenium.ByID, "sshModal"))
+		wd.Wait(conditions.ElementIsLocated(selenium.ByID, "sshDropdown"))
 
-		sshDropdown, err := wd.FindElement(ByID, "sshDropdown")
+		sshDropdown, err := wd.FindElement(selenium.ByID, "sshDropdown")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
 
 		sshDropdown.Click()
 
-		wd.Wait(ElementIsLocated(ByID, "sshDropdown-list0"))
-		machine, err := wd.FindElement(ByID, "sshDropdown-list0")
+		wd.Wait(conditions.ElementIsLocated(selenium.ByID, "sshDropdown-list0"))
+		machine, err := wd.FindElement(selenium.ByID, "sshDropdown-list0")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
 
 		machine.Click()
 
-		wd.Wait(ElementIsLocated(ByID, "sshButton"))
-		requestBtn, err := wd.FindElement(ByID, "sshButton")
+		wd.Wait(conditions.ElementIsLocated(selenium.ByID, "sshButton"))
+		requestBtn, err := wd.FindElement(selenium.ByID, "sshButton")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
@@ -192,7 +193,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		requestBtn.Click()
 
 		// Test fails if these labels aren't present
-		err = wd.Wait(ElementIsLocated(ByID, "sshCommand"))
+		err = wd.Wait(conditions.ElementIsLocated(selenium.ByID, "sshCommand"))
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
