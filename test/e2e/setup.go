@@ -328,14 +328,16 @@ func tearDownSelenium(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, "docker", "stop", seleniumContainerName)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Fatalf("Error occurred stopping selenium container\n Output: %s\n Error: %s\n", output, err)
+		log.Printf("Error occurred stopping selenium container\n Output: %s\n Error: %s\n", output, err)
+		return err
 	}
 
 	log.Infof("Removing Selenium Grid container")
 	cmd = exec.CommandContext(ctx, "docker", "rm", seleniumContainerName)
 	output, err = cmd.CombinedOutput()
 	if err != nil {
-		log.Fatalf("Error occurred removing selenium grid container\n Output: %s\n Error: %s\n", output, err)
+		log.Printf("Error occurred removing selenium grid container\n Output: %s\n Error: %s\n", output, err)
+		return err
 	}
 
 	return nil
@@ -408,6 +410,6 @@ var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
 
 	if err := tearDown(context.Background()); err != nil {
-		panic(err)
+		log.Printf(err.Error())
 	}
 })
