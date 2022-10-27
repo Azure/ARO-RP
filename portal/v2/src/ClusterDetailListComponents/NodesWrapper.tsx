@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { AxiosResponse } from 'axios';
 import { FetchNodes } from '../Request';
 import { ICluster } from "../App"
-import { NodesComponent } from './Nodes';
+import { NodesListComponent } from './NodesList';
 import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from '@fluentui/react';
 import { nodesKey } from "../ClusterDetail";
 
@@ -51,7 +51,8 @@ export function NodesWrapper(props: {
 }) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
-  const state = useRef<NodesComponent>(null)
+  const state = useRef<NodesListComponent>(null)
+  
   const [fetching, setFetching] = useState("")
 
   const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
@@ -125,7 +126,7 @@ export function NodesWrapper(props: {
       } else {
         setError(result)
       }
-      setFetching(props.currentCluster.name)
+      setFetching(props.currentCluster.name) //  <----  Why are we updating 'fetching' here?
     }
 
     if (props.detailPanelSelected.toLowerCase() == nodesKey && 
@@ -136,12 +137,12 @@ export function NodesWrapper(props: {
       FetchNodes(props.currentCluster).then(onData)
     }
   }, [data, props.loaded, props.detailPanelSelected])
-
+  
   return (
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <NodesComponent nodes={data!} ref={state} clusterName={props.currentCluster != null ? props.currentCluster.name : ""}/>
+        <NodesListComponent nodes={data!} ref={state} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} />
       </Stack>
     </Stack>   
   )

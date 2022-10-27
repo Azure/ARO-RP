@@ -13,6 +13,7 @@ import {
   Separator,
   IStackStyles,
   Icon,
+  IconButton,
   IIconStyles,
 } from "@fluentui/react"
 import { AxiosResponse } from "axios"
@@ -36,13 +37,14 @@ const navStyles: Partial<INavStyles> = {
   },
 }
 
-const customPanelStyle: Partial<IPanelStyles> = {
-  root: { top: "40px", left: "225px" },
-  content: { paddingLeft: 30, paddingRight: 5 },
-  navigation: {
-    justifyContent: "flex-start",
-  },
-}
+
+// let customPanelStyle: Partial<IPanelStyles> = {
+//   root: { top: "40px", left: "225px" },
+//   content: { paddingLeft: 30, paddingRight: 5 },
+//   navigation: {
+//     justifyContent: "flex-start",
+//   },
+// }
 
 const headerStyle: Partial<IStackStyles> = {
   root: {
@@ -51,6 +53,15 @@ const headerStyle: Partial<IStackStyles> = {
     height: 48,
     paddingLeft: 30,
     marginBottom: 15,
+  },
+}
+
+const doubleChevronIconStyle: Partial<IStackStyles> = {
+  root: {
+    marginLeft: -30,
+    marginTop: -15,
+    height: "100%",
+    width: "100%",
   },
 }
 
@@ -86,6 +97,13 @@ export function ClusterDetailPanel(props: {
   const [isOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false) // panel controls
   const [dataLoaded, setDataLoaded] = useState<boolean>(false)
   const [detailPanelVisible, setdetailPanelVisible] = useState<string>("Overview")
+  const [customPanelStyle, setcustomPanelStyle] = useState<Partial<IPanelStyles>>({
+    root: { top: "40px", left: "225px" },
+    content: { paddingLeft: 30, paddingRight: 5 },
+    navigation: {
+      justifyContent: "flex-start",
+    },
+  })
 
   const errorBar = (): any => {
     return (
@@ -199,10 +217,40 @@ export function ClusterDetailPanel(props: {
     }
   }
 
+  const [doubleChevronIconProp, setdoubleChevronIconProp] = useState({ iconName: "doublechevronleft"})
+  function _onClickDoubleChevronIcon() {
+    let customPanelStyleRootLeft
+    if (doubleChevronIconProp.iconName == "doublechevronright") {
+      customPanelStyleRootLeft = "225px"
+      setdoubleChevronIconProp({ iconName: "doublechevronleft"})
+    } else {
+      customPanelStyleRootLeft = "0px"
+      setdoubleChevronIconProp({ iconName: "doublechevronright"})
+    }
+
+    setcustomPanelStyle({
+      root: { top: "40px", left: customPanelStyleRootLeft },
+      content: { paddingLeft: 30, paddingRight: 5 },
+      navigation: {
+        justifyContent: "flex-start",
+      },
+    })
+  }
+
+
   const onRenderHeader = (
   ): ReactElement => {
     return (
       <>
+        <Stack styles={headerStyle} horizontal>
+          <Stack.Item styles={doubleChevronIconStyle}>
+            <IconButton
+              onClick={_onClickDoubleChevronIcon}
+              iconProps={doubleChevronIconProp}
+            />
+          </Stack.Item>
+        </Stack>
+
         <Stack styles={headerStyle} horizontal>
           <Stack.Item>
             <Icon styles={headerIconStyles} iconName="openshift-svg"></Icon>

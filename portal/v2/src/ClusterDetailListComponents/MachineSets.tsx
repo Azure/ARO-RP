@@ -1,5 +1,5 @@
 import { Component } from "react"
-import { Stack, Text, StackItem, Pivot, PivotItem, IStackItemStyles, } from '@fluentui/react';
+import { Stack, StackItem, PivotItem, IStackItemStyles, } from '@fluentui/react';
 import { contentStackStylesNormal } from "../App";
 import { InfoList } from "./InfoList"
 import { IMachineSet } from "./MachineSetsWrapper";
@@ -7,6 +7,7 @@ import { IMachineSet } from "./MachineSetsWrapper";
 interface MachineSetsComponentProps {
     machineSets: any
     clusterName: string
+    machineSetName: string
 }
 
 const stackItemStyles: IStackItemStyles = {
@@ -27,19 +28,17 @@ const MachineSetDetails: IMachineSet = {
 }
 
 interface IMachineSetsState {
-machineSets: IMachineSet[]
+    machineSets: IMachineSet[]
 }
 
-const renderMachineSets = (machineSets: IMachineSet[]) => {
-    return machineSets.map(machineSet => {
-        return <PivotItem key={machineSet.name} headerText={machineSet.name}>
-                    <Stack styles={stackItemStyles}>
-                        <StackItem>
-                            <InfoList headers={MachineSetDetails} object={machineSet} title={machineSet.name!} titleSize="large"/>
-                        </StackItem>
-                    </Stack>
-            </PivotItem>;
-    });
+const renderMachineSets = (machineSet: IMachineSet) => {
+    return <PivotItem key={machineSet.name} headerText={machineSet.name}>
+                <Stack styles={stackItemStyles}>
+                    <StackItem>
+                        <InfoList headers={MachineSetDetails} object={machineSet} title={machineSet.name!} titleSize="large"/>
+                    </StackItem>
+                </Stack>
+        </PivotItem>;
 };
 
 export class MachineSetsComponent extends Component<MachineSetsComponentProps, IMachineSetsState> {
@@ -52,14 +51,22 @@ export class MachineSetsComponent extends Component<MachineSetsComponentProps, I
         }
     }
 
+    private extractCurrentMachineSet = (machineSetName: string): IMachineSet => {
+        let machineSetTemp: IMachineSet
+        this.state.machineSets.forEach((machineSet: IMachineSet) => {
+            if (machineSet.name === machineSetName) {
+                machineSetTemp = machineSet
+                return
+            }
+        })
+        return machineSetTemp!
+    }
+
     public render() {
         return (
         <Stack styles={contentStackStylesNormal}>
-            <Text variant="xxLarge">{this.props.clusterName}</Text>
             <Stack>
-                <Pivot linkFormat={'tabs'} overflowBehavior={'menu'}>
-                    {renderMachineSets(this.state.machineSets)}
-                </Pivot>
+                {renderMachineSets(this.extractCurrentMachineSet(this.props.machineSetName))}
             </Stack>
         </Stack>
         )

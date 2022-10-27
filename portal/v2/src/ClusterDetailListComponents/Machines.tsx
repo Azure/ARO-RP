@@ -1,5 +1,5 @@
 import { Component } from "react"
-import { Stack, Text, StackItem, Pivot, PivotItem, IStackItemStyles, } from '@fluentui/react';
+import { Stack, StackItem, PivotItem, IStackItemStyles, } from '@fluentui/react';
 import { contentStackStylesNormal } from "../App";
 import { InfoList } from "./InfoList"
 import { IMachine } from "./MachinesWrapper";
@@ -7,6 +7,7 @@ import { IMachine } from "./MachinesWrapper";
 interface MachinesComponentProps {
     machines: any
     clusterName: string
+    machineName: string
 }
 
 const stackItemStyles: IStackItemStyles = {
@@ -15,7 +16,7 @@ const stackItemStyles: IStackItemStyles = {
     },
   };
 
-const MachineDetails: IMachine = {
+export const MachineDetails: IMachine = {
     createdTime: 'Created Time',
     lastUpdated: "Last Updated",
     errorReason: "Error Reason",
@@ -26,19 +27,18 @@ const MachineDetails: IMachine = {
 }
 
 interface IMachinesState {
-machines: IMachine[]
+    machines: IMachine[],
+    machineName: string,
 }
 
-const renderMachines = (machines: IMachine[]) => {
-    return machines.map(machine => {
-        return <PivotItem key={machine.name} headerText={machine.name}>
-                    <Stack styles={stackItemStyles}>
-                        <StackItem>
-                            <InfoList headers={MachineDetails} object={machine} title={machine.name!} titleSize="large"/>
-                        </StackItem>
-                    </Stack>
-            </PivotItem>;
-    });
+const renderMachines = (machine: IMachine) => {
+    return <PivotItem key={machine.name} headerText={machine.name}>
+                <Stack styles={stackItemStyles}>
+                    <StackItem>
+                        <InfoList headers={MachineDetails} object={machine} title={machine.name!} titleSize="large"/>
+                    </StackItem>
+                </Stack>
+        </PivotItem>;
 };
 
 export class MachinesComponent extends Component<MachinesComponentProps, IMachinesState> {
@@ -48,17 +48,24 @@ export class MachinesComponent extends Component<MachinesComponentProps, IMachin
 
         this.state = {
             machines: this.props.machines,
+            machineName: this.props.machineName,
         }
+    }
+
+    private extractCurrentMachine = (machineName: string): IMachine => {
+        this.state.machines.forEach((machine: IMachine) => {
+            if (machine.name === machineName) {
+                return machine
+            }
+        })
+        return this.state.machines[0]
     }
 
     public render() {
         return (
         <Stack styles={contentStackStylesNormal}>
-            <Text variant="xxLarge">{this.props.clusterName}</Text>
             <Stack>
-                <Pivot linkFormat={'tabs'} overflowBehavior={'menu'}>
-                    {renderMachines(this.state.machines)}
-                </Pivot>
+                {renderMachines(this.extractCurrentMachine(this.state.machineName))}
             </Stack>
         </Stack>
         )

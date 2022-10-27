@@ -1,12 +1,13 @@
 import { Component } from "react"
-import { Stack, Text, StackItem, Pivot, PivotItem, IStackItemStyles, } from '@fluentui/react';
+import { Stack, Text, StackItem, PivotItem, IStackItemStyles } from '@fluentui/react';
 import { ICondition, INode, INodeOverviewDetails, IResourceUsage, ITaint, IVolume} from "./NodesWrapper";
 import { contentStackStylesNormal } from "../App";
 import { InfoList, MultiInfoList } from "./InfoList"
 
-interface NodesComponentProps {
+export interface NodesComponentProps {
     nodes: any
     clusterName: string
+    nodeName: string
 }
 
 const stackItemStyles: IStackItemStyles = {
@@ -41,8 +42,10 @@ const VolumeDetails: IVolume = {
     Path: "Device Path"
 }
 
-interface INodesState {
-nodes: INode[]
+export interface INodesState {
+    nodes: INode[]
+    clusterName: string
+    nodeName: string
 }
 
 const HeadersFromStringMap = (items: Map<string,string>) => {
@@ -63,9 +66,8 @@ const ObjectFromStringMap = (items: Map<string,string>) => {
     return newItems
 }
 
-const renderNodes = (nodes: INode[]) => {
-    return nodes.map(node => {
-        return <PivotItem key={node.name} headerText={node.name}>
+const renderNodes = (node: INode) => {    
+    return <PivotItem key={node.name} headerText={node.name}>
                 <Text variant="xLarge">{node.name}</Text>
                 <Stack horizontal grow>
                     <Stack styles={stackItemStyles}>
@@ -103,14 +105,25 @@ const renderNodes = (nodes: INode[]) => {
                     }
                 </Stack>
             </PivotItem>;
-    });
 };
 
-function PivotOverflowMenuExample(value: any) {
+function PivotOverflowMenuExample(props: {
+    nodes: any,
+    nodeName: string
+}) {   
+    let currentNode: INode
+    
+    props.nodes.forEach((node: INode) => {
+        if (node.name === props.nodeName) {
+            currentNode = node
+            return
+        }
+    })
+    
     return (
-            <Pivot linkFormat={'tabs'} overflowBehavior={'menu'}>
-                {renderNodes(value.nodes)}
-            </Pivot>
+            <>
+                {renderNodes(currentNode!)}
+            </>
     );
 }
 export class NodesComponent extends Component<NodesComponentProps, INodesState> {
@@ -120,15 +133,16 @@ export class NodesComponent extends Component<NodesComponentProps, INodesState> 
 
         this.state = {
             nodes: this.props.nodes,
+            clusterName: this.props.clusterName,
+            nodeName: this.props.nodeName
         }
     }
 
-    public render() {
+    public render() {        
         return (
         <Stack styles={contentStackStylesNormal}>
-            <Text variant="xxLarge">{this.props.clusterName}</Text>
             <Stack>
-                <PivotOverflowMenuExample nodes={this.state.nodes}/>
+                <PivotOverflowMenuExample nodes={this.state.nodes} nodeName={this.state.nodeName}/>
             </Stack>
         </Stack>
         )

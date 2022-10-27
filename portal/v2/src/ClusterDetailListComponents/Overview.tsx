@@ -111,7 +111,6 @@ export class OverviewComponent extends Component<OverviewComponentProps, IOvervi
             })
             return (
                 <Stack styles={contentStackStylesNormal}>
-                    <Text variant="xxLarge">{this.props.clusterName}</Text>
                     <Stack horizontal>
                         <Stack id="Headers" styles={KeyColumnStyle}>
                         {filteredHeaders.map((value: [string, any], index: number) => (

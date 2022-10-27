@@ -4,7 +4,7 @@ import { FetchMachineSets } from '../Request';
 import { ICluster } from "../App"
 import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from '@fluentui/react';
 import { machineSetsKey } from "../ClusterDetail";
-import { MachineSetsComponent } from "./MachineSets";
+import { MachineSetsListComponent } from "./MachineSetsList";
 
 export interface IMachineSet {
   name?: string,
@@ -14,6 +14,22 @@ export interface IMachineSet {
   replicas?: string,
   errorReason?: string,
   errorMessage?: string
+  publicLoadBalancerName?: string
+  subnet?: string
+  vmSize?: string
+  vNet?: string
+  accountStorageType?: string
+}
+
+export interface IOSDisk {
+  diskSettings: string,
+  diskSizeGB: string,
+  managedDisk: IManagedDisk,
+  osType: string
+}
+
+export interface IManagedDisk {
+  storageAccountType: string
 }
 
 export function MachineSetsWrapper(props: {
@@ -23,7 +39,7 @@ export function MachineSetsWrapper(props: {
 }) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
-  const state = useRef<MachineSetsComponent>(null)
+  const state = useRef<MachineSetsListComponent>(null)
   const [fetching, setFetching] = useState("")
 
   const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
@@ -55,7 +71,11 @@ export function MachineSetsWrapper(props: {
                                            desiredreplicas: number;
                                            replicas: number;
                                            errorreason: string;
-                                           errormessage: string;}) => {
+                                           errormessage: string;
+                                           publicloadbalancername: string;
+                                           subnet: string;
+                                           accountstoragetype: string;
+                                           vNet: string;}) => {
         const machineSet: IMachineSet = {
           name: element.name,
           type: element.type,
@@ -64,7 +84,12 @@ export function MachineSetsWrapper(props: {
           replicas: element.replicas.toString(),
           errorReason: element.errorreason,
           errorMessage: element.errormessage,
+          publicLoadBalancerName: element.publicloadbalancername,
+          subnet: element.subnet,
+          vNet: element.vNet,
+          accountStorageType: element.accountstoragetype
         }
+
         machineSetList.push(machineSet)
       });
       state.current.setState({ machineSets: machineSetList })
@@ -94,7 +119,7 @@ export function MachineSetsWrapper(props: {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <MachineSetsComponent machineSets={data!} ref={state} clusterName={props.currentCluster != null ? props.currentCluster.name : ""}/>
+        <MachineSetsListComponent machineSets={data!} ref={state} clusterName={props.currentCluster != null ? props.currentCluster.name : ""}/>
       </Stack>
     </Stack>   
   )

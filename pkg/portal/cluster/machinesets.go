@@ -5,39 +5,76 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type MachineSetsInformation struct {
-	Name            string `json:"name"`
-	Type            string `json:"type"`
-	CreatedAt       string `json:"createdat"`
-	DesiredReplicas int    `json:"desiredreplicas"`
-	Replicas        int    `json:"replicas"`
-	ErrorReason     string `json:"errorreason"`
-	ErrorMessage    string `json:"errormessage"`
+type OsDiskManagedDisk struct {
+	StorageAccountType string `json:"storageaccounttype"`
+}
+type MachineSetProviderSpecValueOSDisk struct {
+	DiskSizeGB  int               `json:"disksizegb"`
+	OsType      string            `json:"ostype"`
+	ManagedDisk OsDiskManagedDisk `json:"manageddisk"`
+}
+type MachineSetProviderSpecValue struct {
+	Kind                 string                            `json:"kind"`
+	Location             string                            `json:"location"`
+	NetworkResourceGroup string                            `json:"networkresourcegroup"`
+	OsDisk               MachineSetProviderSpecValueOSDisk `json:"osdisk"`
+	PublicIP             bool                              `json:"publicip"`
+	PublicLoadBalancer   string                            `json:"publicloadbalancer"`
+	Subnet               string                            `json:"subnet"`
+	VmSize               string                            `json:"vmsize"`
+	Vnet                 string                            `json:"vnet"`
 }
 
+type MachineSetsInformation struct {
+	Name                     string `json:"name"`
+	Type                     string `json:"type"`
+	CreatedAt                string `json:"createdat"`
+	DesiredReplicas          int    `json:"desiredreplicas"`
+	Replicas                 int    `json:"replicas"`
+	ErrorReason              string `json:"errorreason"`
+	ErrorMessage             string `json:"errormessage"`
+	PublicLoadBalancerName   string `json:"publicloadbalancername"`
+	VMSize                   string `json:"vmsize"`
+	OSDiskAccountStorageType string `json:"accountstoragetype"`
+	Subnet                   string `json:"subnet"`
+	VNet                     string `json:"vnet"`
+}
 type MachineSetListInformation struct {
 	MachineSets []MachineSetsInformation `json:"machines"`
 }
 
-func MachineSetsFromMachineSetList(machineSets *machinev1beta1.MachineSetList) *MachineSetListInformation {
+func (f *realFetcher) MachineSetsFromMachineSetList(ctx context.Context, machineSets *machinev1beta1.MachineSetList) *MachineSetListInformation {
 	final := &MachineSetListInformation{
 		MachineSets: make([]MachineSetsInformation, 0, len(machineSets.Items)),
 	}
 
 	for _, machineSet := range machineSets.Items {
+		var machineSetProviderSpecValue MachineSetProviderSpecValue
+		machineSetJson, err := machineSet.Spec.Template.Spec.ProviderSpec.Value.MarshalJSON()
+		if err != nil {
+			f.log.Logger.Error(err.Error())
+		}
+		json.Unmarshal(machineSetJson, &machineSetProviderSpecValue)
+
 		final.MachineSets = append(final.MachineSets, MachineSetsInformation{
-			Name:            machineSet.Name,
-			Type:            machineSet.ObjectMeta.Labels["machine.openshift.io/cluster-api-machine-type"],
-			CreatedAt:       machineSet.ObjectMeta.CreationTimestamp.String(),
-			DesiredReplicas: int(*machineSet.Spec.Replicas),
-			Replicas:        int(machineSet.Status.Replicas),
-			ErrorReason:     getErrorReasonMachineSet(machineSet),
-			ErrorMessage:    getErrorMessageMachineSet(machineSet),
+			Name:                     machineSet.Name,
+			Type:                     machineSet.ObjectMeta.Labels["machine.openshift.io/cluster-api-machine-type"],
+			CreatedAt:                machineSet.ObjectMeta.CreationTimestamp.String(),
+			DesiredReplicas:          int(*machineSet.Spec.Replicas),
+			Replicas:                 int(machineSet.Status.Replicas),
+			ErrorReason:              getErrorReasonMachineSet(machineSet),
+			ErrorMessage:             getErrorMessageMachineSet(machineSet),
+			PublicLoadBalancerName:   machineSetProviderSpecValue.PublicLoadBalancer,
+			OSDiskAccountStorageType: machineSetProviderSpecValue.OsDisk.ManagedDisk.StorageAccountType,
+			VNet:                     machineSetProviderSpecValue.Vnet,
+			Subnet:                   machineSetProviderSpecValue.Subnet,
+			VMSize:                   machineSetProviderSpecValue.VmSize,
 		})
 	}
 
@@ -50,7 +87,7 @@ func (f *realFetcher) MachineSets(ctx context.Context) (*MachineSetListInformati
 		return nil, err
 	}
 
-	return MachineSetsFromMachineSetList(r), nil
+	return f.MachineSetsFromMachineSetList(ctx, r), nil
 }
 
 func (c *client) MachineSets(ctx context.Context) (*MachineSetListInformation, error) {

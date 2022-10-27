@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { AxiosResponse } from 'axios';
 import { FetchMachines } from '../Request';
 import { ICluster } from "../App"
-import { MachinesComponent } from './Machines';
+import { MachinesListComponent } from './MachinesList';
 import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from '@fluentui/react';
 import { machinesKey } from "../ClusterDetail";
 
@@ -24,7 +24,7 @@ export function MachinesWrapper(props: {
 }) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
-  const state = useRef<MachinesComponent>(null)
+  const state = useRef<MachinesListComponent>(null)
   const [fetching, setFetching] = useState("")
 
   const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
@@ -97,7 +97,7 @@ export function MachinesWrapper(props: {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <MachinesComponent machines={data!} ref={state} clusterName={props.currentCluster != null ? props.currentCluster.name : ""}/>
+        <MachinesListComponent machines={data!} ref={state} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} />
       </Stack>
     </Stack>   
   )
