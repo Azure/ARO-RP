@@ -98,9 +98,9 @@ func (m *manager) fixSSH(ctx context.Context) error {
 }
 
 func (m *manager) removeBackendPoolsFromNIC(ctx context.Context, resourceGroup, nicName string, nic *mgmtnetwork.Interface) error {
-	m.log.Printf("Removing Loadbalancer Backend Address Pools from NIC %s with no VMs attached", nicName)
 	ipc := (*nic.InterfacePropertiesFormat.IPConfigurations)[0]
 	if ipc.LoadBalancerBackendAddressPools != nil {
+		m.log.Printf("Removing Loadbalancer Backend Address Pools from NIC %s with no VMs attached", nicName)
 		*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = []mgmtnetwork.BackendAddressPool{}
 		return m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, nicName, *nic)
 	}
@@ -113,10 +113,6 @@ func updateNIC(nic *mgmtnetwork.Interface, lb *mgmtnetwork.LoadBalancer, i int) 
 	if ipc.LoadBalancerBackendAddressPools == nil {
 		backendAddressPool := make([]mgmtnetwork.BackendAddressPool, 0)
 		ipc.LoadBalancerBackendAddressPools = &backendAddressPool
-		// *(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = append(*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
-		// 	ID: &id,
-		// })
-		// return true
 	}
 	for _, p := range *(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools {
 		if strings.EqualFold(*p.ID, id) {

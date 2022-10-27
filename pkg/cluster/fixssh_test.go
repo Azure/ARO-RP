@@ -135,9 +135,12 @@ func TestFixSSH(t *testing.T) {
 		}
 	}
 
-	ifBefore := func(lbID string, i int) *mgmtnetwork.Interface {
+	ifBefore := func(lbID string, i int, vmID string) *mgmtnetwork.Interface {
 		return &mgmtnetwork.Interface{
 			InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
+				VirtualMachine: &mgmtnetwork.SubResource{
+					ID: to.StringPtr(vmID),
+				},
 				IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
 					{
 						InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
@@ -149,9 +152,12 @@ func TestFixSSH(t *testing.T) {
 		}
 	}
 
-	ifAfter := func(lbID string, i int) *mgmtnetwork.Interface {
+	ifAfter := func(lbID string, i int, vmID string) *mgmtnetwork.Interface {
 		return &mgmtnetwork.Interface{
 			InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
+				VirtualMachine: &mgmtnetwork.SubResource{
+					ID: to.StringPtr(vmID),
+				},
 				IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
 					{
 						InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
@@ -173,10 +179,11 @@ func TestFixSSH(t *testing.T) {
 		lb                  string
 		lbID                string
 		loadbalancer        func(string) *mgmtnetwork.LoadBalancer
-		iface               func(string, int) *mgmtnetwork.Interface
+		iface               func(string, int, string) *mgmtnetwork.Interface
 		iNameF              string
 		writeExpected       bool // do we expect write to happen as part of this test
 		fallbackExpected    bool // do we expect fallback nic.Get as part of this test
+		vmID                string
 	}{
 		{
 			name:          "updates v1 resources correctly",
@@ -186,6 +193,7 @@ func TestFixSSH(t *testing.T) {
 			iface:         ifBefore,
 			iNameF:        "%s-master%d-nic",
 			writeExpected: true,
+			vmID:          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Compute/virtualMachines/" + "%s-master%d",
 		},
 		{
 			name:         "v1 noop",
@@ -194,6 +202,7 @@ func TestFixSSH(t *testing.T) {
 			loadbalancer: lbAfter,
 			iface:        ifAfter,
 			iNameF:       "%s-master%d-nic",
+			vmID:         "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Compute/virtualMachines/" + "%s-master%d",
 		},
 		{
 			name:                "updates v2 resources correctly",
@@ -204,6 +213,7 @@ func TestFixSSH(t *testing.T) {
 			iface:               ifBefore,
 			iNameF:              "%s-master%d-nic",
 			writeExpected:       true,
+			vmID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Compute/virtualMachines/" + "%s-master%d",
 		},
 		{
 			name:                "v2 noop",
@@ -213,6 +223,7 @@ func TestFixSSH(t *testing.T) {
 			loadbalancer:        lbAfter,
 			iface:               ifAfter,
 			iNameF:              "%s-master%d-nic",
+			vmID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Compute/virtualMachines/" + "%s-master%d",
 		},
 		{
 			name:                "updates v2 resources correctly with masters recreated",
@@ -224,6 +235,19 @@ func TestFixSSH(t *testing.T) {
 			iNameF:              "%s-master-%d-nic",
 			writeExpected:       true,
 			fallbackExpected:    true,
+			vmID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Compute/virtualMachines/" + "%s-master%d",
+		},
+		{
+			name:                "NIC has no VMs attached",
+			architectureVersion: api.ArchitectureVersionV2,
+			lb:                  infraID + "-internal",
+			lbID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
+			loadbalancer:        lbBefore,
+			iface:               ifBefore,
+			iNameF:              "%s-master-%d-nic",
+			writeExpected:       true,
+			fallbackExpected:    true,
+			vmID:                "",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -239,13 +263,13 @@ func TestFixSSH(t *testing.T) {
 				if tt.fallbackExpected { // bit of hack to check fallback.
 					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), "").Return(mgmtnetwork.Interface{}, fmt.Errorf("nic not found"))
 				}
-				interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*tt.iface(tt.lbID, i), nil)
+				interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*tt.iface(tt.lbID, i, fmt.Sprintf(tt.vmID, infraID, i)), nil)
 			}
 
 			if tt.writeExpected {
 				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, tt.lb, *lbAfter(tt.lbID))
 				for i := 0; i < 3; i++ {
-					interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *ifAfter(tt.lbID, i))
+					interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *ifAfter(tt.lbID, i, fmt.Sprintf(tt.vmID, infraID, i)))
 				}
 			}
 
