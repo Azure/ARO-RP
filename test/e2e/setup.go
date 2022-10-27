@@ -329,6 +329,7 @@ func tearDownSelenium(ctx context.Context) error {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("Error occurred stopping selenium container\n Output: %s\n Error: %s\n", output, err)
+		return err
 	}
 
 	log.Infof("Removing Selenium Grid container")
@@ -336,6 +337,7 @@ func tearDownSelenium(ctx context.Context) error {
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("Error occurred removing selenium grid container\n Output: %s\n Error: %s\n", output, err)
+		return err
 	}
 
 	return nil
