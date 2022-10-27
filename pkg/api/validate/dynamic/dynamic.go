@@ -150,6 +150,12 @@ func (dv *dynamic) ValidateVnet(ctx context.Context, location string, subnets []
 		}
 	}
 
+	for _, s := range subnets {
+		err := dv.validateNatGatewayPermissions(ctx, s)
+		if err != nil {
+			return err
+		}
+	}
 	return dv.validateCIDRRanges(ctx, subnets, additionalCIDRs...)
 }
 
@@ -225,6 +231,59 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedRouteTable, "", "The route table '%s' could not be found.", rtID)
+	}
+	return err
+}
+
+// validateNatGatewayPermissions will validate permissions on provided subnet
+func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) error {
+	dv.log.Printf("validateNatGatewayPermissions")
+
+	vnetID, _, err := subnet.Split(s.ID)
+	if err != nil {
+		return err
+	}
+
+	vnetr, err := azure.ParseResourceID(vnetID)
+	if err != nil {
+		return err
+	}
+
+	vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, "")
+	if err != nil {
+		return err
+	}
+
+	ngID, err := getNatGatewayID(&vnet, s.ID)
+	if err != nil {
+		return err
+	}
+
+	if ngID == "" { // empty nat gateway
+		return nil
+	}
+
+	ngr, err := azure.ParseResourceID(ngID)
+	if err != nil {
+		return err
+	}
+
+	errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
+	if dv.authorizerType == AuthorizerClusterServicePrincipal {
+		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
+	}
+
+	err = dv.validateActions(ctx, &ngr, []string{
+		"Microsoft.Network/natGateways/join/action",
+		"Microsoft.Network/natGateways/read",
+		"Microsoft.Network/natGateways/write",
+	})
+	if err == wait.ErrWaitTimeout {
+		return api.NewCloudError(http.StatusBadRequest, errCode, "", "The %s service principal does not have Network Contributor permission on nat gateway '%s'.", dv.authorizerType, ngID)
+	}
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusNotFound {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedNatGateway, "", "The nat gateway '%s' could not be found.", ngID)
 	}
 	return err
 }
@@ -419,6 +478,19 @@ func getRouteTableID(vnet *mgmtnetwork.VirtualNetwork, subnetID string) (string,
 	}
 
 	return *s.RouteTable.ID, nil
+}
+
+func getNatGatewayID(vnet *mgmtnetwork.VirtualNetwork, subnetID string) (string, error) {
+	s, err := findSubnet(vnet, subnetID)
+	if err != nil {
+		return "", err
+	}
+
+	if s == nil || s.NatGateway == nil {
+		return "", nil
+	}
+
+	return *s.NatGateway.ID, nil
 }
 
 func findSubnet(vnet *mgmtnetwork.VirtualNetwork, subnetID string) (*mgmtnetwork.Subnet, error) {

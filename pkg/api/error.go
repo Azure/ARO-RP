@@ -81,6 +81,7 @@ const (
 	CloudErrorCodeUnsupportedMediaType               = "UnsupportedMediaType"
 	CloudErrorCodeInvalidLinkedVNet                  = "InvalidLinkedVNet"
 	CloudErrorCodeInvalidLinkedRouteTable            = "InvalidLinkedRouteTable"
+	CloudErrorCodeInvalidLinkedNatGateway            = "InvalidLinkedNatGateway"
 	CloudErrorCodeInvalidLinkedDiskEncryptionSet     = "InvalidLinkedDiskEncryptionSet"
 	CloudErrorCodeNotFound                           = "NotFound"
 	CloudErrorCodeForbidden                          = "Forbidden"
