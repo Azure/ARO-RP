@@ -410,6 +410,6 @@ var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
 
 	if err := tearDown(context.Background()); err != nil {
-		panic(err)
+		log.Printf(err.Error())
 	}
 })
