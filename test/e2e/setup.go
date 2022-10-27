@@ -315,7 +315,7 @@ func setupSelenium(ctx context.Context) error {
 	cmd = exec.CommandContext(ctx, "docker", "run", "-d", "-p", "4444:4444", "--name", seleniumContainerName, "--network=host", "--shm-size=2g", "selenium/standalone-edge:latest")
 	output, err = cmd.CombinedOutput()
 	if err != nil {
-		log.Fatalf("Error occurred starting selenium grid\n Output: %s\n Error: %s\n", output, err)
+		log.Printf("Error occurred starting selenium grid\n Output: %s\n Error: %s\n", output, err)
 	}
 
 	log.Infof("Selenium Container Run Output : %s\n", output)
