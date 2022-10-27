@@ -6,8 +6,9 @@ package purge
 // all the purge functions are located here
 
 import (
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -35,10 +36,14 @@ type ResourceCleaner struct {
 
 // NewResourceCleaner instantiates the new RC object
 func NewResourceCleaner(log *logrus.Entry, env env.Core, shouldDelete checkFn, dryRun bool) (*ResourceCleaner, error) {
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	options := env.Environment().EnvironmentCredentialOptions()
+	tokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
 		return nil, err
 	}
+
+	scopes := []string{env.Environment().ResourceManagerEndpoint + "/.default"}
+	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
 	return &ResourceCleaner{
 		log:    log,
