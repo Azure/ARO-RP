@@ -328,14 +328,14 @@ func tearDownSelenium(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, "docker", "stop", seleniumContainerName)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Fatalf("Error occurred stopping selenium container\n Output: %s\n Error: %s\n", output, err)
+		log.Printf("Error occurred stopping selenium container\n Output: %s\n Error: %s\n", output, err)
 	}
 
 	log.Infof("Removing Selenium Grid container")
 	cmd = exec.CommandContext(ctx, "docker", "rm", seleniumContainerName)
 	output, err = cmd.CombinedOutput()
 	if err != nil {
-		log.Fatalf("Error occurred removing selenium grid container\n Output: %s\n Error: %s\n", output, err)
+		log.Printf("Error occurred removing selenium grid container\n Output: %s\n Error: %s\n", output, err)
 	}
 
 	return nil
