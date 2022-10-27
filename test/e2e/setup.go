@@ -75,11 +75,21 @@ var (
 	vnetResourceGroup string
 	clusterName       string
 	clients           *clientSet
+
+	dockerSucceeded bool
 )
 
 func skipIfNotInDevelopmentEnv() {
 	if !_env.IsLocalDevelopmentMode() {
-		Skip("skipping tests in non-development environment")
+		Skip("skipping portal tests in non-development environment")
+	}
+}
+
+func skipIfDockerNotWorking() {
+	// docker cmds will fail in INT until we figure out a solution since
+	// it is running from docker already
+	if !dockerSucceeded {
+		Skip("skipping portal tests as docker is not available")
 	}
 }
 
@@ -307,7 +317,8 @@ func setupSelenium(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, "docker", "pull", "selenium/standalone-edge:latest")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Fatalf("Error occurred pulling selenium image\n Output: %s\n Error: %s\n", output, err)
+		log.Printf("Error occurred pulling selenium image\n Output: %s\n Error: %s\n", output, err)
+		dockerSucceeded = false
 	}
 
 	log.Infof("Selenium Image Pull Output : %s\n", output)
@@ -316,6 +327,7 @@ func setupSelenium(ctx context.Context) error {
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("Error occurred starting selenium grid\n Output: %s\n Error: %s\n", output, err)
+		dockerSucceeded = false
 	}
 
 	log.Infof("Selenium Container Run Output : %s\n", output)
@@ -329,6 +341,7 @@ func tearDownSelenium(ctx context.Context) error {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("Error occurred stopping selenium container\n Output: %s\n Error: %s\n", output, err)
+		dockerSucceeded = false
 		return err
 	}
 
@@ -337,6 +350,7 @@ func tearDownSelenium(ctx context.Context) error {
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("Error occurred removing selenium grid container\n Output: %s\n Error: %s\n", output, err)
+		dockerSucceeded = false
 		return err
 	}
 
