@@ -19,7 +19,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/jongio/azidext/go/azidext"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
@@ -263,10 +264,14 @@ func resourceIDFromEnv() string {
 }
 
 func newClientSet(ctx context.Context) (*clientSet, error) {
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	options := _env.Environment().EnvironmentCredentialOptions()
+	tokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
 		return nil, err
 	}
+
+	scopes := []string{_env.Environment().ResourceManagerEndpoint + "/.default"}
+	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
 	configv1, err := kubeadminkubeconfig.Get(ctx, log, _env, authorizer, resourceIDFromEnv())
 	if err != nil {
