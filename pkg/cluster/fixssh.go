@@ -48,7 +48,7 @@ func (m *manager) fixSSH(ctx context.Context) error {
 		}
 	}
 
-	for i := 2; i < 3; i++ {
+	for i := 0; i < 3; i++ {
 		// NIC names might be different if customer re-created master nodes
 		// see https://bugzilla.redhat.com/show_bug.cgi?id=1882490 for more details
 		// installer naming  - <foo>-master{0,1,2}-nic
@@ -70,18 +70,20 @@ func (m *manager) fixSSH(ctx context.Context) error {
 				m.log.Warnf("fallback failed with err %s", err)
 				return iErr
 			}
-
 		} else if nic.InterfacePropertiesFormat != nil && nic.InterfacePropertiesFormat.VirtualMachine == nil {
+			err = m.removeBackendPoolsFromNIC(ctx, resourceGroup, nicName, &nic)
+			if err != nil {
+				m.log.Warnf("Removing BackendPools from NIC %s has failed with err %s", nicName, err)
+				return err
+			}
 			nicName = nicNameMachineAPI
-			m.log.Warnf("fallback to check MachineAPI NIC name format for %s", nicName)
+			m.log.Warnf("installer provisioned NIC has no VM attached, fallback to check MachineAPI NIC name format for %s", nicName)
 			nic, err = m.interfaces.Get(ctx, resourceGroup, nicName, "")
 			if err != nil {
 				m.log.Warnf("fallback failed with err %s", err)
 				return err
 			}
-
 		}
-
 		changed = updateNIC(&nic, &lb, i)
 
 		if changed {
@@ -92,31 +94,39 @@ func (m *manager) fixSSH(ctx context.Context) error {
 			}
 		}
 	}
+	return nil
+}
 
+func (m *manager) removeBackendPoolsFromNIC(ctx context.Context, resourceGroup, nicName string, nic *mgmtnetwork.Interface) error {
+	m.log.Printf("Removing Loadbalancer Backend Address Pools from NIC %s with no VMs attached", nicName)
+	ipc := (*nic.InterfacePropertiesFormat.IPConfigurations)[0]
+	if ipc.LoadBalancerBackendAddressPools != nil {
+		*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = []mgmtnetwork.BackendAddressPool{}
+		return m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, nicName, *nic)
+	}
 	return nil
 }
 
 func updateNIC(nic *mgmtnetwork.Interface, lb *mgmtnetwork.LoadBalancer, i int) bool {
 	id := fmt.Sprintf("%s/backendAddressPools/ssh-%d", *lb.ID, i)
-	if (*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools == nil {
-		*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = append(*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
-			ID: &id,
-		})
-		return true
-
-	} else {
-		for _, p := range *(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools {
-			if strings.EqualFold(*p.ID, id) {
-				return false
-			}
-		}
-		*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = append(*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
-			ID: &id,
-		})
-		return true
-
+	ipc := (*nic.InterfacePropertiesFormat.IPConfigurations)[0]
+	if ipc.LoadBalancerBackendAddressPools == nil {
+		backendAddressPool := make([]mgmtnetwork.BackendAddressPool, 0)
+		ipc.LoadBalancerBackendAddressPools = &backendAddressPool
+		// *(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = append(*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
+		// 	ID: &id,
+		// })
+		// return true
 	}
-
+	for _, p := range *(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools {
+		if strings.EqualFold(*p.ID, id) {
+			return false
+		}
+	}
+	*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = append(*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
+		ID: &id,
+	})
+	return true
 }
 
 func updateLB(lb *mgmtnetwork.LoadBalancer) (changed bool) {
