@@ -8,9 +8,10 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/vmsscleaner"
@@ -73,15 +74,17 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		return nil, err
 	}
 
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	options := _env.Environment().EnvironmentCredentialOptions()
+	tokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
 		return nil, err
 	}
 
-	kvAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(_env.Environment().ResourceIdentifiers.KeyVault)
-	if err != nil {
-		return nil, err
-	}
+	scopes := []string{_env.Environment().ResourceManagerEndpoint + "/.default"}
+	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
+
+	scopes = []string{_env.Environment().ResourceIdentifiers.KeyVault + "/.default"}
+	kvAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
 	vmssClient := compute.NewVirtualMachineScaleSetsClient(_env.Environment(), config.SubscriptionID, authorizer)
 
