@@ -405,10 +405,6 @@ func setup(ctx context.Context) error {
 	return nil
 }
 
-func tearDown(ctx context.Context) error {
-	return tearDownSelenium(context.Background())
-}
-
 var _ = BeforeSuite(func() {
 	log.Info("BeforeSuite")
 
@@ -423,7 +419,7 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
 
-	if err := tearDown(context.Background()); err != nil {
+	if err := tearDownSelenium(context.Background()); err != nil {
 		log.Printf(err.Error())
 	}
 })
