@@ -38,12 +38,17 @@ func Copy(ctx context.Context, dstreference, srcreference string, dstauth, srcau
 		return err
 	}
 
+	// Use non-existent RegistriesDirPath to make v5/image use the defaults,
+	// since RHEL8 defines a root-writable-only directory for lookaside
+	// signature storage in /etc/containers/registries.d/default.yaml
 	_, err = copy.Image(ctx, policyctx, dst, src, &copy.Options{
 		SourceCtx: &types.SystemContext{
-			DockerAuthConfig: srcauth,
+			DockerAuthConfig:  srcauth,
+			RegistriesDirPath: "/does/not/exist/so/does/not/load/config",
 		},
 		DestinationCtx: &types.SystemContext{
-			DockerAuthConfig: dstauth,
+			DockerAuthConfig:  dstauth,
+			RegistriesDirPath: "/does/not/exist/so/does/not/load/config",
 		},
 	})
 
