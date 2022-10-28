@@ -12,6 +12,7 @@ import (
 )
 
 var rxVersion = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)(.*)`)
+var rxVersionMinorOnly = regexp.MustCompile(`^(\d+)\.(\d+)(.*)`)
 
 type Version struct {
 	V      [3]uint32
@@ -45,6 +46,28 @@ func ParseVersion(vsn string) (*Version, error) {
 	}
 
 	for i := 0; i < 3; i++ {
+		d, err := strconv.ParseUint(m[i+1], 10, 32)
+		if err != nil {
+			return nil, err
+		}
+
+		v.V[i] = uint32(d)
+	}
+
+	return v, nil
+}
+
+func ParseMinorVersion(vsn string) (*Version, error) {
+	m := rxVersionMinorOnly.FindStringSubmatch(strings.TrimSpace(vsn))
+	if m == nil {
+		return nil, fmt.Errorf("could not parse version %q", vsn)
+	}
+
+	v := &Version{
+		Suffix: "",
+	}
+
+	for i := 0; i < 2; i++ {
 		d, err := strconv.ParseUint(m[i+1], 10, 32)
 		if err != nil {
 			return nil, err

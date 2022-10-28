@@ -24,7 +24,20 @@ func usage() {
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s dbtoken\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s deploy config.yaml location\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s gateway\n", os.Args[0])
-	fmt.Fprintf(flag.CommandLine.Output(), "  %s mirror [release_image...]\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s mirror\n", os.Args[0])
+
+	// indent the mirror flags... probably a better way to do this? :)
+	s := &strings.Builder{}
+	mirror := mirrorFlags()
+	mirror.SetOutput(s)
+	mirror.PrintDefaults()
+	for _, l := range strings.Split(s.String(), "\n") {
+		if l == "" {
+			continue
+		}
+		fmt.Fprintf(flag.CommandLine.Output(), "  %s\n", l)
+	}
+
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s monitor\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s portal\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s rp\n", os.Args[0])

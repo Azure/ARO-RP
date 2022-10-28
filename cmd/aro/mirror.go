@@ -27,6 +27,26 @@ var doNotMirrorTags = map[string]struct{}{
 	"4.7.27": {}, // release points to unreachable link
 }
 
+var (
+	openShiftVersionToMirror string
+	mirrorOpenShiftImages    bool
+	mirrorMicrosoftImages    bool
+	mirrorBaseImages         bool
+	mirrorAppSREImages       bool
+)
+
+func mirrorFlags() *flag.FlagSet {
+	flags := flag.NewFlagSet("mirror", flag.ContinueOnError)
+
+	flags.StringVar(&openShiftVersionToMirror, "openShiftVersion", "", "OpenShift major/minor version to mirror, 4.6+ if not specified")
+	flags.BoolVar(&mirrorOpenShiftImages, "mirrorOpenShiftImages", false, "Whether to mirror OpenShift releases, default false")
+	flags.BoolVar(&mirrorMicrosoftImages, "mirrorMicrosoftImages", false, "Whether to mirror Microsoft Images (e.g. MDSD), default false")
+	flags.BoolVar(&mirrorBaseImages, "mirrorBaseImages", false, "Whether to mirror base images (e.g. toolboxes, go-toolset), default false")
+	flags.BoolVar(&mirrorAppSREImages, "mirrorAppSREImages", false, "Whether to mirror AppSRE images (MUO, Hive), default false")
+
+	return flags
+}
+
 func getAuth(key string) (*types.DockerAuthConfig, error) {
 	b, err := base64.StdEncoding.DecodeString(os.Getenv(key))
 	if err != nil {
@@ -40,6 +60,12 @@ func getAuth(key string) (*types.DockerAuthConfig, error) {
 }
 
 func mirror(ctx context.Context, log *logrus.Entry) error {
+	mirrorFlags := mirrorFlags()
+	err := mirrorFlags.Parse(flag.Args()[1:])
+	if err != nil {
+		return err
+	}
+
 	for _, key := range []string{
 		"DST_AUTH",
 		"DST_ACR_NAME",
@@ -49,6 +75,14 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		if _, found := os.LookupEnv(key); !found {
 			return fmt.Errorf("environment variable %q unset", key)
 		}
+	}
+
+	// If no mirroring has been selected, perform them all for backwards compat
+	if !mirrorOpenShiftImages && !mirrorMicrosoftImages && !mirrorBaseImages && !mirrorAppSREImages {
+		mirrorOpenShiftImages = true
+		mirrorMicrosoftImages = true
+		mirrorBaseImages = true
+		mirrorAppSREImages = true
 	}
 
 	env, err := env.NewCoreForCI(ctx, log)
@@ -84,15 +118,104 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	var releases []pkgmirror.Node
-	if len(flag.Args()) == 1 {
-		log.Print("reading release graph")
-		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 6))
+	var errorOccurred bool
+
+	if mirrorOpenShiftImages {
+		doOpenShiftMirror := func(release pkgmirror.Node) error {
+			log.Printf("mirroring OpenShift release %s", release.Version)
+			return pkgmirror.Mirror(ctx, log, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
+		}
+
+		errHappened, err := openShiftImages(log, mirrorFlags.Args(), doOpenShiftMirror)
 		if err != nil {
 			return err
 		}
+		if errHappened {
+			errorOccurred = true
+		}
+	}
+
+	if mirrorMicrosoftImages {
+		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
+		if srcAcrGenevaOverride != "" {
+			srcAcrGeneva = srcAcrGenevaOverride
+		}
+
+		doMsftMirror := func(ref string) error {
+			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
+			return pkgmirror.Copy(ctx, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
+		}
+
+		errHappened := msftImages(log, srcAcrGeneva, doMsftMirror)
+		if errHappened {
+			errorOccurred = true
+		}
+	}
+
+	// Mirror function for Quay/RH image sources
+	doBaseMirror := func(ref string) error {
+		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
+
+		srcAuth := srcAuthRedhat
+		if strings.Index(ref, "quay.io") == 0 {
+			srcAuth = srcAuthQuay
+		}
+
+		return pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuth)
+	}
+
+	if mirrorBaseImages {
+		errHappened := baseImages(log, doBaseMirror)
+		if errHappened {
+			errorOccurred = true
+		}
+	}
+
+	if mirrorAppSREImages {
+		errHappened := appSREImages(log, doBaseMirror)
+		if errHappened {
+			errorOccurred = true
+		}
+	}
+
+	log.Print("done")
+
+	if errorOccurred {
+		return fmt.Errorf("an error occurred")
+	}
+
+	return nil
+}
+
+func openShiftImages(log *logrus.Entry, args []string, mirror func(release pkgmirror.Node) error) (bool, error) {
+	var releases []pkgmirror.Node
+	var err error
+	var desiredMinorVersion *version.Version
+
+	if len(args) == 0 {
+		if openShiftVersionToMirror == "" {
+			log.Print("reading release graph for 4.6+")
+
+			releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 6))
+			if err != nil {
+				return true, err
+			}
+		} else {
+			// Limit the mirroring to the desired minor version, so that we can run them individually
+			desiredMinorVersion, err = version.ParseMinorVersion(openShiftVersionToMirror)
+			if err != nil {
+				return true, err
+			}
+
+			log.Printf("reading release graph for OpenShift %s", desiredMinorVersion.MinorVersion())
+
+			releases, err = pkgmirror.AddFromGraph(desiredMinorVersion)
+			if err != nil {
+				return true, err
+			}
+		}
 	} else {
-		for _, arg := range flag.Args()[1:] {
+		for _, arg := range flag.Args()[0:] {
 			if strings.EqualFold(arg, "latest") {
 				releases = append(releases, pkgmirror.Node{
 					Version: version.InstallStream.Version.String(),
@@ -101,12 +224,12 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 			} else {
 				vers, err := version.ParseVersion(arg)
 				if err != nil {
-					return err
+					return true, err
 				}
 
 				node, err := pkgmirror.VersionInfo(vers)
 				if err != nil {
-					return err
+					return true, err
 				}
 
 				releases = append(releases, pkgmirror.Node{
@@ -123,34 +246,45 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 			log.Printf("skipping mirror of release %s", release.Version)
 			continue
 		}
-		log.Printf("mirroring release %s", release.Version)
-		err = pkgmirror.Mirror(ctx, log, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
+		if desiredMinorVersion != nil {
+			ver, err := version.ParseVersion(release.Version)
+			if err != nil {
+				log.Errorf("%s: %s\n", release, err)
+				continue
+			}
+			if ver.MinorVersion() != desiredMinorVersion.MinorVersion() {
+				continue
+			}
+		}
+
+		err := mirror(release)
 		if err != nil {
 			log.Errorf("%s: %s\n", release, err)
 			errorOccurred = true
 		}
 	}
 
-	srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
+	return errorOccurred, nil
+}
 
-	if srcAcrGenevaOverride != "" {
-		srcAcrGeneva = srcAcrGenevaOverride
-	}
-
+func msftImages(log *logrus.Entry, srcAcrGeneva string, mirror func(ref string) error) (errorOccurred bool) {
 	mirrorImages := []string{
 		version.MdsdImage(srcAcrGeneva),
 		version.MdmImage(srcAcrGeneva),
 	}
 
 	for _, ref := range mirrorImages {
-		log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
-		err = pkgmirror.Copy(ctx, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
+		err := mirror(ref)
 		if err != nil {
 			log.Errorf("%s: %s\n", ref, err)
 			errorOccurred = true
 		}
 	}
 
+	return
+}
+
+func baseImages(log *logrus.Entry, mirror func(ref string) error) (errorOccurred bool) {
 	for _, ref := range []string{
 		"registry.redhat.io/rhel7/support-tools:latest",
 		"registry.redhat.io/rhel8/support-tools:latest",
@@ -162,29 +296,26 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.access.redhat.com/ubi7/go-toolset:1.16.12",
 		"registry.access.redhat.com/ubi8/go-toolset:1.17.7",
 		"mcr.microsoft.com/azure-cli:latest",
-
-		"quay.io/app-sre/managed-upgrade-operator:v0.1.856-eebbe07",
-		"quay.io/app-sre/hive:fec14dc",
 	} {
-		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
-
-		srcAuth := srcAuthRedhat
-		if strings.Index(ref, "quay.io") == 0 {
-			srcAuth = srcAuthQuay
-		}
-
-		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuth)
+		err := mirror(ref)
 		if err != nil {
 			log.Errorf("%s: %s\n", ref, err)
 			errorOccurred = true
 		}
 	}
+	return
+}
 
-	log.Print("done")
-
-	if errorOccurred {
-		return fmt.Errorf("an error occurred")
+func appSREImages(log *logrus.Entry, mirror func(ref string) error) (errorOccurred bool) {
+	for _, ref := range []string{
+		"quay.io/app-sre/managed-upgrade-operator:v0.1.856-eebbe07",
+		"quay.io/app-sre/hive:fec14dc",
+	} {
+		err := mirror(ref)
+		if err != nil {
+			log.Errorf("%s: %s\n", ref, err)
+			errorOccurred = true
+		}
 	}
-
-	return nil
+	return
 }
