@@ -169,11 +169,7 @@ export function NodeListHelperComponent(props: {
 
         return {name: node.name, status: "Ready", schedulable: schedulable!, instanceType: instanceType}
       } else {
-        node.taints?.forEach(taint => {
-          //schedulable = taint.key === "node.kubernetes.io/unschedulable" ? "True" : "False"
-          schedulable = "False"
-        })
-
+        schedulable = "--"
         return {name: node.name, status: "Not Ready", schedulable: schedulable!, instanceType: instanceType}
       }
     })

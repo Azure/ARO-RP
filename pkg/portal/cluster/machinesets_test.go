@@ -61,13 +61,18 @@ func TestMachineSets(t *testing.T) {
 	expected := &MachineSetListInformation{
 		MachineSets: []MachineSetsInformation{
 			{
-				Name:            "aro-v4-shared-gxqb4-infra-eastus1",
-				Type:            "infra",
-				CreatedAt:       "2021-03-09 13:48:16 +0000 UTC",
-				DesiredReplicas: 0,
-				Replicas:        0,
-				ErrorReason:     "None",
-				ErrorMessage:    "None",
+				Name:                     "aro-v4-shared-gxqb4-infra-eastus1",
+				Type:                     "infra",
+				CreatedAt:                "2021-03-09 13:48:16 +0000 UTC",
+				DesiredReplicas:          0,
+				Replicas:                 0,
+				ErrorReason:              "None",
+				ErrorMessage:             "None",
+				PublicLoadBalancerName:   "aro-v4-shared-gxqb4",
+				OSDiskAccountStorageType: "Premium_LRS",
+				VNet:                     "vnet",
+				Subnet:                   "worker-subnet",
+				VMSize:                   "Standard_D4s_v3",
 			},
 		},
 	}

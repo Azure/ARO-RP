@@ -66,7 +66,11 @@ const ObjectFromStringMap = (items: Map<string,string>) => {
     return newItems
 }
 
-const renderNodes = (node: INode) => {    
+const renderNodes = (node: INode) => {
+    let length = node.capacity.Memory.length
+    node.capacity.Memory = Number(Number(node.capacity.Memory.slice(0, length-2))/1048576).toFixed(2) + "Gi"
+    length = node.capacity.StorageVolume.length
+    node.capacity.StorageVolume = Number(Number(node.capacity.StorageVolume.slice(0, length-2))/1048576).toFixed(2) + "Gi"
     return <PivotItem key={node.name} headerText={node.name}>
                 <Text variant="xLarge">{node.name}</Text>
                 <Stack horizontal grow>
