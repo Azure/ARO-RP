@@ -118,7 +118,7 @@ func (m *manager) CreateSignedCertificate(ctx context.Context, issuer string, ce
 				},
 			},
 			IssuerParameters: &azkeyvault.IssuerParameters{
-				Name: to.StringPtr(string(issuer)),
+				Name: to.StringPtr(issuer),
 			},
 		},
 	})

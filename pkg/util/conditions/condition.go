@@ -57,7 +57,7 @@ func IsFalse(conditions []operatorv1.OperatorCondition, t string) bool {
 
 func isCondition(conditions []operatorv1.OperatorCondition, t string, s operatorv1.ConditionStatus) bool {
 	for _, condition := range conditions {
-		if condition.Type == string(t) && condition.Status == s {
+		if condition.Type == t && condition.Status == s {
 			return true
 		}
 	}

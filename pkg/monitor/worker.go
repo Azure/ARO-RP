@@ -40,7 +40,7 @@ func (mon *monitor) populateHiveShardRestConfig(ctx context.Context, shard int) 
 		}
 
 		mon.baseLog.Info("pausing for a minute before retrying...")
-		time.Sleep(time.Duration(60 * time.Second))
+		time.Sleep(60 * time.Second)
 	}
 }
 

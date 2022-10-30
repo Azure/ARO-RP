@@ -34,3 +34,4 @@ linters:
     - staticcheck
     - whitespace
     - stylecheck
+    - unconvert

@@ -88,12 +88,12 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 			continue
 		}
 
-		a := m[string(alert.Name())]
+		a := m[alert.Name()]
 
 		a.severity = string(alert.Labels["severity"])
 		a.count++
 
-		m[string(alert.Name())] = a
+		m[alert.Name()] = a
 	}
 
 	for alertName, a := range m {
