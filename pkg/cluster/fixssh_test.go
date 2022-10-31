@@ -291,7 +291,7 @@ func TestFixSSH(t *testing.T) {
 
 			// check
 			loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.lb, "").Return(*tt.loadbalancer(tt.lbID), nil)
-			for i := 0; i < 1; i++ {
+			for i := 0; i < 3; i++ {
 				if tt.fallbackExpected { // bit of hack to check fallback.
 					if tt.ifaceNoVmAttached {
 						iFirst = interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), "").Return(*tt.iface(tt.lbID, i, nil), nil)
@@ -306,7 +306,7 @@ func TestFixSSH(t *testing.T) {
 
 			if tt.writeExpected {
 				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, tt.lb, *lbAfter(tt.lbID))
-				for i := 0; i < 1; i++ {
+				for i := 0; i < 3; i++ {
 					if tt.ifaceNoVmAttached {
 						uFirst = interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), *ifNoVmAfter(tt.lbID, i, nil))
 						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *ifAfter(tt.lbID, i, to.StringPtr(fmt.Sprintf("master-%d", i)))).After(uFirst)
