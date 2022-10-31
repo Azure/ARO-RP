@@ -1,5 +1,12 @@
+# We need to manually set PasswordAuthentication to true in order for the VMSS Access JIT to work
+echo "setting ssh password authentication"
+sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+systemctl reload sshd.service
+
+echo "running yum update"
 yum -y -x WALinuxAgent update
 
+echo "extending filesystems"
 lvextend -l +50%FREE /dev/rootvg/rootlv
 xfs_growfs /
 
@@ -7,6 +14,7 @@ lvextend -l +100%FREE /dev/rootvg/varlv
 xfs_growfs /var
 
 # avoid "error: db5 error(-30969) from dbenv->open: BDB0091 DB_VERSION_MISMATCH: Database environment version mismatch"
+echo "importing rpm repositories"
 rm -f /var/lib/rpm/__db*
 
 rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
@@ -17,6 +25,7 @@ for attempt in {1..5}; do
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
+echo "configuring logrotate"
 cat >/etc/logrotate.conf <<'EOF'
 # see "man logrotate" for details
 # rotate log files weekly
@@ -53,6 +62,7 @@ include /etc/logrotate.d
 }
 EOF
 
+echo "configuring yum repository and running yum update"
 cat >/etc/yum.repos.d/azure.repo <<'EOF'
 [azure-cli]
 name=azure-cli
@@ -79,6 +89,7 @@ done
 rpm -e $(rpm -qa | grep ^abrt-)
 
 # https://access.redhat.com/security/cve/cve-2020-13401
+echo "applying firewall rules"
 cat >/etc/sysctl.d/02-disable-accept-ra.conf <<'EOF'
 net.ipv6.conf.all.accept_ra=0
 EOF
@@ -95,6 +106,7 @@ firewall-cmd --add-port=2222/tcp --permanent
 
 export AZURE_CLOUD_NAME=$AZURECLOUDNAME
 
+echo "logging into prod acr"
 az login -i --allow-no-subscriptions
 
 systemctl start docker.service
@@ -107,6 +119,7 @@ docker pull "$FLUENTBITIMAGE"
 
 az logout
 
+echo "configuring fluentbit service"
 mkdir -p /etc/fluentbit/
 mkdir -p /var/lib/fluent
 
@@ -189,6 +202,7 @@ if [[ -n "$ARMAPICABUNDLE" ]]; then
 fi
 chown -R 1000:1000 /etc/aro-rp
 
+echo "configuring mdm service"
 cat >/etc/sysconfig/mdm <<EOF
 MDMFRONTENDURL='$MDMFRONTENDURL'
 MDMIMAGE='$MDMIMAGE'
@@ -233,6 +247,7 @@ StartLimitInterval=0
 WantedBy=multi-user.target
 EOF
 
+echo "configuring aro-rp service"
 cat >/etc/sysconfig/aro-rp <<EOF
 ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
@@ -310,6 +325,7 @@ StartLimitInterval=0
 WantedBy=multi-user.target
 EOF
 
+echo "configuring aro-dbtoken service"
 cat >/etc/sysconfig/aro-dbtoken <<EOF
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 AZURE_DBTOKEN_CLIENT_ID='$DBTOKENCLIENTID'
@@ -355,6 +371,7 @@ StartLimitInterval=0
 WantedBy=multi-user.target
 EOF
 
+echo "configuring aro-monitor service"
 cat >/etc/sysconfig/aro-monitor <<EOF
 CLUSTER_MDM_ACCOUNT='$CLUSTERMDMACCOUNT'
 CLUSTER_MDM_NAMESPACE=BBM
@@ -397,6 +414,7 @@ StartLimitInterval=0
 WantedBy=multi-user.target
 EOF
 
+echo "configuring aro-portal service"
 cat >/etc/sysconfig/aro-portal <<EOF
 AZURE_PORTAL_ACCESS_GROUP_IDS='$PORTALACCESSGROUPIDS'
 AZURE_PORTAL_CLIENT_ID='$PORTALCLIENTID'
@@ -445,6 +463,7 @@ RestartSec=1
 WantedBy=multi-user.target
 EOF
 
+echo "configuring mdsd and mdm services"
 chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
 
 mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
@@ -610,6 +629,7 @@ PATH=/bin
 0 * * * * root chown syslog:syslog /var/opt/microsoft/linuxmonagent/eh/EventNotice/arorplogs*
 EOF
 
+echo "enabling aro services"
 for service in aro-dbtoken aro-monitor aro-portal aro-rp auoms azsecd azsecmond mdsd mdm chronyd fluentbit; do
   systemctl enable $service.service
 done
@@ -618,8 +638,6 @@ for scan in baseline clamav software; do
   /usr/local/bin/azsecd config -s $scan -d P1D
 done
 
-# We need to manually set PasswordAuthentication to true in order for the VMSS Access JIT to work
-sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
-
+echo "rebooting"
 restorecon -RF /var/log/*
 (sleep 120; reboot) &
