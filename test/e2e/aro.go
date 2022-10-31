@@ -22,9 +22,7 @@ import (
 // a cluster is an ARO cluster. This should help us catch regressions
 // when migrating between installers (e.g. vendored one vs CLI one run by Hive)
 var _ = Describe("ARO Cluster", func() {
-	It("must have ARO-specific machine configs", func() {
-		ctx := context.Background()
-
+	It("must have ARO-specific machine configs", func(ctx context.Context) {
 		expectedMachineConfigs := []string{
 			"90-aro-worker-registries",
 			"99-master-aro-dns",
@@ -45,9 +43,7 @@ var _ = Describe("ARO Cluster", func() {
 		Expect(actualMachineConfigNames).To(ContainElements(expectedMachineConfigs))
 	})
 
-	It("must have ARO-specific custom resource", func() {
-		ctx := context.Background()
-
+	It("must have ARO-specific custom resource", func(ctx context.Context) {
 		// acrDomainList should contain acrDomain verifier
 		acrDomainList := []string{"arointsvc.azurecr.io", "arointsvc.azurecr.us", "arosvc.azurecr.io", "arosvc.azurecr.us"}
 		azEnvironmentList := []string{azureclient.PublicCloud.Environment.Name, azureclient.USGovernmentCloud.Environment.Name}
