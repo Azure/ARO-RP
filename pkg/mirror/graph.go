@@ -20,7 +20,7 @@ type Node struct {
 }
 
 // AddFromGraph adds all nodes whose version is of the form x.y.z (no suffix)
-// and >= min
+// and the same minor version as min
 func AddFromGraph(min *version.Version) ([]Node, error) {
 	req, err := http.NewRequest(http.MethodGet, "https://amd64.ocp.releases.ci.openshift.org/graph", nil)
 	if err != nil {
@@ -63,8 +63,8 @@ func AddFromGraph(min *version.Version) ([]Node, error) {
 			return nil, err
 		}
 
-		// if incoming version < min - skip
-		if vsn.Lt(min) || vsn.Suffix != "" {
+		// if incoming minor version != min - skip
+		if vsn.MinorVersion() != min.MinorVersion() || vsn.Suffix != "" {
 			continue
 		}
 

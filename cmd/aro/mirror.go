@@ -7,10 +7,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
@@ -66,6 +66,11 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	// If no mirroring has been selected, error out
+	if !mirrorOpenShiftImages && !mirrorMicrosoftImages && !mirrorBaseImages && !mirrorAppSREImages {
+		return errors.New("select the images to mirror, try --help")
+	}
+
 	for _, key := range []string{
 		"DST_AUTH",
 		"DST_ACR_NAME",
@@ -75,14 +80,6 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		if _, found := os.LookupEnv(key); !found {
 			return fmt.Errorf("environment variable %q unset", key)
 		}
-	}
-
-	// If no mirroring has been selected, perform them all for backwards compat
-	if !mirrorOpenShiftImages && !mirrorMicrosoftImages && !mirrorBaseImages && !mirrorAppSREImages {
-		mirrorOpenShiftImages = true
-		mirrorMicrosoftImages = true
-		mirrorBaseImages = true
-		mirrorAppSREImages = true
 	}
 
 	env, err := env.NewCoreForCI(ctx, log)
@@ -118,20 +115,24 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	var errorOccurred bool
+	errorOccurred := false
+	m := pkgmirror.New(env, log, dstAcr+acrDomainSuffix, dstAuth)
 
 	if mirrorOpenShiftImages {
-		doOpenShiftMirror := func(release pkgmirror.Node) error {
-			log.Printf("mirroring OpenShift release %s", release.Version)
-			return pkgmirror.Mirror(ctx, log, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
+		if openShiftVersionToMirror == "" {
+			return errors.New("if mirroring OpenShift images, --openShiftVersion is required")
 		}
-
-		errHappened, err := openShiftImages(log, mirrorFlags.Args(), doOpenShiftMirror)
+		// Limit the mirroring to the desired minor version, so that we can run them individually
+		desiredMinorVersion, err := version.ParseMinorVersion(openShiftVersionToMirror)
 		if err != nil {
 			return err
 		}
-		if errHappened {
+
+		err = m.MirrorOpenShiftVersion(ctx, srcAuthQuay, desiredMinorVersion, doNotMirrorTags)
+		if err == pkgmirror.ErrMirror {
 			errorOccurred = true
+		} else {
+			return err
 		}
 	}
 
@@ -141,40 +142,52 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 			srcAcrGeneva = srcAcrGenevaOverride
 		}
 
-		doMsftMirror := func(ref string) error {
-			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
-			return pkgmirror.Copy(ctx, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
+		refs := []string{
+			version.MdsdImage(srcAcrGeneva),
+			version.MdmImage(srcAcrGeneva),
 		}
 
-		errHappened := msftImages(log, srcAcrGeneva, doMsftMirror)
-		if errHappened {
+		err := m.MirrorImageRefs(ctx, srcAuthGeneva, refs)
+		if err == pkgmirror.ErrMirror {
 			errorOccurred = true
+		} else {
+			return err
 		}
-	}
-
-	// Mirror function for Quay/RH image sources
-	doBaseMirror := func(ref string) error {
-		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
-
-		srcAuth := srcAuthRedhat
-		if strings.Index(ref, "quay.io") == 0 {
-			srcAuth = srcAuthQuay
-		}
-
-		return pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuth)
 	}
 
 	if mirrorBaseImages {
-		errHappened := baseImages(log, doBaseMirror)
-		if errHappened {
+		refs := []string{
+			"registry.redhat.io/rhel7/support-tools:latest",
+			"registry.redhat.io/rhel8/support-tools:latest",
+			"registry.redhat.io/openshift4/ose-tools-rhel7:latest",
+			"registry.redhat.io/openshift4/ose-tools-rhel8:latest",
+			"registry.access.redhat.com/ubi7/ubi-minimal:latest",
+			"registry.access.redhat.com/ubi8/ubi-minimal:latest",
+			"registry.access.redhat.com/ubi8/nodejs-14:latest",
+			"registry.access.redhat.com/ubi7/go-toolset:1.16.12",
+			"registry.access.redhat.com/ubi8/go-toolset:1.17.7",
+			"mcr.microsoft.com/azure-cli:latest",
+		}
+
+		err := m.MirrorImageRefs(ctx, srcAuthRedhat, refs)
+		if err == pkgmirror.ErrMirror {
 			errorOccurred = true
+		} else {
+			return err
 		}
 	}
 
 	if mirrorAppSREImages {
-		errHappened := appSREImages(log, doBaseMirror)
-		if errHappened {
+		refs := []string{
+			"quay.io/app-sre/managed-upgrade-operator:v0.1.856-eebbe07",
+			"quay.io/app-sre/hive:fec14dc",
+		}
+
+		err := m.MirrorImageRefs(ctx, srcAuthQuay, refs)
+		if err == pkgmirror.ErrMirror {
 			errorOccurred = true
+		} else {
+			return err
 		}
 	}
 
@@ -185,137 +198,4 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	return nil
-}
-
-func openShiftImages(log *logrus.Entry, args []string, mirror func(release pkgmirror.Node) error) (bool, error) {
-	var releases []pkgmirror.Node
-	var err error
-	var desiredMinorVersion *version.Version
-
-	if len(args) == 0 {
-		if openShiftVersionToMirror == "" {
-			log.Print("reading release graph for 4.6+")
-
-			releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 6))
-			if err != nil {
-				return true, err
-			}
-		} else {
-			// Limit the mirroring to the desired minor version, so that we can run them individually
-			desiredMinorVersion, err = version.ParseMinorVersion(openShiftVersionToMirror)
-			if err != nil {
-				return true, err
-			}
-
-			log.Printf("reading release graph for OpenShift %s", desiredMinorVersion.MinorVersion())
-
-			releases, err = pkgmirror.AddFromGraph(desiredMinorVersion)
-			if err != nil {
-				return true, err
-			}
-		}
-	} else {
-		for _, arg := range flag.Args()[0:] {
-			if strings.EqualFold(arg, "latest") {
-				releases = append(releases, pkgmirror.Node{
-					Version: version.InstallStream.Version.String(),
-					Payload: version.InstallStream.PullSpec,
-				})
-			} else {
-				vers, err := version.ParseVersion(arg)
-				if err != nil {
-					return true, err
-				}
-
-				node, err := pkgmirror.VersionInfo(vers)
-				if err != nil {
-					return true, err
-				}
-
-				releases = append(releases, pkgmirror.Node{
-					Version: node.Version,
-					Payload: node.Payload,
-				})
-			}
-		}
-	}
-
-	var errorOccurred bool
-	for _, release := range releases {
-		if _, ok := doNotMirrorTags[release.Version]; ok {
-			log.Printf("skipping mirror of release %s", release.Version)
-			continue
-		}
-		if desiredMinorVersion != nil {
-			ver, err := version.ParseVersion(release.Version)
-			if err != nil {
-				log.Errorf("%s: %s\n", release, err)
-				continue
-			}
-			if ver.MinorVersion() != desiredMinorVersion.MinorVersion() {
-				continue
-			}
-		}
-
-		err := mirror(release)
-		if err != nil {
-			log.Errorf("%s: %s\n", release, err)
-			errorOccurred = true
-		}
-	}
-
-	return errorOccurred, nil
-}
-
-func msftImages(log *logrus.Entry, srcAcrGeneva string, mirror func(ref string) error) (errorOccurred bool) {
-	mirrorImages := []string{
-		version.MdsdImage(srcAcrGeneva),
-		version.MdmImage(srcAcrGeneva),
-	}
-
-	for _, ref := range mirrorImages {
-		err := mirror(ref)
-		if err != nil {
-			log.Errorf("%s: %s\n", ref, err)
-			errorOccurred = true
-		}
-	}
-
-	return
-}
-
-func baseImages(log *logrus.Entry, mirror func(ref string) error) (errorOccurred bool) {
-	for _, ref := range []string{
-		"registry.redhat.io/rhel7/support-tools:latest",
-		"registry.redhat.io/rhel8/support-tools:latest",
-		"registry.redhat.io/openshift4/ose-tools-rhel7:latest",
-		"registry.redhat.io/openshift4/ose-tools-rhel8:latest",
-		"registry.access.redhat.com/ubi7/ubi-minimal:latest",
-		"registry.access.redhat.com/ubi8/ubi-minimal:latest",
-		"registry.access.redhat.com/ubi8/nodejs-14:latest",
-		"registry.access.redhat.com/ubi7/go-toolset:1.16.12",
-		"registry.access.redhat.com/ubi8/go-toolset:1.17.7",
-		"mcr.microsoft.com/azure-cli:latest",
-	} {
-		err := mirror(ref)
-		if err != nil {
-			log.Errorf("%s: %s\n", ref, err)
-			errorOccurred = true
-		}
-	}
-	return
-}
-
-func appSREImages(log *logrus.Entry, mirror func(ref string) error) (errorOccurred bool) {
-	for _, ref := range []string{
-		"quay.io/app-sre/managed-upgrade-operator:v0.1.856-eebbe07",
-		"quay.io/app-sre/hive:fec14dc",
-	} {
-		err := mirror(ref)
-		if err != nil {
-			log.Errorf("%s: %s\n", ref, err)
-			errorOccurred = true
-		}
-	}
-	return
 }
