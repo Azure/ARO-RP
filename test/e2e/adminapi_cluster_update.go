@@ -20,9 +20,8 @@ import (
 var _ = Describe("[Admin API] Cluster admin update action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
-	It("must run cluster update operation on a cluster", func() {
+	It("must run cluster update operation on a cluster", func(ctx context.Context) {
 		var oc = &admin.OpenShiftCluster{}
-		ctx := context.Background()
 		resourceID := resourceIDFromEnv()
 
 		By("triggering the update via RP admin API")

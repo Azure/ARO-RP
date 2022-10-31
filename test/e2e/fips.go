@@ -15,8 +15,7 @@ import (
 )
 
 var _ = Describe("FIPS Mode", func() {
-	ctx := context.Background()
-	It("must be set correctly", func() {
+	It("must be set correctly", func(ctx context.Context) {
 		expectedFIPSMachineConfigs := []string{"99-worker-fips", "99-master-fips"}
 
 		By("getting the test cluster resource")

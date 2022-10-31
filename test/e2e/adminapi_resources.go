@@ -22,8 +22,7 @@ import (
 var _ = Describe("[Admin API] List Azure resources action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
-	It("must list Azure resources for a cluster", func() {
-		ctx := context.Background()
+	It("must list Azure resources for a cluster", func(ctx context.Context) {
 		resourceID := resourceIDFromEnv()
 
 		By("getting the resource group where cluster resources live in")

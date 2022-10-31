@@ -16,23 +16,20 @@ import (
 var _ = Describe("[Admin API] List clusters action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
-	It("must return list of clusters with admin fields", func() {
-		ctx := context.Background()
+	It("must return list of clusters with admin fields", func(ctx context.Context) {
 		resourceID := resourceIDFromEnv()
 
 		testAdminClustersList(ctx, "/admin/providers/Microsoft.RedHatOpenShift/openShiftClusters", resourceID)
 	})
 
-	It("must return list of clusters with admin fields by subscription", func() {
-		ctx := context.Background()
+	It("must return list of clusters with admin fields by subscription", func(ctx context.Context) {
 		resourceID := resourceIDFromEnv()
 
 		path := fmt.Sprintf("/subscriptions/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters", _env.SubscriptionID())
 		testAdminClustersList(ctx, path, resourceID)
 	})
 
-	It("must return list of clusters with admin fields by resource group", func() {
-		ctx := context.Background()
+	It("must return list of clusters with admin fields by resource group", func(ctx context.Context) {
 		resourceID := resourceIDFromEnv()
 
 		path := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters", _env.SubscriptionID(), vnetResourceGroup)

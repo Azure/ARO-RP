@@ -20,9 +20,9 @@ import (
 var _ = Describe("[Admin API] Cordon and Drain node actions", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
-	It("should be able to cordon, drain, and uncordon nodes", func() {
+	It("should be able to cordon, drain, and uncordon nodes", func(ctx context.Context) {
 		By("selecting a worker node in the cluster")
-		nodes, err := clients.Kubernetes.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{
+		nodes, err := clients.Kubernetes.CoreV1().Nodes().List(ctx, metav1.ListOptions{
 			LabelSelector: "node-role.kubernetes.io/worker",
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -31,7 +31,7 @@ var _ = Describe("[Admin API] Cordon and Drain node actions", func() {
 		nodeName := node.Name
 
 		drainer := &drain.Helper{
-			Ctx:                 context.Background(),
+			Ctx:                 ctx,
 			Client:              clients.Kubernetes,
 			Force:               true,
 			GracePeriodSeconds:  -1,
@@ -52,52 +52,52 @@ var _ = Describe("[Admin API] Cordon and Drain node actions", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}()
 
-		testCordonNodeOK(nodeName)
-		testDrainNodeOK(nodeName, drainer)
-		testUncordonNodeOK(nodeName)
+		testCordonNodeOK(ctx, nodeName)
+		testDrainNodeOK(ctx, nodeName, drainer)
+		testUncordonNodeOK(ctx, nodeName)
 	})
 })
 
-func testCordonNodeOK(nodeName string) {
+func testCordonNodeOK(ctx context.Context, nodeName string) {
 	By("cordoning the node via RP admin API")
 	params := url.Values{
 		"shouldCordon": []string{"true"},
 		"vmName":       []string{nodeName},
 	}
-	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/cordonnode", params, nil, nil)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+resourceIDFromEnv()+"/cordonnode", params, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("checking that node was cordoned via Kubernetes API")
-	node, err := clients.Kubernetes.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+	node, err := clients.Kubernetes.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(node.Name).To(Equal(nodeName))
 	Expect(node.Spec.Unschedulable).Should(BeTrue())
 }
 
-func testUncordonNodeOK(nodeName string) {
+func testUncordonNodeOK(ctx context.Context, nodeName string) {
 	By("uncordoning the node via RP admin API")
 	params := url.Values{
 		"shouldCordon": []string{"false"},
 		"vmName":       []string{nodeName},
 	}
-	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/cordonnode", params, nil, nil)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+resourceIDFromEnv()+"/cordonnode", params, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("checking that node was uncordoned via Kubernetes API")
-	node, err := clients.Kubernetes.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+	node, err := clients.Kubernetes.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(node.Name).To(Equal(nodeName))
 	Expect(node.Spec.Unschedulable).Should(BeFalse())
 }
 
-func testDrainNodeOK(nodeName string, drainer *drain.Helper) {
+func testDrainNodeOK(ctx context.Context, nodeName string, drainer *drain.Helper) {
 	By("draining the node via RP admin API")
 	params := url.Values{
 		"vmName": []string{nodeName},
 	}
-	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/drainnode", params, nil, nil)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+resourceIDFromEnv()+"/drainnode", params, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 }

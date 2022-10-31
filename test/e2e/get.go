@@ -11,9 +11,8 @@ import (
 )
 
 var _ = Describe("Get cluster", func() {
-	It("must be possible get a cluster and retrieve some (enriched) fields", func() {
+	It("must be possible get a cluster and retrieve some (enriched) fields", func(ctx context.Context) {
 		By("getting the cluster resource")
-		ctx := context.Background()
 		oc, err := clients.OpenshiftClustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
