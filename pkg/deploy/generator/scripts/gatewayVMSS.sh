@@ -1,5 +1,12 @@
+# We need to manually set PasswordAuthentication to true in order for the VMSS Access JIT to work
+echo "setting ssh password authentication"
+sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+systemctl reload sshd.service
+
+echo "running yum update"
 yum -y -x WALinuxAgent update
 
+echo "extending filesystems"
 lvextend -l +50%FREE /dev/rootvg/rootlv
 xfs_growfs /
 
@@ -7,6 +14,7 @@ lvextend -l +100%FREE /dev/rootvg/varlv
 xfs_growfs /var
 
 # avoid "error: db5 error(-30969) from dbenv->open: BDB0091 DB_VERSION_MISMATCH: Database environment version mismatch"
+echo "importing rpm repositories"
 rm -f /var/lib/rpm/__db*
 
 rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
@@ -17,6 +25,7 @@ for attempt in {1..5}; do
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
+echo "configuring logrotate"
 cat >/etc/logrotate.conf <<'EOF'
 # see "man logrotate" for details
 # rotate log files weekly
@@ -53,6 +62,7 @@ include /etc/logrotate.d
 }
 EOF
 
+echo "configuring yum repository and running yum update"
 cat >/etc/yum.repos.d/azure.repo <<'EOF'
 [azure-cli]
 name=azure-cli
@@ -79,6 +89,7 @@ done
 rpm -e $(rpm -qa | grep ^abrt-)
 
 # https://access.redhat.com/security/cve/cve-2020-13401
+echo "applying firewall rules"
 cat >/etc/sysctl.d/02-disable-accept-ra.conf <<'EOF'
 net.ipv6.conf.all.accept_ra=0
 EOF
@@ -101,6 +112,7 @@ az login -i --allow-no-subscriptions
 # not show on az login -i, which is why the below line is commented.
 # az account set -s "$SUBSCRIPTIONID"
 
+echo "logging into prod acr"
 systemctl start docker.service
 az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
@@ -111,6 +123,7 @@ docker pull "$FLUENTBITIMAGE"
 
 az logout
 
+echo "configuring fluentbit service"
 mkdir -p /etc/fluentbit/
 mkdir -p /var/lib/fluent
 
@@ -169,6 +182,7 @@ StartLimitInterval=0
 WantedBy=multi-user.target
 EOF
 
+echo "configuring mdm service"
 cat >/etc/sysconfig/mdm <<EOF
 MDMFRONTENDURL='$MDMFRONTENDURL'
 MDMIMAGE='$MDMIMAGE'
@@ -213,6 +227,7 @@ StartLimitInterval=0
 WantedBy=multi-user.target
 EOF
 
+echo "configuring aro-gateway service"
 cat >/etc/sysconfig/aro-gateway <<EOF
 ACR_RESOURCE_ID='$ACRRESOURCEID'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
@@ -267,6 +282,7 @@ chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
 
 mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
 
+echo "configuring mdsd and mdm services"
 for var in "mdsd" "mdm"; do
 cat >/etc/systemd/system/download-$var-credentials.service <<EOF
 [Unit]
@@ -428,6 +444,7 @@ PATH=/bin
 0 * * * * root chown syslog:syslog /var/opt/microsoft/linuxmonagent/eh/EventNotice/arorplogs*
 EOF
 
+echo "enabling aro services"
 for service in aro-gateway auoms azsecd azsecmond mdsd mdm chronyd fluentbit; do
   systemctl enable $service.service
 done
@@ -436,8 +453,6 @@ for scan in baseline clamav software; do
   /usr/local/bin/azsecd config -s $scan -d P1D
 done
 
-# We need to manually set PasswordAuthentication to true in order for the VMSS Access JIT to work
-sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
-
+echo "rebooting"
 restorecon -RF /var/log/*
 (sleep 120; reboot) &
