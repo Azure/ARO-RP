@@ -47,11 +47,12 @@ func newfakeMetricsEmitter() *fakeMetricsEmitter {
 	}
 }
 
-func (e *fakeMetricsEmitter) EmitGauge(topic string, value int64, dims map[string]string) {
-	e.Metrics[topic] = value
+func (e *fakeMetricsEmitter) EmitGauge(metricName string, metricValue int64, dimensions map[string]string) {
+	e.Metrics[metricName] = metricValue
 }
 
-func (e *fakeMetricsEmitter) EmitFloat(topic string, value float64, dims map[string]string) {}
+func (e *fakeMetricsEmitter) EmitFloat(metricName string, metricValue float64, dimensions map[string]string) {
+}
 
 var clusterOperator = &configv1.ClusterOperator{
 	ObjectMeta: metav1.ObjectMeta{

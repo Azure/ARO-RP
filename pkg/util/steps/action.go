@@ -35,6 +35,6 @@ func (s actionStep) String() string {
 	return fmt.Sprintf("[Action %s]", FriendlyName(s.f))
 }
 
-func (s actionStep) metricsTopic() string {
+func (s actionStep) metricsName() string {
 	return fmt.Sprintf("action.%s", shortName(FriendlyName(s.f)))
 }

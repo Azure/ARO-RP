@@ -90,7 +90,7 @@ func (s authorizationRefreshingActionStep) String() string {
 	return fmt.Sprintf("[AuthorizationRefreshingAction %s]", s.step)
 }
 
-func (s authorizationRefreshingActionStep) metricsTopic() string {
+func (s authorizationRefreshingActionStep) metricsName() string {
 	trimedName := strings.ReplaceAll(strings.ReplaceAll(s.step.String(), "[", ""), "]", "")
 	return fmt.Sprintf("refreshing.%s", shortName(trimedName))
 }

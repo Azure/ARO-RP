@@ -346,7 +346,7 @@ func TestStepRunner(t *testing.T) {
 	}
 }
 
-func TestStepMetricsTopicNaming(t *testing.T) {
+func TestStepMetricsNameFormatting(t *testing.T) {
 	for _, tt := range []struct {
 		desc string
 		step Step
@@ -379,8 +379,8 @@ func TestStepMetricsTopicNaming(t *testing.T) {
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
-			if got := tt.step.metricsTopic(); got != tt.want {
-				t.Errorf("incorrect step metrics topic, want: %s, got: %s", tt.want, got)
+			if got := tt.step.metricsName(); got != tt.want {
+				t.Errorf("incorrect step metrics name, want: %s, got: %s", tt.want, got)
 			}
 		})
 	}

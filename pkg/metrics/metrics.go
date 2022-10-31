@@ -5,6 +5,6 @@ package metrics
 
 // Emitter emits different types of metrics
 type Emitter interface {
-	EmitFloat(string, float64, map[string]string)
-	EmitGauge(string, int64, map[string]string)
+	EmitFloat(metricName string, metricValue float64, dimensions map[string]string)
+	EmitGauge(metricName string, metricValue int64, dimensions map[string]string)
 }
