@@ -98,17 +98,15 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 			return err
 		})
 		Expect(err).NotTo(HaveOccurred())
-	})
-	It("sets InternetReachableFromMaster to true when the default URL is reachable from master nodes", func(ctx context.Context) {
-		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(conditions.IsTrue(co.Status.Conditions, arov1alpha1.InternetReachableFromMaster)).To(BeTrue())
-	})
 
-	It("sets InternetReachableFromWorker to true when the default URL is reachable from worker nodes", func(ctx context.Context) {
-		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(conditions.IsTrue(co.Status.Conditions, arov1alpha1.InternetReachableFromWorker)).To(BeTrue())
+		By("waiting for the original conditions")
+		Eventually(func(g Gomega, ctx context.Context) {
+			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+
+			g.Expect(conditions.IsTrue(co.Status.Conditions, arov1alpha1.InternetReachableFromMaster)).To(BeTrue())
+			g.Expect(conditions.IsTrue(co.Status.Conditions, arov1alpha1.InternetReachableFromWorker)).To(BeTrue())
+		}).WithContext(ctx).Should(Succeed())
 	})
 
 	It("sets InternetReachableFromMaster and InternetReachableFromWorker to false when URL is not reachable", func(ctx context.Context) {
@@ -216,7 +214,6 @@ var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
 		Expect(configData.PrometheusK8s.Retention).To(BeEmpty())
 		Expect(configData.PrometheusK8s.VolumeClaimTemplate).To(BeNil())
 		Expect(configData.AlertManagerMain.VolumeClaimTemplate).To(BeNil())
-
 	})
 
 	It("must be restored if deleted", func(ctx context.Context) {
