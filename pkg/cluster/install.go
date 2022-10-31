@@ -348,10 +348,13 @@ func (m *manager) runSteps(ctx context.Context, s []steps.Step, metricsTopic str
 		if err == nil {
 			var totalInstallTime int64
 			for stepName, duration := range stepsTimeRun {
-				m.metricsEmitter.EmitGauge(fmt.Sprintf("backend.openshiftcluster.%s.%s.duration.seconds", metricsTopic, stepName), duration, nil)
+				metricName := fmt.Sprintf("backend.openshiftcluster.%s.%s.duration.seconds", metricsTopic, stepName)
+				m.metricsEmitter.EmitGauge(metricName, duration, nil)
 				totalInstallTime += duration
 			}
-			m.metricsEmitter.EmitGauge(fmt.Sprintf("backend.openshiftcluster.%s.duration.total.seconds", metricsTopic), totalInstallTime, nil)
+
+			metricName := fmt.Sprintf("backend.openshiftcluster.%s.duration.total.seconds", metricsTopic)
+			m.metricsEmitter.EmitGauge(metricName, totalInstallTime, nil)
 		}
 	} else {
 		_, err = steps.Run(ctx, m.log, 10*time.Second, s, nil)
