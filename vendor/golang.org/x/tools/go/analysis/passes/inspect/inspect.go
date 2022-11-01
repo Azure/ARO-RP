@@ -19,13 +19,14 @@
 //		Requires:       []*analysis.Analyzer{inspect.Analyzer},
 //	}
 //
-//	func run(pass *analysis.Pass) (interface{}, error) {
-//		inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
-//		inspect.Preorder(nil, func(n ast.Node) {
-//			...
-//		})
-//		return nil
-//	}
+// 	func run(pass *analysis.Pass) (interface{}, error) {
+// 		inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+// 		inspect.Preorder(nil, func(n ast.Node) {
+// 			...
+// 		})
+// 		return nil
+// 	}
+//
 package inspect
 
 import (

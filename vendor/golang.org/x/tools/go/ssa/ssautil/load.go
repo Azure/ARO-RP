@@ -34,6 +34,7 @@ import (
 // packages with well-typed syntax trees.
 //
 // The mode parameter controls diagnostics and checking during SSA construction.
+//
 func Packages(initial []*packages.Package, mode ssa.BuilderMode) (*ssa.Program, []*ssa.Package) {
 	return doPackages(initial, mode, false)
 }
@@ -55,6 +56,7 @@ func Packages(initial []*packages.Package, mode ssa.BuilderMode) (*ssa.Program, 
 // well-typed syntax trees.
 //
 // The mode parameter controls diagnostics and checking during SSA construction.
+//
 func AllPackages(initial []*packages.Package, mode ssa.BuilderMode) (*ssa.Program, []*ssa.Package) {
 	return doPackages(initial, mode, true)
 }
@@ -102,6 +104,7 @@ func doPackages(initial []*packages.Package, mode ssa.BuilderMode, deps bool) (*
 //
 // Deprecated: Use golang.org/x/tools/go/packages and the Packages
 // function instead; see ssa.Example_loadPackages.
+//
 func CreateProgram(lprog *loader.Program, mode ssa.BuilderMode) *ssa.Program {
 	prog := ssa.NewProgram(lprog.Fset, mode)
 
@@ -128,6 +131,7 @@ func CreateProgram(lprog *loader.Program, mode ssa.BuilderMode) *ssa.Program {
 // The operation fails if there were any type-checking or import errors.
 //
 // See ../example_test.go for an example.
+//
 func BuildPackage(tc *types.Config, fset *token.FileSet, pkg *types.Package, files []*ast.File, mode ssa.BuilderMode) (*ssa.Package, *types.Info, error) {
 	if fset == nil {
 		panic("no token.FileSet")

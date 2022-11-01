@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"math"
 	mathrand "math/rand"
@@ -2903,12 +2904,7 @@ func (t *Transport) logf(format string, args ...interface{}) {
 	log.Printf(format, args...)
 }
 
-var noBody io.ReadCloser = noBodyReader{}
-
-type noBodyReader struct{}
-
-func (noBodyReader) Close() error             { return nil }
-func (noBodyReader) Read([]byte) (int, error) { return 0, io.EOF }
+var noBody io.ReadCloser = ioutil.NopCloser(bytes.NewReader(nil))
 
 type missingBody struct{}
 

@@ -4,7 +4,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"unicode"
 
 	"github.com/onsi/ginkgo/v2/formatter"
@@ -85,13 +84,11 @@ func (d deprecations) Nodot() Deprecation {
 
 type DeprecationTracker struct {
 	deprecations map[Deprecation][]CodeLocation
-	lock         *sync.Mutex
 }
 
 func NewDeprecationTracker() *DeprecationTracker {
 	return &DeprecationTracker{
 		deprecations: map[Deprecation][]CodeLocation{},
-		lock:         &sync.Mutex{},
 	}
 }
 
@@ -105,8 +102,6 @@ func (d *DeprecationTracker) TrackDeprecation(deprecation Deprecation, cl ...Cod
 		}
 	}
 
-	d.lock.Lock()
-	defer d.lock.Unlock()
 	if len(cl) == 1 {
 		d.deprecations[deprecation] = append(d.deprecations[deprecation], cl[0])
 	} else {
@@ -115,14 +110,10 @@ func (d *DeprecationTracker) TrackDeprecation(deprecation Deprecation, cl ...Cod
 }
 
 func (d *DeprecationTracker) DidTrackDeprecations() bool {
-	d.lock.Lock()
-	defer d.lock.Unlock()
 	return len(d.deprecations) > 0
 }
 
 func (d *DeprecationTracker) DeprecationsReport() string {
-	d.lock.Lock()
-	defer d.lock.Unlock()
 	out := formatter.F("{{light-yellow}}You're using deprecated Ginkgo functionality:{{/}}\n")
 	out += formatter.F("{{light-yellow}}============================================={{/}}\n")
 	for deprecation, locations := range d.deprecations {

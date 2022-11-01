@@ -90,8 +90,8 @@ var (
 	asmArchMipsLE   = asmArch{name: "mipsle", bigEndian: false, stack: "R29", lr: true}
 	asmArchMips64   = asmArch{name: "mips64", bigEndian: true, stack: "R29", lr: true}
 	asmArchMips64LE = asmArch{name: "mips64le", bigEndian: false, stack: "R29", lr: true}
-	asmArchPpc64    = asmArch{name: "ppc64", bigEndian: true, stack: "R1", lr: true, retRegs: []string{"R3", "F1"}}
-	asmArchPpc64LE  = asmArch{name: "ppc64le", bigEndian: false, stack: "R1", lr: true, retRegs: []string{"R3", "F1"}}
+	asmArchPpc64    = asmArch{name: "ppc64", bigEndian: true, stack: "R1", lr: true}
+	asmArchPpc64LE  = asmArch{name: "ppc64le", bigEndian: false, stack: "R1", lr: true}
 	asmArchRISCV64  = asmArch{name: "riscv64", bigEndian: false, stack: "SP", lr: true}
 	asmArchS390X    = asmArch{name: "s390x", bigEndian: true, stack: "R15", lr: true}
 	asmArchWasm     = asmArch{name: "wasm", bigEndian: false, stack: "SP", lr: false}
@@ -114,7 +114,6 @@ var (
 )
 
 func init() {
-	arches = append(arches, additionalArches()...)
 	for _, arch := range arches {
 		arch.sizes = types.SizesFor("gc", arch.name)
 		if arch.sizes == nil {
@@ -732,7 +731,7 @@ func asmCheckVar(badf func(string, ...interface{}), fn *asmFunc, line, expr stri
 					src = 8
 				}
 			}
-		case "loong64", "mips", "mipsle", "mips64", "mips64le":
+		case "mips", "mipsle", "mips64", "mips64le":
 			switch op {
 			case "MOVB", "MOVBU":
 				src = 1
