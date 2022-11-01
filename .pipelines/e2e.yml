@@ -76,8 +76,6 @@ jobs:
       export CI=true
       . ./hack/e2e/run-rp-and-e2e.sh
 
-      delete_e2e_cluster
-      clean_e2e_db
       kill_rp
       kill_portal
       kill_vpn
