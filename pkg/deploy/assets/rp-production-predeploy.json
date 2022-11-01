@@ -318,6 +318,30 @@
                 "enableSoftDelete": true
             },
             "apiVersion": "2019-09-01"
+        },
+        {
+            "name": "[concat(parameters('keyvaultPrefix'), '-svc/add')]",
+            "type": "Microsoft.KeyVault/vaults/accessPolicies",
+            "properties": {
+                "accessPolicies": [
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[reference(resourceId('Microsoft.ContainerService/managedClusters', 'aro-aks-cluster-001'), '2020-12-01', 'Full').properties.identityProfile.kubeletidentity.objectId]",
+                        "permissions": {
+                            "secrets": [
+                                "get"
+                            ],
+                            "certificates": [
+                                "get"
+                            ]
+                        }
+                    }
+                ]
+            },
+            "apiVersion": "2021-10-01",
+            "dependsOn": [
+                "[concat(parameters('keyvaultPrefix'), '-svc')]"
+            ]
         }
     ]
 }
