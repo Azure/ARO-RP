@@ -115,7 +115,7 @@ publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
 
 proxy:
-	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
+	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
 
 run-portal:
 	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
