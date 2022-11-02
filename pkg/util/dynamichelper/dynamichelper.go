@@ -182,7 +182,7 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 
 	gvk := gvks[0]
 
-	gvr, err := dh.Resolve(gvk.GroupKind().String(), gvk.Version)
+	gvr, err := dh.resolve(gvk.GroupKind().String(), gvk.Version)
 	if err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 		}
 
 		if strings.HasPrefix(acc.GetName(), "gatekeeper") {
-			dh.log.Printf("\x1b[%dm %s@%s:: ignore changes: %s\x1b[0m\n", 36, acc.GetName(), acc.GetNamespace(), diff)
+			dh.log.Printf("\x1b[%dm ignore changes for %s@%s\x1b[0m\n", 36, acc.GetName(), acc.GetNamespace())
 			return nil
 		}
 		dh.log.Printf("Update %s: %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()), diff)
