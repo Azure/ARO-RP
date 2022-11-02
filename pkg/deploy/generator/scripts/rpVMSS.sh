@@ -622,4 +622,4 @@ done
 sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
 
 restorecon -RF /var/log/*
-(sleep 30; reboot) &
+(sleep 120; reboot) &
