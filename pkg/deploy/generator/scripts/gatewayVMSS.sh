@@ -1,4 +1,4 @@
-yum -y update
+yum -y -x WALinuxAgent update
 
 lvextend -l +50%FREE /dev/rootvg/rootlv
 xfs_growfs /
