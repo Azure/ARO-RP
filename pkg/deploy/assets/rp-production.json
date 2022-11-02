@@ -126,7 +126,8 @@
                 "brazilsouth",
                 "southafricanorth",
                 "northcentralus",
-                "uaenorth"
+                "uaenorth",
+                "westus"
             ]
         },
         "portalAccessGroupIds": {
