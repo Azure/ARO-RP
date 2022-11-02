@@ -72,7 +72,8 @@
                 "koreacentral",
                 "switzerlandnorth",
                 "northcentralus",
-                "uaenorth"
+                "uaenorth",
+                "westus"
             ]
         },
         "rpImage": {

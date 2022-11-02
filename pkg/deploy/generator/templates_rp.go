@@ -124,6 +124,7 @@ func (g *generator) rpTemplate() *arm.Template {
 				"southafricanorth",
 				"northcentralus",
 				"uaenorth",
+				"westus",
 			}
 
 		// TODO: Replace with Live Service Configuration in KeyVault
