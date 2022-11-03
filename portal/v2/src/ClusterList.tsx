@@ -116,7 +116,7 @@ const PopupModal = (props: {title: string, text: string, hidePopup: any}) => {
                 </p>
                 <DefaultButton onClick={() => {
                   // this is to change the URL in the address bar
-                  window.history.replaceState({}, "", "/")
+                  window.history.replaceState({}, "", "/v2")
                   props.hidePopup()
                 }}>
                   Close
