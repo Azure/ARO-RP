@@ -128,9 +128,67 @@ func (g *generator) populateResponses(typ string, isDelete bool, statusCodes ...
 	return
 }
 
+func (g *generator) putResourceOperation(parameterSelector int, resourceType string, friendlyName string, longRunning bool) *Operation {
+	return &Operation{
+		Tags:        []string{resourceType + "s"},
+		Summary:     "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
+		Description: "The operation returns properties of a " + friendlyName + ".",
+		OperationID: resourceType + "s_CreateOrUpdate",
+		Parameters:  g.populateParameters(parameterSelector, resourceType, friendlyName),
+		Responses: map[string]interface{}{
+			strconv.FormatInt(int64(http.StatusOK), 10): Response{
+				Description: http.StatusText(http.StatusOK),
+				Schema: &Schema{
+					Ref: "#/definitions/" + resourceType,
+				},
+			},
+			strconv.FormatInt(int64(http.StatusCreated), 10): Response{
+				Description: http.StatusText(http.StatusCreated),
+				Schema: &Schema{
+					Ref: "#/definitions/" + resourceType,
+				},
+			},
+			"default": Response{
+				Description: "Error response describing why the operation failed.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+				Schema: &Schema{
+					Ref: "#/definitions/CloudError",
+				},
+			},
+		},
+		LongRunningOperation: longRunning,
+	}
+}
+
+func (g *generator) patchResourceOperation(parameterSelector int, resourceType string, friendlyName string, isLongRunning bool) *Operation {
+	return &Operation{
+		Tags:        []string{resourceType + "s"},
+		Summary:     "Updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
+		Description: "The operation returns properties of a " + friendlyName + ".",
+		OperationID: resourceType + "s_Update",
+		Parameters:  g.populateParameters(parameterSelector, resourceType, friendlyName),
+		Responses: map[string]interface{}{
+			strconv.FormatInt(int64(http.StatusOK), 10): Response{
+				Description: http.StatusText(http.StatusOK),
+				Schema: &Schema{
+					Ref: "#/definitions/" + resourceType,
+				},
+			},
+			"default": Response{
+				Description: "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+				Schema: &Schema{
+					Ref: "#/definitions/CloudError",
+				},
+			},
+		},
+		LongRunningOperation: isLongRunning,
+	}
+}
+
 // populateChildResourcePaths populates the paths for a child resource of a top level ARM resoure with list and CRUD operations defined for the path item
 func (g *generator) populateChildResourcePaths(ps Paths, resourceProviderNamespace string, resourceType string, childResourceType string, friendlyName string) {
 	titleCaser := cases.Title(language.Und, cases.NoLower)
+	isLongRunningOperation := false
+
 	ps["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/"+resourceProviderNamespace+"/"+resourceType+"/{resourceName}/"+childResourceType+"s"] = &PathItem{
 		Get: &Operation{
 			Tags:        []string{titleCaser.String(childResourceType) + "s"},
@@ -153,14 +211,7 @@ func (g *generator) populateChildResourcePaths(ps Paths, resourceProviderNamespa
 			Parameters:  g.populateParameters(7, titleCaser.String(childResourceType), friendlyName),
 			Responses:   g.populateResponses(titleCaser.String(childResourceType), false, http.StatusOK),
 		},
-		Put: &Operation{
-			Tags:        []string{titleCaser.String(childResourceType) + "s"},
-			Summary:     "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
-			Description: "The operation returns properties of a " + friendlyName + ".",
-			OperationID: titleCaser.String(childResourceType) + "s_CreateOrUpdate",
-			Parameters:  g.populateParameters(8, titleCaser.String(childResourceType), friendlyName),
-			Responses:   g.populateResponses(titleCaser.String(childResourceType), false, http.StatusOK, http.StatusCreated),
-		},
+		Put: g.putResourceOperation(8, titleCaser.String(childResourceType), friendlyName, isLongRunningOperation),
 		Delete: &Operation{
 			Tags:        []string{titleCaser.String(childResourceType) + "s"},
 			Summary:     "Deletes a " + friendlyName + " with the specified subscription, resource group and resource name.",
@@ -169,14 +220,7 @@ func (g *generator) populateChildResourcePaths(ps Paths, resourceProviderNamespa
 			Parameters:  g.populateParameters(7, titleCaser.String(childResourceType), friendlyName),
 			Responses:   g.populateResponses(titleCaser.String(childResourceType), true, http.StatusOK, http.StatusNoContent),
 		},
-		Patch: &Operation{
-			Tags:        []string{titleCaser.String(childResourceType) + "s"},
-			Summary:     "Patches (create or update) a " + friendlyName + " with the specified subscription, resource group and resource name.",
-			Description: "The operation returns properties of a " + friendlyName + ".",
-			OperationID: titleCaser.String(childResourceType) + "s_Update",
-			Parameters:  g.populateParameters(9, titleCaser.String(childResourceType), friendlyName),
-			Responses:   g.populateResponses(titleCaser.String(childResourceType), false, http.StatusOK, http.StatusCreated),
-		},
+		Patch: g.patchResourceOperation(9, titleCaser.String(childResourceType), friendlyName, isLongRunningOperation),
 	}
 }
 

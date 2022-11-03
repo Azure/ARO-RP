@@ -517,7 +517,7 @@ func (client SecretsClient) UpdateSender(req *http.Request) (*http.Response, err
 func (client SecretsClient) UpdateResponder(resp *http.Response) (result Secret, err error) {
 	err = autorest.Respond(
 		resp,
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
 	result.Response = autorest.Response{Response: resp}

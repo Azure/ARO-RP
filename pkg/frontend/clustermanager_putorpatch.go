@@ -63,9 +63,12 @@ func (f *frontend) _putOrPatchSyncSet(ctx context.Context, log *logrus.Entry, r 
 		return nil, err
 	}
 
-	ocmdoc, _ := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
+	ocmdoc, err := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
+	} else if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) && r.Method == http.MethodPatch {
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
+			vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
 	}
 
 	var resources string
@@ -132,9 +135,12 @@ func (f *frontend) _putOrPatchMachinePool(ctx context.Context, log *logrus.Entry
 		return nil, err
 	}
 
-	ocmdoc, _ := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
+	ocmdoc, err := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
+	} else if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) && r.Method == http.MethodPatch {
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
+			vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
 	}
 
 	var resources string
@@ -201,9 +207,12 @@ func (f *frontend) _putOrPatchSyncIdentityProvider(ctx context.Context, log *log
 		return nil, err
 	}
 
-	ocmdoc, _ := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
+	ocmdoc, err := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
+	} else if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) && r.Method == http.MethodPatch {
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
+			vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
 	}
 
 	var resources string
@@ -270,9 +279,12 @@ func (f *frontend) _putOrPatchSecret(ctx context.Context, log *logrus.Entry, r *
 		return nil, err
 	}
 
-	ocmdoc, _ := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
+	ocmdoc, err := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
+	} else if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) && r.Method == http.MethodPatch {
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
+			vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
 	}
 
 	var resources string
