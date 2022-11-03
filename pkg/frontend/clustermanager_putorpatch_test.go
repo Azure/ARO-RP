@@ -72,6 +72,28 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 			},
 		)
 	}
+	noDocuments := func(f *testdatabase.Fixture, tt *test, resourceKey string) {
+		f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+			ID: mockSubscriptionId,
+			Subscription: &api.Subscription{
+				State: api.SubscriptionStateRegistered,
+				Properties: &api.SubscriptionProperties{
+					TenantID: tenantId,
+				},
+			},
+		})
+		f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+			Key: strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionId, "resourceName")),
+			OpenShiftCluster: &api.OpenShiftCluster{
+				ID: testdatabase.GetResourcePath(mockSubscriptionId, "resourceName"),
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourcegroups/%s", mockSubscriptionId, tt.clusterName),
+					},
+				},
+			},
+		})
+	}
 
 	for _, tt := range []*test{
 		{
@@ -114,31 +136,10 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 			ocmResourceName: "putNewSyncSet",
 			clusterName:     "myCluster",
 			apiVersion:      "2022-09-04",
-			fixture: func(f *testdatabase.Fixture, tt *test, resourceKey string) {
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubscriptionId,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: tenantId,
-						},
-					},
-				})
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionId, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: testdatabase.GetResourcePath(mockSubscriptionId, "resourceName"),
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourcegroups/%s", mockSubscriptionId, tt.clusterName),
-							},
-						},
-					},
-				})
-			},
-			requestMethod:  http.MethodPut,
-			requestBody:    modifiedPayload,
-			wantStatusCode: http.StatusOK,
+			fixture:         noDocuments,
+			requestMethod:   http.MethodPut,
+			requestBody:     modifiedPayload,
+			wantStatusCode:  http.StatusOK,
 			wantResponse: &v20220904.SyncSet{
 				Name: "putnewsyncset",
 				Type: "Microsoft.RedHatOpenShift/SyncSet",
@@ -147,6 +148,18 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 					Resources: modifiedPayload,
 				},
 			},
+		},
+		{
+			name:            "patching nonexistent syncset",
+			ocmResourceType: "syncSet",
+			ocmResourceName: "patchNewSyncSet",
+			clusterName:     "myCluster",
+			apiVersion:      "2022-09-04",
+			fixture:         noDocuments,
+			requestMethod:   http.MethodPatch,
+			requestBody:     modifiedPayload,
+			wantStatusCode:  http.StatusNotFound,
+			wantError:       "404: ResourceNotFound: : The Resource 'openshiftclusters/resourcename/syncset/patchnewsyncset' under resource group 'resourcegroup' was not found.",
 		},
 		{
 			name:            "unsupported api version",

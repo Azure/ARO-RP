@@ -518,7 +518,7 @@ func (client SyncIdentityProvidersClient) UpdateSender(req *http.Request) (*http
 func (client SyncIdentityProvidersClient) UpdateResponder(resp *http.Response) (result SyncIdentityProvider, err error) {
 	err = autorest.Respond(
 		resp,
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
 	result.Response = autorest.Response{Response: resp}
