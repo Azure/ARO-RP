@@ -558,7 +558,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("7-LVM"),
+							Sku:       to.StringPtr("8-LVM"),
 							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
