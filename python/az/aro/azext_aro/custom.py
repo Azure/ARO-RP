@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the Apache License 2.0.
 
+import argparse
 from distutils.log import error
 import random
 import os
@@ -64,6 +65,23 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                install_version=None,
                no_wait=False,
                validate_only=False):
+    if validate_only:
+        error_object = validate_cluster_create(cmd, client, resource_group_name, master_subnet, worker_subnet, vnet, pod_cidr, service_cidr)
+        errors = []
+        for key in error_object:
+            error = error_object[key](cmd, locals())
+            if error != []:
+                for err in error:
+                    errors.append(err)
+
+        if len(errors) > 0:
+            logger.error("Permission issues found blocking cluster creation.\n")
+            for error in errors:
+                logger.warning(error + "\n")
+        else:
+            logger.warning("\nNo Permissions issues on network blocking cluster creation\n")
+        return
+
     if not rp_mode_development():
         resource_client = get_mgmt_service_client(
             cmd.cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES)
@@ -79,10 +97,6 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                                                           random_id)
     oc = create_openshift_cluster(**locals())
     ensure_resource_permissions(cmd.cli_ctx, oc, True, sp_obj_ids)
-
-    if validate_only:
-        error_object = validate_cluster_create(cmd, client, oc, resource_group_name, master_subnet, worker_subnet, vnet)
-        return print(error_object)
 
     # return sdk_no_wait(no_wait, client.open_shift_clusters.begin_create_or_update,
     #                    resource_group_name=resource_group_name,
