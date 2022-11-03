@@ -135,11 +135,11 @@ func TestFixSSH(t *testing.T) {
 		}
 	}
 
-	ifBefore := func(lbID string, i int, vmName *string) *mgmtnetwork.Interface {
+	ifBefore := func(lbID string, i int) *mgmtnetwork.Interface {
 		return &mgmtnetwork.Interface{
 			InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
 				VirtualMachine: &mgmtnetwork.SubResource{
-					ID: vmName,
+					ID: to.StringPtr(fmt.Sprintf("master-%d", i)),
 				},
 				IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
 					{
@@ -152,27 +152,10 @@ func TestFixSSH(t *testing.T) {
 		}
 	}
 
-	ifNoVmBefore := func(lbID string, i int, vmName *string) *mgmtnetwork.Interface {
+	ifNoVmBefore := func(lbID string, i int) *mgmtnetwork.Interface {
 		return &mgmtnetwork.Interface{
 			InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
 				VirtualMachine: nil,
-				IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
-					{
-						InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
-							LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{},
-						},
-					},
-				},
-			},
-		}
-	}
-
-	ifAfter := func(lbID string, i int, vmName *string) *mgmtnetwork.Interface {
-		return &mgmtnetwork.Interface{
-			InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
-				VirtualMachine: &mgmtnetwork.SubResource{
-					ID: vmName,
-				},
 				IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
 					{
 						InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
@@ -188,10 +171,18 @@ func TestFixSSH(t *testing.T) {
 		}
 	}
 
-	ifNoVmAfter := func(lbID string, i int, vmName *string) *mgmtnetwork.Interface {
+	ifNoVmAfter := func(nic *mgmtnetwork.Interface) *mgmtnetwork.Interface {
+		emptyAddressPool := make([]mgmtnetwork.BackendAddressPool, 0)
+		(*nic.InterfacePropertiesFormat.IPConfigurations)[0].InterfaceIPConfigurationPropertiesFormat.LoadBalancerBackendAddressPools = &emptyAddressPool
+		return nic
+	}
+
+	ifAfter := func(lbID string, i int) *mgmtnetwork.Interface {
 		return &mgmtnetwork.Interface{
 			InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
-				VirtualMachine: nil,
+				VirtualMachine: &mgmtnetwork.SubResource{
+					ID: to.StringPtr(fmt.Sprintf("master-%d", i)),
+				},
 				IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
 					{
 						InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
@@ -213,7 +204,7 @@ func TestFixSSH(t *testing.T) {
 		lb                  string
 		lbID                string
 		loadbalancer        func(string) *mgmtnetwork.LoadBalancer
-		iface               func(string, int, *string) *mgmtnetwork.Interface
+		iface               func(string, int) *mgmtnetwork.Interface
 		iNameF              string
 		ifaceNoVmAttached   bool // create the NIC without a master VM attached, to simulate a master node replacement
 		writeExpected       bool // do we expect write to happen as part of this test
@@ -286,32 +277,30 @@ func TestFixSSH(t *testing.T) {
 			interfaces := mock_network.NewMockInterfacesClient(ctrl)
 			loadBalancers := mock_network.NewMockLoadBalancersClient(ctrl)
 
-			var iFirst *gomock.Call
-			var uFirst *gomock.Call
-
-			// check
 			loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.lb, "").Return(*tt.loadbalancer(tt.lbID), nil)
-			for i := 0; i < 3; i++ {
-				if tt.fallbackExpected { // bit of hack to check fallback.
-					if tt.ifaceNoVmAttached {
-						iFirst = interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), "").Return(*tt.iface(tt.lbID, i, nil), nil)
-					} else {
-						iFirst = interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), "").Return(mgmtnetwork.Interface{}, fmt.Errorf("nic not found"))
-					}
-					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*tt.iface(tt.lbID, i, to.StringPtr(fmt.Sprintf("master-%d", i))), nil).After(iFirst)
-				} else {
-					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*tt.iface(tt.lbID, i, to.StringPtr(fmt.Sprintf("master-%d", i))), nil)
-				}
-			}
-
 			if tt.writeExpected {
 				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, tt.lb, *lbAfter(tt.lbID))
-				for i := 0; i < 3; i++ {
+			}
+
+			for i := 0; i < 3; i++ {
+				vmNicBefore := tt.iface(tt.lbID, i)
+
+				if tt.fallbackExpected { // bit of hack to check fallback.
 					if tt.ifaceNoVmAttached {
-						uFirst = interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), *ifNoVmAfter(tt.lbID, i, nil))
-						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *ifAfter(tt.lbID, i, to.StringPtr(fmt.Sprintf("master-%d", i)))).After(uFirst)
+						vmNicBefore = ifNoVmBefore(tt.lbID, i)
+						interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), "").Return(*vmNicBefore, nil)
 					} else {
-						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *ifAfter(tt.lbID, i, to.StringPtr(fmt.Sprintf("master-%d", i))))
+						interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), "").Return(mgmtnetwork.Interface{}, fmt.Errorf("nic not found"))
+					}
+				}
+				interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*vmNicBefore, nil)
+
+				if tt.writeExpected {
+					if tt.ifaceNoVmAttached {
+						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), *vmNicBefore)
+						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *ifNoVmAfter(vmNicBefore))
+					} else {
+						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *vmNicBefore)
 					}
 				}
 			}
