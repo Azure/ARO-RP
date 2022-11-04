@@ -105,7 +105,7 @@ func (f *frontend) _putOrPatchSyncSet(ctx context.Context, log *logrus.Entry, r 
 		if ocmdoc.Deleting {
 			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on a resource marked for deletion.")
 		}
-		ocmdoc.SyncSet.Properties.Resources = string(resources)
+		ocmdoc.SyncSet.Properties.Resources = resources
 	}
 
 	ocmdoc.CorrelationData = correlationData
@@ -174,7 +174,7 @@ func (f *frontend) _putOrPatchMachinePool(ctx context.Context, log *logrus.Entry
 		if ocmdoc.Deleting {
 			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on a resource marked for deletion.")
 		}
-		ocmdoc.MachinePool.Properties.Resources = string(resources)
+		ocmdoc.MachinePool.Properties.Resources = resources
 	}
 
 	ocmdoc.CorrelationData = correlationData
@@ -243,7 +243,7 @@ func (f *frontend) _putOrPatchSyncIdentityProvider(ctx context.Context, log *log
 		if ocmdoc.Deleting {
 			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on a resource marked for deletion.")
 		}
-		ocmdoc.SyncIdentityProvider.Properties.Resources = string(resources)
+		ocmdoc.SyncIdentityProvider.Properties.Resources = resources
 	}
 
 	ocmdoc.CorrelationData = correlationData
