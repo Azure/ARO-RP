@@ -23,6 +23,14 @@ helps['aro create'] = """
     text: az aro create --resource-group MyResourceGroup --name MyCluster --vnet MyVnet --master-subnet MyMasterSubnet --worker-subnet MyWorkerSubnet --apiserver-visibility Private --ingress-visibility Private
 """
 
+helps['aro validate'] = """
+  type: command
+  short-summary: Validate permissions required to create a cluster.
+  examples:
+  - name: Validate permissions.
+    text: az aro validate --resource-group MyResourceGroup --vnet MyVnet --master-subnet MyMasterSubnet --worker-subnet MyWorkerSubnet
+"""
+
 helps['aro list'] = """
   type: command
   short-summary: List clusters.

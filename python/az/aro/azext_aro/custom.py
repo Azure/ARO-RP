@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the Apache License 2.0.
 
+import argparse
+from distutils.log import error
 import random
 import os
 from base64 import b64decode
@@ -18,6 +20,7 @@ from azext_aro._rbac import assign_role_to_resource, \
     has_role_assignment_on_resource
 from azext_aro._rbac import ROLE_NETWORK_CONTRIBUTOR, ROLE_READER
 from azext_aro._validators import validate_subnets
+from azext_aro._dynamic_validators import validate_cluster_create
 
 from knack.log import get_logger
 
@@ -66,6 +69,23 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         if provider.registration_state != 'Registered':
             raise UnauthorizedError('Microsoft.RedHatOpenShift provider is not registered.',
                                     'Run `az provider register -n Microsoft.RedHatOpenShift --wait`.')
+
+    if validate_only:
+        error_object = validate_cluster_create(cmd, client, resource_group_name, master_subnet, worker_subnet, vnet, pod_cidr, service_cidr)
+        errors = []
+        for key in error_object:
+            error = error_object[key](cmd, locals())
+            if error != []:
+                for err in error:
+                    errors.append(err)
+
+        if len(errors) > 0:
+            logger.error("Permission issues found blocking cluster creation.\n")
+            for error in errors:
+                logger.warning(error + "\n")
+        else:
+            logger.warning("\nNo Permissions issues on network blocking cluster creation\n")
+        return
 
     validate_subnets(master_subnet, worker_subnet)
 
@@ -152,6 +172,18 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                        resource_name=resource_name,
                        parameters=oc)
 
+def aro_validate(cmd,
+                 client,
+                 resource_group_name,
+                 master_subnet,
+                 worker_subnet,
+                 vnet,
+                 pod_cidr=None,
+                 service_cidr=None,
+                 resource_name=None,
+                 vnet_resource_group_name=None,
+                 validate_only=True):
+    aro_create(**locals())
 
 def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
     # TODO: clean up rbac
