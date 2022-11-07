@@ -1,8 +1,9 @@
 import * as React from 'react';
 import { useState, useEffect } from "react"
-import { Stack, StackItem, IconButton, IIconStyles } from '@fluentui/react';
+import { Stack, StackItem, IconButton, IIconStyles, SelectionMode } from '@fluentui/react';
 import { Link } from '@fluentui/react/lib/Link';
-import { DetailsList, IColumn } from '@fluentui/react/lib/DetailsList';
+import { IColumn } from '@fluentui/react/lib/DetailsList';
+import { ShimmeredDetailsList } from '@fluentui/react/lib/ShimmeredDetailsList';
 import { IMachine } from "./MachinesWrapper";
 import { MachinesComponent } from "./Machines"
 
@@ -52,8 +53,8 @@ export function MachinesListHelperComponent(props: {
       key: "machineName",
       name: "Name",
       fieldName: "name",
-      minWidth: 100,
-      maxWidth: 200,
+      minWidth: 150,
+      maxWidth: 350,
       isResizable: true,
       isSorted: true,
       isSortedDescending: false,
@@ -66,8 +67,8 @@ export function MachinesListHelperComponent(props: {
       key: "machineStatus",
       name: "Status",
       fieldName: "status",
-      minWidth: 100,
-      maxWidth: 200,
+      minWidth: 60,
+      maxWidth: 60,
       isResizable: true,
       isSorted: true,
       isSortedDescending: false,
@@ -77,8 +78,8 @@ export function MachinesListHelperComponent(props: {
       key: "createdTime",
       name: "Created Time",
       fieldName: "createdTime",
-      minWidth: 100,
-      maxWidth: 200,
+      minWidth: 120,
+      maxWidth: 150,
       isResizable: true,
       isSorted: true,
       isSortedDescending: false,
@@ -89,6 +90,8 @@ export function MachinesListHelperComponent(props: {
   const [machinesList, setMachinesList] = useState<IMachinesList[]>([])
   const [machinesDetailsVisible, setMachinesDetailsVisible] = useState<boolean>(false)
   const [currentMachine, setCurrentMachine] = useState<string>("")
+  const [shimmerVisibility, SetShimmerVisibility] = useState<boolean>(true)
+
 
   useEffect(() => {
     setMachinesList(createMachinesList(props.machines))
@@ -101,6 +104,11 @@ export function MachinesListHelperComponent(props: {
       col.onColumnClick = _onColumnClick
     })
     setColumns(newColumns)
+
+    if (machinesList.length > 0) {
+      SetShimmerVisibility(false)
+    }
+    
   }, [machinesList])
 
   function _onMachineInfoLinkClick(machine: string) {
@@ -141,10 +149,6 @@ export function MachinesListHelperComponent(props: {
     //setMachinesList(machineLocal)
     }
 
-    function _getKey(item: any): string {
-        return item.key
-    }
-
     function createMachinesList(machines: IMachine[]): IMachinesList[] {
         return machines.map(machine => {
             return {name: machine.name, status: machine.status, createdTime: machine.createdTime}
@@ -182,16 +186,17 @@ export function MachinesListHelperComponent(props: {
             <MachinesComponent machines={props.machines} clusterName={props.clusterName} machineName={currentMachine}/>
           </Stack>
           :
-          <DetailsList
-              items={machinesList}
-              setKey="none"
-              columns={columns}
-              selectionMode={0}
-              getKey={_getKey}
-              ariaLabelForSelectionColumn="Toggle selection"
-              ariaLabelForSelectAllCheckbox="Toggle selection for all items"
-              checkButtonAriaLabel="select row"
-            />    
+          <div>
+          <ShimmeredDetailsList
+            setKey="none"
+            items={machinesList}
+            columns={columns}
+            selectionMode={SelectionMode.none}
+            enableShimmer={shimmerVisibility}
+            ariaLabelForShimmer="Content is being fetched"
+            ariaLabelForGrid="Item details"
+          />
+          </div>
         }
       </StackItem>
     </Stack>

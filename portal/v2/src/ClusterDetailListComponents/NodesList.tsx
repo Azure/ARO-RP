@@ -1,8 +1,9 @@
 import * as React from 'react';
 import { useState, useEffect } from "react"
-import { Stack, StackItem, IconButton, IIconStyles } from '@fluentui/react';
+import { Stack, StackItem, IconButton, IIconStyles, SelectionMode } from '@fluentui/react';
 import { Link } from '@fluentui/react/lib/Link';
-import { DetailsList, IColumn } from '@fluentui/react/lib/DetailsList';
+import { IColumn } from '@fluentui/react/lib/DetailsList';
+import { ShimmeredDetailsList } from '@fluentui/react/lib/ShimmeredDetailsList';
 import { INode } from "./NodesWrapper";
 import { NodesComponent } from "./Nodes"
 
@@ -52,7 +53,7 @@ export function NodeListHelperComponent(props: {
       name: "Name",
       fieldName: "name",
       minWidth: 150,
-      maxWidth: 200,
+      maxWidth: 350,
       isResizable: true,
       isPadded: true,
       showSortIconWhenUnsorted: true,
@@ -66,9 +67,9 @@ export function NodeListHelperComponent(props: {
       key: "nodeStatus",
       name: "Status",
       fieldName: "status",
-      minWidth: 150,
+      minWidth: 50,
+      maxWidth: 50,
       isPadded: true,
-      maxWidth: 200,
       isResizable: true,
       isSortedDescending: false,
       isSorted: true,
@@ -78,9 +79,9 @@ export function NodeListHelperComponent(props: {
       key: "nodeSchedulable",
       name: "Schedulable",
       fieldName: "schedulable",
-      minWidth: 150,
+      minWidth: 70,
+      maxWidth: 70,
       isPadded: true,
-      maxWidth: 200,
       isResizable: true,
       isSortedDescending: false,
       isSorted: true,
@@ -90,9 +91,9 @@ export function NodeListHelperComponent(props: {
       key: "nodeInstanceType",
       name: "Instance Type",
       fieldName: "instanceType",
-      minWidth: 150,
+      minWidth: 80,
+      maxWidth: 80,
       isPadded: true,
-      maxWidth: 200,
       isResizable: true,
       isSortedDescending: false,
       isSorted: true,
@@ -103,6 +104,7 @@ export function NodeListHelperComponent(props: {
   const [nodeList, setNodesList] = useState<INodeList[]>([])
   const [nodeDetailsVisible, setNodesDetailsVisible] = useState<boolean>(false)
   const [currentNode, setCurrentNode] = useState<string>("")
+  const [shimmerVisibility, SetShimmerVisibility] = useState<boolean>(true)
 
   useEffect(() => {
     setNodesList(createNodeList(props.nodes))
@@ -114,6 +116,10 @@ export function NodeListHelperComponent(props: {
       col.onColumnClick = _onColumnClick
     })
     setColumns(newColumns)
+
+    if (nodeList.length > 0) {
+      SetShimmerVisibility(false)
+    }
 
   }, [nodeList] )
 
@@ -151,10 +157,6 @@ export function NodeListHelperComponent(props: {
       }
     })
     setColumns(newColumns)
-  }
-
-  function _getKey(item: any): string {
-    return item.key
   }
 
   function createNodeList(nodes: INode[]): INodeList[] {
@@ -205,15 +207,17 @@ export function NodeListHelperComponent(props: {
             <NodesComponent nodes={props.nodes} clusterName={props.clusterName} nodeName={currentNode}/>
           </Stack>
           :
-          <DetailsList
-              items={nodeList}
-              setKey="none"
-              columns={columns}
-              selectionMode={0}
-              getKey={_getKey}
-              ariaLabelForSelectionColumn="Toggle selection"
-              ariaLabelForSelectAllCheckbox="Toggle selection for all items"
-            />
+          <div>
+          <ShimmeredDetailsList
+            setKey="nodeList"
+            items={nodeList}
+            columns={columns}
+            selectionMode={SelectionMode.none}
+            enableShimmer={shimmerVisibility}
+            ariaLabelForShimmer="Content is being fetched"
+            ariaLabelForGrid="Item details"
+          />
+          </div>
         }
       </StackItem>
     </Stack>

@@ -1,8 +1,9 @@
 import * as React from 'react';
 import { useState, useEffect } from "react"
-import { Stack, StackItem, IconButton, IIconStyles } from '@fluentui/react';
+import { Stack, StackItem, IconButton, IIconStyles, SelectionMode } from '@fluentui/react';
 import { Link } from '@fluentui/react/lib/Link';
-import { DetailsList, IColumn,IDetailsListStyles } from '@fluentui/react/lib/DetailsList';
+import { IColumn } from '@fluentui/react/lib/DetailsList';
+import { ShimmeredDetailsList } from '@fluentui/react/lib/ShimmeredDetailsList';
 import { IMachineSet } from "./MachineSetsWrapper";
 import { MachineSetsComponent } from "./MachineSets"
 
@@ -54,8 +55,8 @@ export function MachineSetsListHelperComponent(props: {
       key: "machineName",
       name: "Name",
       fieldName: "name",
-      minWidth: 100,
-      maxWidth: 200,
+      minWidth: 80,
+      maxWidth: 300,
       isResizable: true,
       isSorted: true,
       isSortedDescending: false,
@@ -68,8 +69,8 @@ export function MachineSetsListHelperComponent(props: {
       key: "desiredReplicas",
       name: "Desired Replicas",
       fieldName: "desiredReplicas",
-      minWidth: 120,
-      maxWidth: 200,
+      minWidth: 80,
+      maxWidth: 120,
       isResizable: true,
       isSorted: true,
       isSortedDescending: false,
@@ -79,8 +80,8 @@ export function MachineSetsListHelperComponent(props: {
       key: "currentReplicas",
       name: "Current Replicas",
       fieldName: "currentReplicas",
-      minWidth: 120,
-      maxWidth: 200,
+      minWidth: 80,
+      maxWidth: 120,
       isResizable: true,
       isSorted: true,
       isSortedDescending: false,
@@ -91,7 +92,7 @@ export function MachineSetsListHelperComponent(props: {
       name: "Public LoadBalancer",
       fieldName: "publicLoadBalancer",
       minWidth: 150,
-      maxWidth: 200,
+      maxWidth: 150,
       isResizable: true,
       isSorted: true,
       isSortedDescending: false,
@@ -113,6 +114,8 @@ export function MachineSetsListHelperComponent(props: {
   const [machineSetsList, setMachineSetsList] = useState<IMachineSetsList[]>([])
   const [machineSetsDetailsVisible, setMachineSetsDetailsVisible] = useState<boolean>(false)
   const [currentMachine, setCurrentMachine] = useState<string>("")
+  const [shimmerVisibility, SetShimmerVisibility] = useState<boolean>(true)
+
 
   useEffect(() => {
     setMachineSetsList(createMachineSetsList(props.machineSets))
@@ -124,6 +127,11 @@ export function MachineSetsListHelperComponent(props: {
       col.onColumnClick = _onColumnClick
     })
     setColumns(newColumns)
+
+    if (machineSetsList.length > 0) {
+      SetShimmerVisibility(false)
+    }
+    
   }, [machineSetsList])
 
   function _onMachineInfoLinkClick(machine: string) {
@@ -164,10 +172,6 @@ export function MachineSetsListHelperComponent(props: {
     setColumns(newColumns)
     }
 
-    function _getKey(item: any): string {
-        return item.key
-    }
-
     function createMachineSetsList(MachineSets: IMachineSet[]): IMachineSetsList[] {
         return MachineSets.map(machineSet => {
             return {name: machineSet.name, desiredReplicas: machineSet.desiredReplicas!, currentReplicas: machineSet.replicas!, publicLoadBalancer: machineSet.publicLoadBalancerName, storageType: machineSet.accountStorageType}
@@ -191,28 +195,6 @@ export function MachineSetsListHelperComponent(props: {
     setMachineSetsDetailsVisible(false)
   }
 
-  const gridStyles: Partial<IDetailsListStyles> = {
-    root: {
-      overflowX: 'scroll',
-      selectors: {
-        '& [role=grid]': {
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'start',
-          height: '60vh',
-        },
-      },
-    },
-    headerWrapper: {
-      flex: '0 0 auto',
-    },
-    contentWrapper: {
-      flex: '1 1 auto',
-      overflowY: 'auto',
-      overflowX: 'hidden',
-    },
-  };
-
   return (
     <Stack>
       <StackItem>
@@ -226,18 +208,17 @@ export function MachineSetsListHelperComponent(props: {
             <MachineSetsComponent machineSets={props.machineSets} clusterName={props.clusterName} machineSetName={currentMachine}/>
           </Stack>
           :
-          <DetailsList
-              items={machineSetsList}
-              setKey="none"
-              columns={columns}
-              selectionMode={0}
-              getKey={_getKey}
-              constrainMode={0}
-              styles={gridStyles}
-              ariaLabelForSelectionColumn="Toggle selection"
-              ariaLabelForSelectAllCheckbox="Toggle selection for all items"
-              checkButtonAriaLabel="select row"
-            />    
+          <div>
+          <ShimmeredDetailsList
+            setKey="none"
+            items={machineSetsList}
+            columns={columns}
+            enableShimmer={shimmerVisibility}
+            selectionMode={SelectionMode.none}
+            ariaLabelForShimmer="Content is being fetched"
+            ariaLabelForGrid="Item details"
+          />
+          </div>
         }
       </StackItem>
     </Stack>
