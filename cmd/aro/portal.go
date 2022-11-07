@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	pkgportal "github.com/Azure/ARO-RP/pkg/portal"
 	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/documentdb"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
@@ -95,12 +96,14 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer)
+	masterKeyClient := database.NewMasterKeyClient(_env, msiAuthorizer, documentdb.GetDatabaseAccountsClient())
+	dbAuthorizer, err := masterKeyClient.NewMasterKeyAuthorizer(ctx)
 	if err != nil {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead)
+	db := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, database.DefaultClient, m, aead)
+	dbc, err := db.GetDatabaseClient()
 	if err != nil {
 		return err
 	}
