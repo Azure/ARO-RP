@@ -19,7 +19,7 @@ import (
 func getAksClusterByNameAndLocation(ctx context.Context, aksClusters mgmtcontainerservice.ManagedClusterListResultPage, aksClusterName, location string) (*mgmtcontainerservice.ManagedCluster, error) {
 	for aksClusters.NotDone() {
 		for _, cluster := range aksClusters.Values() {
-			if *cluster.Name == aksClusterName && *cluster.Location == location {
+			if strings.EqualFold(*cluster.Name, aksClusterName) && strings.EqualFold(*cluster.Location, location) {
 				return &cluster, nil
 			}
 		}
