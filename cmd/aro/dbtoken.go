@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/documentdb"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 )
@@ -66,12 +67,14 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer)
+	masterKeyClient := database.NewMasterKeyClient(_env, msiAuthorizer, documentdb.GetDatabaseAccountsClient())
+	dbAuthorizer, err := masterKeyClient.NewMasterKeyAuthorizer(ctx)
 	if err != nil {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, nil)
+	db := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, database.DefaultClient, m, nil)
+	dbc, err := db.GetDatabaseClient()
 	if err != nil {
 		return err
 	}
