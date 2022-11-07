@@ -2,43 +2,39 @@
 # Licensed under the Apache License 2.0.
 
 import ipaddress
-import json
 import re
-from unicodedata import name
-import uuid
 import collections
 from itertools import tee
 
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
-from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.azclierror import CLIInternalError, InvalidArgumentValueError, \
     RequiredArgumentMissingError
 from azure.core.exceptions import ResourceNotFoundError
 from knack.log import get_logger
-from msrestazure.azure_exceptions import CloudError
 from msrestazure.tools import is_valid_resource_id
 from msrestazure.tools import parse_resource_id
-from msrestazure.tools import resource_id
-from azext_aro._validators import validate_vnet, validate_vnet_resource_group_name, validate_cidr
+from azext_aro._validators import validate_vnet, validate_cidr
 
 
 logger = get_logger(__name__)
+
 
 def can_do_action(perms, action):
     for perm in perms:
         for perm_action in perm.actions:
             clean = re.escape(perm_action)
-            clean = re.match("(?i)^" + clean.replace("\*", ".*") + "$", action)
+            clean = re.match("(?i)^" + clean.replace(r"\\*", ".*") + "$", action)
             if clean:
                 return None
         for not_action in perm.not_actions:
             clean = re.escape(not_action)
-            clean = re.match("(?i)^" + clean.replace("\*", ".*") + "$", action)
+            clean = re.match("(?i)^" + clean.replace(r"\\*", ".*") + "$", action)
             if clean:
                 return f"{action} permission is missing"
 
     return f"{action} permission is missing"
+
 
 def validate_resource(client, key, resource, actions):
     perms = client.permissions.list_for_resource(resource['resource_group'],
@@ -51,10 +47,12 @@ def validate_resource(client, key, resource, actions):
     for action in actions:
         perms, perms_copy = tee(perms)
         error = can_do_action(perms_copy, action)
-        if error != None:
-            errors.append(f"{key} -- {error}")
+        if error is not None:
+            row = [key, resource['name'], error]
+            errors.append(row)
 
     return errors
+
 
 def dyn_validate_vnet(key):
     def _validate_vnet(cmd, namespace):
@@ -91,9 +89,10 @@ def dyn_validate_vnet(key):
             "Microsoft.Network/virtualNetworks/write",
             "Microsoft.Network/virtualNetworks/subnets/join/action",
             "Microsoft.Network/virtualNetworks/subnets/read",
-            "Microsoft.Network/virtualNetworks/subnets/write",])
+            "Microsoft.Network/virtualNetworks/subnets/write", ])
 
     return _validate_vnet
+
 
 def dyn_validate_subnet(key):
     def _validate_subnet(cmd, namespace):
@@ -122,7 +121,8 @@ def dyn_validate_subnet(key):
 
         try:
             subnet_obj = network_client.subnets.get(parts['resource_group'],
-                               parts['name'], parts['child_name_1'])
+                                                    parts['name'],
+                                                    parts['child_name_1'])
             route_table_obj = subnet_obj.route_table
         except Exception as err:
             if isinstance(err, ResourceNotFoundError):
@@ -133,12 +133,13 @@ def dyn_validate_subnet(key):
 
         route_parts = parse_resource_id(route_table_obj.id)
 
-        return validate_resource(auth_client, key, route_parts, [
+        return validate_resource(auth_client, f"{key}_route_table", route_parts, [
             "Microsoft.Network/routeTables/join/action",
             "Microsoft.Network/routeTables/read",
-            "Microsoft.Network/routeTables/write",])
+            "Microsoft.Network/routeTables/write", ])
 
     return _validate_subnet
+
 
 def dyn_validate_cidr_ranges():
     def _validate_cidr_ranges(cmd, namespace):
@@ -157,20 +158,18 @@ def dyn_validate_cidr_ranges():
 
         cidr_array = {}
 
-        if pod_cidr != None:
+        if pod_cidr is not None:
             cidr_array["Pod CIDR"] = ipaddress.IPv4Network(pod_cidr)
-        if service_cidr != None:
+        if service_cidr is not None:
             cidr_array["Service CIDR"] = ipaddress.IPv4Network(service_cidr)
-
-        worker_subnet_obj = None
-        master_subnet_obj = None
 
         network_client = get_mgmt_service_client(
             cmd.cli_ctx, ResourceType.MGMT_NETWORK)
 
         try:
             worker_subnet_obj = network_client.subnets.get(vnet_parts['resource_group'],
-                               vnet_parts['name'], worker_parts['child_name_1'])
+                                                           vnet_parts['name'],
+                                                           worker_parts['child_name_1'])
         except Exception as err:
             if isinstance(err, ResourceNotFoundError):
                 raise InvalidArgumentValueError(
@@ -178,16 +177,16 @@ def dyn_validate_cidr_ranges():
             raise CLIInternalError(
                 f"Unexpected error when getting subnet '{worker_subnet}': {str(err)}") from err
 
-        if worker_subnet_obj.address_prefix == None:
+        if worker_subnet_obj.address_prefix is None:
             for address in worker_subnet_obj.address_prefixes:
                 cidr_array["Worker Subnet CIDR -- " + address] = ipaddress.IPv4Network(address)
         else:
             cidr_array["Worker Subnet CIDR"] = ipaddress.IPv4Network(worker_subnet_obj.address_prefix)
 
-
         try:
             master_subnet_obj = network_client.subnets.get(vnet_parts['resource_group'],
-                               vnet_parts['name'], master_parts['child_name_1'])
+                                                           vnet_parts['name'],
+                                                           master_parts['child_name_1'])
         except Exception as err:
             if isinstance(err, ResourceNotFoundError):
                 raise InvalidArgumentValueError(
@@ -195,7 +194,7 @@ def dyn_validate_cidr_ranges():
             raise CLIInternalError(
                 f"Unexpected error when getting subnet '{master_subnet}': {str(err)}") from err
 
-        if master_subnet_obj.address_prefix == None:
+        if master_subnet_obj.address_prefix is None:
             for address in master_subnet_obj.address_prefixes:
                 cidr_array["Master Subnet CIDR -- " + address] = ipaddress.IPv4Network(address)
         else:
@@ -205,14 +204,16 @@ def dyn_validate_cidr_ranges():
 
         addresses = []
 
-        for key in cidr_array:
-            cidr = cidr_array[key]
+        for item in cidr_array.items():
+            key = item[0]
+            cidr = item[1]
             if not cidr.overlaps(ipv4_zero):
                 error = f"{key} -- CIDR {cidr} is not valid as it does not overlap with {ipv4_zero}"
                 addresses.append(error)
-            for key2 in cidr_array:
-                compare = cidr_array[key2]
-                if cidr != compare:
+            for item2 in cidr_array.items():
+                key = item2[0]
+                compare = item2[1]
+                if cidr is not compare:
                     if cidr.overlaps(compare):
                         error = f"{key} -- CIDR {cidr} is not valid as it overlaps with {compare}"
                         addresses.append(cidr)
@@ -221,12 +222,21 @@ def dyn_validate_cidr_ranges():
 
     return _validate_cidr_ranges
 
-def validate_cluster_create(cmd, client, resource_group_name, master_subnet, worker_subnet, vnet, pod_cidr, service_cidr):
-    error_object = {}
 
-    error_object['vnet_validation'] = dyn_validate_vnet("vnet")
-    error_object['master_subnet_validation'] = dyn_validate_subnet("master_subnet")
-    error_object['worker_subnet_validation'] = dyn_validate_subnet("worker_subnet")
-    error_object['cidr_range_validation'] = dyn_validate_cidr_ranges()
+def validate_cluster_create(cmd,  # pylint: disable=unused-argument
+                            client,  # pylint: disable=unused-argument
+                            resource_group_name,  # pylint: disable=unused-argument
+                            master_subnet,  # pylint: disable=unused-argument
+                            worker_subnet,  # pylint: disable=unused-argument
+                            vnet,  # pylint: disable=unused-argument
+                            pod_cidr,  # pylint: disable=unused-argument
+                            service_cidr  # pylint: disable=unused-argument
+                            ):
+    error_object = []
+
+    error_object.append(dyn_validate_vnet("vnet"))
+    error_object.append(dyn_validate_subnet("master_subnet"))
+    error_object.append(dyn_validate_subnet("worker_subnet"))
+    error_object.append(dyn_validate_cidr_ranges())
 
     return error_object

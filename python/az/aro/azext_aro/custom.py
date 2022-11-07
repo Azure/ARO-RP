@@ -1,8 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the Apache License 2.0.
 
-import argparse
-from distutils.log import error
 import random
 import os
 from base64 import b64decode
@@ -14,7 +12,7 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
-from azure.cli.core.azclierror import FileOperationError, ResourceNotFoundError, UnauthorizedError, ValidationError
+from azure.cli.core.azclierror import FileOperationError, ResourceNotFoundError, UnauthorizedError
 from azext_aro._aad import AADManager
 from azext_aro._rbac import assign_role_to_resource, \
     has_role_assignment_on_resource
@@ -28,6 +26,8 @@ from msrestazure.azure_exceptions import CloudError
 from msrestazure.tools import resource_id, parse_resource_id
 from msrest.exceptions import HttpOperationError
 
+from tabulate import tabulate
+
 logger = get_logger(__name__)
 
 FP_CLIENT_ID = 'f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875'
@@ -39,7 +39,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                resource_name,
                master_subnet,
                worker_subnet,
-               vnet=None,  # pylint: disable=unused-argument
+               vnet=None,
                vnet_resource_group_name=None,  # pylint: disable=unused-argument
                location=None,
                pull_secret=None,
@@ -69,23 +69,6 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         if provider.registration_state != 'Registered':
             raise UnauthorizedError('Microsoft.RedHatOpenShift provider is not registered.',
                                     'Run `az provider register -n Microsoft.RedHatOpenShift --wait`.')
-
-    if validate_only:
-        error_object = validate_cluster_create(cmd, client, resource_group_name, master_subnet, worker_subnet, vnet, pod_cidr, service_cidr)
-        errors = []
-        for key in error_object:
-            error = error_object[key](cmd, locals())
-            if error != []:
-                for err in error:
-                    errors.append(err)
-
-        if len(errors) > 0:
-            logger.error("Permission issues found blocking cluster creation.\n")
-            for error in errors:
-                logger.warning(error + "\n")
-        else:
-            logger.warning("\nNo Permissions issues on network blocking cluster creation\n")
-        return
 
     validate_subnets(master_subnet, worker_subnet)
 
@@ -164,6 +147,30 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         ],
     )
 
+    if validate_only:
+        error_objects = validate_cluster_create(cmd,
+                                                client,
+                                                resource_group_name,
+                                                master_subnet,
+                                                worker_subnet,
+                                                vnet, pod_cidr,
+                                                service_cidr)
+        errors = []
+        for error_func in error_objects:
+            error_obj = error_func(cmd, locals())
+            if error_obj != []:
+                for err in error_obj:
+                    errors.append(err)
+
+        if len(errors) > 0:
+            logger.error("Permission issues found blocking cluster creation.\n")
+            headers = ["Type", "Name", "Error"]
+            table = tabulate(errors, headers)
+            logger.warning("%s\n", table)
+        else:
+            logger.warning("\nNo Permissions issues on network blocking cluster creation\n")
+        return None
+
     sp_obj_ids = [client_sp_id, rp_client_sp_id]
     ensure_resource_permissions(cmd.cli_ctx, oc, True, sp_obj_ids)
 
@@ -172,18 +179,21 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                        resource_name=resource_name,
                        parameters=oc)
 
-def aro_validate(cmd,
-                 client,
-                 resource_group_name,
-                 master_subnet,
-                 worker_subnet,
-                 vnet,
-                 pod_cidr=None,
-                 service_cidr=None,
-                 resource_name=None,
-                 vnet_resource_group_name=None,
-                 validate_only=True):
+
+def aro_validate(cmd,  # pylint: disable=unused-argument
+                 client,  # pylint: disable=unused-argument
+                 resource_group_name,  # pylint: disable=unused-argument
+                 master_subnet,  # pylint: disable=unused-argument
+                 worker_subnet,  # pylint: disable=unused-argument
+                 vnet,  # pylint: disable=unused-argument
+                 pod_cidr=None,  # pylint: disable=unused-argument
+                 service_cidr=None,  # pylint: disable=unused-argument
+                 resource_name=None,  # pylint: disable=unused-argument
+                 vnet_resource_group_name=None,  # pylint: disable=unused-argument
+                 validate_only=True  # pylint: disable=unused-argument
+                 ):
     aro_create(**locals())
+
 
 def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
     # TODO: clean up rbac
