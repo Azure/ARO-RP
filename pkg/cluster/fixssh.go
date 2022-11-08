@@ -21,8 +21,6 @@ func (m *manager) fixSSH(ctx context.Context) error {
 		infraID = "aro"
 	}
 
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-
 	var lbName string
 	switch m.doc.OpenShiftCluster.Properties.ArchitectureVersion {
 	case api.ArchitectureVersionV1:
@@ -33,9 +31,24 @@ func (m *manager) fixSSH(ctx context.Context) error {
 		return fmt.Errorf("unknown architecture version %d", m.doc.OpenShiftCluster.Properties.ArchitectureVersion)
 	}
 
-	lb, err := m.loadBalancers.Get(ctx, resourceGroup, lbName, "")
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	lb, err := m.checkAndUpdateLB(ctx, resourceGroup, lbName)
 	if err != nil {
-		return err
+		m.log.Warnf("Failed checking and Updating Load Balancer with err %s", err)
+	}
+
+	err = m.checkandUpdateNIC(ctx, resourceGroup, infraID, lb)
+	if err != nil {
+		m.log.Warnf("Failed checking and Updating Network Interface with err %s", err)
+	}
+	return nil
+}
+
+func (m *manager) checkAndUpdateLB(ctx context.Context, resourceGroup string, lbName string) (lb mgmtnetwork.LoadBalancer, err error) {
+	lb, err = m.loadBalancers.Get(ctx, resourceGroup, lbName, "")
+	if err != nil {
+		return lb, err
 	}
 
 	changed := updateLB(&lb)
@@ -44,10 +57,13 @@ func (m *manager) fixSSH(ctx context.Context) error {
 		m.log.Printf("updating %s", lbName)
 		err = m.loadBalancers.CreateOrUpdateAndWait(ctx, resourceGroup, lbName, lb)
 		if err != nil {
-			return err
+			return lb, err
 		}
 	}
+	return lb, nil
+}
 
+func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, infraID string, lb mgmtnetwork.LoadBalancer) (err error) {
 	for i := 0; i < 3; i++ {
 		// NIC names might be different if customer re-created master nodes
 		// see https://bugzilla.redhat.com/show_bug.cgi?id=1882490 for more details
@@ -56,35 +72,36 @@ func (m *manager) fixSSH(ctx context.Context) error {
 		nicNameInstaller := fmt.Sprintf("%s-master%d-nic", infraID, i)
 		nicNameMachineAPI := fmt.Sprintf("%s-master-%d-nic", infraID, i)
 
-		var iErr, err error
+		//var iErr, err error
 		var nic mgmtnetwork.Interface
 		nicName := nicNameInstaller
+		var fallbackNIC bool
 
 		nic, err = m.interfaces.Get(ctx, resourceGroup, nicName, "")
 		if err != nil {
-			iErr = err // preserve original error
-			nicName = nicNameMachineAPI
-			m.log.Warnf("fallback to check MachineAPI Nic name format for %s", nicName)
-			nic, err = m.interfaces.Get(ctx, resourceGroup, nicName, "")
-			if err != nil {
-				m.log.Warnf("fallback failed with err %s", err)
-				return iErr
-			}
+			//iErr = err // preserve original error
+			fallbackNIC = true
 		} else if nic.InterfacePropertiesFormat != nil && nic.InterfacePropertiesFormat.VirtualMachine == nil {
 			err = m.removeBackendPoolsFromNIC(ctx, resourceGroup, nicName, &nic)
 			if err != nil {
 				m.log.Warnf("Removing BackendPools from NIC %s has failed with err %s", nicName, err)
 				return err
 			}
+			m.log.Warnf("Installer provisioned NIC has no VM attached")
+			fallbackNIC = true
+		}
+
+		if fallbackNIC {
 			nicName = nicNameMachineAPI
-			m.log.Warnf("installer provisioned NIC has no VM attached, fallback to check MachineAPI NIC name format for %s", nicName)
+			m.log.Warnf("Fallback to check MachineAPI Nic name format for %s", nicName)
 			nic, err = m.interfaces.Get(ctx, resourceGroup, nicName, "")
 			if err != nil {
-				m.log.Warnf("fallback failed with err %s", err)
+				m.log.Warnf("Fallback failed with err %s", err)
 				return err
 			}
 		}
-		changed = updateNIC(&nic, &lb, i)
+
+		changed := updateNIC(&nic, &lb, i)
 
 		if changed {
 			m.log.Printf("updating %s", nicName)
