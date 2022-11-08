@@ -312,6 +312,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		g.rpDBTokenKeyvault(),
 		g.rpPortalKeyvault(),
 		g.rpServiceKeyvault(),
+		g.rpServiceKeyvaultDynamic(),
 	)
 
 	return t

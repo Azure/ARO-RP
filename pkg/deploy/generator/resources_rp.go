@@ -859,6 +859,35 @@ func (g *generator) rpPortalKeyvault() *arm.Resource {
 	}
 }
 
+func (g *generator) rpServiceKeyvaultDynamic() *arm.Resource {
+	vaultAccessPolicies := &mgmtkeyvault.Vault{
+		Properties: &mgmtkeyvault.VaultProperties{
+			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
+				{
+					TenantID: &tenantUUIDHack,
+					ObjectID: to.StringPtr("[reference(resourceId('Microsoft.ContainerService/managedClusters', 'aro-aks-cluster-001'), '2020-12-01', 'Full').properties.identityProfile.kubeletidentity.objectId]"),
+					Permissions: &mgmtkeyvault.Permissions{
+						Secrets: &[]mgmtkeyvault.SecretPermissions{
+							mgmtkeyvault.SecretPermissionsGet,
+						},
+						Certificates: &[]mgmtkeyvault.CertificatePermissions{
+							mgmtkeyvault.Get,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	return &arm.Resource{
+		Name:       "[concat(parameters('keyvaultPrefix'), '" + env.ServiceKeyvaultSuffix + "/add')]",
+		Type:       "Microsoft.KeyVault/vaults/accessPolicies",
+		APIVersion: azureclient.APIVersion("Microsoft.KeyVault/vaults/accessPolicies"),
+		DependsOn:  []string{"[concat(parameters('keyvaultPrefix'), '" + env.ServiceKeyvaultSuffix + "')]"},
+		Resource:   vaultAccessPolicies,
+	}
+}
+
 func (g *generator) rpServiceKeyvault() *arm.Resource {
 	vault := &mgmtkeyvault.Vault{
 		Properties: &mgmtkeyvault.VaultProperties{
