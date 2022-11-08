@@ -79,7 +79,7 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 
 		nic, err = m.interfaces.Get(ctx, resourceGroup, nicName, "")
 		if err != nil {
-			//iErr = err // preserve original error
+			m.log.Warnf("Fetching details for NIC %s has failed with err %s", nicName, err)
 			fallbackNIC = true
 		} else if nic.InterfacePropertiesFormat != nil && nic.InterfacePropertiesFormat.VirtualMachine == nil {
 			err = m.removeBackendPoolsFromNIC(ctx, resourceGroup, nicName, &nic)
@@ -101,7 +101,7 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 			}
 		}
 
-		changed := updateNIC(&nic, &lb, i)
+		changed := updateNIC(&nic, &lb, i, infraID)
 
 		if changed {
 			m.log.Printf("updating %s", nicName)
@@ -124,7 +124,7 @@ func (m *manager) removeBackendPoolsFromNIC(ctx context.Context, resourceGroup, 
 	return nil
 }
 
-func updateNIC(nic *mgmtnetwork.Interface, lb *mgmtnetwork.LoadBalancer, i int) bool {
+func updateNIC(nic *mgmtnetwork.Interface, lb *mgmtnetwork.LoadBalancer, i int, infraID string) bool {
 	id := fmt.Sprintf("%s/backendAddressPools/ssh-%d", *lb.ID, i)
 	ipc := (*nic.InterfacePropertiesFormat.IPConfigurations)[0]
 	if ipc.LoadBalancerBackendAddressPools == nil {
