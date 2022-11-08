@@ -24,12 +24,12 @@ def can_do_action(perms, action):
     for perm in perms:
         for perm_action in perm.actions:
             clean = re.escape(perm_action)
-            clean = re.match("(?i)^" + clean.replace(r"\\*", ".*") + "$", action)
+            clean = re.match("(?i)^" + clean.replace(r"\*", ".*") + "$", action)
             if clean:
                 return None
         for not_action in perm.not_actions:
             clean = re.escape(not_action)
-            clean = re.match("(?i)^" + clean.replace(r"\\*", ".*") + "$", action)
+            clean = re.match("(?i)^" + clean.replace(r"\*", ".*") + "$", action)
             if clean:
                 return f"{action} permission is missing"
 
@@ -143,18 +143,20 @@ def dyn_validate_subnet(key):
 
 def dyn_validate_cidr_ranges():
     def _validate_cidr_ranges(cmd, namespace):
-        vnet = namespace["vnet"]
-        master_subnet = namespace["master_subnet"]
-        worker_subnet = namespace["worker_subnet"]
-        pod_cidr = namespace["pod_cidr"]
-        service_cidr = namespace["service_cidr"]
+        vnet = namespace.vnet
+        master_subnet = namespace.master_subnet
+        worker_subnet = namespace.worker_subnet
+        pod_cidr = namespace.pod_cidr
+        service_cidr = namespace.service_cidr
 
         vnet_parts = parse_resource_id(vnet)
         worker_parts = parse_resource_id(worker_subnet)
         master_parts = parse_resource_id(master_subnet)
 
-        validate_cidr(pod_cidr)
-        validate_cidr(service_cidr)
+        fn = validate_cidr("pod_cidr")
+        fn(namespace)
+        fn = validate_cidr("service_cidr")
+        fn(namespace)
 
         cidr_array = {}
 
@@ -216,7 +218,7 @@ def dyn_validate_cidr_ranges():
                 if cidr is not compare:
                     if cidr.overlaps(compare):
                         error = f"{key} -- CIDR {cidr} is not valid as it overlaps with {compare}"
-                        addresses.append(cidr)
+                        addresses.append(error)
 
         return addresses
 
