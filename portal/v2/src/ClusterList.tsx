@@ -505,7 +505,6 @@ export function ClusterList(props: {
         styles={controlStyles}
       />
       <Separator styles={separatorStyle} />
-      
       {error && errorBar()}
 
       {isPopupVisible && PopupModal({title: "Resource Not Found", text: "No resource found due to Invalid/Non-existent resource ID in the URL.", hidePopup: hidePopup})}
