@@ -168,10 +168,24 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 					}
 				}
 
-				example.Responses[statusCode] = struct {
-					Body interface{} `json:"body,omitempty"`
-				}{
-					Body: body,
+				if statusCode == "202" {
+					// If the response code is 202 Accepted, then it's a long-running operation and must have
+					// a "location" header.
+					example.Responses[statusCode] = struct {
+						Body    interface{} `json:"body,omitempty"`
+						Headers interface{} `json:"headers,omitempty"`
+					}{
+						Body: body,
+						Headers: map[string]string{
+							"location": "https://management.azure.com/subscriptions/subid/providers/Microsoft.Cache/...pathToOperationResult...",
+						},
+					}
+				} else {
+					example.Responses[statusCode] = struct {
+						Body interface{} `json:"body,omitempty"`
+					}{
+						Body: body,
+					}
 				}
 			}
 
