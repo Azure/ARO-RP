@@ -22,12 +22,14 @@ const (
 	OAuthConfigMapName                        = "oauth-openshift"
 	OpenShiftConsoleDeploymentName            = OpenShiftConsoleName
 	OpenShiftConsoleServiceName               = OpenShiftConsoleName
+	OpenShiftConsolePDBName                   = OpenShiftConsoleName
 	OpenshiftConsoleRedirectServiceName       = "console-redirect"
 	OpenShiftConsoleRouteName                 = OpenShiftConsoleName
 	OpenshiftConsoleCustomRouteName           = "console-custom"
 	DownloadsResourceName                     = "downloads"
 	OpenShiftConsoleDownloadsRouteName        = DownloadsResourceName
 	OpenShiftConsoleDownloadsDeploymentName   = DownloadsResourceName
+	OpenShiftConsoleDownloadsPDBName          = DownloadsResourceName
 	OAuthClientName                           = OpenShiftConsoleName
 	OpenShiftConfigManagedNamespace           = "openshift-config-managed"
 	OpenShiftConfigNamespace                  = "openshift-config"
@@ -53,6 +55,8 @@ const (
 	OAuthClientManagedClusterViewName         = "console-oauth-client"
 	CreateOAuthClientManagedClusterActionName = "console-create-oauth-client"
 	OAuthServerCertManagedClusterViewName     = "console-oauth-server-cert"
+
+	PluginI18nAnnotation = "console.openshift.io/use-i18n"
 
 	ManagedClusterViewAPIGroup     = "view.open-cluster-management.io"
 	ManagedClusterViewAPIVersion   = "v1beta1"

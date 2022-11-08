@@ -16,8 +16,10 @@ import (
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	icgcp "github.com/openshift/installer/pkg/asset/installconfig/gcp"
 	icibmcloud "github.com/openshift/installer/pkg/asset/installconfig/ibmcloud"
+	icnutanix "github.com/openshift/installer/pkg/asset/installconfig/nutanix"
 	icopenstack "github.com/openshift/installer/pkg/asset/installconfig/openstack"
 	icovirt "github.com/openshift/installer/pkg/asset/installconfig/ovirt"
+	icpowervs "github.com/openshift/installer/pkg/asset/installconfig/powervs"
 	icvsphere "github.com/openshift/installer/pkg/asset/installconfig/vsphere"
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/conversion"
@@ -37,6 +39,7 @@ type InstallConfig struct {
 	Azure        *icazure.Metadata      `json:"azure,omitempty"`
 	IBMCloud     *icibmcloud.Metadata   `json:"ibmcloud,omitempty"`
 	AlibabaCloud *alibabacloud.Metadata `json:"alibabacloud,omitempty"`
+	PowerVS      *icpowervs.Metadata    `json:"powervs,omitempty"`
 }
 
 var _ asset.WritableAsset = (*InstallConfig)(nil)
@@ -97,6 +100,8 @@ func (a *InstallConfig) Generate(parents asset.Parents) error {
 	a.Config.IBMCloud = platform.IBMCloud
 	a.Config.BareMetal = platform.BareMetal
 	a.Config.Ovirt = platform.Ovirt
+	a.Config.PowerVS = platform.PowerVS
+	a.Config.Nutanix = platform.Nutanix
 
 	return a.finish("")
 }
@@ -121,7 +126,7 @@ func (a *InstallConfig) Load(f asset.FileFetcher) (found bool, err error) {
 		if os.IsNotExist(err) {
 			return false, nil
 		}
-		return false, err
+		return false, errors.Wrap(err, asset.InstallConfigError)
 	}
 
 	config := &types.InstallConfig{}
@@ -130,18 +135,18 @@ func (a *InstallConfig) Load(f asset.FileFetcher) (found bool, err error) {
 			err = errors.Wrapf(err, "failed to parse first occurence of unknown field")
 		}
 		err = errors.Wrapf(err, "failed to unmarshal %s", installConfigFilename)
-		return false, err
+		return false, errors.Wrap(err, asset.InstallConfigError)
 	}
 	a.Config = config
 
 	// Upconvert any deprecated fields
 	if err := conversion.ConvertInstallConfig(a.Config); err != nil {
-		return false, errors.Wrap(err, "failed to upconvert install config")
+		return false, errors.Wrap(errors.Wrap(err, "failed to upconvert install config"), asset.InstallConfigError)
 	}
 
 	err = a.finish(installConfigFilename)
 	if err != nil {
-		return false, err
+		return false, errors.Wrap(err, asset.InstallConfigError)
 	}
 	return true, nil
 }
@@ -161,6 +166,10 @@ func (a *InstallConfig) finish(filename string) error {
 	if a.Config.IBMCloud != nil {
 		a.IBMCloud = icibmcloud.NewMetadata(a.Config.BaseDomain)
 	}
+	if a.Config.PowerVS != nil {
+		a.PowerVS = icpowervs.NewMetadata(a.Config.BaseDomain)
+	}
+
 	if err := validation.ValidateInstallConfig(a.Config).ToAggregate(); err != nil {
 		if filename == "" {
 			return errors.Wrap(err, "invalid install config")
@@ -223,6 +232,12 @@ func (a *InstallConfig) platformValidation() error {
 	}
 	if a.Config.Platform.OpenStack != nil {
 		return icopenstack.Validate(a.Config)
+	}
+	if a.Config.Platform.PowerVS != nil {
+		return icpowervs.Validate(a.Config)
+	}
+	if a.Config.Platform.Nutanix != nil {
+		return icnutanix.Validate(a.Config)
 	}
 	return field.ErrorList{}.ToAggregate()
 }

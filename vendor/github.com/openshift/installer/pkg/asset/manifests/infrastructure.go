@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 	"sort"
+	"strconv"
 
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
@@ -21,8 +22,10 @@ import (
 	"github.com/openshift/installer/pkg/types/ibmcloud"
 	"github.com/openshift/installer/pkg/types/libvirt"
 	"github.com/openshift/installer/pkg/types/none"
+	"github.com/openshift/installer/pkg/types/nutanix"
 	"github.com/openshift/installer/pkg/types/openstack"
 	"github.com/openshift/installer/pkg/types/ovirt"
+	"github.com/openshift/installer/pkg/types/powervs"
 	"github.com/openshift/installer/pkg/types/vsphere"
 )
 
@@ -82,26 +85,10 @@ func (i *Infrastructure) Generate(dependencies asset.Parents) error {
 		},
 	}
 
-	if installConfig.Config.ControlPlane.Replicas != nil && *installConfig.Config.ControlPlane.Replicas < 3 {
-		config.Status.ControlPlaneTopology = configv1.SingleReplicaTopologyMode
-	} else {
-		config.Status.ControlPlaneTopology = configv1.HighlyAvailableTopologyMode
-	}
+	controlPlaneTopology, infrastructureTopology := determineTopologies(installConfig.Config)
 
-	numOfWorkers := int64(0)
-	for _, mp := range installConfig.Config.Compute {
-		if mp.Replicas != nil {
-			numOfWorkers += *mp.Replicas
-		}
-	}
-	switch numOfWorkers {
-	case 0:
-		config.Status.InfrastructureTopology = config.Status.ControlPlaneTopology
-	case 1:
-		config.Status.InfrastructureTopology = configv1.SingleReplicaTopologyMode
-	default:
-		config.Status.InfrastructureTopology = configv1.HighlyAvailableTopologyMode
-	}
+	config.Status.InfrastructureTopology = infrastructureTopology
+	config.Status.ControlPlaneTopology = controlPlaneTopology
 
 	switch installConfig.Config.Platform.Name() {
 	case aws.Name:
@@ -211,6 +198,61 @@ func (i *Infrastructure) Generate(dependencies asset.Parents) error {
 		config.Status.PlatformStatus.Ovirt = &configv1.OvirtPlatformStatus{
 			APIServerInternalIP: installConfig.Config.Ovirt.APIVIP,
 			IngressIP:           installConfig.Config.Ovirt.IngressVIP,
+		}
+	case powervs.Name:
+		config.Spec.PlatformSpec.Type = configv1.PowerVSPlatformType
+		cisInstanceCRN, err := installConfig.PowerVS.CISInstanceCRN(context.TODO())
+		if err != nil {
+			return errors.Wrapf(err, "failed to get instance CRN")
+		}
+		config.Status.PlatformStatus.PowerVS = &configv1.PowerVSPlatformStatus{
+			Region:         installConfig.Config.Platform.PowerVS.Region,
+			Zone:           installConfig.Config.Platform.PowerVS.Zone,
+			CISInstanceCRN: cisInstanceCRN,
+		}
+	case nutanix.Name:
+		nutanixPlatform := installConfig.Config.Nutanix
+
+		// Retrieve the prism element name
+		var peName string
+		if len(nutanixPlatform.PrismElements[0].Name) == 0 {
+			nc, err := nutanix.CreateNutanixClient(context.Background(),
+				nutanixPlatform.PrismCentral.Endpoint.Address,
+				strconv.Itoa(int(nutanixPlatform.PrismCentral.Endpoint.Port)),
+				nutanixPlatform.PrismCentral.Username,
+				nutanixPlatform.PrismCentral.Password)
+			if err != nil {
+				return errors.Wrapf(err, "unable to connect to Prism Central %s", nutanixPlatform.PrismCentral.Endpoint.Address)
+			}
+			pe, err := nc.V3.GetCluster(nutanixPlatform.PrismElements[0].UUID)
+			if err != nil {
+				return errors.Wrapf(err, "fail to find the Prism Element (cluster) with uuid %s", nutanixPlatform.PrismElements[0].UUID)
+			}
+			peName = *pe.Spec.Name
+		} else {
+			peName = nutanixPlatform.PrismElements[0].Name
+		}
+
+		config.Spec.PlatformSpec.Type = configv1.NutanixPlatformType
+		config.Spec.PlatformSpec.Nutanix = &configv1.NutanixPlatformSpec{
+			PrismCentral: configv1.NutanixPrismEndpoint{
+				Address: nutanixPlatform.PrismCentral.Endpoint.Address,
+				Port:    nutanixPlatform.PrismCentral.Endpoint.Port,
+			},
+			PrismElements: []configv1.NutanixPrismElementEndpoint{{
+				Name: peName,
+				Endpoint: configv1.NutanixPrismEndpoint{
+					Address: nutanixPlatform.PrismElements[0].Endpoint.Address,
+					Port:    nutanixPlatform.PrismElements[0].Endpoint.Port,
+				},
+			}},
+		}
+
+		if installConfig.Config.Nutanix.APIVIP != "" {
+			config.Status.PlatformStatus.Nutanix = &configv1.NutanixPlatformStatus{
+				APIServerInternalIP: installConfig.Config.Nutanix.APIVIP,
+				IngressIP:           installConfig.Config.Nutanix.IngressVIP,
+			}
 		}
 	default:
 		config.Spec.PlatformSpec.Type = configv1.NonePlatformType

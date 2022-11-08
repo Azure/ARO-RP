@@ -144,9 +144,10 @@ func (m *manager) computeBootstrapVM(installConfig *installconfig.InstallConfig)
 		Location: &installConfig.Config.Azure.Region,
 	}
 
-	if installConfig.Config.ControlPlane.Platform.Azure.DiskEncryptionSetID != "" {
+	if installConfig.Config.ControlPlane.Platform.Azure.DiskEncryptionSet != nil {
+		var diskEncryptionSetId = installConfig.Config.ControlPlane.Platform.Azure.DiskEncryptionSet.ToID()
 		vm.StorageProfile.OsDisk.ManagedDisk.DiskEncryptionSet = &mgmtcompute.DiskEncryptionSetParameters{
-			ID: &installConfig.Config.ControlPlane.Platform.Azure.DiskEncryptionSetID,
+			ID: &diskEncryptionSetId,
 		}
 	}
 
@@ -216,9 +217,10 @@ func (m *manager) computeMasterVMs(installConfig *installconfig.InstallConfig, z
 		Location: &installConfig.Config.Azure.Region,
 	}
 
-	if installConfig.Config.ControlPlane.Platform.Azure.DiskEncryptionSetID != "" {
+	if installConfig.Config.ControlPlane.Platform.Azure.DiskEncryptionSet != nil {
+		var diskEncryptionSetId = installConfig.Config.ControlPlane.Platform.Azure.DiskEncryptionSet.ToID()
 		vm.StorageProfile.OsDisk.ManagedDisk.DiskEncryptionSet = &mgmtcompute.DiskEncryptionSetParameters{
-			ID: &installConfig.Config.ControlPlane.Platform.Azure.DiskEncryptionSetID,
+			ID: &diskEncryptionSetId,
 		}
 	}
 

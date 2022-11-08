@@ -2,16 +2,15 @@ package vsphere
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/vmware/govmomi/vim25"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/vsphere"
-	vspheretypes "github.com/openshift/installer/pkg/types/vsphere"
 	"github.com/openshift/installer/pkg/types/vsphere/validation"
 )
 
@@ -33,7 +32,7 @@ func ValidateForProvisioning(ic *types.InstallConfig) error {
 	}
 
 	p := ic.Platform.VSphere
-	vim25Client, _, err := vspheretypes.CreateVSphereClients(context.TODO(),
+	vim25Client, _, cleanup, err := CreateVSphereClients(context.TODO(),
 		p.VCenter,
 		p.Username,
 		p.Password)
@@ -41,18 +40,19 @@ func ValidateForProvisioning(ic *types.InstallConfig) error {
 	if err != nil {
 		return errors.New(field.InternalError(field.NewPath("platform", "vsphere"), errors.Wrapf(err, "unable to connect to vCenter %s.", p.VCenter)).Error())
 	}
+	defer cleanup()
 
 	finder := NewFinder(vim25Client)
-	return validateProvisioning(finder, ic)
+	return validateProvisioning(vim25Client, finder, ic)
 }
 
-func validateProvisioning(finder Finder, ic *types.InstallConfig) error {
+func validateProvisioning(client *vim25.Client, finder Finder, ic *types.InstallConfig) error {
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, validation.ValidateForProvisioning(ic.Platform.VSphere, field.NewPath("platform").Child("vsphere"))...)
 	allErrs = append(allErrs, folderExists(finder, ic, field.NewPath("platform").Child("vsphere").Child("folder"))...)
 	allErrs = append(allErrs, resourcePoolExists(finder, ic, field.NewPath("platform").Child("vsphere").Child("resourcePool"))...)
 	if p := ic.Platform.VSphere; p.Network != "" {
-		allErrs = append(allErrs, validateNetwork(finder, p, field.NewPath("platform").Child("vsphere").Child("network"))...)
+		allErrs = append(allErrs, validateNetwork(client, finder, p, field.NewPath("platform").Child("vsphere").Child("network"))...)
 	}
 
 	return allErrs.ToAggregate()
@@ -77,7 +77,11 @@ func folderExists(finder Finder, ic *types.InstallConfig, fldPath *field.Path) f
 	return nil
 }
 
-func validateNetwork(finder Finder, p *vsphere.Platform, fldPath *field.Path) field.ErrorList {
+func validateNetwork(client *vim25.Client, finder Finder, p *vsphere.Platform, fldPath *field.Path) field.ErrorList {
+	// It's not possible to validate a network if datacenter or cluster are empty strings
+	if p.Datacenter == "" || p.Cluster == "" {
+		return nil
+	}
 	ctx, cancel := context.WithTimeout(context.TODO(), 60*time.Second)
 	defer cancel()
 	dcName := p.Datacenter
@@ -89,10 +93,11 @@ func validateNetwork(finder Finder, p *vsphere.Platform, fldPath *field.Path) fi
 	if err != nil {
 		return field.ErrorList{field.Invalid(fldPath, p.Datacenter, err.Error())}
 	}
-	networkPath := fmt.Sprintf("%s/network/%s", dataCenter.InventoryPath, p.Network)
-	_, err = finder.Network(ctx, networkPath)
+	// Remove any trailing backslash before getting networkMoID
+	trimmedPath := strings.TrimPrefix(dataCenter.InventoryPath, "/")
+	_, err = GetNetworkMoID(ctx, client, finder, trimmedPath, p.Cluster, p.Network)
 	if err != nil {
-		return field.ErrorList{field.Invalid(fldPath, p.Network, "unable to find network provided")}
+		return field.ErrorList{field.Invalid(fldPath, p.Network, err.Error())}
 	}
 	return nil
 }

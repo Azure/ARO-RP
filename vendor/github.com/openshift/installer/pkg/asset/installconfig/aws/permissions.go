@@ -150,6 +150,7 @@ var permissions = map[PermissionGroup][]string{
 		"s3:GetBucketLocation",
 		"s3:GetBucketLogging",
 		"s3:GetBucketObjectLockConfiguration",
+		"s3:GetBucketPolicy",
 		"s3:GetBucketRequestPayment",
 		"s3:GetBucketTagging",
 		"s3:GetBucketVersioning",
@@ -176,6 +177,7 @@ var permissions = map[PermissionGroup][]string{
 	PermissionDeleteBase: {
 		"autoscaling:DescribeAutoScalingGroups",
 		"ec2:DeleteNetworkInterface",
+		"ec2:DeletePlacementGroup",
 		"ec2:DeleteTags",
 		"ec2:DeleteVolume",
 		"elasticloadbalancing:DeleteTargetGroup",

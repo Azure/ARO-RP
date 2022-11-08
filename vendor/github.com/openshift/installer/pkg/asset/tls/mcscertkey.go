@@ -10,6 +10,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/templates/content/bootkube"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
+	nutanixtypes "github.com/openshift/installer/pkg/types/nutanix"
 	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
 	ovirttypes "github.com/openshift/installer/pkg/types/ovirt"
 	vspheretypes "github.com/openshift/installer/pkg/types/vsphere"
@@ -59,6 +60,12 @@ func (a *MCSCertKey) Generate(dependencies asset.Parents) error {
 	case baremetaltypes.Name:
 		cfg.IPAddresses = []net.IP{net.ParseIP(installConfig.Config.BareMetal.APIVIP)}
 		cfg.DNSNames = []string{hostname, installConfig.Config.BareMetal.APIVIP}
+	case nutanixtypes.Name:
+		cfg.DNSNames = []string{hostname}
+		if installConfig.Config.Nutanix.APIVIP != "" {
+			cfg.IPAddresses = []net.IP{net.ParseIP(installConfig.Config.Nutanix.APIVIP)}
+			cfg.DNSNames = append(cfg.DNSNames, installConfig.Config.Nutanix.APIVIP)
+		}
 	case openstacktypes.Name:
 		cfg.IPAddresses = []net.IP{net.ParseIP(installConfig.Config.OpenStack.APIVIP)}
 		cfg.DNSNames = []string{hostname, installConfig.Config.OpenStack.APIVIP}

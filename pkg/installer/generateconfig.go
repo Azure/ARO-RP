@@ -109,6 +109,15 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 		SoftwareDefinedNetwork = string(m.oc.Properties.NetworkProfile.SoftwareDefinedNetwork)
 	}
 
+	masterDiskEncryptionSet, err := azure.ParseResourceID(m.oc.Properties.MasterProfile.DiskEncryptionSetID)
+	if err != nil {
+		return nil, nil, err
+	}
+	workerDiskEncryptionSet, err := azure.ParseResourceID(m.oc.Properties.WorkerProfiles[0].DiskEncryptionSetID)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	installConfig := &installconfig.InstallConfig{
 		Config: &types.InstallConfig{
 			TypeMeta: metav1.TypeMeta{
@@ -145,9 +154,13 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 						InstanceType:     string(m.oc.Properties.MasterProfile.VMSize),
 						EncryptionAtHost: m.oc.Properties.MasterProfile.EncryptionAtHost == api.EncryptionAtHostEnabled,
 						OSDisk: azuretypes.OSDisk{
-							DiskEncryptionSetID: m.oc.Properties.MasterProfile.DiskEncryptionSetID,
-							DiskSizeGB:          1024,
-							DiskType:            computeskus.SupportedOSDisk(masterSKU),
+							DiskEncryptionSet: &azuretypes.DiskEncryptionSet{
+								SubscriptionID: masterDiskEncryptionSet.SubscriptionID,
+								ResourceGroup:  masterDiskEncryptionSet.ResourceGroup,
+								Name:           masterDiskEncryptionSet.ResourceName,
+							},
+							DiskSizeGB: 1024,
+							DiskType:   computeskus.SupportedOSDisk(masterSKU),
 						},
 					},
 				},
@@ -164,9 +177,13 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 							InstanceType:     string(m.oc.Properties.WorkerProfiles[0].VMSize),
 							EncryptionAtHost: m.oc.Properties.WorkerProfiles[0].EncryptionAtHost == api.EncryptionAtHostEnabled,
 							OSDisk: azuretypes.OSDisk{
-								DiskEncryptionSetID: m.oc.Properties.WorkerProfiles[0].DiskEncryptionSetID,
-								DiskSizeGB:          int32(m.oc.Properties.WorkerProfiles[0].DiskSizeGB),
-								DiskType:            computeskus.SupportedOSDisk(workerSKU),
+								DiskEncryptionSet: &azuretypes.DiskEncryptionSet{
+									SubscriptionID: workerDiskEncryptionSet.SubscriptionID,
+									ResourceGroup:  workerDiskEncryptionSet.ResourceGroup,
+									Name:           workerDiskEncryptionSet.ResourceName,
+								},
+								DiskSizeGB: int32(m.oc.Properties.WorkerProfiles[0].DiskSizeGB),
+								DiskType:   computeskus.SupportedOSDisk(workerSKU),
 							},
 						},
 					},

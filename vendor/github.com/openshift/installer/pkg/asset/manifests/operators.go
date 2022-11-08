@@ -100,6 +100,11 @@ func (m *Manifests) Generate(dependencies asset.Parents) error {
 	m.KubeSysConfig = configMap("kube-system", "cluster-config-v1", genericData{
 		"install-config": string(redactedConfig),
 	})
+	if m.KubeSysConfig.Metadata.Annotations == nil {
+		m.KubeSysConfig.Metadata.Annotations = make(map[string]string, 1)
+	}
+	m.KubeSysConfig.Metadata.Annotations["kubernetes.io/description"] = "The install-config content used to create the cluster.  The cluster configuration may have evolved since installation, so check cluster configuration resources directly if you are interested in the current cluster state."
+
 	kubeSysConfigData, err := yaml.Marshal(m.KubeSysConfig)
 	if err != nil {
 		return errors.Wrap(err, "failed to create kube-system/cluster-config-v1 configmap")
@@ -148,6 +153,7 @@ func (m *Manifests) generateBootKubeManifests(dependencies asset.Parents) []*ass
 	)
 
 	templateData := &bootkubeTemplateData{
+		CVOCapabilities:               installConfig.Config.Capabilities,
 		CVOClusterID:                  clusterID.UUID,
 		McsTLSCert:                    base64.StdEncoding.EncodeToString(mcsCertKey.Cert()),
 		McsTLSKey:                     base64.StdEncoding.EncodeToString(mcsCertKey.Key()),

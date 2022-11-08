@@ -15,6 +15,7 @@ import (
 	"github.com/openshift/installer/pkg/types"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
+	nutanixtypes "github.com/openshift/installer/pkg/types/nutanix"
 	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
 	ovirttypes "github.com/openshift/installer/pkg/types/ovirt"
 	vspheretypes "github.com/openshift/installer/pkg/types/vsphere"
@@ -39,6 +40,10 @@ func pointerIgnitionConfig(installConfig *types.InstallConfig, aroDNSConfig *boo
 		// Baremetal needs to point directly at the VIP because we don't have a
 		// way to configure DNS before Ignition runs.
 		ignitionHost = net.JoinHostPort(installConfig.BareMetal.APIVIP, "22623")
+	case nutanixtypes.Name:
+		if installConfig.Nutanix.APIVIP != "" {
+			ignitionHost = net.JoinHostPort(installConfig.Nutanix.APIVIP, "22623")
+		}
 	case openstacktypes.Name:
 		ignitionHost = net.JoinHostPort(installConfig.OpenStack.APIVIP, "22623")
 	case ovirttypes.Name:

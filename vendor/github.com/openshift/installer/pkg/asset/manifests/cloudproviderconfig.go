@@ -20,6 +20,7 @@ import (
 	gcpmanifests "github.com/openshift/installer/pkg/asset/manifests/gcp"
 	ibmcloudmanifests "github.com/openshift/installer/pkg/asset/manifests/ibmcloud"
 	openstackmanifests "github.com/openshift/installer/pkg/asset/manifests/openstack"
+	powervsmanifests "github.com/openshift/installer/pkg/asset/manifests/powervs"
 	vspheremanifests "github.com/openshift/installer/pkg/asset/manifests/vsphere"
 	alibabacloudtypes "github.com/openshift/installer/pkg/types/alibabacloud"
 	awstypes "github.com/openshift/installer/pkg/types/aws"
@@ -29,8 +30,10 @@ import (
 	ibmcloudtypes "github.com/openshift/installer/pkg/types/ibmcloud"
 	libvirttypes "github.com/openshift/installer/pkg/types/libvirt"
 	nonetypes "github.com/openshift/installer/pkg/types/none"
+	nutanixtypes "github.com/openshift/installer/pkg/types/nutanix"
 	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
 	ovirttypes "github.com/openshift/installer/pkg/types/ovirt"
+	powervstypes "github.com/openshift/installer/pkg/types/powervs"
 	vspheretypes "github.com/openshift/installer/pkg/types/vsphere"
 )
 
@@ -90,12 +93,12 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 	}
 
 	switch installConfig.Config.Platform.Name() {
-	case libvirttypes.Name, nonetypes.Name, baremetaltypes.Name, ovirttypes.Name:
+	case libvirttypes.Name, nonetypes.Name, baremetaltypes.Name, ovirttypes.Name, nutanixtypes.Name:
 		return nil
 	case awstypes.Name:
 		// Store the additional trust bundle in the ca-bundle.pem key if the cluster is being installed on a C2S region.
 		trustBundle := installConfig.Config.AdditionalTrustBundle
-		if trustBundle == "" || !awstypes.C2SRegions.Has(installConfig.Config.AWS.Region) {
+		if trustBundle == "" || !awstypes.IsSecretRegion(installConfig.Config.AWS.Region) {
 			return nil
 		}
 		cm.Data[cloudProviderConfigCABundleDataKey] = trustBundle
@@ -213,6 +216,45 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 			return errors.Wrap(err, "could not create cloud provider config")
 		}
 		cm.Data[cloudProviderConfigDataKey] = ibmcloudConfig
+	case powervstypes.Name:
+		var (
+			accountID, vpcRegion string
+			err                  error
+		)
+
+		if accountID, err = installConfig.PowerVS.AccountID(context.TODO()); err != nil {
+			return err
+		}
+
+		if vpcRegion, err = powervstypes.VPCRegionForPowerVSRegion(installConfig.Config.PowerVS.Region); err != nil {
+			return err
+		}
+
+		vpc := installConfig.Config.PowerVS.VPC
+		vpcSubnets := installConfig.Config.PowerVS.Subnets
+		if vpc == "" {
+			vpc = fmt.Sprintf("vpc-%s", clusterID.InfraID)
+		}
+
+		if len(vpcSubnets) == 0 {
+			vpcSubnets = append(vpcSubnets, fmt.Sprintf("vpc-subnet-%s", clusterID.InfraID))
+		}
+
+		powervsConfig, err := powervsmanifests.CloudProviderConfig(
+			clusterID.InfraID,
+			accountID,
+			vpc,
+			vpcRegion,
+			installConfig.Config.Platform.PowerVS.PowerVSResourceGroup,
+			vpcSubnets,
+			installConfig.Config.PowerVS.ServiceInstanceID,
+			installConfig.Config.PowerVS.Region,
+			installConfig.Config.PowerVS.Zone,
+		)
+		if err != nil {
+			return errors.Wrap(err, "could not create cloud provider config")
+		}
+		cm.Data[cloudProviderConfigDataKey] = powervsConfig
 	case vspheretypes.Name:
 		folderPath := installConfig.Config.Platform.VSphere.Folder
 		if len(folderPath) == 0 {

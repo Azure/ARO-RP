@@ -36,10 +36,14 @@ type config struct {
 	MasterMemory            int32                    `json:"ovirt_master_memory"`
 	MasterCores             int32                    `json:"ovirt_master_cores"`
 	MasterSockets           int32                    `json:"ovirt_master_sockets"`
+	MasterThreads           int32                    `json:"ovirt_master_threads"`
 	MasterOsDiskGB          int64                    `json:"ovirt_master_os_disk_gb"`
 	MasterAffinityGroups    []string                 `json:"ovirt_master_affinity_groups"`
 	MasterAutoPinningPolicy string                   `json:"ovirt_master_auto_pinning_policy,omitempty"`
 	MasterHugePages         int32                    `json:"ovirt_master_hugepages"`
+	MasterClone             *bool                    `json:"ovirt_master_clone"`
+	MasterSparse            *bool                    `json:"ovirt_master_sparse"`
+	MasterFormat            string                   `json:"ovirt_master_format"`
 }
 
 // TFVars generates ovirt-specific Terraform variables.
@@ -54,6 +58,12 @@ func TFVars(
 	masterSpec *v1beta1.OvirtMachineProviderSpec,
 	affinityGroups []ovirt.AffinityGroup,
 ) ([]byte, error) {
+	if clusterID == "" {
+		return nil, fmt.Errorf("storage domain ID cannot be empty")
+	}
+	if storageDomainID == "" {
+		return nil, fmt.Errorf("storage domain ID cannot be empty")
+	}
 	cfg := config{
 		Auth:                    auth,
 		ClusterID:               clusterID,
@@ -67,10 +77,14 @@ func TFVars(
 		MasterAffinityGroups:    masterSpec.AffinityGroupsNames,
 		MasterAutoPinningPolicy: masterSpec.AutoPinningPolicy,
 		MasterHugePages:         masterSpec.Hugepages,
+		MasterClone:             masterSpec.Clone,
+		MasterSparse:            masterSpec.Sparse,
+		MasterFormat:            masterSpec.Format,
 	}
 	if masterSpec.CPU != nil {
 		cfg.MasterCores = masterSpec.CPU.Cores
 		cfg.MasterSockets = masterSpec.CPU.Sockets
+		cfg.MasterThreads = masterSpec.CPU.Threads
 	}
 
 	imageName, isURL := rhcos.GenerateOpenStackImageName(baseImage, infraID)

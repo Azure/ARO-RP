@@ -11,9 +11,9 @@ import (
 
 // TemplateData holds data specific to templates used for the baremetal platform.
 type TemplateData struct {
-	// ProvisioningInterface holds the interface the bootstrap node will use to host the ProvisioningIP below.
-	// When the provisioning network is disabled, this is the external baremetal network interface.
-	ProvisioningInterface string
+	// ProvisioningInterfaceMAC holds the interface's MAC address that the bootstrap node will use to host the ProvisioningIP below.
+	// When the provisioning network is disabled, this is the external baremetal network MAC address.
+	ProvisioningInterfaceMAC string
 
 	// ProvisioningIP holds the IP the bootstrap node will use to service Ironic, TFTP, etc.
 	ProvisioningIP string
@@ -58,6 +58,16 @@ type TemplateData struct {
 
 	// ProvisioningNetwork displays the type of provisioning network being used
 	ProvisioningNetwork string
+
+	// ExternalStaticIP is the static IP of the bootstrap node
+	ExternalStaticIP string
+
+	// ExternalStaticIP is the static gateway of the bootstrap node
+	ExternalStaticGateway string
+
+	ExternalSubnetCIDR int
+
+	ExternalMACAddress string
 }
 
 // GetTemplateData returns platform-specific data for bootstrap templates.
@@ -70,12 +80,23 @@ func GetTemplateData(config *baremetal.Platform, networks []types.MachineNetwork
 	templateData.ProvisioningNetwork = string(config.ProvisioningNetwork)
 	templateData.BaremetalEndpointOverride = fmt.Sprintf("http://%s/v1", net.JoinHostPort(config.APIVIP, "6385"))
 	templateData.BaremetalIntrospectionEndpointOverride = fmt.Sprintf("http://%s/v1", net.JoinHostPort(config.APIVIP, "5050"))
+	templateData.ExternalStaticIP = config.BootstrapExternalStaticIP
+	templateData.ExternalStaticGateway = config.BootstrapExternalStaticGateway
+	templateData.ExternalMACAddress = config.ExternalMACAddress
+
+	if config.BootstrapExternalStaticIP != "" {
+		for _, network := range networks {
+			cidr, _ := network.CIDR.Mask.Size()
+			templateData.ExternalSubnetCIDR = cidr
+			break
+		}
+	}
 
 	if config.ProvisioningNetwork != baremetal.DisabledProvisioningNetwork {
 		cidr, _ := config.ProvisioningNetworkCIDR.Mask.Size()
 		templateData.ProvisioningCIDR = cidr
 		templateData.ProvisioningIPv6 = config.ProvisioningNetworkCIDR.IP.To4() == nil
-		templateData.ProvisioningInterface = "ens4"
+		templateData.ProvisioningInterfaceMAC = config.ProvisioningMACAddress
 		templateData.ProvisioningDNSMasq = true
 	}
 
@@ -95,7 +116,7 @@ func GetTemplateData(config *baremetal.Platform, networks []types.MachineNetwork
 		}
 		templateData.ProvisioningDHCPAllowList = strings.Join(dhcpAllowList, " ")
 	case baremetal.DisabledProvisioningNetwork:
-		templateData.ProvisioningInterface = "ens3"
+		templateData.ProvisioningInterfaceMAC = config.ExternalMACAddress
 		templateData.ProvisioningDNSMasq = false
 
 		if templateData.ProvisioningIP != "" {
