@@ -445,8 +445,8 @@ var _ = JustAfterEach(func() {
 
 	log.WithFields(logrus.Fields{
 		e2emetrics.LogEntryIsE2EEmittableMetric: true,
-		e2emetrics.LogEntryMetricName:           metricName,
-		e2emetrics.LogEntryMetricStatus:         !gsc.Failed(),
+		e2emetrics.LogEntryE2ETestName:          metricName,
+		e2emetrics.LogEntryIsE2ETestSuccessful:  !gsc.Failed(),
 		e2emetrics.DimensionARMResourceID:       resourceIDFromEnv(),
 		e2emetrics.DimensionARMGeoLocation:      _env.Location(),
 		e2emetrics.DimensionResourceType:        "openShiftClusters",

@@ -16,11 +16,11 @@ const (
 	DimensionARMGeoLocation = "armGeoLocation"
 	DimensionARMResourceID  = "armResourceID"
 	DimensionResourceType   = "resourceType"
-	DimensionSucceeded      = "Succeeded"
+	DimensionSucceeded      = "E2ETestSuccessful"
 
+	LogEntryE2ETestName          = "E2ETestName"
 	LogEntryIsE2EEmittableMetric = "IsE2EEmittableMetric"
-	LogEntryMetricName           = "MetricName"
-	LogEntryMetricStatus         = "MetricStatus"
+	LogEntryIsE2ETestSuccessful  = "IsE2ETestSuccessful"
 )
 
 type E2ELogToMetrics struct {
@@ -35,16 +35,16 @@ func NewE2ELogToMetrics(m metrics.Emitter) E2ELogToMetrics {
 
 func (e *E2ELogToMetrics) PostMetricsFromLogEntry(entry *logrus.Entry) {
 	if _, ok := entry.Data[LogEntryIsE2EEmittableMetric]; ok {
-		metricName := fmt.Sprint(entry.Data[LogEntryMetricName])
-		metricStatus := fmt.Sprint(entry.Data[LogEntryMetricStatus])
-		metricStatusInt := btoi(strings.EqualFold(metricStatus, "true"))
+		metricName := fmt.Sprint(entry.Data[LogEntryE2ETestName])
+		metricIsE2ETestSuccessful := fmt.Sprint(entry.Data[LogEntryIsE2ETestSuccessful])
+		metricIsE2ETestSuccessfulInt := btoi(strings.EqualFold(metricIsE2ETestSuccessful, "true"))
 		dimensions := map[string]string{
 			DimensionARMResourceID:  fmt.Sprint(entry.Data[DimensionARMResourceID]),
 			DimensionARMGeoLocation: fmt.Sprint(entry.Data[DimensionARMGeoLocation]),
 			DimensionResourceType:   fmt.Sprint(entry.Data[DimensionResourceType]),
-			DimensionSucceeded:      metricStatus,
+			DimensionSucceeded:      metricIsE2ETestSuccessful,
 		}
-		e.metricsEmitter.EmitGauge(metricName, metricStatusInt, dimensions)
+		e.metricsEmitter.EmitGauge(metricName, metricIsE2ETestSuccessfulInt, dimensions)
 	}
 }
 
