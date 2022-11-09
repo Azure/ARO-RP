@@ -6,7 +6,6 @@ package dnsmasq
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
@@ -82,35 +81,6 @@ func TestMachineConfigReconciler(t *testing.T) {
 			),
 			mcocli: fakeMco(),
 			mocks:  func(mdh *mock_dynamichelper.MockInterface) {},
-			request: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "",
-					Name:      "99-custom-aro-dns",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "MachineConfigPool in deletion state for MachineConfig does nothing",
-			arocli: fakeAro(
-				&arov1alpha1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-					Status:     arov1alpha1.ClusterStatus{},
-					Spec: arov1alpha1.ClusterSpec{
-						OperatorFlags: arov1alpha1.OperatorFlags{
-							controllerEnabled: "true",
-						},
-					},
-				},
-			),
-			mcocli: fakeMco(
-				&mcv1.MachineConfigPool{
-					ObjectMeta: metav1.ObjectMeta{Name: "custom", DeletionTimestamp: &metav1.Time{Time: time.Unix(0, 0)}},
-					Status:     mcv1.MachineConfigPoolStatus{},
-					Spec:       mcv1.MachineConfigPoolSpec{},
-				},
-			),
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {},
 			request: ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: "",

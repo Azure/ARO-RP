@@ -65,14 +65,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, err
 	}
 
-	roles := make([]string, 0, len(mcps.Items))
-	for _, mcp := range mcps.Items {
-		if mcp.GetDeletionTimestamp() == nil {
-			roles = append(roles, mcp.Name)
-		}
-	}
-
-	err = reconcileMachineConfigs(ctx, instance, r.dh, roles...)
+	err = reconcileMachineConfigs(ctx, instance, r.dh, mcps.Items...)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
@@ -81,10 +74,15 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 	return reconcile.Result{}, nil
 }
 
-func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, dh dynamichelper.Interface, roles ...string) error {
+func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, dh dynamichelper.Interface, roles ...mcv1.MachineConfigPool) error {
 	var resources []kruntime.Object
 	for _, role := range roles {
-		resource, err := dnsmasq.MachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, role, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP)
+		resource, err := dnsmasq.MachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, role.Name, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP)
+		if err != nil {
+			return err
+		}
+
+		err = dynamichelper.SetControllerReferences([]kruntime.Object{resource}, &role)
 		if err != nil {
 			return err
 		}
@@ -92,12 +90,7 @@ func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster,
 		resources = append(resources, resource)
 	}
 
-	err := dynamichelper.SetControllerReferences(resources, instance)
-	if err != nil {
-		return err
-	}
-
-	err = dynamichelper.Prepare(resources)
+	err := dynamichelper.Prepare(resources)
 	if err != nil {
 		return err
 	}

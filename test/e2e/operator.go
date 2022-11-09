@@ -573,6 +573,10 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		Eventually(func(g Gomega) {
 			machineConfigs := getMachineConfigNames(g)
 			g.Expect(machineConfigs).To(ContainElement(mcName))
+
+			customMachineConfig, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get(ctx, mcName, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(customMachineConfig.ObjectMeta.OwnerReferences[0].Name).To(Equal(mcpName))
 		}).WithTimeout(timeout).WithPolling(polling).Should(Succeed())
 
 		By("deleting the ARO DNS MachineConfig when deleting the custom MachineConfigPool")

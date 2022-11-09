@@ -6,7 +6,6 @@ package dnsmasq
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
@@ -91,74 +90,6 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "MachineConfigPool marked for deletion with no finalizers does nothing",
-			arocli: fakeAro(
-				&arov1alpha1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-					Status:     arov1alpha1.ClusterStatus{},
-					Spec: arov1alpha1.ClusterSpec{
-						OperatorFlags: arov1alpha1.OperatorFlags{
-							controllerEnabled: "true",
-						},
-					},
-				},
-			),
-			mcocli: fakeMco(
-				&mcv1.MachineConfigPool{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "custom",
-						DeletionTimestamp: &metav1.Time{Time: time.Unix(0, 0)},
-					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
-				},
-			),
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {},
-			request: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "",
-					Name:      "custom",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "MachineConfigPool marked for deletion with controller finalizer deletes ARO DNS MachineConfig and removes finalizer",
-			arocli: fakeAro(
-				&arov1alpha1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-					Status:     arov1alpha1.ClusterStatus{},
-					Spec: arov1alpha1.ClusterSpec{
-						OperatorFlags: arov1alpha1.OperatorFlags{
-							controllerEnabled: "true",
-						},
-					},
-				},
-			),
-			mcocli: fakeMco(
-				&mcv1.MachineConfigPool{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "custom",
-						DeletionTimestamp: &metav1.Time{Time: time.Unix(0, 0)},
-						Finalizers:        []string{MachineConfigPoolControllerName},
-					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
-				},
-			),
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineConfig", "", "99-custom-aro-dns").Times(1)
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.AssignableToTypeOf(&mcv1.MachineConfigPool{})).Times(1)
-			},
-			request: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "",
-					Name:      "custom",
-				},
-			},
-			wantErr: false,
-		},
-		{
 			name: "MachineConfigPool reconciles ARO DNS MachineConfig",
 			arocli: fakeAro(
 				&arov1alpha1.Cluster{
@@ -183,40 +114,6 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 			),
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
 				mdh.EXPECT().Ensure(gomock.Any(), gomock.AssignableToTypeOf(&mcv1.MachineConfig{})).Times(1)
-			},
-			request: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: "",
-					Name:      "custom",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "MachineConfigPool with no finalizer adds finalizer",
-			arocli: fakeAro(
-				&arov1alpha1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-					Status:     arov1alpha1.ClusterStatus{},
-					Spec: arov1alpha1.ClusterSpec{
-						OperatorFlags: arov1alpha1.OperatorFlags{
-							controllerEnabled: "true",
-						},
-					},
-				},
-			),
-			mcocli: fakeMco(
-				&mcv1.MachineConfigPool{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "custom",
-					},
-					Status: mcv1.MachineConfigPoolStatus{},
-					Spec:   mcv1.MachineConfigPoolSpec{},
-				},
-			),
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.AssignableToTypeOf(&mcv1.MachineConfig{})).Times(1)
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.AssignableToTypeOf(&mcv1.MachineConfigPool{})).Times(1)
 			},
 			request: ctrl.Request{
 				NamespacedName: types.NamespacedName{
