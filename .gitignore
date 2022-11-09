@@ -23,6 +23,7 @@ gomock_reflect_*
 /mdm_statsd.socket
 /uts.txt
 /cover.out
+/cover_coverpkg.out
 /coverage.*
 /report.xml
 /e2e-report.xml

@@ -15,19 +15,12 @@ import (
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 )
 
-var (
-	client   = flag.Bool("client", false, "generate client certificate")
-	ca       = flag.Bool("ca", false, "generate ca certificate")
-	keyFile  = flag.String("keyFile", "", `file containing signing key in der format (default "" - self-signed)`)
-	certFile = flag.String("certFile", "", `file containing signing certificate in der format (default "" - self-signed)`)
-)
-
-func run(name string) error {
+func run(name string, flags flagsType) error {
 	var signingKey *rsa.PrivateKey
 	var signingCert *x509.Certificate
 
-	if *keyFile != "" {
-		b, err := os.ReadFile(*keyFile)
+	if *flags.keyFile != "" {
+		b, err := os.ReadFile(*flags.keyFile)
 		if err != nil {
 			return err
 		}
@@ -38,8 +31,8 @@ func run(name string) error {
 		}
 	}
 
-	if *certFile != "" {
-		b, err := os.ReadFile(*certFile)
+	if *flags.certFile != "" {
+		b, err := os.ReadFile(*flags.certFile)
 		if err != nil {
 			return err
 		}
@@ -50,7 +43,7 @@ func run(name string) error {
 		}
 	}
 
-	key, cert, err := utiltls.GenerateKeyAndCertificate(name, signingKey, signingCert, *ca, *client)
+	key, cert, err := utiltls.GenerateKeyAndCertificate(name, signingKey, signingCert, *flags.ca, *flags.client)
 	if err != nil {
 		return err
 	}
@@ -92,7 +85,21 @@ func usage() {
 	flag.PrintDefaults()
 }
 
+type flagsType struct {
+	client   *bool
+	ca       *bool
+	keyFile  *string
+	certFile *string
+}
+
 func main() {
+	flags := flagsType{
+		client:   flag.Bool("client", false, "generate client certificate"),
+		ca:       flag.Bool("ca", false, "generate ca certificate"),
+		keyFile:  flag.String("keyFile", "", `file containing signing key in der format (default "" - self-signed)`),
+		certFile: flag.String("certFile", "", `file containing signing certificate in der format (default "" - self-signed)`),
+	}
+
 	flag.Usage = usage
 	flag.Parse()
 
@@ -101,7 +108,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	if err := run(flag.Arg(0)); err != nil {
+	if err := run(flag.Arg(0), flags); err != nil {
 		panic(err)
 	}
 }

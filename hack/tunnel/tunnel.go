@@ -35,19 +35,12 @@ import (
 // TLS client certificate.  For better or worse, this means we can avoid having
 // to add more configurability to the client libraries.
 
-var (
-	certFile       = flag.String("certFile", "secrets/localhost.crt", "file containing server certificate")
-	keyFile        = flag.String("keyFile", "secrets/localhost.key", "file containing server key")
-	clientCertFile = flag.String("clientCertFile", "secrets/dev-client.crt", "file containing client certificate")
-	clientKeyFile  = flag.String("clientKeyFile", "secrets/dev-client.key", "file containing client key")
-)
-
-func run(ctx context.Context, log *logrus.Entry) error {
+func run(ctx context.Context, log *logrus.Entry, flags flagsType) error {
 	if len(flag.Args()) != 1 {
 		return fmt.Errorf("usage: %s IP", os.Args[0])
 	}
 
-	certb, err := os.ReadFile(*certFile)
+	certb, err := os.ReadFile(*flags.certFile)
 	if err != nil {
 		return err
 	}
@@ -60,7 +53,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	pool := x509.NewCertPool()
 	pool.AddCert(cert)
 
-	keyb, err := os.ReadFile(*keyFile)
+	keyb, err := os.ReadFile(*flags.keyFile)
 	if err != nil {
 		return err
 	}
@@ -70,12 +63,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	clientCertb, err := os.ReadFile(*clientCertFile)
+	clientCertb, err := os.ReadFile(*flags.clientCertFile)
 	if err != nil {
 		return err
 	}
 
-	clientKeyb, err := os.ReadFile(*clientKeyFile)
+	clientKeyb, err := os.ReadFile(*flags.clientKeyFile)
 	if err != nil {
 		return err
 	}
@@ -151,14 +144,28 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	}
 }
 
+type flagsType struct {
+	certFile       *string
+	keyFile        *string
+	clientCertFile *string
+	clientKeyFile  *string
+}
+
 func main() {
 	log := utillog.GetLogger()
 
 	log.Printf("starting, git commit %s", version.GitCommit)
 
+	flags := flagsType{
+		certFile:       flag.String("certFile", "secrets/localhost.crt", "file containing server certificate"),
+		keyFile:        flag.String("keyFile", "secrets/localhost.key", "file containing server key"),
+		clientCertFile: flag.String("clientCertFile", "secrets/dev-client.crt", "file containing client certificate"),
+		clientKeyFile:  flag.String("clientKeyFile", "secrets/dev-client.key", "file containing client key"),
+	}
+
 	flag.Parse()
 
-	if err := run(context.Background(), log); err != nil {
+	if err := run(context.Background(), log, flags); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -27,12 +27,10 @@ const (
 	SessionKeyGroups   = "groups"
 )
 
-var (
-	username = flag.String("username", "testuser", "username of the portal user")
-	groups   = flag.String("groups", "", "comma-separated list of groups the user is in")
-)
-
 func run(ctx context.Context, log *logrus.Entry) error {
+	username := flag.String("username", "testuser", "username of the portal user")
+	groups := flag.String("groups", "", "comma-separated list of groups the user is in")
+
 	flag.Parse()
 
 	_env, err := env.NewCore(ctx, log)

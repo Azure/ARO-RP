@@ -189,6 +189,9 @@ validate-fips:
 unit-test-go:
 	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverprofile=cover.out ./...
 
+unit-test-go-coverpkg:
+	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
+
 lint-go:
 	hack/lint-go.sh
 
