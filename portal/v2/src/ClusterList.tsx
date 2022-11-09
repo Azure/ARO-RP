@@ -373,7 +373,7 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
   ): void => {
     this.setState({
       items: text
-        ? this.props.items.filter((i) => i.resourceId.toLowerCase().indexOf(text) > -1)
+      ? this.props.items.filter((i) => i.resourceId.toLowerCase().indexOf(text.trim().toLowerCase()) != -1)
         : this.props.items,
     })
   }
