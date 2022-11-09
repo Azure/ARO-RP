@@ -10,8 +10,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/golang/mock/gomock"
@@ -119,9 +121,10 @@ func createToken(tr *tokenRequirements) (*adal.ServicePrincipalToken, error) {
 
 	tk := adal.Token{}
 
+	r := rand.New(rand.NewSource(time.Now().UnixMicro()))
 	tk = adal.Token{
 		AccessToken:  headerEnc + "." + claimsEnc + "." + signatureEnc,
-		RefreshToken: "IwOGYzYTlmM2YxOTQ5MGE3YmNmMDFkNTVk",
+		RefreshToken: fmt.Sprintf("rand-%d", r.Int()),
 		ExpiresIn:    json.Number("300"),
 		Resource:     tr.resource,
 		Type:         "refresh",
