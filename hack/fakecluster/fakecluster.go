@@ -26,14 +26,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-var (
-	certFile = flag.String("certFile", "secrets/proxy.crt", "file containing server certificate")
-	keyFile  = flag.String("keyFile", "secrets/proxy.key", "file containing server key")
-	port     = flag.Int("port", 6443, "Port to listen on")
-	host     = flag.String("host", "localhost", "Host to listen on")
-)
-
 func run(ctx context.Context, l *logrus.Entry) error {
+	certFile := flag.String("certFile", "secrets/proxy.crt", "file containing server certificate")
+	keyFile := flag.String("keyFile", "secrets/proxy.key", "file containing server key")
+	port := flag.Int("port", 6443, "Port to listen on")
+	host := flag.String("host", "localhost", "Host to listen on")
+
 	l.Printf("starting, git commit %s", version.GitCommit)
 
 	flag.Parse()
