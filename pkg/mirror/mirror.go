@@ -45,6 +45,11 @@ func Copy(ctx context.Context, dstreference, srcreference string, dstauth, srcau
 		DestinationCtx: &types.SystemContext{
 			DockerAuthConfig: dstauth,
 		},
+		// Images that we mirror shouldn't change, so we can use the
+		// optimisation that checks if the source and destination manifests are
+		// equal before attempting to push it (and sending no blobs because
+		// they're all already there)
+		OptimizeDestinationImageAlreadyExists: true,
 	})
 
 	return err

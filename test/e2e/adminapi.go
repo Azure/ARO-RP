@@ -83,10 +83,40 @@ func adminRequest(ctx context.Context, method, path string, params url.Values, i
 	return resp, nil
 }
 
-func getCluster(ctx context.Context, resourceID string) *admin.OpenShiftCluster {
+// adminGetCluster returns admin representation of an ARO cluster
+func adminGetCluster(ctx context.Context, resourceID string) *admin.OpenShiftCluster {
 	var oc admin.OpenShiftCluster
 	resp, err := adminRequest(ctx, http.MethodGet, resourceID, nil, nil, &oc)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 	return &oc
+}
+
+// adminListClusters returns a list of ARO clusters in admin representation.
+// It handles pagination: function returns all the clusters from all pages.
+func adminListClusters(ctx context.Context, path string) []*admin.OpenShiftCluster {
+	ocs := make([]*admin.OpenShiftCluster, 0)
+	params := url.Values{}
+	for {
+		var list admin.OpenShiftClusterList
+		resp, err := adminRequest(ctx, http.MethodGet, path, params, nil, &list)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+		ocs = append(ocs, list.OpenShiftClusters...)
+
+		if list.NextLink == "" {
+			break
+		}
+
+		params = nextParams(list.NextLink)
+	}
+	return ocs
+}
+
+func nextParams(nextLink string) url.Values {
+	url, err := url.Parse(nextLink)
+	Expect(err).NotTo(HaveOccurred())
+
+	return url.Query()
 }

@@ -969,6 +969,156 @@ type OpenShiftVersionList struct {
 	NextLink *string `json:"nextLink,omitempty"`
 }
 
+// OpenShiftVersionListIterator provides access to a complete listing of OpenShiftVersion values.
+type OpenShiftVersionListIterator struct {
+	i    int
+	page OpenShiftVersionListPage
+}
+
+// NextWithContext advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+func (iter *OpenShiftVersionListIterator) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftVersionListIterator.NextWithContext")
+		defer func() {
+			sc := -1
+			if iter.Response().Response.Response != nil {
+				sc = iter.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	iter.i++
+	if iter.i < len(iter.page.Values()) {
+		return nil
+	}
+	err = iter.page.NextWithContext(ctx)
+	if err != nil {
+		iter.i--
+		return err
+	}
+	iter.i = 0
+	return nil
+}
+
+// Next advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (iter *OpenShiftVersionListIterator) Next() error {
+	return iter.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the enumeration should be started or is not yet complete.
+func (iter OpenShiftVersionListIterator) NotDone() bool {
+	return iter.page.NotDone() && iter.i < len(iter.page.Values())
+}
+
+// Response returns the raw server response from the last page request.
+func (iter OpenShiftVersionListIterator) Response() OpenShiftVersionList {
+	return iter.page.Response()
+}
+
+// Value returns the current value or a zero-initialized value if the
+// iterator has advanced beyond the end of the collection.
+func (iter OpenShiftVersionListIterator) Value() OpenShiftVersion {
+	if !iter.page.NotDone() {
+		return OpenShiftVersion{}
+	}
+	return iter.page.Values()[iter.i]
+}
+
+// Creates a new instance of the OpenShiftVersionListIterator type.
+func NewOpenShiftVersionListIterator(page OpenShiftVersionListPage) OpenShiftVersionListIterator {
+	return OpenShiftVersionListIterator{page: page}
+}
+
+// IsEmpty returns true if the ListResult contains no values.
+func (osvl OpenShiftVersionList) IsEmpty() bool {
+	return osvl.Value == nil || len(*osvl.Value) == 0
+}
+
+// hasNextLink returns true if the NextLink is not empty.
+func (osvl OpenShiftVersionList) hasNextLink() bool {
+	return osvl.NextLink != nil && len(*osvl.NextLink) != 0
+}
+
+// openShiftVersionListPreparer prepares a request to retrieve the next set of results.
+// It returns nil if no more results exist.
+func (osvl OpenShiftVersionList) openShiftVersionListPreparer(ctx context.Context) (*http.Request, error) {
+	if !osvl.hasNextLink() {
+		return nil, nil
+	}
+	return autorest.Prepare((&http.Request{}).WithContext(ctx),
+		autorest.AsJSON(),
+		autorest.AsGet(),
+		autorest.WithBaseURL(to.String(osvl.NextLink)))
+}
+
+// OpenShiftVersionListPage contains a page of OpenShiftVersion values.
+type OpenShiftVersionListPage struct {
+	fn   func(context.Context, OpenShiftVersionList) (OpenShiftVersionList, error)
+	osvl OpenShiftVersionList
+}
+
+// NextWithContext advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+func (page *OpenShiftVersionListPage) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftVersionListPage.NextWithContext")
+		defer func() {
+			sc := -1
+			if page.Response().Response.Response != nil {
+				sc = page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	for {
+		next, err := page.fn(ctx, page.osvl)
+		if err != nil {
+			return err
+		}
+		page.osvl = next
+		if !next.hasNextLink() || !next.IsEmpty() {
+			break
+		}
+	}
+	return nil
+}
+
+// Next advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (page *OpenShiftVersionListPage) Next() error {
+	return page.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the page enumeration should be started or is not yet complete.
+func (page OpenShiftVersionListPage) NotDone() bool {
+	return !page.osvl.IsEmpty()
+}
+
+// Response returns the raw server response from the last page request.
+func (page OpenShiftVersionListPage) Response() OpenShiftVersionList {
+	return page.osvl
+}
+
+// Values returns the slice of values for the current page or nil if there are no values.
+func (page OpenShiftVersionListPage) Values() []OpenShiftVersion {
+	if page.osvl.IsEmpty() {
+		return nil
+	}
+	return *page.osvl.Value
+}
+
+// Creates a new instance of the OpenShiftVersionListPage type.
+func NewOpenShiftVersionListPage(cur OpenShiftVersionList, getNextPage func(context.Context, OpenShiftVersionList) (OpenShiftVersionList, error)) OpenShiftVersionListPage {
+	return OpenShiftVersionListPage{
+		fn:   getNextPage,
+		osvl: cur,
+	}
+}
+
 // OpenShiftVersionProperties openShiftVersionProperties represents the properties of an OpenShiftVersion.
 type OpenShiftVersionProperties struct {
 	// Version - Version represents the version to create the cluster at.

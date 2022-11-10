@@ -5,30 +5,60 @@ package liveconfig
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"os"
+	"strings"
 
 	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
 )
 
-const (
-	hiveKubeconfigPathEnvVar  = "HIVE_KUBE_CONFIG_PATH"
-	hiveInstallerEnableEnvVar = "ARO_INSTALL_VIA_HIVE"
-	hiveDefaultPullSpecEnvVar = "ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC"
-	hiveAdoptEnableEnvVar     = "ARO_ADOPT_BY_HIVE"
-)
+func getAksClusterByNameAndLocation(ctx context.Context, aksClusters mgmtcontainerservice.ManagedClusterListResultPage, aksClusterName, location string) (*mgmtcontainerservice.ManagedCluster, error) {
+	for aksClusters.NotDone() {
+		for _, cluster := range aksClusters.Values() {
+			if strings.EqualFold(*cluster.Name, aksClusterName) && strings.EqualFold(*cluster.Location, location) {
+				return &cluster, nil
+			}
+		}
+		err := aksClusters.NextWithContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return nil, nil
+}
 
-func parseKubeconfig(credentials []mgmtcontainerservice.CredentialResult) (*rest.Config, error) {
-	res := make([]byte, base64.StdEncoding.DecodedLen(len(*credentials[0].Value)))
-	_, err := base64.StdEncoding.Decode(res, *credentials[0].Value)
+func getAksShardKubeconfig(ctx context.Context, managedClustersClient containerservice.ManagedClustersClient, location string, shard int) (*rest.Config, error) {
+	aksClusterName := fmt.Sprintf("aro-aks-cluster-%03d", shard)
+
+	aksClusters, err := managedClustersClient.List(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	clientconfig, err := clientcmd.NewClientConfigFromBytes(res)
+	aksCluster, err := getAksClusterByNameAndLocation(ctx, aksClusters, aksClusterName, location)
+	if err != nil {
+		return nil, err
+	}
+	if aksCluster == nil {
+		return nil, fmt.Errorf("failed to find the AKS cluster %s in %s", aksClusterName, location)
+	}
+
+	aksResourceGroup := strings.Replace(*aksCluster.NodeResourceGroup, fmt.Sprintf("-aks%d", shard), "", 1)
+
+	res, err := managedClustersClient.ListClusterAdminCredentials(ctx, aksResourceGroup, aksClusterName, "public")
+	if err != nil {
+		return nil, err
+	}
+
+	return parseKubeconfig(*res.Kubeconfigs)
+}
+
+func parseKubeconfig(credentials []mgmtcontainerservice.CredentialResult) (*rest.Config, error) {
+	clientconfig, err := clientcmd.NewClientConfigFromBytes(*credentials[0].Value)
 	if err != nil {
 		return nil, err
 	}
@@ -41,14 +71,12 @@ func parseKubeconfig(credentials []mgmtcontainerservice.CredentialResult) (*rest
 	return restConfig, nil
 }
 
-func (p *prod) HiveRestConfig(ctx context.Context, index int) (*rest.Config, error) {
-	// NOTE: This RWMutex locks on a fetch for any index for simplicity, rather
-	// than a more granular per-index lock. As of the time of writing, multiple
-	// Hive shards are planned but unimplemented elsewhere.
+func (p *prod) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, error) {
+	// Hive shards are planned but not implemented yet
 	p.hiveCredentialsMutex.RLock()
-	cached, ext := p.cachedCredentials[index]
+	cached, exists := p.cachedCredentials[shard]
 	p.hiveCredentialsMutex.RUnlock()
-	if ext {
+	if exists {
 		return rest.CopyConfig(cached), nil
 	}
 
@@ -57,21 +85,14 @@ func (p *prod) HiveRestConfig(ctx context.Context, index int) (*rest.Config, err
 	p.hiveCredentialsMutex.Lock()
 	defer p.hiveCredentialsMutex.Unlock()
 
-	rpResourceGroup := fmt.Sprintf("rp-%s", p.location)
-	rpResourceName := fmt.Sprintf("aro-aks-cluster-%03d", index)
-
-	res, err := p.managedClustersClient.ListClusterUserCredentials(ctx, rpResourceGroup, rpResourceName, "")
+	kubeConfig, err := getAksShardKubeconfig(ctx, p.managedClustersClient, p.location, shard)
 	if err != nil {
 		return nil, err
 	}
 
-	parsed, err := parseKubeconfig(*res.Kubeconfigs)
-	if err != nil {
-		return nil, err
-	}
+	p.cachedCredentials[shard] = kubeConfig
 
-	p.cachedCredentials[index] = parsed
-	return rest.CopyConfig(parsed), nil
+	return rest.CopyConfig(kubeConfig), nil
 }
 
 func (p *prod) InstallViaHive(ctx context.Context) (bool, error) {

@@ -80,9 +80,13 @@ type frontend struct {
 	ready     atomic.Value
 
 	// these helps us to test and mock easier
-	now                              func() time.Time
-	systemDataClusterDocEnricher     func(*api.OpenShiftClusterDocument, *api.SystemData)
-	systemDataClusterManagerEnricher func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
+	now                          func() time.Time
+	systemDataClusterDocEnricher func(*api.OpenShiftClusterDocument, *api.SystemData)
+
+	systemDataSyncSetEnricher              func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
+	systemDataMachinePoolEnricher          func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
+	systemDataSyncIdentityProviderEnricher func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
+	systemDataSecretEnricher               func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
 }
 
 // Runnable represents a runnable object
@@ -136,9 +140,13 @@ func NewFrontend(ctx context.Context,
 
 		startTime: time.Now(),
 
-		now:                              time.Now,
-		systemDataClusterDocEnricher:     enrichClusterSystemData,
-		systemDataClusterManagerEnricher: enrichClusterManagerSystemData,
+		now:                          time.Now,
+		systemDataClusterDocEnricher: enrichClusterSystemData,
+
+		systemDataSyncSetEnricher:              enrichSyncSetSystemData,
+		systemDataMachinePoolEnricher:          enrichMachinePoolSystemData,
+		systemDataSyncIdentityProviderEnricher: enrichSyncIdentityProviderSystemData,
+		systemDataSecretEnricher:               enrichSecretSystemData,
 	}
 
 	l, err := f.env.Listen()
@@ -256,7 +264,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterKubeConfigCredentials).Name("postOpenShiftClusterKubeConfigCredentials")
 
 	s = r.
-		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/listinstallversions").
+		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/openshiftversions").
 		Queries("api-version", "{api-version}").
 		Subrouter()
 

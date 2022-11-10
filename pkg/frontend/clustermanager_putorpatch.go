@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -22,52 +21,54 @@ func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, 
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
-	var header http.Header
-	var b []byte
 
-	if f.apis[vars["api-version"]].ClusterManagerConfigurationConverter == nil {
-		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
+	var (
+		header http.Header
+		b      []byte
+		err    error
+	)
+
+	err = f.validateOcmResourceType(vars)
+	if err != nil {
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", err.Error())
 		return
 	}
 
-	err := cosmosdb.RetryOnPreconditionFailed(func() error {
+	err = cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchClusterManagerConfiguration(ctx, log, r, &header, f.apis[vars["api-version"]].ClusterManagerConfigurationConverter)
+		switch vars["ocmResourceType"] {
+		case "syncset":
+			b, err = f._putOrPatchSyncSet(ctx, log, r, &header, f.apis[vars["api-version"]].SyncSetConverter, f.apis[vars["api-version"]].ClusterManagerStaticValidator)
+		case "machinepool":
+			b, err = f._putOrPatchMachinePool(ctx, log, r, &header, f.apis[vars["api-version"]].MachinePoolConverter, f.apis[vars["api-version"]].ClusterManagerStaticValidator)
+		case "syncidentityprovider":
+			b, err = f._putOrPatchSyncIdentityProvider(ctx, log, r, &header, f.apis[vars["api-version"]].SyncIdentityProviderConverter, f.apis[vars["api-version"]].ClusterManagerStaticValidator)
+		case "secret":
+			b, err = f._putOrPatchSecret(ctx, log, r, &header, f.apis[vars["api-version"]].SecretConverter, f.apis[vars["api-version"]].ClusterManagerStaticValidator)
+		}
 		return err
 	})
 
 	reply(log, w, header, b, err)
 }
 
-func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, header *http.Header, converter api.ClusterManagerConfigurationConverter) ([]byte, error) {
+func (f *frontend) _putOrPatchSyncSet(ctx context.Context, log *logrus.Entry, r *http.Request, header *http.Header, converter api.SyncSetConverter, staticValidator api.ClusterManagerStaticValidator) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 	vars := mux.Vars(r)
 
-	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
+	originalPath, err := f.extractOriginalPath(ctx, r, vars)
 	if err != nil {
 		return nil, err
 	}
 
-	originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
-	armResource, err := arm.ParseArmResourceId(originalPath)
-	if err != nil {
-		return nil, err
-	}
-
-	ocp, err := f.dbOpenShiftClusters.Get(ctx, armResource.ParentResource())
+	ocmdoc, err := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
-	}
-
-	if ocp == nil || cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
-	}
-
-	ocmdoc, _ := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
-	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return nil, err
+	} else if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) && r.Method == http.MethodPatch {
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
+			vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
 	}
 
 	var resources string
@@ -76,19 +77,24 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
+	err = staticValidator.Static(resources, vars)
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The 'Kind' in the request payload does not match 'Kind' in the request path: %q.", err)
+	}
+
 	isCreate := ocmdoc == nil
 	uuid := f.dbClusterManagerConfiguration.NewUUID()
 	if isCreate {
 		ocmdoc = &api.ClusterManagerConfigurationDocument{
 			ID:  uuid,
 			Key: r.URL.Path,
-			ClusterManagerConfiguration: &api.ClusterManagerConfiguration{
-				ID:                originalPath,
-				Name:              armResource.SubResource.ResourceName,
-				ClusterResourceID: strings.ToLower(armResource.ParentResource()),
-				Properties: api.ClusterManagerConfigurationProperties{
-					Resources: []byte(resources),
-				},
+		}
+		ocmdoc.SyncSet = &api.SyncSet{
+			Name: vars["ocmResourceName"],
+			Type: "Microsoft.RedHatOpenShift/SyncSet",
+			ID:   originalPath,
+			Properties: api.SyncSetProperties{
+				Resources: resources,
 			},
 		}
 
@@ -102,52 +108,357 @@ func (f *frontend) _putOrPatchClusterManagerConfiguration(ctx context.Context, l
 		if ocmdoc.Deleting {
 			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on a resource marked for deletion.")
 		}
-		if ocmdoc.ClusterManagerConfiguration != nil {
-			ocmdoc.ClusterManagerConfiguration.Properties.Resources = []byte(resources)
-		}
+		ocmdoc.SyncSet.Properties.Resources = resources
 	}
 
 	ocmdoc.CorrelationData = correlationData
+	f.systemDataSyncSetEnricher(ocmdoc, systemData)
 
-	f.systemDataClusterManagerEnricher(ocmdoc, systemData)
 	ocmdoc, err = f.dbClusterManagerConfiguration.Update(ctx, ocmdoc)
 	if err != nil {
 		return nil, err
 	}
 
-	var ext interface{}
-	ext, err = converter.ToExternal(ocmdoc.ClusterManagerConfiguration)
+	ext := converter.ToExternal(ocmdoc.SyncSet)
+	b, err := json.MarshalIndent(ext, "", "  ")
+	return b, err
+}
+
+func (f *frontend) _putOrPatchMachinePool(ctx context.Context, log *logrus.Entry, r *http.Request, header *http.Header, converter api.MachinePoolConverter, staticValidator api.ClusterManagerStaticValidator) ([]byte, error) {
+	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
+	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
+	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
+	vars := mux.Vars(r)
+
+	originalPath, err := f.extractOriginalPath(ctx, r, vars)
 	if err != nil {
 		return nil, err
 	}
 
+	ocmdoc, err := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
+	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+		return nil, err
+	} else if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) && r.Method == http.MethodPatch {
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
+			vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
+	}
+
+	var resources string
+	err = json.Unmarshal(body, &resources)
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
+	}
+
+	err = staticValidator.Static(resources, vars)
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The 'Kind' in the request payload does not match 'Kind' in the request path: %q.", err)
+	}
+
+	isCreate := ocmdoc == nil
+	uuid := f.dbClusterManagerConfiguration.NewUUID()
+	if isCreate {
+		ocmdoc = &api.ClusterManagerConfigurationDocument{
+			ID:  uuid,
+			Key: r.URL.Path,
+		}
+		ocmdoc.MachinePool = &api.MachinePool{
+			Name: vars["ocmResourceName"],
+			Type: "Microsoft.RedHatOpenShift/MachinePool",
+			ID:   originalPath,
+			Properties: api.MachinePoolProperties{
+				Resources: resources,
+			},
+		}
+
+		var newdoc *api.ClusterManagerConfigurationDocument
+		err = cosmosdb.RetryOnPreconditionFailed(func() error {
+			newdoc, err = f.dbClusterManagerConfiguration.Create(ctx, ocmdoc)
+			return err
+		})
+		ocmdoc = newdoc
+	} else {
+		if ocmdoc.Deleting {
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on a resource marked for deletion.")
+		}
+		ocmdoc.MachinePool.Properties.Resources = resources
+	}
+
+	ocmdoc.CorrelationData = correlationData
+	f.systemDataMachinePoolEnricher(ocmdoc, systemData)
+
+	ocmdoc, err = f.dbClusterManagerConfiguration.Update(ctx, ocmdoc)
+	if err != nil {
+		return nil, err
+	}
+
+	ext := converter.ToExternal(ocmdoc.MachinePool)
 	b, err := json.MarshalIndent(ext, "", "  ")
 	return b, err
+}
+
+func (f *frontend) _putOrPatchSyncIdentityProvider(ctx context.Context, log *logrus.Entry, r *http.Request, header *http.Header, converter api.SyncIdentityProviderConverter, staticValidator api.ClusterManagerStaticValidator) ([]byte, error) {
+	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
+	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
+	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
+	vars := mux.Vars(r)
+
+	originalPath, err := f.extractOriginalPath(ctx, r, vars)
+	if err != nil {
+		return nil, err
+	}
+
+	ocmdoc, err := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
+	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+		return nil, err
+	} else if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) && r.Method == http.MethodPatch {
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
+			vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
+	}
+
+	var resources string
+	err = json.Unmarshal(body, &resources)
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
+	}
+
+	err = staticValidator.Static(resources, vars)
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The 'Kind' in the request payload does not match 'Kind' in the request path: %q.", err)
+	}
+
+	isCreate := ocmdoc == nil
+	uuid := f.dbClusterManagerConfiguration.NewUUID()
+	if isCreate {
+		ocmdoc = &api.ClusterManagerConfigurationDocument{
+			ID:  uuid,
+			Key: r.URL.Path,
+		}
+		ocmdoc.SyncIdentityProvider = &api.SyncIdentityProvider{
+			Name: vars["ocmResourceName"],
+			Type: "Microsoft.RedHatOpenShift/SyncIdentityProvider",
+			ID:   originalPath,
+			Properties: api.SyncIdentityProviderProperties{
+				Resources: resources,
+			},
+		}
+
+		var newdoc *api.ClusterManagerConfigurationDocument
+		err = cosmosdb.RetryOnPreconditionFailed(func() error {
+			newdoc, err = f.dbClusterManagerConfiguration.Create(ctx, ocmdoc)
+			return err
+		})
+		ocmdoc = newdoc
+	} else {
+		if ocmdoc.Deleting {
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on a resource marked for deletion.")
+		}
+		ocmdoc.SyncIdentityProvider.Properties.Resources = resources
+	}
+
+	ocmdoc.CorrelationData = correlationData
+	f.systemDataSyncIdentityProviderEnricher(ocmdoc, systemData)
+
+	ocmdoc, err = f.dbClusterManagerConfiguration.Update(ctx, ocmdoc)
+	if err != nil {
+		return nil, err
+	}
+
+	ext := converter.ToExternal(ocmdoc.SyncIdentityProvider)
+	b, err := json.MarshalIndent(ext, "", "  ")
+	return b, err
+}
+
+func (f *frontend) _putOrPatchSecret(ctx context.Context, log *logrus.Entry, r *http.Request, header *http.Header, converter api.SecretConverter, staticValidator api.ClusterManagerStaticValidator) ([]byte, error) {
+	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
+	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
+	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
+	vars := mux.Vars(r)
+
+	originalPath, err := f.extractOriginalPath(ctx, r, vars)
+	if err != nil {
+		return nil, err
+	}
+
+	ocmdoc, err := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
+	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+		return nil, err
+	} else if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) && r.Method == http.MethodPatch {
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
+			vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
+	}
+
+	var resources string
+	err = json.Unmarshal(body, &resources)
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
+	}
+
+	err = staticValidator.Static(resources, vars)
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The 'Kind' in the request payload does not match 'Kind' in the request path: %q.", err)
+	}
+
+	isCreate := ocmdoc == nil
+	uuid := f.dbClusterManagerConfiguration.NewUUID()
+	if isCreate {
+		ocmdoc = &api.ClusterManagerConfigurationDocument{
+			ID:  uuid,
+			Key: r.URL.Path,
+		}
+		ocmdoc.Secret = &api.Secret{
+			Name: vars["ocmResourceName"],
+			Type: "Microsoft.RedHatOpenShift/Secret",
+			ID:   originalPath,
+			Properties: api.SecretProperties{
+				SecretResources: api.SecureString(resources),
+			},
+		}
+
+		var newdoc *api.ClusterManagerConfigurationDocument
+		err = cosmosdb.RetryOnPreconditionFailed(func() error {
+			newdoc, err = f.dbClusterManagerConfiguration.Create(ctx, ocmdoc)
+			return err
+		})
+		ocmdoc = newdoc
+	} else {
+		if ocmdoc.Deleting {
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on a resource marked for deletion.")
+		}
+		ocmdoc.Secret.Properties.SecretResources = api.SecureString(resources)
+	}
+
+	ocmdoc.CorrelationData = correlationData
+	f.systemDataSecretEnricher(ocmdoc, systemData)
+
+	ocmdoc, err = f.dbClusterManagerConfiguration.Update(ctx, ocmdoc)
+	if err != nil {
+		return nil, err
+	}
+
+	ext := converter.ToExternal(ocmdoc.Secret)
+	b, err := json.MarshalIndent(ext, "", "  ")
+	return b, err
+}
+
+func (f *frontend) extractOriginalPath(ctx context.Context, r *http.Request, vars map[string]string) (string, error) {
+	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
+	if err != nil {
+		return "", err
+	}
+
+	originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
+	armResource, err := arm.ParseArmResourceId(originalPath)
+	if err != nil {
+		return "", err
+	}
+
+	ocp, err := f.dbOpenShiftClusters.Get(ctx, armResource.ParentResource())
+	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+		return "", err
+	}
+
+	if ocp == nil || cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+		return "", api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+	}
+
+	return originalPath, err
 }
 
 // TODO once we hit go1.18 we can refactor to use generics for any document using systemData
 // enrichClusterManagerSystemData will selectively overwrite systemData fields based on
 // arm inputs
-func enrichClusterManagerSystemData(doc *api.ClusterManagerConfigurationDocument, systemData *api.SystemData) {
+func enrichSyncSetSystemData(doc *api.ClusterManagerConfigurationDocument, systemData *api.SystemData) {
 	if systemData == nil {
 		return
 	}
 	if systemData.CreatedAt != nil {
-		doc.ClusterManagerConfiguration.SystemData.CreatedAt = systemData.CreatedAt
+		doc.SyncSet.SystemData.CreatedAt = systemData.CreatedAt
 	}
 	if systemData.CreatedBy != "" {
-		doc.ClusterManagerConfiguration.SystemData.CreatedBy = systemData.CreatedBy
+		doc.SyncSet.SystemData.CreatedBy = systemData.CreatedBy
 	}
 	if systemData.CreatedByType != "" {
-		doc.ClusterManagerConfiguration.SystemData.CreatedByType = systemData.CreatedByType
+		doc.SyncSet.SystemData.CreatedByType = systemData.CreatedByType
 	}
 	if systemData.LastModifiedAt != nil {
-		doc.ClusterManagerConfiguration.SystemData.LastModifiedAt = systemData.LastModifiedAt
+		doc.SyncSet.SystemData.LastModifiedAt = systemData.LastModifiedAt
 	}
 	if systemData.LastModifiedBy != "" {
-		doc.ClusterManagerConfiguration.SystemData.LastModifiedBy = systemData.LastModifiedBy
+		doc.SyncSet.SystemData.LastModifiedBy = systemData.LastModifiedBy
 	}
 	if systemData.LastModifiedByType != "" {
-		doc.ClusterManagerConfiguration.SystemData.LastModifiedByType = systemData.LastModifiedByType
+		doc.SyncSet.SystemData.LastModifiedByType = systemData.LastModifiedByType
+	}
+}
+
+func enrichMachinePoolSystemData(doc *api.ClusterManagerConfigurationDocument, systemData *api.SystemData) {
+	if systemData == nil {
+		return
+	}
+	if systemData.CreatedAt != nil {
+		doc.MachinePool.SystemData.CreatedAt = systemData.CreatedAt
+	}
+	if systemData.CreatedBy != "" {
+		doc.MachinePool.SystemData.CreatedBy = systemData.CreatedBy
+	}
+	if systemData.CreatedByType != "" {
+		doc.MachinePool.SystemData.CreatedByType = systemData.CreatedByType
+	}
+	if systemData.LastModifiedAt != nil {
+		doc.MachinePool.SystemData.LastModifiedAt = systemData.LastModifiedAt
+	}
+	if systemData.LastModifiedBy != "" {
+		doc.MachinePool.SystemData.LastModifiedBy = systemData.LastModifiedBy
+	}
+	if systemData.LastModifiedByType != "" {
+		doc.MachinePool.SystemData.LastModifiedByType = systemData.LastModifiedByType
+	}
+}
+
+func enrichSyncIdentityProviderSystemData(doc *api.ClusterManagerConfigurationDocument, systemData *api.SystemData) {
+	if systemData == nil {
+		return
+	}
+	if systemData.CreatedAt != nil {
+		doc.SyncIdentityProvider.SystemData.CreatedAt = systemData.CreatedAt
+	}
+	if systemData.CreatedBy != "" {
+		doc.SyncIdentityProvider.SystemData.CreatedBy = systemData.CreatedBy
+	}
+	if systemData.CreatedByType != "" {
+		doc.SyncIdentityProvider.SystemData.CreatedByType = systemData.CreatedByType
+	}
+	if systemData.LastModifiedAt != nil {
+		doc.SyncIdentityProvider.SystemData.LastModifiedAt = systemData.LastModifiedAt
+	}
+	if systemData.LastModifiedBy != "" {
+		doc.SyncIdentityProvider.SystemData.LastModifiedBy = systemData.LastModifiedBy
+	}
+	if systemData.LastModifiedByType != "" {
+		doc.SyncIdentityProvider.SystemData.LastModifiedByType = systemData.LastModifiedByType
+	}
+}
+
+func enrichSecretSystemData(doc *api.ClusterManagerConfigurationDocument, systemData *api.SystemData) {
+	if systemData == nil {
+		return
+	}
+	if systemData.CreatedAt != nil {
+		doc.Secret.SystemData.CreatedAt = systemData.CreatedAt
+	}
+	if systemData.CreatedBy != "" {
+		doc.Secret.SystemData.CreatedBy = systemData.CreatedBy
+	}
+	if systemData.CreatedByType != "" {
+		doc.Secret.SystemData.CreatedByType = systemData.CreatedByType
+	}
+	if systemData.LastModifiedAt != nil {
+		doc.Secret.SystemData.LastModifiedAt = systemData.LastModifiedAt
+	}
+	if systemData.LastModifiedBy != "" {
+		doc.Secret.SystemData.LastModifiedBy = systemData.LastModifiedBy
+	}
+	if systemData.LastModifiedByType != "" {
+		doc.Secret.SystemData.LastModifiedByType = systemData.LastModifiedByType
 	}
 }

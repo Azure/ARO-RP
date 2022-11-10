@@ -21,18 +21,82 @@ func (f *frontend) getClusterManagerConfiguration(w http.ResponseWriter, r *http
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	if f.apis[vars["api-version"]].ClusterManagerConfigurationConverter == nil {
-		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
+	var (
+		b   []byte
+		err error
+	)
+
+	err = f.validateOcmResourceType(vars)
+	if err != nil {
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", err.Error())
 		return
 	}
 
-	b, err := f._getClusterManagerConfiguration(ctx, log, r, f.apis[vars["api-version"]].ClusterManagerConfigurationConverter)
+	switch vars["ocmResourceType"] {
+	case "syncset":
+		b, err = f._getSyncSetConfiguration(ctx, log, r, f.apis[vars["api-version"]].SyncSetConverter)
+	case "machinepool":
+		b, err = f._getMachinePoolConfiguration(ctx, log, r, f.apis[vars["api-version"]].MachinePoolConverter)
+	case "syncidentityprovider":
+		b, err = f._getSyncIdentityProviderConfiguration(ctx, log, r, f.apis[vars["api-version"]].SyncIdentityProviderConverter)
+	case "secret":
+		b, err = f._getSecretConfiguration(ctx, log, r, f.apis[vars["api-version"]].SecretConverter)
+	default:
+		return
+	}
+
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getClusterManagerConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.ClusterManagerConfigurationConverter) ([]byte, error) {
+func (f *frontend) _getSyncSetConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.SyncSetConverter) ([]byte, error) {
 	vars := mux.Vars(r)
 
+	doc, err := f.validateResourceForGet(ctx, vars, r.URL.Path, r)
+	if err != nil {
+		return nil, err
+	}
+
+	ext := converter.ToExternal(doc.SyncSet)
+	return json.MarshalIndent(ext, "", "    ")
+}
+
+func (f *frontend) _getMachinePoolConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.MachinePoolConverter) ([]byte, error) {
+	vars := mux.Vars(r)
+
+	doc, err := f.validateResourceForGet(ctx, vars, r.URL.Path, r)
+	if err != nil {
+		return nil, err
+	}
+
+	ext := converter.ToExternal(doc.MachinePool)
+	return json.MarshalIndent(ext, "", "    ")
+}
+
+func (f *frontend) _getSyncIdentityProviderConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.SyncIdentityProviderConverter) ([]byte, error) {
+	vars := mux.Vars(r)
+
+	doc, err := f.validateResourceForGet(ctx, vars, r.URL.Path, r)
+	if err != nil {
+		return nil, err
+	}
+
+	ext := converter.ToExternal(doc.SyncIdentityProvider)
+	return json.MarshalIndent(ext, "", "    ")
+}
+
+func (f *frontend) _getSecretConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.SecretConverter) ([]byte, error) {
+	vars := mux.Vars(r)
+
+	doc, err := f.validateResourceForGet(ctx, vars, r.URL.Path, r)
+	if err != nil {
+		return nil, err
+	}
+
+	ext := converter.ToExternal(doc.Secret)
+	return json.MarshalIndent(ext, "", "    ")
+}
+
+func (f *frontend) validateResourceForGet(ctx context.Context, vars map[string]string, path string, r *http.Request) (*api.ClusterManagerConfigurationDocument, error) {
 	doc, err := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
 	if err != nil {
 		switch {
@@ -48,9 +112,5 @@ func (f *frontend) _getClusterManagerConfiguration(ctx context.Context, log *log
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on a resource marked for deletion.")
 	}
 
-	ext, err := converter.ToExternal(doc.ClusterManagerConfiguration)
-	if err != nil {
-		return nil, err
-	}
-	return json.MarshalIndent(ext, "", "    ")
+	return doc, nil
 }

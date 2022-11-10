@@ -44,6 +44,17 @@ func Run(api, outputDir string) error {
 		Produces:    []string{"application/json"},
 		Paths:       g.populateTopLevelPaths("Microsoft.RedHatOpenShift", "openShiftCluster", "OpenShift cluster"),
 		Definitions: Definitions{},
+		Parameters: ParametersDefinitions{
+			"api-version": &Parameter{
+				Name:                 "api-version",
+				Description:          "The version of the API the caller wants to use.",
+				Required:             true,
+				Type:                 "string",
+				In:                   "query",
+				Pattern:              "^\\d{2}-\\d{2}-\\d{4}(-preview)?$",
+				XMSParameterLocation: "client",
+			},
+		},
 		SecurityDefinitions: SecurityDefinitions{
 			"azure_auth": {
 				Type:             "oauth2",
@@ -101,7 +112,7 @@ func Run(api, outputDir string) error {
 	}
 
 	if g.installVersionList {
-		s.Paths["/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/listinstallversions"] = &PathItem{
+		s.Paths["/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openshiftversions"] = &PathItem{
 			Get: &Operation{
 				Tags:        []string{"OpenShiftVersions"},
 				Summary:     "Lists all OpenShift versions available to install in the specified location.",
@@ -109,6 +120,9 @@ func Run(api, outputDir string) error {
 				OperationID: "OpenShiftVersions_List",
 				Parameters:  g.populateParameters(6, "OpenShiftVersionList", "OpenShift Versions"),
 				Responses:   g.populateResponses("OpenShiftVersionList", false, http.StatusOK),
+				Pageable: &Pageable{
+					NextLinkName: "nextLink",
+				},
 			},
 		}
 	}

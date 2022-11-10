@@ -267,7 +267,7 @@ function App() {
           <Stack.Item grow>
             <ClusterDetailPanel
               csrfToken={csrfRef}
-              csrfTokenAvailable={fetching}
+              loaded={fetching}
               currentCluster={currentCluster}
               onClose={_onCloseDetailPanel}
             />

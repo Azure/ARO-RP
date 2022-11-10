@@ -102,7 +102,7 @@ func TestListInstallVersions(t *testing.T) {
 			frontend.mu.Unlock()
 
 			resp, b, err := ti.request(method,
-				fmt.Sprintf("https://server/subscriptions/%s/providers/Microsoft.RedHatOpenShift/locations/%s/listinstallversions?api-version=%s", mockSubID, ti.env.Location(), tt.apiVersion),
+				fmt.Sprintf("https://server/subscriptions/%s/providers/Microsoft.RedHatOpenShift/locations/%s/openshiftversions?api-version=%s", mockSubID, ti.env.Location(), tt.apiVersion),
 				nil, nil)
 			if err != nil {
 				t.Fatal(err)

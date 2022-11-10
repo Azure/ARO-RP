@@ -23,7 +23,7 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 	mockSubscriptionId := "00000000-0000-0000-0000-000000000000"
 	tenantId := "11111111-1111-1111-1111-111111111111"
 	resourcePayload := "eyAKICAiYXBpVmVyc2lvbiI6ICJoaXZlLm9wZW5zaGlmdC5pby92MSIsCiAgImtpbmQiOiAiU3luY1NldCIsCiAgIm1ldGFkYXRhIjogewogICAgIm5hbWUiOiAic2FtcGxlIiwKICAgICJuYW1lc3BhY2UiOiAiYXJvLWY2MGFlOGEyLWJjYTEtNDk4Ny05MDU2LWYyZjZhMTgzN2NhYSIKICB9LAogICJzcGVjIjogewogICAgImNsdXN0ZXJEZXBsb3ltZW50UmVmcyI6IFtdLAogICAgInJlc291cmNlcyI6IFsKICAgICAgewogICAgICAgICJhcGlWZXJzaW9uIjogInYxIiwKICAgICAgICAia2luZCI6ICJDb25maWdNYXAiLAogICAgICAgICJtZXRhZGF0YSI6IHsKICAgICAgICAgICJuYW1lIjogIm15Y29uZmlnbWFwIgogICAgICAgIH0KICAgICAgfQogICAgXQogIH0KfQo="
-	modifiedPayload := "modified"
+	modifiedPayload := "eyAKICAiYXBpVmVyc2lvbiI6ICJoaXZlLm9wZW5zaGlmdC5pby92MSIsCiAgImtpbmQiOiAiU3luY1NldCIsCiAgIm1ldGFkYXRhIjogewogICAgIm5hbWUiOiAibW9kaWZpZWQtc2FtcGxlIiwKICAgICJuYW1lc3BhY2UiOiAiYXJvLWY2MGFlOGEyLWJjYTEtNDk4Ny05MDU2LWYyZjZhMTgzN2NhYSIKICB9LAogICJzcGVjIjogewogICAgImNsdXN0ZXJEZXBsb3ltZW50UmVmcyI6IFtdLAogICAgInJlc291cmNlcyI6IFsKICAgICAgewogICAgICAgICJhcGlWZXJzaW9uIjogInYxIiwKICAgICAgICAia2luZCI6ICJDb25maWdNYXAiLAogICAgICAgICJtZXRhZGF0YSI6IHsKICAgICAgICAgICJuYW1lIjogIm15Y29uZmlnbWFwIgogICAgICAgIH0KICAgICAgfQogICAgXQogIH0KfQo="
 
 	type test struct {
 		name            string
@@ -35,7 +35,7 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 		requestMethod   string
 		requestBody     string
 		wantStatusCode  int
-		wantResponse    *v20220904.ClusterManagerConfiguration
+		wantResponse    *v20220904.SyncSet
 		wantError       string
 	}
 	createSingleDocument := func(f *testdatabase.Fixture, tt *test, resourceKey string) {
@@ -63,14 +63,36 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 			&api.ClusterManagerConfigurationDocument{
 				ID:  mockSubscriptionId,
 				Key: resourceKey,
-				ClusterManagerConfiguration: &api.ClusterManagerConfiguration{
+				SyncSet: &api.SyncSet{
 					Name: tt.ocmResourceName,
-					Properties: api.ClusterManagerConfigurationProperties{
-						Resources: []byte(resourcePayload),
+					Properties: api.SyncSetProperties{
+						Resources: resourcePayload,
 					},
 				},
 			},
 		)
+	}
+	noDocuments := func(f *testdatabase.Fixture, tt *test, resourceKey string) {
+		f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+			ID: mockSubscriptionId,
+			Subscription: &api.Subscription{
+				State: api.SubscriptionStateRegistered,
+				Properties: &api.SubscriptionProperties{
+					TenantID: tenantId,
+				},
+			},
+		})
+		f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+			Key: strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionId, "resourceName")),
+			OpenShiftCluster: &api.OpenShiftCluster{
+				ID: testdatabase.GetResourcePath(mockSubscriptionId, "resourceName"),
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourcegroups/%s", mockSubscriptionId, tt.clusterName),
+					},
+				},
+			},
+		})
 	}
 
 	for _, tt := range []*test{
@@ -84,9 +106,9 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 			requestMethod:   http.MethodPut,
 			requestBody:     modifiedPayload,
 			wantStatusCode:  http.StatusOK,
-			wantResponse: &v20220904.ClusterManagerConfiguration{
+			wantResponse: &v20220904.SyncSet{
 				Name: "putSyncSet",
-				Properties: v20220904.ClusterManagerConfigurationProperties{
+				Properties: v20220904.SyncSetProperties{
 					Resources: modifiedPayload,
 				},
 			},
@@ -101,9 +123,9 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 			requestMethod:   http.MethodPatch,
 			requestBody:     modifiedPayload,
 			wantStatusCode:  http.StatusOK,
-			wantResponse: &v20220904.ClusterManagerConfiguration{
+			wantResponse: &v20220904.SyncSet{
 				Name: "patchSyncSet",
-				Properties: v20220904.ClusterManagerConfigurationProperties{
+				Properties: v20220904.SyncSetProperties{
 					Resources: modifiedPayload,
 				},
 			},
@@ -114,42 +136,34 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 			ocmResourceName: "putNewSyncSet",
 			clusterName:     "myCluster",
 			apiVersion:      "2022-09-04",
-			fixture: func(f *testdatabase.Fixture, tt *test, resourceKey string) {
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubscriptionId,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: tenantId,
-						},
-					},
-				})
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubscriptionId, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: testdatabase.GetResourcePath(mockSubscriptionId, "resourceName"),
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourcegroups/%s", mockSubscriptionId, tt.clusterName),
-							},
-						},
-					},
-				})
-			},
-			requestMethod:  http.MethodPut,
-			requestBody:    modifiedPayload,
-			wantStatusCode: http.StatusOK,
-			wantResponse: &v20220904.ClusterManagerConfiguration{
-				Name: "putNewSyncSet",
+			fixture:         noDocuments,
+			requestMethod:   http.MethodPut,
+			requestBody:     modifiedPayload,
+			wantStatusCode:  http.StatusOK,
+			wantResponse: &v20220904.SyncSet{
+				Name: "putnewsyncset",
+				Type: "Microsoft.RedHatOpenShift/SyncSet",
 				ID:   "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename/syncSet/putNewSyncSet",
-				Properties: v20220904.ClusterManagerConfigurationProperties{
+				Properties: v20220904.SyncSetProperties{
 					Resources: modifiedPayload,
 				},
 			},
 		},
 		{
-			name:            "wrong version",
+			name:            "patching nonexistent syncset",
 			ocmResourceType: "syncSet",
+			ocmResourceName: "patchNewSyncSet",
+			clusterName:     "myCluster",
+			apiVersion:      "2022-09-04",
+			fixture:         noDocuments,
+			requestMethod:   http.MethodPatch,
+			requestBody:     modifiedPayload,
+			wantStatusCode:  http.StatusNotFound,
+			wantError:       "404: ResourceNotFound: : The Resource 'openshiftclusters/resourcename/syncset/patchnewsyncset' under resource group 'resourcegroup' was not found.",
+		},
+		{
+			name:            "unsupported api version",
+			ocmResourceType: "syncset",
 			ocmResourceName: "patchSyncSet",
 			clusterName:     "myCluster",
 			apiVersion:      "2022-04-01",
@@ -157,7 +171,19 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 			requestMethod:   http.MethodPatch,
 			requestBody:     modifiedPayload,
 			wantStatusCode:  http.StatusBadRequest,
-			wantError:       "400: InvalidResourceType: : The resource type 'openshiftclusters' could not be found in the namespace 'microsoft.redhatopenshift' for api version '2022-04-01'.",
+			wantError:       "400: InvalidResourceType: : the resource type 'syncset' is not valid for api version '2022-04-01'",
+		},
+		{
+			name:            "unsupported resource type",
+			ocmResourceType: "unsupported",
+			ocmResourceName: "patchSyncSet",
+			clusterName:     "myCluster",
+			apiVersion:      "2022-09-04",
+			fixture:         createSingleDocument,
+			requestMethod:   http.MethodPatch,
+			requestBody:     modifiedPayload,
+			wantStatusCode:  http.StatusBadRequest,
+			wantError:       "400: InvalidResourceType: : the resource type 'unsupported' is not valid for api version '2022-09-04'",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

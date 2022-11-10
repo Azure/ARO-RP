@@ -29,8 +29,7 @@ var _ = Describe("[Admin API] Kubernetes get pod logs action", func() {
 	When("in a standard openshift namespace", func() {
 		const namespace = "openshift-azure-operator"
 
-		It("must be able to get logs from a container of a pod", func() {
-			ctx := context.Background()
+		It("must be able to get logs from a container of a pod", func(ctx context.Context) {
 			testGetPodLogsOK(ctx, containerName, podName, namespace)
 		})
 	})
@@ -38,8 +37,7 @@ var _ = Describe("[Admin API] Kubernetes get pod logs action", func() {
 	When("in a customer namespace", func() {
 		const namespace = "e2e-test-namespace"
 
-		It("must be not be able to get logs from customer workload namespaces", func() {
-			ctx := context.Background()
+		It("must be not be able to get logs from customer workload namespaces", func(ctx context.Context) {
 			testGetPodLogsFromCustomerNamespaceForbidden(ctx, containerName, podName, namespace)
 		})
 	})

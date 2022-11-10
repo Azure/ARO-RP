@@ -31,8 +31,7 @@ const (
 var _ = Describe("[Admin API] VM redeploy action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
-	It("should trigger a selected VM to redeploy", func() {
-		ctx := context.Background()
+	It("must trigger a selected VM to redeploy", func(ctx context.Context) {
 		resourceID := resourceIDFromEnv()
 
 		By("getting the resource group where the VM instances live in")
@@ -48,7 +47,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		log.Infof("selected vm: %s", *vm.Name)
 
 		By("saving the current uptime")
-		oldUptime, err := getNodeUptime(*vm.Name)
+		oldUptime, err := getNodeUptime(ctx, *vm.Name)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying redeploy action completes without error")
@@ -56,7 +55,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-		By("verifying node power state is eventually Running in Azure")
+		By("waiting for the redeployed VM to report Running power state in Azure")
 		// we can pollimmediate without fear of false positive because we have
 		// already waited on the redeploy future
 		err = wait.PollImmediate(1*time.Minute, 10*time.Minute, func() (bool, error) {
@@ -74,7 +73,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		By("verifying redeployed node is eventually Ready in OpenShift")
+		By("waiting for the redeployed node to eventually become Ready in OpenShift")
 		// wait 1 minute - this will guarantee we pass the minimum (default) threshold of Node heartbeats (40 seconds)
 		err = wait.Poll(1*time.Minute, 10*time.Minute, func() (bool, error) {
 			node, err := clients.Kubernetes.CoreV1().Nodes().Get(ctx, *vm.Name, metav1.GetOptions{})
@@ -90,15 +89,14 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("getting system uptime again and making sure it is newer")
-		newUptime, err := getNodeUptime(*vm.Name)
+		newUptime, err := getNodeUptime(ctx, *vm.Name)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(oldUptime.Before(newUptime)).To(BeTrue())
 	})
 })
 
-func getNodeUptime(node string) (time.Time, error) {
+func getNodeUptime(ctx context.Context, node string) (time.Time, error) {
 	// container kernel = node kernel = `uptime` in a Pod reflects the Node as well
-	ctx := context.Background()
 	namespace := "default"
 	name := node
 	pod := &corev1.Pod{

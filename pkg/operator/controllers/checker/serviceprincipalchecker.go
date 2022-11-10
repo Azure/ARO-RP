@@ -23,13 +23,15 @@ import (
 )
 
 type ServicePrincipalChecker struct {
-	log *logrus.Entry
-
+	log           *logrus.Entry
 	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
 	maocli        machineclient.Interface
 
 	role string
+
+	tokenClient              aad.TokenClient
+	validateServicePrincipal dynamic.ServicePrincipalValidator
 }
 
 func NewServicePrincipalChecker(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli machineclient.Interface, role string) *ServicePrincipalChecker {
@@ -39,6 +41,7 @@ func NewServicePrincipalChecker(log *logrus.Entry, arocli aroclient.Interface, k
 		kubernetescli: kubernetescli,
 		maocli:        maocli,
 		role:          role,
+		tokenClient:   aad.NewTokenClient(),
 	}
 }
 
@@ -69,17 +72,22 @@ func (r *ServicePrincipalChecker) Check(ctx context.Context) error {
 		return err
 	}
 
-	_, err = aad.GetToken(ctx, r.log, string(azCred.ClientID), string(azCred.ClientSecret), string(azCred.TenantID), azEnv.ActiveDirectoryEndpoint, azEnv.ResourceManagerEndpoint)
+	_, err = r.tokenClient.GetToken(ctx, r.log, string(azCred.ClientID), string(azCred.ClientSecret), string(azCred.TenantID), azEnv.ActiveDirectoryEndpoint, azEnv.ResourceManagerEndpoint)
 	if err != nil {
 		updateFailedCondition(cond, err)
 	}
 
-	spDynamic, err := dynamic.NewServicePrincipalValidator(r.log, &azEnv, dynamic.AuthorizerClusterServicePrincipal)
+	spDynamic, err := dynamic.NewServicePrincipalValidator(r.log, &azEnv, dynamic.AuthorizerClusterServicePrincipal, aad.NewTokenClient())
 	if err != nil {
 		return err
 	}
 
-	err = spDynamic.ValidateServicePrincipal(ctx, string(azCred.ClientID), string(azCred.ClientSecret), string(azCred.TenantID))
+	if r.validateServicePrincipal != nil {
+		err = r.validateServicePrincipal.ValidateServicePrincipal(ctx, string(azCred.ClientID), string(azCred.ClientSecret), string(azCred.TenantID))
+	} else {
+		err = spDynamic.ValidateServicePrincipal(ctx, string(azCred.ClientID), string(azCred.ClientSecret), string(azCred.TenantID))
+	}
+
 	if err != nil {
 		updateFailedCondition(cond, err)
 	}

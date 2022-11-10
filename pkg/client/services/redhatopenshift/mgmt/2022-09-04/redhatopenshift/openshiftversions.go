@@ -47,13 +47,13 @@ func NewOpenShiftVersionsClientWithBaseURI(baseURI string, subscriptionID string
 // List the operation returns the installable OpenShift versions as strings.
 // Parameters:
 // location - the name of Azure region.
-func (client OpenShiftVersionsClient) List(ctx context.Context, location string) (result OpenShiftVersionList, err error) {
+func (client OpenShiftVersionsClient) List(ctx context.Context, location string) (result OpenShiftVersionListPage, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftVersionsClient.List")
 		defer func() {
 			sc := -1
-			if result.Response.Response != nil {
-				sc = result.Response.Response.StatusCode
+			if result.osvl.Response.Response != nil {
+				sc = result.osvl.Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -66,6 +66,7 @@ func (client OpenShiftVersionsClient) List(ctx context.Context, location string)
 		return result, validation.NewError("redhatopenshift.OpenShiftVersionsClient", "List", err.Error())
 	}
 
+	result.fn = client.listNextResults
 	req, err := client.ListPreparer(ctx, location)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftVersionsClient", "List", nil, "Failure preparing request")
@@ -74,14 +75,18 @@ func (client OpenShiftVersionsClient) List(ctx context.Context, location string)
 
 	resp, err := client.ListSender(req)
 	if err != nil {
-		result.Response = autorest.Response{Response: resp}
+		result.osvl.Response = autorest.Response{Response: resp}
 		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftVersionsClient", "List", resp, "Failure sending request")
 		return
 	}
 
-	result, err = client.ListResponder(resp)
+	result.osvl, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftVersionsClient", "List", resp, "Failure responding to request")
+		return
+	}
+	if result.osvl.hasNextLink() && result.osvl.IsEmpty() {
+		err = result.NextWithContext(ctx)
 		return
 	}
 
@@ -103,7 +108,7 @@ func (client OpenShiftVersionsClient) ListPreparer(ctx context.Context, location
 	preparer := autorest.CreatePreparer(
 		autorest.AsGet(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/listinstallversions", pathParameters),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openshiftversions", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
@@ -123,5 +128,42 @@ func (client OpenShiftVersionsClient) ListResponder(resp *http.Response) (result
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
 	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// listNextResults retrieves the next set of results, if any.
+func (client OpenShiftVersionsClient) listNextResults(ctx context.Context, lastResults OpenShiftVersionList) (result OpenShiftVersionList, err error) {
+	req, err := lastResults.openShiftVersionListPreparer(ctx)
+	if err != nil {
+		return result, autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftVersionsClient", "listNextResults", nil, "Failure preparing next results request")
+	}
+	if req == nil {
+		return
+	}
+	resp, err := client.ListSender(req)
+	if err != nil {
+		result.Response = autorest.Response{Response: resp}
+		return result, autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftVersionsClient", "listNextResults", resp, "Failure sending next results request")
+	}
+	result, err = client.ListResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftVersionsClient", "listNextResults", resp, "Failure responding to next results request")
+	}
+	return
+}
+
+// ListComplete enumerates all values, automatically crossing page boundaries as required.
+func (client OpenShiftVersionsClient) ListComplete(ctx context.Context, location string) (result OpenShiftVersionListIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftVersionsClient.List")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	result.page, err = client.List(ctx, location)
 	return
 }

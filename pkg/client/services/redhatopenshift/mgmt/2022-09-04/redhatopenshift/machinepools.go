@@ -517,7 +517,7 @@ func (client MachinePoolsClient) UpdateSender(req *http.Request) (*http.Response
 func (client MachinePoolsClient) UpdateResponder(resp *http.Response) (result MachinePool, err error) {
 	err = autorest.Respond(
 		resp,
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
 	result.Response = autorest.Response{Response: resp}

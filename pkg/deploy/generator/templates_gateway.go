@@ -77,6 +77,7 @@ func (g *generator) gatewayTemplate() *arm.Template {
 				"switzerlandnorth",
 				"northcentralus",
 				"uaenorth",
+				"westus",
 			}
 		}
 		t.Parameters[param] = p

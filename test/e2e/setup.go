@@ -17,9 +17,8 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"  //nolint
-	. "github.com/onsi/gomega"     //nolint
-	. "github.com/tebeka/selenium" //nolint
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -27,6 +26,7 @@ import (
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	"github.com/tebeka/selenium"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -44,6 +44,8 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
+
+const seleniumContainerName = "selenium-edge-standalone"
 
 type clientSet struct {
 	OpenshiftClustersv20200430 redhatopenshift20200430.OpenShiftClustersClient
@@ -73,15 +75,25 @@ var (
 	vnetResourceGroup string
 	clusterName       string
 	clients           *clientSet
+
+	dockerSucceeded bool
 )
 
 func skipIfNotInDevelopmentEnv() {
 	if !_env.IsLocalDevelopmentMode() {
-		Skip("skipping tests in non-development environment")
+		Skip("skipping portal tests in non-development environment")
 	}
 }
 
-func SaveScreenshotAndExit(wd WebDriver, e error) {
+func skipIfDockerNotWorking() {
+	// docker cmds will fail in INT until we figure out a solution since
+	// it is running from docker already
+	if !dockerSucceeded {
+		Skip("skipping portal tests as docker is not available")
+	}
+}
+
+func SaveScreenshotAndExit(wd selenium.WebDriver, e error) {
 	log.Infof("Error : %s", e.Error())
 	log.Info("Taking Screenshot and saving page source")
 	imageBytes, err := wd.Screenshot()
@@ -149,7 +161,7 @@ func SaveScreenshotAndExit(wd WebDriver, e error) {
 	panic(e)
 }
 
-func adminPortalSessionSetup() (string, *WebDriver) {
+func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 	const (
 		hubPort  = 4444
 		hostPort = 8444
@@ -157,11 +169,11 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 
 	os.Setenv("SE_SESSION_REQUEST_TIMEOUT", "9000")
 
-	caps := Capabilities{
+	caps := selenium.Capabilities{
 		"browserName":         "MicrosoftEdge",
 		"acceptInsecureCerts": true,
 	}
-	wd := WebDriver(nil)
+	wd := selenium.WebDriver(nil)
 
 	_, err := url.ParseRequestURI(fmt.Sprintf("https://localhost:%d", hubPort))
 	if err != nil {
@@ -169,7 +181,7 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 	}
 
 	for i := 0; i < 10; i++ {
-		wd, err = NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", hubPort))
+		wd, err = selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", hubPort))
 		if wd != nil {
 			err = nil
 			break
@@ -205,7 +217,7 @@ func adminPortalSessionSetup() (string, *WebDriver) {
 
 	log.Infof("Session Output : %s\n", os.Getenv("SESSION"))
 
-	cookie := &Cookie{
+	cookie := &selenium.Cookie{
 		Name:   "session",
 		Value:  os.Getenv("SESSION"),
 		Expiry: math.MaxUint32,
@@ -305,20 +317,44 @@ func setupSelenium(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, "docker", "pull", "selenium/standalone-edge:latest")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Fatalf("Error occurred pulling selenium image\n Output: %s\n Error: %s\n", output, err)
+		log.Printf("Error occurred pulling selenium image\n Output: %s\n Error: %s\n", output, err)
+		dockerSucceeded = false
 	}
 
 	log.Infof("Selenium Image Pull Output : %s\n", output)
 
-	cmd = exec.CommandContext(ctx, "docker", "run", "-d", "-p", "4444:4444", "--name", "selenium-edge-standalone", "--network=host", "--shm-size=2g", "selenium/standalone-edge:latest")
+	cmd = exec.CommandContext(ctx, "docker", "run", "-d", "-p", "4444:4444", "--name", seleniumContainerName, "--network=host", "--shm-size=2g", "selenium/standalone-edge:latest")
 	output, err = cmd.CombinedOutput()
 	if err != nil {
-		log.Fatalf("Error occurred starting selenium grid\n Output: %s\n Error: %s\n", output, err)
+		log.Printf("Error occurred starting selenium grid\n Output: %s\n Error: %s\n", output, err)
+		dockerSucceeded = false
 	}
 
 	log.Infof("Selenium Container Run Output : %s\n", output)
 
 	return err
+}
+
+func tearDownSelenium(ctx context.Context) error {
+	log.Infof("Stopping Selenium Grid")
+	cmd := exec.CommandContext(ctx, "docker", "stop", seleniumContainerName)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("Error occurred stopping selenium container\n Output: %s\n Error: %s\n", output, err)
+		dockerSucceeded = false
+		return err
+	}
+
+	log.Infof("Removing Selenium Grid container")
+	cmd = exec.CommandContext(ctx, "docker", "rm", seleniumContainerName)
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("Error occurred removing selenium grid container\n Output: %s\n Error: %s\n", output, err)
+		dockerSucceeded = false
+		return err
+	}
+
+	return nil
 }
 
 func setup(ctx context.Context) error {
@@ -382,4 +418,8 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
+
+	if err := tearDownSelenium(context.Background()); err != nil {
+		log.Printf(err.Error())
+	}
 })

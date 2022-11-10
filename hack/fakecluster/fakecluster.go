@@ -84,8 +84,12 @@ func run(ctx context.Context, l *logrus.Entry) error {
 	r.Use(middleware.Panic(l))
 
 	r.NewRoute().PathPrefix(
-		"/apis/config.openshift.io/v1/clusteroperators",
+		"/api/config.openshift.io/v1/clusteroperators",
 	).HandlerFunc(resp(cluster.MustAsset("clusteroperator.json")))
+
+	r.NewRoute().PathPrefix(
+		"/api/v1/nodes",
+	).HandlerFunc(resp(cluster.MustAsset("nodes.json")))
 
 	s := &http.Server{
 		Handler:     frontendmiddleware.Lowercase(r),

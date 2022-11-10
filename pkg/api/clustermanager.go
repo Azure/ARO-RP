@@ -8,26 +8,6 @@ type SyncSetList struct {
 	SyncSets []*SyncSet `json:"value"`
 }
 
-type ClusterManagerConfigurationList struct {
-	ClusterManagerConfigurations []*ClusterManagerConfiguration `json:"value"`
-}
-
-// ClusterManagerConfiguration represents the configuration from OpenShift Cluster Manager (OCM)
-type ClusterManagerConfiguration struct {
-	// ID is the unique identifier for the cluster manager configuration
-	ID                string                                `json:"id,omitempty"`
-	Name              string                                `json:"name,omitempty"`
-	ClusterResourceID string                                `json:"clusterResourceId,omitempty"`
-	Properties        ClusterManagerConfigurationProperties `json:"properties,omitempty"`
-	SystemData        *SystemData                           `json:"systemData,omitempty"`
-}
-
-// ClusterManagerConfigurationProperties houses the payloads the frontend receives for all OCM resources
-// we store them as a byte slice in cosmos
-type ClusterManagerConfigurationProperties struct {
-	Resources []byte `json:"resources,omitempty"`
-}
-
 // SyncSet represents a SyncSet for an Azure Red Hat OpenShift Cluster.
 type SyncSet struct {
 	// Required resource properties in ARM

@@ -22,8 +22,7 @@ import (
 var _ = Describe("[Admin API] List Azure resources action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
-	It("should list Azure resources", func() {
-		ctx := context.Background()
+	It("must list Azure resources for a cluster", func(ctx context.Context) {
 		resourceID := resourceIDFromEnv()
 
 		By("getting the resource group where cluster resources live in")
@@ -31,21 +30,27 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 		Expect(err).NotTo(HaveOccurred())
 		clusterResourceGroup := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
 
-		By("building a list of valid Azure resource IDs via the Azure API")
+		By("getting a list of resources from the cluster resource group via ARM")
 		expectedResources, err := clients.Resources.ListByResourceGroup(ctx, clusterResourceGroup, "", "", nil)
 		Expect(err).NotTo(HaveOccurred())
 
+		By("building a list of expected Azure resource IDs")
 		expectedResourceIDs := make([]string, 0, len(expectedResources)+1)
 		for _, r := range expectedResources {
 			expectedResourceIDs = append(expectedResourceIDs, strings.ToLower(*r.ID))
 		}
 
-		By("adding VNet to list of valid Azure resource IDs")
+		By("adding disk encryption sets to the the list of expected resource IDs")
+		diskEncryptionSet, err := clients.DiskEncryptionSets.Get(ctx, vnetResourceGroup, fmt.Sprintf("%s-disk-encryption-set", vnetResourceGroup))
+		Expect(err).NotTo(HaveOccurred())
+		expectedResourceIDs = append(expectedResourceIDs, strings.ToLower(*diskEncryptionSet.ID))
+
+		By("adding VNet to the list of expected resource IDs")
 		vnetID, _, err := subnet.Split(*oc.OpenShiftClusterProperties.MasterProfile.SubnetID)
 		Expect(err).NotTo(HaveOccurred())
 		expectedResourceIDs = append(expectedResourceIDs, strings.ToLower(vnetID))
 
-		By("adding RouteTables to list of valid Azure resource IDs")
+		By("adding RouteTables to the list of expected resource IDs")
 		r, err := azure.ParseResourceID(vnetID)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -59,10 +64,6 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 		vnet, err := clients.VirtualNetworks.Get(ctx, r.ResourceGroup, r.ResourceName, "")
 		Expect(err).NotTo(HaveOccurred())
 
-		diskEncryptionSet, err := clients.DiskEncryptionSets.Get(ctx, vnetResourceGroup, fmt.Sprintf("%s-disk-encryption-set", vnetResourceGroup))
-		Expect(err).NotTo(HaveOccurred())
-		expectedResourceIDs = append(expectedResourceIDs, strings.ToLower(*diskEncryptionSet.ID))
-
 		for _, subnet := range *vnet.Subnets {
 			if _, ok := subnets[strings.ToLower(*subnet.ID)]; !ok {
 				continue
@@ -74,7 +75,7 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 			}
 		}
 
-		By("getting the actual Azure resource IDs via admin actions API")
+		By("getting the actual Azure resource IDs via RP admin API")
 		var actualResources []mgmtfeatures.GenericResourceExpanded
 		resp, err := adminRequest(ctx, http.MethodGet, "/admin"+resourceID+"/resources", nil, nil, &actualResources)
 		Expect(err).NotTo(HaveOccurred())
@@ -87,7 +88,7 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 			actualResourceIDs = append(actualResourceIDs, id)
 		}
 
-		By("comparing lists of resources")
+		By("verifying the list of resources")
 		Expect(actualResourceIDs).To(ConsistOf(expectedResourceIDs))
 	})
 })

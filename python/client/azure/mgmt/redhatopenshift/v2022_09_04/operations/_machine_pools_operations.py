@@ -558,8 +558,7 @@ class MachinePoolsOperations(object):
         **kwargs  # type: Any
     ):
         # type: (...) -> "_models.MachinePool"
-        """Patches (create or update) a MachinePool with the specified subscription, resource group and
-        resource name.
+        """Updates a MachinePool with the specified subscription, resource group and resource name.
 
         The operation returns properties of a MachinePool.
 
@@ -607,15 +606,11 @@ class MachinePoolsOperations(object):
         )
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 201]:
+        if response.status_code not in [200]:
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response, error_format=ARMErrorFormat)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize('MachinePool', pipeline_response)
-
-        if response.status_code == 201:
-            deserialized = self._deserialize('MachinePool', pipeline_response)
+        deserialized = self._deserialize('MachinePool', pipeline_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})

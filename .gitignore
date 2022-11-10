@@ -25,10 +25,12 @@ gomock_reflect_*
 /cover.out
 /coverage.*
 /report.xml
+/e2e-report.xml
 /deploy/config.yaml
 **/*.swp
 /portal/v1/node_modules/
 /portal/v2/node_modules/
+portal/v2/.vscode/
 .idea*
 /hack/hive-config/crds
 /hack/hive-config/hive-deployment.yaml

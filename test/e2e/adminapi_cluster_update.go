@@ -20,9 +20,8 @@ import (
 var _ = Describe("[Admin API] Cluster admin update action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
-	It("should be able to run cluster update operation on a cluster", func() {
+	It("must run cluster update operation on a cluster", func(ctx context.Context) {
 		var oc = &admin.OpenShiftCluster{}
-		ctx := context.Background()
 		resourceID := resourceIDFromEnv()
 
 		By("triggering the update via RP admin API")
@@ -36,7 +35,7 @@ var _ = Describe("[Admin API] Cluster admin update action", func() {
 
 		By("waiting for the update to complete")
 		err = wait.PollImmediate(10*time.Second, 30*time.Minute, func() (bool, error) {
-			oc = getCluster(ctx, resourceID)
+			oc = adminGetCluster(ctx, resourceID)
 			return oc.Properties.ProvisioningState == admin.ProvisioningStateSucceeded, nil
 		})
 		Expect(err).NotTo(HaveOccurred())

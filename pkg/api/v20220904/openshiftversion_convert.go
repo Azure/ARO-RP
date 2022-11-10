@@ -16,6 +16,7 @@ type openShiftVersionConverter struct{}
 // returned objects.
 func (openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) interface{} {
 	out := &OpenShiftVersion{
+		ID:            v.ID,
 		proxyResource: true,
 		Properties: OpenShiftVersionProperties{
 			Version: v.Properties.Version,

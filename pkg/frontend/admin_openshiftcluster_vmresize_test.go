@@ -89,7 +89,7 @@ func TestAdminVMResize(t *testing.T) {
 					Items: []corev1.Node{node},
 				}
 				marsh, _ := json.Marshal(nodeList)
-				k.EXPECT().KubeList(gomock.Any(), "node", "").Return([]byte(marsh), nil)
+				k.EXPECT().KubeList(gomock.Any(), "node", "").Return(marsh, nil)
 				a.EXPECT().VMResize(gomock.Any(), tt.vmName, tt.vmSize).Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
@@ -183,7 +183,7 @@ func TestAdminVMResize(t *testing.T) {
 					Items: []corev1.Node{node},
 				}
 				marsh, _ := json.Marshal(nodeList)
-				k.EXPECT().KubeList(gomock.Any(), "node", "").Return([]byte(marsh), nil)
+				k.EXPECT().KubeList(gomock.Any(), "node", "").Return(marsh, nil)
 			},
 			wantStatusCode: http.StatusNotFound,
 			wantError:      `404: NotFound: : "The master node 'aro-fake-node-0' under resource group 'resourcegroup' was not found."`,

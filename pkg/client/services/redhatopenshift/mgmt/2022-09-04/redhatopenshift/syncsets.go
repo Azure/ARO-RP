@@ -517,7 +517,7 @@ func (client SyncSetsClient) UpdateSender(req *http.Request) (*http.Response, er
 func (client SyncSetsClient) UpdateResponder(resp *http.Response) (result SyncSet, err error) {
 	err = autorest.Respond(
 		resp,
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
 	result.Response = autorest.Response{Response: resp}
