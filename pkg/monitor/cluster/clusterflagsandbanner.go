@@ -19,14 +19,11 @@ const (
 
 func (mon *Monitor) emitOperatorFlagsAndSupportBanner(ctx context.Context) error {
 	var cont string
-	var count int64
 	for {
 		clusters, err := mon.arocli.AroV1alpha1().Clusters().List(ctx, metav1.ListOptions{Limit: 20, Continue: cont})
 		if err != nil {
 			return err
 		}
-
-		count += int64(len(clusters.Items))
 
 		for _, cluster := range clusters.Items {
 			if cluster.Spec.OperatorFlags != nil {
