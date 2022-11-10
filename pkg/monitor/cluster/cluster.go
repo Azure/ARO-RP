@@ -159,6 +159,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitJobConditions,
 		mon.emitSummary,
 		mon.emitHiveRegistrationStatus,
+		mon.emitOperatorFlagsAndSupportBanner,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 	} {
 		err = f(ctx)
