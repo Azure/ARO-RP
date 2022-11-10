@@ -289,7 +289,6 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/machines").HandlerFunc(p.machines)
 	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/machine-sets").HandlerFunc(p.machineSets)
 	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
-
 }
 
 func (p *portal) index(w http.ResponseWriter, r *http.Request) {
