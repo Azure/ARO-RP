@@ -30,6 +30,7 @@ gomock_reflect_*
 **/*.swp
 /portal/v1/node_modules/
 /portal/v2/node_modules/
+portal/v2/.vscode/
 .idea*
 /hack/hive-config/crds
 /hack/hive-config/hive-deployment.yaml

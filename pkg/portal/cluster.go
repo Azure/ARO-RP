@@ -23,6 +23,7 @@ type AdminOpenShiftCluster struct {
 	FailedProvisioningState string `json:"failedprovisioningState"`
 	Version                 string `json:"version"`
 	CreatedAt               string `json:"createdAt"`
+	LastModified            string `json:"lastModified"`
 	ProvisionedBy           string `json:"provisionedBy"`
 }
 
@@ -58,6 +59,11 @@ func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
 			createdAt = doc.OpenShiftCluster.Properties.CreatedAt.Format(time.RFC3339)
 		}
 
+		lastModified := "Unknown"
+		if doc.OpenShiftCluster.SystemData.LastModifiedAt != nil {
+			lastModified = doc.OpenShiftCluster.SystemData.LastModifiedAt.Format(time.RFC3339)
+		}
+
 		clusters = append(clusters, &AdminOpenShiftCluster{
 			Key:                     doc.ID,
 			ResourceId:              doc.OpenShiftCluster.ID,
@@ -66,6 +72,7 @@ func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
 			ResourceGroup:           resourceGroup,
 			Version:                 doc.OpenShiftCluster.Properties.ClusterProfile.Version,
 			CreatedAt:               createdAt,
+			LastModified:            lastModified,
 			ProvisionedBy:           doc.OpenShiftCluster.Properties.ProvisionedBy,
 			ProvisioningState:       ps.String(),
 			FailedProvisioningState: fps.String(),
@@ -93,13 +100,88 @@ func (p *portal) clusterOperators(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := fetcher.ClusterOperators(ctx)
+	clusterOperators, err := fetcher.ClusterOperators(ctx)
 	if err != nil {
 		p.internalServerError(w, err)
 		return
 	}
 
-	b, err := json.MarshalIndent(res, "", "    ")
+	b, err := json.MarshalIndent(clusterOperators, "", "    ")
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(b)
+}
+
+func (p *portal) nodes(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	fetcher, err := p.makeFetcher(ctx, r)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	nodes, err := fetcher.Nodes(ctx)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	b, err := json.MarshalIndent(nodes, "", "    ")
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(b)
+}
+
+func (p *portal) machines(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	fetcher, err := p.makeFetcher(ctx, r)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	machines, err := fetcher.Machines(ctx)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	b, err := json.MarshalIndent(machines, "", "    ")
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(b)
+}
+
+func (p *portal) machineSets(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	fetcher, err := p.makeFetcher(ctx, r)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	machineSets, err := fetcher.MachineSets(ctx)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	b, err := json.MarshalIndent(machineSets, "", "    ")
 	if err != nil {
 		p.internalServerError(w, err)
 		return
