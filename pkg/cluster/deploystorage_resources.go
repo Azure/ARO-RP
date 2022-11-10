@@ -457,23 +457,6 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string) *arm.Resource {
 			},
 			LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{}, //required to override default LB rules for port 80 and 443
 			Probes:             &[]mgmtnetwork.Probe{},             //required to override default LB rules for port 80 and 443
-			OutboundRules: &[]mgmtnetwork.OutboundRule{
-				{
-					OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
-						FrontendIPConfigurations: &[]mgmtnetwork.SubResource{
-							{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + m.doc.OpenShiftCluster.Properties.InfraID + "', 'public-lb-ip-v4')]"),
-							},
-						},
-						BackendAddressPool: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
-						},
-						Protocol:             mgmtnetwork.LoadBalancerOutboundRuleProtocolAll,
-						IdleTimeoutInMinutes: to.Int32Ptr(30),
-					},
-					Name: to.StringPtr("outbound-rule-v4"),
-				},
-			},
 		},
 		Name:     &m.doc.OpenShiftCluster.Properties.InfraID,
 		Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
@@ -497,7 +480,7 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string) *arm.Resource {
 				FrontendPort:         to.Int32Ptr(6443),
 				BackendPort:          to.Int32Ptr(6443),
 				IdleTimeoutInMinutes: to.Int32Ptr(30),
-				DisableOutboundSnat:  to.BoolPtr(true),
+				DisableOutboundSnat:  to.BoolPtr(false),
 			},
 			Name: to.StringPtr("api-internal-v4"),
 		})
