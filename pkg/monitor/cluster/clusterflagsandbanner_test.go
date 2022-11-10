@@ -10,6 +10,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 )
@@ -42,6 +43,40 @@ func (e *fakeMetricsEmitter) EmitGauge(topic string, value int64, dims map[strin
 
 func (e *fakeMetricsEmitter) EmitFloat(topic string, value float64, dims map[string]string) {}
 
+func generateDefaultFlags() arov1alpha1.OperatorFlags {
+	df := make(arov1alpha1.OperatorFlags)
+	for k, v := range api.DefaultOperatorFlags() {
+		df[k] = v
+	}
+	return df
+}
+
+func generateNonStandardFlags(nonDefualtFlagNames []string) arov1alpha1.OperatorFlags {
+	nsf := make(arov1alpha1.OperatorFlags)
+	for k, v := range api.DefaultOperatorFlags() {
+		nsf[k] = v
+	}
+	for _, n := range nonDefualtFlagNames {
+		if nsf[n] == "true" {
+			nsf[n] = "false"
+		} else {
+			nsf[n] = "true"
+		}
+	}
+	return nsf
+}
+
+func generateFlagsWithMissingEntries(missingFlagNames []string) arov1alpha1.OperatorFlags {
+	mf := make(arov1alpha1.OperatorFlags)
+	for k, v := range api.DefaultOperatorFlags() {
+		mf[k] = v
+	}
+	for _, n := range missingFlagNames {
+		delete(mf, n)
+	}
+	return mf
+}
+
 func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 	baseCluster := &arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -68,12 +103,8 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			expectBannerMetricsValue: 0,
 		},
 		{
-			name: "cluster with standard operator flags",
-			operatorFlags: arov1alpha1.OperatorFlags{
-				"aro.imageconfig.enabled":   "true",
-				"aro.dnsmasq.enabled":       "true",
-				"aro.genevalogging.enabled": "true",
-			},
+			name:          "cluster with standard operator flags",
+			operatorFlags: generateDefaultFlags(),
 			clusterBanner: arov1alpha1.Banner{
 				Content: "",
 			},
@@ -82,12 +113,8 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			expectBannerMetricsValue: 0,
 		},
 		{
-			name: "cluster with non-standard operator flags",
-			operatorFlags: arov1alpha1.OperatorFlags{
-				"aro.imageconfig.enabled":   "false",
-				"aro.dnsmasq.enabled":       "false",
-				"aro.genevalogging.enabled": "false",
-			},
+			name:          "cluster with non-standard operator flags",
+			operatorFlags: generateNonStandardFlags([]string{"aro.imageconfig.enabled", "aro.dnsmasq.enabled", "aro.genevalogging.enabled", "aro.autosizednodes.enable"}),
 			clusterBanner: arov1alpha1.Banner{
 				Content: "",
 			},
@@ -96,12 +123,28 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 				"aro.imageconfig.enabled":   "false",
 				"aro.dnsmasq.enabled":       "false",
 				"aro.genevalogging.enabled": "false",
+				"aro.autosizednodes.enable": "true",
+			},
+			expectBannerMetricsValue: 0,
+		},
+		{
+			name:          "cluster with missing operator flags",
+			operatorFlags: generateFlagsWithMissingEntries([]string{"aro.imageconfig.enabled", "aro.dnsmasq.enabled", "aro.genevalogging.enabled", "aro.autosizednodes.enable"}),
+			clusterBanner: arov1alpha1.Banner{
+				Content: "",
+			},
+			expectFlagsMetricsValue: 1,
+			expectFlagsMetricsDims: map[string]string{
+				"aro.imageconfig.enabled":   "not exist",
+				"aro.dnsmasq.enabled":       "not exist",
+				"aro.genevalogging.enabled": "not exist",
+				"aro.autosizednodes.enable": "not exist",
 			},
 			expectBannerMetricsValue: 0,
 		},
 		{
 			name:          "cluster with activated support banner",
-			operatorFlags: arov1alpha1.OperatorFlags{},
+			operatorFlags: generateDefaultFlags(),
 			clusterBanner: arov1alpha1.Banner{
 				Content: arov1alpha1.BannerContactSupport,
 			},
@@ -110,12 +153,8 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			expectBannerMetricsValue: 1,
 		},
 		{
-			name: "cluster with non-standard operator flags and activated support banner",
-			operatorFlags: arov1alpha1.OperatorFlags{
-				"aro.imageconfig.enabled":   "false",
-				"aro.dnsmasq.enabled":       "false",
-				"aro.genevalogging.enabled": "false",
-			},
+			name:          "cluster with non-standard operator flags and activated support banner",
+			operatorFlags: generateNonStandardFlags([]string{"aro.imageconfig.enabled", "aro.dnsmasq.enabled", "aro.genevalogging.enabled", "aro.autosizednodes.enable"}),
 			clusterBanner: arov1alpha1.Banner{
 				Content: arov1alpha1.BannerContactSupport,
 			},
@@ -124,6 +163,7 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 				"aro.imageconfig.enabled":   "false",
 				"aro.dnsmasq.enabled":       "false",
 				"aro.genevalogging.enabled": "false",
+				"aro.autosizednodes.enable": "true",
 			},
 			expectBannerMetricsValue: 1,
 		},

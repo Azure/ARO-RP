@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
 // Anything that caches a List is an anti-pattern because of the potential
@@ -59,14 +58,4 @@ func (mon *Monitor) listARODeployments(ctx context.Context) (*appsv1.DeploymentL
 	var err error
 	mon.cache.arodl, err = mon.cli.AppsV1().Deployments(pkgoperator.Namespace).List(ctx, metav1.ListOptions{})
 	return mon.cache.arodl, err
-}
-
-func (mon *Monitor) listAROClusters(ctx context.Context) (*arov1alpha1.ClusterList, error) {
-	if mon.cache.cs != nil {
-		return mon.cache.cs, nil
-	}
-
-	var err error
-	mon.cache.cs, err = mon.arocli.AroV1alpha1().Clusters().List(ctx, metav1.ListOptions{})
-	return mon.cache.cs, err
 }
