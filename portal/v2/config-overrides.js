@@ -10,6 +10,13 @@ module.exports = function override(config) {
 
   config.resolve.fallback = fallback;
 
+  config.module.rules.push({
+    test: /\.m?js/,
+    resolve: {
+      fullySpecified: false
+    }
+  });
+
   config.plugins = (config.plugins || []).concat([
     new webpack.ProvidePlugin({
       process: 'process/browser',

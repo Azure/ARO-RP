@@ -4,7 +4,7 @@ sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_
 systemctl reload sshd.service
 
 echo "running yum update"
-yum -y -x WALinuxAgent update
+yum -y -x WALinuxAgent -x WALinuxAgent-udev update
 
 echo "extending filesystems"
 lvextend -l +50%FREE /dev/rootvg/rootlv

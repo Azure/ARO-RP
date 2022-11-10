@@ -1,10 +1,8 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap-select/dist/css/bootstrap-select.min.css';
 
 import 'bootstrap/js/dist/util';
 import 'bootstrap/js/dist/dropdown';
-
-import 'bootstrap-select'
+import 'bootstrap/js/dist/alert';
 
 jQuery.extend({
     redirect: function (location, args) {
@@ -32,8 +30,6 @@ jQuery(function () {
             $.each(clusters, function (i, cluster) {
                 $("#selResourceId").append($("<option>").text(cluster.resourceId));
             });
-
-            $("#selResourceId").selectpicker();
         },
         dataType: "json",
     });

@@ -280,10 +280,15 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 
 	r.NewRoute().Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
 	r.NewRoute().Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
+	r.NewRoute().Methods(http.MethodGet).Path("/api/regions").HandlerFunc(p.regions)
 
 	// Cluster-specific routes
-	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{name}/clusteroperators").HandlerFunc(p.clusterOperators)
-	r.NewRoute().Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{name}").HandlerFunc(p.clusterInfo)
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/clusteroperators").HandlerFunc(p.clusterOperators)
+	r.NewRoute().Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/nodes").HandlerFunc(p.nodes)
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/machines").HandlerFunc(p.machines)
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/machine-sets").HandlerFunc(p.machineSets)
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
 }
 
 func (p *portal) index(w http.ResponseWriter, r *http.Request) {
@@ -318,7 +323,17 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 
 // makeFetcher creates a cluster.FetchClient suitable for use by the Portal REST API
 func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.FetchClient, error) {
-	resourceID := strings.Join(strings.Split(r.URL.Path, "/")[:9], "/")
+	apiVars := mux.Vars(r)
+
+	subscription := apiVars["subscription"]
+	resourceGroup := apiVars["resourceGroup"]
+	clusterName := apiVars["clusterName"]
+
+	resourceID :=
+		strings.ToLower(
+			fmt.Sprintf(
+				"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
+				subscription, resourceGroup, clusterName))
 	if !validate.RxClusterID.MatchString(resourceID) {
 		return nil, fmt.Errorf("invalid resource ID")
 	}
