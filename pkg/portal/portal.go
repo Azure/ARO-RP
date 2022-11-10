@@ -280,6 +280,7 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 
 	r.NewRoute().Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
 	r.NewRoute().Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
+	r.NewRoute().Methods(http.MethodGet).Path("/api/regions").HandlerFunc(p.regions)
 
 	// Cluster-specific routes
 	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/clusteroperators").HandlerFunc(p.clusterOperators)
@@ -328,8 +329,11 @@ func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.Fetc
 	resourceGroup := apiVars["resourceGroup"]
 	clusterName := apiVars["clusterName"]
 
-	resourceID := strings.ToLower(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", subscription, resourceGroup, clusterName))
-
+	resourceID :=
+		strings.ToLower(
+			fmt.Sprintf(
+				"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
+				subscription, resourceGroup, clusterName))
 	if !validate.RxClusterID.MatchString(resourceID) {
 		return nil, fmt.Errorf("invalid resource ID")
 	}
