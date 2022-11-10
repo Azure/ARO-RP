@@ -87,7 +87,7 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 				m.log.Warnf("Removing BackendPools from NIC %s has failed with err %s", nicName, err)
 				return err
 			}
-			m.log.Warnf("Installer provisioned NIC has no VM attached")
+			m.log.Warnf("Installer provisioned NIC %s has no VM attached", nicName)
 			fallbackNIC = true
 		}
 
