@@ -40,7 +40,7 @@ func (p *portal) clusterInfo(w http.ResponseWriter, r *http.Request) {
 
 	subscription := apiVars["subscription"]
 	resourceGroup := apiVars["resourceGroup"]
-	clusterName := apiVars["name"]
+	clusterName := apiVars["clusterName"]
 
 	resourceId := strings.ToLower(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", subscription, resourceGroup, clusterName))
 
