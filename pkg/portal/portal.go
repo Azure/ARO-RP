@@ -263,17 +263,17 @@ func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 	for _, name := range AssetNames() {
 		if name == "v1/build/index.html" {
-			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.index)
+			r.NewRoute().Methods(http.MethodGet).Path("/v1").HandlerFunc(p.index)
 			continue
 		}
 
 		if name == "v2/build/index.html" {
-			r.NewRoute().Methods(http.MethodGet).Path("/v2").HandlerFunc(p.indexV2)
+			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.indexV2)
 			continue
 		}
 
-		fmtName := strings.TrimPrefix(name, "v1/build/")
-		fmtName = strings.TrimPrefix(fmtName, "v2/build/")
+		fmtName := strings.TrimPrefix(name, "v2/build/")
+		fmtName = strings.TrimPrefix(fmtName, "v1/build/")
 
 		r.NewRoute().Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
 	}

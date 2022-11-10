@@ -98,6 +98,6 @@ jQuery(function () {
     });
 
     $("#btnV2").click(function () {
-        window.location = "/v2";
+        window.location = "/";
     });
 });

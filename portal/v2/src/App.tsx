@@ -22,6 +22,7 @@ import {
   Icon,
   mergeStyleSets,
   registerIcons,
+  DefaultButton,
 } from "@fluentui/react"
 import { AxiosResponse } from "axios"
 import { useBoolean } from "@fluentui/react-hooks"
@@ -81,7 +82,28 @@ const stackNavStyles: IStackStyles = {
 }
 
 const MenuButtonStyles: IButtonStyles = {
-  icon: { color: DefaultPalette.white },
+  root: {
+    color: DefaultPalette.white,
+  },
+  rootHovered: {
+    color: DefaultPalette.themePrimary,
+  },
+}
+
+const v1ButtonStyle: IButtonStyles = {
+  root: {
+    backgroundColor: 'transparent',
+    color: DefaultPalette.white,
+    minWidth: '50px',
+    height: '20px',
+    marginLeft: '10px',
+    padding: '0px',
+    borderColor: DefaultPalette.white,
+  },
+  rootHovered: {
+    backgroundColor: DefaultPalette.white,
+    color: DefaultPalette.themePrimary,
+  },
 }
 
 const darkTheme: PartialTheme = {
@@ -244,6 +266,11 @@ function App() {
               <TooltipHost content={`Elevated User`}>
                 <Icon iconName={"Admin"}></Icon>
               </TooltipHost>
+            </Stack.Item>
+            <Stack.Item>
+              <DefaultButton styles={v1ButtonStyle} title="Go to Admin Portal V1" href="/v1">
+                V1
+              </DefaultButton>
             </Stack.Item>
             <Stack.Item>
               <IconButton
