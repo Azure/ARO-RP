@@ -206,29 +206,29 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 
 	It("Should be able to navigate to other regions", func() {
 		NUMBER_OF_REGIONS := 40
-		err := wd.WaitWithTimeout(ElementIsLocated(ByID, "RegionNavButton"), time.Second*30)
+		err := wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "RegionNavButton"), time.Second*30)
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
 
-		button, err := wd.FindElement(ByID, "RegionNavButton")
+		button, err := wd.FindElement(selenium.ByID, "RegionNavButton")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
 
 		button.Click()
 
-		panel, err := wd.FindElement(ByID, "RegionsPanel")
+		panel, err := wd.FindElement(selenium.ByID, "RegionsPanel")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
 
-		regionList, err := panel.FindElement(ByTagName, "ul")
+		regionList, err := panel.FindElement(selenium.ByTagName, "ul")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
 
-		regions, err := regionList.FindElements(ByTagName, "li")
+		regions, err := regionList.FindElements(selenium.ByTagName, "li")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
@@ -236,7 +236,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		Expect(len(regions)).To(Equal(NUMBER_OF_REGIONS))
 
 		for _, region := range regions {
-			link, err := region.FindElement(ByTagName, "a")
+			link, err := region.FindElement(selenium.ByTagName, "a")
 			if err != nil {
 				SaveScreenshotAndExit(wd, err)
 			}
