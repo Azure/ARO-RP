@@ -30,7 +30,7 @@ func (mon *Monitor) emitOperatorFlagsAndSupportBanner(ctx context.Context) error
 		for _, cluster := range clusters.Items {
 			if cluster.Spec.OperatorFlags != nil {
 				defaultFlags := api.DefaultOperatorFlags()
-				nonStandardOperatorFlags := make(map[string]string)
+				nonStandardOperatorFlags := make(map[string]string, len(defaultFlags))
 
 				//check if the current set flags matches the default ones
 				for name, value := range defaultFlags {
