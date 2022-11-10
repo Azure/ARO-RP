@@ -72,7 +72,6 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 		nicNameInstaller := fmt.Sprintf("%s-master%d-nic", infraID, i)
 		nicNameMachineAPI := fmt.Sprintf("%s-master-%d-nic", infraID, i)
 
-		//var iErr, err error
 		var nic mgmtnetwork.Interface
 		nicName := nicNameInstaller
 		var fallbackNIC bool
