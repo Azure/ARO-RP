@@ -126,7 +126,7 @@ export function NodesWrapper(props: {
       } else {
         setError(result)
       }
-      setFetching(props.currentCluster.name) //  <----  Why are we updating 'fetching' here?
+      setFetching(props.currentCluster.name)
     }
 
     if (props.detailPanelSelected.toLowerCase() == nodesKey && 

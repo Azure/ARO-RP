@@ -1,19 +1,10 @@
 {
   "files": {
-<<<<<<< HEAD
-    "main.js": "/static/js/main.2de0ba6f.js",
+    "main.js": "/static/js/main.bb644f09.js",
     "index.html": "/index.html",
-    "main.2de0ba6f.js.map": "/static/js/main.2de0ba6f.js.map"
+    "main.bb644f09.js.map": "/static/js/main.bb644f09.js.map"
   },
   "entrypoints": [
-    "static/js/main.2de0ba6f.js"
-=======
-    "main.js": "/static/js/main.801414b2.js",
-    "index.html": "/index.html",
-    "main.fac26d62.js.map": "/static/js/main.fac26d62.js.map"
-  },
-  "entrypoints": [
-    "static/js/main.801414b2.js"
->>>>>>> 76fd31509 (fixed few linting issues and bindata issue)
+    "static/js/main.bb644f09.js"
   ]
 }
