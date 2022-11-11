@@ -56,15 +56,13 @@ def validate_resource(client, key, resource, actions):
 
 def dyn_validate_vnet(key):
     def _validate_vnet(cmd, namespace):
-        vnet = namespace[key]
+        vnet = getattr(namespace, key)
 
         if not is_valid_resource_id(vnet):
             raise RequiredArgumentMissingError(
                 f"Must specify --vnet if --{key.replace('_', '-')} is not an id.")
 
-        namespace_obj = collections.namedtuple("Namespace", namespace.keys())(*namespace.values())
-
-        validate_vnet(cmd, namespace_obj)
+        validate_vnet(cmd, namespace)
 
         parts = parse_resource_id(vnet)
 
@@ -96,16 +94,16 @@ def dyn_validate_vnet(key):
 
 def dyn_validate_subnet(key):
     def _validate_subnet(cmd, namespace):
-        subnet = namespace[key]
+        subnet = getattr(namespace, key)
 
         if not is_valid_resource_id(subnet):
-            if not namespace["vnet"]:
+            if not namespace.vnet:
                 raise RequiredArgumentMissingError(
                     f"Must specify --vnet if --{key.replace('_', '-')} is not an id.")
 
             validate_vnet(cmd, namespace)
 
-            subnet = namespace["vnet"] + '/subnets/' + subnet
+            subnet = namespace.vnet + '/subnets/' + subnet
             setattr(namespace, key, subnet)
 
         parts = parse_resource_id(subnet)
@@ -143,6 +141,7 @@ def dyn_validate_subnet(key):
 
 def dyn_validate_cidr_ranges():
     def _validate_cidr_ranges(cmd, namespace):
+        ERROR_KEY = "CIDR Range"
         vnet = namespace.vnet
         master_subnet = namespace.master_subnet
         worker_subnet = namespace.worker_subnet
@@ -210,15 +209,14 @@ def dyn_validate_cidr_ranges():
             key = item[0]
             cidr = item[1]
             if not cidr.overlaps(ipv4_zero):
-                error = f"{key} -- CIDR {cidr} is not valid as it does not overlap with {ipv4_zero}"
-                addresses.append(error)
+                row = [ERROR_KEY, key, f"{cidr} is not valid as it does not overlap with {ipv4_zero}"]
+                addresses.append(row)
             for item2 in cidr_array.items():
-                key = item2[0]
                 compare = item2[1]
                 if cidr is not compare:
                     if cidr.overlaps(compare):
-                        error = f"{key} -- CIDR {cidr} is not valid as it overlaps with {compare}"
-                        addresses.append(error)
+                        row = [ERROR_KEY, key, f"{cidr} is not valid as it overlaps with {compare}"]
+                        addresses.append(row)
 
         return addresses
 

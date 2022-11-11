@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the Apache License 2.0.
 
+import collections
 import random
 import os
 from base64 import b64decode
@@ -157,7 +158,8 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                                                 service_cidr)
         errors = []
         for error_func in error_objects:
-            error_obj = error_func(cmd, locals())
+            namespace = collections.namedtuple("Namespace", locals().keys())(*locals().values())
+            error_obj = error_func(cmd, namespace)
             if error_obj != []:
                 for err in error_obj:
                     errors.append(err)
