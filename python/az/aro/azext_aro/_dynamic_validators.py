@@ -52,11 +52,12 @@ def validate_resource(client, key, resource, actions):
 
     return errors
 
+
 def get_subnet(client, subnet, subnet_parts):
     try:
-            subnet_obj = client.subnets.get(subnet_parts['resource_group'],
-                                                           subnet_parts['name'],
-                                                           subnet_parts['child_name_1'])
+        subnet_obj = client.subnets.get(subnet_parts['resource_group'],
+                                        subnet_parts['name'],
+                                        subnet_parts['child_name_1'])
     except Exception as err:
         if isinstance(err, ResourceNotFoundError):
             raise InvalidArgumentValueError(
@@ -65,6 +66,7 @@ def get_subnet(client, subnet, subnet_parts):
             f"Unexpected error when getting subnet '{subnet}': {str(err)}") from err
 
     return subnet_obj
+
 
 def dyn_validate_vnet(key):
     def _validate_vnet(cmd, namespace):
