@@ -884,6 +884,7 @@ func (g *generator) rpServiceKeyvaultDynamic() *arm.Resource {
 		Type:       "Microsoft.KeyVault/vaults/accessPolicies",
 		APIVersion: azureclient.APIVersion("Microsoft.KeyVault/vaults/accessPolicies"),
 		DependsOn:  []string{"[concat(parameters('keyvaultPrefix'), '" + env.ServiceKeyvaultSuffix + "')]"},
+		Condition:  "[not(startsWith(toLower(replace(resourceGroup().location, ' ', '')), 'usgov'))]",
 		Resource:   vaultAccessPolicies,
 	}
 }
