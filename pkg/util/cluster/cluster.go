@@ -140,8 +140,11 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 }
 
 func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string) error {
-	_, err := c.openshiftclustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
+	clusterGet, err := c.openshiftclustersv20220904.Get(ctx, vnetResourceGroup, clusterName)
 	if err == nil {
+		if clusterGet.ProvisioningState == mgmtredhatopenshift20220904.Failed {
+			return fmt.Errorf("cluster exists and is in failed provisioning state, please delete and retry")
+		}
 		c.log.Print("cluster already exists, skipping create")
 		return nil
 	}
