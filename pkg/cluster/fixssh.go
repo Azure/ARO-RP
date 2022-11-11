@@ -36,11 +36,13 @@ func (m *manager) fixSSH(ctx context.Context) error {
 	lb, err := m.checkAndUpdateLB(ctx, resourceGroup, lbName)
 	if err != nil {
 		m.log.Warnf("Failed checking and Updating Load Balancer with err %s", err)
+		return err
 	}
 
 	err = m.checkandUpdateNIC(ctx, resourceGroup, infraID, lb)
 	if err != nil {
 		m.log.Warnf("Failed checking and Updating Network Interface with err %s", err)
+		return err
 	}
 	return nil
 }
