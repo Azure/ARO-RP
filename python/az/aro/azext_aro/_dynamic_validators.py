@@ -3,7 +3,6 @@
 
 import ipaddress
 import re
-import collections
 from itertools import tee
 
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
@@ -53,6 +52,19 @@ def validate_resource(client, key, resource, actions):
 
     return errors
 
+def get_subnet(client, subnet, subnet_parts):
+    try:
+            subnet_obj = client.subnets.get(subnet_parts['resource_group'],
+                                                           subnet_parts['name'],
+                                                           subnet_parts['child_name_1'])
+    except Exception as err:
+        if isinstance(err, ResourceNotFoundError):
+            raise InvalidArgumentValueError(
+                f"Invalid -- subnet, error when getting '{subnet}': {str(err)}") from err
+        raise CLIInternalError(
+            f"Unexpected error when getting subnet '{subnet}': {str(err)}") from err
+
+    return subnet_obj
 
 def dyn_validate_vnet(key):
     def _validate_vnet(cmd, namespace):
@@ -114,9 +126,6 @@ def dyn_validate_subnet(key):
         auth_client = get_mgmt_service_client(
             cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION, api_version="2015-07-01")
 
-        subnet_obj = None
-        route_table_obj = None
-
         try:
             subnet_obj = network_client.subnets.get(parts['resource_group'],
                                                     parts['name'],
@@ -142,13 +151,11 @@ def dyn_validate_subnet(key):
 def dyn_validate_cidr_ranges():
     def _validate_cidr_ranges(cmd, namespace):
         ERROR_KEY = "CIDR Range"
-        vnet = namespace.vnet
         master_subnet = namespace.master_subnet
         worker_subnet = namespace.worker_subnet
         pod_cidr = namespace.pod_cidr
         service_cidr = namespace.service_cidr
 
-        vnet_parts = parse_resource_id(vnet)
         worker_parts = parse_resource_id(worker_subnet)
         master_parts = parse_resource_id(master_subnet)
 
@@ -167,16 +174,7 @@ def dyn_validate_cidr_ranges():
         network_client = get_mgmt_service_client(
             cmd.cli_ctx, ResourceType.MGMT_NETWORK)
 
-        try:
-            worker_subnet_obj = network_client.subnets.get(vnet_parts['resource_group'],
-                                                           vnet_parts['name'],
-                                                           worker_parts['child_name_1'])
-        except Exception as err:
-            if isinstance(err, ResourceNotFoundError):
-                raise InvalidArgumentValueError(
-                    f"Invalid -- worker_subnet, error when getting '{worker_subnet}': {str(err)}") from err
-            raise CLIInternalError(
-                f"Unexpected error when getting subnet '{worker_subnet}': {str(err)}") from err
+        worker_subnet_obj = get_subnet(network_client, worker_subnet, worker_parts)
 
         if worker_subnet_obj.address_prefix is None:
             for address in worker_subnet_obj.address_prefixes:
@@ -184,16 +182,7 @@ def dyn_validate_cidr_ranges():
         else:
             cidr_array["Worker Subnet CIDR"] = ipaddress.IPv4Network(worker_subnet_obj.address_prefix)
 
-        try:
-            master_subnet_obj = network_client.subnets.get(vnet_parts['resource_group'],
-                                                           vnet_parts['name'],
-                                                           master_parts['child_name_1'])
-        except Exception as err:
-            if isinstance(err, ResourceNotFoundError):
-                raise InvalidArgumentValueError(
-                    f"Invalid -- master_subnet, error when getting '{master_subnet}': {str(err)}") from err
-            raise CLIInternalError(
-                f"Unexpected error when getting subnet '{master_subnet}': {str(err)}") from err
+        master_subnet_obj = get_subnet(network_client, master_subnet, master_parts)
 
         if master_subnet_obj.address_prefix is None:
             for address in master_subnet_obj.address_prefixes:
@@ -209,14 +198,12 @@ def dyn_validate_cidr_ranges():
             key = item[0]
             cidr = item[1]
             if not cidr.overlaps(ipv4_zero):
-                row = [ERROR_KEY, key, f"{cidr} is not valid as it does not overlap with {ipv4_zero}"]
-                addresses.append(row)
+                addresses.append([ERROR_KEY, key, f"{cidr} is not valid as it does not overlap with {ipv4_zero}"])
             for item2 in cidr_array.items():
                 compare = item2[1]
                 if cidr is not compare:
                     if cidr.overlaps(compare):
-                        row = [ERROR_KEY, key, f"{cidr} is not valid as it overlaps with {compare}"]
-                        addresses.append(row)
+                        addresses.append([ERROR_KEY, key, f"{cidr} is not valid as it overlaps with {compare}"])
 
         return addresses
 

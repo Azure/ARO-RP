@@ -121,6 +121,7 @@ def test_validate_cidr(
         with pytest.raises(expected_exception):
             validate_cidr_fn(cmd_mock, namespace_mock)
 
+
 test_validate_subnets_data = [
     (
         "should not return missing permission when actions are permitted",
@@ -200,7 +201,7 @@ def test_validate_subnets(
     # Test cases parameters:
     test_description, cmd_mock, namespace_mock, network_client_mock, auth_client_mock, parse_resource_id_mock_return_value, is_valid_resource_id_mock_return_value, expected_missing_perms, expected_exception
 ):
-    is_valid_resource_id_mock = is_valid_resource_id_mock_return_value
+    is_valid_resource_id_mock.return_value = is_valid_resource_id_mock_return_value
     parse_resource_id_mock.return_value = parse_resource_id_mock_return_value
     get_mgmt_service_client_mock.side_effect = [network_client_mock, auth_client_mock]
 
@@ -218,6 +219,7 @@ def test_validate_subnets(
     else:
         with pytest.raises(expected_exception):
             validate_subnet_fn(cmd_mock, namespace_mock)
+
 
 test_validate_vnets_data = [
     (
@@ -298,7 +300,7 @@ def test_validate_vnets(
     # Test cases parameters:
     test_description, cmd_mock, namespace_mock, network_client_mock, auth_client_mock, parse_resource_id_mock_return_value, is_valid_resource_id_mock_return_value, expected_missing_perms, expected_exception
 ):
-    is_valid_resource_id_mock = is_valid_resource_id_mock_return_value
+    is_valid_resource_id_mock.return_value = is_valid_resource_id_mock_return_value
     parse_resource_id_mock.return_value = parse_resource_id_mock_return_value
     get_mgmt_service_client_mock.side_effect = [network_client_mock, auth_client_mock]
 
