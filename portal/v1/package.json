@@ -4,7 +4,7 @@
     "description": "",
     "private": true,
     "scripts": {
-        "build": "webpack --config webpack.prod.js"
+        "build": "webpack --config webpack.prod.js && rm -rf ../../pkg/portal/assets/v1/build && mv -f build ../../pkg/portal/assets/v1/"
     },
     "keywords": [],
     "author": "Microsoft",

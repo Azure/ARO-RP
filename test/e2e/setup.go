@@ -76,7 +76,7 @@ var (
 	clusterName       string
 	clients           *clientSet
 
-	dockerSucceeded bool
+	dockerSucceeded bool = true
 )
 
 func skipIfNotInDevelopmentEnv() {
@@ -400,7 +400,15 @@ func setup(ctx context.Context) error {
 		return err
 	}
 
-	setupSelenium(ctx)
+	cmd := exec.CommandContext(ctx, "which", "docker")
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		dockerSucceeded = false
+	}
+
+	if dockerSucceeded {
+		setupSelenium(ctx)
+	}
 
 	return nil
 }
@@ -436,8 +444,10 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
 
-	if err := tearDownSelenium(context.Background()); err != nil {
-		log.Printf(err.Error())
+	if dockerSucceeded {
+		if err := tearDownSelenium(context.Background()); err != nil {
+			log.Printf(err.Error())
+		}
 	}
 
 	if err := done(context.Background()); err != nil {
