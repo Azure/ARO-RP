@@ -23,6 +23,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
+	templatesv1 "github.com/open-policy-agent/frameworks/constraint/pkg/apis/templates/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -38,6 +39,7 @@ type deployer struct {
 	dh            dynamichelper.Interface
 	fs            fs.FS
 	directory     string
+	unstructured  bool
 }
 
 func NewDeployer(kubernetescli kubernetes.Interface, dh dynamichelper.Interface, fs fs.FS, directory string) Deployer {
@@ -75,6 +77,7 @@ func (depl *deployer) Template(data interface{}, fsys fs.FS) ([]kruntime.Object,
 			if err != nil {
 				return nil, err
 			}
+			depl.unstructured = true
 			results = append(results, uns)
 		} else {
 			results = append(results, obj)
@@ -92,8 +95,7 @@ func (depl *deployer) CreateOrUpdate(ctx context.Context, cluster *arov1alpha1.C
 		return err
 	}
 
-	// this guy fails with "object does not implement the Object interfaces"
-	// how do deal with this? is it necessary?
+	// this call fails with "object does not implement the Object interfaces" if not adding templatesv1beta1 in scheme.go
 	// err = dynamichelper.SetControllerReferences(resources, cluster)
 	// if err != nil {
 	// 	logrus.Printf("\x1b[%dm SetControllerReferences failed %v\x1b[0m", 31, err)
@@ -126,6 +128,14 @@ func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
 				errs = append(errs, err)
 			}
 		}
+		if ct, ok := obj.(*templatesv1.ConstraintTemplate); ok {
+			logrus.Printf("\x1b[%dm guardrails:: deployer removing ConstraintTemplate %s ns %s\x1b[0m", 31, ct.Name, ct.Namespace)
+			err := depl.dh.EnsureDeleted(ctx, "ConstraintTemplate", ct.Namespace, ct.Name)
+			// Don't error out because then we might delete some resources and not others
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
 		if uns, ok := obj.(dynamichelper.UnstructuredObj); ok {
 			logrus.Printf("\x1b[%dm guardrails:: deployer removing UnstructuredObj kind %s name %s\x1b[0m", 31, uns.GroupVersionKind().GroupKind().String(), uns.GetName())
 			err := depl.dh.EnsureDeleted(ctx, uns.GroupVersionKind().GroupKind().String(), uns.GetNamespace(), uns.GetName())
@@ -148,5 +158,8 @@ func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
 }
 
 func (depl *deployer) IsReady(ctx context.Context, namespace, deploymentName string) (bool, error) {
-	return ready.CheckDeploymentIsReady(ctx, depl.kubernetescli.AppsV1().Deployments(namespace), deploymentName)()
+	if !depl.unstructured {
+		return ready.CheckDeploymentIsReady(ctx, depl.kubernetescli.AppsV1().Deployments(namespace), deploymentName)()
+	}
+	return true, nil
 }

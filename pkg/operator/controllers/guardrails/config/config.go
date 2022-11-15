@@ -17,4 +17,5 @@ type GuardRailsDeploymentConfig struct {
 }
 
 type GuardRailsPolicyConfig struct {
+	Enforcement string
 }
