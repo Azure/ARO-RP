@@ -76,7 +76,7 @@ var (
 	clusterName       string
 	clients           *clientSet
 
-	dockerSucceeded bool = true
+	dockerSucceeded bool
 )
 
 func skipIfNotInDevelopmentEnv() {
@@ -89,7 +89,7 @@ func skipIfDockerNotWorking() {
 	// docker cmds will fail in INT until we figure out a solution since
 	// it is running from docker already
 	if !dockerSucceeded {
-		Skip("skipping portal tests as docker is not available")
+		Skip("skipping admin portal tests as docker is not available")
 	}
 }
 
@@ -402,8 +402,8 @@ func setup(ctx context.Context) error {
 
 	cmd := exec.CommandContext(ctx, "which", "docker")
 	_, err = cmd.CombinedOutput()
-	if err != nil {
-		dockerSucceeded = false
+	if err == nil {
+		dockerSucceeded = true
 	}
 
 	if dockerSucceeded {
