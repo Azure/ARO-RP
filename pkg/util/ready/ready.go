@@ -170,22 +170,6 @@ func StatefulSetIsReady(s *appsv1.StatefulSet) bool {
 		s.Generation == s.Status.ObservedGeneration
 }
 
-// CheckStatefulSetIsReady returns a function which polls a StatefulSet and
-// returns its readiness
-func CheckStatefulSetIsReady(ctx context.Context, cli appsv1client.StatefulSetInterface, name string) func() (bool, error) {
-	return func() (bool, error) {
-		s, err := cli.Get(ctx, name, metav1.GetOptions{})
-		switch {
-		case kerrors.IsNotFound(err):
-			return false, nil
-		case err != nil:
-			return false, err
-		}
-
-		return StatefulSetIsReady(s), nil
-	}
-}
-
 // MachineConfigPoolIsReady returns true if a MachineConfigPool is considered
 // ready
 func MachineConfigPoolIsReady(s *mcv1.MachineConfigPool) bool {
