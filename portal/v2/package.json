@@ -19,7 +19,7 @@
   },
   "scripts": {
     "start": "HTTPS=true react-app-rewired start",
-    "build": "react-app-rewired build && rm -rf ../../pkg/portal/assets/v2/build && mv -f build ../../pkg/portal/assets/v2/",
+    "build": "BUILD_PATH=../../pkg/portal/assets/v2/build react-app-rewired build",
     "test": "react-app-rewired test",
     "eject": "react-scripts eject",
     "lint": "./node_modules/eslint/bin/eslint.js --format 'node_modules/eslint-friendly-formatter' ./src --ext .tsx --ext .js"
