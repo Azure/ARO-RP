@@ -4,6 +4,9 @@ import 'bootstrap/js/dist/util';
 import 'bootstrap/js/dist/dropdown';
 import 'bootstrap/js/dist/alert';
 
+import "./select/select.css"
+import "./select/select.js"
+
 jQuery.extend({
     redirect: function (location, args) {
         var form = $("<form method='POST' style='display: none;'></form>");

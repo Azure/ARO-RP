@@ -1,0 +1,24 @@
+.select-search {
+    position: relative;
+    z-index: 2;
+}
+
+.select-search>select {
+    visibility: hidden;
+    width: 100%;
+    position: absolute;
+    z-index: -1;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    max-height: 60vh;
+}
+
+.select-search>select>option {
+    padding: 10px;
+}
+
+.select-search>select>option:hover {
+    color: #ffffff;
+    background: #0d6efd;
+}
