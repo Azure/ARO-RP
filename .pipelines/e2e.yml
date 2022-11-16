@@ -19,71 +19,11 @@ jobs:
   steps:
   - template: ./templates/template-checkout.yml
 
-  - template: ./templates/template-az-cli-login.yml
-    parameters:
-      azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
-
-  - script: |
-      az account set -s $AZURE_SUBSCRIPTION_ID
-      export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
-      make secrets
-      . secrets/env
-      echo "##vso[task.setvariable variable=RP_MODE]$RP_MODE"
-    displayName: 🔑 Downloading certificates and secrets from storage account
-    name: setEnv
-
-  - template: ./templates/template-push-images-to-acr.yml
-    parameters:
-      rpImageACR: $(RP_IMAGE_ACR)
-      buildCommand: publish-image-aro
-
-  - script: |
-      set -e
-      set -o pipefail
-
-      . secrets/env
-      export HIVE_KUBE_CONFIG_PATH="secrets/e2e-aks-kubeconfig"
-
-      az account set -s $AZURE_SUBSCRIPTION_ID
-
-      set -x
-
-      export PRIVATE_CLUSTER=true
-
-      . ./hack/e2e/run-rp-and-e2e.sh
-      trap 'set +e; kill_rp; kill_portal; kill_vpn; clean_e2e_db' EXIT
-
-      run_vpn
-      deploy_e2e_db
-
-      run_portal
-      validate_portal_running
-
-      run_rp
-      validate_rp_running
-
-      register_sub
-
-      export CI=true
-      make test-e2e
+  - script: exit 1
     displayName: Execute Tests
 
   - task: PublishTestResults@2
     displayName: 📊 Publish tests results
     inputs:
-      testResultsFiles: $(System.DefaultWorkingDirectory)/**/e2e-report.xml
+      testResultsFiles: $(System.DefaultWorkingDirectory)/**/does-not-work-as-expected.xml
     condition: succeededOrFailed()
-
-  - task: CopyFiles@2
-    condition: succeededOrFailed()
-    inputs:
-      contents: $(Build.SourcesDirectory)/*.png
-      targetFolder: $(Build.ArtifactStagingDirectory)
-
-  - task: PublishBuildArtifacts@1
-    condition: succeededOrFailed()
-    inputs:
-      pathToPublish: $(Build.ArtifactStagingDirectory)
-      artifactName: Screenshots
-
-  - template: ./templates/template-az-cli-logout.yml

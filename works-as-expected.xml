@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+	<testsuite tests="20" failures="2" time="0.000000" name="github.com/Azure/ARO-RP/pkg/api">
+		<properties>
+			<property name="go.version" value="go1.18.4 darwin/arm64"></property>
+		</properties>
+		<testcase classname="github.com/Azure/ARO-RP/pkg/api" name="TestIsTerminal/Success_is_Terminal" time="0.000000">
+			<failure message="Failed" type="">=== RUN   TestIsTerminal/Success_is_Terminal&#xA;    openshiftcluster_test.go:47: Succeeded isTerminal wants != false&#xA;    --- FAIL: TestIsTerminal/Success_is_Terminal (0.00s)&#xA;</failure>
+		</testcase>
+		<testcase classname="github.com/Azure/ARO-RP/pkg/api" name="TestIsTerminal" time="0.000000">
+			<failure message="Failed" type="">=== RUN   TestIsTerminal&#xA;--- FAIL: TestIsTerminal (0.00s)&#xA;</failure>
+		</testcase>
+		<testcase classname="github.com/Azure/ARO-RP/pkg/api" name="TestSetDefaults/no_defaults_needed" time="0.000000"></testcase>
+		<testcase classname="github.com/Azure/ARO-RP/pkg/api" name="TestSetDefaults" time="0.000000"></testcase>
+	</testsuite>
+</testsuites>
