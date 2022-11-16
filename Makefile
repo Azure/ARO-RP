@@ -122,7 +122,6 @@ run-portal:
 
 build-portal:
 	cd portal/v1 && npm install && npm run build && cd ../v2 && npm install && npm run build
-	make generate
 
 pyenv:
 	python3 -m venv pyenv
