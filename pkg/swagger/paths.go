@@ -51,17 +51,20 @@ func (g *generator) populateParameters(n int, typ, friendlyName string) (s []int
 	}
 
 	if n > 2 {
-		temp := friendlyName
-		if contains(proxyResources, temp) {
-			temp = "OpenShift cluster"
-		}
-		s = append(s, Parameter{
+		resourceNameParameter := Parameter{
 			Name:        "resourceName",
 			In:          "path",
-			Description: "The name of the " + temp + " resource.",
+			Description: "The name of the " + friendlyName + " resource.",
 			Required:    true,
 			Type:        "string",
-		})
+		}
+		if contains(proxyResources, friendlyName) {
+			resourceNameParameter.Description = "The name of the OpenShift cluster resource."
+			resourceNameParameter.Pattern = resourceNamePattern
+			resourceNameParameter.MinLength = 1
+			resourceNameParameter.MaxLength = 63
+		}
+		s = append(s, resourceNameParameter)
 	}
 
 	// gross. this is really hacky :/
@@ -75,6 +78,9 @@ func (g *generator) populateParameters(n int, typ, friendlyName string) (s []int
 			Description: "The name of the " + friendlyName + " resource.",
 			Required:    true,
 			Type:        "string",
+			Pattern:     resourceNamePattern,
+			MinLength:   1,
+			MaxLength:   63,
 		})
 	}
 

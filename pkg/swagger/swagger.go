@@ -25,6 +25,9 @@ var proxyResources = []string{
 	"OpenShiftVersion",
 }
 
+// resourceNamePattern is a regex pattern to validate resource names
+const resourceNamePattern = `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`
+
 func Run(api, outputDir string) error {
 	g, err := New(api)
 	if err != nil {
