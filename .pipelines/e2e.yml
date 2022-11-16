@@ -25,5 +25,5 @@ jobs:
   - task: PublishTestResults@2
     displayName: 📊 Publish tests results
     inputs:
-      testResultsFiles: $(System.DefaultWorkingDirectory)/**/does-not-work-as-expected.xml
+      testResultsFiles: $(System.DefaultWorkingDirectory)/**/works-as-expected.xml
     condition: succeededOrFailed()
