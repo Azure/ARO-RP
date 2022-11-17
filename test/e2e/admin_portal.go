@@ -134,6 +134,71 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		}
 	})
 
+	It("Should be able to populate feature flag panel correctly", func() {
+		const (
+			CLUSTER_FEATURE_HEADINGS = 24
+			featureFlagDivSelector   = "div[name='Feature Flags']"
+		)
+
+		err := wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, featureFlagDivSelector))
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		cluster, err := wd.FindElement(selenium.ByCSSSelector, featureFlagDivSelector)
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		err = cluster.Click()
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailCell"), 2*time.Minute)
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		featureFlagPanelSpans, err := wd.FindElements(selenium.ByID, "ClusterDetailCell")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		Expect(len(featureFlagPanelSpans)).To(Equal(CLUSTER_FEATURE_HEADINGS * 3))
+
+		featureFlagPanelFields := featureFlagPanelSpans[0 : CLUSTER_FEATURE_HEADINGS-1]
+		featureFlagPanelColons := featureFlagPanelSpans[CLUSTER_FEATURE_HEADINGS : CLUSTER_FEATURE_HEADINGS*2-1]
+		featureFlagPanelValues := featureFlagPanelSpans[CLUSTER_FEATURE_HEADINGS*2 : len(featureFlagPanelSpans)-1]
+
+		for _, featureFlagPanelField := range featureFlagPanelFields {
+			featureFlagPanelText, err := featureFlagPanelField.Text()
+			if err != nil {
+				SaveScreenshotAndExit(wd, err)
+			}
+
+			Expect(featureFlagPanelText).To(Not(Equal("")))
+		}
+
+		for _, featureFlagPanelField := range featureFlagPanelColons {
+			featureFlagPanelText, err := featureFlagPanelField.Text()
+			if err != nil {
+				SaveScreenshotAndExit(wd, err)
+			}
+
+			Expect(featureFlagPanelText).To(Equal(":"))
+		}
+
+		for _, featureFlagPanelField := range featureFlagPanelValues {
+			featureFlagPanelText, err := featureFlagPanelField.Text()
+			if err != nil {
+				SaveScreenshotAndExit(wd, err)
+			}
+
+			Expect(featureFlagPanelText).To(Not(Equal("")))
+		}
+	})
+
 	It("Should be able to copy cluster resource id", func() {
 		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "button[aria-label='Copy Resource ID']"))
 

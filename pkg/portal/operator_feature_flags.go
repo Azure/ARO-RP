@@ -9,8 +9,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/gorilla/mux"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 func (p *portal) operatorFeatureFlags(w http.ResponseWriter, r *http.Request) {

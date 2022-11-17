@@ -1,4 +1,8 @@
-import { IPanelStyles, Panel, PanelType } from "@fluentui/react/lib/Panel"
+import {
+  IPanelStyles,
+  Panel,
+  PanelType,
+} from "@fluentui/react/lib/Panel"
 import { useBoolean } from "@fluentui/react-hooks"
 import { useState, useEffect, useRef, MutableRefObject, ReactElement } from "react"
 import {
@@ -9,14 +13,13 @@ import {
   Separator,
   IStackStyles,
   Icon,
-  IconButton,
   IIconStyles,
 } from "@fluentui/react"
 import { AxiosResponse } from "axios"
-import { fetchClusterInfo } from "./Request"
+import { FetchClusterInfo, FetchFeatureFlagsInfo } from "./Request"
 import { ICluster, headerStyles } from "./App"
-import { Nav, INavLink, INavStyles } from "@fluentui/react/lib/Nav"
-import { ClusterDetailComponent, MemoisedClusterDetailListComponent } from "./ClusterDetailList"
+import { Nav, INavLink, INavLinkGroup, INavStyles } from "@fluentui/react/lib/Nav"
+import { ClusterDetailComponent } from "./ClusterDetailList"
 import React from "react"
 
 const navStyles: Partial<INavStyles> = {
@@ -33,6 +36,47 @@ const navStyles: Partial<INavStyles> = {
   },
 }
 
+const navLinkGroups: INavLinkGroup[] = [
+  {
+    links: [
+      {
+        name: "Overview",
+        key: "overview",
+        url: "#overview",
+        icon: "ThisPC",
+      },
+    ],
+  },
+  {
+    links: [
+      {
+        name: "Feature Flags",
+        key: "featureflags",
+        url: "#featureflags",
+        icon: "Flag",
+      },
+    ],
+  },
+  /*  {
+    links: [
+      {
+        name: "Nodes",
+        key: "nodes",
+        url: "#nodes",
+        icon: "BuildQueue",
+      },
+    ],
+  }, */
+]
+
+const customPanelStyle: Partial<IPanelStyles> = {
+  root: { top: "40px", left: "225px" },
+  content: { paddingLeft: 30, paddingRight: 5 },
+  navigation: {
+    justifyContent: "flex-start",
+  },
+}
+
 const headerStyle: Partial<IStackStyles> = {
   root: {
     alignSelf: "flex-start",
@@ -40,15 +84,6 @@ const headerStyle: Partial<IStackStyles> = {
     height: 48,
     paddingLeft: 30,
     marginBottom: 15,
-  },
-}
-
-const doubleChevronIconStyle: Partial<IStackStyles> = {
-  root: {
-    marginLeft: -30,
-    marginTop: -15,
-    height: "100%",
-    width: "100%",
   },
 }
 
@@ -64,38 +99,23 @@ const headerIconStyles: Partial<IIconStyles> = {
   },
 }
 
-export const overviewKey = "overview"
-export const nodesKey = "nodes"
-export const machinesKey = "machines"
-export const machineSetsKey = "machinesets"
-export const apiStatisticsKey = "apistatistics"
-export const kcmStatisticsKey = "kcmstatistics"
-export const dnsStatisticsKey = "dnsstatistics"
-export const ingressStatisticsKey = "ingressstatistics"
-export const clusterOperatorsKey = "clusteroperators"
-
 const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
 
 export function ClusterDetailPanel(props: {
   csrfToken: MutableRefObject<string>
   currentCluster: ICluster | null
-  onClose: any
-  loaded: string
+  onClose: Function
+  csrfTokenAvailable: string
 }) {
   const [data, setData] = useState<any>([])
+  const [featureData, setFeatureData] = useState<any>([])
+  const [showData, setShowData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
   const state = useRef<ClusterDetailComponent>(null)
   const [fetching, setFetching] = useState("")
   const [isOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false) // panel controls
   const [dataLoaded, setDataLoaded] = useState<boolean>(false)
   const [detailPanelVisible, setdetailPanelVisible] = useState<string>("Overview")
-  const [customPanelStyle, setcustomPanelStyle] = useState<Partial<IPanelStyles>>({
-    root: { top: "40px", left: "225px" },
-    content: { paddingLeft: 30, paddingRight: 5 },
-    navigation: {
-      justifyContent: "flex-start",
-    },
-  })
 
   const errorBar = (): any => {
     return (
@@ -109,67 +129,6 @@ export function ClusterDetailPanel(props: {
       </MessageBar>
     )
   }
-
-  const navLinkGroups = [
-    {
-      links: [
-        {
-          name: "Overview",
-          key: overviewKey,
-          url: '#overview',
-          icon: 'Info',
-        },
-        {
-          name: "Nodes",
-          key: nodesKey,
-          url: '#nodes',
-          icon: 'BranchCommit',
-        },
-        {
-          name: "Machines",
-          key: machinesKey,
-          url: '#machines',
-          icon: 'ConnectVirtualMachine',
-        },
-        {
-          name: "MachineSets",
-          key: machineSetsKey,
-          url: "#machinesets",
-          icon: "BuildQueue",
-        },
-        {
-          name: "APIStatistics",
-          key: apiStatisticsKey,
-          url: "#apistatistics",
-          icon: "BIDashboard",
-        },
-        {
-          name: "KCMStatistics",
-          key: kcmStatisticsKey,
-          url: "#kcmstatistics",
-          icon: "BIDashboard",
-        },
-        {
-          name: "DNSStatistics",
-          key: dnsStatisticsKey,
-          url: "#dnsstatistics",
-          icon: "BIDashboard",
-        },
-        {
-          name: "IngressStatistics",
-          key: ingressStatisticsKey,
-          url: "#ingressstatistics",
-          icon: "BIDashboard",
-        },
-        {
-          name: 'ClusterOperators',
-          key: clusterOperatorsKey,
-          url: '#clusteroperators',
-          icon: 'Shapes',
-        },
-      ],
-    },
-  ]
 
   // updateData - updates the state of the component
   // can be used if we want a refresh button.
@@ -194,11 +153,12 @@ export function ClusterDetailPanel(props: {
     if (props.currentCluster == null) {
       return
     }
-    const resourceID = props.currentCluster.resourceId
+    var resourceID = props.currentCluster.resourceId
 
     const onData = (result: AxiosResponse | null) => {
       if (result?.status === 200) {
         updateData(result.data)
+        setShowData(result.data)
         setDataLoaded(true)
       } else {
         setError(result)
@@ -206,19 +166,18 @@ export function ClusterDetailPanel(props: {
       setFetching(resourceID)
     }
 
-    if (fetching === "" && props.loaded === "DONE" && resourceID != "") {
+    if (fetching === "" && props.csrfTokenAvailable === "DONE" && resourceID != "") {
       setFetching("FETCHING")
       setError(null)
-      fetchClusterInfo(props.currentCluster).then(onData)
+      FetchClusterInfo(props.currentCluster).then(onData) // TODO: fetchClusterInfo accepts IClusterDetail
     }
   }, [data, fetching, setFetching])
-
 
   useEffect(() => {
     if (props.currentCluster == null) {
       return
     }
-    let resourceID = props.currentCluster.resourceId
+    var resourceID = props.currentCluster.resourceId
 
     const onData = (result: AxiosResponse | null) => {
       if (result?.status === 200) {
@@ -230,7 +189,7 @@ export function ClusterDetailPanel(props: {
       setFetching(resourceID)
     }
 
-    if (fetching === "" && props.loaded === "DONE" && resourceID != "") {
+    if (fetching === "" && props.csrfTokenAvailable === "DONE" && resourceID != "") {
       setFetching("FETCHING")
       setError(null)
       FetchFeatureFlagsInfo(props.currentCluster).then(onData)
@@ -242,7 +201,7 @@ export function ClusterDetailPanel(props: {
       setDataLoaded(false)
       return
     }
-    const resourceID = props.currentCluster.resourceId
+    var resourceID = props.currentCluster.resourceId
 
     if (resourceID != "") {
       if (resourceID == fetching) {
@@ -260,44 +219,16 @@ export function ClusterDetailPanel(props: {
   function _onLinkClick(ev?: React.MouseEvent<HTMLElement>, item?: INavLink) {
     if (item && item.name !== "") {
       setdetailPanelVisible(item.name)
+      setShowData(()=>{
+        return item.name == 'Overview' ? data : featureData
+      }) 
     }
   }
 
-  // const [doubleChevronIconProp, setdoubleChevronIconProp] = useState({ iconName: "doublechevronleft"})
-  const doubleChevronIconProp = useRef({ iconName: "doublechevronleft" })
-  const _onClickDoubleChevronIcon = () => {
-    let customPanelStyleRootLeft
-    if (doubleChevronIconProp.current.iconName == "doublechevronright") {
-      customPanelStyleRootLeft = "225px"
-      // setdoubleChevronIconProp({ iconName: "doublechevronleft"})
-      doubleChevronIconProp.current = { iconName: "doublechevronleft" }
-    } else {
-      customPanelStyleRootLeft = "0px"
-      // setdoubleChevronIconProp({ iconName: "doublechevronright"})
-      doubleChevronIconProp.current = { iconName: "doublechevronright" }
-    }
-
-    setcustomPanelStyle({
-      root: { top: "40px", left: customPanelStyleRootLeft },
-      content: { paddingLeft: 30, paddingRight: 5 },
-      navigation: {
-        justifyContent: "flex-start",
-      },
-    })
-  }
-
-  const onRenderHeader = (): ReactElement => {
+  const onRenderHeader = (
+  ): ReactElement => {
     return (
       <>
-        <Stack styles={headerStyle} horizontal>
-          <Stack.Item styles={doubleChevronIconStyle}>
-            <IconButton
-              onClick={_onClickDoubleChevronIcon}
-              iconProps={doubleChevronIconProp.current}
-            />
-          </Stack.Item>
-        </Stack>
-
         <Stack styles={headerStyle} horizontal>
           <Stack.Item>
             <Icon styles={headerIconStyles} iconName="openshift-svg"></Icon>
@@ -313,7 +244,6 @@ export function ClusterDetailPanel(props: {
 
   return (
     <Panel
-      id="ClusterDetailPanel"
       isOpen={isOpen}
       type={PanelType.custom}
       onDismiss={_dismissPanel}
@@ -334,8 +264,8 @@ export function ClusterDetailPanel(props: {
           </Stack.Item>
           <Separator vertical />
           <Stack.Item grow>
-            <MemoisedClusterDetailListComponent
-              item={data}
+            <ClusterDetailComponent
+              item={showData}
               cluster={props.currentCluster}
               isDataLoaded={dataLoaded}
               detailPanelVisible={detailPanelVisible}
@@ -346,3 +276,356 @@ export function ClusterDetailPanel(props: {
     </Panel>
   )
 }
+
+
+
+
+// import { IPanelStyles, Panel, PanelType } from "@fluentui/react/lib/Panel"
+// import { useBoolean } from "@fluentui/react-hooks"
+// import { useState, useEffect, useRef, MutableRefObject, ReactElement } from "react"
+// import {
+//   IMessageBarStyles,
+//   MessageBar,
+//   MessageBarType,
+//   Stack,
+//   Separator,
+//   IStackStyles,
+//   Icon,
+//   IconButton,
+//   IIconStyles,
+// } from "@fluentui/react"
+// import { AxiosResponse } from "axios"
+// import { fetchClusterInfo } from "./Request"
+// import { ICluster, headerStyles } from "./App"
+// import { Nav, INavLink, INavStyles } from "@fluentui/react/lib/Nav"
+// import { ClusterDetailComponent, MemoisedClusterDetailListComponent } from "./ClusterDetailList"
+// import React from "react"
+
+// const navStyles: Partial<INavStyles> = {
+//   root: {
+//     width: 155,
+//     paddingRight: "10px",
+//   },
+//   link: {
+//     whiteSpace: "normal",
+//     lineHeight: "inherit",
+//   },
+//   groupContent: {
+//     marginBottom: "0px",
+//   },
+// }
+
+// const headerStyle: Partial<IStackStyles> = {
+//   root: {
+//     alignSelf: "flex-start",
+//     flexGrow: 2,
+//     height: 48,
+//     paddingLeft: 30,
+//     marginBottom: 15,
+//   },
+// }
+
+// const doubleChevronIconStyle: Partial<IStackStyles> = {
+//   root: {
+//     marginLeft: -30,
+//     marginTop: -15,
+//     height: "100%",
+//     width: "100%",
+//   },
+// }
+
+// const headerIconStyles: Partial<IIconStyles> = {
+//   root: {
+//     height: "100%",
+//     width: 40,
+//     paddingTop: 4,
+//     paddingRight: 10,
+//     svg: {
+//       fill: "#e3222f",
+//     },
+//   },
+// }
+
+// export const overviewKey = "overview"
+// export const nodesKey = "nodes"
+// export const machinesKey = "machines"
+// export const machineSetsKey = "machinesets"
+// export const apiStatisticsKey = "apistatistics"
+// export const kcmStatisticsKey = "kcmstatistics"
+// export const dnsStatisticsKey = "dnsstatistics"
+// export const ingressStatisticsKey = "ingressstatistics"
+// export const clusterOperatorsKey = "clusteroperators"
+
+// const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
+
+// export function ClusterDetailPanel(props: {
+//   csrfToken: MutableRefObject<string>
+//   currentCluster: ICluster | null
+//   onClose: any
+//   loaded: string
+// }) {
+//   const [data, setData] = useState<any>([])
+//   const [error, setError] = useState<AxiosResponse | null>(null)
+//   const state = useRef<ClusterDetailComponent>(null)
+//   const [fetching, setFetching] = useState("")
+//   const [isOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false) // panel controls
+//   const [dataLoaded, setDataLoaded] = useState<boolean>(false)
+//   const [detailPanelVisible, setdetailPanelVisible] = useState<string>("Overview")
+//   const [customPanelStyle, setcustomPanelStyle] = useState<Partial<IPanelStyles>>({
+//     root: { top: "40px", left: "225px" },
+//     content: { paddingLeft: 30, paddingRight: 5 },
+//     navigation: {
+//       justifyContent: "flex-start",
+//     },
+//   })
+
+//   const errorBar = (): any => {
+//     return (
+//       <MessageBar
+//         messageBarType={MessageBarType.error}
+//         isMultiline={false}
+//         onDismiss={() => setError(null)}
+//         dismissButtonAriaLabel="Close"
+//         styles={errorBarStyles}>
+//         {error?.statusText}
+//       </MessageBar>
+//     )
+//   }
+
+//   const navLinkGroups = [
+//     {
+//       links: [
+//         {
+//           name: "Overview",
+//           key: overviewKey,
+//           url: '#overview',
+//           icon: 'Info',
+//         },
+//         {
+//           name: "Nodes",
+//           key: nodesKey,
+//           url: '#nodes',
+//           icon: 'BranchCommit',
+//         },
+//         {
+//           name: "Machines",
+//           key: machinesKey,
+//           url: '#machines',
+//           icon: 'ConnectVirtualMachine',
+//         },
+//         {
+//           name: "MachineSets",
+//           key: machineSetsKey,
+//           url: "#machinesets",
+//           icon: "BuildQueue",
+//         },
+//         {
+//           name: "APIStatistics",
+//           key: apiStatisticsKey,
+//           url: "#apistatistics",
+//           icon: "BIDashboard",
+//         },
+//         {
+//           name: "KCMStatistics",
+//           key: kcmStatisticsKey,
+//           url: "#kcmstatistics",
+//           icon: "BIDashboard",
+//         },
+//         {
+//           name: "DNSStatistics",
+//           key: dnsStatisticsKey,
+//           url: "#dnsstatistics",
+//           icon: "BIDashboard",
+//         },
+//         {
+//           name: "IngressStatistics",
+//           key: ingressStatisticsKey,
+//           url: "#ingressstatistics",
+//           icon: "BIDashboard",
+//         },
+//         {
+//           name: 'ClusterOperators',
+//           key: clusterOperatorsKey,
+//           url: '#clusteroperators',
+//           icon: 'Shapes',
+//         },
+//       ],
+//     },
+//   ]
+
+//   // updateData - updates the state of the component
+//   // can be used if we want a refresh button.
+//   // api/clusterdetail returns a single item.
+//   const updateData = (newData: any) => {
+//     setData(newData)
+//     if (state && state.current) {
+//       state.current.setState({ item: newData })
+//     }
+//   }
+
+//   const _dismissPanel = () => {
+//     dismissPanel()
+//     props.onClose() // useEffect?
+//     setData([])
+//     setFetching("")
+//     setDataLoaded(false)
+//     setError(null)
+//   }
+
+//   useEffect(() => {
+//     if (props.currentCluster == null) {
+//       return
+//     }
+//     const resourceID = props.currentCluster.resourceId
+
+//     const onData = (result: AxiosResponse | null) => {
+//       if (result?.status === 200) {
+//         updateData(result.data)
+//         setDataLoaded(true)
+//       } else {
+//         setError(result)
+//       }
+//       setFetching(resourceID)
+//     }
+
+//     if (fetching === "" && props.loaded === "DONE" && resourceID != "") {
+//       setFetching("FETCHING")
+//       setError(null)
+//       fetchClusterInfo(props.currentCluster).then(onData)
+//     }
+//   }, [data, fetching, setFetching])
+
+
+//   useEffect(() => {
+//     if (props.currentCluster == null) {
+//       return
+//     }
+//     let resourceID = props.currentCluster.resourceId
+
+//     const onData = (result: AxiosResponse | null) => {
+//       if (result?.status === 200) {
+//         setFeatureData(result.data)
+//         setDataLoaded(true)
+//       } else {
+//         setError(result)
+//       }
+//       setFetching(resourceID)
+//     }
+
+//     if (fetching === "" && props.loaded === "DONE" && resourceID != "") {
+//       setFetching("FETCHING")
+//       setError(null)
+//       FetchFeatureFlagsInfo(props.currentCluster).then(onData)
+//     }
+//   }, [data, fetching, setFetching])
+
+
+//   useEffect(() => {
+//     if (props.currentCluster == null) {
+//       setDataLoaded(false)
+//       return
+//     }
+//     const resourceID = props.currentCluster.resourceId
+
+//     if (resourceID != "") {
+//       if (resourceID == fetching) {
+//         openPanel()
+//         setDataLoaded(true)
+//       } else {
+//         setData([])
+//         setFetching("")
+//         setDataLoaded(false) // activate shimmer
+//         openPanel()
+//       }
+//     }
+//   }, [props.currentCluster?.resourceId])
+
+//   function _onLinkClick(ev?: React.MouseEvent<HTMLElement>, item?: INavLink) {
+//     if (item && item.name !== "") {
+//       setdetailPanelVisible(item.name)
+//     }
+//   }
+
+//   // const [doubleChevronIconProp, setdoubleChevronIconProp] = useState({ iconName: "doublechevronleft"})
+//   const doubleChevronIconProp = useRef({ iconName: "doublechevronleft" })
+//   const _onClickDoubleChevronIcon = () => {
+//     let customPanelStyleRootLeft
+//     if (doubleChevronIconProp.current.iconName == "doublechevronright") {
+//       customPanelStyleRootLeft = "225px"
+//       // setdoubleChevronIconProp({ iconName: "doublechevronleft"})
+//       doubleChevronIconProp.current = { iconName: "doublechevronleft" }
+//     } else {
+//       customPanelStyleRootLeft = "0px"
+//       // setdoubleChevronIconProp({ iconName: "doublechevronright"})
+//       doubleChevronIconProp.current = { iconName: "doublechevronright" }
+//     }
+
+//     setcustomPanelStyle({
+//       root: { top: "40px", left: customPanelStyleRootLeft },
+//       content: { paddingLeft: 30, paddingRight: 5 },
+//       navigation: {
+//         justifyContent: "flex-start",
+//       },
+//     })
+//   }
+
+//   const onRenderHeader = (): ReactElement => {
+//     return (
+//       <>
+//         <Stack styles={headerStyle} horizontal>
+//           <Stack.Item styles={doubleChevronIconStyle}>
+//             <IconButton
+//               onClick={_onClickDoubleChevronIcon}
+//               iconProps={doubleChevronIconProp.current}
+//             />
+//           </Stack.Item>
+//         </Stack>
+
+//         <Stack styles={headerStyle} horizontal>
+//           <Stack.Item>
+//             <Icon styles={headerIconStyles} iconName="openshift-svg"></Icon>
+//           </Stack.Item>
+//           <Stack.Item>
+//             <div className={headerStyles.titleText}>{props.currentCluster?.name}</div>
+//             <div className={headerStyles.subtitleText}>Cluster</div>
+//           </Stack.Item>
+//         </Stack>
+//       </>
+//     )
+//   }
+
+//   return (
+//     <Panel
+//       id="ClusterDetailPanel"
+//       isOpen={isOpen}
+//       type={PanelType.custom}
+//       onDismiss={_dismissPanel}
+//       isBlocking={false}
+//       styles={customPanelStyle}
+//       closeButtonAriaLabel="Close"
+//       onRenderHeader={onRenderHeader}>
+//       <Stack>
+//         <Stack.Item grow>{error && errorBar()}</Stack.Item>
+//         <Stack horizontal>
+//           <Stack.Item>
+//             <Nav
+//               onLinkClick={_onLinkClick}
+//               ariaLabel="Select a tab to view"
+//               styles={navStyles}
+//               groups={navLinkGroups}
+//             />
+//           </Stack.Item>
+//           <Separator vertical />
+//           <Stack.Item grow>
+//             <MemoisedClusterDetailListComponent
+//               item={data}
+//               cluster={props.currentCluster}
+//               isDataLoaded={dataLoaded}
+//               detailPanelVisible={detailPanelVisible}
+//             />
+//           </Stack.Item>
+//         </Stack>
+//       </Stack>
+//     </Panel>
+//   )
+// }

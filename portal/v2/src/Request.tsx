@@ -21,7 +21,7 @@ export const fetchClusters = async (): Promise<AxiosResponse | null> => {
   }
 }
 
-export const fetchClusterInfo = async (cluster: ICluster): Promise<AxiosResponse | null> => {
+export const FetchClusterInfo = async (cluster: ICluster): Promise<AxiosResponse | null> => {
   try {
     const result = await axios(
       "/api/" + cluster.subscription + "/" + cluster.resourceGroup + "/" + cluster.name
@@ -29,6 +29,21 @@ export const fetchClusterInfo = async (cluster: ICluster): Promise<AxiosResponse
     return result
   } catch (e: any) {
     const err = e.response as AxiosResponse
+    return OnError(err)
+  }
+}
+
+
+export const FetchFeatureFlagsInfo = async (cluster: ICluster): Promise<AxiosResponse | null> => {
+  const featureflags = "/featureflags"
+  try {
+    const result = await axios(
+      "/api/" + cluster.subscription + "/" + cluster.resourceGroup + "/" + cluster.name + featureflags
+    )
+    console.log(result)
+    return result
+  } catch (e: any) {
+    let err = e.response as AxiosResponse
     return OnError(err)
   }
 }

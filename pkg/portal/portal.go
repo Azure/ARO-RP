@@ -43,6 +43,10 @@ type Runnable interface {
 	Run(context.Context) error
 }
 
+const (
+	featureFlags = "featureflags"
+)
+
 type portal struct {
 	env           env.Core
 	audit         *logrus.Entry
