@@ -137,15 +137,15 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	It("Should be able to populate feature flag panel correctly", func() {
 		const (
 			CLUSTER_FEATURE_HEADINGS = 24
-			featureFlagDivSelector   = "div[name='Feature Flags']"
+			//featureFlagDivSelector   = "div[name='Feature Flags']"
 		)
 
-		err := wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, featureFlagDivSelector))
+		err := wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[name='Feature Flags']"))
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
 
-		cluster, err := wd.FindElement(selenium.ByCSSSelector, featureFlagDivSelector)
+		cluster, err := wd.FindElement(selenium.ByCSSSelector, "div[name='Feature Flags']")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
