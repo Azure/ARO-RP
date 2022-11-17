@@ -860,7 +860,10 @@ func (g *generator) rpPortalKeyvault() *arm.Resource {
 }
 
 func (g *generator) rpServiceKeyvaultDynamic() *arm.Resource {
-	vaultAccessPolicies := &mgmtkeyvault.Vault{
+	vaultAccessPoliciesResource := &arm.DeploymentTemplateResource{
+		Name:       "[concat(parameters('keyvaultPrefix'), '" + env.ServiceKeyvaultSuffix + "/add')]",
+		Type:       "Microsoft.KeyVault/vaults/accessPolicies",
+		APIVersion: azureclient.APIVersion("Microsoft.KeyVault/vaults/accessPolicies"),
 		Properties: &mgmtkeyvault.VaultProperties{
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
 				{
@@ -879,12 +882,37 @@ func (g *generator) rpServiceKeyvaultDynamic() *arm.Resource {
 		},
 	}
 
+	rpServiceKeyvaultDynamicDeployment := &arm.Deployment{
+		Properties: &arm.DeploymentProperties{
+			Template: &arm.DeploymentTemplate{
+				Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+				ContentVersion: "1.0.0.0",
+				Parameters: map[string]*arm.TemplateParameter{
+					"keyvaultPrefix": {
+						Type: "string",
+					},
+				},
+				Resources: []*arm.DeploymentTemplateResource{vaultAccessPoliciesResource},
+			},
+			Parameters: map[string]*arm.DeploymentTemplateResourceParameter{
+				"keyvaultPrefix": {
+					Value: "[parameters('keyvaultPrefix')]",
+				},
+			},
+			Mode: "Incremental",
+			ExpressionEvaluationOptions: map[string]*string{
+				"scope": to.StringPtr("inner"),
+			},
+		},
+	}
+
 	return &arm.Resource{
-		Name:       "[concat(parameters('keyvaultPrefix'), '" + env.ServiceKeyvaultSuffix + "/add')]",
-		Type:       "Microsoft.KeyVault/vaults/accessPolicies",
-		APIVersion: azureclient.APIVersion("Microsoft.KeyVault/vaults/accessPolicies"),
+		Name:       "rpServiceKeyvaultDynamic",
+		Type:       "Microsoft.Resources/deployments",
+		APIVersion: azureclient.APIVersion("Microsoft.Resources/deployments"),
+		Condition:  "[not(startsWith(toLower(replace(resourceGroup().location, ' ', '')), 'usgov'))]",
 		DependsOn:  []string{"[concat(parameters('keyvaultPrefix'), '" + env.ServiceKeyvaultSuffix + "')]"},
-		Resource:   vaultAccessPolicies,
+		Resource:   rpServiceKeyvaultDynamicDeployment,
 	}
 }
 

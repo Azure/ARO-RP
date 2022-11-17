@@ -17,6 +17,7 @@ var apiVersions = map[string]string{
 	"microsoft.compute/snapshots":              "2020-05-01",
 	"microsoft.compute/diskencryptionsets":     "2021-04-01",
 	"microsoft.containerregistry":              "2020-11-01-preview",
+	"microsoft.resources/deployments":          "2021-04-01",
 	"microsoft.documentdb":                     "2021-01-15",
 	"microsoft.insights":                       "2018-03-01",
 	"microsoft.keyvault":                       "2019-09-01",

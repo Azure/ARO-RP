@@ -10,8 +10,6 @@ resources:
 # Azure DevOps Pipeline running e2e tests
 variables:
 - template: vars.yml
-
-# Run the test suite and collect must-gather
 jobs:
 - job: E2E
   timeoutInMinutes: 180
@@ -25,14 +23,35 @@ jobs:
     parameters:
       azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
 
+  - script: |
+      az account set -s $AZURE_SUBSCRIPTION_ID
+      export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
+      make secrets
+      . secrets/env
+      echo "##vso[task.setvariable variable=RP_MODE]$RP_MODE"
+    displayName: 🔑 Downloading certificates and secrets from storage account
+    name: setEnv
+
   - template: ./templates/template-push-images-to-acr.yml
     parameters:
       rpImageACR: $(RP_IMAGE_ACR)
       buildCommand: publish-image-aro
 
   - script: |
-      export CI=true
+      set -e
+      set -o pipefail
+
+      . secrets/env
+      export HIVE_KUBE_CONFIG_PATH="secrets/e2e-aks-kubeconfig"
+
+      az account set -s $AZURE_SUBSCRIPTION_ID
+
+      set -x
+
+      export PRIVATE_CLUSTER=true
+
       . ./hack/e2e/run-rp-and-e2e.sh
+      trap 'set +e; kill_rp; kill_portal; kill_vpn; clean_e2e_db' EXIT
 
       run_vpn
       deploy_e2e_db
@@ -45,27 +64,9 @@ jobs:
 
       register_sub
 
+      export CI=true
       make test-e2e
     displayName: Execute Tests
-
-  - script: |
-      export CI=true
-      . ./hack/e2e/run-rp-and-e2e.sh
-
-      hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER >admin.kubeconfig
-      export KUBECONFIG=admin.kubeconfig
-
-      wget https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftVersion)/openshift-client-linux-$(OpenShiftVersion).tar.gz
-      tar xf openshift-client-linux-$(OpenShiftVersion).tar.gz
-      ./oc adm must-gather
-      tar cf must-gather.tar.gz must-gather.local.*
-    displayName: Collect must-gather
-    condition: failed()
-
-  - publish: must-gather.tar.gz
-    artifact: must-gather
-    displayName: Append must-gather to Pipeline
-    condition: failed()
 
   - task: PublishTestResults@2
     displayName: 📊 Publish tests results
@@ -84,17 +85,5 @@ jobs:
     inputs:
       pathToPublish: $(Build.ArtifactStagingDirectory)
       artifactName: Screenshots
-
-  - script: |
-      export CI=true
-      . ./hack/e2e/run-rp-and-e2e.sh
-
-      delete_e2e_cluster
-      clean_e2e_db
-      kill_rp
-      kill_portal
-      kill_vpn
-    displayName: Cleanup
-    condition: always()
 
   - template: ./templates/template-az-cli-logout.yml

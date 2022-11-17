@@ -33,7 +33,6 @@ try:
     from ._models_py3 import OpenShiftClusterUpdate
     from ._models_py3 import OpenShiftVersion
     from ._models_py3 import OpenShiftVersionList
-    from ._models_py3 import OpenShiftVersionProperties
     from ._models_py3 import Operation
     from ._models_py3 import OperationList
     from ._models_py3 import ProxyResource
@@ -70,7 +69,6 @@ except (SyntaxError, ImportError):
     from ._models import OpenShiftClusterUpdate  # type: ignore
     from ._models import OpenShiftVersion  # type: ignore
     from ._models import OpenShiftVersionList  # type: ignore
-    from ._models import OpenShiftVersionProperties  # type: ignore
     from ._models import Operation  # type: ignore
     from ._models import OperationList  # type: ignore
     from ._models import ProxyResource  # type: ignore
@@ -116,7 +114,6 @@ __all__ = [
     'OpenShiftClusterUpdate',
     'OpenShiftVersion',
     'OpenShiftVersionList',
-    'OpenShiftVersionProperties',
     'Operation',
     'OperationList',
     'ProxyResource',

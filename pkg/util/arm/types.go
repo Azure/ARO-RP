@@ -42,6 +42,50 @@ type Resource struct {
 	Comments   string                 `json:"comments,omitempty"`
 }
 
+// Deployment represents a nested ARM deployment in a deployment
+type Deployment struct {
+	Name       string                `json:"name,omitempty"`
+	Type       string                `json:"type,omitempty"`
+	Location   string                `json:"location,omitempty"`
+	APIVersion string                `json:"apiVersion,omitempty"`
+	DependsOn  []string              `json:"dependsOn,omitempty"`
+	Condition  interface{}           `json:"condition,omitempty"`
+	Properties *DeploymentProperties `json:"properties,omitempty"`
+}
+
+// DeploDeploymentProperties represents the propertioes of a nested ARM deployment
+type DeploymentProperties struct {
+	Mode                        string                                          `json:"mode,omitempty"`
+	ExpressionEvaluationOptions map[string]*string                              `json:"expressionEvaluationOptions,omitempty"`
+	Parameters                  map[string]*DeploymentTemplateResourceParameter `json:"parameters,omitempty"`
+	Variables                   map[string]interface{}                          `json:"variables,omitempty"`
+	Template                    *DeploymentTemplate                             `json:"template,omitempty"`
+}
+
+// DeploymentTemplate represents the inner template of a nested ARM deployment
+type DeploymentTemplate struct {
+	Schema         string                        `json:"$schema,omitempty"`
+	APIProfile     string                        `json:"apiProfile,omitempty"`
+	ContentVersion string                        `json:"contentVersion,omitempty"`
+	Variables      map[string]interface{}        `json:"variables,omitempty"`
+	Parameters     map[string]*TemplateParameter `json:"parameters,omitempty"`
+	Functions      []interface{}                 `json:"functions,omitempty"`
+	Resources      []*DeploymentTemplateResource `json:"resources,omitempty"`
+}
+
+// DeploymentTemplateResource represents the inner template's resource of a nested ARM deployment
+type DeploymentTemplateResource struct {
+	Name       string      `json:"name,omitempty"`
+	Type       string      `json:"type,omitempty"`
+	APIVersion string      `json:"apiVersion,omitempty"`
+	Properties interface{} `json:"properties,omitempty"`
+}
+
+// DeploymentTemplateResourceParameter represents a nested ARM deployment's resource parameter
+type DeploymentTemplateResourceParameter struct {
+	Value string `json:"value,omitempty"`
+}
+
 // Copy represents an ARM template copy stanza
 type Copy struct {
 	Name      string `json:"name,omitempty"`
