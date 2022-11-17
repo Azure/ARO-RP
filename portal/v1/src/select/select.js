@@ -3,6 +3,10 @@ const select_element = $('#selResourceId');
 
 select_element.css('top', select_input.outerHeight());
 
+function getResourceIdCount() {
+    return select_element.children().length >= 3 ? select_element.children().length - 1 : 2;
+}
+
 select_input.on('keyup change', function () {
     const search_val = $(this).val().toLowerCase();
 
@@ -17,13 +21,13 @@ select_input.on('keyup change', function () {
     } else {
         select_element.children().each(function () {
             $(this).show();
-            select_element.attr('size', select_element.children().length);
+            select_element.attr('size', getResourceIdCount());
         });
     }
 });
 
 select_input.focus(function () {
-    select_element.attr('size', select_element.children().length);
+    select_element.attr('size', getResourceIdCount());
     select_element.css('z-index', '3');
     select_element.css('visibility', 'visible');
 
@@ -42,5 +46,13 @@ select_input.focus(function () {
                 reset();
             }
         }, 50);
+    });
+
+    $(window).click(function () {
+        reset();
+    });
+
+    $(select_input).click(function (e) {
+        e.stopPropagation();
     });
 });
