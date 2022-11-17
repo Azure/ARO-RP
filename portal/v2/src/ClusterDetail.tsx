@@ -213,6 +213,30 @@ export function ClusterDetailPanel(props: {
     }
   }, [data, fetching, setFetching])
 
+
+  useEffect(() => {
+    if (props.currentCluster == null) {
+      return
+    }
+    let resourceID = props.currentCluster.resourceId
+
+    const onData = (result: AxiosResponse | null) => {
+      if (result?.status === 200) {
+        setFeatureData(result.data)
+        setDataLoaded(true)
+      } else {
+        setError(result)
+      }
+      setFetching(resourceID)
+    }
+
+    if (fetching === "" && props.loaded === "DONE" && resourceID != "") {
+      setFetching("FETCHING")
+      setError(null)
+      FetchFeatureFlagsInfo(props.currentCluster).then(onData)
+    }
+  }, [data, fetching, setFetching])
+
   useEffect(() => {
     if (props.currentCluster == null) {
       setDataLoaded(false)
