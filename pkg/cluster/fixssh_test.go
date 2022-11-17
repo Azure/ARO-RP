@@ -207,8 +207,11 @@ func TestFixSSH(t *testing.T) {
 		iface               func(string, int) *mgmtnetwork.Interface
 		iNameF              string
 		ifaceNoVmAttached   bool // create the NIC without a master VM attached, to simulate a master node replacement
+		lbErrorExpected     bool
 		writeExpected       bool // do we expect write to happen as part of this test
 		fallbackExpected    bool // do we expect fallback nic.Get as part of this test
+		nicErrorExpected    bool
+		wantError           string
 	}{
 		{
 			name:          "updates v1 resources correctly",
@@ -269,6 +272,34 @@ func TestFixSSH(t *testing.T) {
 			writeExpected:       true,
 			fallbackExpected:    true,
 		},
+		{
+			name:                "FixSSH function returns an error while Fetching LB",
+			architectureVersion: api.ArchitectureVersionV2,
+			lb:                  infraID + "-internal",
+			lbID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
+			loadbalancer:        lbBefore,
+			iface:               ifNoVmBefore,
+			iNameF:              "%s-master%d-nic",
+			writeExpected:       false,
+			fallbackExpected:    false,
+			lbErrorExpected:     true,
+			nicErrorExpected:    false,
+			wantError:           "Loadbalancer not found",
+		},
+		{
+			name:                "FixSSH function returns an error while Fetching NIC",
+			architectureVersion: api.ArchitectureVersionV2,
+			lb:                  infraID + "-internal",
+			lbID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
+			loadbalancer:        lbBefore,
+			iface:               ifNoVmBefore,
+			iNameF:              "%s-master-%d-nic",
+			writeExpected:       true,
+			fallbackExpected:    false,
+			lbErrorExpected:     false,
+			nicErrorExpected:    true,
+			wantError:           "Interface not found",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
@@ -277,9 +308,13 @@ func TestFixSSH(t *testing.T) {
 			interfaces := mock_network.NewMockInterfacesClient(ctrl)
 			loadBalancers := mock_network.NewMockLoadBalancersClient(ctrl)
 
-			loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.lb, "").Return(*tt.loadbalancer(tt.lbID), nil)
-			if tt.writeExpected {
-				loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, tt.lb, *lbAfter(tt.lbID))
+			if tt.lbErrorExpected {
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.lb, "").Return(mgmtnetwork.LoadBalancer{}, fmt.Errorf("Loadbalancer not found"))
+			} else {
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.lb, "").Return(*tt.loadbalancer(tt.lbID), nil)
+				if tt.writeExpected {
+					loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, tt.lb, *lbAfter(tt.lbID))
+				}
 			}
 
 			for i := 0; i < 3; i++ {
@@ -293,7 +328,16 @@ func TestFixSSH(t *testing.T) {
 						interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), "").Return(mgmtnetwork.Interface{}, fmt.Errorf("nic not found"))
 					}
 				}
-				interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*vmNicBefore, nil)
+
+				if tt.nicErrorExpected {
+					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), "").Return(mgmtnetwork.Interface{}, fmt.Errorf("Interface not found"))
+					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(mgmtnetwork.Interface{}, fmt.Errorf("Interface not found"))
+					break
+				} else if tt.lbErrorExpected {
+					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Times(0)
+				} else {
+					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*vmNicBefore, nil)
+				}
 
 				if tt.writeExpected {
 					if tt.ifaceNoVmAttached {
@@ -323,7 +367,8 @@ func TestFixSSH(t *testing.T) {
 			}
 
 			err := m.fixSSH(context.Background())
-			if err != nil {
+			if err != nil && err.Error() != tt.wantError ||
+				err == nil && tt.wantError != "" {
 				t.Error(err)
 			}
 		})
