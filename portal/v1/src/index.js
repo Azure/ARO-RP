@@ -5,95 +5,95 @@ import 'bootstrap/js/dist/dropdown';
 import 'bootstrap/js/dist/alert';
 
 jQuery.extend({
-    redirect: function (location, args) {
-        var form = $("<form method='POST' style='display: none;'></form>");
-        form.attr("action", location);
+  redirect: function (location, args) {
+    var form = $("<form method='POST' style='display: none;'></form>");
+    form.attr("action", location);
 
-        $.each(args || {}, function (key, value) {
-            var input = $("<input name='hidden'></input>");
+    $.each(args || {}, function (key, value) {
+      var input = $("<input name='hidden'></input>");
 
-            input.attr("name", key);
-            input.attr("value", value);
+      input.attr("name", key);
+      input.attr("value", value);
 
-            form.append(input);
-        });
+      form.append(input);
+    });
 
-        form.append($("input[name='gorilla.csrf.Token']").first());
-        form.appendTo("body").submit();
-    }
+    form.append($("input[name='gorilla.csrf.Token']").first());
+    form.appendTo("body").submit();
+  }
 });
 
 jQuery(function () {
+  $.ajax({
+    url: "/api/clusters",
+    success: function (clusters) {
+      $.each(clusters, function (i, cluster) {
+        $("#selResourceId").append($("<option>").text(cluster.resourceId));
+      });
+    },
+    dataType: "json",
+  });
+
+  $("#btnLogout").click(function () {
+    $.redirect("/api/logout");
+  });
+
+  $("#btnKubeconfig").click(function () {
+    $.redirect($("#selResourceId").val() + "/kubeconfig/new");
+  });
+
+  $("#btnPrometheus").click(function () {
+    window.location = $("#selResourceId").val() + "/prometheus";
+  });
+
+  $("#btnSSH").click(function () {
     $.ajax({
-        url: "/api/clusters",
-        success: function (clusters) {
-            $.each(clusters, function (i, cluster) {
-                $("#selResourceId").append($("<option>").text(cluster.resourceId));
-            });
-        },
-        dataType: "json",
-    });
+      method: "POST",
+      url: $("#selResourceId").val() + "/ssh/new",
+      headers: {
+        "X-CSRF-Token": $("input[name='gorilla.csrf.Token']").val(),
+      },
+      contentType: "application/json",
+      data: JSON.stringify({
+        "master": parseInt($("#selMaster").val()),
+      }),
+      success: function (reply) {
+        if (reply["error"]) {
+          var template = $("#tmplSSHAlertError").html();
+          var alert = $(template);
 
-    $("#btnLogout").click(function () {
-        $.redirect("/api/logout");
-    });
+          alert.find("span[data-copy='error']").text(reply["error"]);
+          $("#divAlerts").html(alert);
 
-    $("#btnKubeconfig").click(function () {
-        $.redirect($("#selResourceId").val() + "/kubeconfig/new");
-    });
+          return;
+        }
 
-    $("#btnPrometheus").click(function () {
-        window.location = $("#selResourceId").val() + "/prometheus";
-    });
+        var template = $("#tmplSSHAlert").html();
+        var alert = $(template);
 
-    $("#btnSSH").click(function () {
-        $.ajax({
-            method: "POST",
-            url: $("#selResourceId").val() + "/ssh/new",
-            headers: {
-                "X-CSRF-Token": $("input[name='gorilla.csrf.Token']").val(),
-            },
-            contentType: "application/json",
-            data: JSON.stringify({
-                "master": parseInt($("#selMaster").val()),
-            }),
-            success: function (reply) {
-                if (reply["error"]) {
-                    var template = $("#tmplSSHAlertError").html();
-                    var alert = $(template);
+        alert.find("span[data-copy='command'] > code").text(reply["command"]);
+        alert.find("span[data-copy='command']").attr("data-copy", reply["command"]);
+        alert.find("span[data-copy='password'] > code").text("********");
+        alert.find("span[data-copy='password']").attr("data-copy", reply["password"]);
+        $("#divAlerts").html(alert);
 
-                    alert.find("span[data-copy='error']").text(reply["error"]);
-                    $("#divAlerts").html(alert);
+        $('.copy-button').click(function () {
+          var textarea = $("<textarea class='style: hidden;' id='textarea'></textarea>");
+          textarea.text($(this).next().attr("data-copy"));
+          textarea.appendTo("body");
 
-                    return;
-                }
-
-                var template = $("#tmplSSHAlert").html();
-                var alert = $(template);
-
-                alert.find("span[data-copy='command'] > code").text(reply["command"]);
-                alert.find("span[data-copy='command']").attr("data-copy", reply["command"]);
-                alert.find("span[data-copy='password'] > code").text("********");
-                alert.find("span[data-copy='password']").attr("data-copy", reply["password"]);
-                $("#divAlerts").html(alert);
-
-                $('.copy-button').click(function () {
-                    var textarea = $("<textarea class='style: hidden;' id='textarea'></textarea>");
-                    textarea.text($(this).next().attr("data-copy"));
-                    textarea.appendTo("body");
-
-                    textarea = document.getElementById("textarea")
-                    textarea.select();
-                    textarea.setSelectionRange(0, textarea.value.length + 1);
-                    document.execCommand('copy');
-                    document.body.removeChild(textarea)
-                });
-            },
-            dataType: "json",
+          textarea = document.getElementById("textarea")
+          textarea.select();
+          textarea.setSelectionRange(0, textarea.value.length + 1);
+          document.execCommand('copy');
+          document.body.removeChild(textarea)
         });
+      },
+      dataType: "json",
     });
+  });
 
-    $("#btnV2").click(function () {
-        window.location = "/v2";
-    });
+  $("#btnV2").click(function () {
+    window.location = "/v2";
+  });
 });
