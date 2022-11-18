@@ -74,6 +74,18 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 	return reconcile.Result{}, nil
 }
 
+// SetupWithManager setup our mananger
+func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == arov1alpha1.SingletonClusterName
+	})
+
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
+		Named(ClusterControllerName).
+		Complete(r)
+}
+
 func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, dh dynamichelper.Interface, roles ...mcv1.MachineConfigPool) error {
 	var resources []kruntime.Object
 	for _, role := range roles {
@@ -96,16 +108,4 @@ func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster,
 	}
 
 	return dh.Ensure(ctx, resources...)
-}
-
-// SetupWithManager setup our manager
-func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return o.GetName() == arov1alpha1.SingletonClusterName
-	})
-
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
-		Named(ClusterControllerName).
-		Complete(r)
 }
