@@ -36,6 +36,7 @@ const navStyles: Partial<INavStyles> = {
   },
 }
 
+<<<<<<< HEAD
 const navLinkGroups: INavLinkGroup[] = [
   {
     links: [
@@ -77,6 +78,8 @@ const customPanelStyle: Partial<IPanelStyles> = {
   },
 }
 
+=======
+>>>>>>> 2af4f4303 (removing the comments, addressing variable names)
 const headerStyle: Partial<IStackStyles> = {
   root: {
     alignSelf: "flex-start",

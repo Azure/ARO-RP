@@ -73,7 +73,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	})
 
 	It("Should be able to populate cluster info panel correctly", func() {
-		const CLUSTER_INFO_HEADINGS = 10
+		const cluster_info_headings = 10
 
 		err := wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[data-automation-key='name']"))
 		if err != nil {
@@ -100,11 +100,11 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 			SaveScreenshotAndExit(wd, err)
 		}
 
-		Expect(len(panelSpans)).To(Equal(CLUSTER_INFO_HEADINGS * 3))
+		Expect(len(panelSpans)).To(Equal(cluster_info_headings * 3))
 
-		panelFields := panelSpans[0 : CLUSTER_INFO_HEADINGS-1]
-		panelColons := panelSpans[CLUSTER_INFO_HEADINGS : CLUSTER_INFO_HEADINGS*2-1]
-		panelValues := panelSpans[CLUSTER_INFO_HEADINGS*2 : len(panelSpans)-1]
+		panelFields := panelSpans[0 : cluster_info_headings-1]
+		panelColons := panelSpans[cluster_info_headings : cluster_info_headings*2-1]
+		panelValues := panelSpans[cluster_info_headings*2 : len(panelSpans)-1]
 
 		for _, panelField := range panelFields {
 			panelText, err := panelField.Text()
@@ -136,7 +136,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 
 	It("Should be able to populate feature flag panel correctly", func() {
 		const (
-			CLUSTER_FEATURE_HEADINGS = 24
+			cluster_feature_headings = 24
 			featureFlagDivSelector   = "div[name='Feature Flags']"
 		)
 
@@ -180,11 +180,11 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 			SaveScreenshotAndExit(wd, err)
 		}
 
-		Expect(len(featureFlagPanelSpans)).To(Equal(CLUSTER_FEATURE_HEADINGS * 3))
+		Expect(len(featureFlagPanelSpans)).To(Equal(cluster_feature_headings * 3))
 
-		featureFlagPanelFields := featureFlagPanelSpans[0 : CLUSTER_FEATURE_HEADINGS-1]
-		featureFlagPanelColons := featureFlagPanelSpans[CLUSTER_FEATURE_HEADINGS : CLUSTER_FEATURE_HEADINGS*2-1]
-		featureFlagPanelValues := featureFlagPanelSpans[CLUSTER_FEATURE_HEADINGS*2 : len(featureFlagPanelSpans)-1]
+		featureFlagPanelFields := featureFlagPanelSpans[0 : cluster_feature_headings-1]
+		featureFlagPanelColons := featureFlagPanelSpans[cluster_feature_headings : cluster_feature_headings*2-1]
+		featureFlagPanelValues := featureFlagPanelSpans[cluster_feature_headings*2 : len(featureFlagPanelSpans)-1]
 
 		for _, featureFlagPanelField := range featureFlagPanelFields {
 			featureFlagPanelText, err := featureFlagPanelField.Text()
