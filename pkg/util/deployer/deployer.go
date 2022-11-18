@@ -12,10 +12,10 @@ import (
 	"io"
 	"io/fs"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"text/template"
 
-	appsv1 "k8s.io/api/apps/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -23,7 +23,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
-	templatesv1 "github.com/open-policy-agent/frameworks/constraint/pkg/apis/templates/v1"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -72,6 +72,7 @@ func (depl *deployer) Template(data interface{}, fsys fs.FS) ([]kruntime.Object,
 		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(bytes, nil, nil)
 		if err != nil {
 			// for unrecognised ones try unstructured way
+			logrus.Printf("\x1b[%dm scheme.Codecs decode failed try unstructured way for %v err %v\x1b[0m", 31, templ.Name, err)
 			uns := dynamichelper.UnstructuredObj{}
 			err := uns.DecodeUnstructured(bytes)
 			if err != nil {
@@ -95,12 +96,12 @@ func (depl *deployer) CreateOrUpdate(ctx context.Context, cluster *arov1alpha1.C
 		return err
 	}
 
-	// this call fails with "object does not implement the Object interfaces" if not adding templatesv1beta1 in scheme.go
-	// err = dynamichelper.SetControllerReferences(resources, cluster)
-	// if err != nil {
-	// 	logrus.Printf("\x1b[%dm SetControllerReferences failed %v\x1b[0m", 31, err)
-	// 	return err
-	// }
+	// this call fails with "object does not implement the Object interfaces" for ConstraintTemplate if not adding templatesv1beta1 in scheme.go
+	err = dynamichelper.SetControllerReferences(resources, cluster)
+	if err != nil {
+		logrus.Printf("\x1b[%dm SetControllerReferences failed %v\x1b[0m", 31, err)
+		return err
+	}
 
 	err = dynamichelper.Prepare(resources)
 	if err != nil {
@@ -118,31 +119,27 @@ func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
 	}
 
 	var errs []error
+	namespaceName := ""
 	for _, obj := range resources {
-		// delete any deployments we have
-		if deployment, ok := obj.(*appsv1.Deployment); ok {
-			logrus.Printf("\x1b[%dm guardrails:: deployer removing %s ns %s\x1b[0m", 31, deployment.Name, deployment.Namespace)
-			err := depl.dh.EnsureDeleted(ctx, "Deployment", deployment.Namespace, deployment.Name)
-			// Don't error out because then we might delete some resources and not others
-			if err != nil {
-				errs = append(errs, err)
+		// remove everything we created that has name and ns
+		if getName, getNs := reflect.ValueOf(obj).MethodByName("GetName"), reflect.ValueOf(obj).MethodByName("GetNamespace"); getName != reflect.ValueOf(nil) && getNs != reflect.ValueOf(nil) {
+			name := getName.Call(nil)
+			ns := getNs.Call(nil)
+			if reflect.TypeOf(obj).String() != "*v1.Namespace" { // dont remove the ns for now
+				err := depl.dh.EnsureDeletedGVR(ctx, obj.GetObjectKind().GroupVersionKind().GroupKind().String(), ns[0].String(), name[0].String(), "")
+				if err != nil {
+					errs = append(errs, err)
+				}
+			} else {
+				namespaceName = name[0].String()
 			}
 		}
-		if ct, ok := obj.(*templatesv1.ConstraintTemplate); ok {
-			logrus.Printf("\x1b[%dm guardrails:: deployer removing ConstraintTemplate %s ns %s\x1b[0m", 31, ct.Name, ct.Namespace)
-			err := depl.dh.EnsureDeleted(ctx, "ConstraintTemplate", ct.Namespace, ct.Name)
-			// Don't error out because then we might delete some resources and not others
-			if err != nil {
-				errs = append(errs, err)
-			}
-		}
-		if uns, ok := obj.(dynamichelper.UnstructuredObj); ok {
-			logrus.Printf("\x1b[%dm guardrails:: deployer removing UnstructuredObj kind %s name %s\x1b[0m", 31, uns.GroupVersionKind().GroupKind().String(), uns.GetName())
-			err := depl.dh.EnsureDeleted(ctx, uns.GroupVersionKind().GroupKind().String(), uns.GetNamespace(), uns.GetName())
-			// Don't error out because then we might delete some resources and not others
-			if err != nil {
-				errs = append(errs, err)
-			}
+	}
+	// remove ns finally
+	if namespaceName != "" {
+		err := depl.dh.EnsureDeleted(ctx, "Namespace", "", namespaceName)
+		if err != nil {
+			errs = append(errs, err)
 		}
 	}
 

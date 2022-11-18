@@ -16,6 +16,7 @@ webhooks:
   failurePolicy: Ignore
   matchPolicy: Exact
   name: validation.gatekeeper.sh
+  failurePolicy: {{.ValidatingWebhookFailurePolicy}}
   namespaceSelector:
     matchExpressions:
     - key: admission.gatekeeper.sh/ignore
@@ -32,7 +33,7 @@ webhooks:
     resources:
     - '*'
   sideEffects: None
-  timeoutSeconds: 3
+  timeoutSeconds: {{.ValidatingWebhookTimeout}}
 - admissionReviewVersions:
   - v1
   - v1beta1
@@ -55,4 +56,4 @@ webhooks:
     resources:
     - namespaces
   sideEffects: None
-  timeoutSeconds: 3
+  timeoutSeconds:  {{.ValidatingWebhookTimeout}}

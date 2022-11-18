@@ -16,6 +16,7 @@ webhooks:
   failurePolicy: Ignore
   matchPolicy: Exact
   name: mutation.gatekeeper.sh
+  failurePolicy: {{.MutatingWebhookFailurePolicy}}
   namespaceSelector:
     matchExpressions:
     - key: admission.gatekeeper.sh/ignore
@@ -31,4 +32,4 @@ webhooks:
     resources:
     - '*'
   sideEffects: None
-  timeoutSeconds: 1
+  timeoutSeconds: {{.MutatingWebhookTimeout}}

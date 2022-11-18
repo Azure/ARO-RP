@@ -14,6 +14,11 @@ type GuardRailsDeploymentConfig struct {
 	AuditLimitCPU      string
 	AuditRequestsMem   string
 	AuditLimitMem      string
+
+	ValidatingWebhookTimeout       string
+	ValidatingWebhookFailurePolicy string
+	MutatingWebhookTimeout         string
+	MutatingWebhookFailurePolicy   string
 }
 
 type GuardRailsPolicyConfig struct {

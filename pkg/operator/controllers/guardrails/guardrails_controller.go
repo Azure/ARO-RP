@@ -53,8 +53,11 @@ const (
 	controllerAuditRequestsMem   = "aro.guardrails.deploy.audit.requests.mem"
 	controllerAuditLimitCPU      = "aro.guardrails.deploy.audit.limit.cpu"
 	controllerAuditLimitMem      = "aro.guardrails.deploy.audit.limit.mem"
-	// controllerWebhookManaged        = "aro.guardrails.webhook.managed"        // trinary, do-nothing by default
-	// controllerWebhookTimeout        = "aro.guardrails.webhook.timeoutSeconds" // int, 3 by default (as per upstream)
+
+	controllerValidatingWebhookFailurePolicy = "aro.guardrails.validatingwebhook.managed"
+	controllerValidatingWebhookTimeout       = "aro.guardrails.validatingwebhook.timeoutSeconds"
+	controllerMutatingWebhookFailurePolicy   = "aro.guardrails.mutatingwebhook.managed"
+	controllerMutatingWebhookTimeout         = "aro.guardrails.mutatingwebhook.timeoutSeconds"
 
 	controllerReconciliationMinutes     = "aro.guardrails.reconciliationMinutes"                  // int, 60 by default.
 	controllerPolicyMachineDenyManaged  = "aro.guardrails.policies.aro-machines-deny.managed"     // trinary, do-nothing by default
@@ -72,6 +75,11 @@ const (
 	defaultAuditLimitMem      = "512Mi"
 
 	defaultReconciliationMinutes = "60"
+
+	defaultValidatingWebhookFailurePolicy = "Ignore"
+	defaultValidatingWebhookTimeout       = "3"
+	defaultMutatingWebhookFailurePolicy   = "Ignore"
+	defaultMutatingWebhookTimeout         = "1"
 
 	gkDeploymentPath  = "staticresources"
 	gkTemplatePath    = "gktemplates"
@@ -123,6 +131,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
+	// how to handle the enable/disable sequence of enabled and managed?
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		// controller is disabled
 		return reconcile.Result{}, nil
@@ -134,26 +143,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// If enabled and managed=false, remove the GuardRails deployment
 	// If enabled and managed is missing, do nothing
 	if strings.EqualFold(managed, "true") {
-		// apply the default pullspec if the flag is empty or missing
-		pullSpec := instance.Spec.OperatorFlags.GetWithDefault(controllerPullSpec, "")
-		if pullSpec == "" {
-			pullSpec = version.GateKeeperImage(instance.Spec.ACRDomain)
-		}
-
-		deployConfig := &config.GuardRailsDeploymentConfig{
-			Pullspec:  pullSpec,
-			Namespace: instance.Spec.OperatorFlags.GetWithDefault(controllerNamespace, defaultNamespace),
-
-			ManagerRequestsCPU: instance.Spec.OperatorFlags.GetWithDefault(controllerManagerRequestsCPU, defaultManagerRequestsCPU),
-			ManagerLimitCPU:    instance.Spec.OperatorFlags.GetWithDefault(controllerManagerLimitCPU, defaultManagerLimitCPU),
-			ManagerRequestsMem: instance.Spec.OperatorFlags.GetWithDefault(controllerManagerRequestsMem, defaultManagerRequestsMem),
-			ManagerLimitMem:    instance.Spec.OperatorFlags.GetWithDefault(controllerManagerLimitMem, defaultManagerLimitMem),
-
-			AuditRequestsCPU: instance.Spec.OperatorFlags.GetWithDefault(controllerAuditRequestsCPU, defaultAuditRequestsCPU),
-			AuditLimitCPU:    instance.Spec.OperatorFlags.GetWithDefault(controllerAuditLimitCPU, defaultAuditLimitCPU),
-			AuditRequestsMem: instance.Spec.OperatorFlags.GetWithDefault(controllerAuditRequestsMem, defaultAuditRequestsMem),
-			AuditLimitMem:    instance.Spec.OperatorFlags.GetWithDefault(controllerAuditLimitMem, defaultAuditLimitMem),
-		}
+		deployConfig := getDefaultDeployConfig(ctx, instance)
 		// no need to CreateOrUpdate if gatekeeper is already ready, it costs ~3.5min
 		if ready, err := r.gatekeeperIsReady(ctx, deployConfig); err != nil || !ready {
 			// Deploy the GateKeeper manifests and config
@@ -400,7 +390,6 @@ func (r *Reconciler) ensurePolicy(ctx context.Context, fs embed.FS, path string)
 			return err
 		}
 		data := buffer.Bytes()
-		// logrus.Printf("\x1b[%dm guardrails:: ensure %v \n%s\x1b[0m", 31, templ, string(data))
 
 		obj := &unstructured.Unstructured{}
 		json, err := yaml.YAMLToJSON(data)
@@ -413,8 +402,7 @@ func (r *Reconciler) ensurePolicy(ctx context.Context, fs embed.FS, path string)
 		}
 
 		if managed != "true" {
-			// logrus.Printf("\x1b[%dm guardrails:: ensurePolicy deleting UnstructuredObj kind %s name %s\x1b[0m", 31, obj.GroupVersionKind().GroupKind().String(), obj.GetName())
-			err := r.dh.EnsureDeleted(ctx, obj.GroupVersionKind().GroupKind().String(), obj.GetNamespace(), obj.GetName())
+			err := r.dh.EnsureDeletedGVR(ctx, obj.GroupVersionKind().GroupKind().String(), obj.GetNamespace(), obj.GetName(), obj.GroupVersionKind().Version)
 			if err != nil && !strings.Contains(err.Error(), "NotFound") { //!kerrors.IsNotFound(err) {
 				logrus.Printf("\x1b[%dm guardrails:: ensurePolicy failed to remove UnstructuredObj kind %s name %s\x1b[0m", 31, obj.GroupVersionKind().GroupKind().String(), obj.GetName())
 				return err
@@ -445,17 +433,6 @@ func (r *Reconciler) removePolicy(ctx context.Context, fs embed.FS, path string)
 			return err
 		}
 		data := buffer.Bytes()
-		// logrus.Printf("\x1b[%dm guardrails:: removePolicy %v\x1b[0m", 31, templ)
-
-		// managed, enforcement, err := r.getPolicyConfig(ctx, templ.Name())
-		// if err != nil {
-		// 	return err
-		// }
-
-		// if managed != "true" || enforcement != "true" {
-		// 	// logrus.Printf("\x1b[%dm guardrails:: constraint %v not managed/enforced: %s\x1b[0m", 31, templ, string(data))
-		// 	continue
-		// }
 
 		obj := &unstructured.Unstructured{}
 		json, err := yaml.YAMLToJSON(data)
@@ -467,11 +444,53 @@ func (r *Reconciler) removePolicy(ctx context.Context, fs embed.FS, path string)
 			return err
 		}
 
-		err = r.dh.EnsureDeleted(ctx, obj.GroupVersionKind().GroupKind().String(), obj.GetNamespace(), obj.GetName())
+		err = r.dh.EnsureDeletedGVR(ctx, obj.GroupVersionKind().GroupKind().String(), obj.GetNamespace(), obj.GetName(), obj.GroupVersionKind().Version)
 		if err != nil && !strings.Contains(err.Error(), "NotFound") { //!kerrors.IsNotFound(err) {
 			logrus.Printf("\x1b[%dm guardrails:: removePolicy failed removing UnstructuredObj kind %s name %s\x1b[0m", 31, obj.GroupVersionKind().GroupKind().String(), obj.GetName())
 			return err
 		}
 	}
 	return nil
+}
+
+func getDefaultDeployConfig(ctx context.Context, instance *arov1alpha1.Cluster) *config.GuardRailsDeploymentConfig {
+	// apply the default value if the flag is empty or missing
+	deployConfig := &config.GuardRailsDeploymentConfig{
+		Pullspec:  instance.Spec.OperatorFlags.GetWithDefault(controllerPullSpec, version.GateKeeperImage(instance.Spec.ACRDomain)),
+		Namespace: instance.Spec.OperatorFlags.GetWithDefault(controllerNamespace, defaultNamespace),
+
+		ManagerRequestsCPU: instance.Spec.OperatorFlags.GetWithDefault(controllerManagerRequestsCPU, defaultManagerRequestsCPU),
+		ManagerLimitCPU:    instance.Spec.OperatorFlags.GetWithDefault(controllerManagerLimitCPU, defaultManagerLimitCPU),
+		ManagerRequestsMem: instance.Spec.OperatorFlags.GetWithDefault(controllerManagerRequestsMem, defaultManagerRequestsMem),
+		ManagerLimitMem:    instance.Spec.OperatorFlags.GetWithDefault(controllerManagerLimitMem, defaultManagerLimitMem),
+
+		AuditRequestsCPU: instance.Spec.OperatorFlags.GetWithDefault(controllerAuditRequestsCPU, defaultAuditRequestsCPU),
+		AuditLimitCPU:    instance.Spec.OperatorFlags.GetWithDefault(controllerAuditLimitCPU, defaultAuditLimitCPU),
+		AuditRequestsMem: instance.Spec.OperatorFlags.GetWithDefault(controllerAuditRequestsMem, defaultAuditRequestsMem),
+		AuditLimitMem:    instance.Spec.OperatorFlags.GetWithDefault(controllerAuditLimitMem, defaultAuditLimitMem),
+
+		ValidatingWebhookTimeout:       instance.Spec.OperatorFlags.GetWithDefault(controllerValidatingWebhookTimeout, defaultValidatingWebhookTimeout),
+		ValidatingWebhookFailurePolicy: instance.Spec.OperatorFlags.GetWithDefault(controllerValidatingWebhookFailurePolicy, defaultValidatingWebhookFailurePolicy),
+		MutatingWebhookTimeout:         instance.Spec.OperatorFlags.GetWithDefault(controllerMutatingWebhookTimeout, defaultMutatingWebhookTimeout),
+		MutatingWebhookFailurePolicy:   instance.Spec.OperatorFlags.GetWithDefault(controllerMutatingWebhookFailurePolicy, defaultMutatingWebhookFailurePolicy),
+	}
+	validatingManaged := instance.Spec.OperatorFlags.GetWithDefault(controllerValidatingWebhookFailurePolicy, "")
+	switch {
+	case validatingManaged == "":
+		deployConfig.ValidatingWebhookFailurePolicy = defaultValidatingWebhookFailurePolicy
+	case strings.EqualFold(validatingManaged, "true"):
+		deployConfig.ValidatingWebhookFailurePolicy = "Fail"
+	case strings.EqualFold(validatingManaged, "false"):
+		deployConfig.ValidatingWebhookFailurePolicy = "Ignore"
+	}
+	mutatingManaged := instance.Spec.OperatorFlags.GetWithDefault(controllerMutatingWebhookFailurePolicy, "")
+	switch {
+	case mutatingManaged == "":
+		deployConfig.MutatingWebhookFailurePolicy = defaultMutatingWebhookFailurePolicy
+	case strings.EqualFold(mutatingManaged, "true"):
+		deployConfig.MutatingWebhookFailurePolicy = "Fail"
+	case strings.EqualFold(mutatingManaged, "false"):
+		deployConfig.MutatingWebhookFailurePolicy = "Ignore"
+	}
+	return deployConfig
 }
