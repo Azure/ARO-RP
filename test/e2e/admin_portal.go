@@ -28,7 +28,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	JustBeforeEach(func() {
 		host, wdPoint = adminPortalSessionSetup()
 		wd = *wdPoint
-		wd.Get(host + "/v2")
+		wd.Get(host + "/")
 		wd.Refresh()
 	})
 
