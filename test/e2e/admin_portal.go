@@ -139,7 +139,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 			CLUSTER_FEATURE_HEADINGS = 24
 			featureFlagDivSelector   = "div[name='Feature Flags']"
 		)
-		
+
 		err := wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[data-automation-key='name']"))
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
