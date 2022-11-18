@@ -526,8 +526,6 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 	mcpName := "test-aro-custom-mcp"
 	mcName := fmt.Sprintf("99-%s-aro-dns", mcpName)
 
-	ctx := context.Background()
-
 	customMcp := mcv1.MachineConfigPool{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "machineconfiguration.openshift.io/v1",
@@ -539,7 +537,7 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		Spec: mcv1.MachineConfigPoolSpec{},
 	}
 
-	getMachineConfigNames := func(g Gomega) []string {
+	getMachineConfigNames := func(g Gomega, ctx context.Context) []string {
 		machineConfigs, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().List(ctx, metav1.ListOptions{})
 		g.Expect(err).NotTo(HaveOccurred())
 		names := []string{}
@@ -549,13 +547,13 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		return names
 	}
 
-	BeforeEach(func() {
+	BeforeEach(func(ctx context.Context) {
 		By("Create custom MachineConfigPool")
 		_, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().Create(ctx, &customMcp, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	AfterEach(func() {
+	AfterEach(func(ctx context.Context) {
 		By("cleaning up custom MachineConfigPool")
 		err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().Delete(ctx, mcpName, metav1.DeleteOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {
@@ -568,23 +566,23 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		}
 	})
 
-	It("must handle the lifetime of the `99-${MCP}-custom-dns MachineConfig for every MachineConfigPool ${MCP}", func() {
+	It("must handle the lifetime of the `99-${MCP}-custom-dns MachineConfig for every MachineConfigPool ${MCP}", func(ctx context.Context) {
 		By("creating an ARO DNS MachineConfig when creating a custom MachineConfigPool")
-		Eventually(func(g Gomega) {
-			machineConfigs := getMachineConfigNames(g)
+		Eventually(func(g Gomega, ctx context.Context) {
+			machineConfigs := getMachineConfigNames(g, ctx)
 			g.Expect(machineConfigs).To(ContainElement(mcName))
 
 			customMachineConfig, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get(ctx, mcName, metav1.GetOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(customMachineConfig.ObjectMeta.OwnerReferences[0].Name).To(Equal(mcpName))
-		}).WithTimeout(timeout).WithPolling(polling).Should(Succeed())
+		}).WithContext(ctx).WithTimeout(timeout).WithPolling(polling).Should(Succeed())
 
 		By("deleting the ARO DNS MachineConfig when deleting the custom MachineConfigPool")
 		err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().Delete(ctx, mcpName, metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(func(g Gomega) {
-			machineConfigs := getMachineConfigNames(g)
+			machineConfigs := getMachineConfigNames(g, ctx)
 			g.Expect(machineConfigs).NotTo(ContainElement(mcName))
-		}).WithTimeout(timeout).WithPolling(polling).Should(Succeed())
+		}).WithContext(ctx).WithTimeout(timeout).WithPolling(polling).Should(Succeed())
 	})
 })
