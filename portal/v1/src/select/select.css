@@ -18,7 +18,19 @@
     padding: 10px;
 }
 
-.select-search>select>option:hover {
+.select-search>select>option:checked {
+    background-color: #dfdfdf;
+}
+
+.option-header {
+    text-transform: uppercase;
+    background: #aaaaaa;
+    color: #222222 !important;
+    cursor: default;
+    font-weight: 600;
+}
+
+.select-search>select>option:hover:not(:first-child) {
     color: #ffffff;
     background: #0d6efd;
 }

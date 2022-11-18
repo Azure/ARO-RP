@@ -33,7 +33,7 @@ jQuery(function () {
             $.each(clusters, function (i, cluster) {
                 $("#selResourceId").append($("<option>").text(cluster.resourceId));
             });
-            $("#enterResourceId").attr("placeholder", "Enter or select a ResourceId");
+            $("#enterResourceId").attr("placeholder", "Search for a cluster...");
             $("#enterResourceId").prop("disabled", false);
         },
         dataType: "json",
