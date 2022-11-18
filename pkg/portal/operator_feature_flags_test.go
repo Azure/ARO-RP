@@ -24,13 +24,6 @@ func TestOperatorFeatureFlags(t *testing.T) {
 		clusterName = "cluster1"
 
 		fakeKey = "/subscriptions/" + fakeID + "/resourcegroups/" + rgName + "/providers/microsoft.redhatopenshift/openshiftclusters/" + clusterName
-
-		fakeID_0 = "00000000-0000-0000-0000-000000000000"
-		fakeID_2 = "00000000-0000-0000-0000-000000000001"
-		fakeID_3 = "00000000-0000-0000-0000-000000000002"
-
-		fakeKey_2 = "/subscriptions/" + fakeID_0 + "/resourcegroups/" + rgName + "/providers/microsoft.redhatopenshift/openshiftclusters/cluster2"
-		fakeKey_3 = "/subscriptions/" + fakeID_0 + "/resourcegroups/" + rgName + "/providers/microsoft.redhatopenshift/openshiftclusters/cluster3"
 	)
 
 	dbOpenShiftClusters, _ := testdatabase.NewFakeOpenShiftClusters()
@@ -75,75 +68,6 @@ func TestOperatorFeatureFlags(t *testing.T) {
 						"aro.workaround.enabled":                   "false",
 						"rh.srep.muo.enabled":                      "true",
 						"rh.srep.muo.managed":                      "false",
-					},
-				},
-			},
-		}, &api.OpenShiftClusterDocument{
-			ID:  fakeID_2,
-			Key: fakeKey_2,
-			OpenShiftCluster: &api.OpenShiftCluster{
-				ID: fakeKey_2,
-				Properties: api.OpenShiftClusterProperties{
-					OperatorFlags: api.OperatorFlags{
-						"aro.alertwebhook.enabled":                 "false",
-						"aro.autosizednodes.enable":                "true",
-						"aro.azuresubnets.enabled":                 "false",
-						"aro.azuresubnets.nsg.managed":             "true",
-						"aro.azuresubnets.serviceendpoint.managed": "false",
-						"aro.banner.enabled":                       "true",
-						"aro.checker.enabled":                      "false",
-						"aro.dnsmasq.enabled":                      "true",
-						"aro.genevalogging.enabled":                "false",
-						"aro.imageconfig.enabled":                  "true",
-						"aro.machine.enabled":                      "false",
-						"aro.machinehealthcheck.enabled":           "true",
-						"aro.machinehealthcheck.managed":           "false",
-						"aro.machineset.enabled":                   "true",
-						"aro.monitoring.enabled":                   "false",
-						"aro.nodedrainer.enabled":                  "true",
-						"aro.pullsecret.enabled":                   "false",
-						"aro.pullsecret.managed":                   "true",
-						"aro.rbac.enabled":                         "false",
-						"aro.routefix.enabled":                     "true",
-						"aro.storageaccounts.enabled":              "false",
-						"aro.workaround.enabled":                   "true",
-						"rh.srep.muo.enabled":                      "false",
-						"rh.srep.muo.managed":                      "true",
-					},
-				},
-			},
-		},
-		&api.OpenShiftClusterDocument{
-			ID:  fakeID_3,
-			Key: fakeKey_3,
-			OpenShiftCluster: &api.OpenShiftCluster{
-				ID: fakeKey_3,
-				Properties: api.OpenShiftClusterProperties{
-					OperatorFlags: api.OperatorFlags{
-						"aro.alertwebhook.enabled":                 "true",
-						"aro.autosizednodes.enable":                "false",
-						"aro.azuresubnets.enabled":                 "true",
-						"aro.azuresubnets.nsg.managed":             "true",
-						"aro.azuresubnets.serviceendpoint.managed": "true",
-						"aro.banner.enabled":                       "false",
-						"aro.checker.enabled":                      "true",
-						"aro.dnsmasq.enabled":                      "true",
-						"aro.genevalogging.enabled":                "true",
-						"aro.imageconfig.enabled":                  "true",
-						"aro.machine.enabled":                      "true",
-						"aro.machinehealthcheck.enabled":           "true",
-						"aro.machinehealthcheck.managed":           "true",
-						"aro.machineset.enabled":                   "true",
-						"aro.monitoring.enabled":                   "true",
-						"aro.nodedrainer.enabled":                  "true",
-						"aro.pullsecret.enabled":                   "true",
-						"aro.pullsecret.managed":                   "true",
-						"aro.rbac.enabled":                         "true",
-						"aro.routefix.enabled":                     "true",
-						"aro.storageaccounts.enabled":              "true",
-						"aro.workaround.enabled":                   "true",
-						"rh.srep.muo.enabled":                      "true",
-						"rh.srep.muo.managed":                      "true",
 					},
 				},
 			},

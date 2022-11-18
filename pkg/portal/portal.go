@@ -43,10 +43,6 @@ type Runnable interface {
 	Run(context.Context) error
 }
 
-const (
-	featureFlags = "featureflags"
-)
-
 type portal struct {
 	env           env.Core
 	audit         *logrus.Entry
@@ -311,6 +307,7 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Promethe
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machine-sets").HandlerFunc(p.machineSets)
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/statistics/{statisticsType}").HandlerFunc(p.statistics)
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
+	r.Path("/api/{subscription}/{resourceGroup}/{name}/featureflags").HandlerFunc(p.operatorFeatureFlags)
 
 	// prometheus
 	if prom != nil {
