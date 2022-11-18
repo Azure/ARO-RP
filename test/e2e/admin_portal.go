@@ -137,20 +137,35 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	It("Should be able to populate feature flag panel correctly", func() {
 		const (
 			CLUSTER_FEATURE_HEADINGS = 24
-			//featureFlagDivSelector   = "div[name='Feature Flags']"
+			featureFlagDivSelector   = "div[name='Feature Flags']"
 		)
-
-		err := wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[name='Feature Flags']"))
+		
+		err := wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[data-automation-key='name']"))
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
 
-		cluster, err := wd.FindElement(selenium.ByCSSSelector, "div[name='Feature Flags']")
+		cluster, err := wd.FindElement(selenium.ByCSSSelector, "div[data-automation-key='name']")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
 
 		err = cluster.Click()
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		err = wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, featureFlagDivSelector))
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		featureflagpanel, err := wd.FindElement(selenium.ByCSSSelector, featureFlagDivSelector)
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		err = featureflagpanel.Click()
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}
