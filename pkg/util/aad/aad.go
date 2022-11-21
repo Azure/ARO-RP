@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	DefaultTimeout = 5 * time.Minute
+	defaultTimeout = 5 * time.Minute
 )
 
 type TokenClient interface {
@@ -33,14 +33,14 @@ func NewTokenClient() TokenClient {
 }
 
 func (tc *tokenClient) GetToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, tenantID, aadEndpoint, resource string) (*adal.ServicePrincipalToken, error) {
-	spToken, err := NewServicePrincipalToken(clientID, clientSecret, tenantID, aadEndpoint, resource)
+	spToken, err := newServicePrincipalToken(clientID, clientSecret, tenantID, aadEndpoint, resource)
 	if err != nil {
 		return spToken, err
 	}
 
 	tokenAuthorizer := refreshable.NewAuthorizer(spToken)
 
-	err = AuthenticateServicePrincipalToken(ctx, log, tokenAuthorizer, DefaultTimeout)
+	err = authenticateServicePrincipalToken(ctx, log, tokenAuthorizer, defaultTimeout)
 	return spToken, err
 }
 
@@ -54,8 +54,7 @@ func refreshContext(ctx context.Context, authorizer refreshable.Authorizer, log 
 
 // GetToken authenticates in the customer's tenant as the cluster service
 // principal and returns a token.
-func NewServicePrincipalToken(clientID, clientSecret, tenantID, aadEndpoint, resource string) (*adal.ServicePrincipalToken, error) {
-	//func (tc *tokenClient) GetToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, tenantID string, aadEndpoint, resource string) (*adal.ServicePrincipalToken, error) {
+func newServicePrincipalToken(clientID, clientSecret, tenantID, aadEndpoint, resource string) (*adal.ServicePrincipalToken, error) {
 	conf := auth.ClientCredentialsConfig{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
@@ -73,7 +72,7 @@ func NewServicePrincipalToken(clientID, clientSecret, tenantID, aadEndpoint, res
 }
 
 // AuthenticateServicePrincipalToken authenticates in the customer's tenant as the cluster service principal and returns a token.
-func AuthenticateServicePrincipalToken(ctx context.Context, log *logrus.Entry, authorizer refreshable.Authorizer, timeout time.Duration) error {
+func authenticateServicePrincipalToken(ctx context.Context, log *logrus.Entry, authorizer refreshable.Authorizer, timeout time.Duration) error {
 	// during credentials rotation this can take time to propagate
 	// it is overridable so we can have unit tests pass/fail quicker
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)

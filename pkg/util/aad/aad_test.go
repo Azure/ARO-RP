@@ -45,7 +45,7 @@ func TestAuthenticateServicePrincipalToken(t *testing.T) {
 
 			authorizer.EXPECT().RefreshWithContext(gomock.Any(), gomock.Any()).Return(false, tt.refreshError).AnyTimes()
 
-			err := AuthenticateServicePrincipalToken(ctx, log, authorizer, duration)
+			err := authenticateServicePrincipalToken(ctx, log, authorizer, duration)
 			if err != nil && tt.wantErr.Error() != err.Error() {
 				t.Errorf("AuthenticateServicePrincipalToken() error = %v, wantErr = %v", err.Error(), tt.wantErr.Error())
 				return
