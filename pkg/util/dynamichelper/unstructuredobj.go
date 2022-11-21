@@ -56,8 +56,6 @@ func (o *UnstructuredObj) DecodeUnstructured(data []byte) error {
 }
 
 func isKindUnstructured(groupKind string) bool {
-	// if strings.HasSuffix(groupKind, ".constraints.gatekeeper.sh") ||
-	// 	strings.HasSuffix(groupKind, ".templates.gatekeeper.sh") {
 	if strings.HasSuffix(groupKind, ".constraints.gatekeeper.sh") {
 		return true
 	}

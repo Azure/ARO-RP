@@ -24,7 +24,6 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -36,14 +35,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"sigs.k8s.io/yaml"
 )
 
 const (
 	ControllerName               = "GuardRails"
-	controllerEnabled            = "aro.guardrails.enabled"        // boolean, false by default
-	controllerNamespace          = "aro.guardrails.namespace"      // string
-	controllerManaged            = "aro.guardrails.deploy.managed" // trinary, do-nothing by default
+	controllerEnabled            = "aro.guardrails.enabled"
+	controllerNamespace          = "aro.guardrails.namespace"
+	controllerManaged            = "aro.guardrails.deploy.managed"
 	controllerPullSpec           = "aro.guardrails.deploy.pullspec"
 	controllerManagerRequestsCPU = "aro.guardrails.deploy.manager.requests.cpu"
 	controllerManagerRequestsMem = "aro.guardrails.deploy.manager.requests.mem"
@@ -59,9 +57,9 @@ const (
 	controllerMutatingWebhookFailurePolicy   = "aro.guardrails.mutatingwebhook.managed"
 	controllerMutatingWebhookTimeout         = "aro.guardrails.mutatingwebhook.timeoutSeconds"
 
-	controllerReconciliationMinutes     = "aro.guardrails.reconciliationMinutes"                  // int, 60 by default.
-	controllerPolicyMachineDenyManaged  = "aro.guardrails.policies.aro-machines-deny.managed"     // trinary, do-nothing by default
-	controllerPolicyMachineDenyEnforced = "aro.guardrails.policies.aro-machines-deny.enforcement" // [“warn”, “dryrun”, “deny”], “dryrun” by default/on invalid input
+	controllerReconciliationMinutes     = "aro.guardrails.reconciliationMinutes"
+	controllerPolicyMachineDenyManaged  = "aro.guardrails.policies.aro-machines-deny.managed"
+	controllerPolicyMachineDenyEnforced = "aro.guardrails.policies.aro-machines-deny.enforcement"
 
 	defaultNamespace = "openshift-azure-guardrails"
 
@@ -98,11 +96,10 @@ var gkPolicyConraints embed.FS
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
 
 type Reconciler struct {
-	arocli             aroclient.Interface
-	kubernetescli      kubernetes.Interface
-	deployer           deployer.Deployer
-	gkPolicyTemplate   deployer.Deployer
-	gkPolicyConstraint deployer.Deployer
+	arocli           aroclient.Interface
+	kubernetescli    kubernetes.Interface
+	deployer         deployer.Deployer
+	gkPolicyTemplate deployer.Deployer
 
 	readinessPollTime     time.Duration
 	readinessTimeout      time.Duration
@@ -113,12 +110,11 @@ type Reconciler struct {
 
 func NewReconciler(arocli aroclient.Interface, kubernetescli kubernetes.Interface, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
-		arocli:             arocli,
-		kubernetescli:      kubernetescli,
-		deployer:           deployer.NewDeployer(kubernetescli, dh, staticFiles, gkDeploymentPath),
-		gkPolicyTemplate:   deployer.NewDeployer(kubernetescli, dh, gkPolicyTemplates, gkTemplatePath),
-		gkPolicyConstraint: deployer.NewDeployer(kubernetescli, dh, gkPolicyConraints, gkConstraintsPath),
-		dh:                 dh,
+		arocli:           arocli,
+		kubernetescli:    kubernetescli,
+		deployer:         deployer.NewDeployer(kubernetescli, dh, staticFiles, gkDeploymentPath),
+		gkPolicyTemplate: deployer.NewDeployer(kubernetescli, dh, gkPolicyTemplates, gkTemplatePath),
+		dh:               dh,
 
 		readinessPollTime: 10 * time.Second,
 		readinessTimeout:  5 * time.Minute,
@@ -143,80 +139,48 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// If enabled and managed=false, remove the GuardRails deployment
 	// If enabled and managed is missing, do nothing
 	if strings.EqualFold(managed, "true") {
+		// Deploy the GateKeeper manifests and config
 		deployConfig := getDefaultDeployConfig(ctx, instance)
-		// no need to CreateOrUpdate if gatekeeper is already ready, it costs ~3.5min
-		if ready, err := r.gatekeeperIsReady(ctx, deployConfig); err != nil || !ready {
-			// Deploy the GateKeeper manifests and config
-			err = r.deployer.CreateOrUpdate(ctx, instance, deployConfig)
-			if err != nil {
-				logrus.Printf("\x1b[%dm guardrails:: reconcile error updating %s\x1b[0m", 31, err.Error())
-				return reconcile.Result{}, err
-			}
+		err = r.deployer.CreateOrUpdate(ctx, instance, deployConfig)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 
-			// Check that GuardRails has become ready, wait up to readinessTimeout (default 5min)
-			timeoutCtx, cancel := context.WithTimeout(ctx, r.readinessTimeout)
-			defer cancel()
+		// Check that GuardRails has become ready, wait up to readinessTimeout (default 5min)
+		timeoutCtx, cancel := context.WithTimeout(ctx, r.readinessTimeout)
+		defer cancel()
 
-			err := wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
-				return r.gatekeeperIsReady(ctx, deployConfig)
-			}, timeoutCtx.Done())
-			if err != nil {
-				return reconcile.Result{}, fmt.Errorf("GateKeeper deployment timed out on Ready: %w", err)
-			}
+		err := wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
+			return r.gatekeeperDeploymentIsReady(ctx, deployConfig)
+		}, timeoutCtx.Done())
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("GateKeeper deployment timed out on Ready: %w", err)
 		}
 		policyConfig := &config.GuardRailsPolicyConfig{}
-		if r.gkPolicyTemplate != nil && r.gkPolicyConstraint != nil {
-			logrus.Printf("\x1b[%dm guardrails:: CreateOrUpdate gkPolicyTemplate for %v\x1b[0m", 31, r.gkPolicyTemplate)
-			// Deploy the GateKeeper policies templates
+		if r.gkPolicyTemplate != nil {
+			// Deploy the GateKeeper ConstraintTemplate
 			err = r.gkPolicyTemplate.CreateOrUpdate(ctx, instance, policyConfig)
 			if err != nil {
-				logrus.Printf("\x1b[%dm guardrails:: reconcile error setup template %s\x1b[0m", 31, err.Error())
 				return reconcile.Result{}, err
 			}
-			logrus.Printf("\x1b[%dm guardrails:: ensuring gkPolicyConstraint for %v\x1b[0m", 31, r.gkPolicyConstraint)
-			// // Deploy the GateKeeper policies contraints
-			// err = r.gkPolicyConstraint.CreateOrUpdate(ctx, instance, policyConfig)
-			// if err != nil {
-			// 	logrus.Printf("\x1b[%dm guardrails:: reconcile error setup constraints %s\x1b[0m", 31, err.Error())
-			// 	return reconcile.Result{}, err
-			// }
 
+			// Deploy the GateKeeper Constraint
 			err = r.ensurePolicy(ctx, gkPolicyConraints, gkConstraintsPath)
 			if err != nil {
-				logrus.Printf("\x1b[%dm guardrails:: reconcile error ensure constraints %s\x1b[0m", 31, err.Error())
 				return reconcile.Result{}, err
 			}
 		}
-
-		// temp := templatesv1beta1.ConstraintTemplate{}
-
-		// TODO: need to find a way to check if gatekeeper policies have been deployed successfully
-		// Check that GuardRails policies has become ready, wait up to readinessTimeout (default 5min)
-		// timeoutPolicyCtx, cancel := context.WithTimeout(ctx, r.readinessTimeout)
-		// defer cancel()
-
-		// err = wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
-		// 	if ready, err := r.gkPolicyTemplate.IsReady(ctx, "", "arodenylabels"); !ready || err != nil { //  ConstraintTemplate
-		// 		return ready, err
-		// 	}
-		// 	return r.gkPolicyConstraint.IsReady(ctx, "", "aro-machines-deny") // arodenylabels
-		// }, timeoutPolicyCtx.Done())
-		// if err != nil {
-		// 	return reconcile.Result{}, fmt.Errorf("GateKeeper policy timed out on Ready: %w", err)
-		// }
 
 		// start a ticker to periodically re-enforce gatekeeper policies, in case they are deleted by users
 		minutes := instance.Spec.OperatorFlags.GetWithDefault(controllerReconciliationMinutes, defaultReconciliationMinutes)
 		min, err := strconv.Atoi(minutes)
 		if err != nil {
-			// invalid user config here, use default value
 			min, _ = strconv.Atoi(defaultReconciliationMinutes)
 		}
 		if r.reconciliationMinutes != min && r.policyTickerDone != nil {
 			// trigger ticker reset
 			r.reconciliationMinutes = min
 			r.policyTickerDone <- false
-			// logrus.Printf("\x1b[%dm guardrails:: reconcile ticker check min %d recon %d ticker %v\x1b[0m", 31, min, r.reconciliationMinutes, r.policyTickerDone)
 		}
 
 		// make sure only one ticker started
@@ -225,7 +189,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 
 	} else if strings.EqualFold(managed, "false") {
-		logrus.Printf("\x1b[%dm guardrails:: reconcile starts removing guardrails\x1b[0m", 31)
 		if r.gkPolicyTemplate != nil {
 			// stop the gatekeeper policies re-enforce ticker
 			if r.policyTickerDone != nil {
@@ -235,7 +198,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 			err = r.removePolicy(ctx, gkPolicyConraints, gkConstraintsPath)
 			if err != nil {
-				logrus.Printf("\x1b[%dm guardrails:: reconcile error removing constraints %s\x1b[0m", 31, err.Error())
 				return reconcile.Result{}, err
 			}
 
@@ -246,7 +208,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 		err = r.deployer.Remove(ctx, config.GuardRailsDeploymentConfig{Namespace: instance.Spec.OperatorFlags.GetWithDefault(controllerNamespace, defaultNamespace)})
 		if err != nil {
-			logrus.Printf("\x1b[%dm guardrails:: reconcile error removing deployment %s\x1b[0m", 31, err.Error())
 			return reconcile.Result{}, err
 		}
 	}
@@ -261,7 +222,6 @@ func (r *Reconciler) policyTicker(ctx context.Context, instance *arov1alpha1.Clu
 	minutes := instance.Spec.OperatorFlags.GetWithDefault(controllerReconciliationMinutes, defaultReconciliationMinutes)
 	r.reconciliationMinutes, err = strconv.Atoi(minutes)
 	if err != nil {
-		// invalid user config here, use default value
 		r.reconciliationMinutes, _ = strconv.Atoi(defaultReconciliationMinutes)
 	}
 
@@ -275,7 +235,7 @@ func (r *Reconciler) policyTicker(ctx context.Context, instance *arov1alpha1.Clu
 				return
 			}
 			// false to trigger a ticker reset
-			logrus.Printf("\x1b[%dm guardrails:: ticker reset to %d min \x1b[0m", 31, r.reconciliationMinutes)
+			logrus.Printf("guardrails:: ticker reset to %d min", r.reconciliationMinutes)
 			ticker.Reset(time.Duration(r.reconciliationMinutes) * time.Minute)
 		case <-ticker.C:
 			err = r.ensurePolicy(ctx, gkPolicyConraints, gkConstraintsPath)
@@ -286,7 +246,7 @@ func (r *Reconciler) policyTicker(ctx context.Context, instance *arov1alpha1.Clu
 
 	}
 }
-func (r *Reconciler) gatekeeperIsReady(ctx context.Context, deployConfig *config.GuardRailsDeploymentConfig) (bool, error) {
+func (r *Reconciler) gatekeeperDeploymentIsReady(ctx context.Context, deployConfig *config.GuardRailsDeploymentConfig) (bool, error) {
 	if ready, err := r.deployer.IsReady(ctx, deployConfig.Namespace, "gatekeeper-audit"); !ready || err != nil {
 		return ready, err
 	}
@@ -341,7 +301,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}, predicate.LabelChangedPredicate{})).
 		Named(ControllerName).
 		Complete(r); err != nil {
-		logrus.Printf("\x1b[%dm guardrails::SetupWithManager deployment failed %v 0\x1b[0m", 31, err)
 		return err
 	}
 	return nil
@@ -391,27 +350,21 @@ func (r *Reconciler) ensurePolicy(ctx context.Context, fs embed.FS, path string)
 		}
 		data := buffer.Bytes()
 
-		obj := &unstructured.Unstructured{}
-		json, err := yaml.YAMLToJSON(data)
-		if err != nil {
-			return err
-		}
-		err = obj.UnmarshalJSON(json)
+		uns := dynamichelper.UnstructuredObj{}
+		err = uns.DecodeUnstructured(data)
 		if err != nil {
 			return err
 		}
 
 		if managed != "true" {
-			err := r.dh.EnsureDeletedGVR(ctx, obj.GroupVersionKind().GroupKind().String(), obj.GetNamespace(), obj.GetName(), obj.GroupVersionKind().Version)
+			err := r.dh.EnsureDeletedGVR(ctx, uns.GroupVersionKind().GroupKind().String(), uns.GetNamespace(), uns.GetName(), uns.GroupVersionKind().Version)
 			if err != nil && !strings.Contains(err.Error(), "NotFound") { //!kerrors.IsNotFound(err) {
-				logrus.Printf("\x1b[%dm guardrails:: ensurePolicy failed to remove UnstructuredObj kind %s name %s\x1b[0m", 31, obj.GroupVersionKind().GroupKind().String(), obj.GetName())
 				return err
 			}
 			continue
 		}
 
-		uns := dynamichelper.NewUnstructuredObj(*obj)
-		creates = append(creates, *uns)
+		creates = append(creates, uns)
 	}
 	err = r.dh.Ensure(ctx, creates...)
 	if err != nil {
@@ -434,19 +387,14 @@ func (r *Reconciler) removePolicy(ctx context.Context, fs embed.FS, path string)
 		}
 		data := buffer.Bytes()
 
-		obj := &unstructured.Unstructured{}
-		json, err := yaml.YAMLToJSON(data)
-		if err != nil {
-			return err
-		}
-		err = obj.UnmarshalJSON(json)
+		uns := dynamichelper.UnstructuredObj{}
+		err = uns.DecodeUnstructured(data)
 		if err != nil {
 			return err
 		}
 
-		err = r.dh.EnsureDeletedGVR(ctx, obj.GroupVersionKind().GroupKind().String(), obj.GetNamespace(), obj.GetName(), obj.GroupVersionKind().Version)
+		err = r.dh.EnsureDeletedGVR(ctx, uns.GroupVersionKind().GroupKind().String(), uns.GetNamespace(), uns.GetName(), uns.GroupVersionKind().Version)
 		if err != nil && !strings.Contains(err.Error(), "NotFound") { //!kerrors.IsNotFound(err) {
-			logrus.Printf("\x1b[%dm guardrails:: removePolicy failed removing UnstructuredObj kind %s name %s\x1b[0m", 31, obj.GroupVersionKind().GroupKind().String(), obj.GetName())
 			return err
 		}
 	}

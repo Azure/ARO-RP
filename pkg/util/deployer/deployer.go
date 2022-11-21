@@ -23,8 +23,6 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
-
-	"github.com/sirupsen/logrus"
 )
 
 type Deployer interface {
@@ -39,7 +37,6 @@ type deployer struct {
 	dh            dynamichelper.Interface
 	fs            fs.FS
 	directory     string
-	unstructured  bool
 }
 
 func NewDeployer(kubernetescli kubernetes.Interface, dh dynamichelper.Interface, fs fs.FS, directory string) Deployer {
@@ -71,18 +68,9 @@ func (depl *deployer) Template(data interface{}, fsys fs.FS) ([]kruntime.Object,
 
 		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(bytes, nil, nil)
 		if err != nil {
-			// for unrecognised ones try unstructured way
-			logrus.Printf("\x1b[%dm scheme.Codecs decode failed try unstructured way for %v err %v\x1b[0m", 31, templ.Name, err)
-			uns := dynamichelper.UnstructuredObj{}
-			err := uns.DecodeUnstructured(bytes)
-			if err != nil {
-				return nil, err
-			}
-			depl.unstructured = true
-			results = append(results, uns)
-		} else {
-			results = append(results, obj)
+			return nil, err
 		}
+		results = append(results, obj)
 		buffer.Reset()
 	}
 
@@ -92,20 +80,16 @@ func (depl *deployer) Template(data interface{}, fsys fs.FS) ([]kruntime.Object,
 func (depl *deployer) CreateOrUpdate(ctx context.Context, cluster *arov1alpha1.Cluster, config interface{}) error {
 	resources, err := depl.Template(config, depl.fs)
 	if err != nil {
-		logrus.Printf("\x1b[%dm Template failed %v\x1b[0m", 31, err)
 		return err
 	}
 
-	// this call fails with "object does not implement the Object interfaces" for ConstraintTemplate if not adding templatesv1beta1 in scheme.go
 	err = dynamichelper.SetControllerReferences(resources, cluster)
 	if err != nil {
-		logrus.Printf("\x1b[%dm SetControllerReferences failed %v\x1b[0m", 31, err)
 		return err
 	}
 
 	err = dynamichelper.Prepare(resources)
 	if err != nil {
-		logrus.Printf("\x1b[%dm Prepare failed %v\x1b[0m", 31, err)
 		return err
 	}
 
@@ -144,7 +128,7 @@ func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
 	}
 
 	if len(errs) != 0 {
-		errContent := []string{"error removing deployment/unstructured:"}
+		errContent := []string{"error removing deployment:"}
 		for _, err := range errs {
 			errContent = append(errContent, err.Error())
 		}
@@ -155,8 +139,5 @@ func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
 }
 
 func (depl *deployer) IsReady(ctx context.Context, namespace, deploymentName string) (bool, error) {
-	if !depl.unstructured {
-		return ready.CheckDeploymentIsReady(ctx, depl.kubernetescli.AppsV1().Deployments(namespace), deploymentName)()
-	}
-	return true, nil
+	return ready.CheckDeploymentIsReady(ctx, depl.kubernetescli.AppsV1().Deployments(namespace), deploymentName)()
 }

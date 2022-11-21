@@ -83,7 +83,7 @@ func (dh *dynamicHelper) resolve(groupKind, optionalVersion string) (*schema.Gro
 	}
 	// refresh sometimes may solves the issue
 	if errNew := dh.Refresh(); errNew != nil {
-		logrus.Printf("\x1b[%dm dynamicHelper Refresh failed with %v\x1b[0m", 31, errNew)
+		dh.log.Printf("dynamicHelper Refresh failed with error: %v", errNew)
 		return gvr, err
 	}
 	return dh.Resolve(groupKind, optionalVersion)
@@ -93,40 +93,24 @@ func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace
 	return dh.EnsureDeletedGVR(ctx, groupKind, namespace, name, "")
 }
 func (dh *dynamicHelper) EnsureDeletedGVR(ctx context.Context, groupKind, namespace, name, optionalVersion string) error {
-	logrus.Printf("\x1b[%dm guardrails:: EnsureDeletedGVR deleting %s ns %s kind %s ver %s\x1b[0m", 31, name, namespace, groupKind, optionalVersion)
 	gvr, err := dh.resolve(groupKind, optionalVersion)
 	if err != nil {
-		// gvr, err = dh.resolve(groupKind, "v1beta1")
-		// if err != nil {
-		logrus.Printf("\x1b[%dm guardrails:: EnsureDeleted resolve failed optionalVersion %s with %v\x1b[0m", 31, optionalVersion, err)
 		return err
-		// }
 	}
 
 	// gatekeeper policies is unstructured and should be deleted differently
 	if isKindUnstructured(groupKind) {
-		logrus.Printf("\x1b[%dm guardrails:: EnsureDeleted deleteUnstructuredObj deleting %s ns %s kind %s\x1b[0m", 31, name, namespace, groupKind)
+		dh.log.Printf("Delete unstructured obj kind %s ns %s name %s version %s", groupKind, namespace, name, optionalVersion)
 		err := dh.deleteUnstructuredObj(ctx, groupKind, namespace, name)
 		if err == nil {
-			// logrus.Printf("\x1b[%dm guardrails:: EnsureDeleted deletion succeed for %s\x1b[0m", 31, name)
-			return nil
+			err = nil
 		}
-
-		if notFound(err) {
-			logrus.Printf("\x1b[%dm guardrails:: EnsureDeleted obj not found for %s\x1b[0m", 31, name)
-			return nil
-		}
-
-		logrus.Printf("\x1b[%dm guardrails:: EnsureDeleted deleteUnstructuredObj failed with %v, try old way now\x1b[0m", 31, err)
 		return err
 	}
-	// logrus.Printf("\x1b[%dm guardrails:: EnsureDeleted restcli.Delete deleting %s ns %s kind %s\x1b[0m", 31, name, namespace, groupKind)
+	dh.log.Printf("Delete kind %s ns %s name %s", groupKind, namespace, name)
 	err = dh.restcli.Delete().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Error()
 	if kerrors.IsNotFound(err) {
 		err = nil
-	}
-	if err != nil {
-		logrus.Printf("\x1b[%dm guardrails:: EnsureDeleted old way failed with %v\x1b[0m", 31, err)
 	}
 	return err
 }
@@ -138,14 +122,12 @@ func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) er
 		if un, ok := o.(UnstructuredObj); ok {
 			err := dh.ensureUnstructuredObj(ctx, &un)
 			if err != nil {
-				logrus.Printf("\x1b[%dm ensureUnstructuredObj failed %v\x1b[0m", 31, err)
 				return err
 			}
 			continue
 		}
 		err := dh.ensureOne(ctx, o)
 		if err != nil {
-			logrus.Printf("\x1b[%dm ensureOne failed %v\x1b[0m", 31, err)
 			return err
 		}
 	}
@@ -164,15 +146,13 @@ func (dh *dynamicHelper) ensureUnstructuredObj(ctx context.Context, o *Unstructu
 	obj, err := dh.dynamicClient.Resource(*gvr).Namespace(o.obj.GetNamespace()).Get(ctx, o.obj.GetName(), metav1.GetOptions{})
 	if err != nil {
 		if !notFound(err) {
-			logrus.Printf("\x1b[%dm ensureUnstructuredObj Get failed %v\x1b[0m", 31, err)
 			return err
 		}
 		notfound = true
 	}
 	if notfound {
-		logrus.Printf("\x1b[%dm ensureUnstructuredObj Creating obj %s\x1b[0m", 31, o.obj.GetName())
+		dh.log.Printf("Create %s", keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName()))
 		if _, err = dh.dynamicClient.Resource(*gvr).Namespace(o.obj.GetNamespace()).Create(ctx, &o.obj, metav1.CreateOptions{}); err != nil {
-			logrus.Printf("\x1b[%dm ensureUnstructuredObj Create failed %v\x1b[0m", 31, err)
 			return err
 		}
 		return nil
@@ -190,11 +170,10 @@ func (dh *dynamicHelper) ensureUnstructuredObj(ctx context.Context, o *Unstructu
 		// currently EnforcementAction is the only part that may change in an update
 		return nil
 	}
-	logrus.Printf("\x1b[%dm ensureUnstructuredObj updating obj %s\x1b[0m", 31, o.obj.GetName())
+	dh.log.Printf("Update %s: enforcementAction: %s->%s", keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName()), enOld, enNew)
 	o.obj.SetResourceVersion(obj.GetResourceVersion())
 
 	if _, err = dh.dynamicClient.Resource(*gvr).Namespace(o.obj.GetNamespace()).Update(ctx, &o.obj, metav1.UpdateOptions{}); err != nil {
-		logrus.Printf("\x1b[%dm ensureUnstructuredObj update failed %v\x1b[0m", 31, err)
 		return err
 	}
 	return nil
@@ -205,7 +184,6 @@ func GetEnforcementAction(obj *unstructured.Unstructured) (string, error) {
 	ns := obj.GetNamespace()
 	field, ok := obj.Object["spec"]
 	if !ok {
-		logrus.Printf("\x1b[%dm meta %v\x1b[0m", 31, obj.Object)
 		return "", fmt.Errorf("%s/%s: get spec failed", ns, name)
 	}
 	spec, ok := field.(map[string]interface{})
@@ -215,7 +193,6 @@ func GetEnforcementAction(obj *unstructured.Unstructured) (string, error) {
 
 	field, ok = spec["enforcementAction"]
 	if !ok {
-		logrus.Printf("\x1b[%dm spec %v\x1b[0m", 31, spec)
 		return "", fmt.Errorf("%s/%s: get enforcementAction failed", ns, name)
 	}
 	enforce, ok := field.(string)
@@ -223,7 +200,6 @@ func GetEnforcementAction(obj *unstructured.Unstructured) (string, error) {
 		return "", fmt.Errorf("%s/%s: enforcementAction: %T is not string", ns, name, field)
 	}
 
-	// logrus.Printf("\x1b[%dm GetEnforcementAction  %s\x1b[0m", 31, enforce)
 	return enforce, nil
 }
 
@@ -231,12 +207,9 @@ func (dh *dynamicHelper) deleteUnstructuredObj(ctx context.Context, groupKind, n
 
 	gvr, err := dh.resolve(groupKind, "")
 	if err != nil {
-		logrus.Printf("\x1b[%dm deleteUnstructuredObj Resolve failed %v\x1b[0m", 31, err)
 		return err
 	}
-
 	if err = dh.dynamicClient.Resource(*gvr).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil && !notFound(err) {
-		logrus.Printf("\x1b[%dm deleteUnstructuredObj Resource delete failed %v\x1b[0m", 31, err)
 		return err
 	}
 	return nil
@@ -280,7 +253,7 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 			return nil
 		}
 		// ignore ConstraintTemplate.templates.gatekeeper?
-		if strings.HasPrefix(acc.GetName(), "ConstraintTemplate.templates.gatekeeper") {
+		if strings.HasPrefix(gvk.GroupKind().String(), "ConstraintTemplate.templates.gatekeeper") {
 			dh.log.Printf("\x1b[%dm ignore changes for ConstraintTemplate %s@%s: %s\x1b[0m\n", 36, acc.GetName(), acc.GetNamespace(), diff)
 			return nil
 		}
@@ -450,7 +423,7 @@ func makeURLSegments(gvr *schema.GroupVersionResource, namespace, name string) (
 }
 
 func notFound(err error) bool {
-	if err == nil || kerrors.IsNotFound(err) || strings.Contains(err.Error(), "NotFound") {
+	if err == nil || kerrors.IsNotFound(err) || strings.Contains(strings.ToLower(err.Error()), "notfound") {
 		return true
 	}
 	return false
