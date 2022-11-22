@@ -76,9 +76,10 @@ deploy_aks_dev() {
         -n aks-development \
         --template-file pkg/deploy/assets/aks-development.json \
         --parameters \
-            "adminObjectId=$ADMIN_OBJECT_ID" \
             "dnsZone=$DOMAIN_NAME" \
-            "sshRSAPublicKey=$(<secrets/proxy_id_rsa.pub)" >/dev/null
+            "keyvaultPrefix=$KEYVAULT_PREFIX" \
+            "sshRSAPublicKey=$(<secrets/proxy_id_rsa.pub)" \
+            "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
 }
 
 deploy_env_dev_override() {
