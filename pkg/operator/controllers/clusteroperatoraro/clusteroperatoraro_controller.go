@@ -5,7 +5,6 @@ package clusteroperatoraro
 
 import (
 	"context"
-	"fmt"
 
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -161,7 +160,7 @@ func (r *Reconciler) defaultOperator() *configv1.ClusterOperator {
 			Versions: []configv1.OperandVersion{
 				{
 					Name:    "operator",
-					Version: fmt.Sprintf("1.0-%s", version.GitCommit),
+					Version: version.GitCommit,
 				},
 			},
 			Conditions: []configv1.ClusterOperatorStatusCondition{
