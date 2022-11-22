@@ -151,20 +151,6 @@
                 "description": "Specifies the address prefix of the subnet hosting the pods of the AKS cluster."
             }
         },
-        "gatewaySubnetName": {
-            "type": "string",
-            "defaultValue": "GatewaySubnet",
-            "metadata": {
-                "description": "Subnet name that will contain the App Service Environment"
-            }
-        },
-        "gatewaySubnetPrefix": {
-            "type": "string",
-            "defaultValue": "10.128.0.128/25",
-            "metadata": {
-                "description": "Subnet address prefix"
-            }
-        },
         "serviceCidr": {
             "type": "string",
             "defaultValue": "10.130.0.0/16",
@@ -248,10 +234,6 @@
             "metadata": {
                 "description": "Specifies the max graceful termination time interval in seconds for the auto-scaler of the AKS cluster."
             }
-        },
-        "vpnCACertificate": {
-            "type": "string",
-            "defaultValue": ""
         },
         "Ev2ShellSubnetName": {
             "type": "string",
@@ -395,12 +377,6 @@
                                     }
                                 }
                             ]
-                        }
-                    },
-                    {
-                        "name": "[parameters('gatewaySubnetName')]",
-                        "properties": {
-                            "addressPrefix": "[parameters('gatewaySubnetPrefix')]"
                         }
                     },
                     {
@@ -691,55 +667,6 @@
                         }
                     }
                 ]
-            }
-        },
-        {
-            "type": "Microsoft.Network/virtualNetworkGateways",
-            "name": "aks-vpn",
-            "apiVersion": "2020-08-01",
-            "location": "[resourceGroup().location]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/publicIPAddresses', 'aks-vpn-pip')]",
-                "[variables('vnetId')]",
-                "[variables('aksClusterId')]"
-            ],
-            "properties": {
-                "ipConfigurations": [
-                    {
-                        "properties": {
-                            "subnet": {
-                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('gatewaySubnetName'))]"
-                            },
-                            "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'aks-vpn-pip')]"
-                            }
-                        },
-                        "name": "default"
-                    }
-                ],
-                "vpnType": "RouteBased",
-                "sku": {
-                    "name": "VpnGw1",
-                    "tier": "VpnGw1"
-                },
-                "vpnClientConfiguration": {
-                    "vpnClientAddressPool": {
-                        "addressPrefixes": [
-                            "192.168.254.0/24"
-                        ]
-                    },
-                    "vpnClientRootCertificates": [
-                        {
-                            "properties": {
-                                "publicCertData": "[parameters('vpnCACertificate')]"
-                            },
-                            "name": "aks-vpn-ca"
-                        }
-                    ],
-                    "vpnClientProtocols": [
-                        "OpenVPN"
-                    ]
-                }
             }
         }
     ]
