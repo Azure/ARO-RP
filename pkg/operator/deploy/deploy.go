@@ -392,10 +392,12 @@ func (o *operator) RenewMDSDCertificate(ctx context.Context) error {
 
 func (o *operator) IsReady(ctx context.Context) (bool, error) {
 	ok, err := ready.CheckDeploymentIsReady(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-master")()
+	o.log.Infof("deployment %q ok status is: %v, err is: %v", "aro-operator-master", ok, err)
 	if !ok || err != nil {
 		return ok, err
 	}
 	ok, err = ready.CheckDeploymentIsReady(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-worker")()
+	o.log.Infof("deployment %q ok status is: %v, err is: %v", "aro-operator-worker", ok, err)
 	if !ok || err != nil {
 		return ok, err
 	}
