@@ -169,6 +169,109 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 	}
 }
 
+func TestIsClusterInstallationComplete(t *testing.T) {
+	fakeNamespace := "fake-namespace"
+	doc := &api.OpenShiftClusterDocument{
+		OpenShiftCluster: &api.OpenShiftCluster{
+			Properties: api.OpenShiftClusterProperties{
+				HiveProfile: api.HiveProfile{
+					Namespace: fakeNamespace,
+				},
+			},
+		},
+	}
+
+	for _, tt := range []struct {
+		name       string
+		cd         kruntime.Object
+		wantResult bool
+		wantErr    string
+	}{
+		{
+			name: "is installed",
+			cd: &hivev1.ClusterDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      ClusterDeploymentName,
+					Namespace: fakeNamespace,
+				},
+				Spec: hivev1.ClusterDeploymentSpec{
+					Installed: true,
+				},
+				Status: hivev1.ClusterDeploymentStatus{
+					Conditions: []hivev1.ClusterDeploymentCondition{
+						{
+							Type:   hivev1.ProvisionFailedCondition,
+							Status: corev1.ConditionFalse,
+						},
+					},
+				},
+			},
+			wantResult: true,
+		},
+		{
+			name: "is not installed yet",
+			cd: &hivev1.ClusterDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      ClusterDeploymentName,
+					Namespace: fakeNamespace,
+				},
+				Spec: hivev1.ClusterDeploymentSpec{
+					Installed: false,
+				},
+				Status: hivev1.ClusterDeploymentStatus{
+					Conditions: []hivev1.ClusterDeploymentCondition{
+						{
+							Type:   hivev1.ProvisionFailedCondition,
+							Status: corev1.ConditionFalse,
+						},
+					},
+				},
+			},
+			wantResult: false,
+		},
+		{
+			name: "has failed provisioning",
+			cd: &hivev1.ClusterDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      ClusterDeploymentName,
+					Namespace: fakeNamespace,
+				},
+				Status: hivev1.ClusterDeploymentStatus{
+					Conditions: []hivev1.ClusterDeploymentCondition{
+						{
+							Type:   hivev1.ProvisionFailedCondition,
+							Status: corev1.ConditionTrue,
+						},
+					},
+				},
+			},
+			wantErr:    "clusterdeployment has failed: ProvisionFailed == True",
+			wantResult: false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClientset := hivefake.NewSimpleClientset()
+			if tt.cd != nil {
+				fakeClientset.Tracker().Add(tt.cd)
+			}
+			c := clusterManager{
+				hiveClientset: fakeClientset,
+				log:           logrus.NewEntry(logrus.StandardLogger()),
+			}
+
+			result, err := c.IsClusterInstallationComplete(context.Background(), doc)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+
+			if tt.wantResult != result {
+				t.Error(result)
+			}
+		})
+	}
+}
+
 func TestResetCorrelationData(t *testing.T) {
 	fakeNamespace := "fake-namespace"
 	doc := &api.OpenShiftClusterDocument{
