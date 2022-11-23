@@ -30,6 +30,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 )
 
 type Interface interface {
@@ -243,22 +244,32 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 			return err
 		}
 
-		new, changed, diff, err := merge(old, new)
+		var candidate kruntime.Object
+		changed := false
+		diff := ""
+
+		switch {
+		case strings.HasPrefix(acc.GetName(), "gatekeeper"):
+			candidate, changed, diff, err = mergeGK(old, new)
+			if diff != "" {
+				dh.log.Printf("\x1b[%dm changes for %s@%s diff: %s\x1b[0m\n", 36, acc.GetName(), acc.GetNamespace(), diff)
+			}
+
+		case strings.HasPrefix(gvk.GroupKind().String(), "ConstraintTemplate.templates.gatekeeper"):
+			candidate, changed, diff, err = mergeGK(old, new)
+			if diff != "" {
+				dh.log.Printf("\x1b[%dm changes for ConstraintTemplate %s@%s: %s\x1b[0m\n", 36, acc.GetName(), acc.GetNamespace(), diff)
+			}
+
+		default:
+			candidate, changed, diff, err = merge(old, new)
+		}
+
 		if err != nil || !changed {
 			return err
 		}
-
-		if strings.HasPrefix(acc.GetName(), "gatekeeper") {
-			dh.log.Printf("\x1b[%dm ignore changes for %s@%s\x1b[0m\n", 36, acc.GetName(), acc.GetNamespace())
-			return nil
-		}
-		// ignore ConstraintTemplate.templates.gatekeeper?
-		if strings.HasPrefix(gvk.GroupKind().String(), "ConstraintTemplate.templates.gatekeeper") {
-			dh.log.Printf("\x1b[%dm ignore changes for ConstraintTemplate %s@%s: %s\x1b[0m\n", 36, acc.GetName(), acc.GetNamespace(), diff)
-			return nil
-		}
 		dh.log.Printf("Update %s: %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()), diff)
-		return dh.restcli.Put().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Body(new).Do(ctx).Error()
+		return dh.restcli.Put().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Body(candidate).Do(ctx).Error()
 	})
 }
 
@@ -427,4 +438,91 @@ func notFound(err error) bool {
 		return true
 	}
 	return false
+}
+
+// mergeGK takes the existing (old) and desired (new) objects.  It compares them
+// to see if an update is necessary, fixes up the *old* object if needed, and
+// returns the difference for debugging purposes.
+// this is because that old objects were changed by gatekeeper binaries which have to be kept!
+func mergeGK(old, new kruntime.Object) (kruntime.Object, bool, string, error) {
+	if reflect.TypeOf(old) != reflect.TypeOf(new) {
+		return nil, false, "", fmt.Errorf("types differ: %T %T", old, new)
+	}
+	expect := old.DeepCopyObject()
+
+	// 1. Set defaults on old.  This gets rid of many false positive diffs.
+	scheme.Scheme.Default(expect)
+
+	// 2. Do fix-ups on a per-Kind basis.
+	changed := false
+	switch new.(type) {
+
+	case *appsv1.Deployment:
+		new, expect := new.(*appsv1.Deployment), expect.(*appsv1.Deployment)
+		for i, _ := range expect.Spec.Template.Spec.Containers {
+			ec := expect.Spec.Template.Spec.Containers[i]
+			nc := new.Spec.Template.Spec.Containers[i]
+			if ec.Image != nc.Image {
+				logrus.Printf("\x1b[%dm guardrails::mergeGK image changed %s->%s\x1b[0m", 31, ec.Image, nc.Image)
+				ec.Image = nc.Image
+				changed = true
+			}
+			if cmpAndCopy(&nc.Resources.Limits, &ec.Resources.Limits) {
+				logrus.Printf("\x1b[%dm guardrails::mergeGK Limits changed %v -> %v\x1b[0m", 31, ec.Resources.Limits, nc.Resources.Limits)
+				changed = true
+			}
+			if cmpAndCopy(&nc.Resources.Requests, &ec.Resources.Requests) {
+				logrus.Printf("\x1b[%dm guardrails::mergeGK Requests changed %v -> %v\x1b[0m", 31, ec.Resources.Requests, nc.Resources.Requests)
+				changed = true
+			}
+		}
+	case *admissionregistrationv1.ValidatingWebhookConfiguration:
+		new, expect := new.(*admissionregistrationv1.ValidatingWebhookConfiguration), expect.(*admissionregistrationv1.ValidatingWebhookConfiguration)
+		for i, _ := range expect.Webhooks {
+			if *expect.Webhooks[i].FailurePolicy != *new.Webhooks[i].FailurePolicy {
+				logrus.Printf("\x1b[%dm guardrails::mergeGK FailurePolicy changed %s->%s\x1b[0m", 31, *expect.Webhooks[i].FailurePolicy, *new.Webhooks[i].FailurePolicy)
+				expect.Webhooks[i].FailurePolicy = new.Webhooks[i].FailurePolicy
+				changed = true
+			}
+			if *expect.Webhooks[i].TimeoutSeconds != *new.Webhooks[i].TimeoutSeconds {
+				logrus.Printf("\x1b[%dm guardrails::mergeGK TimeoutSeconds changed %d->%d\x1b[0m", 31, *expect.Webhooks[i].TimeoutSeconds, *new.Webhooks[i].TimeoutSeconds)
+				expect.Webhooks[i].TimeoutSeconds = new.Webhooks[i].TimeoutSeconds
+				changed = true
+			}
+		}
+	case *admissionregistrationv1.MutatingWebhookConfiguration:
+		new, expect := new.(*admissionregistrationv1.MutatingWebhookConfiguration), expect.(*admissionregistrationv1.MutatingWebhookConfiguration)
+		for i, _ := range expect.Webhooks {
+			if *expect.Webhooks[i].FailurePolicy != *new.Webhooks[i].FailurePolicy {
+				logrus.Printf("\x1b[%dm guardrails::mergeGK FailurePolicy changed %s->%s\x1b[0m", 31, *expect.Webhooks[i].FailurePolicy, *new.Webhooks[i].FailurePolicy)
+				expect.Webhooks[i].FailurePolicy = new.Webhooks[i].FailurePolicy
+				changed = true
+			}
+			if *expect.Webhooks[i].TimeoutSeconds != *new.Webhooks[i].TimeoutSeconds {
+				logrus.Printf("\x1b[%dm guardrails::mergeGK TimeoutSeconds changed %d->%d\x1b[0m", 31, *expect.Webhooks[i].TimeoutSeconds, *new.Webhooks[i].TimeoutSeconds)
+				expect.Webhooks[i].TimeoutSeconds = new.Webhooks[i].TimeoutSeconds
+				changed = true
+			}
+		}
+	}
+
+	var diff string
+	if _, ok := expect.(*corev1.Secret); !ok { // Don't show a diff if kind is Secret
+		diff = cmp.Diff(old, expect)
+	}
+
+	return expect, changed, diff, nil
+}
+
+func cmpAndCopy(srcP, dstP *corev1.ResourceList) bool {
+	src, dst := *srcP, *dstP
+	changed := false
+	for key, val := range dst {
+		if !val.Equal(src[key]) {
+			logrus.Printf("\x1b[%dm guardrails::mergeGK copying key %s: %v->%v\x1b[0m", 31, key, dst[key], src[key])
+			dst[key] = src[key].DeepCopy()
+			changed = true
+		}
+	}
+	return changed
 }

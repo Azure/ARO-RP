@@ -106,21 +106,23 @@ func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
 	namespaceName := ""
 	for _, obj := range resources {
 		// remove everything we created that has name and ns
-		if getName, getNs := reflect.ValueOf(obj).MethodByName("GetName"), reflect.ValueOf(obj).MethodByName("GetNamespace"); getName != reflect.ValueOf(nil) && getNs != reflect.ValueOf(nil) {
+		if getName, getNs := reflect.ValueOf(obj).MethodByName("GetName"),
+			reflect.ValueOf(obj).MethodByName("GetNamespace"); getName != reflect.ValueOf(nil) && getNs != reflect.ValueOf(nil) {
 			name := getName.Call(nil)
 			ns := getNs.Call(nil)
-			if reflect.TypeOf(obj).String() != "*v1.Namespace" { // dont remove the ns for now
-				err := depl.dh.EnsureDeletedGVR(ctx, obj.GetObjectKind().GroupVersionKind().GroupKind().String(), ns[0].String(), name[0].String(), "")
-				if err != nil {
-					errs = append(errs, err)
-				}
-			} else {
+			if reflect.TypeOf(obj).String() == "*v1.Namespace" {
+				// dont delete the namespace for now
 				namespaceName = name[0].String()
+				continue
+			}
+			err := depl.dh.EnsureDeletedGVR(ctx, obj.GetObjectKind().GroupVersionKind().GroupKind().String(), ns[0].String(), name[0].String(), "")
+			if err != nil {
+				errs = append(errs, err)
 			}
 		}
 	}
-	// remove ns finally
 	if namespaceName != "" {
+		// remove the namespace
 		err := depl.dh.EnsureDeleted(ctx, "Namespace", "", namespaceName)
 		if err != nil {
 			errs = append(errs, err)
@@ -128,7 +130,7 @@ func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
 	}
 
 	if len(errs) != 0 {
-		errContent := []string{"error removing deployment:"}
+		errContent := []string{"error removing resource:"}
 		for _, err := range errs {
 			errContent = append(errContent, err.Error())
 		}
