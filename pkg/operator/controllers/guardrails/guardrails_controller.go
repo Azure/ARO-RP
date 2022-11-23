@@ -166,7 +166,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 		// start a ticker to re-enforce gatekeeper policies periodically
 		r.startTicker(ctx, instance)
-
 	} else if strings.EqualFold(managed, "false") {
 		if r.gkPolicyTemplate != nil {
 			// stop the gatekeeper policies re-enforce ticker
@@ -193,7 +192,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 // SetupWithManager setup our manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-
 	pullSecretPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return (o.GetName() == pullSecretName.Name && o.GetNamespace() == pullSecretName.Namespace)
 	})

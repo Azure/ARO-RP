@@ -88,7 +88,7 @@ func TestDeployDelete(t *testing.T) {
 
 	k8scli := fake.NewSimpleClientset()
 	dh := mock_dynamichelper.NewMockInterface(controller)
-	dh.EXPECT().EnsureDeleted(gomock.Any(), "Deployment", "openshift-managed-upgrade-operator", "managed-upgrade-operator").Return(nil)
+	dh.EXPECT().EnsureDeletedGVR(gomock.Any(), "Deployment.apps", "openshift-managed-upgrade-operator", "managed-upgrade-operator", gomock.Any()).Return(nil)
 
 	deployer := NewDeployer(k8scli, dh, staticFiles, "staticresources")
 	err := deployer.Remove(context.Background(), config.MUODeploymentConfig{})
@@ -103,14 +103,14 @@ func TestDeployDeleteFailure(t *testing.T) {
 
 	k8scli := fake.NewSimpleClientset()
 	dh := mock_dynamichelper.NewMockInterface(controller)
-	dh.EXPECT().EnsureDeleted(gomock.Any(), "Deployment", "openshift-managed-upgrade-operator", "managed-upgrade-operator").Return(errors.New("fail"))
+	dh.EXPECT().EnsureDeletedGVR(gomock.Any(), "Deployment.apps", "openshift-managed-upgrade-operator", "managed-upgrade-operator", gomock.Any()).Return(errors.New("fail"))
 
 	deployer := NewDeployer(k8scli, dh, staticFiles, "staticresources")
 	err := deployer.Remove(context.Background(), config.MUODeploymentConfig{})
 	if err == nil {
 		t.Error(err)
 	}
-	if err.Error() != "error removing deployment:\nfail" {
+	if err.Error() != "error removing resource:\nfail" {
 		t.Error(err)
 	}
 }

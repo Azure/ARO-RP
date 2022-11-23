@@ -77,7 +77,6 @@ require (
 	sigs.k8s.io/cluster-api-provider-azure v1.2.1
 	sigs.k8s.io/controller-runtime v0.12.3
 	sigs.k8s.io/controller-tools v0.9.0
-	sigs.k8s.io/yaml v1.3.0
 )
 
 require (
@@ -360,6 +359,7 @@ require (
 	sigs.k8s.io/kustomize/api v0.11.4 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.13.6 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
+	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
 exclude (

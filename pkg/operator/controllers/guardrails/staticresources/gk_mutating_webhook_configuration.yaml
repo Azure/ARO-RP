@@ -13,7 +13,6 @@ webhooks:
       name: gatekeeper-webhook-service
       namespace: {{.Namespace}}
       path: /v1/mutate
-  failurePolicy: Ignore
   matchPolicy: Exact
   name: mutation.gatekeeper.sh
   failurePolicy: {{.MutatingWebhookFailurePolicy}}

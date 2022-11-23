@@ -4,7 +4,7 @@ metadata:
   name: arodenylabels
   annotations:
     description: >-
-      Prevents changes in resources that contain specified labels, with values 
+      Prevents changes in resources that contain specified labels, with values
       optionally matching a provided regular expression.
 spec:
   crd:

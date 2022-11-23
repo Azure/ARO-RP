@@ -24,7 +24,6 @@ import (
 )
 
 func (r *Reconciler) getPolicyConfig(ctx context.Context, na string) (string, string, error) {
-
 	parts := strings.Split(na, ".")
 	if len(parts) < 1 {
 		return "", "", errors.New("unrecognised name: " + na)

@@ -13,7 +13,6 @@ webhooks:
       name: gatekeeper-webhook-service
       namespace: {{.Namespace}}
       path: /v1/admit
-  failurePolicy: Ignore
   matchPolicy: Exact
   name: validation.gatekeeper.sh
   failurePolicy: {{.ValidatingWebhookFailurePolicy}}
@@ -42,7 +41,7 @@ webhooks:
       name: gatekeeper-webhook-service
       namespace: {{.Namespace}}
       path: /v1/admitlabel
-  failurePolicy: Fail
+  failurePolicy: {{.ValidatingWebhookFailurePolicy}}
   matchPolicy: Exact
   name: check-ignore-label.gatekeeper.sh
   rules:
@@ -56,4 +55,4 @@ webhooks:
     resources:
     - namespaces
   sideEffects: None
-  timeoutSeconds:  {{.ValidatingWebhookTimeout}}
+  timeoutSeconds: {{.ValidatingWebhookTimeout}}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/to"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -69,6 +70,7 @@ func TestEsureDeleted(t *testing.T) {
 	dh := &dynamicHelper{
 		GVRResolver: mockGVRResolver,
 		restcli:     mockRestCLI,
+		log:         logrus.NewEntry(logrus.StandardLogger()),
 	}
 
 	err := dh.EnsureDeleted(ctx, "configmap", "test-ns-1", "test-name-1")

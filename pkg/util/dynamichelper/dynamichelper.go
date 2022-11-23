@@ -77,7 +77,6 @@ func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 }
 
 func (dh *dynamicHelper) resolve(groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
-
 	gvr, err := dh.Resolve(groupKind, optionalVersion)
 	if err == nil {
 		return gvr, err
@@ -137,7 +136,6 @@ func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) er
 }
 
 func (dh *dynamicHelper) ensureUnstructuredObj(ctx context.Context, o *UnstructuredObj) error {
-
 	gvr, err := dh.resolve(o.obj.GroupVersionKind().GroupKind().String(), o.obj.GroupVersionKind().Version)
 	if err != nil {
 		return err
@@ -167,7 +165,7 @@ func (dh *dynamicHelper) ensureUnstructuredObj(ctx context.Context, o *Unstructu
 	if err != nil {
 		return nil
 	}
-	if strings.ToLower(enOld) == strings.ToLower(enNew) {
+	if strings.EqualFold(enOld, enNew) {
 		// currently EnforcementAction is the only part that may change in an update
 		return nil
 	}
@@ -205,7 +203,6 @@ func GetEnforcementAction(obj *unstructured.Unstructured) (string, error) {
 }
 
 func (dh *dynamicHelper) deleteUnstructuredObj(ctx context.Context, groupKind, namespace, name string) error {
-
 	gvr, err := dh.resolve(groupKind, "")
 	if err != nil {
 		return err
@@ -456,10 +453,9 @@ func mergeGK(old, new kruntime.Object) (kruntime.Object, bool, string, error) {
 	// 2. Do fix-ups on a per-Kind basis.
 	changed := false
 	switch new.(type) {
-
 	case *appsv1.Deployment:
 		new, expect := new.(*appsv1.Deployment), expect.(*appsv1.Deployment)
-		for i, _ := range expect.Spec.Template.Spec.Containers {
+		for i := range expect.Spec.Template.Spec.Containers {
 			ec := expect.Spec.Template.Spec.Containers[i]
 			nc := new.Spec.Template.Spec.Containers[i]
 			if ec.Image != nc.Image {
@@ -478,7 +474,7 @@ func mergeGK(old, new kruntime.Object) (kruntime.Object, bool, string, error) {
 		}
 	case *admissionregistrationv1.ValidatingWebhookConfiguration:
 		new, expect := new.(*admissionregistrationv1.ValidatingWebhookConfiguration), expect.(*admissionregistrationv1.ValidatingWebhookConfiguration)
-		for i, _ := range expect.Webhooks {
+		for i := range expect.Webhooks {
 			if *expect.Webhooks[i].FailurePolicy != *new.Webhooks[i].FailurePolicy {
 				logrus.Printf("\x1b[%dm guardrails::mergeGK FailurePolicy changed %s->%s\x1b[0m", 31, *expect.Webhooks[i].FailurePolicy, *new.Webhooks[i].FailurePolicy)
 				expect.Webhooks[i].FailurePolicy = new.Webhooks[i].FailurePolicy
@@ -492,7 +488,7 @@ func mergeGK(old, new kruntime.Object) (kruntime.Object, bool, string, error) {
 		}
 	case *admissionregistrationv1.MutatingWebhookConfiguration:
 		new, expect := new.(*admissionregistrationv1.MutatingWebhookConfiguration), expect.(*admissionregistrationv1.MutatingWebhookConfiguration)
-		for i, _ := range expect.Webhooks {
+		for i := range expect.Webhooks {
 			if *expect.Webhooks[i].FailurePolicy != *new.Webhooks[i].FailurePolicy {
 				logrus.Printf("\x1b[%dm guardrails::mergeGK FailurePolicy changed %s->%s\x1b[0m", 31, *expect.Webhooks[i].FailurePolicy, *new.Webhooks[i].FailurePolicy)
 				expect.Webhooks[i].FailurePolicy = new.Webhooks[i].FailurePolicy

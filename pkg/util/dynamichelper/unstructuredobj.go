@@ -6,10 +6,10 @@ package dynamichelper
 import (
 	"strings"
 
+	"github.com/ghodss/yaml"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/yaml"
 )
 
 type UnstructuredObj struct {
@@ -56,8 +56,5 @@ func (o *UnstructuredObj) DecodeUnstructured(data []byte) error {
 }
 
 func isKindUnstructured(groupKind string) bool {
-	if strings.HasSuffix(groupKind, ".constraints.gatekeeper.sh") {
-		return true
-	}
-	return false
+	return strings.HasSuffix(groupKind, ".constraints.gatekeeper.sh")
 }
