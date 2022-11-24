@@ -36,6 +36,13 @@ spec:
         ports:
         - containerPort: 8080
           name: http
+        resources:
+          limits:
+            cpu: 50m
+            memory: 500Mi
+          requests:
+            cpu: 50m
+            memory: 500Mi
         livenessProbe:
           httpGet:
             path: /healthz/ready
