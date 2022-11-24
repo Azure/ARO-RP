@@ -5,19 +5,12 @@ package guardrails
 
 import (
 	"context"
-	"embed"
 	"fmt"
 	"strings"
 	"time"
 
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
-	"github.com/Azure/ARO-RP/pkg/util/deployer"
-	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -27,65 +20,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
+	"github.com/Azure/ARO-RP/pkg/util/deployer"
+	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
-
-const (
-	ControllerName               = "GuardRails"
-	controllerEnabled            = "aro.guardrails.enabled"
-	controllerNamespace          = "aro.guardrails.namespace"
-	controllerManaged            = "aro.guardrails.deploy.managed"
-	controllerPullSpec           = "aro.guardrails.deploy.pullspec"
-	controllerManagerRequestsCPU = "aro.guardrails.deploy.manager.requests.cpu"
-	controllerManagerRequestsMem = "aro.guardrails.deploy.manager.requests.mem"
-	controllerManagerLimitCPU    = "aro.guardrails.deploy.manager.limit.cpu"
-	controllerManagerLimitMem    = "aro.guardrails.deploy.manager.limit.mem"
-	controllerAuditRequestsCPU   = "aro.guardrails.deploy.audit.requests.cpu"
-	controllerAuditRequestsMem   = "aro.guardrails.deploy.audit.requests.mem"
-	controllerAuditLimitCPU      = "aro.guardrails.deploy.audit.limit.cpu"
-	controllerAuditLimitMem      = "aro.guardrails.deploy.audit.limit.mem"
-
-	controllerValidatingWebhookFailurePolicy = "aro.guardrails.validatingwebhook.managed"
-	controllerValidatingWebhookTimeout       = "aro.guardrails.validatingwebhook.timeoutSeconds"
-	controllerMutatingWebhookFailurePolicy   = "aro.guardrails.mutatingwebhook.managed"
-	controllerMutatingWebhookTimeout         = "aro.guardrails.mutatingwebhook.timeoutSeconds"
-
-	controllerReconciliationMinutes     = "aro.guardrails.reconciliationMinutes"
-	controllerPolicyMachineDenyManaged  = "aro.guardrails.policies.aro-machines-deny.managed"
-	controllerPolicyMachineDenyEnforced = "aro.guardrails.policies.aro-machines-deny.enforcement"
-
-	defaultNamespace = "openshift-azure-guardrails"
-
-	defaultManagerRequestsCPU = "100m"
-	defaultManagerLimitCPU    = "1000m"
-	defaultManagerRequestsMem = "256Mi"
-	defaultManagerLimitMem    = "512Mi"
-	defaultAuditRequestsCPU   = "100m"
-	defaultAuditLimitCPU      = "1000m"
-	defaultAuditRequestsMem   = "256Mi"
-	defaultAuditLimitMem      = "512Mi"
-
-	defaultReconciliationMinutes = "60"
-
-	defaultValidatingWebhookFailurePolicy = "Ignore"
-	defaultValidatingWebhookTimeout       = "3"
-	defaultMutatingWebhookFailurePolicy   = "Ignore"
-	defaultMutatingWebhookTimeout         = "1"
-
-	gkDeploymentPath  = "staticresources"
-	gkTemplatePath    = "gktemplates"
-	gkConstraintsPath = "gkconstraints"
-)
-
-//go:embed staticresources
-var staticFiles embed.FS
-
-//go:embed gktemplates
-var gkPolicyTemplates embed.FS
-
-//go:embed gkconstraints
-var gkPolicyConraints embed.FS
-
-var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
 
 type Reconciler struct {
 	arocli           aroclient.Interface
@@ -139,7 +80,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{}, err
 		}
 
-		// Check that GuardRails has become ready, wait up to readinessTimeout (default 5min)
+		// Check gatekeeper has become ready, wait up to readinessTimeout (default 5min)
 		timeoutCtx, cancel := context.WithTimeout(ctx, r.readinessTimeout)
 		defer cancel()
 

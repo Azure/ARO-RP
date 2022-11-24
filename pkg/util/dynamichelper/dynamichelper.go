@@ -12,6 +12,7 @@ import (
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -30,7 +31,6 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 )
 
 type Interface interface {
@@ -141,22 +141,21 @@ func (dh *dynamicHelper) ensureUnstructuredObj(ctx context.Context, o *Unstructu
 		return err
 	}
 
-	notfound := false
+	create := false
 	obj, err := dh.dynamicClient.Resource(*gvr).Namespace(o.obj.GetNamespace()).Get(ctx, o.obj.GetName(), metav1.GetOptions{})
 	if err != nil {
 		if !notFound(err) {
 			return err
 		}
-		notfound = true
+		create = true
 	}
-	if notfound {
+	if create {
 		dh.log.Printf("Create %s", keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName()))
 		if _, err = dh.dynamicClient.Resource(*gvr).Namespace(o.obj.GetNamespace()).Create(ctx, &o.obj, metav1.CreateOptions{}); err != nil {
 			return err
 		}
 		return nil
 	}
-
 	enNew, err := GetEnforcementAction(&o.obj)
 	if err != nil {
 		return nil
@@ -241,27 +240,12 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 			return err
 		}
 
-		var candidate kruntime.Object
-		changed := false
-		diff := ""
-
-		switch {
-		case strings.HasPrefix(acc.GetName(), "gatekeeper"):
-			candidate, changed, diff, err = mergeGK(old, new)
-			if diff != "" {
-				dh.log.Printf("\x1b[%dm changes for %s@%s diff: %s\x1b[0m\n", 36, acc.GetName(), acc.GetNamespace(), diff)
-			}
-
-		case strings.HasPrefix(gvk.GroupKind().String(), "ConstraintTemplate.templates.gatekeeper"):
-			candidate, changed, diff, err = mergeGK(old, new)
-			if diff != "" {
-				dh.log.Printf("\x1b[%dm changes for ConstraintTemplate %s@%s: %s\x1b[0m\n", 36, acc.GetName(), acc.GetNamespace(), diff)
-			}
-
-		default:
-			candidate, changed, diff, err = merge(old, new)
+		mergeFunc := merge
+		if strings.HasPrefix(acc.GetName(), "gatekeeper") ||
+			strings.HasPrefix(gvk.GroupKind().String(), "ConstraintTemplate.templates.gatekeeper") {
+			mergeFunc = mergeGK
 		}
-
+		candidate, changed, diff, err := mergeFunc(old, new)
 		if err != nil || !changed {
 			return err
 		}
@@ -456,47 +440,48 @@ func mergeGK(old, new kruntime.Object) (kruntime.Object, bool, string, error) {
 	case *appsv1.Deployment:
 		new, expect := new.(*appsv1.Deployment), expect.(*appsv1.Deployment)
 		for i := range expect.Spec.Template.Spec.Containers {
-			ec := expect.Spec.Template.Spec.Containers[i]
-			nc := new.Spec.Template.Spec.Containers[i]
+			ec := &expect.Spec.Template.Spec.Containers[i]
+			nc := &new.Spec.Template.Spec.Containers[i]
 			if ec.Image != nc.Image {
-				logrus.Printf("\x1b[%dm guardrails::mergeGK image changed %s->%s\x1b[0m", 31, ec.Image, nc.Image)
 				ec.Image = nc.Image
 				changed = true
 			}
 			if cmpAndCopy(&nc.Resources.Limits, &ec.Resources.Limits) {
-				logrus.Printf("\x1b[%dm guardrails::mergeGK Limits changed %v -> %v\x1b[0m", 31, ec.Resources.Limits, nc.Resources.Limits)
 				changed = true
 			}
 			if cmpAndCopy(&nc.Resources.Requests, &ec.Resources.Requests) {
-				logrus.Printf("\x1b[%dm guardrails::mergeGK Requests changed %v -> %v\x1b[0m", 31, ec.Resources.Requests, nc.Resources.Requests)
 				changed = true
 			}
 		}
 	case *admissionregistrationv1.ValidatingWebhookConfiguration:
 		new, expect := new.(*admissionregistrationv1.ValidatingWebhookConfiguration), expect.(*admissionregistrationv1.ValidatingWebhookConfiguration)
 		for i := range expect.Webhooks {
-			if *expect.Webhooks[i].FailurePolicy != *new.Webhooks[i].FailurePolicy {
-				logrus.Printf("\x1b[%dm guardrails::mergeGK FailurePolicy changed %s->%s\x1b[0m", 31, *expect.Webhooks[i].FailurePolicy, *new.Webhooks[i].FailurePolicy)
-				expect.Webhooks[i].FailurePolicy = new.Webhooks[i].FailurePolicy
+			if expect.Webhooks[i].FailurePolicy != nil &&
+				new.Webhooks[i].FailurePolicy != nil &&
+				*expect.Webhooks[i].FailurePolicy != *new.Webhooks[i].FailurePolicy {
+				*expect.Webhooks[i].FailurePolicy = *new.Webhooks[i].FailurePolicy
 				changed = true
 			}
-			if *expect.Webhooks[i].TimeoutSeconds != *new.Webhooks[i].TimeoutSeconds {
-				logrus.Printf("\x1b[%dm guardrails::mergeGK TimeoutSeconds changed %d->%d\x1b[0m", 31, *expect.Webhooks[i].TimeoutSeconds, *new.Webhooks[i].TimeoutSeconds)
-				expect.Webhooks[i].TimeoutSeconds = new.Webhooks[i].TimeoutSeconds
+			if expect.Webhooks[i].TimeoutSeconds != nil &&
+				new.Webhooks[i].TimeoutSeconds != nil &&
+				*expect.Webhooks[i].TimeoutSeconds != *new.Webhooks[i].TimeoutSeconds {
+				*expect.Webhooks[i].TimeoutSeconds = *new.Webhooks[i].TimeoutSeconds
 				changed = true
 			}
 		}
 	case *admissionregistrationv1.MutatingWebhookConfiguration:
 		new, expect := new.(*admissionregistrationv1.MutatingWebhookConfiguration), expect.(*admissionregistrationv1.MutatingWebhookConfiguration)
 		for i := range expect.Webhooks {
-			if *expect.Webhooks[i].FailurePolicy != *new.Webhooks[i].FailurePolicy {
-				logrus.Printf("\x1b[%dm guardrails::mergeGK FailurePolicy changed %s->%s\x1b[0m", 31, *expect.Webhooks[i].FailurePolicy, *new.Webhooks[i].FailurePolicy)
-				expect.Webhooks[i].FailurePolicy = new.Webhooks[i].FailurePolicy
+			if expect.Webhooks[i].FailurePolicy != nil &&
+				new.Webhooks[i].FailurePolicy != nil &&
+				*expect.Webhooks[i].FailurePolicy != *new.Webhooks[i].FailurePolicy {
+				*expect.Webhooks[i].FailurePolicy = *new.Webhooks[i].FailurePolicy
 				changed = true
 			}
-			if *expect.Webhooks[i].TimeoutSeconds != *new.Webhooks[i].TimeoutSeconds {
-				logrus.Printf("\x1b[%dm guardrails::mergeGK TimeoutSeconds changed %d->%d\x1b[0m", 31, *expect.Webhooks[i].TimeoutSeconds, *new.Webhooks[i].TimeoutSeconds)
-				expect.Webhooks[i].TimeoutSeconds = new.Webhooks[i].TimeoutSeconds
+			if expect.Webhooks[i].TimeoutSeconds != nil &&
+				new.Webhooks[i].TimeoutSeconds != nil &&
+				*expect.Webhooks[i].TimeoutSeconds != *new.Webhooks[i].TimeoutSeconds {
+				*expect.Webhooks[i].TimeoutSeconds = *new.Webhooks[i].TimeoutSeconds
 				changed = true
 			}
 		}
@@ -515,7 +500,6 @@ func cmpAndCopy(srcP, dstP *corev1.ResourceList) bool {
 	changed := false
 	for key, val := range dst {
 		if !val.Equal(src[key]) {
-			logrus.Printf("\x1b[%dm guardrails::mergeGK copying key %s: %v->%v\x1b[0m", 31, key, dst[key], src[key])
 			dst[key] = src[key].DeepCopy()
 			changed = true
 		}

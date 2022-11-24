@@ -5,12 +5,73 @@ package guardrails
 
 import (
 	"context"
+	"embed"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
+
+const (
+	ControllerName               = "GuardRails"
+	controllerEnabled            = "aro.guardrails.enabled"
+	controllerNamespace          = "aro.guardrails.namespace"
+	controllerManaged            = "aro.guardrails.deploy.managed"
+	controllerPullSpec           = "aro.guardrails.deploy.pullspec"
+	controllerManagerRequestsCPU = "aro.guardrails.deploy.manager.requests.cpu"
+	controllerManagerRequestsMem = "aro.guardrails.deploy.manager.requests.mem"
+	controllerManagerLimitCPU    = "aro.guardrails.deploy.manager.limit.cpu"
+	controllerManagerLimitMem    = "aro.guardrails.deploy.manager.limit.mem"
+	controllerAuditRequestsCPU   = "aro.guardrails.deploy.audit.requests.cpu"
+	controllerAuditRequestsMem   = "aro.guardrails.deploy.audit.requests.mem"
+	controllerAuditLimitCPU      = "aro.guardrails.deploy.audit.limit.cpu"
+	controllerAuditLimitMem      = "aro.guardrails.deploy.audit.limit.mem"
+
+	controllerValidatingWebhookFailurePolicy = "aro.guardrails.validatingwebhook.managed"
+	controllerValidatingWebhookTimeout       = "aro.guardrails.validatingwebhook.timeoutSeconds"
+	controllerMutatingWebhookFailurePolicy   = "aro.guardrails.mutatingwebhook.managed"
+	controllerMutatingWebhookTimeout         = "aro.guardrails.mutatingwebhook.timeoutSeconds"
+
+	controllerReconciliationMinutes     = "aro.guardrails.reconciliationMinutes"
+	controllerPolicyManagedTemplate     = "aro.guardrails.policies.%s.managed"
+	controllerPolicyEnforcementTemplate = "aro.guardrails.policies.%s.enforcement"
+
+	defaultNamespace = "openshift-azure-guardrails"
+
+	defaultManagerRequestsCPU = "100m"
+	defaultManagerLimitCPU    = "1000m"
+	defaultManagerRequestsMem = "256Mi"
+	defaultManagerLimitMem    = "512Mi"
+	defaultAuditRequestsCPU   = "100m"
+	defaultAuditLimitCPU      = "1000m"
+	defaultAuditRequestsMem   = "256Mi"
+	defaultAuditLimitMem      = "512Mi"
+
+	defaultReconciliationMinutes = "60"
+
+	defaultValidatingWebhookFailurePolicy = "Ignore"
+	defaultValidatingWebhookTimeout       = "3"
+	defaultMutatingWebhookFailurePolicy   = "Ignore"
+	defaultMutatingWebhookTimeout         = "1"
+
+	gkDeploymentPath  = "staticresources"
+	gkTemplatePath    = "gktemplates"
+	gkConstraintsPath = "gkconstraints"
+)
+
+//go:embed staticresources
+var staticFiles embed.FS
+
+//go:embed gktemplates
+var gkPolicyTemplates embed.FS
+
+//go:embed gkconstraints
+var gkPolicyConraints embed.FS
+
+var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
 
 func (r *Reconciler) getDefaultDeployConfig(ctx context.Context, instance *arov1alpha1.Cluster) *config.GuardRailsDeploymentConfig {
 	// apply the default value if the flag is empty or missing

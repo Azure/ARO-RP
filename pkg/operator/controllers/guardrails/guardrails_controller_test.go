@@ -202,7 +202,6 @@ func TestGuardRailsReconciler(t *testing.T) {
 				kubernetescli: kubecli,
 				deployer:      deployer,
 				// gkPolicyTemplate:   mock_deployer.NewMockDeployer(controller),
-				// gkPolicyConstraint: mock_deployer.NewMockDeployer(controller),
 				readinessTimeout:  0 * time.Second,
 				readinessPollTime: 1 * time.Second,
 			}

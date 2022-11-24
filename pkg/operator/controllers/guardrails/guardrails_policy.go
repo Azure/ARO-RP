@@ -15,12 +15,14 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/sirupsen/logrus"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
+
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
-	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
 )
 
 func (r *Reconciler) getPolicyConfig(ctx context.Context, na string) (string, string, error) {
@@ -35,10 +37,10 @@ func (r *Reconciler) getPolicyConfig(ctx context.Context, na string) (string, st
 		return "", "", err
 	}
 
-	managedPath := fmt.Sprintf("aro.guardrails.policies.%s.managed", name)
+	managedPath := fmt.Sprintf(controllerPolicyManagedTemplate, name)
 	managed := instance.Spec.OperatorFlags.GetWithDefault(managedPath, "false")
 
-	enforcementPath := fmt.Sprintf("aro.guardrails.policies.%s.enforcement", name)
+	enforcementPath := fmt.Sprintf(controllerPolicyEnforcementTemplate, name)
 	enforcement := instance.Spec.OperatorFlags.GetWithDefault(enforcementPath, "dryrun")
 
 	return managed, enforcement, nil
@@ -74,7 +76,7 @@ func (r *Reconciler) ensurePolicy(ctx context.Context, fs embed.FS, path string)
 
 		if managed != "true" {
 			err := r.dh.EnsureDeletedGVR(ctx, uns.GroupVersionKind().GroupKind().String(), uns.GetNamespace(), uns.GetName(), uns.GroupVersionKind().Version)
-			if err != nil && !strings.Contains(err.Error(), "NotFound") { //!kerrors.IsNotFound(err) {
+			if err != nil && !kerrors.IsNotFound(err) && !strings.Contains(strings.ToLower(err.Error()), "notfound") {
 				return err
 			}
 			continue
@@ -110,7 +112,7 @@ func (r *Reconciler) removePolicy(ctx context.Context, fs embed.FS, path string)
 		}
 
 		err = r.dh.EnsureDeletedGVR(ctx, uns.GroupVersionKind().GroupKind().String(), uns.GetNamespace(), uns.GetName(), uns.GroupVersionKind().Version)
-		if err != nil && !strings.Contains(err.Error(), "NotFound") { //!kerrors.IsNotFound(err) {
+		if err != nil && !kerrors.IsNotFound(err) && !strings.Contains(strings.ToLower(err.Error()), "notfound") {
 			return err
 		}
 	}
@@ -137,12 +139,12 @@ func (r *Reconciler) policyTicker(ctx context.Context, instance *arov1alpha1.Clu
 				return
 			}
 			// false to trigger a ticker reset
-			logrus.Printf("guardrails:: ticker reset to %d min", r.reconciliationMinutes)
+			logrus.Printf("policyTicker reset to %d min", r.reconciliationMinutes)
 			ticker.Reset(time.Duration(r.reconciliationMinutes) * time.Minute)
 		case <-ticker.C:
 			err = r.ensurePolicy(ctx, gkPolicyConraints, gkConstraintsPath)
 			if err != nil {
-				logrus.Printf("\x1b[%dm guardrails::Ticker ensurePolicy error ensure constraints %s\x1b[0m", 31, err.Error())
+				logrus.Printf("policyTicker ensurePolicy error %s", err.Error())
 			}
 		}
 	}
