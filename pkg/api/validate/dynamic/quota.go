@@ -11,63 +11,80 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
+const (
+	standardDSv3    = "standardDSv3Family"
+	standardDASv4   = "standardDASv4Family"
+	standardESv3    = "standardESv3Family"
+	standardEISv4   = "standardEISv4Family"
+	standardEIDSv4  = "standardEIDSv4Family"
+	standardEIv5    = "standardEIv5Family"
+	standardEISv5   = "standardEISv5Family"
+	standardEIDSv5  = "standardEIDSv5Family"
+	standardEIDv5   = "standardEIDv5Family"
+	standardFSv2    = "standardFSv2Family"
+	standardMS      = "standardMSFamily"
+	standardGFamily = "standardGFamily"
+	standardLSv2    = "standardLsv2Family"
+	standardNCAS    = "Standard NCASv3_T4 Family"
+)
+
 func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, count int) error {
 	vmTypesMap := map[api.VMSize]struct {
 		CoreCount int
 		Family    string
 	}{
-		api.VMSizeStandardD2sV3: {CoreCount: 2, Family: "standardDSv3Family"},
+		api.VMSizeStandardD2sV3: {CoreCount: 2, Family: standardDSv3},
 
-		api.VMSizeStandardD4asV4:  {CoreCount: 4, Family: "standardDASv4Family"},
-		api.VMSizeStandardD8asV4:  {CoreCount: 8, Family: "standardDASv4Family"},
-		api.VMSizeStandardD16asV4: {CoreCount: 16, Family: "standardDASv4Family"},
-		api.VMSizeStandardD32asV4: {CoreCount: 32, Family: "standardDASv4Family"},
+		api.VMSizeStandardD4asV4:  {CoreCount: 4, Family: standardDASv4},
+		api.VMSizeStandardD8asV4:  {CoreCount: 8, Family: standardDASv4},
+		api.VMSizeStandardD16asV4: {CoreCount: 16, Family: standardDASv4},
+		api.VMSizeStandardD32asV4: {CoreCount: 32, Family: standardDASv4},
 
-		api.VMSizeStandardD4sV3:  {CoreCount: 4, Family: "standardDSv3Family"},
-		api.VMSizeStandardD8sV3:  {CoreCount: 8, Family: "standardDSv3Family"},
-		api.VMSizeStandardD16sV3: {CoreCount: 16, Family: "standardDSv3Family"},
-		api.VMSizeStandardD32sV3: {CoreCount: 32, Family: "standardDSv3Family"},
+		api.VMSizeStandardD4sV3:  {CoreCount: 4, Family: standardDSv3},
+		api.VMSizeStandardD8sV3:  {CoreCount: 8, Family: standardDSv3},
+		api.VMSizeStandardD16sV3: {CoreCount: 16, Family: standardDSv3},
+		api.VMSizeStandardD32sV3: {CoreCount: 32, Family: standardDSv3},
 
-		api.VMSizeStandardE4sV3:     {CoreCount: 4, Family: "standardESv3Family"},
-		api.VMSizeStandardE8sV3:     {CoreCount: 8, Family: "standardESv3Family"},
-		api.VMSizeStandardE16sV3:    {CoreCount: 16, Family: "standardESv3Family"},
-		api.VMSizeStandardE32sV3:    {CoreCount: 32, Family: "standardESv3Family"},
-		api.VMSizeStandardE64isV3:   {CoreCount: 64, Family: "standardESv3Family"},
-		api.VMSizeStandardE64iV3:    {CoreCount: 64, Family: "standardESv3Family"},
-		api.VMSizeStandardE80isV4:   {CoreCount: 80, Family: "standardEISv4Family"},
-		api.VMSizeStandardE80idsV4:  {CoreCount: 80, Family: "standardEIDSv4Family"},
-		api.VMSizeStandardE104iV5:   {CoreCount: 104, Family: "standardEIv5Family"},
-		api.VMSizeStandardE104isV5:  {CoreCount: 104, Family: "standardEISv5Family"},
-		api.VMSizeStandardE104idV5:  {CoreCount: 104, Family: "standardEIDv5Family"},
-		api.VMSizeStandardE104idsV5: {CoreCount: 104, Family: "standardEIDSv5Family"},
+		api.VMSizeStandardE4sV3:     {CoreCount: 4, Family: standardESv3},
+		api.VMSizeStandardE8sV3:     {CoreCount: 8, Family: standardESv3},
+		api.VMSizeStandardE16sV3:    {CoreCount: 16, Family: standardESv3},
+		api.VMSizeStandardE32sV3:    {CoreCount: 32, Family: standardESv3},
+		api.VMSizeStandardE64isV3:   {CoreCount: 64, Family: standardESv3},
+		api.VMSizeStandardE64iV3:    {CoreCount: 64, Family: standardESv3},
+		api.VMSizeStandardE80isV4:   {CoreCount: 80, Family: standardEISv4},
+		api.VMSizeStandardE80idsV4:  {CoreCount: 80, Family: standardEIDSv4},
+		api.VMSizeStandardE104iV5:   {CoreCount: 104, Family: standardEIv5},
+		api.VMSizeStandardE104isV5:  {CoreCount: 104, Family: standardEISv5},
+		api.VMSizeStandardE104idV5:  {CoreCount: 104, Family: standardEIDv5},
+		api.VMSizeStandardE104idsV5: {CoreCount: 104, Family: standardEIDSv5},
 
-		api.VMSizeStandardF4sV2:  {CoreCount: 4, Family: "standardFSv2Family"},
-		api.VMSizeStandardF8sV2:  {CoreCount: 8, Family: "standardFSv2Family"},
-		api.VMSizeStandardF16sV2: {CoreCount: 16, Family: "standardFSv2Family"},
-		api.VMSizeStandardF32sV2: {CoreCount: 32, Family: "standardFSv2Family"},
-		api.VMSizeStandardF72sV2: {CoreCount: 72, Family: "standardFSv2Family"},
+		api.VMSizeStandardF4sV2:  {CoreCount: 4, Family: standardFSv2},
+		api.VMSizeStandardF8sV2:  {CoreCount: 8, Family: standardFSv2},
+		api.VMSizeStandardF16sV2: {CoreCount: 16, Family: standardFSv2},
+		api.VMSizeStandardF32sV2: {CoreCount: 32, Family: standardFSv2},
+		api.VMSizeStandardF72sV2: {CoreCount: 72, Family: standardFSv2},
 
-		api.VMSizeStandardM128ms: {CoreCount: 128, Family: "standardMSFamily"},
-		api.VMSizeStandardG5:     {CoreCount: 32, Family: "standardGFamily"},
-		api.VMSizeStandardGS5:    {CoreCount: 32, Family: "standardGFamily"},
+		api.VMSizeStandardM128ms: {CoreCount: 128, Family: standardMS},
+		api.VMSizeStandardG5:     {CoreCount: 32, Family: standardGFamily},
+		api.VMSizeStandardGS5:    {CoreCount: 32, Family: standardGFamily},
 
-		api.VMSizeStandardL4s:    {CoreCount: 4, Family: "standardLsv2Family"},
-		api.VMSizeStandardL8s:    {CoreCount: 8, Family: "standardLsv2Family"},
-		api.VMSizeStandardL16s:   {CoreCount: 16, Family: "standardLsv2Family"},
-		api.VMSizeStandardL32s:   {CoreCount: 32, Family: "standardLsv2Family"},
-		api.VMSizeStandardL8sV2:  {CoreCount: 8, Family: "standardLsv2Family"},
-		api.VMSizeStandardL16sV2: {CoreCount: 16, Family: "standardLsv2Family"},
-		api.VMSizeStandardL32sV2: {CoreCount: 32, Family: "standardLsv2Family"},
-		api.VMSizeStandardL48sV2: {CoreCount: 48, Family: "standardLsv2Family"},
-		api.VMSizeStandardL64sV2: {CoreCount: 64, Family: "standardLsv2Family"},
+		api.VMSizeStandardL4s:    {CoreCount: 4, Family: standardLSv2},
+		api.VMSizeStandardL8s:    {CoreCount: 8, Family: standardLSv2},
+		api.VMSizeStandardL16s:   {CoreCount: 16, Family: standardLSv2},
+		api.VMSizeStandardL32s:   {CoreCount: 32, Family: standardLSv2},
+		api.VMSizeStandardL8sV2:  {CoreCount: 8, Family: standardLSv2},
+		api.VMSizeStandardL16sV2: {CoreCount: 16, Family: standardLSv2},
+		api.VMSizeStandardL32sV2: {CoreCount: 32, Family: standardLSv2},
+		api.VMSizeStandardL48sV2: {CoreCount: 48, Family: standardLSv2},
+		api.VMSizeStandardL64sV2: {CoreCount: 64, Family: standardLSv2},
 
 		// GPU nodes
 		// the formatting of the ncasv3_t4 family is different.  This can be seen through a
 		// az vm list-usage -l eastus
-		api.VMSizeStandardNC4asT4V3:  {CoreCount: 4, Family: "Standard NCASv3_T4 Family"},
-		api.VMSizeStandardNC8asT4V3:  {CoreCount: 8, Family: "Standard NCASv3_T4 Family"},
-		api.VMSizeStandardNC16asT4V3: {CoreCount: 16, Family: "Standard NCASv3_T4 Family"},
-		api.VMSizeStandardNC64asT4V3: {CoreCount: 64, Family: "Standard NCASv3_T4 Family"},
+		api.VMSizeStandardNC4asT4V3:  {CoreCount: 4, Family: standardNCAS},
+		api.VMSizeStandardNC8asT4V3:  {CoreCount: 8, Family: standardNCAS},
+		api.VMSizeStandardNC16asT4V3: {CoreCount: 16, Family: standardNCAS},
+		api.VMSizeStandardNC64asT4V3: {CoreCount: 64, Family: standardNCAS},
 	}
 
 	vm, ok := vmTypesMap[vmSize]
