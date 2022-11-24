@@ -34,7 +34,28 @@ var _ = Describe("AKS cluster present", func() {
 		Expect(err).To(BeNil())
 	})
 
+	// TODO: remove this when all regions have the AKS
+	//       since this is going to happen in a weeks,
+	//       no need for external configuration option
+	regionsWithoutAKS := []string{
+		"australiacentral",
+		"australiacentral2",
+		"brazilsoutheast",
+		"eastus2euap",
+		"switzerlandwest",
+		"uaecentral",
+		"usgovvirginia",
+	}
+
 	It("should get kubeconfig", func() {
+		By("region = " + _env.Location())
+		for _, region := range regionsWithoutAKS {
+			// uses the region information stored in core environment, which reads it from instance metadata.
+			if _env.Location() == region {
+				Skip("Region " + region + " does not have AKS, skipping.")
+			}
+		}
+
 		var err error
 
 		kubeConfig, err = liveConfig.HiveRestConfig(ctx, 0)
