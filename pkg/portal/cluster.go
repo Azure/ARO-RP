@@ -166,6 +166,31 @@ func (p *portal) machines(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(b)
 }
 
+func (p *portal) VMAllocationStatus(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	fetcher, err := p.makeFetcher(ctx, r)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	machineVMAllocationStatus, err := fetcher.VMAllocationStatus(ctx)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	b, err := json.MarshalIndent(machineVMAllocationStatus, "", "    ")
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(b)
+}
+
 func (p *portal) machineSets(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

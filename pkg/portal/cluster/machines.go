@@ -5,7 +5,11 @@ package cluster
 
 import (
 	"context"
+	"strings"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -57,6 +61,62 @@ func (f *realFetcher) Machines(ctx context.Context) (*MachineListInformation, er
 
 func (c *client) Machines(ctx context.Context) (*MachineListInformation, error) {
 	return c.fetcher.Machines(ctx)
+}
+
+// VM Allocation Status Stuff
+type VMAllocationStatus map[string]string
+
+func (c *client) VMAllocationStatus(ctx context.Context) (VMAllocationStatus, error) {
+	return c.fetcher.VMAllocationStatus(ctx)
+}
+
+func (f *realFetcher) VMAllocationStatus(ctx context.Context) (VMAllocationStatus, error) {
+	env := f.azureSideFetcher.env
+	subscriptionDoc := f.azureSideFetcher.subscriptionDoc
+	// fmt.Println(subscriptionDoc)
+	// fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+	// fmt.Println(subscriptionDoc.Subscription)
+	clusterRGName := f.azureSideFetcher.resourceGroupName
+	fpAuth, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, env.Environment().ResourceManagerEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	// Getting Virtual Machine resources through the Cluster's Resource Group
+	computeResources, err := features.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth).ListByResourceGroup(ctx, clusterRGName, "resourceType eq 'Microsoft.Compute/virtualMachines'", "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	vmAllocationStatus := make(VMAllocationStatus)
+	virtualMachineClient := compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth)
+	for _, res := range computeResources {
+		var vmName, allocationStatus string
+		if *res.Type != "Microsoft.Compute/virtualMachines" {
+			continue
+		}
+
+		vm, err := virtualMachineClient.Get(ctx, clusterRGName, *res.Name, mgmtcompute.InstanceView)
+		if err != nil {
+			f.log.Warn(err) // can happen when the ARM cache is lagging
+			// armResources = append(armResources, arm.Resource{
+			// 	Resource: res,
+			// })
+			continue
+		}
+
+		vmName = *vm.Name
+		instanceViewStatuses := vm.InstanceView.Statuses
+		for _, status := range *instanceViewStatuses {
+			if strings.Contains(*status.Code, "PowerState") {
+				allocationStatus = *status.Code
+			}
+		}
+
+		vmAllocationStatus[vmName] = allocationStatus
+	}
+
+	return vmAllocationStatus, nil
 }
 
 // Helper Functions

@@ -12,14 +12,17 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 // FetchClient is the interface that the Admin Portal Frontend uses to gather
 // information about clusters. It returns frontend-suitable data structures.
 type FetchClient interface {
 	Nodes(context.Context) (*NodeListInformation, error)
+	VMAllocationStatus(context.Context) (VMAllocationStatus, error)
 	ClusterOperators(context.Context) (*ClusterOperatorsInformation, error)
 	Machines(context.Context) (*MachineListInformation, error)
 	MachineSets(context.Context) (*MachineSetListInformation, error)
@@ -41,13 +44,28 @@ type client struct {
 // contains Kubernetes clients and returns the frontend-suitable data
 // structures. The concrete implementation of FetchClient wraps this.
 type realFetcher struct {
-	log           *logrus.Entry
-	configCli     configclient.Interface
-	kubernetesCli kubernetes.Interface
-	machineClient machineclient.Interface
+	log              *logrus.Entry
+	configCli        configclient.Interface
+	kubernetesCli    kubernetes.Interface
+	machineClient    machineclient.Interface
+	azureSideFetcher azureSideFetcher
 }
 
-func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument) (*realFetcher, error) {
+type azureSideFetcher struct {
+	resourceGroupName string
+	subscriptionDoc   *api.SubscriptionDocument
+	env               env.Interface
+}
+
+func newAzureSideFetcher(resourceGroupName string, subscriptionDoc *api.SubscriptionDocument, env env.Interface) azureSideFetcher {
+	return azureSideFetcher{
+		resourceGroupName: resourceGroupName,
+		subscriptionDoc:   subscriptionDoc,
+		env:               env,
+	}
+}
+
+func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument, azureazureSideFetcher azureSideFetcher) (*realFetcher, error) {
 	restConfig, err := restconfig.RestConfig(dialer, doc.OpenShiftCluster)
 	if err != nil {
 		log.Error(err)
@@ -72,15 +90,19 @@ func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftCl
 	}
 
 	return &realFetcher{
-		log:           log,
-		configCli:     configCli,
-		kubernetesCli: kubernetesCli,
-		machineClient: machineClient,
+		log:              log,
+		configCli:        configCli,
+		kubernetesCli:    kubernetesCli,
+		machineClient:    machineClient,
+		azureSideFetcher: azureazureSideFetcher,
 	}, nil
 }
 
-func NewFetchClient(log *logrus.Entry, dialer proxy.Dialer, cluster *api.OpenShiftClusterDocument) (FetchClient, error) {
-	fetcher, err := newRealFetcher(log, dialer, cluster)
+func NewFetchClient(log *logrus.Entry, dialer proxy.Dialer, cluster *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, env env.Interface) (FetchClient, error) {
+	resourceGroupName := stringutils.LastTokenByte(cluster.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	azureSideFetcher := newAzureSideFetcher(resourceGroupName, subscriptionDoc, env)
+
+	fetcher, err := newRealFetcher(log, dialer, cluster, azureSideFetcher)
 	if err != nil {
 		return nil, err
 	}

@@ -26,7 +26,9 @@ import (
 )
 
 func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
-	_env, err := env.NewCore(ctx, log)
+	//_env, err := env.NewCore(ctx, log)
+	_env, err := env.NewEnv(ctx, log)
+
 	if err != nil {
 		return err
 	}
@@ -115,6 +117,11 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
+	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	if err != nil {
+		return err
+	}
+
 	portalKeyvaultURI, err := keyvault.URI(_env, env.PortalKeyvaultSuffix)
 	if err != nil {
 		return err
@@ -187,7 +194,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 
 	log.Printf("listening %s", address)
 
-	p := pkgportal.NewPortal(_env, audit, log.WithField("component", "portal"), log.WithField("component", "portal-access"), l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbOpenShiftClusters, dbPortal, dialer, m)
+	p := pkgportal.NewPortal(_env, audit, log.WithField("component", "portal"), log.WithField("component", "portal-access"), l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbOpenShiftClusters, dbPortal, dbSubscriptions, dialer, m)
 
 	return p.Run(ctx)
 }
