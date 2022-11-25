@@ -195,6 +195,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				"[Action ensureDefaults-fm]",
 				"[Action fixupClusterSPObjectID-fm]",
 				"[Action fixInfraID-fm]",
+				"[Action populateDatabaseIntIP-fm]",
 				"[Action startVMs-fm]",
 				"[Condition apiServersReady-fm, timeout 30m0s]",
 				"[Action fixMCSCert-fm]",
