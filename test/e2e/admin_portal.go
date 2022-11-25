@@ -244,4 +244,36 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 			Expect(link.GetAttribute("href")).To(MatchRegexp(`https://([a-z]|[0-9])+\.admin\.aro\.azure\.com`))
 		}
 	})
+
+	It("Should open an error modal for an invalid resource ID parameter in the URL", func() {
+		wd.Get(host + "/v2" + "?resourceid=" + "invalidResourceId")
+		time.Sleep(time.Second * 2) // this is done to give enough time to fetch the data
+
+		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[role='document']"))
+		errorModal, err := wd.FindElement(selenium.ByCSSSelector, "div[role='document']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		Expect(errorModal.IsDisplayed()).To(BeTrue())
+	})
+
+	It("Should display the correct cluster detail view for the resource ID parameter in the URL", func() {
+		wd.Get(host + "/v2" + "?resourceid=" + resourceIDFromEnv())
+		time.Sleep(time.Second * 2)
+		wd.Wait(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailPanel"))
+
+		detailPanel, err := wd.FindElement(selenium.ByID, "ClusterDetailPanel")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		Expect(detailPanel.IsDisplayed()).To(BeTrue())
+
+		elem, err := wd.FindElement(selenium.ByCSSSelector, "div[class='titleText-109']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		Expect(elem.Text()).To(Equal(clusterName))
+	})
 })

@@ -139,7 +139,7 @@ export interface IClusterDetail {
   clusterName: string
 }
 
-function App() {
+function App(props: {params: any}) {
   const [data, updateData] = useState({ location: "", csrf: "", elevated: false, username: "" })
   const [regions, setRegions] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
@@ -275,6 +275,7 @@ function App() {
               sshBox={sshRef}
               setCurrentCluster={setCurrentCluster}
               csrfTokenAvailable={fetching}
+              params={props.params}
             />
           </Stack.Item>
           <Stack.Item grow>
