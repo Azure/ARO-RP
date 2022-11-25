@@ -69,7 +69,6 @@ type frontend struct {
 	kubeActionsFactory  kubeActionsFactory
 	azureActionsFactory azureActionsFactory
 	ocEnricherFactory   ocEnricherFactory
-	adminAction         adminactions.AzureActions
 
 	l net.Listener
 	s *http.Server

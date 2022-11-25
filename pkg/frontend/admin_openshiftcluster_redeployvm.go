@@ -26,9 +26,9 @@ func (f *frontend) postAdminOpenShiftClusterRedeployVM(w http.ResponseWriter, r 
 func (f *frontend) _postAdminOpenShiftClusterRedeployVM(log *logrus.Entry, ctx context.Context, r *http.Request) error {
 	vars := mux.Vars(r)
 	vmName := r.URL.Query().Get("vmName")
-	azActionsWrapper, err := f.newAzureActionsWrapper(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), vars)
+	action, _, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), vars)
 	if err != nil {
 		return err
 	}
-	return f.adminAction.VMRedeployAndWait(ctx, azActionsWrapper.vmName)
+	return action.VMRedeployAndWait(ctx, vmName)
 }
