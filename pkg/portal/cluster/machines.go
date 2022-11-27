@@ -7,12 +7,18 @@ import (
 	"context"
 	"strings"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// Creating local vars for these functions in order to make them testable. The function definition will is altered while in the tests written.
+var NewResourceClientFunction = features.NewResourcesClient
+var NewVirtualMachineClientFunction = compute.NewVirtualMachinesClient
 
 type MachinesInformation struct {
 	Name              string `json:"name"`
@@ -73,9 +79,6 @@ func (c *client) VMAllocationStatus(ctx context.Context) (VMAllocationStatus, er
 func (f *realFetcher) VMAllocationStatus(ctx context.Context) (VMAllocationStatus, error) {
 	env := f.azureSideFetcher.env
 	subscriptionDoc := f.azureSideFetcher.subscriptionDoc
-	// fmt.Println(subscriptionDoc)
-	// fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-	// fmt.Println(subscriptionDoc.Subscription)
 	clusterRGName := f.azureSideFetcher.resourceGroupName
 	fpAuth, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, env.Environment().ResourceManagerEndpoint)
 	if err != nil {
@@ -83,13 +86,13 @@ func (f *realFetcher) VMAllocationStatus(ctx context.Context) (VMAllocationStatu
 	}
 
 	// Getting Virtual Machine resources through the Cluster's Resource Group
-	computeResources, err := features.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth).ListByResourceGroup(ctx, clusterRGName, "resourceType eq 'Microsoft.Compute/virtualMachines'", "", nil)
+	computeResources, err := NewResourceClientFunction(env.Environment(), subscriptionDoc.ID, fpAuth).ListByResourceGroup(ctx, clusterRGName, "resourceType eq 'Microsoft.Compute/virtualMachines'", "", nil)
 	if err != nil {
 		return nil, err
 	}
 
 	vmAllocationStatus := make(VMAllocationStatus)
-	virtualMachineClient := compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth)
+	virtualMachineClient := NewVirtualMachineClientFunction(env.Environment(), subscriptionDoc.ID, fpAuth)
 	for _, res := range computeResources {
 		var vmName, allocationStatus string
 		if *res.Type != "Microsoft.Compute/virtualMachines" {

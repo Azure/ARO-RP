@@ -6,25 +6,31 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"regexp"
 	"sort"
 	"testing"
 
+	kruntime "k8s.io/apimachinery/pkg/runtime"
+
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 
-	kruntime "k8s.io/apimachinery/pkg/runtime"
-
 	"github.com/Azure/ARO-RP/pkg/api"
-	testlog "github.com/Azure/ARO-RP/test/util/log"
-
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
-
-	//mgmtcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
+	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_refreshable "github.com/Azure/ARO-RP/pkg/util/mocks/refreshable"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestMachines(t *testing.T) {
@@ -108,86 +114,121 @@ func TestMachines(t *testing.T) {
 }
 
 func TestVMAllocationStatus(t *testing.T) {
-	//ctx := context.Background()
+	ctx := context.Background()
+	controller := gomock.NewController(t)
+	mockResourcesClient := mock_features.NewMockResourcesClient(controller)
+	mockVirtualMachinesClient := mock_compute.NewMockVirtualMachinesClient(controller)
+	NewResourceClientFunction = func(environment *azureclient.AROEnvironment,
+		subscriptionID string,
+		authorizer autorest.Authorizer) features.ResourcesClient {
+		return mockResourcesClient
+	}
+	NewVirtualMachineClientFunction = func(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
+		return mockVirtualMachinesClient
+	}
+
+	defer func() {
+		NewResourceClientFunction = features.NewResourcesClient
+	}()
 
 	type test struct {
 		name    string
-		mocks   func(*test, *mock_compute.MockVirtualMachinesClient, *mock_env.MockInterface, *mock_refreshable.MockAuthorizer)
+		mocks   func(*test, *mock_env.MockInterface, *mock_refreshable.MockAuthorizer, *mock_features.MockResourcesClient, *mock_compute.MockVirtualMachinesClient)
 		wantErr string
 	}
 	for _, tt := range []*test{
 		{
-			name: "allow when there's enough resources - limits set to exact requirements, offset by 100 of current value",
-			mocks: func(tt *test, cuc *mock_compute.MockVirtualMachinesClient, env *mock_env.MockInterface, authorizer *mock_refreshable.MockAuthorizer) {
-				// cuc.EXPECT().List(ctx, "someResourceGroup").Return([]mgmtcompute.VirtualMachine{{Name: func() *string {
-				// 	s := new(string)
-				// 	*s = "vm1"
-				// 	return s
-				// }(), VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{InstanceView: &mgmtcompute.VirtualMachineInstanceView{Statuses: &[]mgmtcompute.InstanceViewStatus{{Code: func() *string {
-				// 	s := new(string)
-				// 	*s = "PowerState/running"
-				// 	return s
-				// }()}}}}}}, nil)
-				env.EXPECT().FPAuthorizer("someString", "someEndpoint").Return(authorizer, nil)
-				env.EXPECT().Environment()
+			name: "Everything runs fine",
+			mocks: func(tt *test,
+				env *mock_env.MockInterface,
+				authorizer *mock_refreshable.MockAuthorizer,
+				mockResourcesClient *mock_features.MockResourcesClient,
+				mockVirtualMachinesClient *mock_compute.MockVirtualMachinesClient) {
+				env.EXPECT().Environment().Return(&azureclient.AROEnvironment{
+					Environment: azure.Environment{
+						ResourceManagerEndpoint: "temp",
+					},
+				}).AnyTimes()
+				env.EXPECT().FPAuthorizer(gomock.Any(), gomock.Any()).Return(authorizer, nil)
+
+				mockResourcesClient.EXPECT().ListByResourceGroup(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]mgmtfeatures.GenericResourceExpanded{
+						{
+							Kind: func(v string) *string { return &v }("something"),
+							Type: func(v string) *string { return &v }("Microsoft.Compute/virtualMachines"),
+							Name: func(v string) *string { return &v }("master-x"),
+						},
+					}, nil)
+
+				mockVirtualMachinesClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mgmtcompute.VirtualMachine{
+					Name: func(v string) *string { return &v }("master-x"),
+					VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+						InstanceView: &mgmtcompute.VirtualMachineInstanceView{
+							Statuses: &[]mgmtcompute.InstanceViewStatus{
+								{
+									Code: func() *string {
+										s := new(string)
+										*s = "PowerState/running"
+										return s
+									}(),
+								},
+							},
+						},
+					},
+				}, nil)
 			},
 			wantErr: "",
 		},
-		// {
-		// 	name:    "not enough cores",
-		// 	wantErr: "400: ResourceQuotaExceeded: : Resource quota of cores exceeded. Maximum allowed: 204, Current in use: 101, Additional requested: 104.",
-		// 	mocks: func(tt *test, cuc *mock_compute.MockVirtualMachinesClient) {
-		// 		cuc.EXPECT().
-		// 			List(ctx, "ocLocation").
-		// 			Return([]mgmtcompute.Usage{
-		// 				{
-		// 					Name: &mgmtcompute.UsageName{
-		// 						Value: to.StringPtr("cores"),
-		// 					},
-		// 					CurrentValue: to.Int32Ptr(101),
-		// 					Limit:        to.Int64Ptr(204),
-		// 				},
-		// 			}, nil)
-		// 	},
-		// },
-		// {
-		// 	name:    "not enough premium disks",
-		// 	wantErr: "400: ResourceQuotaExceeded: : Resource quota of PremiumDiskCount exceeded. Maximum allowed: 113, Current in use: 101, Additional requested: 13.",
-		// 	mocks: func(tt *test, cuc *mock_compute.MockVirtualMachinesClient) {
-		// 		cuc.EXPECT().
-		// 			List(ctx, "ocLocation").
-		// 			Return([]mgmtcompute.Usage{
-		// 				{
-		// 					Name: &mgmtcompute.UsageName{
-		// 						Value: to.StringPtr("PremiumDiskCount"),
-		// 					},
-		// 					CurrentValue: to.Int32Ptr(101),
-		// 					Limit:        to.Int64Ptr(113),
-		// 				},
-		// 			}, nil)
-		// 	},
-		// },
+		{
+			name: "No VM resource found",
+			mocks: func(tt *test,
+				env *mock_env.MockInterface,
+				authorizer *mock_refreshable.MockAuthorizer,
+				mockResourcesClient *mock_features.MockResourcesClient,
+				mockVirtualMachinesClient *mock_compute.MockVirtualMachinesClient) {
+				env.EXPECT().Environment().Return(&azureclient.AROEnvironment{
+					Environment: azure.Environment{
+						ResourceManagerEndpoint: "temp",
+					},
+				}).AnyTimes()
+				env.EXPECT().FPAuthorizer(gomock.Any(), gomock.Any()).Return(authorizer, nil)
+
+				mockResourcesClient.EXPECT().ListByResourceGroup(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]mgmtfeatures.GenericResourceExpanded{}, nil)
+			},
+			wantErr: "",
+		},
+		{
+			name: "Empty FP Authorizer",
+			mocks: func(tt *test,
+				env *mock_env.MockInterface,
+				authorizer *mock_refreshable.MockAuthorizer,
+				mockResourcesClient *mock_features.MockResourcesClient,
+				mockVirtualMachinesClient *mock_compute.MockVirtualMachinesClient) {
+				env.EXPECT().Environment().Return(&azureclient.AROEnvironment{
+					Environment: azure.Environment{
+						ResourceManagerEndpoint: "temp",
+					},
+				}).AnyTimes()
+				env.EXPECT().FPAuthorizer(gomock.Any(), gomock.Any()).Return(nil, errors.New("Empty Athorizer"))
+			},
+			wantErr: "Empty Athorizer",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-			ctx := context.Background()
-
-			computeVirtualMachineClient := mock_compute.NewMockVirtualMachinesClient(controller)
 			mockEnv := mock_env.NewMockInterface(controller)
 			mockRefreshable := mock_refreshable.NewMockAuthorizer(controller)
-
 			subscriptionDoc := &api.SubscriptionDocument{
-				ID:          "fe16a035-e540-4ab7-80d9-373fa9a3d6ae",
-				ResourceID:  "MrEvAJyKauIBAAAAAAAAAA==",
+				ID:          "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+				ResourceID:  "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 				Timestamp:   1668689726,
-				Self:        "dbs/MrEvAA==/colls/MrEvAJyKauI=/docs/MrEvAJyKauIBAAAAAAAAAA==/",
-				ETag:        "\"c4006fe2-0000-0100-0000-63762f3e0000\"",
+				Self:        "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+				ETag:        "\"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz\"",
 				Attachments: "attachments/",
 				Subscription: &api.Subscription{
 					State: "Registered",
 					Properties: &api.SubscriptionProperties{
-						TenantID: "64dc69e4-d083-49fc-9569-ebece1dd1408",
+						TenantID: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 						RegisteredFeatures: []api.RegisteredFeatureProfile{
 							{Name: "Microsoft.RedHatOpenShift/RedHatEngineering", State: "Registered"},
 						},
@@ -196,49 +237,23 @@ func TestVMAllocationStatus(t *testing.T) {
 			}
 
 			if tt.mocks != nil {
-				tt.mocks(tt, computeVirtualMachineClient, mockEnv, mockRefreshable)
+				tt.mocks(tt, mockEnv, mockRefreshable, mockResourcesClient, mockVirtualMachinesClient)
 			}
-
-			// oc := &api.OpenShiftCluster{
-			// 	Location: "ocLocation",
-			// 	Properties: api.OpenShiftClusterProperties{
-			// 		Install: &api.Install{
-			// 			Phase: api.InstallPhaseBootstrap,
-			// 		},
-			// 		MasterProfile: api.MasterProfile{
-			// 			VMSize: "Standard_D8s_v3",
-			// 		},
-			// 		WorkerProfiles: []api.WorkerProfile{
-			// 			{
-			// 				VMSize: "Standard_D8s_v3",
-			// 				Count:  10,
-			// 			},
-			// 		},
-			// 	},
-			// }
-
 			_, log := testlog.New()
-
 			azureSideFetcher := azureSideFetcher{
 				resourceGroupName: "someResourceGroup",
 				env:               mockEnv,
 				subscriptionDoc:   subscriptionDoc,
 			}
-
 			realFetcher := &realFetcher{
 				log:              log,
 				azureSideFetcher: azureSideFetcher,
 			}
-
 			client := &client{fetcher: realFetcher, log: log}
-
-			vmAllocationStatus, err := client.VMAllocationStatus(ctx)
-			t.Log(vmAllocationStatus)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
+			_, err := client.VMAllocationStatus(ctx)
+			if err != nil && err.Error() != tt.wantErr || err == nil && tt.wantErr != "" {
+				t.Error("Expected", tt.wantErr, "Got", err)
 			}
-
 		})
 	}
 }
