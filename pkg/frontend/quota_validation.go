@@ -1,4 +1,4 @@
-package dynamic
+package frontend
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -9,6 +9,11 @@ import (
 	"net/http"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 const (
@@ -27,6 +32,12 @@ const (
 	standardLSv2    = "standardLsv2Family"
 	standardNCAS    = "Standard NCASv3_T4 Family"
 )
+
+type QuotaValidator interface {
+	ValidateQuota(ctx context.Context, azEnv *azureclient.AROEnvironment, subscriptionID string, oc *api.OpenShiftCluster, authorizer refreshable.Authorizer) error
+}
+
+type quotaValidator struct{}
 
 func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, count int) error {
 	vmTypesMap := map[api.VMSize]struct {
@@ -102,9 +113,15 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 
 // ValidateQuota checks usage quotas vs. resources required by cluster before cluster
 // creation
-func (dv *dynamic) ValidateQuota(ctx context.Context, oc *api.OpenShiftCluster) error {
-	dv.log.Print("ValidateQuota")
+// It is a method on struct so we can make use of interfaces.
+func (q quotaValidator) ValidateQuota(ctx context.Context, azEnv *azureclient.AROEnvironment, subscriptionID string, oc *api.OpenShiftCluster, authorizer refreshable.Authorizer) error {
+	spComputeUsage := compute.NewUsageClient(azEnv, subscriptionID, authorizer)
+	spNetworkUsage := network.NewUsageClient(azEnv, subscriptionID, authorizer)
 
+	return validateQuota(ctx, oc, spNetworkUsage, spComputeUsage)
+}
+
+func validateQuota(ctx context.Context, oc *api.OpenShiftCluster, spNetworkUsage network.UsageClient, spComputeUsage compute.UsageClient) error {
 	// If ValidateQuota runs outside install process, we should skip quota validation
 	if oc.Properties.Install == nil || oc.Properties.Install.Phase != api.InstallPhaseBootstrap {
 		return nil
@@ -133,7 +150,7 @@ func (dv *dynamic) ValidateQuota(ctx context.Context, oc *api.OpenShiftCluster) 
 	// rationale:
 	// 1. if the Usage API doesn't send a limit because a resource is no longer limited, RP will continue cluster creation without impact
 	// 2. if the Usage API doesn't send a limit that is still enforced, cluster creation will fail on the backend and we will get an error in the RP logs
-	computeUsages, err := dv.spComputeUsage.List(ctx, oc.Location)
+	computeUsages, err := spComputeUsage.List(ctx, oc.Location)
 	if err != nil {
 		return err
 	}
@@ -145,7 +162,7 @@ func (dv *dynamic) ValidateQuota(ctx context.Context, oc *api.OpenShiftCluster) 
 		}
 	}
 
-	netUsages, err := dv.spNetworkUsage.List(ctx, oc.Location)
+	netUsages, err := spNetworkUsage.List(ctx, oc.Location)
 	if err != nil {
 		return err
 	}
