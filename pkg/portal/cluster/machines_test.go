@@ -11,8 +11,6 @@ import (
 	"sort"
 	"testing"
 
-	kruntime "k8s.io/apimachinery/pkg/runtime"
-
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
@@ -21,6 +19,7 @@ import (
 	"github.com/golang/mock/gomock"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"

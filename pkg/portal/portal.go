@@ -19,11 +19,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
-
-	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
