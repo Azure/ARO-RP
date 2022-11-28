@@ -5,7 +5,8 @@ import 'bootstrap/js/dist/dropdown';
 import 'bootstrap/js/dist/alert';
 
 import "./select/select.css"
-import "./select/select.js"
+import 'tom-select/dist/css/tom-select.bootstrap5.min.css';
+import TomSelect from 'tom-select/dist/js/tom-select.complete.min';
 
 jQuery.extend({
     redirect: function (location, args) {
@@ -33,8 +34,20 @@ jQuery(function () {
             $.each(clusters, function (i, cluster) {
                 $("#selResourceId").append($("<option>").text(cluster.resourceId));
             });
-            $("#enterResourceId").attr("placeholder", "Search for a cluster...");
-            $("#enterResourceId").prop("disabled", false);
+
+            $("#selResourceId").prop("disabled", false);
+
+            new TomSelect("#selResourceId", {
+                plugins: ["dropdown_input"],
+                maxOptions: null,
+                maxItems: 1,
+                placeholder: "Search clusters...",
+                onDropdownOpen: function (value) {
+                    $(".dropdown-input").val($(".ts-control").children("div").html());
+                }
+            });
+
+            $("#selResourceId").css("display", "none");
         },
         dataType: "json",
     });

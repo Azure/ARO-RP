@@ -27,12 +27,9 @@
         <div class="form-group">
             <label for="selResourceId" class="form-label">Cluster:</label>
             <div class="mb-3">
-                <div class="select-search">
-                    <input id="enterResourceId" class="form-control" type="text" placeholder="Fetching clusters..." disabled>
-                    <select id="selResourceId">
-                        <option class="option-header" disabled>Select a cluster below</option>
-                    </select>
-                </div>
+                <select id="selResourceId" autocomplete="off" placeholder="Search clusters..." disabled>
+                    <option value=""></option>
+                </select>
             </div>
         </div>
 
