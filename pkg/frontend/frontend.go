@@ -71,6 +71,8 @@ type frontend struct {
 	ocEnricherFactory   ocEnricherFactory
 	adminAction         adminactions.AzureActions
 
+	quotaValidator QuotaValidator
+
 	l net.Listener
 	s *http.Server
 
@@ -125,6 +127,7 @@ func NewFrontend(ctx context.Context,
 		kubeActionsFactory:            kubeActionsFactory,
 		azureActionsFactory:           azureActionsFactory,
 		ocEnricherFactory:             ocEnricherFactory,
+		quotaValidator:                quotaValidator{},
 
 		// add default installation version so it's always supported
 		enabledOcpVersions: map[string]*api.OpenShiftVersion{
