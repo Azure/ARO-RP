@@ -33,11 +33,9 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli        aroclient.Interface
-	configcli     configclient.Interface
-	kubernetescli kubernetes.Interface
+	arocli    aroclient.Interface
+	configcli configclient.Interface
 
-	restConfig  *rest.Config
 	workarounds []Workaround
 }
 
@@ -48,12 +46,10 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli conf
 	}
 
 	return &Reconciler{
-		log:           log,
-		arocli:        arocli,
-		configcli:     configcli,
-		kubernetescli: kubernetescli,
-		restConfig:    restConfig,
-		workarounds:   []Workaround{NewSystemReserved(log, mcocli, dh), NewIfReload(log, kubernetescli)},
+		log:         log,
+		arocli:      arocli,
+		configcli:   configcli,
+		workarounds: []Workaround{NewSystemReserved(log, mcocli, dh), NewIfReload(log, kubernetescli)},
 	}
 }
 

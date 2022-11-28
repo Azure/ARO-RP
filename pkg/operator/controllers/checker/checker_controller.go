@@ -34,7 +34,6 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	role     string
 	checkers []Checker
 	arocli   aroclient.Interface
 }
@@ -52,7 +51,6 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli 
 
 	return &Reconciler{
 		log:      log,
-		role:     role,
 		checkers: checkers,
 		arocli:   arocli,
 	}
