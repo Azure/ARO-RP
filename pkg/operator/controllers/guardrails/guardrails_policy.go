@@ -68,8 +68,7 @@ func (r *Reconciler) ensurePolicy(ctx context.Context, fs embed.FS, path string)
 		}
 		data := buffer.Bytes()
 
-		uns := dynamichelper.UnstructuredObj{}
-		err = uns.DecodeUnstructured(data)
+		uns, err := dynamichelper.DecodeUnstructured(data)
 		if err != nil {
 			return err
 		}
@@ -96,7 +95,6 @@ func (r *Reconciler) removePolicy(ctx context.Context, fs embed.FS, path string)
 	if err != nil {
 		return err
 	}
-
 	buffer := new(bytes.Buffer)
 	for _, templ := range template.Templates() {
 		err := templ.Execute(buffer, nil)
@@ -104,13 +102,10 @@ func (r *Reconciler) removePolicy(ctx context.Context, fs embed.FS, path string)
 			return err
 		}
 		data := buffer.Bytes()
-
-		uns := dynamichelper.UnstructuredObj{}
-		err = uns.DecodeUnstructured(data)
+		uns, err := dynamichelper.DecodeUnstructured(data)
 		if err != nil {
 			return err
 		}
-
 		err = r.dh.EnsureDeletedGVR(ctx, uns.GroupVersionKind().GroupKind().String(), uns.GetNamespace(), uns.GetName(), uns.GroupVersionKind().Version)
 		if err != nil && !kerrors.IsNotFound(err) && !strings.Contains(strings.ToLower(err.Error()), "notfound") {
 			return err

@@ -233,7 +233,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			arocli, operatorcli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", ingress.ControllerName, err)
 		}
-		if err = (guardrails.NewReconciler(arocli, kubernetescli, dh)).SetupWithManager(mgr); err != nil {
+		if err = guardrails.NewReconciler(arocli, kubernetescli, dh).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", guardrails.ControllerName, err)
 		}
 	}

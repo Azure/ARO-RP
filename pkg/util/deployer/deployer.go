@@ -105,20 +105,13 @@ func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
 	var errs []error
 	namespaceName := ""
 	for _, obj := range resources {
-		// remove everything we created that has name and ns
-		if getName, getNs := reflect.ValueOf(obj).MethodByName("GetName"),
-			reflect.ValueOf(obj).MethodByName("GetNamespace"); getName != reflect.ValueOf(nil) && getNs != reflect.ValueOf(nil) {
-			name := getName.Call(nil)
-			ns := getNs.Call(nil)
-			if reflect.TypeOf(obj).String() == "*v1.Namespace" {
-				// dont delete the namespace for now
-				namespaceName = name[0].String()
-				continue
-			}
-			err := depl.dh.EnsureDeletedGVR(ctx, obj.GetObjectKind().GroupVersionKind().GroupKind().String(), ns[0].String(), name[0].String(), "")
-			if err != nil {
-				errs = append(errs, err)
-			}
+		nsName, err := depl.removeOne(ctx, obj)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		if nsName != "" {
+			namespaceName = nsName
 		}
 	}
 	if namespaceName != "" {
@@ -138,6 +131,47 @@ func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
 	}
 
 	return nil
+}
+
+func (depl *deployer) removeOne(ctx context.Context, obj kruntime.Object) (string, error) {
+	// remove everything we created that has name and ns
+	nameValue, err := getField(obj, "Name")
+	if err != nil {
+		return "", err
+	}
+	nsValue, err := getField(obj, "Namespace")
+	if err != nil {
+		return "", err
+	}
+	name := nameValue.String()
+	ns := nsValue.String()
+	if reflect.TypeOf(obj).String() == "*v1.Namespace" {
+		// dont delete the namespace for now
+		return name, nil
+	}
+	errDelete := depl.dh.EnsureDeletedGVR(ctx, obj.GetObjectKind().GroupVersionKind().GroupKind().String(), ns, name, "")
+	if errDelete != nil {
+		return "", errDelete
+	}
+	return "", nil
+}
+
+func getField(obj interface{}, fieldName string) (reflect.Value, error) {
+	if fieldName == "" {
+		return reflect.Value{}, errors.New("empty field name")
+	}
+	if reflect.TypeOf(obj).Kind() != reflect.Ptr {
+		return reflect.Value{}, errors.New("obj not ptr")
+	}
+	elem := reflect.ValueOf(obj).Elem()
+	if elem.Kind() != reflect.Struct {
+		return reflect.Value{}, errors.New("obj not pointing to struct")
+	}
+	field := elem.FieldByName(fieldName)
+	if !field.IsValid() {
+		return reflect.Value{}, errors.New("not found field: " + fieldName)
+	}
+	return field, nil
 }
 
 func (depl *deployer) IsReady(ctx context.Context, namespace, deploymentName string) (bool, error) {

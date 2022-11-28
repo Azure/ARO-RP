@@ -16,43 +16,39 @@ type UnstructuredObj struct {
 	obj unstructured.Unstructured
 }
 
-func NewUnstructuredObj(obj unstructured.Unstructured) *UnstructuredObj {
-	return &UnstructuredObj{obj}
-}
-
-func (o UnstructuredObj) GetObjectKind() schema.ObjectKind {
+func (o *UnstructuredObj) GetObjectKind() schema.ObjectKind {
 	return o.obj.GetObjectKind()
 }
 
-func (o UnstructuredObj) DeepCopyObject() kruntime.Object {
+func (o *UnstructuredObj) DeepCopyObject() kruntime.Object {
 	if un := o.obj.DeepCopy(); un != nil {
-		out := NewUnstructuredObj(*un)
-		return out
+		return &UnstructuredObj{*un}
 	}
 	return nil
 }
 
-func (o UnstructuredObj) GroupVersionKind() schema.GroupVersionKind {
+func (o *UnstructuredObj) GroupVersionKind() schema.GroupVersionKind {
 	return o.obj.GroupVersionKind()
 }
 
-func (o UnstructuredObj) GetNamespace() string {
+func (o *UnstructuredObj) GetNamespace() string {
 	return o.obj.GetNamespace()
 }
-func (o UnstructuredObj) GetName() string {
+func (o *UnstructuredObj) GetName() string {
 	return o.obj.GetName()
 }
 
-func (o *UnstructuredObj) DecodeUnstructured(data []byte) error {
+func DecodeUnstructured(data []byte) (*UnstructuredObj, error) {
 	json, err := yaml.YAMLToJSON(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	err = o.obj.UnmarshalJSON(json)
+	obj := &unstructured.Unstructured{}
+	err = obj.UnmarshalJSON(json)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &UnstructuredObj{*obj}, nil
 }
 
 func isKindUnstructured(groupKind string) bool {

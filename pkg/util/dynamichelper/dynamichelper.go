@@ -81,7 +81,7 @@ func (dh *dynamicHelper) resolve(groupKind, optionalVersion string) (*schema.Gro
 	if err == nil {
 		return gvr, err
 	}
-	// refresh sometimes may solves the issue
+	// refresh may sometimes solve the issue
 	if errNew := dh.Refresh(); errNew != nil {
 		dh.log.Printf("dynamicHelper Refresh failed with error: %v", errNew)
 		return gvr, err
@@ -98,7 +98,7 @@ func (dh *dynamicHelper) EnsureDeletedGVR(ctx context.Context, groupKind, namesp
 		return err
 	}
 
-	// gatekeeper policies is unstructured and should be deleted differently
+	// gatekeeper policies are unstructured and should be deleted differently
 	if isKindUnstructured(groupKind) {
 		dh.log.Printf("Delete unstructured obj kind %s ns %s name %s version %s", groupKind, namespace, name, optionalVersion)
 		err := dh.deleteUnstructuredObj(ctx, groupKind, namespace, name)
@@ -119,8 +119,8 @@ func (dh *dynamicHelper) EnsureDeletedGVR(ctx context.Context, groupKind, namesp
 // objects that need to be updated.
 func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) error {
 	for _, o := range objs {
-		if un, ok := o.(UnstructuredObj); ok {
-			err := dh.ensureUnstructuredObj(ctx, &un)
+		if un, ok := o.(*UnstructuredObj); ok {
+			err := dh.ensureUnstructuredObj(ctx, un)
 			if err != nil {
 				return err
 			}
@@ -136,13 +136,13 @@ func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) er
 }
 
 func (dh *dynamicHelper) ensureUnstructuredObj(ctx context.Context, o *UnstructuredObj) error {
-	gvr, err := dh.resolve(o.obj.GroupVersionKind().GroupKind().String(), o.obj.GroupVersionKind().Version)
+	gvr, err := dh.resolve(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
 	if err != nil {
 		return err
 	}
 
 	create := false
-	obj, err := dh.dynamicClient.Resource(*gvr).Namespace(o.obj.GetNamespace()).Get(ctx, o.obj.GetName(), metav1.GetOptions{})
+	obj, err := dh.dynamicClient.Resource(*gvr).Namespace(o.GetNamespace()).Get(ctx, o.GetName(), metav1.GetOptions{})
 	if err != nil {
 		if !notFound(err) {
 			return err
@@ -151,7 +151,7 @@ func (dh *dynamicHelper) ensureUnstructuredObj(ctx context.Context, o *Unstructu
 	}
 	if create {
 		dh.log.Printf("Create %s", keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName()))
-		if _, err = dh.dynamicClient.Resource(*gvr).Namespace(o.obj.GetNamespace()).Create(ctx, &o.obj, metav1.CreateOptions{}); err != nil {
+		if _, err = dh.dynamicClient.Resource(*gvr).Namespace(o.GetNamespace()).Create(ctx, &o.obj, metav1.CreateOptions{}); err != nil {
 			return err
 		}
 		return nil
@@ -171,7 +171,7 @@ func (dh *dynamicHelper) ensureUnstructuredObj(ctx context.Context, o *Unstructu
 	dh.log.Printf("Update %s: enforcementAction: %s->%s", keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName()), enOld, enNew)
 	o.obj.SetResourceVersion(obj.GetResourceVersion())
 
-	if _, err = dh.dynamicClient.Resource(*gvr).Namespace(o.obj.GetNamespace()).Update(ctx, &o.obj, metav1.UpdateOptions{}); err != nil {
+	if _, err = dh.dynamicClient.Resource(*gvr).Namespace(o.GetNamespace()).Update(ctx, &o.obj, metav1.UpdateOptions{}); err != nil {
 		return err
 	}
 	return nil
@@ -206,7 +206,7 @@ func (dh *dynamicHelper) deleteUnstructuredObj(ctx context.Context, groupKind, n
 	if err != nil {
 		return err
 	}
-	if err = dh.dynamicClient.Resource(*gvr).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil && !notFound(err) {
+	if err = dh.dynamicClient.Resource(*gvr).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{}); !(err == nil || notFound(err)) {
 		return err
 	}
 	return nil
@@ -239,19 +239,21 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 		if err != nil {
 			return err
 		}
-
-		mergeFunc := merge
-		if strings.HasPrefix(acc.GetName(), "gatekeeper") ||
-			strings.HasPrefix(gvk.GroupKind().String(), "ConstraintTemplate.templates.gatekeeper") {
-			mergeFunc = mergeGK
-		}
-		candidate, changed, diff, err := mergeFunc(old, new)
+		candidate, changed, diff, err := mergeWithLogic(acc.GetName(), gvk.GroupKind().String(), old, new)
 		if err != nil || !changed {
 			return err
 		}
 		dh.log.Printf("Update %s: %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()), diff)
 		return dh.restcli.Put().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Body(candidate).Do(ctx).Error()
 	})
+}
+
+func mergeWithLogic(name, groupKind string, old, new kruntime.Object) (kruntime.Object, bool, string, error) {
+	if strings.HasPrefix(name, "gatekeeper") ||
+		strings.HasPrefix(groupKind, "ConstraintTemplate.templates.gatekeeper") {
+		return mergeGK(old, new)
+	}
+	return merge(old, new)
 }
 
 // merge takes the existing (old) and desired (new) objects.  It compares them
@@ -421,88 +423,107 @@ func notFound(err error) bool {
 	return false
 }
 
-// mergeGK takes the existing (old) and desired (new) objects.  It compares them
-// to see if an update is necessary, fixes up the *old* object if needed, and
-// returns the difference for debugging purposes.
-// this is because that old objects were changed by gatekeeper binaries which have to be kept!
+// mergeGK takes the existing (old) and desired (new) objects. It checks the
+// the interested fields in the *new* object to see if an update is necessary,
+// fixes up the *old* object if needed, and returns the difference for
+// debugging purposes. The reason for using *old* as basis is that the *old*
+// object are changed by gatekeeper binaries and the changes must be kept.
 func mergeGK(old, new kruntime.Object) (kruntime.Object, bool, string, error) {
 	if reflect.TypeOf(old) != reflect.TypeOf(new) {
 		return nil, false, "", fmt.Errorf("types differ: %T %T", old, new)
 	}
-	expect := old.DeepCopyObject()
+	expected := old.DeepCopyObject()
 
 	// 1. Set defaults on old.  This gets rid of many false positive diffs.
-	scheme.Scheme.Default(expect)
+	scheme.Scheme.Default(expected)
 
 	// 2. Do fix-ups on a per-Kind basis.
-	changed := false
+	hasChanged := false
 	switch new.(type) {
 	case *appsv1.Deployment:
-		new, expect := new.(*appsv1.Deployment), expect.(*appsv1.Deployment)
-		for i := range expect.Spec.Template.Spec.Containers {
-			ec := &expect.Spec.Template.Spec.Containers[i]
-			nc := &new.Spec.Template.Spec.Containers[i]
-			if ec.Image != nc.Image {
-				ec.Image = nc.Image
-				changed = true
-			}
-			if cmpAndCopy(&nc.Resources.Limits, &ec.Resources.Limits) {
-				changed = true
-			}
-			if cmpAndCopy(&nc.Resources.Requests, &ec.Resources.Requests) {
-				changed = true
-			}
-		}
+		hasChanged = handleDeployment(new, expected)
 	case *admissionregistrationv1.ValidatingWebhookConfiguration:
-		new, expect := new.(*admissionregistrationv1.ValidatingWebhookConfiguration), expect.(*admissionregistrationv1.ValidatingWebhookConfiguration)
-		for i := range expect.Webhooks {
-			if expect.Webhooks[i].FailurePolicy != nil &&
-				new.Webhooks[i].FailurePolicy != nil &&
-				*expect.Webhooks[i].FailurePolicy != *new.Webhooks[i].FailurePolicy {
-				*expect.Webhooks[i].FailurePolicy = *new.Webhooks[i].FailurePolicy
-				changed = true
-			}
-			if expect.Webhooks[i].TimeoutSeconds != nil &&
-				new.Webhooks[i].TimeoutSeconds != nil &&
-				*expect.Webhooks[i].TimeoutSeconds != *new.Webhooks[i].TimeoutSeconds {
-				*expect.Webhooks[i].TimeoutSeconds = *new.Webhooks[i].TimeoutSeconds
-				changed = true
-			}
-		}
+		hasChanged = handleValidatingWebhook(new, expected)
 	case *admissionregistrationv1.MutatingWebhookConfiguration:
-		new, expect := new.(*admissionregistrationv1.MutatingWebhookConfiguration), expect.(*admissionregistrationv1.MutatingWebhookConfiguration)
-		for i := range expect.Webhooks {
-			if expect.Webhooks[i].FailurePolicy != nil &&
-				new.Webhooks[i].FailurePolicy != nil &&
-				*expect.Webhooks[i].FailurePolicy != *new.Webhooks[i].FailurePolicy {
-				*expect.Webhooks[i].FailurePolicy = *new.Webhooks[i].FailurePolicy
-				changed = true
-			}
-			if expect.Webhooks[i].TimeoutSeconds != nil &&
-				new.Webhooks[i].TimeoutSeconds != nil &&
-				*expect.Webhooks[i].TimeoutSeconds != *new.Webhooks[i].TimeoutSeconds {
-				*expect.Webhooks[i].TimeoutSeconds = *new.Webhooks[i].TimeoutSeconds
-				changed = true
-			}
-		}
+		hasChanged = handleMutatingWebhook(new, expected)
 	}
-
 	var diff string
-	if _, ok := expect.(*corev1.Secret); !ok { // Don't show a diff if kind is Secret
-		diff = cmp.Diff(old, expect)
+	if _, ok := expected.(*corev1.Secret); !ok { // Don't show a diff if kind is Secret
+		diff = cmp.Diff(old, expected)
 	}
-
-	return expect, changed, diff, nil
+	return expected, hasChanged, diff, nil
 }
 
-func cmpAndCopy(srcP, dstP *corev1.ResourceList) bool {
-	src, dst := *srcP, *dstP
-	changed := false
+func handleDeployment(new, expected kruntime.Object) bool {
+	hasChanged := false
+	newDeployment, expectedDeployment := new.(*appsv1.Deployment), expected.(*appsv1.Deployment)
+	for i := range expectedDeployment.Spec.Template.Spec.Containers {
+		ec := &expectedDeployment.Spec.Template.Spec.Containers[i]
+		nc := &newDeployment.Spec.Template.Spec.Containers[i]
+		if ec.Image != nc.Image {
+			ec.Image = nc.Image
+			hasChanged = true
+		}
+		if cmpAndCopy(&nc.Resources.Limits, &ec.Resources.Limits) {
+			hasChanged = true
+		}
+		if cmpAndCopy(&nc.Resources.Requests, &ec.Resources.Requests) {
+			hasChanged = true
+		}
+	}
+	return hasChanged
+}
+
+func handleValidatingWebhook(new, expected kruntime.Object) bool {
+	hasChanged := false
+	newWebhook := new.(*admissionregistrationv1.ValidatingWebhookConfiguration)
+	expectedWebhook := expected.(*admissionregistrationv1.ValidatingWebhookConfiguration)
+	for i := range expectedWebhook.Webhooks {
+		if expectedWebhook.Webhooks[i].FailurePolicy != nil &&
+			newWebhook.Webhooks[i].FailurePolicy != nil &&
+			*expectedWebhook.Webhooks[i].FailurePolicy != *newWebhook.Webhooks[i].FailurePolicy {
+			*expectedWebhook.Webhooks[i].FailurePolicy = *newWebhook.Webhooks[i].FailurePolicy
+			hasChanged = true
+		}
+		if expectedWebhook.Webhooks[i].TimeoutSeconds != nil &&
+			newWebhook.Webhooks[i].TimeoutSeconds != nil &&
+			*expectedWebhook.Webhooks[i].TimeoutSeconds != *newWebhook.Webhooks[i].TimeoutSeconds {
+			*expectedWebhook.Webhooks[i].TimeoutSeconds = *newWebhook.Webhooks[i].TimeoutSeconds
+			hasChanged = true
+		}
+	}
+	return hasChanged
+}
+
+func handleMutatingWebhook(new, expected kruntime.Object) bool {
+	hasChanged := false
+	newWebhook := new.(*admissionregistrationv1.MutatingWebhookConfiguration)
+	expectedWebhook := expected.(*admissionregistrationv1.MutatingWebhookConfiguration)
+	for i := range expectedWebhook.Webhooks {
+		if expectedWebhook.Webhooks[i].FailurePolicy != nil &&
+			newWebhook.Webhooks[i].FailurePolicy != nil &&
+			*expectedWebhook.Webhooks[i].FailurePolicy != *newWebhook.Webhooks[i].FailurePolicy {
+			*expectedWebhook.Webhooks[i].FailurePolicy = *newWebhook.Webhooks[i].FailurePolicy
+			hasChanged = true
+		}
+		if expectedWebhook.Webhooks[i].TimeoutSeconds != nil &&
+			newWebhook.Webhooks[i].TimeoutSeconds != nil &&
+			*expectedWebhook.Webhooks[i].TimeoutSeconds != *newWebhook.Webhooks[i].TimeoutSeconds {
+			*expectedWebhook.Webhooks[i].TimeoutSeconds = *newWebhook.Webhooks[i].TimeoutSeconds
+			hasChanged = true
+		}
+	}
+	return hasChanged
+}
+
+func cmpAndCopy(srcPtr, dstPtr *corev1.ResourceList) bool {
+	src, dst := *srcPtr, *dstPtr
+	hasChanged := false
 	for key, val := range dst {
 		if !val.Equal(src[key]) {
 			dst[key] = src[key].DeepCopy()
-			changed = true
+			hasChanged = true
 		}
 	}
-	return changed
+	return hasChanged
 }
