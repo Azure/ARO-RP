@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
@@ -82,6 +83,19 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	var mirrorSince time.Time
+	mirrorSinceArg := os.Getenv("MIRROR_SINCE")
+
+	if mirrorSinceArg != "" {
+		mirrorSince, err = time.Parse("2006-01-02", mirrorSinceArg)
+		if err != nil {
+			log.Errorf("unable to parse MIRROR_SINCE, falling back: %s\n", err)
+			mirrorSince = time.UnixMilli(1664586000000)
+		}
+	} else {
+		mirrorSince = time.UnixMilli(1664586000000)
 	}
 
 	var releases []pkgmirror.Node
@@ -162,9 +176,6 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.access.redhat.com/ubi7/go-toolset:1.16.12",
 		"registry.access.redhat.com/ubi8/go-toolset:1.17.7",
 		"mcr.microsoft.com/azure-cli:latest",
-
-		"quay.io/app-sre/managed-upgrade-operator:v0.1.856-eebbe07",
-		"quay.io/app-sre/hive:fec14dc",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
 
@@ -176,6 +187,19 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuth)
 		if err != nil {
 			log.Errorf("%s: %s\n", ref, err)
+			errorOccurred = true
+		}
+	}
+
+	mirMgr := pkgmirror.NewRepositoryMirrorManager(dstAcr+acrDomainSuffix, dstAuth)
+
+	for _, ref := range []string{
+		"quay.io/app-sre/managed-upgrade-operator",
+		"quay.io/app-sre/hive",
+	} {
+		err = pkgmirror.MirrorTagsByFilteredDate(ctx, mirMgr, ref, srcAuthQuay, mirrorSince)
+		if err != nil {
+			log.Errorf("mirrorManager: %s\n", err)
 			errorOccurred = true
 		}
 	}
