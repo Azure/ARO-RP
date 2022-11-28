@@ -108,7 +108,7 @@ func NewFrontend(ctx context.Context,
 	aead encryption.AEAD,
 	kubeActionsFactory kubeActionsFactory,
 	azureActionsFactory azureActionsFactory,
-	ocEnricherFactory ocEnricherFactory) (Runnable, error) {
+	ocEnricherFactory ocEnricherFactory) (*frontend, error) {
 	f := &frontend{
 		auditLog:                      auditLog,
 		baseLog:                       baseLog,
