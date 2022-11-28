@@ -573,10 +573,10 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			f.(*frontend).bucketAllocator = bucket.Fixed(1)
+			f.bucketAllocator = bucket.Fixed(1)
 
 			var systemDataClusterDocEnricherCalled bool
-			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+			f.systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
 				systemDataClusterDocEnricherCalled = true
 			}
 
@@ -1398,11 +1398,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			f.(*frontend).bucketAllocator = bucket.Fixed(1)
-			f.(*frontend).now = func() time.Time { return mockCurrentTime }
+			f.bucketAllocator = bucket.Fixed(1)
+			f.now = func() time.Time { return mockCurrentTime }
 
 			var systemDataClusterDocEnricherCalled bool
-			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+			f.systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
 				systemDataClusterDocEnricherCalled = true
 			}
 
@@ -1700,11 +1700,11 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			f.(*frontend).bucketAllocator = bucket.Fixed(1)
-			f.(*frontend).now = func() time.Time { return mockCurrentTime }
+			f.bucketAllocator = bucket.Fixed(1)
+			f.now = func() time.Time { return mockCurrentTime }
 
 			var systemDataClusterDocEnricherCalled bool
-			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+			f.systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
 				enrichClusterSystemData(doc, systemData)
 				systemDataClusterDocEnricherCalled = true
 			}
