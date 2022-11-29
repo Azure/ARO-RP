@@ -6,6 +6,7 @@ package frontend
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -671,6 +672,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		request                func(*v20200430.OpenShiftCluster)
 		isPatch                bool
 		fixture                func(*testdatabase.Fixture)
+		quotaValidatorError    error
 		wantEnriched           []string
 		wantSystemDataEnriched bool
 		wantDocuments          func(*testdatabase.Checker)
@@ -749,6 +751,78 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					ProvisioningState: v20200430.ProvisioningStateCreating,
 					ClusterProfile: v20200430.ClusterProfile{
 						Version: "4.10.40",
+					},
+				},
+			},
+		},
+		{
+			name: "create a new cluster quota fails",
+			request: func(oc *v20200430.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.10.20"
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			quotaValidatorError:    errors.New("you need more cpu"),
+			wantSystemDataEnriched: true,
+			wantDocuments: func(c *testdatabase.Checker) {
+				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
+					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					AsyncOperation: &api.AsyncOperation{
+						InitialProvisioningState: api.ProvisioningStateCreating,
+						ProvisioningState:        api.ProvisioningStateCreating,
+					},
+				})
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key:    strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					Bucket: 1,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+						Properties: api.OpenShiftClusterProperties{
+							ArchitectureVersion: version.InstallArchitectureVersion,
+							ProvisioningState:   api.ProvisioningStateCreating,
+							ProvisionedBy:       version.GitCommit,
+							CreatedAt:           mockCurrentTime,
+							CreatedBy:           version.GitCommit,
+							ClusterProfile: api.ClusterProfile{
+								Version:              "4.10.20",
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
+							},
+							NetworkProfile: api.NetworkProfile{
+								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+							},
+							MasterProfile: api.MasterProfile{
+								EncryptionAtHost: api.EncryptionAtHostDisabled,
+							},
+							FeatureProfile: api.FeatureProfile{
+								GatewayEnabled: true,
+							},
+							OperatorFlags: api.DefaultOperatorFlags(),
+						},
+					},
+				})
+			},
+			wantEnriched:   []string{},
+			wantAsync:      true,
+			wantStatusCode: http.StatusCreated,
+			wantResponse: &v20200430.OpenShiftCluster{
+				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+				Name: "resourceName",
+				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+				Properties: v20200430.OpenShiftClusterProperties{
+					ProvisioningState: v20200430.ProvisioningStateCreating,
+					ClusterProfile: v20200430.ClusterProfile{
+						Version: "4.10.20",
 					},
 				},
 			},
