@@ -43,7 +43,7 @@
   "overrides": {
     "@svgr/webpack": "$@svgr/webpack",
     "minimatch": "^5.1.0",
-    "loader-utils": "^2.0.3"
+    "loader-utils": "^2.0.4"
   },
   "browserslist": {
     "production": [

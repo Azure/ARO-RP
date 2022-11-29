@@ -1,0 +1,23 @@
+.ts-control .item {
+    white-space: nowrap;
+    padding-right: 10px;
+}
+
+.ts-dropdown [data-selectable].option {
+    width: fit-content;
+}
+
+.ts-dropdown-content {
+    overflow: auto !important;
+    white-space: nowrap;
+}
+
+#selResourceId {
+    position: relative;
+    width: 100%;
+}
+
+.ts-wrapper:not(.form-control):not(.form-select).single .ts-control {
+    background: none !important;
+    overflow-x: auto;
+}
