@@ -248,6 +248,15 @@ const (
 	MTU3900 MTUSize = 3900
 )
 
+// OutboundType represents the type of routing a cluster is using
+type OutboundType string
+
+// OutboundType constants
+const (
+	OutboundTypeUserDefinedRouting OutboundType = "UserDefinedRouting"
+	OutboundTypeLoadbalancer       OutboundType = "Loadbalancer"
+)
+
 // NetworkProfile represents a network profile
 type NetworkProfile struct {
 	MissingFields
@@ -256,6 +265,7 @@ type NetworkProfile struct {
 	ServiceCIDR            string                 `json:"serviceCidr,omitempty"`
 	SoftwareDefinedNetwork SoftwareDefinedNetwork `json:"softwareDefinedNetwork,omitempty"`
 	MTUSize                MTUSize                `json:"mtuSize,omitempty"`
+	OutboundType           OutboundType           `json:"outboundType,omitempty"`
 
 	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
 	GatewayPrivateEndpointIP   string `json:"gatewayPrivateEndpointIp,omitempty"`
