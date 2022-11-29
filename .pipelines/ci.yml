@@ -40,9 +40,9 @@ jobs:
   steps:
   - template: ./templates/template-checkout.yml
 
-  - script: |
-      sudo chmod 666 /var/run/docker.sock
-    displayName: Add docker.sock permissions
+  # - script: |
+  #     sudo chmod 666 /var/run/docker.sock
+  #   displayName: Add docker.sock permissions
 
   - task: Docker@2
     displayName: Build ci image 
@@ -95,9 +95,9 @@ jobs:
   pool:
     name: ARO-CI
   steps:
-  - script: |
-      sudo chmod 666 /var/run/docker.sock
-    displayName: Add docker.sock permissions
+  # - script: |
+  #     sudo chmod 666 /var/run/docker.sock
+  #   displayName: Add docker.sock permissions
 
   - task: Docker@2
     displayName: Build portal_lint image 
