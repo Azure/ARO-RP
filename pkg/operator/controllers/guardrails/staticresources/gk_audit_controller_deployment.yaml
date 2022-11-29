@@ -31,6 +31,7 @@ spec:
         - --operation=mutation-status
         - --logtostderr
         - --disable-opa-builtin={http.send}
+        - --disable-cert-rotation
         command:
         - /manager
         env:
@@ -43,6 +44,13 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: CONTAINER_NAME
+          value: manager
         image: {{.Pullspec}}
         imagePullPolicy: Always
         livenessProbe:
@@ -78,6 +86,9 @@ spec:
           runAsNonRoot: true
           runAsUser: 1000
         volumeMounts:
+        - mountPath: /certs
+          name: cert
+          readOnly: true
         - mountPath: /tmp/audit
           name: tmp-volume
       nodeSelector:
@@ -86,5 +97,9 @@ spec:
       serviceAccountName: gatekeeper-admin
       terminationGracePeriodSeconds: 60
       volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: gatekeeper-webhook-server-cert
       - emptyDir: {}
         name: tmp-volume
