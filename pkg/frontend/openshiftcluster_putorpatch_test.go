@@ -6,7 +6,6 @@ package frontend
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -14,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -26,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -758,61 +759,10 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			quotaValidatorError:    errors.New("you need more cpu"),
-			wantSystemDataEnriched: true,
-			wantDocuments: func(c *testdatabase.Checker) {
-				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
-					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					AsyncOperation: &api.AsyncOperation{
-						InitialProvisioningState: api.ProvisioningStateCreating,
-						ProvisioningState:        api.ProvisioningStateCreating,
-					},
-				})
-				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key:    strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					Bucket: 1,
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-						Properties: api.OpenShiftClusterProperties{
-							ArchitectureVersion: version.InstallArchitectureVersion,
-							ProvisioningState:   api.ProvisioningStateCreating,
-							ProvisionedBy:       version.GitCommit,
-							CreatedAt:           mockCurrentTime,
-							CreatedBy:           version.GitCommit,
-							ClusterProfile: api.ClusterProfile{
-								Version:              "4.10.20",
-								FipsValidatedModules: api.FipsValidatedModulesDisabled,
-							},
-							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-							},
-							MasterProfile: api.MasterProfile{
-								EncryptionAtHost: api.EncryptionAtHostDisabled,
-							},
-							FeatureProfile: api.FeatureProfile{
-								GatewayEnabled: true,
-							},
-							OperatorFlags: api.DefaultOperatorFlags(),
-						},
-					},
-				})
-			},
-			wantEnriched:   []string{},
-			wantAsync:      true,
-			wantStatusCode: http.StatusCreated,
-			wantResponse: &v20200430.OpenShiftCluster{
-				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-				Name: "resourceName",
-				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
-				Properties: v20200430.OpenShiftClusterProperties{
-					ProvisioningState: v20200430.ProvisioningStateCreating,
-					ClusterProfile: v20200430.ClusterProfile{
-						Version: "4.10.20",
-					},
-				},
-			},
+			quotaValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorUnsupportedSKU, "", "The provided VM SKU %s is not supported.", "something"),
+			wantEnriched:        []string{},
+			wantStatusCode:      http.StatusBadRequest,
+			wantError:           "400: InvalidVMSKU: : The provided VM SKU something is not supported.",
 		},
 		{
 			name: "update a cluster from succeeded",
@@ -1461,6 +1411,12 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				WithOpenShiftVersions()
 			defer ti.done()
 
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			mockValidator := mock_frontend.NewMockQuotaValidator(controller)
+			mockValidator.EXPECT().ValidateQuota(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.quotaValidatorError).AnyTimes()
+
 			err := ti.buildFixtures(tt.fixture)
 			if err != nil {
 				t.Fatal(err)
@@ -1472,6 +1428,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			f.quotaValidator = mockValidator
 			f.bucketAllocator = bucket.Fixed(1)
 			f.now = func() time.Time { return mockCurrentTime }
 
