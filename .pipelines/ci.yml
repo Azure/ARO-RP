@@ -53,6 +53,12 @@ jobs:
       command: build
       Dockerfile: .Dockerfile.ci
 
+  - script : |
+      docker images -a
+      docker ps -a
+      docker images -qa
+    displayName: listing docker images and containers
+
   - script: |
       docker run --platform=linux/amd64 -t --rm ci:latest generate
     displayName: ⚙️ Run Golang code generate
