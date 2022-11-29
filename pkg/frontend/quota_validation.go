@@ -5,15 +5,14 @@ package frontend
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
-	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 const (
@@ -34,7 +33,8 @@ const (
 )
 
 type QuotaValidator interface {
-	ValidateQuota(ctx context.Context, azEnv *azureclient.AROEnvironment, subscriptionID string, oc *api.OpenShiftCluster, authorizer refreshable.Authorizer) error
+	ValidateQuota(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error
+	//ValidateNewCluster(ctx context.Context, envValue env.Interface, subscription *api.SubscriptionDocument, cluster *api.OpenShiftCluster, staticValidator api.OpenShiftClusterStaticValidator, ext interface{}, path string) error
 }
 
 type quotaValidator struct{}
@@ -100,7 +100,7 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 
 	vm, ok := vmTypesMap[vmSize]
 	if !ok {
-		return fmt.Errorf("unsupported VMSize %s", vmSize)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorUnsupportedSKU, "", "The provided VM SKU %s is not supported.", vmSize)
 	}
 
 	requiredResources["virtualMachines"] += count
@@ -114,9 +114,14 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 // ValidateQuota checks usage quotas vs. resources required by cluster before cluster
 // creation
 // It is a method on struct so we can make use of interfaces.
-func (q quotaValidator) ValidateQuota(ctx context.Context, azEnv *azureclient.AROEnvironment, subscriptionID string, oc *api.OpenShiftCluster, authorizer refreshable.Authorizer) error {
-	spComputeUsage := compute.NewUsageClient(azEnv, subscriptionID, authorizer)
-	spNetworkUsage := network.NewUsageClient(azEnv, subscriptionID, authorizer)
+func (q quotaValidator) ValidateQuota(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error {
+	fpAuthorizer, err := environment.FPAuthorizer(tenantID, environment.Environment().ResourceManagerEndpoint)
+	if err != nil {
+		return err
+	}
+
+	spComputeUsage := compute.NewUsageClient(azEnv, subscriptionID, fpAuthorizer)
+	spNetworkUsage := network.NewUsageClient(azEnv, subscriptionID, fpAuthorizer)
 
 	return validateQuota(ctx, oc, spNetworkUsage, spComputeUsage)
 }
