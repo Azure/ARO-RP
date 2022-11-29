@@ -51,7 +51,7 @@ jobs:
       tag: latest
       arguments: '--platform=linux/amd64 --no-cache'
       command: build
-      Dockerfile: .Dockerfile.ci
+      Dockerfile: Dockerfile.ci
 
   - script : |
       docker images -a
@@ -112,7 +112,7 @@ jobs:
       tag: latest
       arguments: '--platform=linux/amd64 --build-arg REGISTRY=registry.access.redhat.com --no-cache'
       command: build
-      Dockerfile: .Dockerfile.portal_lint
+      Dockerfile: Dockerfile.portal_lint
 
   - script: |
       docker run --platform=linux/amd64 -t --rm linter:latest
