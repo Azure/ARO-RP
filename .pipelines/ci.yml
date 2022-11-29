@@ -54,19 +54,19 @@ jobs:
       Dockerfile: .Dockerfile.ci
 
   - script: |
-      docker run --platform=linux/amd64 -t --build-arg OPTION="generate" --rm ci:latest
+      docker run --platform=linux/amd64 -t --rm ci:latest generate
     displayName: ⚙️ Run Golang code generate
 
   - script: |
-      docker run --platform=linux/amd64 -t --build-arg OPTION="build-all" --rm ci:latest
+      docker run --platform=linux/amd64 -t --rm ci:latest build-all
     displayName: 🕵️ Build Golang code
 
   - script: |
-      docker run --platform=linux/amd64 -t --build-arg OPTION="unit-test-go" --rm ci:latest
+      docker run --platform=linux/amd64 -t --rm ci:latest unit-test-go
     displayName: 🧪 Run Golang unit tests
 
   - script: |
-      docker run --platform=linux/amd64 -t --build-arg OPTION="validate-fips" --rm ci:latest
+      docker run --platform=linux/amd64 -t --rm ci:latest validate-fips
     displayName: 🕵️ Validate FIPS
 
   - task: PublishTestResults@2
