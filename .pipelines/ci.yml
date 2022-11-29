@@ -48,7 +48,7 @@ jobs:
     displayName: Build ci image 
     inputs:
       repository: ci
-      tag: latest
+      tags: latest
       arguments: '--platform=linux/amd64 --no-cache'
       command: build
       Dockerfile: Dockerfile.ci
@@ -109,7 +109,7 @@ jobs:
     displayName: Build portal_lint image 
     inputs:
       repository: linter
-      tag: latest
+      tags: latest
       arguments: '--platform=linux/amd64 --build-arg REGISTRY=registry.access.redhat.com --no-cache'
       command: build
       Dockerfile: Dockerfile.portal_lint
