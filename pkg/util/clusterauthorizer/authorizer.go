@@ -6,12 +6,14 @@ package clusterauthorizer
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/form3tech-oss/jwt-go"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -70,7 +72,7 @@ func (a *azRefreshableAuthorizer) NewRefreshableAuthorizerToken(ctx context.Cont
 	c := &azureclaim.AzureClaim{}
 	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
 	if err != nil {
-		return nil, err
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalToken, "properties.servicePrincipalProfile", "The provided service principal generated an invalid token.")
 	}
 
 	return refreshable.NewAuthorizer(token), nil
