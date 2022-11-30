@@ -127,19 +127,15 @@ func (q quotaValidator) ValidateQuota(ctx context.Context, azEnv *azureclient.AR
 
 func validateQuota(ctx context.Context, oc *api.OpenShiftCluster, spNetworkUsage network.UsageClient, spComputeUsage compute.UsageClient) error {
 	// If ValidateQuota runs outside install process, we should skip quota validation
-	if oc.Properties.Install == nil || oc.Properties.Install.Phase != api.InstallPhaseBootstrap {
-		return nil
-	}
-
 	requiredResources := map[string]int{}
+
 	err := addRequiredResources(requiredResources, oc.Properties.MasterProfile.VMSize, 3)
 	if err != nil {
 		return err
 	}
-
 	//worker node resource calculation
 	for _, w := range oc.Properties.WorkerProfiles {
-		err = addRequiredResources(requiredResources, w.VMSize, w.Count)
+		err := addRequiredResources(requiredResources, w.VMSize, w.Count)
 		if err != nil {
 			return err
 		}
