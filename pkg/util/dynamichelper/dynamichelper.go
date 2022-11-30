@@ -119,7 +119,7 @@ func (dh *dynamicHelper) EnsureDeletedGVR(ctx context.Context, groupKind, namesp
 // objects that need to be updated.
 func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) error {
 	for _, o := range objs {
-		if un, ok := o.(*UnstructuredObj); ok {
+		if un, ok := o.(*unstructured.Unstructured); ok {
 			err := dh.ensureUnstructuredObj(ctx, un)
 			if err != nil {
 				return err
@@ -135,14 +135,14 @@ func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) er
 	return nil
 }
 
-func (dh *dynamicHelper) ensureUnstructuredObj(ctx context.Context, o *UnstructuredObj) error {
-	gvr, err := dh.resolve(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
+func (dh *dynamicHelper) ensureUnstructuredObj(ctx context.Context, uns *unstructured.Unstructured) error {
+	gvr, err := dh.resolve(uns.GroupVersionKind().GroupKind().String(), uns.GroupVersionKind().Version)
 	if err != nil {
 		return err
 	}
 
 	create := false
-	obj, err := dh.dynamicClient.Resource(*gvr).Namespace(o.GetNamespace()).Get(ctx, o.GetName(), metav1.GetOptions{})
+	obj, err := dh.dynamicClient.Resource(*gvr).Namespace(uns.GetNamespace()).Get(ctx, uns.GetName(), metav1.GetOptions{})
 	if err != nil {
 		if !notFound(err) {
 			return err
@@ -150,13 +150,13 @@ func (dh *dynamicHelper) ensureUnstructuredObj(ctx context.Context, o *Unstructu
 		create = true
 	}
 	if create {
-		dh.log.Printf("Create %s", keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName()))
-		if _, err = dh.dynamicClient.Resource(*gvr).Namespace(o.GetNamespace()).Create(ctx, &o.obj, metav1.CreateOptions{}); err != nil {
+		dh.log.Printf("Create %s", keyFunc(uns.GroupVersionKind().GroupKind(), uns.GetNamespace(), uns.GetName()))
+		if _, err = dh.dynamicClient.Resource(*gvr).Namespace(uns.GetNamespace()).Create(ctx, uns, metav1.CreateOptions{}); err != nil {
 			return err
 		}
 		return nil
 	}
-	enNew, err := GetEnforcementAction(&o.obj)
+	enNew, err := GetEnforcementAction(uns)
 	if err != nil {
 		return nil
 	}
@@ -168,10 +168,10 @@ func (dh *dynamicHelper) ensureUnstructuredObj(ctx context.Context, o *Unstructu
 		// currently EnforcementAction is the only part that may change in an update
 		return nil
 	}
-	dh.log.Printf("Update %s: enforcementAction: %s->%s", keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName()), enOld, enNew)
-	o.obj.SetResourceVersion(obj.GetResourceVersion())
+	dh.log.Printf("Update %s: enforcementAction: %s->%s", keyFunc(uns.GroupVersionKind().GroupKind(), uns.GetNamespace(), uns.GetName()), enOld, enNew)
+	uns.SetResourceVersion(obj.GetResourceVersion())
 
-	if _, err = dh.dynamicClient.Resource(*gvr).Namespace(o.GetNamespace()).Update(ctx, &o.obj, metav1.UpdateOptions{}); err != nil {
+	if _, err = dh.dynamicClient.Resource(*gvr).Namespace(uns.GetNamespace()).Update(ctx, uns, metav1.UpdateOptions{}); err != nil {
 		return err
 	}
 	return nil
