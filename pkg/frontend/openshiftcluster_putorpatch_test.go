@@ -757,7 +757,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			},
 		},
 		{
-			name: "create a new cluster quota fails",
+			name: "create a new cluster vm not supported",
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Version = "4.10.20"
 			},
@@ -776,6 +776,27 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantEnriched:        []string{},
 			wantStatusCode:      http.StatusBadRequest,
 			wantError:           "400: InvalidVMSKU: : The provided VM SKU something is not supported.",
+		},
+		{
+			name: "create a new cluster quota fails",
+			request: func(oc *v20200430.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.10.20"
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			quotaValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, "", "Resource quota of vm exceeded. Maximum allowed: 0, Current in use: 0, Additional requested: 1."),
+			wantEnriched:        []string{},
+			wantStatusCode:      http.StatusBadRequest,
+			wantError:           "400: QuotaExceeded: : Resource quota of vm exceeded. Maximum allowed: 0, Current in use: 0, Additional requested: 1.",
 		},
 		{
 			name: "update a cluster from succeeded",
