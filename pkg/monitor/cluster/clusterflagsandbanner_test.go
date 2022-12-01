@@ -92,6 +92,7 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 		expectFlagsMetricsValue  int64
 		expectFlagsMetricsDims   map[string]string
 		expectBannerMetricsValue int64
+		expectBannerMetricsDims  map[string]string
 	}{
 		{
 			name: "cluster without operator flags and activated support banner",
@@ -101,6 +102,7 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			expectFlagsMetricsValue:  0,
 			expectFlagsMetricsDims:   nil,
 			expectBannerMetricsValue: 0,
+			expectBannerMetricsDims:  nil,
 		},
 		{
 			name:          "cluster with standard operator flags",
@@ -111,6 +113,7 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			expectFlagsMetricsValue:  0,
 			expectFlagsMetricsDims:   nil,
 			expectBannerMetricsValue: 0,
+			expectBannerMetricsDims:  nil,
 		},
 		{
 			name:          "cluster with non-standard operator flags",
@@ -126,6 +129,7 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 				"aro.autosizednodes.enable": "true",
 			},
 			expectBannerMetricsValue: 0,
+			expectBannerMetricsDims:  nil,
 		},
 		{
 			name:          "cluster with missing operator flags",
@@ -135,12 +139,13 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			},
 			expectFlagsMetricsValue: 1,
 			expectFlagsMetricsDims: map[string]string{
-				"aro.imageconfig.enabled":   "not exist",
-				"aro.dnsmasq.enabled":       "not exist",
-				"aro.genevalogging.enabled": "not exist",
-				"aro.autosizednodes.enable": "not exist",
+				"aro.imageconfig.enabled":   "DNE",
+				"aro.dnsmasq.enabled":       "DNE",
+				"aro.genevalogging.enabled": "DNE",
+				"aro.autosizednodes.enable": "DNE",
 			},
 			expectBannerMetricsValue: 0,
+			expectBannerMetricsDims:  nil,
 		},
 		{
 			name:          "cluster with activated support banner",
@@ -151,6 +156,7 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			expectFlagsMetricsValue:  0,
 			expectFlagsMetricsDims:   nil,
 			expectBannerMetricsValue: 1,
+			expectBannerMetricsDims:  map[string]string{"msg": "contact support"},
 		},
 		{
 			name:          "cluster with non-standard operator flags and activated support banner",
@@ -166,6 +172,7 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 				"aro.autosizednodes.enable": "true",
 			},
 			expectBannerMetricsValue: 1,
+			expectBannerMetricsDims:  map[string]string{"msg": "contact support"},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -198,6 +205,11 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			if fm.Metrics[supportBannerMetricsTopic].Value != tt.expectBannerMetricsValue {
 				t.Errorf("incorrect support banner metrics value, want: %d, got: %d", tt.expectBannerMetricsValue, fm.Metrics[supportBannerMetricsTopic].Value)
 			}
+
+			if !reflect.DeepEqual(fm.Metrics[supportBannerMetricsTopic].Dims, tt.expectBannerMetricsDims) {
+				t.Errorf("incorrect support banner metrics dims, want: %v, got: %v", tt.expectBannerMetricsDims, fm.Metrics[supportBannerMetricsTopic].Dims)
+			}
+
 		})
 	}
 }

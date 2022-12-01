@@ -14,7 +14,7 @@ import (
 
 const (
 	operatorFlagMetricsTopic  = "cluster.nonstandard.operator.featureflags"
-	supportBannerMetricsTopic = "cluster.nonstandard.contact.support.banner"
+	supportBannerMetricsTopic = "cluster.nonstandard.banner"
 )
 
 func (mon *Monitor) emitOperatorFlagsAndSupportBanner(ctx context.Context) error {
@@ -28,33 +28,27 @@ func (mon *Monitor) emitOperatorFlagsAndSupportBanner(ctx context.Context) error
 		for _, cluster := range clusters.Items {
 			if cluster.Spec.OperatorFlags != nil {
 				defaultFlags := api.DefaultOperatorFlags()
-				nonStandardOperatorFlags := make(map[string]string, len(defaultFlags))
+				nonStandardOperatorFlagDims := make(map[string]string, len(defaultFlags))
 
 				//check if the current set flags matches the default ones
-				for name, value := range defaultFlags {
-					flag, ok := cluster.Spec.OperatorFlags[name]
+				for defaulFlagName, defaultFlagValue := range defaultFlags {
+					currentFlagValue, ok := cluster.Spec.OperatorFlags[defaulFlagName]
 					if !ok {
-						// if flag is not there, put "not exist" in the metrics
-						nonStandardOperatorFlags[name] = "not exist"
-					} else if flag != value {
+						// if flag is not there, put "DNE - do not exist" in the metrics
+						nonStandardOperatorFlagDims[defaulFlagName] = "DNE"
+					} else if currentFlagValue != defaultFlagValue {
 						// if flag value does not match the defualt one, record the current set value in the metrics
-						nonStandardOperatorFlags[name] = flag
+						nonStandardOperatorFlagDims[defaulFlagName] = currentFlagValue
 					}
 				}
-
-				for flag, status := range cluster.Spec.OperatorFlags {
-					if defaultFlags[flag] != status {
-						nonStandardOperatorFlags[flag] = status
-					}
-				}
-				if len(nonStandardOperatorFlags) > 0 {
-					mon.emitGauge(operatorFlagMetricsTopic, 1, nonStandardOperatorFlags)
+				if len(nonStandardOperatorFlagDims) > 0 {
+					mon.emitGauge(operatorFlagMetricsTopic, 1, nonStandardOperatorFlagDims)
 				}
 			}
 
 			//check if the contact support banner is activated
 			if cluster.Spec.Banner.Content == arov1alpha1.BannerContactSupport {
-				mon.emitGauge(supportBannerMetricsTopic, 1, nil)
+				mon.emitGauge(supportBannerMetricsTopic, 1, map[string]string{"msg": "contact support"})
 			}
 		}
 
