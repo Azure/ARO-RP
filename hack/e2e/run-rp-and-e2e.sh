@@ -98,13 +98,13 @@ kill_portal(){
 run_vpn() {
     echo "########## 🚀 Run OpenVPN in background ##########"
     echo "Using Secret secrets/$VPN"
-    sudo openvpn --config secrets/$VPN --daemon --writepid vpnpid
+    openvpn --config secrets/$VPN --daemon --writepid vpnpid
     sleep 10
 }
 
 kill_vpn() {
     echo "########## Kill the OpenVPN running in background ##########"
-    while read pid; do sudo kill $pid; done < vpnpid
+    while read pid; do kill $pid; done < vpnpid
 }
 
 deploy_e2e_db() {
@@ -143,14 +143,13 @@ delete_e2e_cluster() {
 }
 
 run_vpn() {
-    sudo openvpn --config secrets/$VPN --daemon --writepid vpnpid
+    openvpn --config secrets/$VPN --daemon --writepid vpnpid
     sleep 10
 }
 
 kill_vpn() {
-    while read pid; do sudo kill $pid; done < vpnpid
+    while read pid; do kill $pid; done < vpnpid
 }
-
 
 # TODO: CLUSTER and is also recalculated in multiple places
 # in the billing pipelines :-(
@@ -190,3 +189,18 @@ echo "######################################"
 [[ $DATABASE_ACCOUNT_NAME ]] || ( echo ">> DATABASE_ACCOUNT_NAME is not set; please validate your ./secrets/env"; return 128 )
 [[ $DATABASE_NAME ]] || ( echo ">> DATABASE_NAME is not set; please validate your ./secrets/env"; return 128 )
 [[ $AZURE_SUBSCRIPTION_ID ]] || ( echo ">> AZURE_SUBSCRIPTION_ID is not set; please validate your ./secrets/env"; return 128 )
+
+run_vpn
+deploy_e2e_db
+run_portal
+validate_portal_running
+run_rp
+validate_rp_running
+register_sub
+
+make test-e2e
+
+delete_e2e_cluster
+clean_e2e_db
+kill_rp
+kill_vpn

@@ -1,0 +1,64 @@
+FROM registry.access.redhat.com/ubi8
+RUN rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+RUN dnf install -y openvpn easy-rsa
+
+ARG AzureDevOpsJSONSPN
+ARG AZURE_SUBSCRIPTION_ID
+ARG SECRET_SA_ACCOUNT_NAME
+ARG LOCATION
+
+USER root
+RUN mkdir -p /app/ARO-RP
+WORKDIR /app/ARO-RP
+
+#we have multiple steps for copy so we can make use of caching
+COPY vendor/ vendor
+
+COPY docs/ docs
+COPY hack/ hack
+
+COPY swagger/ swagger
+COPY test/ test
+COPY python/ python
+COPY portal/ portal
+
+COPY cmd/ cmd
+COPY pkg/ pkg
+
+#COPY all files with an extension (directories not copied)
+COPY ?*.* /app/ARO-RP/
+COPY Makefile LICENSE /app/ARO-RP/
+
+COPY .git .git
+COPY .gitignore .gitignore
+COPY .pipelines .pipelines
+COPY .gdn .gdn
+COPY .github .github
+COPY .env .env
+COPY .sha256sum .sha256sum
+COPY .config .config
+
+RUN dnf update -y && \
+    dnf install go -y && \
+    dnf install make python39 git jq -y && \
+    dnf install bash-completion -y && \
+    dnf clean all
+
+#Install azclient
+RUN rpm --import https://packages.microsoft.com/keys/microsoft.asc
+RUN dnf install -y https://packages.microsoft.com/config/rhel/8/packages-microsoft-prod.rpm
+RUN dnf install azure-cli -y
+
+RUN trap 'rm -f devops-spn.json' EXIT
+RUN echo -n "$AzureDevOpsJSONSPN" | base64 -d >> devops-spn.json
+RUN az login --service-principal -u "$(jq -r .clientId <devops-spn.json)" -p "$(jq -r .clientSecret <devops-spn.json)" -t "$(jq -r .tenantId <devops-spn.json)" --allow-no-subscriptions >/dev/null
+ENV SECRET_SA_ACCOUNT_NAME=${SECRET_SA_ACCOUNT_NAME}
+#RUN make secrets
+
+#ENV HIVE_KUBE_CONFIG_PATH "secrets/e2e-aks-kubeconfig"
+ENV AZURE_SUBSCRIPTION_ID $AZURE_SUBSCRIPTION_ID
+#ENV PRIVATE_CLUSTER true
+ENV CI true
+ENV LOCATION ${LOCATION}
+
+ENTRYPOINT ["./hack/e2e/run-rp-and-e2e.sh"]
