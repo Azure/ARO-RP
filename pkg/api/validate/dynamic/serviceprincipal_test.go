@@ -80,7 +80,7 @@ func TestValidateServicePrincipal(t *testing.T) {
 				claims:        `{ "Roles":["Application.ReadWrite.OwnedBy"] }`,
 				signMethod:    "fake-signing-method",
 			},
-			wantErr: "signing method (alg) is unavailable.",
+			wantErr: "400: InvalidServicePrincipalToken: properties.servicePrincipalProfile: The provided service principal generated an invalid token.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -121,7 +121,7 @@ func createToken(tr *tokenRequirements) (*adal.ServicePrincipalToken, error) {
 
 	tk := adal.Token{}
 
-	r := rand.New(rand.NewSource(time.Now().UnixMicro()))
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	tk = adal.Token{
 		AccessToken:  headerEnc + "." + claimsEnc + "." + signatureEnc,
 		RefreshToken: fmt.Sprintf("rand-%d", r.Int()),

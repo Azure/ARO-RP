@@ -126,7 +126,7 @@ func TestNewRefreshableAuthorizerToken(t *testing.T) {
 				signMethod:   "fake-signing-method",
 			},
 			secret:  newV1CoreSecret(azureSecretName, nameSpace),
-			wantErr: "signing method (alg) is unavailable.",
+			wantErr: "400: InvalidServicePrincipalToken: properties.servicePrincipalProfile: The provided service principal generated an invalid token.",
 		},
 		{
 			name:   "pass: create new bearer authorizer token",
@@ -271,7 +271,7 @@ func createToken(tr *tokenRequirements) (*adal.ServicePrincipalToken, error) {
 
 	tk := adal.Token{}
 
-	r := rand.New(rand.NewSource(time.Now().UnixMicro()))
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	tk = adal.Token{
 		AccessToken:  headerEnc + "." + claimsEnc + "." + signatureEnc,
 		RefreshToken: fmt.Sprintf("rand-%d", r.Int()),
