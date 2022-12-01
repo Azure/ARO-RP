@@ -45,7 +45,7 @@ jobs:
   #   displayName: Add docker.sock permissions
 
   - task: Docker@2
-    displayName: Build ci image 
+    displayName: Build ci image
     inputs:
       repository: ci
       tags: latest
@@ -53,7 +53,7 @@ jobs:
       command: build
       Dockerfile: Dockerfile.ci
 
-  - script : |
+  - script: |
       docker images -a
       docker ps -a
       docker images -qa
@@ -106,7 +106,7 @@ jobs:
   #   displayName: Add docker.sock permissions
 
   - task: Docker@2
-    displayName: Build portal_lint image 
+    displayName: Build portal_lint image
     inputs:
       repository: linter
       tags: latest
