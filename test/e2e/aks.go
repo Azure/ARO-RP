@@ -8,6 +8,7 @@ package e2e
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -51,14 +52,17 @@ var _ = Describe("AKS cluster present", func() {
 		By("region = " + _env.Location())
 		for _, region := range regionsWithoutAKS {
 			// uses the region information stored in core environment, which reads it from instance metadata.
-			if _env.Location() == region {
+			if strings.EqualFold(_env.Location(), region) {
 				Skip("Region " + region + " does not have AKS, skipping.")
 			}
 		}
 
 		var err error
 
-		kubeConfig, err = liveConfig.HiveRestConfig(ctx, 0)
+		// AKS shards starts from 1
+		// E2E uses kubeconfig directly, therefore this call is useless in e2e scenario
+		// first real test is done in INT environment
+		kubeConfig, err = liveConfig.HiveRestConfig(ctx, 1)
 		Expect(err).To(BeNil())
 		Expect(kubeConfig).ToNot(BeNil())
 
