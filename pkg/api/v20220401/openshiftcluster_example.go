@@ -31,12 +31,12 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 	oc.Type = ""
 	oc.Properties.ProvisioningState = ""
 	oc.Properties.ClusterProfile.Version = ""
-	oc.Properties.ClusterProfile.FipsValidatedModules = FipsValidatedModules(FipsValidatedModulesEnabled)
+	oc.Properties.ClusterProfile.FipsValidatedModules = FipsValidatedModulesEnabled
 	oc.Properties.ConsoleProfile.URL = ""
 	oc.Properties.APIServerProfile.URL = ""
 	oc.Properties.APIServerProfile.IP = ""
 	oc.Properties.IngressProfiles[0].IP = ""
-	oc.Properties.MasterProfile.EncryptionAtHost = EncryptionAtHost(EncryptionAtHostEnabled)
+	oc.Properties.MasterProfile.EncryptionAtHost = EncryptionAtHostEnabled
 	oc.SystemData = nil
 
 	return oc

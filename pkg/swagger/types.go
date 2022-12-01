@@ -129,6 +129,8 @@ type Parameter struct {
 	UniqueItems      bool          `json:"uniqueItems,omitempty"`
 	Enum             []interface{} `json:"enum,omitempty"`
 	MultipleOf       int           `json:"multipleOf,omitempty"`
+
+	XMSParameterLocation string `json:"x-ms-parameter-location,omitempty"`
 }
 
 // Items represents an Items object

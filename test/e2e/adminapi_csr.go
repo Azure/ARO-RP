@@ -25,7 +25,7 @@ var _ = Describe("[Admin API] CertificateSigningRequest action", func() {
 	const namespace = "openshift"
 	const csrCount = 4
 
-	BeforeEach(func() {
+	BeforeEach(func(ctx context.Context) {
 		const csrdataStr = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KTUlJQ3BEQ0NBWXdDQVFBd1h6RUxNQWtHQTFVRUJoTUNWVk14Q3pBSkJnTlZCQWdNQWtOUE1ROHdEUVlEVlFRSApEQVpFWlc1MlpYSXhFakFRQmdOVkJBb01DVTFwWTNKdmMyOW1kREVNTUFvR0ExVUVDd3dEUVZKUE1SQXdEZ1lEClZRUUREQWRsTW1VdVlYSnZNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQWxqWUUKcnFkU0hvV1p2MVdHSnN1RFZsaGExVU1BVnJiUk0xWjJHaWZJMzNETlBUWGFmQnN1QVI2ZGVCQVgyWmpybUozNQpuekNBZ0k5d1ltdlYwN3JtTEFYQlloRnJiTWtNN1pSU1ZFT01hL2ZXdlN5ZjJVQWxSdm5Jd0JmRkgwS1pRSGg5Cm5aV3RIZHQxSzRuZ3ZnM1NuQ3JEU0NBRUhsS2hoN3Jua1pyRkdrMldabFFoVklWUXFReFFzdmx3VStvWlhnNjQKdmpleDRuc3BZaXFXMERzakl6RzFsSEszWHczN3RGeWhNNzJ4SjByblBYVTRGWkJsWXUzWkVqOFVhSFBoTlcrdgpqZmg2c0hCbWFkcHpEMWRuNDJ4eXgrUGhOaCtKWTVVT3ZWWnR2MWx5UU44eEswL0VjK0Mvcm1mOWZPYmdFSkNVCm00Z3pFSXhhVGhCVURsN1JHd0lEQVFBQm9BQXdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBQnYvVHdUR0JvL20KcVJVK0djZ3Bsa3I1aDlKQVdSZjNNazV3Z1o0ZmlSZm85UEVaYUxJWkZYQ0V0elNHV3JZenFjbFpZQ3JuRmUySQpzdHdNUU8yb1pQUzNvcUVIcWs5Uk0rbzRUVmtkSldjY3hKV3RMY3JoTWRwVjVMc3VMam1qRS9jeDcrbEtUZkh1Cno0eDllYzJTajhnZmV3SFowZTkzZjFTT3ZhVGFMaTQrT3JkM3FTT0NyNE5ZSGhvVDJiM0pBUFpMSmkvVEFpb1gKOUxJNFJpVXNSSWlMUm45VDZidzczM0FLMkpNMXREWU9Tc0hXdmJrZ3FDOFlHMmpYUW9LNUpZOWdTN0V5TkF6NwpjT1plbkkwK2dVeE1leUlNN2I0S05YWFQ3NmxVdHZ5M2N3LzhwVmxQU01pTDFVZ2RpMXFZMDl0MW9FMmU4YnljCm5GdWhZOW5ERU53PQotLS0tLUVORCBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0K"
 
 		csrDataEncoded := []byte(csrdataStr)
@@ -37,40 +37,40 @@ var _ = Describe("[Admin API] CertificateSigningRequest action", func() {
 		By("creating mock CSRs via Kubernetes API")
 		for i := 0; i < csrCount; i++ {
 			csr := mockCSR(prefix+strconv.Itoa(i), namespace, csrData)
-			_, err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Create(context.Background(), csr, metav1.CreateOptions{})
+			_, err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Create(ctx, csr, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 		}
-
-		DeferCleanup(func() {
-			By("deleting the mock CSRs via Kubernetes API")
-			for i := 0; i < csrCount; i++ {
-				err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete(context.Background(), prefix+strconv.Itoa(i), metav1.DeleteOptions{})
-				Expect(err).NotTo(HaveOccurred())
-			}
-		})
 	})
 
-	It("must be able to approve one CSRs", func() {
-		testCSRApproveOK(prefix+"0", namespace)
+	AfterEach(func(ctx context.Context) {
+		By("deleting the mock CSRs via Kubernetes API")
+		for i := 0; i < csrCount; i++ {
+			err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete(ctx, prefix+strconv.Itoa(i), metav1.DeleteOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		}
 	})
 
-	It("must be able to approve multiple CSRs", func() {
-		testCSRMassApproveOK(prefix, namespace, csrCount)
+	It("must be able to approve one CSRs", func(ctx context.Context) {
+		testCSRApproveOK(ctx, prefix+"0", namespace)
+	})
+
+	It("must be able to approve multiple CSRs", func(ctx context.Context) {
+		testCSRMassApproveOK(ctx, prefix, namespace, csrCount)
 	})
 
 })
 
-func testCSRApproveOK(objName, namespace string) {
+func testCSRApproveOK(ctx context.Context, objName, namespace string) {
 	By("approving the CSR via RP admin API")
 	params := url.Values{
 		"csrName": []string{objName},
 	}
-	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/approvecsr", params, nil, nil)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+resourceIDFromEnv()+"/approvecsr", params, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("checking that the CSR was approved via Kubernetes API")
-	testcsr, err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get(context.Background(), objName, metav1.GetOptions{})
+	testcsr, err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get(ctx, objName, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	approved := false
@@ -85,15 +85,15 @@ func testCSRApproveOK(objName, namespace string) {
 	Expect(approved).Should(BeTrue())
 }
 
-func testCSRMassApproveOK(namePrefix, namespace string, csrCount int) {
+func testCSRMassApproveOK(ctx context.Context, namePrefix, namespace string, csrCount int) {
 	By("approving all CSRs via RP admin API")
-	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/approvecsr", nil, nil, nil)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+resourceIDFromEnv()+"/approvecsr", nil, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("checking that all CSRs were approved via Kubernetes API")
 	for i := 1; i < csrCount; i++ {
-		testcsr, err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get(context.Background(), namePrefix+strconv.Itoa(i), metav1.GetOptions{})
+		testcsr, err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get(ctx, namePrefix+strconv.Itoa(i), metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		approved := false

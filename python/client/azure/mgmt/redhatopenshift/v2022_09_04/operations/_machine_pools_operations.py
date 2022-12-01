@@ -54,7 +54,7 @@ def build_list_request(
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, 'str', min_length=1),
         "resourceGroupName": _SERIALIZER.url("resource_group_name", resource_group_name, 'str', max_length=90, min_length=1),
-        "resourceName": _SERIALIZER.url("resource_name", resource_name, 'str'),
+        "resourceName": _SERIALIZER.url("resource_name", resource_name, 'str', max_length=63, min_length=1, pattern=r'^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$'),
     }
 
     _url = _format_url_section(_url, **path_format_arguments)
@@ -92,8 +92,8 @@ def build_get_request(
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, 'str', min_length=1),
         "resourceGroupName": _SERIALIZER.url("resource_group_name", resource_group_name, 'str', max_length=90, min_length=1),
-        "resourceName": _SERIALIZER.url("resource_name", resource_name, 'str'),
-        "childResourceName": _SERIALIZER.url("child_resource_name", child_resource_name, 'str'),
+        "resourceName": _SERIALIZER.url("resource_name", resource_name, 'str', max_length=63, min_length=1, pattern=r'^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$'),
+        "childResourceName": _SERIALIZER.url("child_resource_name", child_resource_name, 'str', max_length=63, min_length=1, pattern=r'^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$'),
     }
 
     _url = _format_url_section(_url, **path_format_arguments)
@@ -132,8 +132,8 @@ def build_create_or_update_request(
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, 'str', min_length=1),
         "resourceGroupName": _SERIALIZER.url("resource_group_name", resource_group_name, 'str', max_length=90, min_length=1),
-        "resourceName": _SERIALIZER.url("resource_name", resource_name, 'str'),
-        "childResourceName": _SERIALIZER.url("child_resource_name", child_resource_name, 'str'),
+        "resourceName": _SERIALIZER.url("resource_name", resource_name, 'str', max_length=63, min_length=1, pattern=r'^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$'),
+        "childResourceName": _SERIALIZER.url("child_resource_name", child_resource_name, 'str', max_length=63, min_length=1, pattern=r'^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$'),
     }
 
     _url = _format_url_section(_url, **path_format_arguments)
@@ -173,8 +173,8 @@ def build_delete_request(
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, 'str', min_length=1),
         "resourceGroupName": _SERIALIZER.url("resource_group_name", resource_group_name, 'str', max_length=90, min_length=1),
-        "resourceName": _SERIALIZER.url("resource_name", resource_name, 'str'),
-        "childResourceName": _SERIALIZER.url("child_resource_name", child_resource_name, 'str'),
+        "resourceName": _SERIALIZER.url("resource_name", resource_name, 'str', max_length=63, min_length=1, pattern=r'^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$'),
+        "childResourceName": _SERIALIZER.url("child_resource_name", child_resource_name, 'str', max_length=63, min_length=1, pattern=r'^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$'),
     }
 
     _url = _format_url_section(_url, **path_format_arguments)
@@ -213,8 +213,8 @@ def build_update_request(
     path_format_arguments = {
         "subscriptionId": _SERIALIZER.url("subscription_id", subscription_id, 'str', min_length=1),
         "resourceGroupName": _SERIALIZER.url("resource_group_name", resource_group_name, 'str', max_length=90, min_length=1),
-        "resourceName": _SERIALIZER.url("resource_name", resource_name, 'str'),
-        "childResourceName": _SERIALIZER.url("child_resource_name", child_resource_name, 'str'),
+        "resourceName": _SERIALIZER.url("resource_name", resource_name, 'str', max_length=63, min_length=1, pattern=r'^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$'),
+        "childResourceName": _SERIALIZER.url("child_resource_name", child_resource_name, 'str', max_length=63, min_length=1, pattern=r'^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$'),
     }
 
     _url = _format_url_section(_url, **path_format_arguments)
@@ -558,8 +558,7 @@ class MachinePoolsOperations(object):
         **kwargs  # type: Any
     ):
         # type: (...) -> "_models.MachinePool"
-        """Patches (create or update) a MachinePool with the specified subscription, resource group and
-        resource name.
+        """Updates a MachinePool with the specified subscription, resource group and resource name.
 
         The operation returns properties of a MachinePool.
 
@@ -607,15 +606,11 @@ class MachinePoolsOperations(object):
         )
         response = pipeline_response.http_response
 
-        if response.status_code not in [200, 201]:
+        if response.status_code not in [200]:
             map_error(status_code=response.status_code, response=response, error_map=error_map)
             raise HttpResponseError(response=response, error_format=ARMErrorFormat)
 
-        if response.status_code == 200:
-            deserialized = self._deserialize('MachinePool', pipeline_response)
-
-        if response.status_code == 201:
-            deserialized = self._deserialize('MachinePool', pipeline_response)
+        deserialized = self._deserialize('MachinePool', pipeline_response)
 
         if cls:
             return cls(pipeline_response, deserialized, {})

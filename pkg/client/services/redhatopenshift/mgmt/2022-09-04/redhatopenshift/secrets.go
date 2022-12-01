@@ -65,7 +65,15 @@ func (client SecretsClient) CreateOrUpdate(ctx context.Context, resourceGroupNam
 			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceName,
+			Constraints: []validation.Constraint{{Target: "resourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "resourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}},
+		{TargetValue: childResourceName,
+			Constraints: []validation.Constraint{{Target: "childResourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "childResourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "childResourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("redhatopenshift.SecretsClient", "CreateOrUpdate", err.Error())
 	}
 
@@ -154,7 +162,15 @@ func (client SecretsClient) Delete(ctx context.Context, resourceGroupName string
 			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceName,
+			Constraints: []validation.Constraint{{Target: "resourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "resourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}},
+		{TargetValue: childResourceName,
+			Constraints: []validation.Constraint{{Target: "childResourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "childResourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "childResourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("redhatopenshift.SecretsClient", "Delete", err.Error())
 	}
 
@@ -240,7 +256,15 @@ func (client SecretsClient) Get(ctx context.Context, resourceGroupName string, r
 			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceName,
+			Constraints: []validation.Constraint{{Target: "resourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "resourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}},
+		{TargetValue: childResourceName,
+			Constraints: []validation.Constraint{{Target: "childResourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "childResourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "childResourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("redhatopenshift.SecretsClient", "Get", err.Error())
 	}
 
@@ -326,7 +350,11 @@ func (client SecretsClient) List(ctx context.Context, resourceGroupName string, 
 			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceName,
+			Constraints: []validation.Constraint{{Target: "resourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "resourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("redhatopenshift.SecretsClient", "List", err.Error())
 	}
 
@@ -455,7 +483,15 @@ func (client SecretsClient) Update(ctx context.Context, resourceGroupName string
 			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceName,
+			Constraints: []validation.Constraint{{Target: "resourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "resourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}},
+		{TargetValue: childResourceName,
+			Constraints: []validation.Constraint{{Target: "childResourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "childResourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "childResourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("redhatopenshift.SecretsClient", "Update", err.Error())
 	}
 
@@ -517,7 +553,7 @@ func (client SecretsClient) UpdateSender(req *http.Request) (*http.Response, err
 func (client SecretsClient) UpdateResponder(resp *http.Response) (result Secret, err error) {
 	err = autorest.Respond(
 		resp,
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
 	result.Response = autorest.Response{Response: resp}

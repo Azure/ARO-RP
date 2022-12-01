@@ -225,10 +225,10 @@ def aro_list_admin_credentials(cmd, client, resource_group_name, resource_name, 
 
 
 def aro_get_versions(client, location):
-    openshift_verions = client.open_shift_versions.list(location)
+    items = client.open_shift_versions.list(location)
     versions = []
-    for ver in openshift_verions.value:
-        versions.append(ver.properties.version)
+    for item in items:
+        versions.append(item.version)
     return sorted(versions)
 
 
@@ -278,10 +278,10 @@ def generate_random_id():
     return random_id
 
 
-def get_route_tables_from_subnets(cli_ctx, subnets):
+def get_network_resources_from_subnets(cli_ctx, subnets):
     network_client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_NETWORK)
 
-    route_tables = set()
+    subnet_resources = set()
     for sn in subnets:
         sid = parse_resource_id(sn)
 
@@ -290,9 +290,12 @@ def get_route_tables_from_subnets(cli_ctx, subnets):
                                             subnet_name=sid['resource_name'])
 
         if subnet.route_table is not None:
-            route_tables.add(subnet.route_table.id)
+            subnet_resources.add(subnet.route_table.id)
 
-    return route_tables
+        if subnet.nat_gateway is not None:
+            subnet_resources.add(subnet.nat_gateway.id)
+
+    return subnet_resources
 
 
 def get_cluster_network_resources(cli_ctx, oc):
@@ -317,11 +320,11 @@ def get_cluster_network_resources(cli_ctx, oc):
 
 
 def get_network_resources(cli_ctx, subnets, vnet):
-    route_tables = get_route_tables_from_subnets(cli_ctx, subnets)
+    subnet_resources = get_network_resources_from_subnets(cli_ctx, subnets)
 
     resources = set()
     resources.add(vnet)
-    resources.update(route_tables)
+    resources.update(subnet_resources)
 
     return resources
 

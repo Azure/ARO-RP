@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"context"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -15,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/util/ready"
@@ -29,44 +27,44 @@ const (
 var _ = Describe("Cluster", func() {
 	var p project.Project
 
-	var _ = BeforeEach(func() {
+	var _ = BeforeEach(func(ctx context.Context) {
 		By("creating a test namespace")
 		p = project.NewProject(clients.Kubernetes, clients.Project, testNamespace)
-		err := p.Create(context.Background())
+		err := p.Create(ctx)
 		Expect(err).NotTo(HaveOccurred(), "Failed to create test namespace")
 
 		By("verifying the namespace is ready")
-		Eventually(func() error {
-			return p.Verify(context.Background())
-		}).Should(BeNil())
+		Eventually(func(ctx context.Context) error {
+			return p.Verify(ctx)
+		}).WithContext(ctx).Should(BeNil())
 	})
 
-	var _ = AfterEach(func() {
+	var _ = AfterEach(func(ctx context.Context) {
 		By("deleting a test namespace")
-		err := p.Delete(context.Background())
+		err := p.Delete(ctx)
 		Expect(err).NotTo(HaveOccurred(), "Failed to delete test namespace")
 
 		By("verifying the namespace is deleted")
-		Eventually(func() error {
-			return p.VerifyProjectIsDeleted(context.Background())
-		}, 5*time.Minute, 10*time.Second).Should(BeNil())
+		Eventually(func(ctx context.Context) error {
+			return p.VerifyProjectIsDeleted(ctx)
+		}).WithContext(ctx).Should(BeNil())
 	})
 
-	It("can run a stateful set which is using Azure Disk storage", func() {
-		ctx := context.Background()
-
+	It("can run a stateful set which is using Azure Disk storage", func(ctx context.Context) {
 		By("creating stateful set")
 		err := createStatefulSet(ctx, clients.Kubernetes)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying the stateful set is ready")
-		err = wait.PollImmediate(10*time.Second, 15*time.Minute, ready.CheckStatefulSetIsReady(ctx, clients.Kubernetes.AppsV1().StatefulSets(testNamespace), "busybox"))
-		Expect(err).NotTo(HaveOccurred())
+		Eventually(func(g Gomega, ctx context.Context) {
+			s, err := clients.Kubernetes.AppsV1().StatefulSets(testNamespace).Get(ctx, "busybox", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+
+			g.Expect(ready.StatefulSetIsReady(s)).To(BeTrue(), "expect stateful to be ready")
+		}).WithContext(ctx).Should(Succeed())
 	})
 
-	It("can create load balancer services", func() {
-		ctx := context.Background()
-
+	It("can create load balancer services", func(ctx context.Context) {
 		By("creating an external load balancer service")
 		err := createLoadBalancerService(ctx, clients.Kubernetes, "elb", map[string]string{})
 		Expect(err).NotTo(HaveOccurred())
@@ -78,28 +76,27 @@ var _ = Describe("Cluster", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying the external load balancer service is ready")
-		Eventually(func() bool {
-			svc, err := clients.Kubernetes.CoreV1().Services(testNamespace).Get(context.Background(), "elb", metav1.GetOptions{})
+		Eventually(func(ctx context.Context) bool {
+			svc, err := clients.Kubernetes.CoreV1().Services(testNamespace).Get(ctx, "elb", metav1.GetOptions{})
 			if err != nil {
 				return false
 			}
 			return ready.ServiceIsReady(svc)
-		}, 5*time.Minute, 10*time.Second).Should(BeTrue())
+		}).WithContext(ctx).Should(BeTrue())
 
 		By("verifying the internal load balancer service is ready")
-		Eventually(func() bool {
-			svc, err := clients.Kubernetes.CoreV1().Services(testNamespace).Get(context.Background(), "ilb", metav1.GetOptions{})
+		Eventually(func(ctx context.Context) bool {
+			svc, err := clients.Kubernetes.CoreV1().Services(testNamespace).Get(ctx, "ilb", metav1.GetOptions{})
 			if err != nil {
 				return false
 			}
 			return ready.ServiceIsReady(svc)
-		}, 5*time.Minute, 10*time.Second).Should(BeTrue())
+		}).WithContext(ctx).Should(BeTrue())
 	})
 
 	// mainly we want to test the gateway/egress functionality - this request for the image will travel from
 	// node > gateway > storage account of the registry.
-	It("can access and use the internal container registry", func() {
-		ctx := context.Background()
+	It("can access and use the internal container registry", func(ctx context.Context) {
 		deployName := "internal-registry-deploy"
 
 		By("creating a test deployment from an internal container registry")
@@ -107,8 +104,12 @@ var _ = Describe("Cluster", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying the deployment is ready")
-		err = wait.PollImmediate(10*time.Second, 5*time.Minute, ready.CheckDeploymentIsReady(ctx, clients.Kubernetes.AppsV1().Deployments(testNamespace), deployName))
-		Expect(err).NotTo(HaveOccurred())
+		Eventually(func(g Gomega, ctx context.Context) {
+			s, err := clients.Kubernetes.AppsV1().Deployments(testNamespace).Get(ctx, deployName, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+
+			g.Expect(ready.DeploymentIsReady(s)).To(BeTrue(), "expect stateful to be ready")
+		}).WithContext(ctx).Should(Succeed())
 	})
 })
 
@@ -118,7 +119,7 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface) error {
 		return err
 	}
 
-	_, err = cli.AppsV1().StatefulSets(testNamespace).Create(context.Background(), &appsv1.StatefulSet{
+	_, err = cli.AppsV1().StatefulSets(testNamespace).Create(ctx, &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "busybox",
 		},
@@ -191,7 +192,7 @@ func createLoadBalancerService(ctx context.Context, cli kubernetes.Interface, na
 			Type: corev1.ServiceTypeLoadBalancer,
 		},
 	}
-	_, err := cli.CoreV1().Services(testNamespace).Create(context.Background(), svc, metav1.CreateOptions{})
+	_, err := cli.CoreV1().Services(testNamespace).Create(ctx, svc, metav1.CreateOptions{})
 	return err
 }
 
@@ -228,6 +229,6 @@ func createContainerFromInternalContainerRegistryImage(ctx context.Context, cli 
 			},
 		},
 	}
-	_, err := cli.AppsV1().Deployments(testNamespace).Create(context.Background(), deploy, metav1.CreateOptions{})
+	_, err := cli.AppsV1().Deployments(testNamespace).Create(ctx, deploy, metav1.CreateOptions{})
 	return err
 }

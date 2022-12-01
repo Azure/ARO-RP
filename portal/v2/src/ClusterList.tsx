@@ -255,6 +255,20 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
               />
             </TooltipHost>
             <KubeconfigButton resourceId={item.resourceId} csrfToken={props.csrfToken} />
+            {/* <TooltipHost content={`Geneva`}>
+              <IconButton
+                iconProps={{iconName: "Health"}}
+                aria-label="Geneva"
+                href={item.resourceId + `/geneva`}
+              />
+            </TooltipHost>
+            <TooltipHost content={`Feature Flags`}>
+              <IconButton
+                iconProps={{iconName: "IconSetsFlag"}}
+                aria-label="featureFlags"
+                href={item.resourceId + `/feature-flags`}
+              />
+            </TooltipHost> */}
           </Stack>
         ),
       },
@@ -301,7 +315,7 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
   ): void => {
     this.setState({
       items: text
-        ? this.props.items.filter((i) => i.resourceId.toLowerCase().indexOf(text) > -1)
+      ? this.props.items.filter((i) => i.resourceId.toLowerCase().indexOf(text.trim().toLowerCase()) != -1)
         : this.props.items,
     })
   }

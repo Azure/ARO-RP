@@ -31,6 +31,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/imageconfig"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/ingress"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machine"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machinehealthcheck"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/machineset"
@@ -225,6 +226,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		if err = (machinehealthcheck.NewReconciler(
 			arocli, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machinehealthcheck.ControllerName, err)
+		}
+		if err = (ingress.NewReconciler(
+			log.WithField("controller", ingress.ControllerName),
+			arocli, operatorcli)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", ingress.ControllerName, err)
 		}
 	}
 

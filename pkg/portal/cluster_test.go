@@ -98,6 +98,7 @@ func TestClusterList(t *testing.T) {
 			ResourceGroup:     "resourceGroupName",
 			Subscription:      "00000000-0000-0000-0000-000000000000",
 			CreatedAt:         "2011-01-02T01:03:00Z",
+			LastModified:      "Unknown",
 			ProvisioningState: api.ProvisioningStateSucceeded.String(),
 		},
 		{
@@ -107,6 +108,7 @@ func TestClusterList(t *testing.T) {
 			ResourceGroup:     "resourceGroupName",
 			Subscription:      "00000000-0000-0000-0000-000000000000",
 			CreatedAt:         "Unknown",
+			LastModified:      "Unknown",
 			ProvisioningState: api.ProvisioningStateCreating.String(),
 		},
 
@@ -117,6 +119,7 @@ func TestClusterList(t *testing.T) {
 			ResourceGroup:           "resourceGroupName",
 			Subscription:            "00000000-0000-0000-0000-000000000000",
 			CreatedAt:               "Unknown",
+			LastModified:            "Unknown",
 			ProvisioningState:       api.ProvisioningStateFailed.String(),
 			FailedProvisioningState: api.ProvisioningStateCreating.String(),
 		},
@@ -161,6 +164,9 @@ func TestClusterDetail(t *testing.T) {
 						Visibility: api.VisibilityPrivate,
 						URL:        "example.com",
 					},
+				},
+				SystemData: api.SystemData{
+					LastModifiedAt: &parsedTime,
 				},
 			},
 		},

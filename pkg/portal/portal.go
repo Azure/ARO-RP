@@ -11,9 +11,12 @@ import (
 	"crypto/x509"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -26,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	frontendmiddleware "github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/portal/assets"
 	"github.com/Azure/ARO-RP/pkg/portal/cluster"
 	"github.com/Azure/ARO-RP/pkg/portal/kubeconfig"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
@@ -137,12 +141,12 @@ func (p *portal) setupRouter() error {
 	r := mux.NewRouter()
 	r.Use(middleware.Panic(p.log))
 
-	assetv1, err := Asset("v1/build/index.html")
+	assetv1, err := assets.EmbeddedFiles.ReadFile("v1/build/index.html")
 	if err != nil {
 		return err
 	}
 
-	assetv2, err := Asset("v2/build/index.html")
+	assetv2, err := assets.EmbeddedFiles.ReadFile("v2/build/index.html")
 	if err != nil {
 		return err
 	}
@@ -261,29 +265,49 @@ func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 }
 
 func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
-	for _, name := range AssetNames() {
-		if name == "v1/build/index.html" {
+	var names []string
+
+	err := filepath.Walk(".", func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		names = append(names, path)
+		return nil
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, name := range names {
+		regexp, _ := regexp.Compile(`v[1,2]/build/.*\..*`)
+		name := regexp.FindString(name)
+		switch name {
+		case "v1/build/index.html":
 			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.index)
-			continue
-		}
-
-		if name == "v2/build/index.html" {
+		case "v2/build/index.html":
 			r.NewRoute().Methods(http.MethodGet).Path("/v2").HandlerFunc(p.indexV2)
-			continue
+		case "":
+		default:
+			fmtName := strings.TrimPrefix(name, "v1/build/")
+			fmtName = strings.TrimPrefix(fmtName, "v2/build/")
+
+			r.NewRoute().Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
 		}
-
-		fmtName := strings.TrimPrefix(name, "v1/build/")
-		fmtName = strings.TrimPrefix(fmtName, "v2/build/")
-
-		r.NewRoute().Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
 	}
 
 	r.NewRoute().Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
 	r.NewRoute().Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
+	r.NewRoute().Methods(http.MethodGet).Path("/api/regions").HandlerFunc(p.regions)
 
 	// Cluster-specific routes
-	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{name}/clusteroperators").HandlerFunc(p.clusterOperators)
-	r.NewRoute().Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{name}").HandlerFunc(p.clusterInfo)
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/clusteroperators").HandlerFunc(p.clusterOperators)
+	r.NewRoute().Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/nodes").HandlerFunc(p.nodes)
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/machines").HandlerFunc(p.machines)
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/machine-sets").HandlerFunc(p.machineSets)
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
 }
 
 func (p *portal) index(w http.ResponseWriter, r *http.Request) {
@@ -318,7 +342,17 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 
 // makeFetcher creates a cluster.FetchClient suitable for use by the Portal REST API
 func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.FetchClient, error) {
-	resourceID := strings.Join(strings.Split(r.URL.Path, "/")[:9], "/")
+	apiVars := mux.Vars(r)
+
+	subscription := apiVars["subscription"]
+	resourceGroup := apiVars["resourceGroup"]
+	clusterName := apiVars["clusterName"]
+
+	resourceID :=
+		strings.ToLower(
+			fmt.Sprintf(
+				"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
+				subscription, resourceGroup, clusterName))
 	if !validate.RxClusterID.MatchString(resourceID) {
 		return nil, fmt.Errorf("invalid resource ID")
 	}
@@ -345,13 +379,13 @@ func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.Fetc
 
 func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		b, err := Asset(path)
+		asset, err := assets.EmbeddedFiles.ReadFile(path)
 		if err != nil {
 			p.internalServerError(w, err)
 			return
 		}
 
-		http.ServeContent(w, r, path, time.Time{}, bytes.NewReader(b))
+		http.ServeContent(w, r, path, time.Time{}, bytes.NewReader(asset))
 	}
 }
 

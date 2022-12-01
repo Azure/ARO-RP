@@ -15,6 +15,11 @@ import (
 func (f *frontend) changefeed(ctx context.Context) {
 	defer recover.Panic(f.baseLog)
 
+	// f.dbOpenShiftVersions will be nil when running unit tests. Return here to avoid nil pointer panic
+	if f.dbOpenShiftVersions == nil {
+		return
+	}
+
 	frontendIterator := f.dbOpenShiftVersions.ChangeFeed()
 
 	t := time.NewTicker(10 * time.Second)

@@ -53,7 +53,7 @@
         }
       }
     },
-    "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/listinstallversions": {
+    "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openshiftversions": {
       "get": {
         "tags": [
           "OpenShiftVersions"
@@ -90,6 +90,9 @@
           "Lists all OpenShift versions available to install in the specified location.": {
             "$ref": "./examples/OpenShiftVersions_List.json"
           }
+        },
+        "x-ms-pageable": {
+          "nextLinkName": "nextLink"
         }
       }
     },
@@ -156,7 +159,10 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           }
         ],
         "responses": {
@@ -206,7 +212,10 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           }
         ],
         "responses": {
@@ -256,7 +265,10 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           }
         ],
         "responses": {
@@ -306,7 +318,10 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           }
         ],
         "responses": {
@@ -708,14 +723,20 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "childResourceName",
             "in": "path",
             "description": "The name of the MachinePool resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           }
         ],
         "responses": {
@@ -760,14 +781,20 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "childResourceName",
             "in": "path",
             "description": "The name of the MachinePool resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "parameters",
@@ -793,7 +820,7 @@
             }
           },
           "default": {
-            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "description": "Error response describing why the operation failed.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
             "schema": {
               "$ref": "#/definitions/CloudError"
             }
@@ -827,14 +854,20 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "childResourceName",
             "in": "path",
             "description": "The name of the MachinePool resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           }
         ],
         "responses": {
@@ -861,7 +894,7 @@
         "tags": [
           "MachinePools"
         ],
-        "summary": "Patches (create or update) a MachinePool with the specified subscription, resource group and resource name.",
+        "summary": "Updates a MachinePool with the specified subscription, resource group and resource name.",
         "description": "The operation returns properties of a MachinePool.",
         "operationId": "MachinePools_Update",
         "parameters": [
@@ -879,14 +912,20 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "childResourceName",
             "in": "path",
             "description": "The name of the MachinePool resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "parameters",
@@ -905,12 +944,6 @@
               "$ref": "#/definitions/MachinePool"
             }
           },
-          "201": {
-            "description": "Created",
-            "schema": {
-              "$ref": "#/definitions/MachinePool"
-            }
-          },
           "default": {
             "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
             "schema": {
@@ -919,7 +952,7 @@
           }
         },
         "x-ms-examples": {
-          "Patches (create or update) a MachinePool with the specified subscription, resource group and resource name.": {
+          "Updates a MachinePool with the specified subscription, resource group and resource name.": {
             "$ref": "./examples/MachinePools_Update.json"
           }
         }
@@ -948,14 +981,20 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "childResourceName",
             "in": "path",
             "description": "The name of the Secret resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           }
         ],
         "responses": {
@@ -1000,14 +1039,20 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "childResourceName",
             "in": "path",
             "description": "The name of the Secret resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "parameters",
@@ -1033,7 +1078,7 @@
             }
           },
           "default": {
-            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "description": "Error response describing why the operation failed.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
             "schema": {
               "$ref": "#/definitions/CloudError"
             }
@@ -1067,14 +1112,20 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "childResourceName",
             "in": "path",
             "description": "The name of the Secret resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           }
         ],
         "responses": {
@@ -1101,7 +1152,7 @@
         "tags": [
           "Secrets"
         ],
-        "summary": "Patches (create or update) a Secret with the specified subscription, resource group and resource name.",
+        "summary": "Updates a Secret with the specified subscription, resource group and resource name.",
         "description": "The operation returns properties of a Secret.",
         "operationId": "Secrets_Update",
         "parameters": [
@@ -1119,14 +1170,20 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "childResourceName",
             "in": "path",
             "description": "The name of the Secret resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "parameters",
@@ -1145,12 +1202,6 @@
               "$ref": "#/definitions/Secret"
             }
           },
-          "201": {
-            "description": "Created",
-            "schema": {
-              "$ref": "#/definitions/Secret"
-            }
-          },
           "default": {
             "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
             "schema": {
@@ -1159,7 +1210,7 @@
           }
         },
         "x-ms-examples": {
-          "Patches (create or update) a Secret with the specified subscription, resource group and resource name.": {
+          "Updates a Secret with the specified subscription, resource group and resource name.": {
             "$ref": "./examples/Secrets_Update.json"
           }
         }
@@ -1188,14 +1239,20 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "childResourceName",
             "in": "path",
             "description": "The name of the SyncIdentityProvider resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           }
         ],
         "responses": {
@@ -1240,14 +1297,20 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "childResourceName",
             "in": "path",
             "description": "The name of the SyncIdentityProvider resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "parameters",
@@ -1273,7 +1336,7 @@
             }
           },
           "default": {
-            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "description": "Error response describing why the operation failed.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
             "schema": {
               "$ref": "#/definitions/CloudError"
             }
@@ -1307,14 +1370,20 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "childResourceName",
             "in": "path",
             "description": "The name of the SyncIdentityProvider resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           }
         ],
         "responses": {
@@ -1341,7 +1410,7 @@
         "tags": [
           "SyncIdentityProviders"
         ],
-        "summary": "Patches (create or update) a SyncIdentityProvider with the specified subscription, resource group and resource name.",
+        "summary": "Updates a SyncIdentityProvider with the specified subscription, resource group and resource name.",
         "description": "The operation returns properties of a SyncIdentityProvider.",
         "operationId": "SyncIdentityProviders_Update",
         "parameters": [
@@ -1359,14 +1428,20 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "childResourceName",
             "in": "path",
             "description": "The name of the SyncIdentityProvider resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "parameters",
@@ -1385,12 +1460,6 @@
               "$ref": "#/definitions/SyncIdentityProvider"
             }
           },
-          "201": {
-            "description": "Created",
-            "schema": {
-              "$ref": "#/definitions/SyncIdentityProvider"
-            }
-          },
           "default": {
             "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
             "schema": {
@@ -1399,7 +1468,7 @@
           }
         },
         "x-ms-examples": {
-          "Patches (create or update) a SyncIdentityProvider with the specified subscription, resource group and resource name.": {
+          "Updates a SyncIdentityProvider with the specified subscription, resource group and resource name.": {
             "$ref": "./examples/SyncIdentityProviders_Update.json"
           }
         }
@@ -1428,14 +1497,20 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "childResourceName",
             "in": "path",
             "description": "The name of the SyncSet resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           }
         ],
         "responses": {
@@ -1480,14 +1555,20 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "childResourceName",
             "in": "path",
             "description": "The name of the SyncSet resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "parameters",
@@ -1513,7 +1594,7 @@
             }
           },
           "default": {
-            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "description": "Error response describing why the operation failed.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
             "schema": {
               "$ref": "#/definitions/CloudError"
             }
@@ -1547,14 +1628,20 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "childResourceName",
             "in": "path",
             "description": "The name of the SyncSet resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           }
         ],
         "responses": {
@@ -1581,7 +1668,7 @@
         "tags": [
           "SyncSets"
         ],
-        "summary": "Patches (create or update) a SyncSet with the specified subscription, resource group and resource name.",
+        "summary": "Updates a SyncSet with the specified subscription, resource group and resource name.",
         "description": "The operation returns properties of a SyncSet.",
         "operationId": "SyncSets_Update",
         "parameters": [
@@ -1599,14 +1686,20 @@
             "in": "path",
             "description": "The name of the OpenShift cluster resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "childResourceName",
             "in": "path",
             "description": "The name of the SyncSet resource.",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$"
           },
           {
             "name": "parameters",
@@ -1625,12 +1718,6 @@
               "$ref": "#/definitions/SyncSet"
             }
           },
-          "201": {
-            "description": "Created",
-            "schema": {
-              "$ref": "#/definitions/SyncSet"
-            }
-          },
           "default": {
             "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
             "schema": {
@@ -1639,7 +1726,7 @@
           }
         },
         "x-ms-examples": {
-          "Patches (create or update) a SyncSet with the specified subscription, resource group and resource name.": {
+          "Updates a SyncSet with the specified subscription, resource group and resource name.": {
             "$ref": "./examples/SyncSets_Update.json"
           }
         }
@@ -2045,21 +2132,15 @@
         }
       ],
       "properties": {
-        "id": {
-          "description": "The ID for the resource.",
-          "type": "string"
-        },
-        "name": {
-          "description": "Name of the resource.",
-          "type": "string"
-        },
-        "type": {
-          "description": "The resource type.",
-          "type": "string"
-        },
         "properties": {
           "$ref": "#/definitions/OpenShiftVersionProperties",
-          "description": "The properties for the OpenShiftVersion resource."
+          "description": "The properties for the OpenShiftVersion resource.",
+          "x-ms-client-flatten": true
+        },
+        "systemData": {
+          "$ref": "../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
+          "description": "The system meta data relating to this resource.",
+          "readOnly": true
         }
       }
     },
@@ -2404,6 +2485,17 @@
           "type": "string"
         }
       }
+    }
+  },
+  "parameters": {
+    "api-version": {
+      "name": "api-version",
+      "in": "query",
+      "description": "The version of the API the caller wants to use.",
+      "required": true,
+      "type": "string",
+      "pattern": "^\\d{2}-\\d{2}-\\d{4}(-preview)?$",
+      "x-ms-parameter-location": "client"
     }
   },
   "securityDefinitions": {

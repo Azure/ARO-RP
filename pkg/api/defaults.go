@@ -36,9 +36,15 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 				doc.OpenShiftCluster.Properties.MaintenanceTask = MaintenanceTaskEverything
 			}
 		}
+
 		// If there's no operator flags, set the default ones
 		if doc.OpenShiftCluster.Properties.OperatorFlags == nil {
 			doc.OpenShiftCluster.Properties.OperatorFlags = DefaultOperatorFlags()
+		}
+
+		// If there's no userDefinedRouting, set default one
+		if doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == "" {
+			doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType = OutboundTypeLoadbalancer
 		}
 	}
 }
@@ -66,6 +72,7 @@ func DefaultOperatorFlags() OperatorFlags {
 		"aro.dnsmasq.enabled":                      flagTrue,
 		"aro.genevalogging.enabled":                flagTrue,
 		"aro.imageconfig.enabled":                  flagTrue,
+		"aro.ingress.enabled":                      flagTrue,
 		"aro.machine.enabled":                      flagTrue,
 		"aro.machineset.enabled":                   flagTrue,
 		"aro.machinehealthcheck.enabled":           flagTrue,

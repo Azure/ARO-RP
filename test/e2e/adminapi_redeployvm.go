@@ -6,7 +6,6 @@ package e2e
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -18,7 +17,6 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -31,8 +29,7 @@ const (
 var _ = Describe("[Admin API] VM redeploy action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
-	It("should trigger a selected VM to redeploy", func() {
-		ctx := context.Background()
+	It("must trigger a selected VM to redeploy", func(ctx context.Context) {
 		resourceID := resourceIDFromEnv()
 
 		By("getting the resource group where the VM instances live in")
@@ -48,57 +45,40 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		log.Infof("selected vm: %s", *vm.Name)
 
 		By("saving the current uptime")
-		oldUptime, err := getNodeUptime(*vm.Name)
+		oldUptime, err := getNodeUptime(Default, ctx, *vm.Name)
 		Expect(err).NotTo(HaveOccurred())
 
-		By("verifying redeploy action completes without error")
+		By("triggering VM redeployment via RP Admin API")
 		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+resourceID+"/redeployvm", url.Values{"vmName": []string{*vm.Name}}, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-		By("verifying node power state is eventually Running in Azure")
-		// we can pollimmediate without fear of false positive because we have
-		// already waited on the redeploy future
-		err = wait.PollImmediate(1*time.Minute, 10*time.Minute, func() (bool, error) {
+		By("waiting for the redeployed VM to report Running power state in Azure")
+		Eventually(func(g Gomega, ctx context.Context) {
 			restartedVm, err := clients.VirtualMachines.Get(ctx, clusterResourceGroup, *vm.Name, mgmtcompute.InstanceView)
-			if err != nil {
-				log.Info(fmt.Sprintf("Failed to get restarted vm: %v", err))
-				return false, nil // swallow err, retry
-			}
-			for _, status := range *restartedVm.InstanceView.Statuses {
-				if *status.Code == "PowerState/running" {
-					return true, nil
-				}
-			}
-			return false, nil
-		})
-		Expect(err).NotTo(HaveOccurred())
+			g.Expect(err).NotTo(HaveOccurred())
 
-		By("verifying redeployed node is eventually Ready in OpenShift")
+			g.Expect(*restartedVm.InstanceView.Statuses).To(ContainElement(HaveField("Code", HaveValue(Equal("PowerState/running")))))
+		}).WithContext(ctx).WithTimeout(10 * time.Minute).WithPolling(time.Minute).Should(Succeed())
+
+		By("waiting for the redeployed node to eventually become Ready in OpenShift")
 		// wait 1 minute - this will guarantee we pass the minimum (default) threshold of Node heartbeats (40 seconds)
-		err = wait.Poll(1*time.Minute, 10*time.Minute, func() (bool, error) {
+		Eventually(func(g Gomega, ctx context.Context) {
 			node, err := clients.Kubernetes.CoreV1().Nodes().Get(ctx, *vm.Name, metav1.GetOptions{})
-			if err != nil {
-				log.Warn(err)
-				return false, nil // swallow error, retry
-			}
-			if ready.NodeIsReady(node) {
-				return true, nil
-			}
-			return false, nil
-		})
-		Expect(err).NotTo(HaveOccurred())
+			g.Expect(err).NotTo(HaveOccurred())
+
+			g.Expect(ready.NodeIsReady(node)).To(BeTrue())
+		}).WithContext(ctx).WithTimeout(10 * time.Minute).WithPolling(time.Minute).Should(Succeed())
 
 		By("getting system uptime again and making sure it is newer")
-		newUptime, err := getNodeUptime(*vm.Name)
+		newUptime, err := getNodeUptime(Default, ctx, *vm.Name)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(oldUptime.Before(newUptime)).To(BeTrue())
+		Expect(newUptime).To(BeTemporally(">", oldUptime))
 	})
 })
 
-func getNodeUptime(node string) (time.Time, error) {
+func getNodeUptime(g Gomega, ctx context.Context, node string) (time.Time, error) {
 	// container kernel = node kernel = `uptime` in a Pod reflects the Node as well
-	ctx := context.Background()
 	namespace := "default"
 	name := node
 	pod := &corev1.Pod{
@@ -123,7 +103,7 @@ func getNodeUptime(node string) (time.Time, error) {
 		},
 	}
 
-	// Create
+	By("creating uptime pod")
 	_, err := clients.Kubernetes.CoreV1().Pods(namespace).Create(ctx, pod, metav1.CreateOptions{})
 	if err != nil {
 		return time.Time{}, err
@@ -131,28 +111,22 @@ func getNodeUptime(node string) (time.Time, error) {
 
 	// Defer Delete
 	defer func() {
+		By("deleting uptime pod")
 		err := clients.Kubernetes.CoreV1().Pods(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 		if err != nil {
 			log.Error("Could not delete test Pod")
 		}
 	}()
 
-	// Wait for Completion
-	err = wait.PollImmediate(5*time.Second, 3*time.Minute, func() (bool, error) {
+	By("waiting for uptime pod to move into the Succeeded phase")
+	g.Eventually(func(g Gomega, ctx context.Context) {
 		p, err := clients.Kubernetes.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			return false, err
-		}
-		if p.Status.Phase == "Succeeded" {
-			return true, nil
-		}
-		return false, nil // retry
-	})
-	if err != nil {
-		return time.Time{}, err
-	}
+		g.Expect(err).NotTo(HaveOccurred())
 
-	// Logs (uptime)
+		g.Expect(p.Status.Phase).To(Equal(corev1.PodSucceeded))
+	}).WithContext(ctx).Should(Succeed())
+
+	By("getting logs")
 	req := clients.Kubernetes.CoreV1().Pods(namespace).GetLogs(name, &corev1.PodLogOptions{})
 	stream, err := req.Stream(ctx)
 	if err != nil {

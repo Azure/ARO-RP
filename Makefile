@@ -2,10 +2,10 @@ SHELL = /bin/bash
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
-E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2
+E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
-FLUENTBIT_VERSION = 1.9.4-1
+FLUENTBIT_VERSION = 1.9.9-1
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)
 AUTOREST_VERSION = 3.6.2
 AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
@@ -115,14 +115,13 @@ publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
 
 proxy:
-	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
+	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
 
 run-portal:
 	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
 
 build-portal:
 	cd portal/v1 && npm install && npm run build && cd ../v2 && npm install && npm run build
-	make generate
 
 pyenv:
 	python3 -m venv pyenv

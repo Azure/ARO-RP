@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: aro-operator-worker
-    version: {{ .Version }}
+    version: "{{ .Version }}"
   name: aro-operator-worker
   namespace: openshift-azure-operator
 spec:

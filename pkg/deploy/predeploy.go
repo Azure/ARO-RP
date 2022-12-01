@@ -126,11 +126,7 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 	// key the decision to deploy NSGs on the existence of the gateway
 	// predeploy.  We do this in order to refresh the RP NSGs when the gateway
 	// is deployed for the first time.
-
-	// TODO: *** REVERT AFTER RELEASE ***
-	// *** Forcing this to true here to ensure the rp_in_geneva NSG gets updated with GenevaActions service tag.
-	// *** Once the NSGs get updated, revert this change (set the isCreate declaration back to `var isCreate bool`) so that the NSGs aren't getting redeployed every release.
-	var isCreate = true
+	isCreate := false
 	_, err = d.deployments.Get(ctx, d.config.GatewayResourceGroupName, strings.TrimSuffix(generator.FileGatewayProductionPredeploy, ".json"))
 	if isDeploymentNotFoundError(err) {
 		isCreate = true
@@ -146,11 +142,6 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 	}
 
 	err = d.deployPreDeploy(ctx, d.config.RPResourceGroupName, generator.FileRPProductionPredeploy, "rpServicePrincipalId", rpMSI.PrincipalID.String(), isCreate)
-	if err != nil {
-		return err
-	}
-
-	err = d.configureKeyvaultIssuers(ctx)
 	if err != nil {
 		return err
 	}
@@ -358,40 +349,6 @@ func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deplo
 			Parameters: parameters.Parameters,
 		},
 	})
-}
-
-func (d *deployer) configureKeyvaultIssuers(ctx context.Context) error {
-	if d.env.IsLocalDevelopmentMode() {
-		return nil
-	}
-
-	for _, kv := range []keyvault.Manager{
-		d.clusterKeyvault,
-		d.dbtokenKeyvault,
-		d.serviceKeyvault,
-		d.portalKeyvault,
-	} {
-		_, err := kv.SetCertificateIssuer(ctx, "OneCertV2-PublicCA", azkeyvault.CertificateIssuerSetParameters{
-			Provider: to.StringPtr("OneCertV2-PublicCA"),
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, kv := range []keyvault.Manager{
-		d.serviceKeyvault,
-		d.portalKeyvault,
-	} {
-		_, err := kv.SetCertificateIssuer(ctx, "OneCertV2-PrivateCA", azkeyvault.CertificateIssuerSetParameters{
-			Provider: to.StringPtr("OneCertV2-PrivateCA"),
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (d *deployer) configureServiceSecrets(ctx context.Context) error {

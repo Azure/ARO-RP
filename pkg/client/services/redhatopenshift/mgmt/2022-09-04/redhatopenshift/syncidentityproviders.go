@@ -66,7 +66,15 @@ func (client SyncIdentityProvidersClient) CreateOrUpdate(ctx context.Context, re
 			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceName,
+			Constraints: []validation.Constraint{{Target: "resourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "resourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}},
+		{TargetValue: childResourceName,
+			Constraints: []validation.Constraint{{Target: "childResourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "childResourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "childResourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("redhatopenshift.SyncIdentityProvidersClient", "CreateOrUpdate", err.Error())
 	}
 
@@ -155,7 +163,15 @@ func (client SyncIdentityProvidersClient) Delete(ctx context.Context, resourceGr
 			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceName,
+			Constraints: []validation.Constraint{{Target: "resourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "resourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}},
+		{TargetValue: childResourceName,
+			Constraints: []validation.Constraint{{Target: "childResourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "childResourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "childResourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("redhatopenshift.SyncIdentityProvidersClient", "Delete", err.Error())
 	}
 
@@ -241,7 +257,15 @@ func (client SyncIdentityProvidersClient) Get(ctx context.Context, resourceGroup
 			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceName,
+			Constraints: []validation.Constraint{{Target: "resourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "resourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}},
+		{TargetValue: childResourceName,
+			Constraints: []validation.Constraint{{Target: "childResourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "childResourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "childResourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("redhatopenshift.SyncIdentityProvidersClient", "Get", err.Error())
 	}
 
@@ -327,7 +351,11 @@ func (client SyncIdentityProvidersClient) List(ctx context.Context, resourceGrou
 			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceName,
+			Constraints: []validation.Constraint{{Target: "resourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "resourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("redhatopenshift.SyncIdentityProvidersClient", "List", err.Error())
 	}
 
@@ -456,7 +484,15 @@ func (client SyncIdentityProvidersClient) Update(ctx context.Context, resourceGr
 			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
-				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceName,
+			Constraints: []validation.Constraint{{Target: "resourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "resourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}},
+		{TargetValue: childResourceName,
+			Constraints: []validation.Constraint{{Target: "childResourceName", Name: validation.MaxLength, Rule: 63, Chain: nil},
+				{Target: "childResourceName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "childResourceName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("redhatopenshift.SyncIdentityProvidersClient", "Update", err.Error())
 	}
 
@@ -518,7 +554,7 @@ func (client SyncIdentityProvidersClient) UpdateSender(req *http.Request) (*http
 func (client SyncIdentityProvidersClient) UpdateResponder(resp *http.Response) (result SyncIdentityProvider, err error) {
 	err = autorest.Respond(
 		resp,
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
 	result.Response = autorest.Response{Response: resp}

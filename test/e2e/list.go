@@ -12,9 +12,7 @@ import (
 )
 
 var _ = Describe("List clusters", func() {
-	It("must contain the test cluster in the returned list", func() {
-		ctx := context.Background()
-
+	It("must contain the test cluster in the returned list", func(ctx context.Context) {
 		By("listing clusters")
 		ocList, err := clients.OpenshiftClustersv20200430.List(ctx)
 		Expect(err).NotTo(HaveOccurred())
@@ -31,9 +29,7 @@ var _ = Describe("List clusters", func() {
 	})
 
 	// listByResourceGroup test marked Pending (X), don't reenable until ARM caching issue is fixed, see https://github.com/Azure/ARO-RP/pull/1995
-	XIt("must contain the test cluster when listing clusters by a resource group", func() {
-		ctx := context.Background()
-
+	XIt("must contain the test cluster when listing clusters by a resource group", func(ctx context.Context) {
 		By(fmt.Sprintf("listing clusters by a resource group %q", vnetResourceGroup))
 		ocList, err := clients.OpenshiftClustersv20200430.ListByResourceGroup(ctx, vnetResourceGroup)
 		Expect(err).NotTo(HaveOccurred())

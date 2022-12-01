@@ -16,11 +16,9 @@ import (
 
 var _ = Describe("Monitor", func() {
 	// This is more of an integration test rather than E2E.
-	It("must run and must not return any errors", func() {
-		ctx := context.Background()
-
+	It("must run and must not return any errors", func(ctx context.Context) {
 		By("creating a new monitor instance for the test cluster")
-		mon, err := cluster.NewMonitor(ctx, log, clients.RestConfig, &api.OpenShiftCluster{
+		mon, err := cluster.NewMonitor(log, clients.RestConfig, &api.OpenShiftCluster{
 			ID: resourceIDFromEnv(),
 		}, &noop.Noop{}, nil, true)
 		Expect(err).NotTo(HaveOccurred())

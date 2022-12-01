@@ -124,6 +124,7 @@ func (g *generator) rpTemplate() *arm.Template {
 				"southafricanorth",
 				"northcentralus",
 				"uaenorth",
+				"westus",
 			}
 
 		// TODO: Replace with Live Service Configuration in KeyVault
@@ -311,6 +312,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		g.rpDBTokenKeyvault(),
 		g.rpPortalKeyvault(),
 		g.rpServiceKeyvault(),
+		g.rpServiceKeyvaultDynamic(),
 	)
 
 	return t

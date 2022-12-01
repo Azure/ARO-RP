@@ -31,7 +31,7 @@ func (mon *Monitor) emitAroOperatorConditions(ctx context.Context) error {
 
 		mon.emitGauge("arooperator.conditions", 1, map[string]string{
 			"status": string(c.Status),
-			"type":   string(c.Type),
+			"type":   c.Type,
 		})
 
 		if mon.hourlyRun && c.Status == operatorv1.ConditionFalse {

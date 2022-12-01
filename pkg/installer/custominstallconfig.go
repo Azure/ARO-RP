@@ -4,7 +4,6 @@ package installer
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 
@@ -21,7 +20,7 @@ import (
 // applyInstallConfigCustomisations modifies the InstallConfig and creates
 // parent assets, then regenerates the InstallConfig for use for Ignition
 // generation, etc.
-func (m *manager) applyInstallConfigCustomisations(ctx context.Context, installConfig *installconfig.InstallConfig, image *releaseimage.Image) (graph.Graph, error) {
+func (m *manager) applyInstallConfigCustomisations(installConfig *installconfig.InstallConfig, image *releaseimage.Image) (graph.Graph, error) {
 	clusterID := &installconfig.ClusterID{
 		UUID:    m.clusterUUID,
 		InfraID: m.oc.Properties.InfraID,
@@ -72,6 +71,5 @@ func (m *manager) applyInstallConfigCustomisations(ctx context.Context, installC
 			return nil, err
 		}
 	}
-
 	return g, nil
 }
