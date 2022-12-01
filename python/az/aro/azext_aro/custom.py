@@ -40,7 +40,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                resource_name,
                master_subnet,
                worker_subnet,
-               vnet=None,
+               vnet=None,  # pylint: disable=unused-argument
                vnet_resource_group_name=None,  # pylint: disable=unused-argument
                location=None,
                pull_secret=None,
@@ -74,8 +74,18 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     validate_subnets(master_subnet, worker_subnet)
 
     subscription_id = get_subscription_id(cmd.cli_ctx)
-
     random_id = generate_random_id()
+
+    if rp_mode_development():
+        worker_vm_size = worker_vm_size or 'Standard_D2s_v3'
+    else:
+        worker_vm_size = worker_vm_size or 'Standard_D4s_v3'
+
+    if apiserver_visibility is not None:
+        apiserver_visibility = apiserver_visibility.capitalize()
+
+    if ingress_visibility is not None:
+        ingress_visibility = ingress_visibility.capitalize()
 
     aad = AADManager(cmd.cli_ctx)
     if client_id is None:
@@ -88,17 +98,6 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     rp_client_sp_id = aad.get_service_principal_id(resolve_rp_client_id())
     if not rp_client_sp_id:
         raise ResourceNotFoundError("RP service principal not found.")
-
-    if rp_mode_development():
-        worker_vm_size = worker_vm_size or 'Standard_D2s_v3'
-    else:
-        worker_vm_size = worker_vm_size or 'Standard_D4s_v3'
-
-    if apiserver_visibility is not None:
-        apiserver_visibility = apiserver_visibility.capitalize()
-
-    if ingress_visibility is not None:
-        ingress_visibility = ingress_visibility.capitalize()
 
     oc = openshiftcluster.OpenShiftCluster(
         location=location,
@@ -148,31 +147,6 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         ],
     )
 
-    if validate_only:
-        error_objects = validate_cluster_create(cmd,
-                                                client,
-                                                resource_group_name,
-                                                master_subnet,
-                                                worker_subnet,
-                                                vnet, pod_cidr,
-                                                service_cidr)
-        errors = []
-        for error_func in error_objects:
-            namespace = collections.namedtuple("Namespace", locals().keys())(*locals().values())
-            error_obj = error_func(cmd, namespace)
-            if error_obj != []:
-                for err in error_obj:
-                    errors.append(err)
-
-        if len(errors) > 0:
-            logger.error("Permission issues found blocking cluster creation.\n")
-            headers = ["Type", "Name", "Error"]
-            table = tabulate(errors, headers)
-            logger.warning("%s\n", table)
-        else:
-            logger.warning("\nNo Permissions issues on network blocking cluster creation\n")
-        return None
-
     sp_obj_ids = [client_sp_id, rp_client_sp_id]
     ensure_resource_permissions(cmd.cli_ctx, oc, True, sp_obj_ids)
 
@@ -182,19 +156,91 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                        parameters=oc)
 
 
-def aro_validate(cmd,  # pylint: disable=unused-argument
+def aro_validate(cmd,  # pylint: disable=too-many-locals
                  client,  # pylint: disable=unused-argument
-                 resource_group_name,  # pylint: disable=unused-argument
+                 resource_group_name,
                  master_subnet,  # pylint: disable=unused-argument
                  worker_subnet,  # pylint: disable=unused-argument
                  vnet,  # pylint: disable=unused-argument
+                 location,  # pylint: disable=unused-argument
+                 client_id,  # pylint: disable=unused-argument
+                 client_secret,  # pylint: disable=unused-argument
+                 vnet_resource_group_name=None,  # pylint: disable=unused-argument
                  pod_cidr=None,  # pylint: disable=unused-argument
                  service_cidr=None,  # pylint: disable=unused-argument
-                 resource_name=None,  # pylint: disable=unused-argument
-                 vnet_resource_group_name=None,  # pylint: disable=unused-argument
-                 validate_only=True  # pylint: disable=unused-argument
+                 master_vm_size=None,  # pylint: disable=unused-argument
+                 disk_encryption_set=None,  # pylint: disable=unused-argument
+                 worker_vm_size=None,  # pylint: disable=unused-argument
+                 worker_vm_disk_size_gb=None,  # pylint: disable=unused-argument
+                 worker_count=None,  # pylint: disable=unused-argument
                  ):
-    aro_create(**locals())
+
+    master_vm_size = master_vm_size or "Standard_D8s_v3"
+    worker_vm_size = worker_vm_size or 'Standard_D4s_v3'
+    worker_vm_disk_size_gb = worker_vm_disk_size_gb or 128
+    worker_count = worker_count or 3
+
+    class oc:  # pylint: disable=too-few-public-methods
+        def __init__(self, disk_encryption_id, master_subnet_id, worker_subnet_id):
+            self.master_profile = openshiftcluster.MasterProfile(
+                subnet_id=master_subnet_id,
+                disk_encryption_set_id=disk_encryption_id
+            )
+            self.worker_profiles = [openshiftcluster.WorkerProfile(
+                subnet_id=worker_subnet_id
+            )]
+
+    aad = AADManager(cmd.cli_ctx)
+
+    client_sp_id = aad.get_service_principal_id(client_id)
+    if not client_sp_id:
+        raise ResourceNotFoundError("RP service principal not found.")
+
+    rp_client_sp_id = aad.get_service_principal_id(resolve_rp_client_id())
+    if not rp_client_sp_id:
+        raise ResourceNotFoundError("RP service principal not found.")
+
+    sp_obj_ids = [client_sp_id, rp_client_sp_id]
+    cluster = oc(disk_encryption_set, master_subnet, worker_subnet)
+    try:
+        # Get cluster resources we need to assign permissions on, sort to ensure the same order of operations
+        resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cmd.cli_ctx, cluster)),
+                     ROLE_READER: sorted(get_disk_encryption_resources(cluster))}
+    except (CloudError, HttpOperationError) as e:
+        logger.error(e.message)
+        raise
+
+    error_objects = validate_cluster_create(cmd,
+                                            client,
+                                            resource_group_name,
+                                            master_subnet,
+                                            worker_subnet,
+                                            vnet, pod_cidr,
+                                            service_cidr,
+                                            location,
+                                            client_id,
+                                            master_vm_size,
+                                            disk_encryption_set,
+                                            worker_vm_size,
+                                            worker_vm_disk_size_gb,
+                                            worker_count,
+                                            resources,
+                                            sp_obj_ids)
+    errors = []
+    for error_func in error_objects:
+        namespace = collections.namedtuple("Namespace", locals().keys())(*locals().values())
+        error_obj = error_func(cmd, namespace)
+        if error_obj != []:
+            for err in error_obj:
+                errors.append(err)
+
+    if len(errors) > 0:
+        logger.error("Issues found blocking cluster creation.\n")
+        headers = ["Type", "Name", "Error"]
+        table = tabulate(errors, headers)
+        print("%s\n", table)
+    else:
+        print("\nNo Issues on subscription blocking cluster creation\n")
 
 
 def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):

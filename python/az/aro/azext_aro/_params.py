@@ -95,9 +95,6 @@ def load_arguments(self, _):
                    help='Ingress visibility.',
                    validator=validate_visibility('ingress_visibility'))
 
-        c.argument('validate_only',
-                   help='Boolean to create cluster or validate permissions only')
-
         c.argument('vnet_resource_group_name',
                    resource_group_name_type,
                    options_list=['--vnet-resource-group'],
