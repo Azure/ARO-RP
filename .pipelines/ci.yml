@@ -22,15 +22,23 @@ variables:
 - template: vars.yml
 
 jobs:
-- job: Python_Unit_Tests
+- job: Python_Unit_Tests_Testing
   pool:
     name: ARO-CI
   steps:
   - template: ./templates/template-checkout.yml
+
+  - task: Docker@2
+    displayName: Build Python Image
+    inputs:
+      repository: test-python
+      tags: $(Build.BuildId)
+      arguments: '--platform=linux/amd64 --no-cache'
+      command: build
+      Dockerfile: Dockerfile.python
+
   - script: |
-      set -xe
-      make test-python
-      [[ -z "$(git status -s)" ]]
+      docker run --platform=linux/amd64 -t --rm test-python:$(Build.BuildId) make test-python
     displayName: 🧪Run Python Unit Tests
 
 - job: Golang_Unit_Tests_Testing
@@ -40,39 +48,29 @@ jobs:
   steps:
   - template: ./templates/template-checkout.yml
 
-  # - script: |
-  #     sudo chmod 666 /var/run/docker.sock
-  #   displayName: Add docker.sock permissions
-
   - task: Docker@2
-    displayName: Build ci image
+    displayName: Build CI Image
     inputs:
       repository: ci
-      tags: latest
+      tags: $(Build.BuildId)
       arguments: '--platform=linux/amd64 --no-cache'
       command: build
       Dockerfile: Dockerfile.ci
 
   - script: |
-      docker images -a
-      docker ps -a
-      docker images -qa
-    displayName: listing docker images and containers
-
-  - script: |
-      docker run --platform=linux/amd64 -t --rm ci:latest generate
+      docker run --platform=linux/amd64 -t --rm ci:$(Build.BuildId) generate
     displayName: ⚙️ Run Golang code generate
 
   - script: |
-      docker run --platform=linux/amd64 -t --rm ci:latest build-all
+      docker run --platform=linux/amd64 -t --rm ci:$(Build.BuildId) build-all
     displayName: 🕵️ Build Golang code
 
   - script: |
-      docker run --platform=linux/amd64 -t --rm ci:latest unit-test-go
+      docker run --platform=linux/amd64 -t --rm ci:$(Build.BuildId) unit-test-go
     displayName: 🧪 Run Golang unit tests
 
   - script: |
-      docker run --platform=linux/amd64 -t --rm ci:latest validate-fips
+      docker run --platform=linux/amd64 -t --rm ci:$(Build.BuildId) validate-fips
     displayName: 🕵️ Validate FIPS
 
   - task: PublishTestResults@2
@@ -101,19 +99,16 @@ jobs:
   pool:
     name: ARO-CI
   steps:
-  # - script: |
-  #     sudo chmod 666 /var/run/docker.sock
-  #   displayName: Add docker.sock permissions
 
   - task: Docker@2
     displayName: Build portal_lint image
     inputs:
       repository: linter
-      tags: latest
+      tags: $(Build.BuildId)
       arguments: '--platform=linux/amd64 --build-arg REGISTRY=registry.access.redhat.com --no-cache'
       command: build
       Dockerfile: Dockerfile.portal_lint
 
   - script: |
-      docker run --platform=linux/amd64 -t --rm linter:latest
+      docker run --platform=linux/amd64 -t --rm linter:$(Build.BuildId)
     displayName: Lint Admin Portal

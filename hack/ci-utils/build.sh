@@ -12,7 +12,7 @@ OPTION=$1
 case "$OPTION" in
     "generate")
         echo "Running make generate."
-        make generate
+        go run hack/ci-utils/differenceChecker/main.go make generate
         exit 0
     ;;
     "build-all")
