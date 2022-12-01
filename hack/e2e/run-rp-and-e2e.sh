@@ -150,6 +150,7 @@ if [ -z "${DATABASE_NAME}" ] ; then
 fi
 
 echo "######################################"
+echo "##### E2E - Containerization    ######"
 echo "##### ARO V4 E2e helper sourced ######"
 echo "######################################"
 echo "######## Current settings : ##########"
