@@ -28,7 +28,8 @@ import { useBoolean } from "@fluentui/react-hooks"
 import { SSHModal } from "./SSHModal"
 import { ClusterDetailPanel } from "./ClusterDetail"
 import { ClusterList } from "./ClusterList"
-import { FetchInfo, ProcessLogOut } from "./Request"
+import { FetchInfo, FetchRegions, ProcessLogOut } from "./Request"
+import { RegionComponent } from "./RegionList"
 
 const containerStackTokens: IStackTokens = {}
 const appStackTokens: IStackTokens = { childrenGap: 10 }
@@ -140,6 +141,7 @@ export interface IClusterDetail {
 
 function App() {
   const [data, updateData] = useState({ location: "", csrf: "", elevated: false, username: "" })
+  const [regions, setRegions] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
   const [isOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false)
   const [fetching, setFetching] = useState("")
@@ -166,11 +168,20 @@ function App() {
       setFetching("DONE")
     }
 
+    const onRegions = (result: AxiosResponse | null) => {
+      if (result?.status === 200) {
+        setRegions(result.data)
+      } else {
+        setError(result)
+      }
+    }
+
     if (fetching === "") {
       setFetching("FETCHING")
       FetchInfo().then(onData)
+      FetchRegions().then(onRegions)
     }
-  }, [fetching, error, data])
+  }, [fetching, error, data, regions])
 
   const onRenderNavigationContent: IRenderFunction<IPanelProps> = useCallback(
     () => (
@@ -207,6 +218,7 @@ function App() {
     <>
       <Stack styles={stackStyles} tokens={containerStackTokens} horizontalAlign={"stretch"}>
         <Panel
+          id="RegionsPanel"
           isLightDismiss
           styles={navPanelStyles}
           type={PanelType.smallFixedNear}
@@ -214,7 +226,7 @@ function App() {
           onDismiss={dismissPanel}
           closeButtonAriaLabel="Close"
           onRenderNavigationContent={onRenderNavigationContent}>
-          <p>regions go here</p>
+          <RegionComponent item={regions}/>
         </Panel>
         <ThemeProvider theme={darkTheme}>
           <Stack
@@ -226,6 +238,7 @@ function App() {
             styles={stackNavStyles}>
             <Stack.Item>
               <IconButton
+                id="RegionNavButton"
                 iconProps={{ iconName: "GlobalNavButton" }}
                 onClick={openPanel}
                 styles={MenuButtonStyles}

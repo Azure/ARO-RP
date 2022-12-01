@@ -962,8 +962,8 @@ class OpenShiftVersion(ProxyResource):
     :ivar system_data: Azure Resource Manager metadata containing createdBy and modifiedBy
      information.
     :vartype system_data: ~azure.mgmt.redhatopenshift.v2022_09_04.models.SystemData
-    :ivar properties: The properties for the OpenShiftVersion resource.
-    :vartype properties: ~azure.mgmt.redhatopenshift.v2022_09_04.models.OpenShiftVersionProperties
+    :ivar version: Version represents the version to create the cluster at.
+    :vartype version: str
     """
 
     _validation = {
@@ -978,22 +978,21 @@ class OpenShiftVersion(ProxyResource):
         'name': {'key': 'name', 'type': 'str'},
         'type': {'key': 'type', 'type': 'str'},
         'system_data': {'key': 'systemData', 'type': 'SystemData'},
-        'properties': {'key': 'properties', 'type': 'OpenShiftVersionProperties'},
+        'version': {'key': 'properties.version', 'type': 'str'},
     }
 
     def __init__(
         self,
         *,
-        properties: Optional["OpenShiftVersionProperties"] = None,
+        version: Optional[str] = None,
         **kwargs
     ):
         """
-        :keyword properties: The properties for the OpenShiftVersion resource.
-        :paramtype properties:
-         ~azure.mgmt.redhatopenshift.v2022_09_04.models.OpenShiftVersionProperties
+        :keyword version: Version represents the version to create the cluster at.
+        :paramtype version: str
         """
         super(OpenShiftVersion, self).__init__(**kwargs)
-        self.properties = properties
+        self.version = version
 
 
 class OpenShiftVersionList(msrest.serialization.Model):
@@ -1026,31 +1025,6 @@ class OpenShiftVersionList(msrest.serialization.Model):
         super(OpenShiftVersionList, self).__init__(**kwargs)
         self.value = value
         self.next_link = next_link
-
-
-class OpenShiftVersionProperties(msrest.serialization.Model):
-    """OpenShiftVersionProperties represents the properties of an OpenShiftVersion.
-
-    :ivar version: Version represents the version to create the cluster at.
-    :vartype version: str
-    """
-
-    _attribute_map = {
-        'version': {'key': 'version', 'type': 'str'},
-    }
-
-    def __init__(
-        self,
-        *,
-        version: Optional[str] = None,
-        **kwargs
-    ):
-        """
-        :keyword version: Version represents the version to create the cluster at.
-        :paramtype version: str
-        """
-        super(OpenShiftVersionProperties, self).__init__(**kwargs)
-        self.version = version
 
 
 class Operation(msrest.serialization.Model):

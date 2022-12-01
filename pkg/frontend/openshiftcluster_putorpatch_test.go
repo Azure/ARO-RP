@@ -113,6 +113,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MaintenanceTask: api.MaintenanceTaskEverything,
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -137,6 +138,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MaintenanceTask: admin.MaintenanceTaskEverything,
 					NetworkProfile: admin.NetworkProfile{
 						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+						OutboundType:           admin.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -201,6 +203,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -222,6 +225,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MaintenanceTask:       admin.MaintenanceTaskOperator,
 					NetworkProfile: admin.NetworkProfile{
 						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+						OutboundType:           admin.OutboundTypeLoadbalancer,
 					},
 					ClusterProfile: admin.ClusterProfile{
 						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
@@ -282,6 +286,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MaintenanceTask:       api.MaintenanceTaskEverything,
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							ClusterProfile: api.ClusterProfile{
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
@@ -306,6 +311,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MaintenanceTask:       admin.MaintenanceTaskEverything,
 					NetworkProfile: admin.NetworkProfile{
 						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+						OutboundType:           admin.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -367,6 +373,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MaintenanceTask: api.MaintenanceTaskOperator,
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -391,6 +398,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MaintenanceTask: admin.MaintenanceTaskOperator,
 					NetworkProfile: admin.NetworkProfile{
 						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+						OutboundType:           admin.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -451,6 +459,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MaintenanceTask: api.MaintenanceTaskOperator,
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -475,6 +484,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MaintenanceTask: admin.MaintenanceTaskOperator,
 					NetworkProfile: admin.NetworkProfile{
 						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+						OutboundType:           admin.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -518,6 +528,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -541,6 +552,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -713,6 +725,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -775,6 +788,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -812,6 +826,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -893,6 +908,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -943,6 +959,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							FailedProvisioningState: api.ProvisioningStateCreating,
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -981,6 +998,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							FailedProvisioningState: api.ProvisioningStateDeleting,
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1029,6 +1047,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1070,6 +1089,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1135,6 +1155,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1177,6 +1198,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1234,6 +1256,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1276,6 +1299,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1320,6 +1344,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1364,6 +1389,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1622,6 +1648,7 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 								PodCIDR:                "10.0.0.0/16",
 								ServiceCIDR:            "10.1.0.0/16",
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							APIServerProfile: api.APIServerProfile{
 								Visibility: api.VisibilityPrivate,

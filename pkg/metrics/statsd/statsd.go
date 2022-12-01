@@ -3,7 +3,7 @@ package statsd
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// statsd implementation for https://genevamondocs.azurewebsites.net/collect/references/statsdref.html
+// statsd implementation for https://eng.ms/docs/products/geneva/collect/metrics/statsdref
 import (
 	"context"
 	"fmt"

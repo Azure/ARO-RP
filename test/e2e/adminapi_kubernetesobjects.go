@@ -7,7 +7,6 @@ import (
 	"context"
 	"net/http"
 	"net/url"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -15,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 )
@@ -79,17 +77,10 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 				// To avoid flakes, we need it to be completely deleted before we can use it again
 				// in a separate run or in a separate It block
 				By("waiting for the test customer namespace to be deleted")
-				err = wait.PollImmediate(10*time.Second, 5*time.Minute, func() (bool, error) {
+				Eventually(func(g Gomega, ctx context.Context) {
 					_, err := clients.Kubernetes.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
-					if kerrors.IsNotFound(err) {
-						return true, nil
-					}
-					if err != nil {
-						log.Warn(err)
-					}
-					return false, nil // swallow error
-				})
-				Expect(err).NotTo(HaveOccurred())
+					g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect Namespace to be deleted")
+				}).WithContext(ctx).Should(Succeed())
 			}()
 
 			testConfigMapCreateOrUpdateForbidden(ctx, "creating", objName, namespace)
@@ -268,17 +259,10 @@ func testConfigMapDeleteOK(ctx context.Context, objName, namespace string) {
 	// To avoid flakes, we need it to be completely deleted before we can use it again
 	// in a separate run or in a separate It block
 	By("waiting for the configmap to be deleted")
-	err = wait.PollImmediate(10*time.Second, time.Minute, func() (bool, error) {
+	Eventually(func(g Gomega, ctx context.Context) {
 		_, err = clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get(ctx, objName, metav1.GetOptions{})
-		if kerrors.IsNotFound(err) {
-			return true, nil
-		}
-		if err != nil {
-			log.Warn(err)
-		}
-		return false, nil // swallow error
-	})
-	Expect(err).NotTo(HaveOccurred())
+		g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect ConfigMap to be deleted")
+	}).WithContext(ctx).Should(Succeed())
 }
 
 func testConfigMapCreateOrUpdateForbidden(ctx context.Context, operation, objName, namespace string) {
@@ -336,17 +320,10 @@ func testPodForceDeleteOK(ctx context.Context, objName, namespace string) {
 	// To avoid flakes, we need it to be completely deleted before we can use it again
 	// in a separate run or in a separate It block
 	By("waiting for the pod to be deleted")
-	err = wait.PollImmediate(10*time.Second, time.Minute, func() (bool, error) {
+	Eventually(func(g Gomega, ctx context.Context) {
 		_, err = clients.Kubernetes.CoreV1().Pods(namespace).Get(ctx, objName, metav1.GetOptions{})
-		if kerrors.IsNotFound(err) {
-			return true, nil
-		}
-		if err != nil {
-			log.Warn(err)
-		}
-		return false, nil // swallow error
-	})
-	Expect(err).NotTo(HaveOccurred())
+		g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect Pod to be deleted")
+	}).WithContext(ctx).Should(Succeed())
 }
 
 func mockSecret(name, namespace string) corev1.Secret {

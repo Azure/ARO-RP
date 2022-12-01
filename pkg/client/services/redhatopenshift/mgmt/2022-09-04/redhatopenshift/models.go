@@ -939,8 +939,8 @@ func (oscu *OpenShiftClusterUpdate) UnmarshalJSON(body []byte) error {
 
 // OpenShiftVersion openShiftVersion represents an OpenShift version that can be installed.
 type OpenShiftVersion struct {
-	// Properties - The properties for the OpenShiftVersion resource.
-	Properties *OpenShiftVersionProperties `json:"properties,omitempty"`
+	// OpenShiftVersionProperties - The properties for the OpenShiftVersion resource.
+	*OpenShiftVersionProperties `json:"properties,omitempty"`
 	// ID - READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
 	ID *string `json:"id,omitempty"`
 	// Name - READ-ONLY; The name of the resource
@@ -954,10 +954,70 @@ type OpenShiftVersion struct {
 // MarshalJSON is the custom marshaler for OpenShiftVersion.
 func (osv OpenShiftVersion) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
-	if osv.Properties != nil {
-		objectMap["properties"] = osv.Properties
+	if osv.OpenShiftVersionProperties != nil {
+		objectMap["properties"] = osv.OpenShiftVersionProperties
 	}
 	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for OpenShiftVersion struct.
+func (osv *OpenShiftVersion) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var openShiftVersionProperties OpenShiftVersionProperties
+				err = json.Unmarshal(*v, &openShiftVersionProperties)
+				if err != nil {
+					return err
+				}
+				osv.OpenShiftVersionProperties = &openShiftVersionProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				osv.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				osv.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				osv.Type = &typeVar
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				osv.SystemData = &systemData
+			}
+		}
+	}
+
+	return nil
 }
 
 // OpenShiftVersionList openShiftVersionList represents a List of available versions.

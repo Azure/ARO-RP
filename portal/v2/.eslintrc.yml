@@ -22,4 +22,5 @@ settings:
     fragment: "Fragment"
     version: "detect"
     flowVersion: "0.53"
-rules: {}
+rules:
+  no-undef: "off"
