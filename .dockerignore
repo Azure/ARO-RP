@@ -8,9 +8,6 @@ gomock_reflect_*
 /pyenv*
 /mdm_statsd.socket
 /uts.txt
-/cover.out
-/coverage.*
-/report.xml
 **/*.swp
 .idea*
 cmd/aro/__debug_bin

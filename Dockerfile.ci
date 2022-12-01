@@ -6,7 +6,6 @@ WORKDIR /root/go/src/github.com/Azure/ARO-RP
 ENV GOPATH=/root/go
 
 #we have multiple steps for copy so we can make use of caching
-COPY $(go env GOMODCACHE) /go/pkg/mod/
 COPY vendor/ vendor
 
 COPY docs/ docs

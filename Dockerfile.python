@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8:latest
+FROM registry.access.redhat.com/ubi8/ubi-minimal
 
 USER root
 RUN mkdir -p /app/ARO-RP
@@ -19,8 +19,8 @@ COPY cmd/ cmd
 COPY pkg/ pkg
 
 #COPY all files with an extension (directories not copied)
-COPY ?*.* .
-COPY Makefile LICENSE .
+COPY ?*.* /app/ARO-RP/
+COPY Makefile LICENSE /app/ARO-RP/
 
 COPY .git .git
 COPY .gitignore .gitignore
