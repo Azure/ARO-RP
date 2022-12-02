@@ -15,7 +15,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -267,17 +266,19 @@ func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 	var names []string
 
-	err := filepath.Walk(".", func(path string, info fs.FileInfo, err error) error {
+	err := fs.WalkDir(assets.EmbeddedFiles, ".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		names = append(names, path)
+		if !entry.IsDir() {
+			names = append(names, path)
+		}
 		return nil
 	})
 
 	if err != nil {
-		log.Fatal(err)
+		p.log.Fatal(err)
 	}
 
 	for _, name := range names {
