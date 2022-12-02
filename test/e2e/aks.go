@@ -23,7 +23,7 @@ import (
 )
 
 // Tests the kubeconfig ability to get and manipulate the cluster
-var _ = Describe("AKS cluster present", func() {
+var _ = Describe("AKS cluster present", Pending, func() {
 	ctx := context.Background()
 	var liveConfig liveconfig.Manager
 	var kubeConfig *rest.Config
