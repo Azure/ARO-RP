@@ -175,7 +175,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				now:           func() time.Time { return time.Now() },
 			}
 
-			err := m.runSteps(ctx, tt.steps, false)
+			err := m.runSteps(ctx, tt.steps, "")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -257,10 +257,10 @@ func TestInstallationTimeMetrics(t *testing.T) {
 				steps.AuthorizationRefreshingAction(nil, steps.Action(successfulActionStep)),
 			},
 			wantedMetrics: map[string]int64{
-				"backend.openshiftcluster.installtime.total":                             6,
-				"backend.openshiftcluster.installtime.action.successfulActionStep":       2,
-				"backend.openshiftcluster.installtime.condition.successfulConditionStep": 2,
-				"backend.openshiftcluster.installtime.refreshing.successfulActionStep":   2,
+				"backend.openshiftcluster.install.time.total":                             6,
+				"backend.openshiftcluster.install.action.successfulActionStep.time":       2,
+				"backend.openshiftcluster.install.condition.successfulConditionStep.time": 2,
+				"backend.openshiftcluster.install.refreshing.successfulActionStep.time":   2,
 			},
 		},
 	} {
@@ -272,7 +272,7 @@ func TestInstallationTimeMetrics(t *testing.T) {
 				now:            func() time.Time { return time.Now().Add(2 * time.Second) },
 			}
 
-			err := m.runSteps(ctx, tt.steps, true)
+			err := m.runSteps(ctx, tt.steps, "install")
 			if err != nil {
 				if len(fm.Metrics) != 0 {
 					t.Error("fake metrics obj should be empty when run steps failed")
