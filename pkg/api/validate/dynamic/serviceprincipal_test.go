@@ -80,7 +80,7 @@ func TestValidateServicePrincipal(t *testing.T) {
 				claims:        `{ "Roles":["Application.ReadWrite.OwnedBy"] }`,
 				signMethod:    "fake-signing-method",
 			},
-			wantErr: "signing method (alg) is unavailable.",
+			wantErr: "400: InvalidServicePrincipalToken: properties.servicePrincipalProfile: The provided service principal generated an invalid token.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
