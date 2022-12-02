@@ -85,11 +85,104 @@
             "type": "string",
             "maxLength": 20
         },
+        "rpNsgPortalSourceAddressPrefixes": {
+            "type": "array",
+            "defaultValue": []
+        },
         "rpServicePrincipalId": {
             "type": "string"
         }
     },
     "resources": [
+        {
+            "properties": {
+                "securityRules": [
+                    {
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "443",
+                            "sourceAddressPrefix": "AzureResourceManager",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 120,
+                            "direction": "Inbound"
+                        },
+                        "name": "rp_in_arm"
+                    },
+                    {
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "443",
+                            "sourceAddressPrefix": "GenevaActions",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 130,
+                            "direction": "Inbound"
+                        },
+                        "name": "rp_in_geneva"
+                    },
+                    {
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "445",
+                            "sourceAddressPrefix": "10.0.8.0/24",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 140,
+                            "direction": "Inbound"
+                        },
+                        "name": "dbtoken_in_gateway_445"
+                    },
+                    {
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "8445",
+                            "sourceAddressPrefix": "10.0.8.0/24",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 141,
+                            "direction": "Inbound"
+                        },
+                        "name": "dbtoken_in_gateway_8445"
+                    },
+                    {
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "10.0.8.0/24",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 145,
+                            "direction": "Inbound"
+                        },
+                        "name": "deny_in_gateway"
+                    },
+                    {
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "444",
+                            "sourceAddressPrefixes": "[parameters('rpNsgPortalSourceAddressPrefixes')]",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 130,
+                            "direction": "Inbound"
+                        },
+                        "name": "portal_in"
+                    }
+                ]
+            },
+            "name": "rp-nsg",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "location": "[resourceGroup().location]",
+            "condition": "[and(parameters('deployNSGs'), parameters('rpNsgPortalSourceAddressPrefixes'))]",
+            "apiVersion": "2020-08-01"
+        },
         {
             "properties": {
                 "securityRules": [
@@ -163,7 +256,7 @@
             "name": "rp-nsg",
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
-            "condition": "[parameters('deployNSGs')]",
+            "condition": "[and(parameters('deployNSGs'), not(parameters('rpNsgPortalSourceAddressPrefixes')))]",
             "apiVersion": "2020-08-01"
         },
         {
