@@ -209,7 +209,6 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			if !reflect.DeepEqual(fm.Metrics[supportBannerMetricsTopic].Dims, tt.expectBannerMetricsDims) {
 				t.Errorf("incorrect support banner metrics dims, want: %v, got: %v", tt.expectBannerMetricsDims, fm.Metrics[supportBannerMetricsTopic].Dims)
 			}
-
 		})
 	}
 }
