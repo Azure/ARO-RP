@@ -55,6 +55,7 @@ extends:
           type: linux
 
         variables: # More settings at https://aka.ms/obpipelines/yaml/jobs
+          is_official_release: true
           ob_outputDirectory: $(Build.SourcesDirectory)/out   # this directory is uploaded to pipeline artifacts, reddog and cloudvault. More info at https://aka.ms/obpipelines/artifacts
 
         steps:
@@ -69,6 +70,7 @@ extends:
           os: linux
 
         variables:
+          is_official_release: true
           ob_git_checkout: true
           release_tag: $[stageDependencies.Build_ARO.Build_ARO.outputs['buildaro.releasetag']]
 

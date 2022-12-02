@@ -39,6 +39,10 @@ build-all:
 aro: generate
 	go build -tags aro,containers_image_openpgp,codec.safe -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
 
+aro-release: generate
+	@[ "${TAG}" ] || ( git describe --exact-match; echo "Ensure there is an annotated tag (git tag -a) for git commit $(COMMIT)"; exit 1 )
+	go build -tags aro,containers_image_openpgp,codec.safe -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(TAG)" ./cmd/aro
+
 runlocal-rp:
 	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro rp
 
