@@ -99,7 +99,6 @@ const (
 	CloudErrorCodeQuotaExceeded                      = "QuotaExceeded"
 	CloudErrorCodeResourceProviderNotRegistered      = "ResourceProviderNotRegistered"
 	CloudErrorCodeCannotDeleteLoadBalancerByID       = "CannotDeleteLoadBalancerWithPrivateLinkService"
-	CloudErrorUnsupportedSKU                         = "InvalidVMSKU"
 )
 
 // NewCloudError returns a new CloudError
