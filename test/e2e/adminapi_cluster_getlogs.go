@@ -5,19 +5,16 @@ package e2e
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 var _ = Describe("[Admin API] Kubernetes get pod logs action", func() {
@@ -59,24 +56,12 @@ func testGetPodLogsOK(ctx context.Context, containerName, podName, namespace str
 	}()
 
 	By("waiting for the pod to successfully terminate")
-	err = wait.PollInfinite(time.Second*5, func() (done bool, err error) {
+	Eventually(func(g Gomega, ctx context.Context) {
 		pod, err = clients.Kubernetes.CoreV1().Pods(namespace).Get(ctx, pod.Name, metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		g.Expect(err).NotTo(HaveOccurred())
 
-		switch pod.Status.Phase {
-		case corev1.PodSucceeded:
-			return true, nil
-		case corev1.PodPending:
-			if pod.CreationTimestamp.Time.Add(5*time.Minute).Unix() < time.Now().Unix() {
-				return false, errors.New("pod was pending for more than 5min")
-			}
-			return false, nil
-		case corev1.PodFailed:
-			return true, errors.New(pod.Status.Message)
-		}
-		return false, nil
-	})
-	Expect(err).NotTo(HaveOccurred())
+		g.Expect(pod.Status.Phase).To(Equal(corev1.PodSucceeded))
+	}).WithContext(ctx).Should(Succeed())
 
 	By("requesting logs via RP admin API")
 	params := url.Values{

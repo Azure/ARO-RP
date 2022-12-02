@@ -4,6 +4,10 @@ import 'bootstrap/js/dist/util';
 import 'bootstrap/js/dist/dropdown';
 import 'bootstrap/js/dist/alert';
 
+import "./select/select.css"
+import 'tom-select/dist/css/tom-select.bootstrap5.min.css';
+import TomSelect from 'tom-select/dist/js/tom-select.complete.min';
+
 jQuery.extend({
     redirect: function (location, args) {
         var form = $("<form method='POST' style='display: none;'></form>");
@@ -30,6 +34,20 @@ jQuery(function () {
             $.each(clusters, function (i, cluster) {
                 $("#selResourceId").append($("<option>").text(cluster.resourceId));
             });
+
+            $("#selResourceId").prop("disabled", false);
+
+            new TomSelect("#selResourceId", {
+                plugins: ["dropdown_input"],
+                maxOptions: null,
+                maxItems: 1,
+                placeholder: "Search clusters...",
+                onDropdownOpen: function (value) {
+                    $(".dropdown-input").val($(".ts-control").children("div").html());
+                }
+            });
+
+            $("#selResourceId").css("display", "none");
         },
         dataType: "json",
     });

@@ -26,10 +26,10 @@ func (f *frontend) postAdminOpenShiftClusterStopVM(w http.ResponseWriter, r *htt
 func (f *frontend) _postAdminOpenShiftClusterStopVM(log *logrus.Entry, ctx context.Context, r *http.Request) error {
 	vars := mux.Vars(r)
 	vmName := r.URL.Query().Get("vmName")
-	azActionsWrapper, err := f.newAzureActionsWrapper(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), vars)
+	action, _, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), vars)
 	if err != nil {
 		return err
 	}
 
-	return f.adminAction.VMStopAndWait(ctx, azActionsWrapper.vmName)
+	return action.VMStopAndWait(ctx, vmName)
 }

@@ -872,6 +872,7 @@ func (g *generator) rpServiceKeyvaultDynamic() *arm.Resource {
 					Permissions: &mgmtkeyvault.Permissions{
 						Secrets: &[]mgmtkeyvault.SecretPermissions{
 							mgmtkeyvault.SecretPermissionsGet,
+							mgmtkeyvault.SecretPermissionsList,
 						},
 						Certificates: &[]mgmtkeyvault.CertificatePermissions{
 							mgmtkeyvault.Get,

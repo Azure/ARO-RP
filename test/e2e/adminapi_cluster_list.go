@@ -19,27 +19,27 @@ var _ = Describe("[Admin API] List clusters action", func() {
 	It("must return list of clusters with admin fields", func(ctx context.Context) {
 		resourceID := resourceIDFromEnv()
 
-		testAdminClustersList(ctx, "/admin/providers/Microsoft.RedHatOpenShift/openShiftClusters", resourceID)
+		testAdminClustersList(Default, ctx, "/admin/providers/Microsoft.RedHatOpenShift/openShiftClusters", resourceID)
 	})
 
 	It("must return list of clusters with admin fields by subscription", func(ctx context.Context) {
 		resourceID := resourceIDFromEnv()
 
 		path := fmt.Sprintf("/subscriptions/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters", _env.SubscriptionID())
-		testAdminClustersList(ctx, path, resourceID)
+		testAdminClustersList(Default, ctx, path, resourceID)
 	})
 
 	It("must return list of clusters with admin fields by resource group", func(ctx context.Context) {
 		resourceID := resourceIDFromEnv()
 
 		path := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters", _env.SubscriptionID(), vnetResourceGroup)
-		testAdminClustersList(ctx, path, resourceID)
+		testAdminClustersList(Default, ctx, path, resourceID)
 	})
 })
 
-func testAdminClustersList(ctx context.Context, path, wantResourceID string) {
+func testAdminClustersList(g Gomega, ctx context.Context, path, wantResourceID string) {
 	By("listing the cluster documents via RP admin API")
-	ocs := adminListClusters(ctx, path)
+	ocs := adminListClusters(g, ctx, path)
 
 	By("verifying that we received the expected cluster")
 	var oc *admin.OpenShiftCluster
@@ -48,12 +48,12 @@ func testAdminClustersList(ctx context.Context, path, wantResourceID string) {
 			oc = ocs[i]
 		}
 	}
-	Expect(oc).ToNot(BeNil())
-	Expect(oc.ID).To(Equal(wantResourceID))
+	g.Expect(oc).ToNot(BeNil())
+	g.Expect(oc.ID).To(Equal(wantResourceID))
 
 	By("checking that fields available only in Admin API have values")
 	// Note: some fields will have empty values
 	// on successfully provisioned cluster (oc.Properties.Install, for example)
-	Expect(oc.Properties.StorageSuffix).ToNot(BeEmpty())
-	Expect(oc.Properties.InfraID).ToNot(BeEmpty())
+	g.Expect(oc.Properties.StorageSuffix).ToNot(BeEmpty())
+	g.Expect(oc.Properties.InfraID).ToNot(BeEmpty())
 }

@@ -5,6 +5,7 @@ package hive
 
 import (
 	"context"
+	"fmt"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
@@ -160,10 +161,26 @@ func (hr *clusterManager) IsClusterDeploymentReady(ctx context.Context, doc *api
 
 func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error) {
 	cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
-	if err == nil {
-		return cd.Spec.Installed, nil
+	if err != nil {
+		return false, err
 	}
-	return false, err
+
+	if cd.Spec.Installed {
+		return true, nil
+	}
+
+	checkFailureConditions := map[hivev1.ClusterDeploymentConditionType]corev1.ConditionStatus{
+		hivev1.ProvisionFailedCondition: corev1.ConditionTrue,
+	}
+
+	for _, cond := range cd.Status.Conditions {
+		conditionStatus, found := checkFailureConditions[cond.Type]
+		if found && conditionStatus == cond.Status {
+			return false, fmt.Errorf("clusterdeployment has failed: %s == %s", cond.Type, cond.Status)
+		}
+	}
+
+	return false, nil
 }
 
 func (hr *clusterManager) ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
