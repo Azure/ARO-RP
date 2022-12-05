@@ -102,7 +102,7 @@ func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resou
 	hiveShard := 1
 	if m.installViaHive && strings.Index(name, "cluster") == 0 {
 		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
-			VirtualNetworkResourceID: to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/aks-net/subnets/ClusterSubnet-%03d", m.env.SubscriptionID(), m.env.ResourceGroup(), hiveShard)),
+			VirtualNetworkResourceID: to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/aks-net/subnets/PodSubnet-%03d", m.env.SubscriptionID(), m.env.ResourceGroup(), hiveShard)),
 			Action:                   mgmtstorage.Allow,
 		})
 	}
