@@ -113,3 +113,5 @@ allowedImportNames:
     - hivev1azure
   github.com/gofrs/uuid:
     - gofrsuuid
+  github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/common:
+    - checkercommon
