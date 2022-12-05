@@ -53,7 +53,7 @@ func (m *manager) checkAndUpdateLB(ctx context.Context, resourceGroup string, lb
 		return lb, err
 	}
 
-	changed := updateLB(&lb)
+	changed := m.updateLB(ctx, &lb)
 
 	if changed {
 		m.log.Printf("updating %s", lbName)
@@ -102,7 +102,7 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 			}
 		}
 
-		changed := updateNIC(&nic, &lb, i, infraID)
+		changed := m.updateNIC(ctx, &nic, &lb, i, infraID)
 
 		if changed {
 			m.log.Printf("updating %s", nicName)
@@ -116,6 +116,9 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 }
 
 func (m *manager) removeBackendPoolsFromNIC(ctx context.Context, resourceGroup, nicName string, nic *mgmtnetwork.Interface) error {
+	if nic.InterfacePropertiesFormat.IPConfigurations == nil || len(*nic.InterfacePropertiesFormat.IPConfigurations) == 0 {
+		return fmt.Errorf("unable to remove backendpools from NIC as there are no IP configurations for %s in resource group %s", nicName, resourceGroup)
+	}
 	ipc := (*nic.InterfacePropertiesFormat.IPConfigurations)[0]
 	if ipc.LoadBalancerBackendAddressPools != nil {
 		m.log.Printf("Removing Loadbalancer Backend Address Pools from NIC %s with no VMs attached", nicName)
@@ -125,7 +128,11 @@ func (m *manager) removeBackendPoolsFromNIC(ctx context.Context, resourceGroup, 
 	return nil
 }
 
-func updateNIC(nic *mgmtnetwork.Interface, lb *mgmtnetwork.LoadBalancer, i int, infraID string) bool {
+func (m *manager) updateNIC(ctx context.Context, nic *mgmtnetwork.Interface, lb *mgmtnetwork.LoadBalancer, i int, infraID string) bool {
+	if nic.InterfacePropertiesFormat.IPConfigurations == nil || len(*nic.InterfacePropertiesFormat.IPConfigurations) == 0 {
+		m.log.Warnf("unable to update NIC as there are no IP configurations for %s", *nic.Name)
+		return false
+	}
 	id := fmt.Sprintf("%s/backendAddressPools/ssh-%d", *lb.ID, i)
 	ipc := (*nic.InterfacePropertiesFormat.IPConfigurations)[0]
 	if ipc.LoadBalancerBackendAddressPools == nil {
@@ -143,7 +150,7 @@ func updateNIC(nic *mgmtnetwork.Interface, lb *mgmtnetwork.LoadBalancer, i int, 
 	return true
 }
 
-func updateLB(lb *mgmtnetwork.LoadBalancer) (changed bool) {
+func (m *manager) updateLB(ctx context.Context, lb *mgmtnetwork.LoadBalancer) (changed bool) {
 backendAddressPools:
 	for i := 0; i < 3; i++ {
 		name := fmt.Sprintf("ssh-%d", i)
