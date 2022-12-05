@@ -22,18 +22,38 @@ import (
 
 // InternetChecker reconciles a Cluster object
 type InternetChecker struct {
-	log *logrus.Entry
+	log          *logrus.Entry
+	role         string
+	checkTimeout time.Duration
 
-	arocli aroclient.Interface
-
-	role string
+	arocli     aroclient.Interface
+	httpClient simpleHTTPClient
 }
 
 func NewInternetChecker(log *logrus.Entry, arocli aroclient.Interface, role string) *InternetChecker {
 	return &InternetChecker{
-		log:    log,
+		log:          log,
+		role:         role,
+		checkTimeout: time.Minute,
+
 		arocli: arocli,
-		role:   role,
+		httpClient: &http.Client{
+			Transport: &http.Transport{
+				// We set DisableKeepAlives for two reasons:
+				//
+				// 1. If we're talking HTTP/2 and the remote end blackholes traffic,
+				// Go has a bug whereby it doesn't reset the connection after a
+				// timeout (https://github.com/golang/go/issues/36026).  If this
+				// happens, we never have a chance to get healthy.  We have
+				// specifically seen this with gcs.prod.monitoring.core.windows.net
+				// in Korea Central, which currently has a bad server which when we
+				// hit it causes our cluster creations to fail.
+				//
+				// 2. We *want* to evaluate our capability to successfully create
+				// *new* connections to internet endpoints anyway.
+				DisableKeepAlives: true,
+			},
+		},
 	}
 }
 
@@ -53,24 +73,6 @@ func (r *InternetChecker) Name() string {
 
 // Reconcile will keep checking that the cluster can connect to essential services.
 func (r *InternetChecker) Check(ctx context.Context) error {
-	cli := &http.Client{
-		Transport: &http.Transport{
-			// We set DisableKeepAlives for two reasons:
-			//
-			// 1. If we're talking HTTP/2 and the remote end blackholes traffic,
-			// Go has a bug whereby it doesn't reset the connection after a
-			// timeout (https://github.com/golang/go/issues/36026).  If this
-			// happens, we never have a chance to get healthy.  We have
-			// specifically seen this with gcs.prod.monitoring.core.windows.net
-			// in Korea Central, which currently has a bad server which when we
-			// hit it causes our cluster creations to fail.
-			//
-			// 2. We *want* to evaluate our capability to successfully create
-			// *new* connections to internet endpoints anyway.
-			DisableKeepAlives: true,
-		},
-	}
-
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -81,7 +83,7 @@ func (r *InternetChecker) Check(ctx context.Context) error {
 	for _, url := range instance.Spec.InternetChecker.URLs {
 		checkCount++
 		go func(urlToCheck string) {
-			ch <- r.checkWithRetry(cli, urlToCheck, time.Minute)
+			ch <- r.checkWithRetry(urlToCheck)
 		}(url)
 	}
 
@@ -127,11 +129,11 @@ func (r *InternetChecker) Check(ctx context.Context) error {
 }
 
 // check the URL, retrying a failed query a few times
-func (r *InternetChecker) checkWithRetry(client simpleHTTPClient, url string, timeout time.Duration) error {
+func (r *InternetChecker) checkWithRetry(url string) error {
 	var err error
 
 	for i := 0; i < 6; i++ {
-		err = r.checkOnce(client, url, timeout/6)
+		err = r.checkOnce(url, r.checkTimeout/6)
 		if err == nil {
 			return nil
 		}
@@ -143,7 +145,7 @@ func (r *InternetChecker) checkWithRetry(client simpleHTTPClient, url string, ti
 // checkOnce checks a given url.  The check both times out after a given timeout
 // *and* will wait for the timeout if it fails, so that we don't hit endpoints
 // too much.
-func (r *InternetChecker) checkOnce(client simpleHTTPClient, url string, timeout time.Duration) error {
+func (r *InternetChecker) checkOnce(url string, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
@@ -153,7 +155,7 @@ func (r *InternetChecker) checkOnce(client simpleHTTPClient, url string, timeout
 		return err
 	}
 
-	resp, err := client.Do(req)
+	resp, err := r.httpClient.Do(req)
 	if err != nil {
 		<-ctx.Done()
 		return fmt.Errorf("%s: %s", url, err)
