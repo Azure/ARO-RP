@@ -97,6 +97,10 @@ func VMSizeIsValid(vmSize api.VMSize, requiredD2sV3Workers, isMaster bool) bool 
 		return supportedAsMaster
 	}
 
+	if requiredD2sV3Workers && vmSize != api.VMSizeStandardD2sV3 {
+		return false
+	}
+
 	_, supportedAsWorker := supportedWorkerVmSizes[vmSize]
 	if supportedAsWorker || (requiredD2sV3Workers && vmSize == api.VMSizeStandardD2sV3) {
 		return true
