@@ -35,6 +35,10 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
+	if _, found := os.LookupEnv("SSH_PUBLIC_KEY"); !found {
+		log.Warnf("environment variable SSH_PUBLIC_KEY unset, will use %s/.ssh/id_rsa.pub", os.Getenv("HOME"))
+	}
+
 	env, err := env.NewCore(ctx, log)
 	if err != nil {
 		return err
