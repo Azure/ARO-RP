@@ -19,15 +19,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	checkercommon "github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/common"
 )
 
 const (
 	ControllerName = "Checker"
-
-	controllerEnabled = "aro.checker.enabled"
 )
 
 // Reconciler runs a number of checkers
@@ -39,14 +37,10 @@ type Reconciler struct {
 }
 
 func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, machinecli machineclient.Interface, operatorcli operatorclient.Interface, configcli configclient.Interface, role string) *Reconciler {
-	checkers := []Checker{NewInternetChecker(log, arocli, role)}
-
-	if role == operator.RoleMaster {
-		checkers = append(checkers,
-			NewServicePrincipalChecker(log, arocli, kubernetescli, machinecli, role),
-			NewIngressCertificateChecker(log, arocli, operatorcli, configcli, role),
-			NewClusterDNSChecker(log, arocli, operatorcli, role),
-		)
+	checkers := []Checker{
+		NewServicePrincipalChecker(log, arocli, kubernetescli, machinecli, role),
+		NewIngressCertificateChecker(log, arocli, operatorcli, configcli, role),
+		NewClusterDNSChecker(log, arocli, operatorcli, role),
 	}
 
 	return &Reconciler{
@@ -69,7 +63,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(checkercommon.ControllerEnabled) {
 		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}

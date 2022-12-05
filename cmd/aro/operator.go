@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/autosizednodes"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/banner"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checker"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/internetchecker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
@@ -237,12 +238,17 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			arocli, operatorcli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", ingress.ControllerName, err)
 		}
+		if err = (checker.NewReconciler(
+			log.WithField("controller", checker.ControllerName),
+			arocli, kubernetescli, maocli, operatorcli, configcli, role)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", checker.ControllerName, err)
+		}
 	}
 
-	if err = (checker.NewReconciler(
-		log.WithField("controller", checker.ControllerName),
-		arocli, kubernetescli, maocli, operatorcli, configcli, role)).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller %s: %v", checker.ControllerName, err)
+	if err = (internetchecker.NewReconciler(
+		log.WithField("controller", internetchecker.ControllerName),
+		arocli, role)).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("unable to create controller %s: %v", internetchecker.ControllerName, err)
 	}
 
 	// +kubebuilder:scaffold:builder
