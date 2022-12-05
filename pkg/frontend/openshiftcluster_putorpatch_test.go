@@ -759,10 +759,10 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
-			quotaValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorUnsupportedSKU, "", "The provided VM SKU %s is not supported.", "something"),
+			quotaValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided VM SKU %s is not supported.", "something"),
 			wantEnriched:        []string{},
 			wantStatusCode:      http.StatusBadRequest,
-			wantError:           "400: InvalidVMSKU: : The provided VM SKU something is not supported.",
+			wantError:           "400: InvalidParameter: : The provided VM SKU something is not supported.",
 		},
 		{
 			name: "create a new cluster quota fails",
