@@ -369,6 +369,11 @@
                             "networkSecurityGroup": {
                                 "id": "[variables('aksPodNsgId')]"
                             },
+                            "serviceEndpoints": [
+                                {
+                                    "service": "Microsoft.Storage"
+                                }
+                            ],
                             "delegations": [
                                 {
                                     "name": "AKS",
