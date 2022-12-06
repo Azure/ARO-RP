@@ -202,7 +202,9 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			arocli, maocli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machineset.ControllerName, err)
 		}
-		if err = (imageconfig.NewReconciler(arocli, configcli)).SetupWithManager(mgr); err != nil {
+		if err = (imageconfig.NewReconciler(
+			log.WithField("controller", imageconfig.ControllerName),
+			arocli, configcli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", imageconfig.ControllerName, err)
 		}
 		if err = (previewfeature.NewReconciler(
@@ -215,7 +217,9 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			arocli, maocli, kubernetescli, imageregistrycli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", storageaccounts.ControllerName, err)
 		}
-		if err = (muo.NewReconciler(arocli, kubernetescli, dh)).SetupWithManager(mgr); err != nil {
+		if err = (muo.NewReconciler(
+			log.WithField("controller", muo.ControllerName),
+			arocli, kubernetescli, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", muo.ControllerName, err)
 		}
 		if err = (autosizednodes.NewReconciler(
@@ -224,6 +228,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			return fmt.Errorf("unable to create controller %s: %v", autosizednodes.ControllerName, err)
 		}
 		if err = (machinehealthcheck.NewReconciler(
+			log.WithField("controller", machinehealthcheck.ControllerName),
 			arocli, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machinehealthcheck.ControllerName, err)
 		}

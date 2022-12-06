@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -163,7 +164,7 @@ func TestReconciler(t *testing.T) {
 			tt.mocks(mdh)
 
 			ctx := context.Background()
-			r := NewReconciler(tt.arocli, mdh)
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), tt.arocli, mdh)
 			request := ctrl.Request{}
 			request.Name = "cluster"
 

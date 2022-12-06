@@ -54,10 +54,11 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	mcps, err := r.mcocli.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		r.log.Error(err)

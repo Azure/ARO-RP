@@ -52,10 +52,11 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	m := rxARODNS.FindStringSubmatch(request.Name)
 	if m == nil {
 		return reconcile.Result{}, nil

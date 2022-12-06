@@ -12,6 +12,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -244,6 +245,7 @@ func TestImageConfigReconciler(t *testing.T) {
 			}
 
 			r := &Reconciler{
+				log:       logrus.NewEntry(logrus.StandardLogger()),
 				arocli:    arocli,
 				configcli: tt.configcli,
 			}
