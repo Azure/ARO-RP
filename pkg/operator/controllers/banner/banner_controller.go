@@ -53,10 +53,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	return reconcile.Result{}, r.reconcileBanner(ctx, instance)
 }
 

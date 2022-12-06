@@ -49,10 +49,11 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	_, err = r.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, request.Name, metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
 		return reconcile.Result{}, nil

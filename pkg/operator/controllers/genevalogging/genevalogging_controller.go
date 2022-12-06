@@ -65,10 +65,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	mysec, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err

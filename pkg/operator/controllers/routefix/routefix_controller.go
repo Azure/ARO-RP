@@ -75,9 +75,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
+
+	r.log.Debug("running")
 
 	// cluster version is not set to final until upgrade is completed. We need to
 	// detect if desired version is with the fix, so we can prevent stuck upgrade

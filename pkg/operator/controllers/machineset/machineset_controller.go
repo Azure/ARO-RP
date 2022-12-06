@@ -52,10 +52,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ControllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	modifiedMachineset, err := r.maocli.MachineV1beta1().MachineSets(machineSetsNamespace).Get(ctx, request.Name, metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
 		return reconcile.Result{}, err

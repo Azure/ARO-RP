@@ -55,10 +55,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	return reconcile.Result{}, r.setAlertManagerWebhook(ctx, "http://aro-operator-master.openshift-azure-operator.svc.cluster.local:8080/healthz/ready")
 }
 
@@ -117,8 +118,6 @@ func (r *Reconciler) setAlertManagerWebhook(ctx context.Context, addr string) er
 
 // SetupWithManager setup our manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.log.Info("starting alertmanager sink")
-
 	isAlertManagerPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == alertManagerName.Name && o.GetNamespace() == alertManagerName.Namespace
 	})
