@@ -318,7 +318,7 @@ test_validate_pull_secret_data = [
         None
     ),
     (
-        "should raise InvalidArgumentValueError exception when namespace.pull_secret is not a valid JSON beacuse is an empty string",
+        "should raise InvalidArgumentValueError exception when namespace.pull_secret is not a valid JSON because is an empty string",
         Mock(pull_secret=""),
         InvalidArgumentValueError
     ),

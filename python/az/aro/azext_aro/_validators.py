@@ -5,6 +5,7 @@ import ipaddress
 import json
 import re
 import uuid
+from os.path import exists
 
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
@@ -106,6 +107,10 @@ def validate_pull_secret(namespace):
         return
 
     try:
+        if exists(namespace.pull_secret):
+            with open(namespace.pull_secret, 'r', encoding='utf-8') as file:
+                namespace.pull_secret = file.read().rstrip('\n')
+
         if not isinstance(json.loads(namespace.pull_secret), dict):
             raise Exception()
     except Exception as e:
