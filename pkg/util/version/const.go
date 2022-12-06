@@ -86,5 +86,5 @@ func MUOImage(acrDomain string) string {
 
 // GateKeeperImage contains the location of the GateKeeper container image
 func GateKeeperImage(acrDomain string) string {
-	return "quay.io/jeyuan/gatekeeper:v3.9.2" // temporarily put here, change to the given location once decided
+	return "quay.io/jeyuan/gatekeeper:v3.10.0" // temporarily put here, change to the given location once decided
 }

@@ -66,7 +66,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 	expectedKinds := map[string]int{
 		"ClusterRole":                    1,
 		"ClusterRoleBinding":             1,
-		"CustomResourceDefinition":       9,
+		"CustomResourceDefinition":       10,
 		"Deployment":                     2,
 		"Namespace":                      1,
 		"Role":                           1,
@@ -75,7 +75,6 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 		"MutatingWebhookConfiguration":   1,
 		"PodDisruptionBudget":            1,
 		"Service":                        1,
-		"PodSecurityPolicy":              1,
 		"Secret":                         1,
 		"ResourceQuota":                  1,
 		"ValidatingWebhookConfiguration": 1,

@@ -1,4 +1,4 @@
-package v1beta1
+package v1
 
 import (
 	ctschema "github.com/open-policy-agent/frameworks/constraint/pkg/schema"
@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-const version = "v1beta1"
+const version = "v1"
 
 var (
 	structuralSchema *schema.Structural

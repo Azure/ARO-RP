@@ -16,8 +16,6 @@ spec:
       gatekeeper.sh/system: "yes"
   template:
     metadata:
-      # annotations:
-      #   container.seccomp.security.alpha.kubernetes.io/manager: runtime/default
       labels:
         control-plane: audit-controller
         gatekeeper.sh/operation: audit
@@ -80,11 +78,13 @@ spec:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
-            - all
+            - ALL
           readOnlyRootFilesystem: true
           runAsGroup: 999
           runAsNonRoot: true
           runAsUser: 1000
+          # seccompProfile:
+          #   type: RuntimeDefault
         volumeMounts:
         - mountPath: /certs
           name: cert

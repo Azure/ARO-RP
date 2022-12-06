@@ -1,4 +1,4 @@
-package v1beta1
+package v1
 
 import (
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"

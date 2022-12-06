@@ -13,9 +13,9 @@ webhooks:
       name: gatekeeper-webhook-service
       namespace: {{.Namespace}}
       path: /v1/admit
+  failurePolicy: {{.ValidatingWebhookFailurePolicy}}
   matchPolicy: Exact
   name: validation.gatekeeper.sh
-  failurePolicy: {{.ValidatingWebhookFailurePolicy}}
   namespaceSelector:
     matchExpressions:
     - key: admission.gatekeeper.sh/ignore
