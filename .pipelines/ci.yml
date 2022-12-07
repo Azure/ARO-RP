@@ -38,8 +38,9 @@ jobs:
       Dockerfile: Dockerfile.python
 
   - script: |
-      docker run --platform=linux/amd64 --cpus "0.5" -t --rm test-python:$(Build.BuildId) make test-python
+      docker run --platform=linux/amd64 -t --rm test-python:$(Build.BuildId) make test-python
     displayName: 🧪Run Python Unit Tests
+    continueOnError: true
 
   - script: |
       docker rmi test-python:$(Build.BuildId)
@@ -62,12 +63,12 @@ jobs:
       Dockerfile: Dockerfile.ci
 
   - script: |
-      docker run --platform=linux/amd64 --cpus "0.5" -t --rm ci:$(Build.BuildId) generate
+      docker run --platform=linux/amd64 -t --rm ci:$(Build.BuildId) generate
     displayName: ⚙️ Run Golang code generate
     continueOnError: true
 
   - script: |
-      docker run --platform=linux/amd64 --cpus "0.5" -t --rm ci:$(Build.BuildId) build-all
+      docker run --platform=linux/amd64 -t --rm ci:$(Build.BuildId) build-all
     displayName: 🕵️ Build Golang code
     continueOnError: true
 
