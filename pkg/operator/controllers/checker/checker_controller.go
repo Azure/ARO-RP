@@ -38,7 +38,6 @@ type Reconciler struct {
 
 func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, machinecli machineclient.Interface, operatorcli operatorclient.Interface, configcli configclient.Interface, role string) *Reconciler {
 	checkers := []Checker{
-		NewServicePrincipalChecker(log, arocli, kubernetescli, machinecli, role),
 		NewIngressCertificateChecker(log, arocli, operatorcli, configcli, role),
 		NewClusterDNSChecker(log, arocli, operatorcli, role),
 	}

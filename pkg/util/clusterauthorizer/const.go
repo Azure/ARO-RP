@@ -4,6 +4,6 @@ package clusterauthorizer
 // Licensed under the Apache License 2.0.
 
 const (
-	azureCredentialSecretName      = "azure-credentials"
-	azureCredentialSecretNameSpace = "kube-system"
+	AzureCredentialSecretName      = "azure-credentials"
+	AzureCredentialSecretNameSpace = "kube-system"
 )
