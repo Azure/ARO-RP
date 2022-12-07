@@ -66,12 +66,16 @@ jobs:
     displayName: 🕵️ Build Golang code
 
   - script: |
-      docker run --platform=linux/amd64 -t --rm ci:$(Build.BuildId) unit-test-go
+      docker run --platform=linux/amd64 -t --rm ci:$(Build.BuildId) unit-test-go && /usr/bin/ls -al
     displayName: 🧪 Run Golang unit tests
 
   - script: |
       docker run --platform=linux/amd64 -t --rm ci:$(Build.BuildId) validate-fips
     displayName: 🕵️ Validate FIPS
+
+  - script: |
+      /usr/bin/ls -al
+    displayName: Print ls
 
   - task: PublishTestResults@2
     displayName: 📊 Publish tests results
