@@ -38,7 +38,7 @@ jobs:
       Dockerfile: Dockerfile.python
 
   - script: |
-      docker run --platform=linux/amd64 -t --rm test-python:$(Build.BuildId) make test-python
+      docker run --cpus=".5" --platform=linux/amd64 -t --rm test-python:$(Build.BuildId) make test-python
     displayName: 🧪Run Python Unit Tests
 
 - job: Golang_Unit_Tests_Testing
@@ -58,15 +58,15 @@ jobs:
       Dockerfile: Dockerfile.ci
 
   - script: |
-      docker run --platform=linux/amd64 -t --rm ci:$(Build.BuildId) generate
+      docker run --cpus=".5" --platform=linux/amd64 -t --rm ci:$(Build.BuildId) generate
     displayName: ⚙️ Run Golang code generate
 
   - script: |
-      docker run --platform=linux/amd64 -t --rm ci:$(Build.BuildId) build-all
+      docker run --cpus=".5" --platform=linux/amd64 -t --rm ci:$(Build.BuildId) build-all
     displayName: 🕵️ Build Golang code
 
   - script: |
-      docker run --platform=linux/amd64 -t --rm ci:$(Build.BuildId) unit-test-go && /usr/bin/ls -al
+      docker run --cpus=".5" --platform=linux/amd64 -t --rm ci:$(Build.BuildId) unit-test-go && /usr/bin/ls -al
     displayName: 🧪 Run Golang unit tests
 
   - script: |
