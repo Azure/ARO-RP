@@ -38,7 +38,7 @@ jobs:
       Dockerfile: Dockerfile.python
 
   - script: |
-      sudo docker run --platform=linux/amd64 --cpus "0.5" -t --rm test-python:$(Build.BuildId) make test-python
+      docker run --platform=linux/amd64 --cpus "0.5" -t --rm test-python:$(Build.BuildId) make test-python
     displayName: 🧪Run Python Unit Tests
 
   - script: |
@@ -62,12 +62,14 @@ jobs:
       Dockerfile: Dockerfile.ci
 
   - script: |
-      sudo docker run --platform=linux/amd64 --cpus "0.5" -t --rm ci:$(Build.BuildId) generate
+      docker run --platform=linux/amd64 --cpus "0.5" -t --rm ci:$(Build.BuildId) generate
     displayName: ⚙️ Run Golang code generate
+    continueOnError: true
 
   - script: |
-      sudo docker run --platform=linux/amd64 --cpus "0.5" -t --rm ci:$(Build.BuildId) build-all
+      docker run --platform=linux/amd64 --cpus "0.5" -t --rm ci:$(Build.BuildId) build-all
     displayName: 🕵️ Build Golang code
+    continueOnError: true
 
   - script: |
       docker run --platform=linux/amd64 --name unit-test-go_$(Build.BuildId) -t ci:$(Build.BuildId) unit-test-go
@@ -75,10 +77,16 @@ jobs:
       docker cp unit-test-go_$(Build.BuildId):/root/go/src/github.com/Azure/ARO-RP/report.xml .
       docker rm unit-test-go_$(Build.BuildId)
     displayName: 🧪 Run Golang unit tests
+    continueOnError: true
 
   - script: |
       docker run --platform=linux/amd64 -t --rm ci:$(Build.BuildId) validate-fips
     displayName: 🕵️ Validate FIPS
+    continueOnError: true
+
+  - script: |
+      docker rmi ci:$(Build.BuildId)
+    displayName: Clean CI Image
 
   - task: PublishTestResults@2
     displayName: 📊 Publish tests results
@@ -102,10 +110,6 @@ jobs:
       failIfCoverageEmpty: false
     condition: succeededOrFailed()
 
-  - script: |
-      docker rmi ci:$(Build.BuildId)
-    displayName: Clean CI Image
-
 - job: Lint_Admin_Portal_Testing
   pool:
     name: ARO-CI
@@ -123,6 +127,7 @@ jobs:
   - script: |
       docker run --platform=linux/amd64 -t --rm linter:$(Build.BuildId)
     displayName: Lint Admin Portal
+    continueOnError: true
 
   - script: |
       docker rmi linter:$(Build.BuildId)
