@@ -70,7 +70,9 @@ jobs:
   #   displayName: 🕵️ Build Golang code
 
   - script: |
-      docker run --platform=linux/amd64 -t --rm ci:$(Build.BuildId) unit-test-go && /usr/bin/ls -al
+      docker run --platform=linux/amd64 --name unit-test-go_$(Build.BuildId) -t ci:$(Build.BuildId) unit-test-go
+      docker cp unit-test-go_$(Build.BuildId):/root/go/src/github.com/Azure/ARO-RP/cover.out .
+      docker cp unit-test-go_$(Build.BuildId):/root/go/src/github.com/Azure/ARO-RP/report.xml .
     displayName: 🧪 Run Golang unit tests
 
   # - script: |
