@@ -1,9 +1,8 @@
-FROM registry.access.redhat.com/ubi8/go-toolset:1.17.7
+FROM registry.access.redhat.com/ubi8/ubi-minimal
 
 USER root
-RUN mkdir -p /root/go/src/github.com/Azure/ARO-RP
-WORKDIR /root/go/src/github.com/Azure/ARO-RP
-ENV GOPATH=/root/go
+RUN mkdir -p /app/ARO-RP
+WORKDIR /app/ARO-RP
 
 #we have multiple steps for copy so we can make use of caching
 COPY vendor/ vendor
@@ -20,8 +19,8 @@ COPY cmd/ cmd
 COPY pkg/ pkg
 
 #COPY all files with an extension (directories not copied)
-COPY ?*.* .
-COPY Makefile LICENSE .
+COPY ?*.* /app/ARO-RP/
+COPY Makefile LICENSE /app/ARO-RP/
 
 COPY .git .git
 COPY .gitignore .gitignore
@@ -32,4 +31,6 @@ COPY .env .env
 COPY .sha256sum .sha256sum
 COPY .config .config
 
-ENTRYPOINT [ "hack/ci-utils/build.sh" ]
+RUN microdnf update && \
+    microdnf install make python39 git && \
+    microdnf clean all
