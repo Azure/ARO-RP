@@ -12,11 +12,17 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
+
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
 	defaultStorageClassName          = "managed-premium"
 	defaultEncryptedStorageClassName = "managed-premium-encrypted-cmk"
+	defaultProvisioner               = "kubernetes.io/azure-disk"
+	ocp411StorageClassName           = "managed-csi"
+	ocp411EncryptedStorageClassName  = "managed-csi-encrypted-cmk"
+	ocp411Provisioner                = "disk.csi.azure.com"
 )
 
 // configureDefaultStorageClass replaces default storage class provided by OCP with
@@ -26,8 +32,23 @@ func (m *manager) configureDefaultStorageClass(ctx context.Context) error {
 		return nil
 	}
 
+	installVersion, err := version.ParseVersion(m.doc.OpenShiftCluster.Properties.ClusterProfile.Version)
+	if err != nil {
+		return err
+	}
+
+	storageClassName := defaultStorageClassName
+	encryptedStorageClassName := defaultEncryptedStorageClassName
+	provisioner := defaultProvisioner
+
+	if installVersion.V[0] == 4 && installVersion.V[1] == 11 {
+		storageClassName = ocp411StorageClassName
+		encryptedStorageClassName = ocp411EncryptedStorageClassName
+		provisioner = ocp411Provisioner
+	}
+
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		oldSC, err := m.kubernetescli.StorageV1().StorageClasses().Get(ctx, defaultStorageClassName, metav1.GetOptions{})
+		oldSC, err := m.kubernetescli.StorageV1().StorageClasses().Get(ctx, storageClassName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -41,7 +62,7 @@ func (m *manager) configureDefaultStorageClass(ctx context.Context) error {
 			return err
 		}
 
-		encryptedSC := newEncryptedStorageClass(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskEncryptionSetID)
+		encryptedSC := newEncryptedStorageClass(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskEncryptionSetID, encryptedStorageClassName, provisioner)
 		_, err = m.kubernetescli.StorageV1().StorageClasses().Create(ctx, encryptedSC, metav1.CreateOptions{})
 		if err != nil && !kerrors.IsAlreadyExists(err) {
 			return err
@@ -51,17 +72,17 @@ func (m *manager) configureDefaultStorageClass(ctx context.Context) error {
 	})
 }
 
-func newEncryptedStorageClass(diskEncryptionSetID string) *storagev1.StorageClass {
+func newEncryptedStorageClass(diskEncryptionSetID, encryptedStorageClassName, provisioner string) *storagev1.StorageClass {
 	volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
 	reclaimPolicy := corev1.PersistentVolumeReclaimDelete
 	return &storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: defaultEncryptedStorageClassName,
+			Name: encryptedStorageClassName,
 			Annotations: map[string]string{
 				"storageclass.kubernetes.io/is-default-class": "true",
 			},
 		},
-		Provisioner:          "kubernetes.io/azure-disk",
+		Provisioner:          provisioner,
 		VolumeBindingMode:    &volumeBindingMode,
 		AllowVolumeExpansion: to.BoolPtr(true),
 		ReclaimPolicy:        &reclaimPolicy,
