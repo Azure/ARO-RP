@@ -46,7 +46,7 @@ test_validate_cidr_data = [
         None
     ),
     (
-        "should return no error on address_prefixes set on subnets, additional cidrs, no overlap",
+        "should return no error on multiple address_prefixes set on subnets, additional cidrs, no overlap",
         Mock(cli_ctx=None),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr="172.143.7.0/24", service_cidr="172.143.6.0/25"),
         Mock(**{"subnets.get.side_effect": [Mock(address_prefix=None,
