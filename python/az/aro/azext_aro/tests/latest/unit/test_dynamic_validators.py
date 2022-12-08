@@ -229,7 +229,7 @@ test_validate_vnets_data = [
         None
     ),
     (
-        "should return missing permission when actions are not permitted",
+        "should return disabled permission when actions are not permitted",
         Mock(cli_ctx=None),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
         Mock(**{"subnets.get.return_value": Mock(route_table=Mock(id="test"))}),
