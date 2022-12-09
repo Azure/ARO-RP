@@ -96,7 +96,7 @@ func (m *manager) generateKubeconfigs(ctx context.Context) error {
 	}
 
 	var adminInternalClient *kubeconfig.AdminInternalClient
-	err = pg.Get(&adminInternalClient)
+	err = pg.Get(true, &adminInternalClient)
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func (m *manager) generateKubeconfigs(ctx context.Context) error {
 func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization []string, validity time.Duration, internal bool) (*kubeconfig.AdminInternalClient, error) {
 	var ca *tls.AdminKubeConfigSignerCertKey
 	var adminInternalClient *kubeconfig.AdminInternalClient
-	err := pg.Get(&ca, &adminInternalClient)
+	err := pg.Get(true, &ca, &adminInternalClient)
 	if err != nil {
 		return nil, err
 	}

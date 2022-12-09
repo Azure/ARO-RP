@@ -154,25 +154,6 @@ type InstallConfig struct {
 	// BootstrapInPlace is the configuration for installing a single node
 	// with bootstrap in place installation.
 	BootstrapInPlace *BootstrapInPlace `json:"bootstrapInPlace,omitempty"`
-
-	// Capabilities configures the installation of optional core cluster components.
-	// +optional
-	Capabilities *Capabilities `json:"capabilities,omitempty"`
-}
-
-// Capabilities selects the managed set of optional, core cluster components.
-type Capabilities struct {
-	// baselineCapabilitySet selects an initial set of
-	// optional capabilities to enable, which can be extended via
-	// additionalEnabledCapabilities. The default is vCurrent.
-	// +optional
-	BaselineCapabilitySet string `json:"baselineCapabilitySet,omitempty"`
-
-	// additionalEnabledCapabilities extends the set of managed
-	// capabilities beyond the baseline defined in
-	// baselineCapabilitySet. The default is an empty set.
-	// +optional
-	AdditionalEnabledCapabilities []string `json:"additionalEnabledCapabilities,omitempty"`
 }
 
 // ClusterDomain returns the DNS domain that all records for a cluster must belong to.
