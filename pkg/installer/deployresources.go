@@ -27,7 +27,7 @@ func (m *manager) deployResourceTemplate(ctx context.Context) error {
 
 	var installConfig *installconfig.InstallConfig
 	var machineMaster *machine.Master
-	err = pg.Get(&installConfig, &machineMaster)
+	err = pg.Get(true, &installConfig, &machineMaster)
 	if err != nil {
 		return err
 	}
