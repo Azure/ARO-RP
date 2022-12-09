@@ -141,6 +141,7 @@ def dyn_validate_subnet(key):
                 subnet_obj = network_client.subnets.get(parts['resource_group'],
                                                         parts['name'],
                                                         parts['child_name_1'])
+
                 route_table_obj = subnet_obj.route_table
                 if route_table_obj is None:
                     raise ResourceNotFoundError("Subnet is missing route table")
@@ -156,10 +157,16 @@ def dyn_validate_subnet(key):
             errors = validate_resource(auth_client, f"{key}_route_table", route_parts, [
                 "Microsoft.Network/routeTables/join/action",
                 "Microsoft.Network/routeTables/read",
-                "Microsoft.Network/routeTables/write", ])
+                "Microsoft.Network/routeTables/write"])
+
+            if subnet_obj.network_security_group is not None:
+                message = f"A Network Security Group \"{subnet_obj.network_security_group}\" "\
+                          "is already assigned to this subnet. Ensure there a no Network "\
+                          "Security Groups assigned to cluster subnets before cluster creation"
+                error = [f"{key}", parts['child_name_1'], message]
+                errors.append(error)
 
         return errors
-
     return _validate_subnet
 
 

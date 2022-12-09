@@ -120,7 +120,7 @@ test_validate_subnets_data = [
         "should not return missing permission when actions are permitted",
         Mock(cli_ctx=None),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
-        Mock(**{"subnets.get.return_value": Mock(route_table=Mock(id="test"))}),
+        Mock(**{"subnets.get.return_value": Mock(network_security_group=None, route_table=Mock(id="test"))}),
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=["Microsoft.Network/routeTables/*"], not_actions=[])]}),
         {
             "subscription": "subscription",
@@ -139,7 +139,7 @@ test_validate_subnets_data = [
         "should return missing permission when actions are not permitted",
         Mock(cli_ctx=None),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
-        Mock(**{"subnets.get.return_value": Mock(route_table=Mock(id="test"))}),
+        Mock(**{"subnets.get.return_value": Mock(network_security_group=None, route_table=Mock(id="test"))}),
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=[], not_actions=["Microsoft.Network/routeTables/*"])]}),
         {
             "subscription": "subscription",
@@ -158,7 +158,7 @@ test_validate_subnets_data = [
         "should return missing permission when actions are not present",
         Mock(cli_ctx=None),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
-        Mock(**{"subnets.get.return_value": Mock(route_table=Mock(id="test"))}),
+        Mock(**{"subnets.get.return_value": Mock(network_security_group=None, route_table=Mock(id="test"))}),
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=[], not_actions=[])]}),
         {
             "subscription": "subscription",
@@ -172,6 +172,27 @@ test_validate_subnets_data = [
         },
         Mock(),
         "Microsoft.Network/routeTables/join/action permission is missing"
+    ),
+    (
+        "should return message when network security group is already attached to subnet",
+        Mock(cli_ctx=None),
+        Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
+        Mock(**{"subnets.get.return_value": Mock(network_security_group="test", route_table=Mock(id="test"))}),
+        Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=["Microsoft.Network/routeTables/*"], not_actions=[])]}),
+        {
+            "subscription": "subscription",
+            "namespace": "MICROSOFT.NETWORK",
+            "type": "virtualnetworks",
+            "last_child_num": 1,
+            "child_type_1": "subnets",
+            "resource_group": None,
+            "name": None,
+            "child_name_1": None
+        },
+        Mock(),
+        "A Network Security Group \"test\" is already assigned to this subnet. "
+        "Ensure there a no Network Security Groups assigned to cluster "
+        "subnets before cluster creation"
     )
 ]
 
