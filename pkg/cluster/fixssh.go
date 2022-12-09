@@ -53,9 +53,9 @@ func (m *manager) checkAndUpdateLB(ctx context.Context, resourceGroup string, lb
 		return lb, err
 	}
 
-	changed := m.updateLB(ctx, &lb)
+	lbChanged := m.updateLB(ctx, &lb)
 
-	if changed {
+	if lbChanged {
 		m.log.Printf("updating %s", lbName)
 		err = m.loadBalancers.CreateOrUpdateAndWait(ctx, resourceGroup, lbName, lb)
 		if err != nil {
@@ -76,7 +76,7 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 
 		var nic mgmtnetwork.Interface
 		nicName := nicNameInstaller
-		var fallbackNIC bool
+		fallbackNIC := false
 
 		nic, err = m.interfaces.Get(ctx, resourceGroup, nicName, "")
 		if err != nil {
@@ -102,9 +102,9 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 			}
 		}
 
-		changed := m.updateNIC(ctx, &nic, &lb, i, infraID)
+		nicChanged := m.updateNIC(ctx, &nic, nicName, &lb, i, infraID)
 
-		if changed {
+		if nicChanged {
 			m.log.Printf("updating %s", nicName)
 			err = m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, nicName, nic)
 			if err != nil {
@@ -128,29 +128,45 @@ func (m *manager) removeBackendPoolsFromNIC(ctx context.Context, resourceGroup, 
 	return nil
 }
 
-func (m *manager) updateNIC(ctx context.Context, nic *mgmtnetwork.Interface, lb *mgmtnetwork.LoadBalancer, i int, infraID string) bool {
+func (m *manager) updateNIC(ctx context.Context, nic *mgmtnetwork.Interface, nicName string, lb *mgmtnetwork.LoadBalancer, i int, infraID string) bool {
 	if nic.InterfacePropertiesFormat.IPConfigurations == nil || len(*nic.InterfacePropertiesFormat.IPConfigurations) == 0 {
-		m.log.Warnf("unable to update NIC as there are no IP configurations for %s", *nic.Name)
+		m.log.Warnf("unable to update NIC as there are no IP configurations for %s", nicName)
 		return false
 	}
-	id := fmt.Sprintf("%s/backendAddressPools/ssh-%d", *lb.ID, i)
-	ipc := (*nic.InterfacePropertiesFormat.IPConfigurations)[0]
-	if ipc.LoadBalancerBackendAddressPools == nil {
-		backendAddressPool := make([]mgmtnetwork.BackendAddressPool, 0)
-		ipc.LoadBalancerBackendAddressPools = &backendAddressPool
-	}
+
+	sshID := fmt.Sprintf("%s/backendAddressPools/ssh-%d", *lb.ID, i)
+	ilbID := fmt.Sprintf("%s/backendAddressPools/%s", *lb.ID, infraID)
+
+	updateSSHPool := true
+	updateILBPool := true
+
 	for _, p := range *(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools {
-		if strings.EqualFold(*p.ID, id) {
-			return false
+		if strings.EqualFold(*p.ID, sshID) {
+			updateSSHPool = false
+		}
+		if strings.EqualFold(*p.ID, ilbID) {
+			updateILBPool = false
 		}
 	}
-	*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = append(*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
-		ID: &id,
-	})
-	return true
+
+	if updateSSHPool {
+		m.log.Printf("Adding NIC %s to Internal LoadBalancer SSH Backend Address Pool %s", nicName, sshID)
+		*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = append(*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
+			ID: &sshID,
+		})
+	}
+
+	if updateILBPool {
+		m.log.Printf("Adding NIC %s to Internal LoadBalancer API Address Pool %s", nicName, ilbID)
+		*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = append(*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
+			ID: &ilbID,
+		})
+	}
+
+	return updateSSHPool || updateILBPool
 }
 
-func (m *manager) updateLB(ctx context.Context, lb *mgmtnetwork.LoadBalancer) (changed bool) {
+func (m *manager) updateLB(ctx context.Context, lb *mgmtnetwork.LoadBalancer) (lbChanged bool) {
 backendAddressPools:
 	for i := 0; i < 3; i++ {
 		name := fmt.Sprintf("ssh-%d", i)
@@ -160,7 +176,7 @@ backendAddressPools:
 			}
 		}
 
-		changed = true
+		lbChanged = true
 		*lb.BackendAddressPools = append(*lb.BackendAddressPools, mgmtnetwork.BackendAddressPool{
 			Name: &name,
 		})
@@ -175,7 +191,7 @@ loadBalancingRules:
 			}
 		}
 
-		changed = true
+		lbChanged = true
 		*lb.LoadBalancingRules = append(*lb.LoadBalancingRules, mgmtnetwork.LoadBalancingRule{
 			LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 				FrontendIPConfiguration: &mgmtnetwork.SubResource{
@@ -200,11 +216,11 @@ loadBalancingRules:
 
 	for _, p := range *lb.Probes {
 		if strings.EqualFold(*p.Name, "ssh") {
-			return changed
+			return lbChanged
 		}
 	}
 
-	changed = true
+	lbChanged = true
 	*lb.Probes = append(*lb.Probes, mgmtnetwork.Probe{
 		ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 			Protocol:          mgmtnetwork.ProbeProtocolTCP,
@@ -215,5 +231,5 @@ loadBalancingRules:
 		Name: to.StringPtr("ssh"),
 	})
 
-	return changed
+	return lbChanged
 }

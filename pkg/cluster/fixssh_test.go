@@ -190,6 +190,9 @@ func TestFixSSH(t *testing.T) {
 								{
 									ID: to.StringPtr(fmt.Sprintf(lbID+"/backendAddressPools/ssh-%d", i)),
 								},
+								{
+									ID: to.StringPtr(fmt.Sprintf(lbID+"/backendAddressPools/%s", infraID)),
+								},
 							},
 						},
 					},
