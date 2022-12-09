@@ -62,7 +62,7 @@ var (
 	timedoutReq = &fakeResponse{err: context.DeadlineExceeded}
 )
 
-func TestInternetCheckerCheck(t *testing.T) {
+func TestCheck(t *testing.T) {
 	var testCases = []struct {
 		name          string
 		responses     []*fakeResponse

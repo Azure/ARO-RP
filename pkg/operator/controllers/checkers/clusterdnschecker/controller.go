@@ -1,4 +1,4 @@
-package serviceprincipalchecker
+package clusterdnschecker
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -8,10 +8,9 @@ import (
 	"time"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,7 +22,6 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	checkercommon "github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/common"
-	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 )
 
@@ -34,7 +32,7 @@ import (
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters/status,verbs=get;update;patch
 
 const (
-	ControllerName = "ServicePrincipalChecker"
+	ControllerName = "ClusterDNSChecker"
 )
 
 // Reconciler runs a number of checkers
@@ -43,20 +41,20 @@ type Reconciler struct {
 	role string
 
 	arocli  aroclient.Interface
-	checker servicePrincipalChecker
+	checker clusterDNSChecker
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, role string) *Reconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, operatorcli operatorclient.Interface, role string) *Reconciler {
 	return &Reconciler{
 		log:  log,
 		role: role,
 
 		arocli:  arocli,
-		checker: newServicePrincipalChecker(log, kubernetescli),
+		checker: newClusterDNSChecker(operatorcli),
 	}
 }
 
-// Reconcile will keep checking that the cluster has a valid cluster service principal.
+// Reconcile will keep checking that the cluster has a valid DNS configuration.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
@@ -69,7 +67,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	r.log.Debug("running")
-	checkErr := r.checker.Check(ctx, instance.Spec.AZEnvironment)
+	checkErr := r.checker.Check(ctx)
 	condition := r.condition(checkErr)
 
 	err = conditions.SetCondition(ctx, r.arocli, condition, r.role)
@@ -86,7 +84,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 func (r *Reconciler) reconcileDisabled(ctx context.Context) (ctrl.Result, error) {
 	condition := &operatorv1.OperatorCondition{
-		Type:   arov1alpha1.ServicePrincipalValid,
+		Type:   arov1alpha1.DefaultClusterDNS,
 		Status: operatorv1.ConditionUnknown,
 	}
 
@@ -96,7 +94,7 @@ func (r *Reconciler) reconcileDisabled(ctx context.Context) (ctrl.Result, error)
 func (r *Reconciler) condition(checkErr error) *operatorv1.OperatorCondition {
 	if checkErr != nil {
 		return &operatorv1.OperatorCondition{
-			Type:    arov1alpha1.ServicePrincipalValid,
+			Type:    arov1alpha1.DefaultClusterDNS,
 			Status:  operatorv1.ConditionFalse,
 			Message: checkErr.Error(),
 			Reason:  "CheckFailed",
@@ -104,9 +102,9 @@ func (r *Reconciler) condition(checkErr error) *operatorv1.OperatorCondition {
 	}
 
 	return &operatorv1.OperatorCondition{
-		Type:    arov1alpha1.ServicePrincipalValid,
+		Type:    arov1alpha1.DefaultClusterDNS,
 		Status:  operatorv1.ConditionTrue,
-		Message: "service principal is valid",
+		Message: "No in-cluster upstream DNS servers",
 		Reason:  "CheckDone",
 	}
 }
@@ -117,16 +115,16 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return o.GetName() == arov1alpha1.SingletonClusterName
 	})
 
-	clusterSPPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return o.GetName() == clusterauthorizer.AzureCredentialSecretName && o.GetNamespace() == clusterauthorizer.AzureCredentialSecretNameSpace
+	defaultClusterDNSPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == "default"
 	})
 
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		Watches(
-			&source.Kind{Type: &corev1.Secret{}},
+			&source.Kind{Type: &operatorv1.DNS{}},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(clusterSPPredicate),
+			builder.WithPredicates(defaultClusterDNSPredicate),
 		)
 
 	return builder.Named(ControllerName).Complete(r)
