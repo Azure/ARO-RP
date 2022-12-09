@@ -18,7 +18,7 @@ import (
 	mock_dynamic "github.com/Azure/ARO-RP/pkg/util/mocks/dynamic"
 )
 
-func TestServicePrincipalValid(t *testing.T) {
+func TestCheck(t *testing.T) {
 	ctx := context.Background()
 	log := logrus.NewEntry(logrus.StandardLogger())
 	mockCredentials := &clusterauthorizer.Credentials{
