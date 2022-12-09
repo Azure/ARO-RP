@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -57,6 +58,8 @@ type MUODeploymentConfig struct {
 }
 
 type Reconciler struct {
+	log *logrus.Entry
+
 	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
 	deployer      deployer.Deployer
@@ -65,8 +68,10 @@ type Reconciler struct {
 	readinessTimeout  time.Duration
 }
 
-func NewReconciler(arocli aroclient.Interface, kubernetescli kubernetes.Interface, dh dynamichelper.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
+		log: log,
+
 		arocli:        arocli,
 		kubernetescli: kubernetescli,
 		deployer:      deployer.NewDeployer(kubernetescli, dh, staticFiles, "staticresources"),
@@ -83,9 +88,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
+
+	r.log.Debug("running")
 
 	managed := instance.Spec.OperatorFlags.GetWithDefault(controllerManaged, "")
 

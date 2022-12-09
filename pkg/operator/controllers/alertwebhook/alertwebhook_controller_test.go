@@ -8,6 +8,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -146,6 +147,7 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 		{
 			name: "old cluster, enabled",
 			reconciler: &Reconciler{
+				log: logrus.NewEntry(logrus.StandardLogger()),
 				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "alertmanager-main",
@@ -173,6 +175,7 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 		{
 			name: "new cluster, enabled",
 			reconciler: &Reconciler{
+				log: logrus.NewEntry(logrus.StandardLogger()),
 				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "alertmanager-main",
@@ -200,6 +203,7 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 		{
 			name: "old cluster, disabled",
 			reconciler: &Reconciler{
+				log: logrus.NewEntry(logrus.StandardLogger()),
 				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "alertmanager-main",
@@ -227,6 +231,7 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 		{
 			name: "new cluster, disabled",
 			reconciler: &Reconciler{
+				log: logrus.NewEntry(logrus.StandardLogger()),
 				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "alertmanager-main",

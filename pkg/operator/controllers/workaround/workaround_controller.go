@@ -65,10 +65,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	clusterVersion, err := version.GetClusterVersion(ctx, r.configcli)
 	if err != nil {
 		r.log.Errorf("error getting the OpenShift version: %v", err)
