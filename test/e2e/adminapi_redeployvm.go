@@ -6,6 +6,7 @@ package e2e
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilrand "k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -80,7 +82,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 func getNodeUptime(g Gomega, ctx context.Context, node string) (time.Time, error) {
 	// container kernel = node kernel = `uptime` in a Pod reflects the Node as well
 	namespace := "default"
-	name := node
+	name := fmt.Sprintf("%s-uptime-%s", node, utilrand.String(5))
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
