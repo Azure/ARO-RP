@@ -81,7 +81,7 @@ var (
 
 func skipIfNotInDevelopmentEnv() {
 	if !_env.IsLocalDevelopmentMode() {
-		Skip("skipping portal tests in non-development environment")
+		Skip("skipping tests in non-development environment")
 	}
 }
 
