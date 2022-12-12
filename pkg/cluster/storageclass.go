@@ -20,9 +20,9 @@ const (
 	defaultStorageClassName          = "managed-premium"
 	defaultEncryptedStorageClassName = "managed-premium-encrypted-cmk"
 	defaultProvisioner               = "kubernetes.io/azure-disk"
-	ocp411StorageClassName           = "managed-csi"
-	ocp411EncryptedStorageClassName  = "managed-csi-encrypted-cmk"
-	ocp411Provisioner                = "disk.csi.azure.com"
+	csiStorageClassName              = "managed-csi"
+	csiEncryptedStorageClassName     = "managed-csi-encrypted-cmk"
+	csiProvisioner                   = "disk.csi.azure.com"
 )
 
 // configureDefaultStorageClass replaces default storage class provided by OCP with
@@ -41,10 +41,11 @@ func (m *manager) configureDefaultStorageClass(ctx context.Context) error {
 	encryptedStorageClassName := defaultEncryptedStorageClassName
 	provisioner := defaultProvisioner
 
-	if installVersion.V[0] == 4 && installVersion.V[1] == 11 {
-		storageClassName = ocp411StorageClassName
-		encryptedStorageClassName = ocp411EncryptedStorageClassName
-		provisioner = ocp411Provisioner
+	// OpenShift 4.11 and above use the CSI storageclasses
+	if installVersion.V[0] >= 4 && installVersion.V[1] >= 11 {
+		storageClassName = csiStorageClassName
+		encryptedStorageClassName = csiEncryptedStorageClassName
+		provisioner = csiProvisioner
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {

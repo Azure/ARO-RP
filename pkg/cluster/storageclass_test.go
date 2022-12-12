@@ -110,8 +110,8 @@ func TestConfigureStorageClass(t *testing.T) {
 			encryptedStorageClassName := defaultEncryptedStorageClassName
 
 			if installVersion.V[0] == 4 && installVersion.V[1] == 11 {
-				storageClassName = ocp411StorageClassName
-				encryptedStorageClassName = ocp411EncryptedStorageClassName
+				storageClassName = csiStorageClassName
+				encryptedStorageClassName = csiEncryptedStorageClassName
 			}
 
 			kubernetescli := fake.NewSimpleClientset(
