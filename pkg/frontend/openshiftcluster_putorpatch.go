@@ -43,7 +43,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 		b, err = f._putOrPatchOpenShiftCluster(ctx, log, body, correlationData, systemData, r.URL.Path, originalPath, r.Method, referer, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter, f.apis[vars["api-version"]].OpenShiftClusterStaticValidator, mux.Vars(r))
 		return err
 	})
-
+	frontendOperationResultLog(log, r.Method, err)
 	reply(log, w, header, b, err)
 }
 

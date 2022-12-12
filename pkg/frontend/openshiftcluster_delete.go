@@ -30,7 +30,7 @@ func (f *frontend) deleteOpenShiftCluster(w http.ResponseWriter, r *http.Request
 	case err == nil:
 		err = statusCodeError(http.StatusAccepted)
 	}
-
+	frontendOperationResultLog(log, r.Method, err)
 	reply(log, w, header, nil, err)
 }
 
