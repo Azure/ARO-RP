@@ -193,6 +193,9 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 					},
 				},
 			},
+			ControlPlaneConfig: hivev1.ControlPlaneConfigSpec{
+				APIServerIPOverride: doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
+			},
 			PullSecretRef: &corev1.LocalObjectReference{
 				Name: pullsecretSecretName,
 			},
