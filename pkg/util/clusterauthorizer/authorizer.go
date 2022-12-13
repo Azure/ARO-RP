@@ -72,6 +72,7 @@ func (a *azRefreshableAuthorizer) NewRefreshableAuthorizerToken(ctx context.Cont
 	c := &azureclaim.AzureClaim{}
 	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
 	if err != nil {
+		a.log.Error(err)
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalToken, "properties.servicePrincipalProfile", "The provided service principal generated an invalid token.")
 	}
 

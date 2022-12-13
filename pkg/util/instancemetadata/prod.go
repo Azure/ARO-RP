@@ -14,7 +14,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/form3tech-oss/jwt-go"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
@@ -72,7 +71,7 @@ func (p *prod) populateTenantIDFromMSI(ctx context.Context) error {
 	c := &azureclaim.AzureClaim{}
 	_, _, err = parser.ParseUnverified(token.OAuthToken(), c)
 	if err != nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalToken, "properties.servicePrincipalProfile", "The provided service principal generated an invalid token.")
+		return err
 	}
 
 	p.tenantID = c.TenantID

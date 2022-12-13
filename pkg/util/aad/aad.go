@@ -67,6 +67,7 @@ func (tc *tokenClient) GetToken(ctx context.Context, log *logrus.Entry, clientID
 		claims := jwt.MapClaims{}
 		_, _, err = p.ParseUnverified(authorizer.OAuthToken(), claims)
 		if err != nil {
+			log.Error(err)
 			err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalToken, "properties.servicePrincipalProfile", "The provided service principal generated an invalid token.")
 			return false, err
 		}
