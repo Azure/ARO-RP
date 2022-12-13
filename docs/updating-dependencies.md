@@ -34,7 +34,6 @@ When upgrading to a newer version of OpenShift, this script have to be updated t
 reflect the proper release.
 
 
-
 ## Update only required dependencies
 
 When adding new dependencies or updating old ones, based on the requirement of
