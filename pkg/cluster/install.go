@@ -279,7 +279,7 @@ func (m *manager) bootstrap() []steps.Step {
 
 // Install installs an ARO cluster
 func (m *manager) Install(ctx context.Context) error {
-	steps := map[api.InstallPhase][]steps.Step{
+	installSteps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: m.bootstrap(),
 		api.InstallPhaseRemoveBootstrap: {
 			steps.Action(m.initializeKubernetesClients),
@@ -301,20 +301,25 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.configureIngressCertificate),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute, true),
 			steps.Action(m.configureDefaultStorageClass),
-			steps.Action(m.finishInstallation),
 		},
 	}
+
+	if m.installViaHive {
+		installSteps[api.InstallPhaseRemoveBootstrap] = append(installSteps[api.InstallPhaseRemoveBootstrap], steps.Action(m.hiveEnsureResources))
+	}
+
+	installSteps[api.InstallPhaseRemoveBootstrap] = append(installSteps[api.InstallPhaseRemoveBootstrap], steps.Action(m.finishInstallation))
 
 	err := m.startInstallation(ctx)
 	if err != nil {
 		return err
 	}
 
-	if steps[m.doc.OpenShiftCluster.Properties.Install.Phase] == nil {
+	if installSteps[m.doc.OpenShiftCluster.Properties.Install.Phase] == nil {
 		return fmt.Errorf("unrecognised phase %s", m.doc.OpenShiftCluster.Properties.Install.Phase)
 	}
 	m.log.Printf("starting phase %s", m.doc.OpenShiftCluster.Properties.Install.Phase)
-	return m.runSteps(ctx, steps[m.doc.OpenShiftCluster.Properties.Install.Phase], true)
+	return m.runSteps(ctx, installSteps[m.doc.OpenShiftCluster.Properties.Install.Phase], true)
 }
 
 func (m *manager) runSteps(ctx context.Context, s []steps.Step, emitMetrics bool) error {
