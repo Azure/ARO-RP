@@ -5,31 +5,7 @@ RUN mkdir -p /app/ARO-RP
 WORKDIR /app/ARO-RP
 
 #we have multiple steps for copy so we can make use of caching
-COPY vendor/ vendor
-
-COPY docs/ docs
-COPY hack/ hack
-
-COPY swagger/ swagger
-COPY test/ test
-COPY python/ python
-COPY portal/ portal
-
-COPY cmd/ cmd
-COPY pkg/ pkg
-
-#COPY all files with an extension (directories not copied)
-COPY ?*.* /app/ARO-RP/
-COPY Makefile LICENSE /app/ARO-RP/
-
-COPY .git .git
-COPY .gitignore .gitignore
-COPY .pipelines .pipelines
-COPY .gdn .gdn
-COPY .github .github
-COPY .env .env
-COPY .sha256sum .sha256sum
-COPY .config .config
+COPY . /app/ARO-RP
 
 RUN microdnf update && \
     microdnf install make python39 git && \
