@@ -31,6 +31,12 @@ monitoring from inside the cluster as well as a complementary near-term goal.
   locally (like k8s list/watch).  At startup, the cosmos DB change feed returns
   the current state of all of the OpenShiftClusterDocuments; subsequently as
   OpenShiftClusterDocuments it returns the updated documents.
+* At the moment of writing, the change feed does not log record deletions. It logs
+  only changes. Deallocated clusters are deleted from the monitoring list only if
+  they were seen in the `DeletingProvisioningState` by the monitor.
+  The monitor reads the change feed every 10 seconds, so we should except exclude
+  cases when `OpenShiftClusterDocuments` have the `DeletingProvisioningState` less
+  than 10 seconds.
 * Each monitor aims to check each cluster it "owns" every 5 minutes; it walks
   the local database map and distributes checking over lots of local goroutine
   workers.
