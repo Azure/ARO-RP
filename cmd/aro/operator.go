@@ -26,8 +26,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/alertwebhook"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/autosizednodes"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/banner"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/checker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/clusterdnschecker"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/ingresscertificatechecker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/internetchecker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/serviceprincipalchecker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
@@ -240,11 +240,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			arocli, operatorcli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", ingress.ControllerName, err)
 		}
-		if err = (checker.NewReconciler(
-			log.WithField("controller", checker.ControllerName),
-			arocli, kubernetescli, maocli, operatorcli, configcli, role)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", checker.ControllerName, err)
-		}
 		if err = (serviceprincipalchecker.NewReconciler(
 			log.WithField("controller", serviceprincipalchecker.ControllerName),
 			arocli, kubernetescli, role)).SetupWithManager(mgr); err != nil {
@@ -254,6 +249,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", clusterdnschecker.ControllerName),
 			arocli, operatorcli, role)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", clusterdnschecker.ControllerName, err)
+		}
+		if err = (ingresscertificatechecker.NewReconciler(
+			log.WithField("controller", ingresscertificatechecker.ControllerName),
+			arocli, operatorcli, configcli, role)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", ingresscertificatechecker.ControllerName, err)
 		}
 	}
 
