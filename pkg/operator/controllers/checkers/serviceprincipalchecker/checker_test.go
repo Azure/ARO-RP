@@ -74,13 +74,13 @@ func TestCheck(t *testing.T) {
 
 			sp := &checker{
 				log: log,
-				credentialsGetter: func(ctx context.Context) (*clusterauthorizer.Credentials, error) {
+				credentials: func(ctx context.Context) (*clusterauthorizer.Credentials, error) {
 					if tt.credentialsExist {
 						return mockCredentials, nil
 					}
 					return nil, errors.New("fake credentials get error")
 				},
-				spValidatorConstructor: func(azEnv *azureclient.AROEnvironment) (dynamic.ServicePrincipalValidator, error) {
+				newSPValidator: func(azEnv *azureclient.AROEnvironment) (dynamic.ServicePrincipalValidator, error) {
 					if validatorMock != nil {
 						return validatorMock, nil
 					}

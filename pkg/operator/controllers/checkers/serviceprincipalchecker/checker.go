@@ -22,8 +22,8 @@ type servicePrincipalChecker interface {
 type checker struct {
 	log *logrus.Entry
 
-	credentialsGetter      func(ctx context.Context) (*clusterauthorizer.Credentials, error)
-	spValidatorConstructor func(azEnv *azureclient.AROEnvironment) (dynamic.ServicePrincipalValidator, error)
+	credentials    func(ctx context.Context) (*clusterauthorizer.Credentials, error)
+	newSPValidator func(azEnv *azureclient.AROEnvironment) (dynamic.ServicePrincipalValidator, error)
 }
 
 func newServicePrincipalChecker(log *logrus.Entry, kubernetescli kubernetes.Interface) servicePrincipalChecker {
@@ -32,10 +32,10 @@ func newServicePrincipalChecker(log *logrus.Entry, kubernetescli kubernetes.Inte
 	return &checker{
 		log: log,
 
-		credentialsGetter: func(ctx context.Context) (*clusterauthorizer.Credentials, error) {
+		credentials: func(ctx context.Context) (*clusterauthorizer.Credentials, error) {
 			return clusterauthorizer.AzCredentials(ctx, kubernetescli)
 		},
-		spValidatorConstructor: func(azEnv *azureclient.AROEnvironment) (dynamic.ServicePrincipalValidator, error) {
+		newSPValidator: func(azEnv *azureclient.AROEnvironment) (dynamic.ServicePrincipalValidator, error) {
 			return dynamic.NewServicePrincipalValidator(log, azEnv, dynamic.AuthorizerClusterServicePrincipal, tokenClient)
 		},
 	}
@@ -47,12 +47,12 @@ func (r *checker) Check(ctx context.Context, AZEnvironment string) error {
 		return err
 	}
 
-	azCred, err := r.credentialsGetter(ctx)
+	azCred, err := r.credentials(ctx)
 	if err != nil {
 		return err
 	}
 
-	spDynamic, err := r.spValidatorConstructor(&azEnv)
+	spDynamic, err := r.newSPValidator(&azEnv)
 	if err != nil {
 		return err
 	}
