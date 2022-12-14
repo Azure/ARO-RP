@@ -129,7 +129,7 @@ func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Re
 		return err
 	}
 
-	return k.KubeDelete(ctx, groupKind, namespace, name, force)
+	return k.KubeDelete(ctx, groupKind, namespace, name, force, nil)
 }
 
 func (f *frontend) postAdminKubernetesObjects(w http.ResponseWriter, r *http.Request) {

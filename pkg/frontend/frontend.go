@@ -294,6 +294,11 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 		})
 		r.Get("/supportedvmsizes", f.supportedvmsizes)
 
+		r.Route("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/etcdrecovery",
+			func(r chi.Router) {
+				r.Post("/", f.postAdminOpenShiftClusterEtcdRecovery)
+			})
+
 		r.Route("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/kubernetesobjects",
 			func(r chi.Router) {
 				r.Get("/", f.getAdminKubernetesObjects)
