@@ -26,7 +26,7 @@ type checker struct {
 	httpClient   simpleHTTPClient
 }
 
-func newInternetChecker() internetChecker {
+func newInternetChecker() *checker {
 	return &checker{
 		checkTimeout: time.Minute,
 		httpClient: &http.Client{
