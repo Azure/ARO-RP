@@ -26,7 +26,7 @@ type checker struct {
 	newSPValidator func(azEnv *azureclient.AROEnvironment) (dynamic.ServicePrincipalValidator, error)
 }
 
-func newServicePrincipalChecker(log *logrus.Entry, kubernetescli kubernetes.Interface) servicePrincipalChecker {
+func newServicePrincipalChecker(log *logrus.Entry, kubernetescli kubernetes.Interface) *checker {
 	tokenClient := aad.NewTokenClient()
 
 	return &checker{

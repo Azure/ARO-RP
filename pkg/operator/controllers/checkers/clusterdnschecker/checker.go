@@ -20,7 +20,7 @@ type checker struct {
 	operatorcli operatorclient.Interface
 }
 
-func newClusterDNSChecker(operatorcli operatorclient.Interface) clusterDNSChecker {
+func newClusterDNSChecker(operatorcli operatorclient.Interface) *checker {
 	return &checker{
 		operatorcli: operatorcli,
 	}
