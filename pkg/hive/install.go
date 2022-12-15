@@ -6,7 +6,11 @@ package hive
 import (
 	"context"
 	"encoding/json"
-	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"os"
+	"path"
+	"path/filepath"
+	"runtime"
+
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -14,14 +18,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"os"
-	"path"
-	"path/filepath"
-	"runtime"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 const (
@@ -213,7 +214,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 			},
 			ControlPlaneConfig: hivev1.ControlPlaneConfigSpec{
 				APIServerIPOverride: doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
-				APIURLOverride:      "api-int." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + ":6443/",
+				APIURLOverride:      "api-int." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + ":6443",
 			},
 			PullSecretRef: &corev1.LocalObjectReference{
 				Name: pullsecretSecretName,
