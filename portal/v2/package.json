@@ -6,6 +6,7 @@
   "proxy": "https://localhost:8444",
   "dependencies": {
     "@fluentui/react": "^8.101.0",
+    "@fluentui/react-charting": "^5.14.27",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^14.4.3",
     "@types/node": "^18.11.9",

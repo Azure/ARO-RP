@@ -50,9 +50,8 @@ require (
 	github.com/pires/go-proxyproto v0.6.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.50.0
-	github.com/prometheus-operator/prometheus-operator/pkg/client v0.48.1
-	github.com/prometheus/client_golang v1.12.1
-	github.com/prometheus/common v0.33.0
+	github.com/prometheus/client_golang v1.14.0
+	github.com/prometheus/common v0.37.0
 	github.com/serge1peshcoff/selenium-go-conditions v0.0.0-20170824121757-5afbdb74596b
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.1
@@ -210,8 +209,10 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/proglottis/gpgme v0.1.1 // indirect
-	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/procfs v0.7.3 // indirect
+	github.com/prometheus/client_model v0.3.0 // indirect
+	github.com/prometheus/procfs v0.8.0 // indirect
+	github.com/quasilyte/go-ruleguard v0.3.4 // indirect
+	github.com/quasilyte/regex/syntax v0.0.0-20200805063351-8f842688393c // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/spf13/cobra v1.4.0 // indirect
@@ -238,7 +239,7 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220405205423-9d709892a2bf // indirect
 	google.golang.org/grpc v1.45.0 // indirect
-	google.golang.org/protobuf v1.28.0 // indirect
+	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/go-playground/validator.v9 v9.31.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect

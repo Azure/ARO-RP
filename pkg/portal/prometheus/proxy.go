@@ -46,7 +46,7 @@ func (p *Prometheus) Director(r *http.Request) {
 	cli := p.clientCache.Get(resourceID)
 	if cli == nil {
 		var err error
-		cli, err = p.cli(ctx, resourceID)
+		cli, err = p.Cli(ctx, resourceID)
 		if err != nil {
 			p.error(r, http.StatusInternalServerError, err)
 			return
@@ -69,7 +69,7 @@ func (p *Prometheus) Director(r *http.Request) {
 	*r = *r.WithContext(context.WithValue(ctx, contextKeyClient, cli))
 }
 
-func (p *Prometheus) cli(ctx context.Context, resourceID string) (*http.Client, error) {
+func (p *prometheus) Cli(ctx context.Context, resourceID string) (*http.Client, error) {
 	openShiftDoc, err := p.dbOpenShiftClusters.Get(ctx, resourceID)
 	if err != nil {
 		return nil, err

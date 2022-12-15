@@ -305,6 +305,7 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Promethe
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/nodes").HandlerFunc(p.nodes)
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machines").HandlerFunc(p.machines)
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machine-sets").HandlerFunc(p.machineSets)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/statistics/{statisticsType}").HandlerFunc(p.statistics)
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
 
 	// prometheus

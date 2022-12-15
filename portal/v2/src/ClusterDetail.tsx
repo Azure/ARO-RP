@@ -20,7 +20,7 @@ import { AxiosResponse } from "axios"
 import { FetchClusterInfo } from "./Request"
 import { ICluster, headerStyles } from "./App"
 import { Nav, INavLink, INavStyles } from "@fluentui/react/lib/Nav"
-import { ClusterDetailComponent } from "./ClusterDetailList"
+import { ClusterDetailComponent, MemoisedClusterDetailListComponent } from "./ClusterDetailList"
 import React from "react"
 
 const navStyles: Partial<INavStyles> = {
@@ -81,6 +81,10 @@ export const overviewKey = "overview"
 export const nodesKey = "nodes"
 export const machinesKey = "machines"
 export const machineSetsKey = "machinesets"
+export const apiStatisticsKey = "apistatistics"
+export const kcmStatisticsKey = "kcmstatistics"
+export const dnsStatisticsKey = "dnsstatistics"
+export const ingressStatisticsKey = "ingressstatistics"
 
 const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
 
@@ -144,6 +148,30 @@ export function ClusterDetailPanel(props: {
           key: machineSetsKey,
           url: '#machinesets',
           icon: 'BuildQueue',
+        },
+        {
+          name: 'APIStatistics',
+          key: apiStatisticsKey,
+          url: '#apistatistics',
+          icon: 'BIDashboard',
+        },
+        {
+          name: 'KCMStatistics',
+          key: kcmStatisticsKey,
+          url: '#kcmstatistics',
+          icon: 'BIDashboard',
+        },
+        {
+          name: 'DNSStatistics',
+          key: dnsStatisticsKey,
+          url: '#dnsstatistics',
+          icon: 'BIDashboard',
+        },
+        {
+          name: 'IngressStatistics',
+          key: ingressStatisticsKey,
+          url: '#ingressstatistics',
+          icon: 'BIDashboard',
         },
       ],
     },
@@ -217,15 +245,18 @@ export function ClusterDetailPanel(props: {
     }
   }
 
-  const [doubleChevronIconProp, setdoubleChevronIconProp] = useState({ iconName: "doublechevronleft"})
-  function _onClickDoubleChevronIcon() {
+  // const [doubleChevronIconProp, setdoubleChevronIconProp] = useState({ iconName: "doublechevronleft"})
+  const doubleChevronIconProp = useRef({ iconName: "doublechevronleft"})
+  const _onClickDoubleChevronIcon = () => {
     let customPanelStyleRootLeft
-    if (doubleChevronIconProp.iconName == "doublechevronright") {
+    if (doubleChevronIconProp.current.iconName == "doublechevronright") {
       customPanelStyleRootLeft = "225px"
-      setdoubleChevronIconProp({ iconName: "doublechevronleft"})
+      // setdoubleChevronIconProp({ iconName: "doublechevronleft"})
+      doubleChevronIconProp.current = { iconName: "doublechevronleft"}
     } else {
       customPanelStyleRootLeft = "0px"
-      setdoubleChevronIconProp({ iconName: "doublechevronright"})
+      // setdoubleChevronIconProp({ iconName: "doublechevronright"})
+      doubleChevronIconProp.current = { iconName: "doublechevronright"}
     }
 
     setcustomPanelStyle({
@@ -246,7 +277,7 @@ export function ClusterDetailPanel(props: {
           <Stack.Item styles={doubleChevronIconStyle}>
             <IconButton
               onClick={_onClickDoubleChevronIcon}
-              iconProps={doubleChevronIconProp}
+              iconProps={doubleChevronIconProp.current}
             />
           </Stack.Item>
         </Stack>
@@ -287,7 +318,7 @@ export function ClusterDetailPanel(props: {
           </Stack.Item>
           <Separator vertical />
           <Stack.Item grow>
-            <ClusterDetailComponent
+            <MemoisedClusterDetailListComponent
               item={data}
               cluster={props.currentCluster}
               isDataLoaded={dataLoaded}

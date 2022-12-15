@@ -114,3 +114,14 @@ export const RequestKubeconfig = async (
     return OnError(err)
   }
 }
+
+export const FetchStatistics = async (cluster: ICluster, statisticsName: string, duration: string, endDate: Date): Promise<AxiosResponse | null> => {
+  try {
+    const result = await axios(
+      "/api/" + cluster.subscription + "/" + cluster.resourceGroup + "/" + cluster.name + "/statistics/" + statisticsName + "?duration=" + duration + "&endtime=" + endDate.toJSON())
+    return result
+  } catch (e: any) {
+    const err = e.response as AxiosResponse
+    return OnError(err)
+  }
+}

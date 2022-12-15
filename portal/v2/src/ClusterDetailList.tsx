@@ -1,8 +1,11 @@
 import { Component } from "react"
+import React from "react"
 import { OverviewWrapper } from './ClusterDetailListComponents/OverviewWrapper';
 import { NodesWrapper } from './ClusterDetailListComponents/NodesWrapper';
 import { MachinesWrapper } from "./ClusterDetailListComponents/MachinesWrapper";
 import { MachineSetsWrapper } from "./ClusterDetailListComponents/MachineSetsWrapper";
+import { Statistics } from "./ClusterDetailListComponents/Statistics/Statistics";
+
 import { ICluster } from "./App"
 
 interface ClusterDetailComponentProps {
@@ -70,6 +73,36 @@ export class ClusterDetailComponent extends Component<ClusterDetailComponentProp
             <MachineSetsWrapper currentCluster={this.props.cluster!} detailPanelSelected={this.props.detailPanelVisible} loaded={this.props.isDataLoaded}/>
           );
         }
+        case "apistatistics":
+        {
+          return (
+            <Statistics currentCluster={this.props.cluster!} detailPanelSelected={this.props.detailPanelVisible} loaded={this.props.isDataLoaded} statisticsType={"api"}/>
+          );
+        }
+        case "kcmstatistics":
+          {
+            return (
+              <Statistics currentCluster={this.props.cluster!} detailPanelSelected={this.props.detailPanelVisible} loaded={this.props.isDataLoaded} statisticsType={"kcm"}/>
+            );
+          }
+        case "dnsstatistics":
+        {
+          return (
+            <>
+            <Statistics currentCluster={this.props.cluster!} detailPanelSelected={this.props.detailPanelVisible} loaded={this.props.isDataLoaded} statisticsType={"dns"}/>
+            </>
+          );
+        }
+        case "ingressstatistics":
+        {
+          return (
+            <>
+            <Statistics currentCluster={this.props.cluster!} detailPanelSelected={this.props.detailPanelVisible} loaded={this.props.isDataLoaded} statisticsType={"ingress"}/>     
+            </>
+          );
+        }
       }
   }
 }
+
+export const MemoisedClusterDetailListComponent = React.memo(ClusterDetailComponent)
