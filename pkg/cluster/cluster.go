@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -109,7 +110,7 @@ type manager struct {
 
 // New returns a cluster manager
 func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, dbGateway database.Gateway, dbOpenShiftVersions database.OpenShiftVersions, aead encryption.AEAD,
-	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, hiveClusterManager hive.ClusterManager, metricsEmitter metrics.Emitter) (Interface, error) {
+	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, metricsEmitter metrics.Emitter) (Interface, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -131,7 +132,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	}
 
 	storage := storage.NewManager(_env, r.SubscriptionID, fpAuthorizer)
-
+	graph := graph.NewManager(log, aead, storage)
 	installViaHive, err := _env.LiveConfig().InstallViaHive(ctx)
 	if err != nil {
 		return nil, err
@@ -140,6 +141,19 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	adoptByHive, err := _env.LiveConfig().AdoptByHive(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	var hr hive.ClusterManager
+	if installViaHive || adoptByHive {
+		hiveShard := 1
+		hiveRestConfig, err := _env.LiveConfig().HiveRestConfig(ctx, hiveShard)
+		if err != nil {
+			return nil, fmt.Errorf("failed getting RESTConfig for Hive shard %d: %w", hiveShard, err)
+		}
+		hr, err = hive.NewFromConfig(log, _env, hiveRestConfig, graph)
+		if err != nil {
+			return nil, fmt.Errorf("failed creating HiveClusterManager: %w", err)
+		}
 	}
 
 	return &manager{
@@ -175,11 +189,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		dns:     dns.NewManager(_env, localFPAuthorizer),
 		storage: storage,
 		subnet:  subnet.NewManager(_env.Environment(), r.SubscriptionID, fpAuthorizer),
-		graph:   graph.NewManager(log, aead, storage),
+		graph:   graph,
 
 		installViaHive:     installViaHive,
 		adoptViaHive:       adoptByHive,
-		hiveClusterManager: hiveClusterManager,
+		hiveClusterManager: hr,
 		now:                func() time.Time { return time.Now() },
 	}, nil
 }

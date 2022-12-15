@@ -6,17 +6,18 @@ package hive
 import (
 	"context"
 	"encoding/json"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	hivev1 "github.com/openshift/hive/apis/hive/v1"
+	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
+	"github.com/openshift/installer/pkg/asset/installconfig"
+	"github.com/openshift/installer/pkg/asset/password"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
-	"strings"
-
-	hivev1 "github.com/openshift/hive/apis/hive/v1"
-	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
@@ -59,8 +60,10 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 		return err
 	}
 
-	cd := c.clusterDeploymentForInstall(doc, version, c.env.IsLocalDevelopmentMode())
-
+	cd, err := c.clusterDeploymentForInstall(doc, version, c.env.IsLocalDevelopmentMode())
+	if err != nil {
+		return err
+	}
 	// Enrich the cluster deployment with the correlation data so that logs are
 	// properly annotated
 	err = utillog.EnrichHiveWithCorrelationData(cd, doc.CorrelationData)
@@ -146,7 +149,7 @@ func servicePrincipalSecretForInstall(oc *api.OpenShiftCluster, sub *api.Subscri
 	return sppSecret, nil
 }
 
-func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, isDevelopment bool) *hivev1.ClusterDeployment {
+func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, isDevelopment bool) (*hivev1.ClusterDeployment, error) {
 	var envVars = []corev1.EnvVar{
 		{
 			Name:  "ARO_UUID",
@@ -166,6 +169,20 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 		for _, i := range prodEnvVars {
 			envVars = append(envVars, makeEnvSecret(i))
 		}
+	}
+	resourceGroup := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	account := "cluster" + doc.OpenShiftCluster.Properties.StorageSuffix
+
+	pg, err := c.graph.LoadPersisted(context.TODO(), resourceGroup, account)
+	if err != nil {
+		return nil, err
+	}
+
+	var installConfig *installconfig.InstallConfig
+	var kubeadminPassword *password.KubeadminPassword
+	err = pg.Get(&installConfig, &kubeadminPassword)
+	if err != nil {
+		return nil, err
 	}
 
 	// Do not set InfraID here, as Hive wants to do that
@@ -196,7 +213,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 			},
 			ControlPlaneConfig: hivev1.ControlPlaneConfigSpec{
 				APIServerIPOverride: doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
-				APIURLOverride:      strings.Replace(doc.OpenShiftCluster.Properties.APIServerProfile.URL, "https://api.", "api-int.", 1),
+				APIURLOverride:      "api-int." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + ":6443/",
 			},
 			PullSecretRef: &corev1.LocalObjectReference{
 				Name: pullsecretSecretName,
@@ -212,5 +229,5 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 			PreserveOnDelete: true,
 			ManageDNS:        false,
 		},
-	}
+	}, nil
 }

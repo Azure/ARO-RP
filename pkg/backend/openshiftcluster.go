@@ -18,7 +18,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -29,7 +28,7 @@ import (
 type openShiftClusterBackend struct {
 	*backend
 
-	newManager func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, database.OpenShiftVersions, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, hive.ClusterManager, metrics.Emitter) (cluster.Interface, error)
+	newManager func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, database.OpenShiftVersions, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, metrics.Emitter) (cluster.Interface, error)
 }
 
 func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
@@ -102,31 +101,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		return err
 	}
 
-	// Only attempt to access Hive if we are installing via Hive or adopting clusters
-	installViaHive, err := ocb.env.LiveConfig().InstallViaHive(ctx)
-	if err != nil {
-		return err
-	}
-
-	adoptViaHive, err := ocb.env.LiveConfig().AdoptByHive(ctx)
-	if err != nil {
-		return err
-	}
-
-	var hr hive.ClusterManager
-	if installViaHive || adoptViaHive {
-		hiveShard := 1
-		hiveRestConfig, err := ocb.env.LiveConfig().HiveRestConfig(ctx, hiveShard)
-		if err != nil {
-			return fmt.Errorf("failed getting RESTConfig for Hive shard %d: %w", hiveShard, err)
-		}
-		hr, err = hive.NewFromConfig(log, ocb.env, hiveRestConfig)
-		if err != nil {
-			return fmt.Errorf("failed creating HiveClusterManager: %w", err)
-		}
-	}
-
-	m, err := ocb.newManager(ctx, log, ocb.env, ocb.dbOpenShiftClusters, ocb.dbGateway, ocb.dbOpenShiftVersions, ocb.aead, ocb.billing, doc, subscriptionDoc, hr, ocb.m)
+	m, err := ocb.newManager(ctx, log, ocb.env, ocb.dbOpenShiftClusters, ocb.dbGateway, ocb.dbOpenShiftVersions, ocb.aead, ocb.billing, doc, subscriptionDoc, ocb.m)
 	if err != nil {
 		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 	}

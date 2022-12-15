@@ -6,6 +6,7 @@ package hive
 import (
 	"context"
 	"fmt"
+	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
@@ -48,13 +49,15 @@ type clusterManager struct {
 	hiveClientset hiveclient.Interface
 	kubernetescli kubernetes.Interface
 
+	graph graph.Manager
+
 	dh dynamichelper.Interface
 }
 
 // NewFromConfig creates a ClusterManager.
 // It MUST NOT take cluster or subscription document as values
 // in these structs can be change during the lifetime of the cluster manager.
-func NewFromConfig(log *logrus.Entry, _env env.Core, restConfig *rest.Config) (ClusterManager, error) {
+func NewFromConfig(log *logrus.Entry, _env env.Core, restConfig *rest.Config, graph graph.Manager) (ClusterManager, error) {
 	hiveClientset, err := hiveclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
@@ -76,8 +79,8 @@ func NewFromConfig(log *logrus.Entry, _env env.Core, restConfig *rest.Config) (C
 
 		hiveClientset: hiveClientset,
 		kubernetescli: kubernetescli,
-
-		dh: dh,
+		graph:         graph,
+		dh:            dh,
 	}, nil
 }
 
