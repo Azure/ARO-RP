@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
@@ -195,6 +196,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 			},
 			ControlPlaneConfig: hivev1.ControlPlaneConfigSpec{
 				APIServerIPOverride: doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
+				APIURLOverride:      strings.Replace(doc.OpenShiftCluster.Properties.APIServerProfile.URL, "https://api.", "api-int.", 1),
 			},
 			PullSecretRef: &corev1.LocalObjectReference{
 				Name: pullsecretSecretName,
