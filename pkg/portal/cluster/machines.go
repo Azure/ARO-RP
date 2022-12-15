@@ -15,9 +15,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 )
 
-// Creating local vars for these functions in order to make them testable. The function definition will is altered while in the tests written.
-var NewResourceClientFunction = features.NewResourcesClient
-var NewVirtualMachineClientFunction = compute.NewVirtualMachinesClient
+// Creating local vars for these functions in order to make them swappable to make them testable. The function definition will is altered in the tests written.
+var newResourceClientFunction = features.NewResourcesClient
+var newVirtualMachineClientFunction = compute.NewVirtualMachinesClient
 
 type MachinesInformation struct {
 	Name              string `json:"name"`
@@ -85,19 +85,15 @@ func (f *realFetcher) VMAllocationStatus(ctx context.Context) (VMAllocationStatu
 	}
 
 	// Getting Virtual Machine resources through the Cluster's Resource Group
-	computeResources, err := NewResourceClientFunction(env.Environment(), subscriptionDoc.ID, fpAuth).ListByResourceGroup(ctx, clusterRGName, "resourceType eq 'Microsoft.Compute/virtualMachines'", "", nil)
+	computeResources, err := newResourceClientFunction(env.Environment(), subscriptionDoc.ID, fpAuth).ListByResourceGroup(ctx, clusterRGName, "resourceType eq 'Microsoft.Compute/virtualMachines'", "", nil)
 	if err != nil {
 		return nil, err
 	}
 
 	vmAllocationStatus := make(VMAllocationStatus)
-	virtualMachineClient := NewVirtualMachineClientFunction(env.Environment(), subscriptionDoc.ID, fpAuth)
+	virtualMachineClient := newVirtualMachineClientFunction(env.Environment(), subscriptionDoc.ID, fpAuth)
 	for _, res := range computeResources {
 		var vmName, allocationStatus string
-		if *res.Type != "Microsoft.Compute/virtualMachines" {
-			continue
-		}
-
 		vm, err := virtualMachineClient.Get(ctx, clusterRGName, *res.Name, mgmtcompute.InstanceView)
 		if err != nil {
 			f.log.Warn(err) // can happen when the ARM cache is lagging

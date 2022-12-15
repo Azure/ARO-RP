@@ -65,7 +65,7 @@ func newAzureSideFetcher(resourceGroupName string, subscriptionDoc *api.Subscrip
 	}
 }
 
-func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument, azureazureSideFetcher azureSideFetcher) (*realFetcher, error) {
+func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument, azureSideFetcher azureSideFetcher) (*realFetcher, error) {
 	restConfig, err := restconfig.RestConfig(dialer, doc.OpenShiftCluster)
 	if err != nil {
 		log.Error(err)
@@ -94,7 +94,7 @@ func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftCl
 		configCli:        configCli,
 		kubernetesCli:    kubernetesCli,
 		machineClient:    machineClient,
-		azureSideFetcher: azureazureSideFetcher,
+		azureSideFetcher: azureSideFetcher,
 	}, nil
 }
 

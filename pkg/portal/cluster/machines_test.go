@@ -117,17 +117,18 @@ func TestVMAllocationStatus(t *testing.T) {
 	controller := gomock.NewController(t)
 	mockResourcesClient := mock_features.NewMockResourcesClient(controller)
 	mockVirtualMachinesClient := mock_compute.NewMockVirtualMachinesClient(controller)
-	NewResourceClientFunction = func(environment *azureclient.AROEnvironment,
+	newResourceClientFunction = func(environment *azureclient.AROEnvironment,
 		subscriptionID string,
 		authorizer autorest.Authorizer) features.ResourcesClient {
 		return mockResourcesClient
 	}
-	NewVirtualMachineClientFunction = func(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
+	newVirtualMachineClientFunction = func(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
 		return mockVirtualMachinesClient
 	}
 
 	defer func() {
-		NewResourceClientFunction = features.NewResourcesClient
+		newResourceClientFunction = features.NewResourcesClient
+		newVirtualMachineClientFunction = compute.NewVirtualMachinesClient
 	}()
 
 	type test struct {
@@ -137,7 +138,7 @@ func TestVMAllocationStatus(t *testing.T) {
 	}
 	for _, tt := range []*test{
 		{
-			name: "Everything runs fine",
+			name: "Successfully fetching VMs allocation status. Calling all the required methods.",
 			mocks: func(tt *test,
 				env *mock_env.MockInterface,
 				authorizer *mock_refreshable.MockAuthorizer,
