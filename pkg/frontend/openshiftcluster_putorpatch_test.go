@@ -684,7 +684,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		{
 			name: "create a new cluster",
 			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+				oc.Properties.ClusterProfile.Version = "4.10.40"
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -720,7 +720,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							CreatedAt:           mockCurrentTime,
 							CreatedBy:           version.GitCommit,
 							ClusterProfile: api.ClusterProfile{
-								Version:              "4.10.20",
+								Version:              "4.10.40",
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
@@ -748,7 +748,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				Properties: v20200430.OpenShiftClusterProperties{
 					ProvisioningState: v20200430.ProvisioningStateCreating,
 					ClusterProfile: v20200430.ClusterProfile{
-						Version: "4.10.20",
+						Version: "4.10.40",
 					},
 				},
 			},
@@ -1338,7 +1338,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
-								Version:              "4.10.20",
+								Version:              "4.10.40",
 								ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID),
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
@@ -1384,7 +1384,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
-								Version:              "4.10.20",
+								Version:              "4.10.40",
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
