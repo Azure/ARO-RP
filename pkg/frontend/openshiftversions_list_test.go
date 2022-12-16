@@ -43,9 +43,9 @@ func TestListInstallVersions(t *testing.T) {
 						Enabled: true,
 					},
 				},
-				"4.10.27": {
+				"4.10.67": {
 					Properties: api.OpenShiftVersionProperties{
-						Version: "4.10.27",
+						Version: "4.10.67",
 						Enabled: true,
 					},
 				},
@@ -67,7 +67,7 @@ func TestListInstallVersions(t *testing.T) {
 					},
 					{
 						Properties: v20220904.OpenShiftVersionProperties{
-							Version: "4.10.27",
+							Version: "4.10.67",
 						},
 					},
 					{
