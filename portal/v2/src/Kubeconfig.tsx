@@ -58,7 +58,7 @@ export const KubeconfigButton = forwardRef<any, KubeconfigButtonProps>(
       <>
         <TooltipHost content={`Download Kubeconfig`}>
           <IconButton
-            iconProps={{ iconName: "HardDriveGroup" }}
+            iconProps={{ iconName: "kubernetes-svg" }}
             disabled={fetching === "FETCHING"}
             aria-label="Download Kubeconfig"
             onClick={() => setFetching("")}
