@@ -6,6 +6,7 @@ package e2e
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -80,7 +81,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 func getNodeUptime(g Gomega, ctx context.Context, node string) (time.Time, error) {
 	// container kernel = node kernel = `uptime` in a Pod reflects the Node as well
 	namespace := "default"
-	name := node
+	name := fmt.Sprintf("%s-uptime-%d", node, GinkgoParallelProcess())
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
