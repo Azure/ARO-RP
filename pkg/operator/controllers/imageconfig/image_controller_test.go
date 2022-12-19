@@ -15,19 +15,19 @@ import (
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 // Test reconcile function
 func TestImageConfigReconciler(t *testing.T) {
 	type test struct {
 		name                string
-		arocli              aroclient.Interface
+		instance            *arov1alpha1.Cluster
 		configcli           configclient.Interface
 		wantRegistrySources configv1.RegistrySources
 		wantErr             string
@@ -36,7 +36,7 @@ func TestImageConfigReconciler(t *testing.T) {
 	for _, tt := range []*test{
 		{
 			name: "Feature Flag disabled, no action",
-			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: arov1alpha1.ClusterSpec{
 					ACRDomain:     "arointsvc.azurecr.io",
@@ -46,7 +46,7 @@ func TestImageConfigReconciler(t *testing.T) {
 					},
 					Location: "eastus",
 				},
-			}),
+			},
 			configcli: configfake.NewSimpleClientset(&configv1.Image{
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: configv1.ImageSpec{
@@ -114,14 +114,14 @@ func TestImageConfigReconciler(t *testing.T) {
 		},
 		{
 			name: "AZEnvironment is unset, no action",
-			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
 						controllerEnabled: strconv.FormatBool(true),
 					},
 				},
-			}),
+			},
 			configcli: configfake.NewSimpleClientset(&configv1.Image{
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: configv1.ImageSpec{
@@ -167,7 +167,7 @@ func TestImageConfigReconciler(t *testing.T) {
 		},
 		{
 			name: "uses Public Cloud cluster's ACRDomain configuration for both Azure registries",
-			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: arov1alpha1.ClusterSpec{
 					ACRDomain:     "fakesvc.azurecr.io",
@@ -177,7 +177,7 @@ func TestImageConfigReconciler(t *testing.T) {
 					},
 					Location: "anyplace",
 				},
-			}),
+			},
 			configcli: configfake.NewSimpleClientset(&configv1.Image{
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: configv1.ImageSpec{
@@ -196,7 +196,7 @@ func TestImageConfigReconciler(t *testing.T) {
 		},
 		{
 			name: "uses USGov Cloud cluster's ACRDomain configuration for both Azure registries",
-			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: arov1alpha1.ClusterSpec{
 					ACRDomain:     "fakesvc.azurecr.us",
@@ -206,7 +206,7 @@ func TestImageConfigReconciler(t *testing.T) {
 					},
 					Location: "anyplace",
 				},
-			}),
+			},
 			configcli: configfake.NewSimpleClientset(&configv1.Image{
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: configv1.ImageSpec{
@@ -227,27 +227,25 @@ func TestImageConfigReconciler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			var arocli aroclient.Interface
-			if tt.arocli != nil {
-				arocli = tt.arocli
-			} else {
-				arocli = arofake.NewSimpleClientset(&arov1alpha1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
-					Spec: arov1alpha1.ClusterSpec{
-						ACRDomain:     "arointsvc.azurecr.io",
-						AZEnvironment: azureclient.PublicCloud.Environment.Name,
-						OperatorFlags: arov1alpha1.OperatorFlags{
-							controllerEnabled: strconv.FormatBool(true),
-						},
-						Location: "eastus",
+			instance := &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
+				Spec: arov1alpha1.ClusterSpec{
+					ACRDomain:     "arointsvc.azurecr.io",
+					AZEnvironment: azureclient.PublicCloud.Environment.Name,
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						controllerEnabled: strconv.FormatBool(true),
 					},
-				})
+					Location: "eastus",
+				},
+			}
+			if tt.instance != nil {
+				instance = tt.instance
 			}
 
 			r := &Reconciler{
 				log:       logrus.NewEntry(logrus.StandardLogger()),
-				arocli:    arocli,
 				configcli: tt.configcli,
+				client:    ctrlfake.NewClientBuilder().WithObjects(instance).Build(),
 			}
 			request := ctrl.Request{}
 			request.Name = "cluster"

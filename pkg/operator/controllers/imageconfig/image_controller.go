@@ -14,6 +14,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
@@ -37,14 +37,14 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli    aroclient.Interface
 	configcli configclient.Interface
+
+	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli configclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, configcli configclient.Interface) *Reconciler {
 	return &Reconciler{
 		log:       log,
-		arocli:    arocli,
 		configcli: configcli,
 	}
 }
@@ -54,8 +54,8 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli conf
 // - If AllowedRegistries is not nil, makes sure required registries are added
 // - Fails fast if both are not nil, unsupported
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	// Get cluster
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, request.Name, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -119,6 +119,11 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&configv1.Image{}, builder.WithPredicates(imagePredicate)).
 		Named(ControllerName).
 		Complete(r)
+}
+
+func (a *Reconciler) InjectClient(c client.Client) error {
+	a.client = c
+	return nil
 }
 
 // Switch case to ensure the correct registries are added depending on the cloud environment (Gov or Public cloud)
