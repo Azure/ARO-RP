@@ -13,7 +13,7 @@ import (
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -24,7 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
@@ -43,9 +42,10 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
 	maocli        machineclient.Interface
+
+	client client.Client
 }
 
 // reconcileManager is an instance of the manager instantiated per request
@@ -60,10 +60,9 @@ type reconcileManager struct {
 }
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli machineclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, maocli machineclient.Interface) *Reconciler {
 	return &Reconciler{
 		log:           log,
-		arocli:        arocli,
 		kubernetescli: kubernetescli,
 		maocli:        maocli,
 	}
@@ -71,7 +70,8 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli 
 
 // Reconcile fixes the Network Security Groups
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -166,4 +166,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForObject{}).            // to reconcile on node status change
 		Named(ControllerName).
 		Complete(r)
+}
+
+func (a *Reconciler) InjectClient(c client.Client) error {
+	a.client = c
+	return nil
 }

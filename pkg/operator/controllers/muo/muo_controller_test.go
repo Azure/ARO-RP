@@ -14,12 +14,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 func TestMUOReconciler(t *testing.T) {
@@ -244,10 +245,15 @@ func TestMUOReconciler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			cluster := &arov1alpha1.Cluster{
+			instance := &arov1alpha1.Cluster{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Cluster",
+					APIVersion: "aro.openshift.io/v1alpha1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
 				},
@@ -256,9 +262,9 @@ func TestMUOReconciler(t *testing.T) {
 					ACRDomain:     "acrtest.example.com",
 				},
 			}
-			arocli := arofake.NewSimpleClientset(cluster)
 			kubecli := fake.NewSimpleClientset()
 			deployer := mock_deployer.NewMockDeployer(controller)
+			clientFake := ctrlfake.NewClientBuilder().WithObjects(instance).Build()
 
 			if tt.pullsecret != "" {
 				_, err := kubecli.CoreV1().Secrets(pullSecretName.Namespace).Create(context.Background(),
@@ -276,18 +282,18 @@ func TestMUOReconciler(t *testing.T) {
 			}
 
 			if tt.mocks != nil {
-				tt.mocks(deployer, cluster)
+				tt.mocks(deployer, instance)
 			}
 
 			r := &Reconciler{
 				log:               logrus.NewEntry(logrus.StandardLogger()),
-				arocli:            arocli,
 				kubernetescli:     kubecli,
 				deployer:          deployer,
+				client:            clientFake,
 				readinessTimeout:  0 * time.Second,
 				readinessPollTime: 1 * time.Second,
 			}
-			_, err := r.Reconcile(context.Background(), reconcile.Request{})
+			_, err := r.Reconcile(ctx, reconcile.Request{})
 			if err != nil && err.Error() != tt.wantErr {
 				t.Errorf("got error '%v', wanted error '%v'", err, tt.wantErr)
 			}

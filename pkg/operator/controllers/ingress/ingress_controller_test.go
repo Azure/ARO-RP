@@ -13,9 +13,10 @@ import (
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 func TestReconciler(t *testing.T) {
@@ -111,7 +112,6 @@ func TestReconciler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.aroCluster.Spec.OperatorFlags["aro.ingress.enabled"] = tt.aroIngressControllerFlag
-			arocli := arofake.NewSimpleClientset(tt.aroCluster)
 			operatorcli := operatorfake.NewSimpleClientset()
 
 			if tt.ingressController != nil {
@@ -120,8 +120,8 @@ func TestReconciler(t *testing.T) {
 
 			r := &Reconciler{
 				log:         logrus.NewEntry(logrus.StandardLogger()),
-				arocli:      arocli,
 				operatorcli: operatorcli,
+				client:      ctrlfake.NewClientBuilder().WithObjects(tt.aroCluster).Build(),
 			}
 
 			request := ctrl.Request{}

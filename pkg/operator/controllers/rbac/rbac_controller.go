@@ -8,8 +8,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -18,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
@@ -31,20 +30,21 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli aroclient.Interface
-	dh     dynamichelper.Interface
+	dh dynamichelper.Interface
+
+	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, dh dynamichelper.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
-		log:    log,
-		arocli: arocli,
-		dh:     dh,
+		log: log,
+		dh:  dh,
 	}
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -105,4 +105,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&rbacv1.ClusterRoleBinding{}).
 		Named(ControllerName).
 		Complete(r)
+}
+
+func (a *Reconciler) InjectClient(c client.Client) error {
+	a.client = c
+	return nil
 }

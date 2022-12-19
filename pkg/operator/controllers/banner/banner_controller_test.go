@@ -14,14 +14,14 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 func TestBannerReconcile(t *testing.T) {
-	r := Reconciler{log: utillog.GetLogger()}
 	for _, tt := range []struct {
 		name            string
 		oldCN           consolev1.ConsoleNotification
@@ -145,8 +145,11 @@ func TestBannerReconcile(t *testing.T) {
 				},
 			}
 
-			r.arocli = arofake.NewSimpleClientset(&instance)
-			r.consolecli = consolefake.NewSimpleClientset(&tt.oldCN)
+			r := Reconciler{
+				log:        utillog.GetLogger(),
+				consolecli: consolefake.NewSimpleClientset(&tt.oldCN),
+				client:     fake.NewClientBuilder().WithObjects(&instance).Build(),
+			}
 
 			// function under test
 			_, err := r.Reconcile(context.Background(), ctrl.Request{})

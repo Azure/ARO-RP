@@ -10,7 +10,7 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -44,6 +44,8 @@ type Reconciler struct {
 
 	arocli  aroclient.Interface
 	checker servicePrincipalChecker
+
+	client client.Client
 }
 
 func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, role string) *Reconciler {
@@ -58,7 +60,8 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli 
 
 // Reconcile will keep checking that the cluster has a valid cluster service principal.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -130,4 +133,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		)
 
 	return builder.Named(ControllerName).Complete(r)
+}
+
+func (a *Reconciler) InjectClient(c client.Client) error {
+	a.client = c
+	return nil
 }

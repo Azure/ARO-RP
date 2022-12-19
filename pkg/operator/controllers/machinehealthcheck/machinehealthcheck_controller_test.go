@@ -14,18 +14,18 @@ import (
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 // Test reconcile function
 func TestReconciler(t *testing.T) {
 	type test struct {
 		name             string
-		arocli           aroclient.Interface
+		instance         *arov1alpha1.Cluster
 		mocks            func(mdh *mock_dynamichelper.MockInterface)
 		wantErr          string
 		wantRequeueAfter time.Duration
@@ -33,18 +33,13 @@ func TestReconciler(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			name: "Failure to get instance",
-			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "some other name",
-				},
-			}),
+			name:    "Failure to get instance",
 			mocks:   func(mdh *mock_dynamichelper.MockInterface) {},
 			wantErr: `clusters.aro.openshift.io "cluster" not found`,
 		},
 		{
 			name: "Enabled Feature Flag is false",
-			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
 				},
@@ -53,7 +48,7 @@ func TestReconciler(t *testing.T) {
 						enabled: strconv.FormatBool(false),
 					},
 				},
-			}),
+			},
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
 				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(0)
 				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
@@ -62,7 +57,7 @@ func TestReconciler(t *testing.T) {
 		},
 		{
 			name: "Managed Feature Flag is false: ensure mhc and its alert are deleted",
-			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
 				},
@@ -72,7 +67,7 @@ func TestReconciler(t *testing.T) {
 						managed: strconv.FormatBool(false),
 					},
 				},
-			}),
+			},
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
 				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(1)
 				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Times(1)
@@ -81,7 +76,7 @@ func TestReconciler(t *testing.T) {
 		},
 		{
 			name: "Managed Feature Flag is false: mhc fails to delete, an error is returned",
-			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
 				},
@@ -91,7 +86,7 @@ func TestReconciler(t *testing.T) {
 						managed: strconv.FormatBool(false),
 					},
 				},
-			}),
+			},
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
 				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Return(errors.New("Could not delete mhc"))
 			},
@@ -100,7 +95,7 @@ func TestReconciler(t *testing.T) {
 		},
 		{
 			name: "Managed Feature Flag is false: mhc deletes but mhc alert fails to delete, an error is returned",
-			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
 				},
@@ -110,7 +105,7 @@ func TestReconciler(t *testing.T) {
 						managed: strconv.FormatBool(false),
 					},
 				},
-			}),
+			},
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
 				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(1)
 				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(errors.New("Could not delete mhc alert"))
@@ -120,7 +115,7 @@ func TestReconciler(t *testing.T) {
 		},
 		{
 			name: "Managed Feature Flag is true: dynamic helper ensures resources",
-			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
 				},
@@ -130,7 +125,7 @@ func TestReconciler(t *testing.T) {
 						managed: strconv.FormatBool(true),
 					},
 				},
-			}),
+			},
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
 				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
@@ -138,7 +133,7 @@ func TestReconciler(t *testing.T) {
 		},
 		{
 			name: "When ensuring resources fails, an error is returned",
-			arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
 				},
@@ -148,7 +143,7 @@ func TestReconciler(t *testing.T) {
 						managed: strconv.FormatBool(true),
 					},
 				},
-			}),
+			},
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
 				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(errors.New("failed to ensure"))
 			},
@@ -163,8 +158,17 @@ func TestReconciler(t *testing.T) {
 
 			tt.mocks(mdh)
 
+			clientBuilder := ctrlfake.NewClientBuilder()
+			if tt.instance != nil {
+				clientBuilder = clientBuilder.WithObjects(tt.instance)
+			}
+
 			ctx := context.Background()
-			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), tt.arocli, mdh)
+			r := &Reconciler{
+				log:    logrus.NewEntry(logrus.StandardLogger()),
+				dh:     mdh,
+				client: clientBuilder.Build(),
+			}
 			request := ctrl.Request{}
 			request.Name = "cluster"
 

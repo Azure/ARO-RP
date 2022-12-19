@@ -15,9 +15,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -143,7 +145,7 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cluster := &arov1alpha1.Cluster{
+			instance := &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 				Status:     arov1alpha1.ClusterStatus{Conditions: []operatorv1.OperatorCondition{}},
 				Spec: arov1alpha1.ClusterSpec{
@@ -155,10 +157,10 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 
 			r := &Reconciler{
 				log:    logrus.NewEntry(logrus.StandardLogger()),
-				arocli: arofake.NewSimpleClientset(cluster),
+				client: ctrlfake.NewClientBuilder().WithObjects(instance).Build(),
 			}
 
-			daemonset, err := r.daemonset(cluster)
+			daemonset, err := r.daemonset(instance)
 			if err != nil {
 				t.Fatal(err)
 			}
