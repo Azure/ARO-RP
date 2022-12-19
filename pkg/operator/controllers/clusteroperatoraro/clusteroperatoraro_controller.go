@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -22,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -43,34 +43,23 @@ type Reconciler struct {
 	// TODO: Replace configcli with CO client
 	log *logrus.Entry
 
-	arocli    aroclient.Interface
 	configcli configclient.Interface
+
+	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli configclient.Interface) *Reconciler {
+// TODO: Decide whether we actually going to make any progress on this. If not - clean up.
+func NewReconciler(log *logrus.Entry, configcli configclient.Interface) *Reconciler {
 	return &Reconciler{
 		log:       log,
-		arocli:    arocli,
 		configcli: configcli,
 	}
 }
 
-// SetupWithManager setup our manager
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return o.GetName() == arov1alpha1.SingletonClusterName
-	})
-
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
-		Owns(&configv1.ClusterOperator{}).
-		Named(ControllerName).
-		Complete(r)
-}
-
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	r.log.Debug("running")
-	cluster, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -81,7 +70,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return err
 		}
 
-		err = controllerutil.SetControllerReference(cluster, co, scheme.Scheme)
+		err = controllerutil.SetControllerReference(instance, co, scheme.Scheme)
 		if err != nil {
 			return err
 		}
@@ -188,4 +177,22 @@ func (r *Reconciler) defaultOperator() *configv1.ClusterOperator {
 			},
 		},
 	}
+}
+
+// SetupWithManager setup our manager
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == arov1alpha1.SingletonClusterName
+	})
+
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
+		Owns(&configv1.ClusterOperator{}).
+		Named(ControllerName).
+		Complete(r)
+}
+
+func (a *Reconciler) InjectClient(c client.Client) error {
+	a.client = c
+	return nil
 }

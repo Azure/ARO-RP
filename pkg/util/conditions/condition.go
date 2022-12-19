@@ -21,6 +21,7 @@ import (
 // This variable makes it easier to test conditions.
 var kubeclock clock.Clock = &clock.RealClock{}
 
+// TODO: Need to get rid of dependency on aroclient.Interface and replace it with a client from controller-runtime.
 func SetCondition(ctx context.Context, arocli aroclient.Interface, cond *operatorv1.OperatorCondition, role string) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if cond == nil {

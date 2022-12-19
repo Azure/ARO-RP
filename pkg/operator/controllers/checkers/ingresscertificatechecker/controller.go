@@ -13,7 +13,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,6 +45,8 @@ type Reconciler struct {
 
 	arocli  aroclient.Interface
 	checker ingressCertificateChecker
+
+	client client.Client
 }
 
 func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, operatorcli operatorclient.Interface, configcli configclient.Interface, role string) *Reconciler {
@@ -59,7 +61,8 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, operatorcli op
 
 // Reconcile will keep checking that the cluster has a valid default IngressController configuration.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -147,4 +150,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		)
 
 	return builder.Named(ControllerName).Complete(r)
+}
+
+func (a *Reconciler) InjectClient(c client.Client) error {
+	a.client = c
+	return nil
 }

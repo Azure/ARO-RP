@@ -11,11 +11,12 @@ import (
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
@@ -26,15 +27,15 @@ const (
 type MachineConfigPoolReconciler struct {
 	log *logrus.Entry
 
-	arocli aroclient.Interface
 	mcocli mcoclient.Interface
 	dh     dynamichelper.Interface
+
+	client client.Client
 }
 
-func NewMachineConfigPoolReconciler(log *logrus.Entry, arocli aroclient.Interface, mcocli mcoclient.Interface, dh dynamichelper.Interface) *MachineConfigPoolReconciler {
+func NewMachineConfigPoolReconciler(log *logrus.Entry, mcocli mcoclient.Interface, dh dynamichelper.Interface) *MachineConfigPoolReconciler {
 	return &MachineConfigPoolReconciler{
 		log:    log,
-		arocli: arocli,
 		mcocli: mcocli,
 		dh:     dh,
 	}
@@ -43,7 +44,8 @@ func NewMachineConfigPoolReconciler(log *logrus.Entry, arocli aroclient.Interfac
 // Reconcile watches MachineConfigPool objects, and if any changes,
 // reconciles the associated ARO DNS MachineConfig object
 func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -63,7 +65,7 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 		return reconcile.Result{}, err
 	}
 
-	err = reconcileMachineConfigs(ctx, r.arocli, r.dh, request.Name)
+	err = reconcileMachineConfigs(ctx, instance, r.dh, request.Name)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
@@ -78,4 +80,9 @@ func (r *MachineConfigPoolReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&mcv1.MachineConfigPool{}).
 		Named(MachineConfigPoolControllerName).
 		Complete(r)
+}
+
+func (a *MachineConfigPoolReconciler) InjectClient(c client.Client) error {
+	a.client = c
+	return nil
 }

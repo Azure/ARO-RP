@@ -31,7 +31,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
@@ -49,15 +48,15 @@ var rhKeys = []string{"registry.redhat.io", "cloud.openshift.com", "registry.con
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
+
+	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface) *Reconciler {
 	return &Reconciler{
 		log:           log,
 		kubernetescli: kubernetescli,
-		arocli:        arocli,
 	}
 }
 
@@ -71,7 +70,8 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli 
 //   - If the pull Secret object (which is not owned by the Cluster object)
 //     changes, we'll see the pull Secret object requested.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -112,7 +112,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	_, err = r.arocli.AroV1alpha1().Clusters().UpdateStatus(ctx, instance, metav1.UpdateOptions{})
+	err = r.client.Update(ctx, instance)
 	return reconcile.Result{}, err
 }
 
@@ -138,6 +138,11 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		).
 		Named(ControllerName).
 		Complete(r)
+}
+
+func (a *Reconciler) InjectClient(c client.Client) error {
+	a.client = c
+	return nil
 }
 
 // ensureGlobalPullSecret checks the state of the pull secrets, in case of missing or broken ARO pull secret

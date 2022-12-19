@@ -18,10 +18,11 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ktesting "k8s.io/client-go/testing"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 func TestReconciler(t *testing.T) {
@@ -191,7 +192,7 @@ func TestReconciler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			baseCluster := arov1alpha1.Cluster{
+			instance := &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: arov1alpha1.ClusterSpec{
 					InfraID: "aro-fake",
@@ -209,8 +210,8 @@ func TestReconciler(t *testing.T) {
 
 			r := &Reconciler{
 				log:    logrus.NewEntry(logrus.StandardLogger()),
-				arocli: arofake.NewSimpleClientset(&baseCluster),
 				maocli: maocli,
+				client: ctrlfake.NewClientBuilder().WithObjects(instance).Build(),
 			}
 
 			request := ctrl.Request{}

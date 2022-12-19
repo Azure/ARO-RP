@@ -10,14 +10,14 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -33,13 +33,14 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli    aroclient.Interface
 	configcli configclient.Interface
 
 	workarounds []Workaround
+
+	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli configclient.Interface, kubernetescli kubernetes.Interface, mcocli mcoclient.Interface, restConfig *rest.Config) *Reconciler {
+func NewReconciler(log *logrus.Entry, configcli configclient.Interface, kubernetescli kubernetes.Interface, mcocli mcoclient.Interface, restConfig *rest.Config) *Reconciler {
 	dh, err := dynamichelper.New(log, restConfig)
 	if err != nil {
 		panic(err)
@@ -47,7 +48,6 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli conf
 
 	return &Reconciler{
 		log:         log,
-		arocli:      arocli,
 		configcli:   configcli,
 		workarounds: []Workaround{NewSystemReserved(log, mcocli, dh), NewIfReload(log, kubernetescli)},
 	}
@@ -55,7 +55,8 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli conf
 
 // Reconcile makes sure that the workarounds are applied or removed as per the OpenShift version.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -93,4 +94,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}).
 		Named(ControllerName).
 		Complete(r)
+}
+
+func (a *Reconciler) InjectClient(c client.Client) error {
+	a.client = c
+	return nil
 }

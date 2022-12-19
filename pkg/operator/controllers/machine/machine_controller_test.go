@@ -17,9 +17,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 func TestMachineReconciler(t *testing.T) {
@@ -64,16 +66,6 @@ func TestMachineReconciler(t *testing.T) {
 		workerMachineSet2 := workerMachineSet("foo-hx8z7-machineset-2")
 
 		return machinefake.NewSimpleClientset(worker0, worker1, master0, master1, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
-	}
-
-	baseCluster := arov1alpha1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-		Status:     arov1alpha1.ClusterStatus{Conditions: []operatorv1.OperatorCondition{}},
-		Spec: arov1alpha1.ClusterSpec{
-			OperatorFlags: arov1alpha1.OperatorFlags{
-				controllerEnabled: "true",
-			},
-		},
 	}
 
 	tests := []struct {
@@ -156,12 +148,26 @@ func TestMachineReconciler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			baseCluster := arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Status:     arov1alpha1.ClusterStatus{Conditions: []operatorv1.OperatorCondition{}},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						controllerEnabled: "true",
+					},
+				},
+			}
+
+			clientFake := fake.NewClientBuilder().WithObjects(&baseCluster).Build()
+			arocliFake := arofake.NewSimpleClientset(&baseCluster)
+
 			r := &Reconciler{
 				maocli:                 tt.maocli,
 				log:                    logrus.NewEntry(logrus.StandardLogger()),
-				arocli:                 arofake.NewSimpleClientset(&baseCluster),
+				arocli:                 arocliFake,
 				isLocalDevelopmentMode: false,
 				role:                   "master",
+				client:                 clientFake,
 			}
 
 			_, err := r.Reconcile(context.Background(), tt.request)
