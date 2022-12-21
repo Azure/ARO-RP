@@ -371,6 +371,9 @@ func enrichSyncSetSystemData(doc *api.ClusterManagerConfigurationDocument, syste
 	if systemData == nil {
 		return
 	}
+	if doc.SyncSet.SystemData == nil {
+		doc.SyncSet.SystemData = &api.SystemData{}
+	}
 	if systemData.CreatedAt != nil {
 		doc.SyncSet.SystemData.CreatedAt = systemData.CreatedAt
 	}
@@ -394,6 +397,9 @@ func enrichSyncSetSystemData(doc *api.ClusterManagerConfigurationDocument, syste
 func enrichMachinePoolSystemData(doc *api.ClusterManagerConfigurationDocument, systemData *api.SystemData) {
 	if systemData == nil {
 		return
+	}
+	if doc.MachinePool.SystemData == nil {
+		doc.MachinePool.SystemData = &api.SystemData{}
 	}
 	if systemData.CreatedAt != nil {
 		doc.MachinePool.SystemData.CreatedAt = systemData.CreatedAt
@@ -419,6 +425,9 @@ func enrichSyncIdentityProviderSystemData(doc *api.ClusterManagerConfigurationDo
 	if systemData == nil {
 		return
 	}
+	if doc.SyncIdentityProvider.SystemData == nil {
+		doc.SyncIdentityProvider.SystemData = &api.SystemData{}
+	}
 	if systemData.CreatedAt != nil {
 		doc.SyncIdentityProvider.SystemData.CreatedAt = systemData.CreatedAt
 	}
@@ -442,6 +451,9 @@ func enrichSyncIdentityProviderSystemData(doc *api.ClusterManagerConfigurationDo
 func enrichSecretSystemData(doc *api.ClusterManagerConfigurationDocument, systemData *api.SystemData) {
 	if systemData == nil {
 		return
+	}
+	if doc.Secret.SystemData == nil {
+		doc.Secret.SystemData = &api.SystemData{}
 	}
 	if systemData.CreatedAt != nil {
 		doc.Secret.SystemData.CreatedAt = systemData.CreatedAt

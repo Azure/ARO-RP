@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
@@ -224,5 +225,75 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 				t.Errorf("%s: %s", err, string(b))
 			}
 		})
+	}
+}
+
+var populatedSystemData = api.SystemData{
+	LastModifiedAt:     &time.Time{},
+	LastModifiedBy:     "test-user",
+	LastModifiedByType: api.CreatedByTypeUser,
+	CreatedAt:          &time.Time{},
+	CreatedBy:          "test-user",
+	CreatedByType:      api.CreatedByTypeUser,
+}
+
+func TestEnrichSyncSetSystemData(t *testing.T) {
+	doc := api.ClusterManagerConfigurationDocument{
+		SyncSet: &api.SyncSet{},
+	}
+
+	enrichSyncSetSystemData(&doc, &populatedSystemData)
+
+	compareSystemData(t, *doc.SyncSet.SystemData, populatedSystemData)
+}
+
+func TestEnrichSyncIdentityProviderSystemData(t *testing.T) {
+	doc := api.ClusterManagerConfigurationDocument{
+		SyncIdentityProvider: &api.SyncIdentityProvider{},
+	}
+
+	enrichSyncIdentityProviderSystemData(&doc, &populatedSystemData)
+
+	compareSystemData(t, *doc.SyncIdentityProvider.SystemData, populatedSystemData)
+}
+
+func TestEnrichMachinePoolSystemData(t *testing.T) {
+	doc := api.ClusterManagerConfigurationDocument{
+		MachinePool: &api.MachinePool{},
+	}
+
+	enrichMachinePoolSystemData(&doc, &populatedSystemData)
+
+	compareSystemData(t, *doc.MachinePool.SystemData, populatedSystemData)
+}
+
+func TestEnrichSecretSystemData(t *testing.T) {
+	doc := api.ClusterManagerConfigurationDocument{
+		Secret: &api.Secret{},
+	}
+
+	enrichSecretSystemData(&doc, &populatedSystemData)
+
+	compareSystemData(t, *doc.Secret.SystemData, populatedSystemData)
+}
+
+func compareSystemData(t *testing.T, docSystemData, expectedSystemData api.SystemData) {
+	if docSystemData.CreatedAt == nil || docSystemData.CreatedAt != expectedSystemData.CreatedAt {
+		t.Fatalf("CreatedAt was %q expected %q", docSystemData.CreatedAt, expectedSystemData.CreatedAt)
+	}
+	if docSystemData.CreatedBy == "" || docSystemData.CreatedBy != expectedSystemData.CreatedBy {
+		t.Fatalf("CreatedBy was %q expected %q", docSystemData.CreatedBy, expectedSystemData.CreatedBy)
+	}
+	if docSystemData.CreatedByType == "" || docSystemData.CreatedByType != expectedSystemData.CreatedByType {
+		t.Fatalf("CreatedByType was %q expected %q", docSystemData.CreatedByType, expectedSystemData.CreatedByType)
+	}
+	if docSystemData.LastModifiedAt == nil || docSystemData.LastModifiedAt != expectedSystemData.LastModifiedAt {
+		t.Fatalf("LastModifiedAt was %q expected %q", docSystemData.LastModifiedAt, expectedSystemData.LastModifiedAt)
+	}
+	if docSystemData.LastModifiedBy == "" || docSystemData.LastModifiedBy != expectedSystemData.LastModifiedBy {
+		t.Fatalf("LastModifiedBy was %q expected %q", docSystemData.LastModifiedBy, expectedSystemData.LastModifiedBy)
+	}
+	if docSystemData.LastModifiedByType == "" || docSystemData.LastModifiedByType != expectedSystemData.LastModifiedByType {
+		t.Fatalf("LastModifiedByType was %q expected %q", docSystemData.LastModifiedByType, expectedSystemData.LastModifiedByType)
 	}
 }
