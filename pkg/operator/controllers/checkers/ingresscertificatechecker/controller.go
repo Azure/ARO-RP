@@ -23,6 +23,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	checkercommon "github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/common"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
+	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
 )
 
 // This is the permissions that this controller needs to work.
@@ -37,40 +38,42 @@ const (
 
 // Reconciler runs a number of checkers
 type Reconciler struct {
-	log  *logrus.Entry
-	role string
-
+	log     *logrus.Entry
+	role    string
+	client  client.Client
 	checker ingressCertificateChecker
-
-	client client.Client
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client, role string) *Reconciler {
 	return &Reconciler{
-		log:  log,
-		role: role,
-
+		log:     log,
+		role:    role,
+		client:  client,
 		checker: newIngressCertificateChecker(client),
-
-		client: client,
 	}
 }
 
 // Reconcile will keep checking that the cluster has a valid default IngressController configuration.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	cluster := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(checkercommon.ControllerEnabled) {
+	if !cluster.Spec.OperatorFlags.GetSimpleBoolean(checkercommon.ControllerEnabled) {
 		r.log.Debug("controller is disabled")
 		return r.reconcileDisabled(ctx)
 	}
 
 	r.log.Debug("running")
-	checkErr := r.checker.Check(ctx)
+
+	domainDetector, err := utilnet.NewDomainDetector(cluster.Spec.AZEnvironment)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	checkErr := r.checker.Check(ctx, domainDetector)
 	condition := r.condition(checkErr)
 
 	err = conditions.SetCondition(ctx, r.client, condition, r.role)
@@ -81,7 +84,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// In case of this error we want to set condition to False, but
 	// we don't want to continuously try to reconcile it as it might
 	// be expected config in some cases (e.g. custom domain cluster)
-	if errors.Is(checkErr, errNoDefaultCertificate) {
+	if errors.Is(checkErr, errNoCertificateAndCustomDomain) {
 		return reconcile.Result{RequeueAfter: time.Hour}, nil
 	}
 

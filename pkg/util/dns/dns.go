@@ -18,7 +18,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 )
 
-const resourceID = "resourceId"
+const (
+	resourceID = "resourceId"
+)
 
 type Manager interface {
 	Create(context.Context, *api.OpenShiftCluster) error
