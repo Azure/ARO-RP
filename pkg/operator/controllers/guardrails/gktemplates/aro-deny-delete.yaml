@@ -27,5 +27,5 @@ spec:
         input.review.operation == "DELETE"
         deny_resource_name := input.parameters.name
         deny_resource_name == input.review.object.metadata.name
-        msg := "Deleting resource - " + name + " is not allowed"
+        msg := sprintf("Deleting resource - %v is not allowed", [deny_resource_name])
       }
