@@ -3,7 +3,7 @@ kind: ARODenyLabels
 metadata:
   name: aro-machines-deny
 spec:
-  enforcementAction: fail
+  enforcementAction: {{.Enforcement}}
   match:
     namespaces: ["openshift-machine-api"]
     kinds:
