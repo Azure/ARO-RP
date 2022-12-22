@@ -1,7 +1,7 @@
-apiVersion: templates.gatekeeper.sh/v1beta1
+apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate
 metadata:
-  name: aro-deny-delete
+  name: arodenydelete
   annotations:
     description: >-
       Prevents unexpected deletion of a specific critical resource
@@ -23,9 +23,9 @@ spec:
     rego: |
       package arodenydelete
 
-      deny[msg] {
+      violation[{"msg": msg}] {
         input.review.operation == "DELETE"
         deny_resource_name := input.parameters.name
         deny_resource_name == input.review.object.metadata.name
-        msg = "Deleting resource - " + name + " is not allowed"
+        msg := "Deleting resource - " + name + " is not allowed"
       }
