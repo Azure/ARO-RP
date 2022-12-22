@@ -38,11 +38,12 @@ jobs:
       Dockerfile: Dockerfile.python
 
   - script: |
-      docker run --platform=linux/amd64 -t --rm test-python:$(Build.BuildId) make test-python
+      docker run --platform=linux/amd64 --name make_test-python_$(Build.BuildId) -t --rm test-python:$(Build.BuildId) make test-python
     displayName: 🧪Run Python Unit Tests
 
   - script: |
-      docker rmi test-python:$(Build.BuildId)
+      docker rm -f make_test-python_$(Build.BuildId) || true
+      docker rmi -f test-python:$(Build.BuildId)
     displayName: Clean Python Image
     condition: always()
 
@@ -63,26 +64,29 @@ jobs:
       Dockerfile: Dockerfile.ci
 
   - script: |
-      docker run --platform=linux/amd64 -v $(go env GOMODCACHE):/opt/app-root/src/go/pkg/mod -v $(go env GOCACHE):/opt/app-root/src/.cache/go-build -t --rm ci:$(Build.BuildId) generate
+      docker run --platform=linux/amd64 --name make_generate_$(Build.BuildId) -v $(go env GOMODCACHE):/opt/app-root/src/go/pkg/mod -t --rm ci:$(Build.BuildId) ./hack/ci-utils/build.sh generate
     displayName: ⚙️ Run Golang code generate
 
   - script: |
-      docker run --platform=linux/amd64 -v $(go env GOMODCACHE):/opt/app-root/src/go/pkg/mod -v $(go env GOCACHE):/opt/app-root/src/.cache/go-build -t --rm ci:$(Build.BuildId) build-all
+      docker run --platform=linux/amd64 --name make_build-all_$(Build.BuildId) -v $(go env GOMODCACHE):/opt/app-root/src/go/pkg/mod -t --rm ci:$(Build.BuildId) ./hack/ci-utils/build.sh build-all
     displayName: 🕵️ Build Golang code
 
   - script: |
-      docker run --platform=linux/amd64 --name unit-test-go_$(Build.BuildId) -v $(go env GOMODCACHE):/opt/app-root/src/go/pkg/mod -v $(go env GOCACHE):/opt/app-root/src/.cache/go-build -t ci:$(Build.BuildId) unit-test-go
-      docker cp unit-test-go_$(Build.BuildId):/root/go/src/github.com/Azure/ARO-RP/cover.out .
-      docker cp unit-test-go_$(Build.BuildId):/root/go/src/github.com/Azure/ARO-RP/report.xml .
+      docker run --platform=linux/amd64 --name make_unit-test-go_$(Build.BuildId) -v $(go env GOMODCACHE):/opt/app-root/src/go/pkg/mod -t ci:$(Build.BuildId) ./hack/ci-utils/build.sh unit-test-go
+      docker cp make_unit-test-go_$(Build.BuildId):/root/go/src/github.com/Azure/ARO-RP/cover.out .
+      docker cp make_unit-test-go_$(Build.BuildId):/root/go/src/github.com/Azure/ARO-RP/report.xml .
     displayName: 🧪 Run Golang unit tests
 
   - script: |
-      docker run --platform=linux/amd64 -v $(go env GOMODCACHE):/opt/app-root/src/go/pkg/mod -v $(go env GOCACHE):/opt/app-root/src/.cache/go-build -t --rm ci:$(Build.BuildId) validate-fips
+      docker run --platform=linux/amd64 --name make_validate-fips_$(Build.BuildId) -v $(go env GOMODCACHE):/opt/app-root/src/go/pkg/mod -t --rm ci:$(Build.BuildId) ./hack/ci-utils/build.sh validate-fips
     displayName: 🕵️ Validate FIPS
 
   - script: |
-      docker rm unit-test-go_$(Build.BuildId) || true
-      docker rmi ci:$(Build.BuildId)
+      docker rm -f make_generate_$(Build.BuildId) || true
+      docker rm -f make_build-all_$(Build.BuildId) || true
+      docker rm -f make_unit-test-go_$(Build.BuildId) || true
+      docker rm -f make_validate-fips_$(Build.BuildId) || true
+      docker rmi -f ci:$(Build.BuildId)
     displayName: Clean CI Image and Container
     condition: always()
 
@@ -123,10 +127,11 @@ jobs:
       Dockerfile: Dockerfile.portal_lint
 
   - script: |
-      docker run --platform=linux/amd64 -t --rm linter:$(Build.BuildId)
+      docker run --platform=linux/amd64 --name make_linter_$(Build.BuildId) -t --rm linter:$(Build.BuildId)
     displayName: 🧹 Lint Admin Portal
 
   - script: |
-      docker rmi linter:$(Build.BuildId)
+      docker rm -f make_linter_$(Build.BuildId)
+      docker rmi -f linter:$(Build.BuildId)
     displayName: Clean Linter Image
     condition: always()

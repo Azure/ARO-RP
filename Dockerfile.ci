@@ -32,4 +32,4 @@ COPY .env .env
 COPY .sha256sum .sha256sum
 COPY .config .config
 
-ENTRYPOINT [ "hack/ci-utils/build.sh" ]
+RUN hack/ci-utils/build.sh
