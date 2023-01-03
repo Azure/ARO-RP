@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 type testRoundTripper struct {
@@ -135,10 +136,7 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 			}
 
 			resp, err := tripper.RoundTrip(req)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 			if resp != nil && resp.StatusCode != tt.wantRespStatusCode ||
 				resp == nil && tt.wantRespStatusCode != 0 {
 				t.Error(resp)

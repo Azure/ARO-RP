@@ -11,6 +11,8 @@ import (
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/types"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
+
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 func TestZones(t *testing.T) {
@@ -84,10 +86,7 @@ func TestZones(t *testing.T) {
 					},
 				},
 			})
-			if err != nil && tt.wantErr != err.Error() ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 			if !reflect.DeepEqual(tt.wantMaster, zones) {
 				t.Errorf("Expected master %v, got master %v", tt.wantMaster, zones)
 			}

@@ -16,6 +16,7 @@ import (
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 var (
@@ -241,10 +242,7 @@ func TestReconcileManager(t *testing.T) {
 			r := NewFeature(flowLogsClient, kubeSubnets, subnets, location)
 
 			err := r.Reconcile(context.Background(), instance)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 		})
 	}
 }

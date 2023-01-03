@@ -5,7 +5,6 @@ package deploy
 
 import (
 	"context"
-	"errors"
 	"reflect"
 	"testing"
 
@@ -18,14 +17,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 func TestCheckIngressIP(t *testing.T) {
 	type test struct {
-		name    string
-		oc      func() *api.OpenShiftClusterProperties
-		want    string
-		wantErr error
+		name       string
+		oc         func() *api.OpenShiftClusterProperties
+		want       string
+		wantErrMsg string
 	}
 
 	for _, tt := range []*test{
@@ -41,8 +41,7 @@ func TestCheckIngressIP(t *testing.T) {
 					},
 				}
 			},
-			want:    "1.2.3.4",
-			wantErr: nil,
+			want: "1.2.3.4",
 		},
 		{
 			name: "Multiple IngressProfiles, pick default",
@@ -64,8 +63,7 @@ func TestCheckIngressIP(t *testing.T) {
 					},
 				}
 			},
-			want:    "1.2.3.4",
-			wantErr: nil,
+			want: "1.2.3.4",
 		},
 		{
 			name: "Single Ingress Profile, No Default",
@@ -79,8 +77,7 @@ func TestCheckIngressIP(t *testing.T) {
 					},
 				}
 			},
-			want:    "1.1.1.1",
-			wantErr: nil,
+			want: "1.1.1.1",
 		},
 		{
 			name: "Multiple Ingress Profiles, No Default",
@@ -98,8 +95,7 @@ func TestCheckIngressIP(t *testing.T) {
 					},
 				}
 			},
-			want:    "1.1.1.1",
-			wantErr: nil,
+			want: "1.1.1.1",
 		},
 		{
 			name: "No Ingresses in IngressProfiles, Error",
@@ -108,25 +104,22 @@ func TestCheckIngressIP(t *testing.T) {
 					IngressProfiles: []api.IngressProfile{},
 				}
 			},
-			want:    "",
-			wantErr: errors.New("no Ingress Profiles found"),
+			wantErrMsg: "no Ingress Profiles found",
 		},
 		{
 			name: "Nil IngressProfiles, Error",
 			oc: func() *api.OpenShiftClusterProperties {
 				return &api.OpenShiftClusterProperties{}
 			},
-			want:    "",
-			wantErr: errors.New("no Ingress Profiles found"),
+			wantErrMsg: "no Ingress Profiles found",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			oc := tt.oc()
 			ingressIP, err := checkIngressIP(oc.IngressProfiles)
-			if err != nil && err.Error() != tt.wantErr.Error() ||
-				err == nil && tt.wantErr != nil {
-				t.Error(err)
-			}
+
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErrMsg)
+
 			if tt.want != ingressIP {
 				t.Error(cmp.Diff(ingressIP, tt.want))
 			}
@@ -292,7 +285,7 @@ func TestCheckOperatorDeploymentVersion(t *testing.T) {
 		deployment     *appsv1.Deployment
 		desiredVersion string
 		want           bool
-		wantErr        error
+		wantErrMsg     string
 	}{
 		{
 			name: "arooperator deployment has correct version",
@@ -307,7 +300,6 @@ func TestCheckOperatorDeploymentVersion(t *testing.T) {
 			},
 			desiredVersion: "abcde",
 			want:           true,
-			wantErr:        nil,
 		},
 		{
 			name: "arooperator deployment has incorrect version",
@@ -321,8 +313,6 @@ func TestCheckOperatorDeploymentVersion(t *testing.T) {
 				},
 			},
 			desiredVersion: "abcde",
-			want:           false,
-			wantErr:        nil,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -333,10 +323,8 @@ func TestCheckOperatorDeploymentVersion(t *testing.T) {
 			}
 
 			got, err := checkOperatorDeploymentVersion(ctx, clientset.AppsV1().Deployments("openshift-azure-operator"), tt.deployment.Name, tt.desiredVersion)
-			if err != nil && err.Error() != tt.wantErr.Error() ||
-				err == nil && tt.wantErr != nil {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErrMsg)
+
 			if tt.want != got {
 				t.Fatalf("error with CheckOperatorDeploymentVersion test %s: got %v wanted %v", tt.name, got, tt.want)
 			}
@@ -351,7 +339,7 @@ func TestCheckPodImageVersion(t *testing.T) {
 		pod            *corev1.Pod
 		desiredVersion string
 		want           bool
-		wantErr        error
+		wantErrMsg     string
 	}{
 		{
 			name: "arooperator pod has correct image version",
@@ -373,7 +361,6 @@ func TestCheckPodImageVersion(t *testing.T) {
 			},
 			desiredVersion: "abcde",
 			want:           true,
-			wantErr:        nil,
 		},
 		{
 			name: "arooperator pod has incorrect image version",
@@ -394,8 +381,6 @@ func TestCheckPodImageVersion(t *testing.T) {
 				},
 			},
 			desiredVersion: "abcde",
-			want:           false,
-			wantErr:        nil,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -406,10 +391,8 @@ func TestCheckPodImageVersion(t *testing.T) {
 			}
 
 			got, err := checkPodImageVersion(ctx, clientset.CoreV1().Pods("openshift-azure-operator"), tt.pod.Name, tt.desiredVersion)
-			if err != nil && err.Error() != tt.wantErr.Error() ||
-				err == nil && tt.wantErr != nil {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErrMsg)
+
 			if tt.want != got {
 				t.Fatalf("error with CheckPodImageVersion test %s: got %v wanted %v", tt.name, got, tt.want)
 			}

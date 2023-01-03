@@ -24,6 +24,7 @@ import (
 	// ARO unfortunately relies on implicit import and its side effect for this
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 func TestAutosizednodesReconciler(t *testing.T) {
@@ -46,7 +47,7 @@ func TestAutosizednodesReconciler(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		wantGetErr error
+		wantErrMsg string
 		client     client.Client
 		wantConfig *mcv1.KubeletConfig
 	}{
@@ -54,13 +55,12 @@ func TestAutosizednodesReconciler(t *testing.T) {
 			name:       "is not needed",
 			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(false)).Build(),
 			wantConfig: &emptyConfig,
-			wantGetErr: kerrors.NewNotFound(mcv1.Resource("kubeletconfigs"), "dynamic-node"),
+			wantErrMsg: kerrors.NewNotFound(mcv1.Resource("kubeletconfigs"), "dynamic-node").Error(),
 		},
 		{
 			name:       "is needed and not present already",
 			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(true)).Build(),
 			wantConfig: &config,
-			wantGetErr: nil,
 		},
 		{
 			name:       "is needed and present already",
@@ -71,7 +71,7 @@ func TestAutosizednodesReconciler(t *testing.T) {
 			name:       "is not needed and is present",
 			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(false), &config).Build(),
 			wantConfig: &emptyConfig,
-			wantGetErr: kerrors.NewNotFound(mcv1.Resource("kubeletconfigs"), "dynamic-node"),
+			wantErrMsg: kerrors.NewNotFound(mcv1.Resource("kubeletconfigs"), "dynamic-node").Error(),
 		},
 		{
 			name: "is needed and config got modified",
@@ -91,7 +91,6 @@ func TestAutosizednodesReconciler(t *testing.T) {
 					},
 				}).Build(),
 			wantConfig: &config,
-			wantGetErr: nil,
 		},
 	}
 
@@ -113,9 +112,7 @@ func TestAutosizednodesReconciler(t *testing.T) {
 			var c mcv1.KubeletConfig
 
 			err = r.client.Get(ctx, key, &c)
-			if err != nil && err.Error() != test.wantGetErr.Error() || err == nil && test.wantGetErr != nil {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, test.wantErrMsg)
 
 			if !reflect.DeepEqual(test.wantConfig.Spec, c.Spec) {
 				t.Error(cmp.Diff(test.wantConfig.Spec, c.Spec))

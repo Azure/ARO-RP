@@ -9,6 +9,8 @@ import (
 	"encoding/hex"
 	"io"
 	"testing"
+
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 func TestNewAES256SHA512(t *testing.T) {
@@ -34,10 +36,7 @@ func TestNewAES256SHA512(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := NewAES256SHA512(context.Background(), tt.key)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Fatal(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 		})
 	}
 }
@@ -82,10 +81,7 @@ func TestAES256SHA512Open(t *testing.T) {
 			}
 
 			opened, err := cipher.Open(tt.input)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Fatal(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 
 			if !bytes.Equal(tt.wantOpened, opened) {
 				t.Error(string(opened))
@@ -132,10 +128,7 @@ func TestAES256SHA512Seal(t *testing.T) {
 			cipher.(*aes256Sha512).randReader = tt.randReader
 
 			sealed, err := cipher.Seal(tt.input)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Fatal(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 
 			if !bytes.Equal(tt.wantSealed, sealed) {
 				t.Error(hex.EncodeToString(sealed))

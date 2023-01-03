@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 const deploymentName = "test"
@@ -111,10 +112,7 @@ func TestDeployARMTemplate(t *testing.T) {
 
 			err := DeployTemplate(ctx, log, deploymentsClient, resourceGroup, deploymentName, armTemplate, params)
 
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 		})
 	}
 }

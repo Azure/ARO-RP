@@ -17,6 +17,7 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 func TestReconciler(t *testing.T) {
@@ -126,9 +127,7 @@ func TestReconciler(t *testing.T) {
 			ctx := context.Background()
 
 			_, err := r.Reconcile(ctx, request)
-			if err != nil && err.Error() != tt.expectedError {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.expectedError)
 
 			if tt.ingressController != nil {
 				ingress := &operatorv1.IngressController{}

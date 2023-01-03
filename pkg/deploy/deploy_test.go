@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_vmsscleaner "github.com/Azure/ARO-RP/pkg/util/mocks/vmsscleaner"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 func TestDeploy(t *testing.T) {
@@ -126,10 +127,7 @@ func TestDeploy(t *testing.T) {
 			}
 
 			err := d.deploy(ctx, rgName, deploymentName, vmssName, *deployment)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Fatal(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 		})
 	}
 }

@@ -19,6 +19,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 // Test reconcile function
@@ -178,10 +179,7 @@ func TestReconciler(t *testing.T) {
 				t.Errorf("Wanted to requeue after %v but was set to %v", tt.wantRequeueAfter, result.RequeueAfter)
 			}
 
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 		})
 	}
 }

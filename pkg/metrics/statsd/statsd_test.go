@@ -12,6 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 func TestEmitGauge(t *testing.T) {
@@ -149,10 +150,7 @@ func TestParseSocketEnv(t *testing.T) {
 			s := &statsd{}
 			network, address, err := s.parseSocketEnv(tt.teststring)
 
-			if err != nil && err.Error() != tt.wantError ||
-				err == nil && tt.wantError != "" {
-				t.Fatal(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantError)
 
 			if network != tt.wantNetwork {
 				t.Error(network)
@@ -203,10 +201,7 @@ func TestValidateSocketDefinition(t *testing.T) {
 
 			ok, err := s.validateSocketDefinition(tt.network, tt.address)
 
-			if err != nil && err.Error() != tt.wantError ||
-				err == nil && tt.wantError != "" {
-				t.Fatal(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantError)
 
 			if ok != tt.expectToPass {
 				t.Error(ok)
@@ -286,10 +281,7 @@ func TestConnectionDetails(t *testing.T) {
 
 			network, address, err := s.connectionDetails()
 
-			if err != nil && err.Error() != tt.wantError ||
-				err == nil && tt.wantError != "" {
-				t.Fatal(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantError)
 
 			if network != tt.network {
 				t.Error(network)

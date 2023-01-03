@@ -4,8 +4,9 @@ package v20220904
 // Licensed under the Apache License 2.0.
 
 import (
-	"fmt"
 	"testing"
+
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 var ocmResource = string(`
@@ -72,11 +73,7 @@ func TestStatic(t *testing.T) {
 			c := &clusterManagerStaticValidator{}
 
 			err := c.Static(tt.ocmResource, tt.ocmResourceType)
-			if err != nil && tt.wantErr {
-				if fmt.Sprint(err) != tt.err {
-					t.Errorf("wanted '%v', got '%v'", tt.err, err)
-				}
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.err)
 		})
 	}
 }

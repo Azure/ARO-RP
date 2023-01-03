@@ -18,6 +18,7 @@ import (
 
 	mock_refreshable "github.com/Azure/ARO-RP/pkg/util/mocks/refreshable"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 func successfulFunc(context.Context) error { return nil }
@@ -333,10 +334,7 @@ func TestStepRunner(t *testing.T) {
 			steps := tt.steps(controller)
 
 			_, err := Run(ctx, log, 25*time.Millisecond, steps, currentTimeFunc)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 
 			err = testlog.AssertLoggingOutput(h, tt.wantEntries)
 			if err != nil {

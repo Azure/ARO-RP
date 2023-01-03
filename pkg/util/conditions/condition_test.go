@@ -35,7 +35,6 @@ func TestSetCondition(t *testing.T) {
 		input   *operatorv1.OperatorCondition
 
 		expected arov1alpha1.ClusterStatus
-		wantErr  error
 	}{
 		{
 			name: "no condition provided",
@@ -209,13 +208,10 @@ func TestSetCondition(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			clientFake := fake.NewClientBuilder().WithObjects(tt.objects...).Build()
 
-			err := SetCondition(ctx, clientFake, tt.input, role)
-			if err != nil && tt.wantErr != nil {
-				t.Fatal(err.Error())
-			}
+			SetCondition(ctx, clientFake, tt.input, role)
 
 			result := &arov1alpha1.Cluster{}
-			err = clientFake.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, result)
+			err := clientFake.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, result)
 			if err != nil {
 				t.Fatal(err.Error())
 			}

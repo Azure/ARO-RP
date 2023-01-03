@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 // Test reconcile function
@@ -251,10 +252,7 @@ func TestImageConfigReconciler(t *testing.T) {
 			request.Name = "cluster"
 
 			_, err := r.Reconcile(ctx, request)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 
 			imgcfg := &configv1.Image{}
 			err = r.client.Get(ctx, types.NamespacedName{Name: request.Name}, imgcfg)
@@ -326,10 +324,7 @@ func TestGetCloudAwareRegistries(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := GetCloudAwareRegistries(tt.instance)
 
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 
 			if !reflect.DeepEqual(result, tt.wantResult) {
 				t.Error(cmp.Diff(result, tt.wantResult))

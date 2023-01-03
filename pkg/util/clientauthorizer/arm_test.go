@@ -20,6 +20,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_instancemetadata "github.com/Azure/ARO-RP/pkg/util/mocks/instancemetadata"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 func TestARMRefreshOnce(t *testing.T) {
@@ -175,10 +176,7 @@ func TestARMRefreshOnce(t *testing.T) {
 
 			err := a.refreshOnce()
 
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 
 			if a.IsReady() != (tt.wantErr == "") {
 				t.Fatal("unexpected ready state")

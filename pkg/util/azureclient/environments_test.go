@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
+
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 func TestEnvironmentFromName(t *testing.T) {
@@ -32,10 +34,7 @@ func TestEnvironmentFromName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := EnvironmentFromName(tt.azEnv)
 
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Errorf("\n%s\n != \n%s", err, tt.wantErr)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 		})
 	}
 }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 func TestGet(t *testing.T) {
@@ -76,10 +77,7 @@ func TestGet(t *testing.T) {
 			}
 
 			subnet, err := m.Get(ctx, tt.subnetID)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 
 			if !reflect.DeepEqual(subnet, tt.wantSubnet) {
 				t.Error(subnet)
@@ -188,10 +186,7 @@ func TestGetGetHighestFreeIP(t *testing.T) {
 			}
 
 			ip, err := m.GetHighestFreeIP(ctx, "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/subnet")
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 
 			if ip != tt.wantIP {
 				t.Error(ip)
@@ -255,10 +250,7 @@ func TestCreateOrUpdate(t *testing.T) {
 			}
 
 			err := m.CreateOrUpdate(ctx, tt.subnetID, &mgmtnetwork.Subnet{})
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 		})
 	}
 }
@@ -323,10 +315,7 @@ func TestNetworkSecurityGroupID(t *testing.T) {
 			oc.Properties.ArchitectureVersion = tt.archVersion
 
 			nsgID, err := NetworkSecurityGroupID(oc, tt.subnetID)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 
 			if nsgID != tt.wantNSGID {
 				t.Error(nsgID)

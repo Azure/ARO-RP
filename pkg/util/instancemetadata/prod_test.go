@@ -18,6 +18,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_instancemetadata "github.com/Azure/ARO-RP/pkg/util/mocks/instancemetadata"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 func TestPopulateInstanceMetadata(t *testing.T) {
@@ -138,10 +139,7 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 
 			err := p.populateInstanceMetadata()
 
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Fatal(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 
 			if p.subscriptionID != tt.wantSubscriptionID {
 				t.Error(p.subscriptionID)
@@ -233,11 +231,7 @@ func TestPopulateTenantIDFromMSI(t *testing.T) {
 			}
 
 			err := p.populateTenantIDFromMSI(ctx)
-
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Fatalf("\n%v\n !=\n%v", err, tt.wantErr)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 
 			if p.tenantID != tt.wantTenantID {
 				t.Error(p.tenantID)

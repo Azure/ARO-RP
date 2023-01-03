@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/version"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 // TestVersion makes sure that bindata contains cache generated with the
@@ -137,10 +138,7 @@ func TestCacheFallbackDiscoveryClient(t *testing.T) {
 			}
 
 			groups, resources, err := cli.ServerGroupsAndResources()
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err, tt.wantErr)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 
 			if !reflect.DeepEqual(tt.wantGroups, groups) {
 				t.Error(cmp.Diff(groups, tt.wantGroups))

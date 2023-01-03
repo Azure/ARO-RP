@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 const (
@@ -100,10 +101,7 @@ func TestListFromCluster(t *testing.T) {
 			}
 
 			subnets, err := m.List(context.Background())
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 
 			if !cmp.Equal(tt.expect, subnets) {
 				t.Fatal(cmp.Diff(tt.expect, subnets))

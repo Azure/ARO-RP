@@ -15,6 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 func TestStartVMs(t *testing.T) {
@@ -221,10 +222,7 @@ func TestStartVMs(t *testing.T) {
 			}
 
 			err := m.startVMs(ctx)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
 		})
 	}
 }
