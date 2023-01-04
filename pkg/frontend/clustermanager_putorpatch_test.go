@@ -244,7 +244,9 @@ func TestEnrichSyncSetSystemData(t *testing.T) {
 
 	enrichSyncSetSystemData(&doc, &populatedSystemData)
 
-	compareSystemData(t, *doc.SyncSet.SystemData, populatedSystemData)
+	if err := compareSystemData(*doc.SyncSet.SystemData, populatedSystemData); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestEnrichSyncIdentityProviderSystemData(t *testing.T) {
@@ -254,7 +256,9 @@ func TestEnrichSyncIdentityProviderSystemData(t *testing.T) {
 
 	enrichSyncIdentityProviderSystemData(&doc, &populatedSystemData)
 
-	compareSystemData(t, *doc.SyncIdentityProvider.SystemData, populatedSystemData)
+	if err := compareSystemData(*doc.SyncIdentityProvider.SystemData, populatedSystemData); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestEnrichMachinePoolSystemData(t *testing.T) {
@@ -264,7 +268,9 @@ func TestEnrichMachinePoolSystemData(t *testing.T) {
 
 	enrichMachinePoolSystemData(&doc, &populatedSystemData)
 
-	compareSystemData(t, *doc.MachinePool.SystemData, populatedSystemData)
+	if err := compareSystemData(*doc.MachinePool.SystemData, populatedSystemData); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestEnrichSecretSystemData(t *testing.T) {
@@ -274,26 +280,29 @@ func TestEnrichSecretSystemData(t *testing.T) {
 
 	enrichSecretSystemData(&doc, &populatedSystemData)
 
-	compareSystemData(t, *doc.Secret.SystemData, populatedSystemData)
+	if err := compareSystemData(*doc.Secret.SystemData, populatedSystemData); err != nil {
+		t.Fatal(err)
+	}
 }
 
-func compareSystemData(t *testing.T, docSystemData, expectedSystemData api.SystemData) {
+func compareSystemData(docSystemData, expectedSystemData api.SystemData) error {
 	if docSystemData.CreatedAt == nil || docSystemData.CreatedAt != expectedSystemData.CreatedAt {
-		t.Fatalf("CreatedAt was %q expected %q", docSystemData.CreatedAt, expectedSystemData.CreatedAt)
+		return fmt.Errorf("CreatedAt was %q expected %q", docSystemData.CreatedAt, expectedSystemData.CreatedAt)
 	}
 	if docSystemData.CreatedBy == "" || docSystemData.CreatedBy != expectedSystemData.CreatedBy {
-		t.Fatalf("CreatedBy was %q expected %q", docSystemData.CreatedBy, expectedSystemData.CreatedBy)
+		return fmt.Errorf("CreatedBy was %q expected %q", docSystemData.CreatedBy, expectedSystemData.CreatedBy)
 	}
 	if docSystemData.CreatedByType == "" || docSystemData.CreatedByType != expectedSystemData.CreatedByType {
-		t.Fatalf("CreatedByType was %q expected %q", docSystemData.CreatedByType, expectedSystemData.CreatedByType)
+		return fmt.Errorf("CreatedByType was %q expected %q", docSystemData.CreatedByType, expectedSystemData.CreatedByType)
 	}
 	if docSystemData.LastModifiedAt == nil || docSystemData.LastModifiedAt != expectedSystemData.LastModifiedAt {
-		t.Fatalf("LastModifiedAt was %q expected %q", docSystemData.LastModifiedAt, expectedSystemData.LastModifiedAt)
+		return fmt.Errorf("LastModifiedAt was %q expected %q", docSystemData.LastModifiedAt, expectedSystemData.LastModifiedAt)
 	}
 	if docSystemData.LastModifiedBy == "" || docSystemData.LastModifiedBy != expectedSystemData.LastModifiedBy {
-		t.Fatalf("LastModifiedBy was %q expected %q", docSystemData.LastModifiedBy, expectedSystemData.LastModifiedBy)
+		return fmt.Errorf("LastModifiedBy was %q expected %q", docSystemData.LastModifiedBy, expectedSystemData.LastModifiedBy)
 	}
 	if docSystemData.LastModifiedByType == "" || docSystemData.LastModifiedByType != expectedSystemData.LastModifiedByType {
-		t.Fatalf("LastModifiedByType was %q expected %q", docSystemData.LastModifiedByType, expectedSystemData.LastModifiedByType)
+		return fmt.Errorf("LastModifiedByType was %q expected %q", docSystemData.LastModifiedByType, expectedSystemData.LastModifiedByType)
 	}
+	return nil
 }
