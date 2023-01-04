@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/gob"
 	"errors"
 	"io"
 	"net/http"
@@ -28,16 +27,13 @@ import (
 )
 
 const (
-	SessionName        = "session"
+	SessionName = "session"
+	// Expiration time in unix format
 	SessionKeyExpires  = "expires"
 	sessionKeyState    = "state"
 	SessionKeyUsername = "user_name"
 	SessionKeyGroups   = "groups"
 )
-
-func init() {
-	gob.Register(time.Time{})
-}
 
 // AAD is responsible for ensuring that we have a valid login session with AAD.
 type AAD interface {
@@ -157,8 +153,8 @@ func (a *aad) AAD(h http.Handler) http.Handler {
 			return
 		}
 
-		expires, ok := session.Values[SessionKeyExpires].(time.Time)
-		if !ok || expires.Before(a.now()) {
+		expires, ok := session.Values[SessionKeyExpires].(int64)
+		if !ok || time.Unix(expires, 0).Before(a.now()) {
 			h.ServeHTTP(w, r)
 			return
 		}
@@ -310,7 +306,7 @@ func (a *aad) callback(w http.ResponseWriter, r *http.Request) {
 
 	session.Values[SessionKeyUsername] = claims.PreferredUsername
 	session.Values[SessionKeyGroups] = groupsIntersect
-	session.Values[SessionKeyExpires] = a.now().Add(a.sessionTimeout)
+	session.Values[SessionKeyExpires] = a.now().Add(a.sessionTimeout).Unix()
 
 	err = session.Save(r, w)
 	if err != nil {

@@ -6,7 +6,6 @@ package e2e
 import (
 	"bytes"
 	"context"
-	"encoding/gob"
 	"fmt"
 	"image/png"
 	"math"
@@ -194,8 +193,6 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 	}
 
 	log := utillog.GetLogger()
-
-	gob.Register(time.Time{})
 
 	// Navigate to the simple playground interface.
 	host, exists := os.LookupEnv("PORTAL_HOSTNAME")
