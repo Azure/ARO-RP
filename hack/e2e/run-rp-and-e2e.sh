@@ -1,6 +1,25 @@
 #!/bin/bash -e
 ######## Helper file to run E2e either locally or using Azure DevOps Pipelines ########
 
+if [[ $CI ]] ; then
+    set -o pipefail
+    set -x
+
+    az account set -s $AZURE_SUBSCRIPTION_ID
+    SECRET_SA_ACCOUNT_NAME=e2earosecrets make secrets
+    . secrets/env
+    echo "##vso[task.setvariable variable=RP_MODE]$RP_MODE"
+
+    set -a
+    HIVEKUBECONFIGPATH="secrets/e2e-aks-kubeconfig"
+    HIVE_KUBE_CONFIG_PATH_1="secrets/aks.kubeconfig"
+    CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+    DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+    PRIVATE_CLUSTER=true
+    E2E_DELETE_CLUSTER=false
+    set +a
+fi
+
 validate_rp_running() {
     echo "########## ？Checking ARO RP Status ##########"
     ELAPSED=0
@@ -31,7 +50,7 @@ run_rp() {
     ./aro rp &
 }
 
-kill_rp(){
+kill_rp() {
     echo "########## Kill the RP running in background ##########"
     rppid=$(lsof -t -i :8443)
     kill $rppid
@@ -110,12 +129,17 @@ register_sub() {
       "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0"
 }
 
-clean_e2e_db(){
+clean_e2e_db() {
     echo "########## 🧹 Deleting DB $DATABASE_NAME ##########"
     az cosmosdb sql database delete --name $DATABASE_NAME \
         --yes \
         --account-name $DATABASE_ACCOUNT_NAME \
         --resource-group $RESOURCEGROUP >/dev/null
+}
+
+delete_e2e_cluster() {
+    echo "########## 🧹 Deleting Cluster $CLUSTER ##########"
+    go run ./hack/cluster delete
 }
 
 run_vpn() {
@@ -131,20 +155,12 @@ kill_vpn() {
 # TODO: CLUSTER and is also recalculated in multiple places
 # in the billing pipelines :-(
 
-
-# if LOCAL_E2E is set, set the value with the local test names
-# If it it not set, it defaults to the build ID
-if [ -z "${LOCAL_E2E}" ] ; then
-    export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-    export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-fi
-
-if [ -z "${CLUSTER}" ] ; then
+if [[ -z $CLUSTER ]] ; then
     echo "CLUSTER is not set, aborting"
     return 1
 fi
 
-if [ -z "${DATABASE_NAME}" ] ; then
+if [[ -z $DATABASE_NAME ]] ; then
     echo "DATABASE_NAME is not set, aborting"
     return 1
 fi
@@ -168,11 +184,9 @@ echo
 echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
 echo "######################################"
 
-[ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; return 128 )
-[ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set; please validate your ./secrets/env"; return 128 )
-[ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set; please validate your ./secrets/env"; return 128 )
-[ "$DATABASE_ACCOUNT_NAME" ] || ( echo ">> DATABASE_ACCOUNT_NAME is not set; please validate your ./secrets/env"; return 128 )
-[ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set; please validate your ./secrets/env"; return 128 )
-[ "$AZURE_SUBSCRIPTION_ID" ] || ( echo ">> AZURE_SUBSCRIPTION_ID is not set; please validate your ./secrets/env"; return 128 )
-
-az account set -s $AZURE_SUBSCRIPTION_ID >/dev/null
+[[ $LOCATION ]] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; return 128 )
+[[ $RESOURCEGROUP ]] || ( echo ">> RESOURCEGROUP is not set; please validate your ./secrets/env"; return 128 )
+[[ $PROXY_HOSTNAME ]] || ( echo ">> PROXY_HOSTNAME is not set; please validate your ./secrets/env"; return 128 )
+[[ $DATABASE_ACCOUNT_NAME ]] || ( echo ">> DATABASE_ACCOUNT_NAME is not set; please validate your ./secrets/env"; return 128 )
+[[ $DATABASE_NAME ]] || ( echo ">> DATABASE_NAME is not set; please validate your ./secrets/env"; return 128 )
+[[ $AZURE_SUBSCRIPTION_ID ]] || ( echo ">> AZURE_SUBSCRIPTION_ID is not set; please validate your ./secrets/env"; return 128 )
