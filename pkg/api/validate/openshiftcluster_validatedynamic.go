@@ -42,10 +42,6 @@ func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, o
 
 	tokenClient := aad.NewTokenClient()
 
-	//legacy dynamic waiting for the move of quota to frontend
-	spAuthorizer := refreshable.NewAuthorizer(token)
-	quotaValidator := dynamic.NewValidator(log, env, env.Environment(), subscriptionDoc.ID, spAuthorizer, aad.NewTokenClient())
-
 	return &openShiftClusterDynamicValidator{
 		log: log,
 		env: env,
@@ -55,9 +51,6 @@ func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, o
 		fpAuthorizer:    fpAuthorizer,
 
 		tokenClient: tokenClient,
-
-		// TODO: remove when we moved it to frontend
-		quotaDynamic: quotaValidator,
 
 		diskValidator:       dynamic.NewDiskValidator(log, diskEncryptionSetsFP, diskEncryptionSetsClusterSP, permissionsFP, permissionsClusterSP),
 		encryptionValidator: dynamic.NewEncryptionAtHostValidator(env, log),
