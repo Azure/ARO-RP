@@ -7,9 +7,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -24,7 +26,9 @@ import (
 
 // AzureActions contains those actions which rely solely on Azure clients, not using any k8s clients
 type AzureActions interface {
-	ResourcesList(ctx context.Context) ([]byte, error)
+	GroupResourceList(ctx context.Context) ([]mgmtfeatures.GenericResourceExpanded, error)
+	ResourcesList(ctx context.Context, resources []mgmtfeatures.GenericResourceExpanded, writer io.WriteCloser) error
+	WriteToStream(ctx context.Context, writer io.WriteCloser) error
 	NICReconcileFailedState(ctx context.Context, nicName string) error
 	VMRedeployAndWait(ctx context.Context, vmName string) error
 	VMStartAndWait(ctx context.Context, vmName string) error

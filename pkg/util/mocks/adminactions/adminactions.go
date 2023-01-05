@@ -6,10 +6,12 @@ package mock_adminactions
 
 import (
 	context "context"
+	io "io"
 	http "net/http"
 	reflect "reflect"
 
 	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	features "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	gomock "github.com/golang/mock/gomock"
 	logrus "github.com/sirupsen/logrus"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -204,15 +206,24 @@ func (m *MockAzureActions) EXPECT() *MockAzureActionsMockRecorder {
 	return m.recorder
 }
 
+<<<<<<< HEAD
 // AppLensGetDetector mocks base method.
 func (m *MockAzureActions) AppLensGetDetector(arg0 context.Context, arg1 string) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AppLensGetDetector", arg0, arg1)
 	ret0, _ := ret[0].([]byte)
+=======
+// GroupResourceList mocks base method.
+func (m *MockAzureActions) GroupResourceList(arg0 context.Context) ([]features.GenericResourceExpanded, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GroupResourceList", arg0)
+	ret0, _ := ret[0].([]features.GenericResourceExpanded)
+>>>>>>> cef0adbb6 (now uses streams instead of array)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
+<<<<<<< HEAD
 // AppLensGetDetector indicates an expected call of AppLensGetDetector.
 func (mr *MockAzureActionsMockRecorder) AppLensGetDetector(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
@@ -232,6 +243,12 @@ func (m *MockAzureActions) AppLensListDetectors(arg0 context.Context) ([]byte, e
 func (mr *MockAzureActionsMockRecorder) AppLensListDetectors(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppLensListDetectors", reflect.TypeOf((*MockAzureActions)(nil).AppLensListDetectors), arg0)
+=======
+// GroupResourceList indicates an expected call of GroupResourceList.
+func (mr *MockAzureActionsMockRecorder) GroupResourceList(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupResourceList", reflect.TypeOf((*MockAzureActions)(nil).GroupResourceList), arg0)
+>>>>>>> cef0adbb6 (now uses streams instead of array)
 }
 
 // NICReconcileFailedState mocks base method.
@@ -249,18 +266,17 @@ func (mr *MockAzureActionsMockRecorder) NICReconcileFailedState(arg0, arg1 inter
 }
 
 // ResourcesList mocks base method.
-func (m *MockAzureActions) ResourcesList(arg0 context.Context) ([]byte, error) {
+func (m *MockAzureActions) ResourcesList(arg0 context.Context, arg1 []features.GenericResourceExpanded, arg2 io.WriteCloser) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResourcesList", arg0)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "ResourcesList", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // ResourcesList indicates an expected call of ResourcesList.
-func (mr *MockAzureActionsMockRecorder) ResourcesList(arg0 interface{}) *gomock.Call {
+func (mr *MockAzureActionsMockRecorder) ResourcesList(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourcesList", reflect.TypeOf((*MockAzureActions)(nil).ResourcesList), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourcesList", reflect.TypeOf((*MockAzureActions)(nil).ResourcesList), arg0, arg1, arg2)
 }
 
 // VMRedeployAndWait mocks base method.
@@ -346,4 +362,18 @@ func (m *MockAzureActions) VMStopAndWait(arg0 context.Context, arg1 string) erro
 func (mr *MockAzureActionsMockRecorder) VMStopAndWait(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMStopAndWait", reflect.TypeOf((*MockAzureActions)(nil).VMStopAndWait), arg0, arg1)
+}
+
+// WriteToStream mocks base method.
+func (m *MockAzureActions) WriteToStream(arg0 context.Context, arg1 io.WriteCloser) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteToStream", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WriteToStream indicates an expected call of WriteToStream.
+func (mr *MockAzureActionsMockRecorder) WriteToStream(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteToStream", reflect.TypeOf((*MockAzureActions)(nil).WriteToStream), arg0, arg1)
 }
