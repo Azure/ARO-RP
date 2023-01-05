@@ -64,10 +64,14 @@ func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request,
 
 	*header = http.Header{}
 
-	u.Path = f.operationResultsPath(r, doc.AsyncOperationID)
+	vars := mux.Vars(r)
+	subId := vars["subscriptionId"]
+	resourceProviderNamespace := vars["resourceProviderNamespace"]
+
+	u.Path = f.operationResultsPath(subId, resourceProviderNamespace, doc.AsyncOperationID)
 	(*header)["Location"] = []string{u.String()}
 
-	u.Path = f.operationsPath(mux.Vars(r), doc.AsyncOperationID)
+	u.Path = f.operationsPath(subId, resourceProviderNamespace, doc.AsyncOperationID)
 	(*header)["Azure-AsyncOperation"] = []string{u.String()}
 
 	return nil

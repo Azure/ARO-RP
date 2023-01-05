@@ -217,7 +217,10 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		return nil, err
 	}
 
-	u.Path = f.operationsPath(vars, doc.AsyncOperationID)
+	subId := vars["subscriptionId"]
+	resourceProviderNamespace := vars["resourceProviderNamespace"]
+
+	u.Path = f.operationsPath(subId, resourceProviderNamespace, doc.AsyncOperationID)
 	*header = http.Header{
 		"Azure-AsyncOperation": []string{u.String()},
 	}
