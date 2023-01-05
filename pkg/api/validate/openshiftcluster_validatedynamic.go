@@ -107,6 +107,11 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
+	err = spDynamic.ValidateQuota(ctx, dv.oc)
+	if err != nil {
+		return err
+	}
+
 	err = spDynamic.ValidateDiskEncryptionSets(ctx, dv.oc)
 	if err != nil {
 		return err
