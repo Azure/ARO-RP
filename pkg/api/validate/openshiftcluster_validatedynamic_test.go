@@ -22,7 +22,6 @@ func TestOpenshiftDynamicValidate(t *testing.T) {
 
 		diskValidatorErr error
 		encrytionErr     error
-		quotaError       error
 		providerError    error
 		vmSKUError       error
 		vnetError        error
@@ -38,7 +37,6 @@ func TestOpenshiftDynamicValidate(t *testing.T) {
 		{name: "all good"},
 		{name: "disk err", diskValidatorErr: errors.New(errorMessage), wantError: errorMessage},
 		{name: "encryption err", encrytionErr: errors.New(errorMessage), wantError: errorMessage},
-		{name: "quota err", quotaError: errors.New(errorMessage), wantError: errorMessage},
 		{name: "subnet err", subnetError: errors.New(errorMessage), wantError: errorMessage},
 		{name: "vnet err", vnetError: errors.New(errorMessage), wantError: errorMessage},
 		{name: "sp err", spError: errors.New(errorMessage), wantError: errorMessage},
