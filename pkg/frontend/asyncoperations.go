@@ -11,10 +11,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-func (f *frontend) newAsyncOperation(ctx context.Context, vars map[string]string, doc *api.OpenShiftClusterDocument) (string, error) {
+func (f *frontend) newAsyncOperation(ctx context.Context, subId, resourceProviderNamespace string, doc *api.OpenShiftClusterDocument) (string, error) {
 	id := f.dbAsyncOperations.NewUUID()
-	subId := vars["subscriptionId"]
-	resourceProviderNamespace := vars["resourceProviderNamespace"]
 	_, err := f.dbAsyncOperations.Create(ctx, &api.AsyncOperationDocument{
 		ID:                  id,
 		OpenShiftClusterKey: doc.Key,

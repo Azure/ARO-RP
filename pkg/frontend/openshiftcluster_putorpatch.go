@@ -207,7 +207,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// SetDefaults will set defaults on cluster document
 	api.SetDefaults(doc)
 
-	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, vars, doc)
+	subId := vars["subscriptionId"]
+	resourceProviderNamespace := vars["resourceProviderNamespace"]
+	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, subId, resourceProviderNamespace, doc)
 	if err != nil {
 		return nil, err
 	}
@@ -216,9 +218,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	if err != nil {
 		return nil, err
 	}
-
-	subId := vars["subscriptionId"]
-	resourceProviderNamespace := vars["resourceProviderNamespace"]
 
 	u.Path = f.operationsPath(subId, resourceProviderNamespace, doc.AsyncOperationID)
 	*header = http.Header{
