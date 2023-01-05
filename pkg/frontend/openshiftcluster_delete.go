@@ -52,7 +52,11 @@ func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request,
 	doc.CorrelationData = correlationData
 	doc.Dequeues = 0
 
-	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, mux.Vars(r), doc)
+	vars := mux.Vars(r)
+	subId := vars["subscriptionId"]
+	resourceProviderNamespace := vars["resourceProviderNamespace"]
+
+	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, subId, resourceProviderNamespace, doc)
 	if err != nil {
 		return err
 	}
@@ -63,10 +67,6 @@ func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request,
 	}
 
 	*header = http.Header{}
-
-	vars := mux.Vars(r)
-	subId := vars["subscriptionId"]
-	resourceProviderNamespace := vars["resourceProviderNamespace"]
 
 	u.Path = f.operationResultsPath(subId, resourceProviderNamespace, doc.AsyncOperationID)
 	(*header)["Location"] = []string{u.String()}
