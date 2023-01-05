@@ -72,9 +72,6 @@ func TestOpenshiftDynamicValidate(t *testing.T) {
 			mockServiceSprincipal := mock_dynamic.NewMockServicePrincipalValidator(controller)
 			mockServiceSprincipal.EXPECT().Validate(gomock.Any()).AnyTimes().Return(tt.spError)
 
-			mockQuota := mock_dynamic.NewMockDynamic(controller)
-			mockQuota.EXPECT().ValidateQuota(gomock.Any(), gomock.Any()).AnyTimes().Return(tt.quotaError)
-
 			mockToken := mock_aad.NewMockTokenClient(controller)
 			mockToken.EXPECT().GetToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil, tt.tokenError)
 
@@ -85,7 +82,6 @@ func TestOpenshiftDynamicValidate(t *testing.T) {
 				vmSKUValidator:      mockVMSKU,
 				vnetValidator:       mockVnet,
 				subnetValidator:     mockSubnet,
-				quotaDynamic:        mockQuota,
 				spValidator:         mockServiceSprincipal,
 
 				tokenClient: mockToken,
