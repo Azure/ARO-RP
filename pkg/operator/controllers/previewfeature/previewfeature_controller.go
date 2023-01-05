@@ -56,6 +56,7 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli 
 
 // Reconcile reconciles ARO preview features
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	r.log.Debug("running")
 	instance, err := r.arocli.PreviewV1alpha1().PreviewFeatures().Get(ctx, aropreviewv1alpha1.SingletonPreviewFeatureName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
