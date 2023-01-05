@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -25,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -585,10 +587,10 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			f.(*frontend).bucketAllocator = bucket.Fixed(1)
+			f.bucketAllocator = bucket.Fixed(1)
 
 			var systemDataClusterDocEnricherCalled bool
-			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+			f.systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
 				systemDataClusterDocEnricherCalled = true
 			}
 
@@ -671,6 +673,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		request                func(*v20200430.OpenShiftCluster)
 		isPatch                bool
 		fixture                func(*testdatabase.Fixture)
+		quotaValidatorError    error
 		wantEnriched           []string
 		wantSystemDataEnriched bool
 		wantDocuments          func(*testdatabase.Checker)
@@ -752,6 +755,48 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				},
 			},
+		},
+		{
+			name: "create a new cluster vm not supported",
+			request: func(oc *v20200430.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.10.20"
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			quotaValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided VM SKU %s is not supported.", "something"),
+			wantEnriched:        []string{},
+			wantStatusCode:      http.StatusBadRequest,
+			wantError:           "400: InvalidParameter: : The provided VM SKU something is not supported.",
+		},
+		{
+			name: "create a new cluster quota fails",
+			request: func(oc *v20200430.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.10.20"
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			quotaValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, "", "Resource quota of vm exceeded. Maximum allowed: 0, Current in use: 0, Additional requested: 1."),
+			wantEnriched:        []string{},
+			wantStatusCode:      http.StatusBadRequest,
+			wantError:           "400: QuotaExceeded: : Resource quota of vm exceeded. Maximum allowed: 0, Current in use: 0, Additional requested: 1.",
 		},
 		{
 			name: "update a cluster from succeeded",
@@ -1413,6 +1458,12 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				WithOpenShiftVersions()
 			defer ti.done()
 
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			mockValidator := mock_frontend.NewMockQuotaValidator(controller)
+			mockValidator.EXPECT().ValidateQuota(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.quotaValidatorError).AnyTimes()
+
 			err := ti.buildFixtures(tt.fixture)
 			if err != nil {
 				t.Fatal(err)
@@ -1424,11 +1475,13 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			f.(*frontend).bucketAllocator = bucket.Fixed(1)
-			f.(*frontend).now = func() time.Time { return mockCurrentTime }
+
+			f.quotaValidator = mockValidator
+			f.bucketAllocator = bucket.Fixed(1)
+			f.now = func() time.Time { return mockCurrentTime }
 
 			var systemDataClusterDocEnricherCalled bool
-			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+			f.systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
 				systemDataClusterDocEnricherCalled = true
 			}
 
@@ -1727,11 +1780,11 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			f.(*frontend).bucketAllocator = bucket.Fixed(1)
-			f.(*frontend).now = func() time.Time { return mockCurrentTime }
+			f.bucketAllocator = bucket.Fixed(1)
+			f.now = func() time.Time { return mockCurrentTime }
 
 			var systemDataClusterDocEnricherCalled bool
-			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+			f.systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
 				enrichClusterSystemData(doc, systemData)
 				systemDataClusterDocEnricherCalled = true
 			}
