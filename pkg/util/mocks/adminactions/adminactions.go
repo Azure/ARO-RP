@@ -206,24 +206,15 @@ func (m *MockAzureActions) EXPECT() *MockAzureActionsMockRecorder {
 	return m.recorder
 }
 
-<<<<<<< HEAD
 // AppLensGetDetector mocks base method.
 func (m *MockAzureActions) AppLensGetDetector(arg0 context.Context, arg1 string) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AppLensGetDetector", arg0, arg1)
 	ret0, _ := ret[0].([]byte)
-=======
-// GroupResourceList mocks base method.
-func (m *MockAzureActions) GroupResourceList(arg0 context.Context) ([]features.GenericResourceExpanded, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GroupResourceList", arg0)
-	ret0, _ := ret[0].([]features.GenericResourceExpanded)
->>>>>>> cef0adbb6 (now uses streams instead of array)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-<<<<<<< HEAD
 // AppLensGetDetector indicates an expected call of AppLensGetDetector.
 func (mr *MockAzureActionsMockRecorder) AppLensGetDetector(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
@@ -243,12 +234,21 @@ func (m *MockAzureActions) AppLensListDetectors(arg0 context.Context) ([]byte, e
 func (mr *MockAzureActionsMockRecorder) AppLensListDetectors(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppLensListDetectors", reflect.TypeOf((*MockAzureActions)(nil).AppLensListDetectors), arg0)
-=======
+}
+
+// GroupResourceList mocks base method.
+func (m *MockAzureActions) GroupResourceList(arg0 context.Context) ([]features.GenericResourceExpanded, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GroupResourceList", arg0)
+	ret0, _ := ret[0].([]features.GenericResourceExpanded)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
 // GroupResourceList indicates an expected call of GroupResourceList.
 func (mr *MockAzureActionsMockRecorder) GroupResourceList(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupResourceList", reflect.TypeOf((*MockAzureActions)(nil).GroupResourceList), arg0)
->>>>>>> cef0adbb6 (now uses streams instead of array)
 }
 
 // NICReconcileFailedState mocks base method.
