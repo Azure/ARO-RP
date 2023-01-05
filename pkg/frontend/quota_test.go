@@ -1,4 +1,4 @@
-package dynamic
+package frontend
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -11,7 +11,6 @@ import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
@@ -192,13 +191,7 @@ func TestValidateQuota(t *testing.T) {
 				},
 			}
 
-			qv := dynamic{
-				log:            logrus.NewEntry(logrus.StandardLogger()),
-				spComputeUsage: computeUsageClient,
-				spNetworkUsage: networkUsageClient,
-			}
-
-			err := qv.ValidateQuota(ctx, oc)
+			err := validateQuota(ctx, oc, networkUsageClient, computeUsageClient)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
