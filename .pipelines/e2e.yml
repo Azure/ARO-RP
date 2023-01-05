@@ -35,6 +35,10 @@ jobs:
 
       run_vpn
       deploy_e2e_db
+
+      run_portal
+      validate_portal_running
+      
       run_rp
       validate_rp_running
 
@@ -70,3 +74,21 @@ jobs:
     displayName: Cleanup
     condition: always()
   - template: ./templates/template-az-cli-logout.yml
+
+  - task: PublishTestResults@2
+    displayName: 📊 Publish tests results
+    inputs:
+      testResultsFiles: $(System.DefaultWorkingDirectory)/**/e2e-report.xml
+    condition: succeededOrFailed()
+
+  - task: CopyFiles@2
+    condition: succeededOrFailed()
+    inputs:
+      contents: $(Build.SourcesDirectory)/*.png
+      targetFolder: $(Build.ArtifactStagingDirectory)
+
+  - task: PublishBuildArtifacts@1
+    condition: succeededOrFailed()
+    inputs:
+      pathToPublish: $(Build.ArtifactStagingDirectory)
+      artifactName: Screenshots
