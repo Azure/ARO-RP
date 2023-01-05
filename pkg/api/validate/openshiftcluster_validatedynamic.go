@@ -72,8 +72,6 @@ type openShiftClusterDynamicValidator struct {
 
 	tokenClient aad.TokenClient
 
-	quotaDynamic dynamic.Dynamic
-
 	diskValidator       dynamic.DiskValidator
 	encryptionValidator dynamic.EncryptionAtHostValidator
 	providersValidator  dynamic.ProvidersValidator
