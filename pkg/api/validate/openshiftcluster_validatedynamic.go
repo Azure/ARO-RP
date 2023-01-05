@@ -7,12 +7,17 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate/dynamic"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
@@ -22,7 +27,25 @@ type OpenShiftClusterDynamicValidator interface {
 }
 
 // NewOpenShiftClusterDynamicValidator creates a new OpenShiftClusterDynamicValidator
-func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, fpAuthorizer refreshable.Authorizer) OpenShiftClusterDynamicValidator {
+func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, fpAuthorizer, clusterAuthorizer refreshable.Authorizer, token *adal.ServicePrincipalToken) (*openShiftClusterDynamicValidator, error) {
+	//with cluster sp
+	providersClusterSP := features.NewProvidersClient(env.Environment(), subscriptionDoc.ID, clusterAuthorizer)
+	permissionsClusterSP := authorization.NewPermissionsClient(env.Environment(), subscriptionDoc.ID, clusterAuthorizer)
+	diskEncryptionSetsClusterSP := compute.NewDiskEncryptionSetsClient(env.Environment(), subscriptionDoc.ID, clusterAuthorizer)
+	resourceSkusClientClusterSP := compute.NewResourceSkusClient(env.Environment(), subscriptionDoc.ID, clusterAuthorizer)
+	networkClientClusterSP := network.NewVirtualNetworksClient(env.Environment(), subscriptionDoc.ID, clusterAuthorizer)
+
+	//with first party sp
+	permissionsFP := authorization.NewPermissionsClient(env.Environment(), subscriptionDoc.ID, fpAuthorizer)
+	diskEncryptionSetsFP := compute.NewDiskEncryptionSetsClient(env.Environment(), subscriptionDoc.ID, fpAuthorizer)
+	networkClientFP := network.NewVirtualNetworksClient(env.Environment(), subscriptionDoc.ID, fpAuthorizer)
+
+	tokenClient := aad.NewTokenClient()
+
+	//legacy dynamic waiting for the move of quota to frontend
+	spAuthorizer := refreshable.NewAuthorizer(token)
+	quotaValidator := dynamic.NewValidator(log, env, env.Environment(), subscriptionDoc.ID, spAuthorizer, aad.NewTokenClient())
+
 	return &openShiftClusterDynamicValidator{
 		log: log,
 		env: env,
@@ -30,7 +53,20 @@ func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, o
 		oc:              oc,
 		subscriptionDoc: subscriptionDoc,
 		fpAuthorizer:    fpAuthorizer,
-	}
+
+		tokenClient: tokenClient,
+
+		// TODO: remove when we moved it to frontend
+		quotaDynamic: quotaValidator,
+
+		diskValidator:       dynamic.NewDiskValidator(log, diskEncryptionSetsFP, diskEncryptionSetsClusterSP, permissionsFP, permissionsClusterSP),
+		encryptionValidator: dynamic.NewEncryptionAtHostValidator(env, log),
+		providersValidator:  dynamic.NewProviderValidator(log, providersClusterSP),
+		spValidator:         dynamic.NewServicePrincipalValidator(),
+		subnetValidator:     dynamic.NewSubnetValidator(log, networkClientClusterSP),
+		vmSKUValidator:      dynamic.NewSKUValidator(resourceSkusClientClusterSP),
+		vnetValidator:       dynamic.NewVnetValidator(log, permissionsFP, permissionsClusterSP, networkClientFP, networkClientClusterSP),
+	}, nil
 }
 
 type openShiftClusterDynamicValidator struct {
@@ -40,10 +76,26 @@ type openShiftClusterDynamicValidator struct {
 	oc              *api.OpenShiftCluster
 	subscriptionDoc *api.SubscriptionDocument
 	fpAuthorizer    refreshable.Authorizer
+
+	tokenClient aad.TokenClient
+
+	quotaDynamic dynamic.Dynamic
+
+	diskValidator       dynamic.DiskValidator
+	encryptionValidator dynamic.EncryptionAtHostValidator
+	providersValidator  dynamic.ProvidersValidator
+	spValidator         dynamic.ServicePrincipalValidator
+	subnetValidator     dynamic.SubnetValidator
+	vmSKUValidator      dynamic.VMSKUValidator
+	vnetValidator       dynamic.VnetValidator
+}
+
+func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
+	return dv.dynamic(ctx, dv.env.Environment().ActiveDirectoryEndpoint, dv.env.Environment().ResourceManagerEndpoint)
 }
 
 // Dynamic validates an OpenShift cluster
-func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
+func (dv *openShiftClusterDynamicValidator) dynamic(ctx context.Context, ADEnpoint, RMEndpoint string) error {
 	// Get all subnets
 	subnets := []dynamic.Subnet{{
 		ID:   dv.oc.Properties.MasterProfile.SubnetID,
@@ -56,68 +108,45 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		})
 	}
 
-	// FP validation
-	fpDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, dv.fpAuthorizer, dynamic.AuthorizerFirstParty, aad.NewTokenClient())
+	err := dv.vnetValidator.Validate(ctx, dv.oc.Location, subnets, dv.oc)
 	if err != nil {
 		return err
 	}
 
-	err = fpDynamic.ValidateVnet(ctx, dv.oc.Location, subnets, dv.oc.Properties.NetworkProfile.PodCIDR, dv.oc.Properties.NetworkProfile.ServiceCIDR)
-	if err != nil {
-		return err
-	}
-
-	err = fpDynamic.ValidateDiskEncryptionSets(ctx, dv.oc)
+	err = dv.diskValidator.Validate(ctx, dv.oc)
 	if err != nil {
 		return err
 	}
 
 	spp := dv.oc.Properties.ServicePrincipalProfile
-	tokenClient := aad.NewTokenClient()
-	token, err := tokenClient.GetToken(ctx, dv.log, spp.ClientID, string(spp.ClientSecret), dv.subscriptionDoc.Subscription.Properties.TenantID, dv.env.Environment().ActiveDirectoryEndpoint, dv.env.Environment().ResourceManagerEndpoint)
+	token, err := dv.tokenClient.GetToken(ctx, dv.log, spp.ClientID, string(spp.ClientSecret), dv.subscriptionDoc.Subscription.Properties.TenantID, ADEnpoint, RMEndpoint)
 	if err != nil {
 		return err
 	}
 
-	spAuthorizer := refreshable.NewAuthorizer(token)
-
-	spDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, spAuthorizer, dynamic.AuthorizerClusterServicePrincipal, aad.NewTokenClient())
+	// validation with cluster service pricinpal
+	err = dv.spValidator.Validate(token)
 	if err != nil {
 		return err
 	}
 
-	// SP validation
-	err = spDynamic.ValidateServicePrincipal(ctx, spp.ClientID, string(spp.ClientSecret), dv.subscriptionDoc.Subscription.Properties.TenantID)
+	err = dv.subnetValidator.Validate(ctx, dv.oc, subnets)
 	if err != nil {
 		return err
 	}
 
-	err = spDynamic.ValidateVnet(ctx, dv.oc.Location, subnets, dv.oc.Properties.NetworkProfile.PodCIDR, dv.oc.Properties.NetworkProfile.ServiceCIDR)
+	err = dv.providersValidator.Validate(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = spDynamic.ValidateSubnets(ctx, dv.oc, subnets)
+	err = dv.encryptionValidator.Validate(ctx, dv.oc)
 	if err != nil {
 		return err
 	}
 
-	err = spDynamic.ValidateProviders(ctx)
-	if err != nil {
-		return err
-	}
+	err = dv.vmSKUValidator.Validate(ctx, dv.oc.Location, dv.subscriptionDoc.ID, dv.oc)
 
-	err = spDynamic.ValidateDiskEncryptionSets(ctx, dv.oc)
-	if err != nil {
-		return err
-	}
-
-	err = spDynamic.ValidateEncryptionAtHost(ctx, dv.oc)
-	if err != nil {
-		return err
-	}
-
-	err = spDynamic.ValidateVMSku(ctx, dv.oc.Location, dv.subscriptionDoc.ID, dv.oc)
 	if err != nil {
 		return err
 	}

@@ -8,11 +8,26 @@ import (
 	"net/http"
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 )
 
-func (dv *dynamic) ValidateProviders(ctx context.Context) error {
+type ProvidersValidator interface {
+	Validate(ctx context.Context) error
+}
+
+type defaultProviderValidator struct {
+	log       *logrus.Entry
+	providers features.ProvidersClient
+}
+
+func NewProviderValidator(log *logrus.Entry, providers features.ProvidersClient) *defaultProviderValidator {
+	return &defaultProviderValidator{log: log, providers: providers}
+}
+
+func (dv *defaultProviderValidator) Validate(ctx context.Context) error {
 	dv.log.Print("ValidateProviders")
 
 	providers, err := dv.providers.List(ctx, nil, "")

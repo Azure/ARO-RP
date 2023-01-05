@@ -4,7 +4,6 @@ package dynamic
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/base64"
@@ -16,10 +15,7 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_aad "github.com/Azure/ARO-RP/pkg/util/mocks/aad"
 )
 
@@ -35,15 +31,11 @@ type tokenRequirements struct {
 }
 
 func TestValidateServicePrincipal(t *testing.T) {
-	ctx := context.Background()
-	log := logrus.NewEntry(logrus.StandardLogger())
-
 	for _, tt := range []struct {
-		tr          *tokenRequirements
-		name        string
-		wantErr     string
-		aadMock     func(*mock_aad.MockTokenClient, *tokenRequirements)
-		getTokenErr error
+		tr      *tokenRequirements
+		name    string
+		wantErr string
+		aadMock func(*mock_aad.MockTokenClient, *tokenRequirements)
 	}{
 		{
 			name: "pass: Successful Validation",
@@ -63,12 +55,6 @@ func TestValidateServicePrincipal(t *testing.T) {
 			wantErr: "400: InvalidServicePrincipalCredentials: properties.servicePrincipalProfile: The provided service principal must not have the Application.ReadWrite.OwnedBy permission.",
 		},
 		{
-			name:        "fail: Provided service must not have Application.ReadWrite.OwnedBy permission",
-			tr:          newTokenRequirements(),
-			getTokenErr: fmt.Errorf("parameter activeDirectoryEndpoint cannot be empty"),
-			wantErr:     "parameter activeDirectoryEndpoint cannot be empty",
-		},
-		{
 			name: "fail: unavailable signing method",
 			tr: &tokenRequirements{
 				clientID:      "my-client",
@@ -84,22 +70,14 @@ func TestValidateServicePrincipal(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			aad := mock_aad.NewMockTokenClient(controller)
+			spValidator := NewServicePrincipalValidator()
 
 			token, err := createToken(tt.tr)
 			if err != nil {
 				t.Errorf("failed to create testing service principal token: %v\n", err)
 			}
 
-			spDynamic, err := NewServicePrincipalValidator(log, &azureclient.PublicCloud, AuthorizerClusterServicePrincipal, aad)
-			if err != nil {
-				t.Errorf("failed to create ServicePrincipalDynamicValidator: %v\n", err)
-			}
-
-			aad.EXPECT().GetToken(ctx, log, tt.tr.clientID, tt.tr.clientSecret, tt.tr.tenantID, tt.tr.aadEndpoint, tt.tr.graphEndpoint).MaxTimes(1).Return(token, tt.getTokenErr)
-
-			err = spDynamic.ValidateServicePrincipal(ctx, tt.tr.clientID, tt.tr.clientSecret, tt.tr.tenantID)
+			err = spValidator.Validate(token)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Errorf("\n%s\n !=\n%s", err, tt.wantErr)

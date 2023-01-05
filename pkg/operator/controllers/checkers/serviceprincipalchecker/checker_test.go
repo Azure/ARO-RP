@@ -8,85 +8,64 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/golang/mock/gomock"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/api/validate/dynamic"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
-	mock_dynamic "github.com/Azure/ARO-RP/pkg/util/mocks/dynamic"
 )
 
-func TestCheck(t *testing.T) {
+type mockValidator struct {
+	err error
+}
+
+func (v mockValidator) Validate(token *adal.ServicePrincipalToken) error {
+	return v.err
+}
+
+type mockTokenGetter struct {
+	err error
+}
+
+func (g mockTokenGetter) Get(ctx context.Context, azEnv *azureclient.AROEnvironment) (token *adal.ServicePrincipalToken, err error) {
+	return nil, g.err
+}
+func TestCheck2(t *testing.T) {
 	ctx := context.Background()
 	log := logrus.NewEntry(logrus.StandardLogger())
-	mockCredentials := &clusterauthorizer.Credentials{
-		ClientID:     []byte("fake-client-id"),
-		ClientSecret: []byte("fake-client-secret"),
-		TenantID:     []byte("fake-tenant-id"),
-	}
 
 	for _, tt := range []struct {
-		name             string
-		credentialsExist bool
-		validator        func(controller *gomock.Controller) dynamic.ServicePrincipalValidator
-		wantErr          string
+		name          string
+		validatorErr  error
+		wantErr       string
+		credGetterErr error
 	}{
 		{
-			name:             "valid service principal",
-			credentialsExist: true,
-			validator: func(controller *gomock.Controller) dynamic.ServicePrincipalValidator {
-				validator := mock_dynamic.NewMockDynamic(controller)
-				validator.EXPECT().ValidateServicePrincipal(ctx, string(mockCredentials.ClientID), string(mockCredentials.ClientSecret), string(mockCredentials.TenantID))
-				return validator
-			},
+			name: "valid service principal",
 		},
 		{
-			name:             "could not instantiate a validator",
-			credentialsExist: true,
-			validator: func(controller *gomock.Controller) dynamic.ServicePrincipalValidator {
-				validator := mock_dynamic.NewMockDynamic(controller)
-				validator.EXPECT().ValidateServicePrincipal(ctx, string(mockCredentials.ClientID), string(mockCredentials.ClientSecret), string(mockCredentials.TenantID)).
-					Return(errors.New("fake validation error"))
-				return validator
-			},
-			wantErr: "fake validation error",
+			name:          "could not get service principal credentials",
+			credGetterErr: errors.New("fake credentials get error"),
+			wantErr:       "fake credentials get error",
 		},
 		{
-			name:             "could not instantiate a validator",
-			credentialsExist: true,
-			wantErr:          "fake validator constructor error",
-		},
-		{
-			name:    "could not get service principal credentials",
-			wantErr: "fake credentials get error",
+			name:         "could not validate",
+			validatorErr: errors.New("some error"),
+			wantErr:      "some error",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			var validatorMock dynamic.ServicePrincipalValidator
-			if tt.validator != nil {
-				validatorMock = tt.validator(controller)
+			credentialsGetter := mockTokenGetter{err: tt.credGetterErr}
+			sp := &checker{
+				log:        log,
+				credGetter: credentialsGetter,
 			}
 
-			sp := &checker{
-				log: log,
-				credentials: func(ctx context.Context) (*clusterauthorizer.Credentials, error) {
-					if tt.credentialsExist {
-						return mockCredentials, nil
-					}
-					return nil, errors.New("fake credentials get error")
-				},
-				newSPValidator: func(azEnv *azureclient.AROEnvironment) (dynamic.ServicePrincipalValidator, error) {
-					if validatorMock != nil {
-						return validatorMock, nil
-					}
-					return nil, errors.New("fake validator constructor error")
-				},
-			}
+			sp.spValidator = mockValidator{err: tt.validatorErr}
 
 			err := sp.Check(ctx, azuretypes.PublicCloud.Name())
 			if err != nil && err.Error() != tt.wantErr ||

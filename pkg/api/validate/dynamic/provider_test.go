@@ -6,6 +6,7 @@ package dynamic
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -139,12 +140,12 @@ func TestValidateProviders(t *testing.T) {
 
 			tt.mocks(providerClient)
 
-			dv := &dynamic{
-				log:       logrus.NewEntry(logrus.StandardLogger()),
-				providers: providerClient,
-			}
+			logger := logrus.New()
+			logger.SetOutput(io.Discard)
 
-			err := dv.ValidateProviders(ctx)
+			dv := NewProviderValidator(logrus.NewEntry(logger), providerClient)
+
+			err := dv.Validate(ctx)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

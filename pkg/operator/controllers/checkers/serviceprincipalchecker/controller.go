@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/Azure/ARO-RP/pkg/api/validate/dynamic"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	checkercommon "github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/common"
@@ -52,7 +53,7 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli 
 		role: role,
 
 		arocli:  arocli,
-		checker: newServicePrincipalChecker(log, kubernetescli),
+		checker: newServicePrincipalChecker(log, kubernetescli, dynamic.NewServicePrincipalValidator()),
 	}
 }
 

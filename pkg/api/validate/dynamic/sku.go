@@ -11,11 +11,24 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 )
 
+type VMSKUValidator interface {
+	Validate(ctx context.Context, location string, subscriptionID string, oc *api.OpenShiftCluster) error
+}
+
+type defaultSKUValidator struct {
+	resourceSkusClient compute.ResourceSkusClient
+}
+
+func NewSKUValidator(resourceSkusClient compute.ResourceSkusClient) defaultSKUValidator {
+	return defaultSKUValidator{resourceSkusClient}
+}
+
 // ValidateWorkerSku uses resourceSkusClient to ensure that the VM sizes listed in the cluster document are available for use in the target region.
-func (dv *dynamic) ValidateVMSku(ctx context.Context, location string, subscriptionID string, oc *api.OpenShiftCluster) error {
+func (dv defaultSKUValidator) Validate(ctx context.Context, location string, subscriptionID string, oc *api.OpenShiftCluster) error {
 	// Get a list of available worker SKUs, filtering by location. We initialize a new resourceSkusClient here instead of using the one in dv.env,
 	// so that we can determine SKU availability within target cluster subscription instead of within RP subscription.
 	filter := fmt.Sprintf("location eq %s", location)

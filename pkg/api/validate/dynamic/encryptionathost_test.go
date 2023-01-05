@@ -6,6 +6,7 @@ package dynamic
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -144,13 +145,12 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 				tt.mocks(_env)
 			}
 
-			dv := &dynamic{
-				env:            _env,
-				authorizerType: AuthorizerClusterServicePrincipal,
-				log:            logrus.NewEntry(logrus.StandardLogger()),
-			}
+			logger := logrus.New()
+			logger.SetOutput(io.Discard)
 
-			err := dv.ValidateEncryptionAtHost(ctx, tt.oc)
+			dv := NewEncryptionAtHostValidator(_env, logrus.NewEntry(logger))
+
+			err := dv.Validate(ctx, tt.oc)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

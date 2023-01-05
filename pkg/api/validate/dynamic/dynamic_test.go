@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"testing"
 
@@ -19,8 +20,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/validate/dynamic/vnetcache"
 	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
-	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
+	mock_vnetcache "github.com/Azure/ARO-RP/pkg/util/mocks/vnetcache"
 )
 
 var (
@@ -39,6 +41,8 @@ var (
 	masterNSGv1       = resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg"
 	workerNSGv1       = resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg"
 )
+
+var cacheKey = vnetcache.VirtualNetworksCacheKey{ResourceGroupName: resourceGroupName, VirtualNetworkName: vnetName}
 
 func TestValidateVnetPermissions(t *testing.T) {
 	ctx := context.Background()
@@ -119,18 +123,17 @@ func TestValidateVnetPermissions(t *testing.T) {
 			permissionsClient := mock_authorization.NewMockPermissionsClient(controller)
 			tt.mocks(permissionsClient, cancel)
 
-			dv := &dynamic{
-				authorizerType: AuthorizerClusterServicePrincipal,
-				log:            logrus.NewEntry(logrus.StandardLogger()),
-				permissions:    permissionsClient,
-			}
+			nullLogger := logrus.New()
+			nullLogger.SetOutput(io.Discard)
+
+			dv := defaultVnetValidator{log: logrus.NewEntry(nullLogger)}
 
 			vnetr, err := azure.ParseResourceID(vnetID)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			err = dv.validateVnetPermissions(ctx, vnetr)
+			err = dv.validateVnetPermissions(ctx, vnetr, permissionsClient, AuthorizerClusterServicePrincipal)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))
@@ -260,15 +263,15 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		name            string
 		subnet          Subnet
 		permissionMocks func(*mock_authorization.MockPermissionsClient, context.CancelFunc)
-		vnetMocks       func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
+		vnetMocks       func(*mock_vnetcache.MockVirtualNetworksGetClient, mgmtnetwork.VirtualNetwork)
 		wantErr         string
 	}{
 		{
 			name:   "fail: failed to get vnet",
 			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, errors.New("failed to get vnet"))
 			},
 			wantErr: "failed to get vnet",
@@ -276,10 +279,10 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		{
 			name:   "fail: master subnet doesn't exist",
 			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnet.Subnets = nil
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
@@ -287,10 +290,10 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		{
 			name:   "fail: worker subnet ID doesn't exist",
 			subnet: Subnet{ID: workerSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[1].ID = to.StringPtr("not valid")
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + workerSubnet + "' could not be found.",
@@ -298,9 +301,9 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		{
 			name:   "fail: permissions don't exist",
 			subnet: Subnet{ID: workerSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 			permissionMocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
@@ -324,9 +327,9 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		{
 			name:   "pass",
 			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 			permissionMocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
@@ -348,11 +351,11 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 		{
 			name:   "pass: no route table to check",
 			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[0].RouteTable = nil
 				(*vnet.Subnets)[1].RouteTable = nil
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 		},
@@ -365,7 +368,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			defer cancel()
 
 			permissionsClient := mock_authorization.NewMockPermissionsClient(controller)
-			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+			vnetClient := mock_vnetcache.NewMockVirtualNetworksGetClient(controller)
 
 			vnet := &mgmtnetwork.VirtualNetwork{
 				ID: &vnetID,
@@ -391,12 +394,8 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 				},
 			}
 
-			dv := &dynamic{
-				authorizerType:  AuthorizerClusterServicePrincipal,
-				log:             logrus.NewEntry(logrus.StandardLogger()),
-				permissions:     permissionsClient,
-				virtualNetworks: vnetClient,
-			}
+			nullLogger := logrus.New()
+			nullLogger.SetOutput(io.Discard)
 
 			if tt.permissionMocks != nil {
 				tt.permissionMocks(permissionsClient, cancel)
@@ -405,8 +404,9 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			if tt.vnetMocks != nil {
 				tt.vnetMocks(vnetClient, *vnet)
 			}
+			dv := defaultVnetValidator{log: logrus.NewEntry(nullLogger), virtualNetworks: vnetClient}
 
-			err := dv.validateRouteTablePermissions(ctx, tt.subnet)
+			err := dv.validateRouteTablePermissions(ctx, tt.subnet, permissionsClient, AuthorizerClusterServicePrincipal)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))
@@ -422,15 +422,15 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		name            string
 		subnet          Subnet
 		permissionMocks func(*mock_authorization.MockPermissionsClient, context.CancelFunc)
-		vnetMocks       func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
+		vnetMocks       func(*mock_vnetcache.MockVirtualNetworksGetClient, mgmtnetwork.VirtualNetwork)
 		wantErr         string
 	}{
 		{
 			name:   "fail: failed to get vnet",
 			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, errors.New("failed to get vnet"))
 			},
 			wantErr: "failed to get vnet",
@@ -438,10 +438,10 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		{
 			name:   "fail: master subnet doesn't exist",
 			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnet.Subnets = nil
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
@@ -449,10 +449,10 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		{
 			name:   "fail: worker subnet ID doesn't exist",
 			subnet: Subnet{ID: workerSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[1].ID = to.StringPtr("not valid")
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + workerSubnet + "' could not be found.",
@@ -460,9 +460,9 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		{
 			name:   "fail: permissions don't exist",
 			subnet: Subnet{ID: workerSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 			permissionMocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
@@ -486,9 +486,9 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		{
 			name:   "pass",
 			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 			permissionMocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
@@ -510,11 +510,11 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 		{
 			name:   "pass: no nat gateway to check",
 			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[0].NatGateway = nil
 				(*vnet.Subnets)[1].NatGateway = nil
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 		},
@@ -527,7 +527,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			defer cancel()
 
 			permissionsClient := mock_authorization.NewMockPermissionsClient(controller)
-			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+			vnetClient := mock_vnetcache.NewMockVirtualNetworksGetClient(controller)
 
 			vnet := &mgmtnetwork.VirtualNetwork{
 				ID: &vnetID,
@@ -553,12 +553,9 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 				},
 			}
 
-			dv := &dynamic{
-				authorizerType:  AuthorizerClusterServicePrincipal,
-				log:             logrus.NewEntry(logrus.StandardLogger()),
-				permissions:     permissionsClient,
-				virtualNetworks: vnetClient,
-			}
+			nullLogger := logrus.New()
+			nullLogger.SetOutput(io.Discard)
+			dv := defaultVnetValidator{log: logrus.NewEntry(nullLogger), virtualNetworks: vnetClient}
 
 			if tt.permissionMocks != nil {
 				tt.permissionMocks(permissionsClient, cancel)
@@ -568,7 +565,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 				tt.vnetMocks(vnetClient, *vnet)
 			}
 
-			err := dv.validateNatGatewayPermissions(ctx, tt.subnet)
+			err := dv.validateNatGatewayPermissions(ctx, tt.subnet, permissionsClient, AuthorizerClusterServicePrincipal)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))
@@ -583,17 +580,17 @@ func TestValidateCIDRRanges(t *testing.T) {
 	for _, tt := range []struct {
 		name      string
 		modifyOC  func(*api.OpenShiftCluster)
-		vnetMocks func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
+		vnetMocks func(*mock_vnetcache.MockVirtualNetworksGetClient, mgmtnetwork.VirtualNetwork)
 		wantErr   string
 	}{
 		{
 			name: "pass",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 		},
@@ -602,12 +599,12 @@ func TestValidateCIDRRanges(t *testing.T) {
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.NetworkProfile.ServiceCIDR = "10.0.0.0/24"
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided CIDRs must not overlap: '10.0.0.0/24 overlaps with 10.0.0.0/24'.",
@@ -702,13 +699,15 @@ func TestValidateCIDRRanges(t *testing.T) {
 			}
 
 			for _, vnet := range vnets {
-				vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+				vnetClient := mock_vnetcache.NewMockVirtualNetworksGetClient(controller)
 				if tt.vnetMocks != nil {
 					tt.vnetMocks(vnetClient, vnet)
 				}
 
-				dv := &dynamic{
-					log:             logrus.NewEntry(logrus.StandardLogger()),
+				nullLogger := logrus.New()
+				nullLogger.SetOutput(io.Discard)
+				dv := defaultVnetValidator{
+					log:             logrus.NewEntry(nullLogger),
 					virtualNetworks: vnetClient,
 				}
 
@@ -752,13 +751,15 @@ func TestValidateVnetLocation(t *testing.T) {
 				Location: to.StringPtr(tt.location),
 			}
 
-			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+			vnetClient := mock_vnetcache.NewMockVirtualNetworksGetClient(controller)
 			vnetClient.EXPECT().
-				Get(gomock.Any(), resourceGroupName, vnetName, "").
+				Get(gomock.Any(), cacheKey).
 				Return(vnet, nil)
 
-			dv := &dynamic{
-				log:             logrus.NewEntry(logrus.StandardLogger()),
+			nullLogger := logrus.New()
+			nullLogger.SetOutput(io.Discard)
+			dv := defaultVnetValidator{
+				log:             logrus.NewEntry(nullLogger),
 				virtualNetworks: vnetClient,
 			}
 
@@ -782,14 +783,14 @@ func TestValidateSubnets(t *testing.T) {
 	for _, tt := range []struct {
 		name      string
 		modifyOC  func(*api.OpenShiftCluster)
-		vnetMocks func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
+		vnetMocks func(*mock_vnetcache.MockVirtualNetworksGetClient, mgmtnetwork.VirtualNetwork)
 		wantErr   string
 	}{
 		{
 			name: "pass",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 		},
@@ -800,9 +801,9 @@ func TestValidateSubnets(t *testing.T) {
 					SubnetID: masterSubnet,
 				}
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 		},
@@ -811,38 +812,38 @@ func TestValidateSubnets(t *testing.T) {
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.ProvisioningState = api.ProvisioningStateCreating
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[0].NetworkSecurityGroup = nil
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 		},
 		{
 			name: "fail: subnet does not exist on vnet",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnet.Subnets = nil
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
 		},
 		{
 			name: "pass: subnet provisioning state is succeeded",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[0].ProvisioningState = mgmtnetwork.Succeeded
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 		},
 		{
 			name: "fail: subnet provisioning state is not succeeded",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[0].ProvisioningState = mgmtnetwork.Failed
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is not in a Succeeded state",
@@ -852,9 +853,9 @@ func TestValidateSubnets(t *testing.T) {
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.ProvisioningState = api.ProvisioningStateCreating
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must not have a network security group attached.",
@@ -864,39 +865,39 @@ func TestValidateSubnets(t *testing.T) {
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.ArchitectureVersion = 9001
 			},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 			wantErr: "unknown architecture version 9001",
 		},
 		{
 			name: "fail: nsg id doesn't match expected",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[0].NetworkSecurityGroup.ID = to.StringPtr("not matching")
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must have network security group '" + masterNSGv1 + "' attached.",
 		},
 		{
 			name: "fail: invalid subnet CIDR",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[0].AddressPrefix = to.StringPtr("not-valid")
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 			wantErr: "invalid CIDR address: not-valid",
 		},
 		{
 			name: "fail: too small subnet CIDR",
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+			vnetMocks: func(vnetClient *mock_vnetcache.MockVirtualNetworksGetClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[0].AddressPrefix = to.StringPtr("10.0.0.0/28")
 				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Get(gomock.Any(), cacheKey).
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must be /27 or larger.",
@@ -934,16 +935,18 @@ func TestValidateSubnets(t *testing.T) {
 			if tt.modifyOC != nil {
 				tt.modifyOC(oc)
 			}
-			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+			vnetClient := mock_vnetcache.NewMockVirtualNetworksGetClient(controller)
 			if tt.vnetMocks != nil {
 				tt.vnetMocks(vnetClient, vnet)
 			}
-			dv := &dynamic{
+			nullLogger := logrus.New()
+			nullLogger.SetOutput(io.Discard)
+			dv := defaultSubnetValidator{
+				log:             logrus.NewEntry(nullLogger),
 				virtualNetworks: vnetClient,
-				log:             logrus.NewEntry(logrus.StandardLogger()),
 			}
 
-			err := dv.ValidateSubnets(ctx, oc, []Subnet{{ID: masterSubnet, Path: masterSubnetPath}})
+			err := dv.Validate(ctx, oc, []Subnet{{ID: masterSubnet, Path: masterSubnetPath}})
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(fmt.Errorf("\n%s\n !=\n%s", err.Error(), tt.wantErr))

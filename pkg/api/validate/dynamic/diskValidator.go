@@ -11,12 +11,39 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 )
 
-func (dv *dynamic) ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenShiftCluster) error {
+type DiskValidator interface {
+	Validate(ctx context.Context, oc *api.OpenShiftCluster) error
+}
+
+type defaultDiskValidator struct {
+	log                  *logrus.Entry
+	diskEncryptionSetsFP compute.DiskEncryptionSetsClient
+	diskEncryptionSetsSP compute.DiskEncryptionSetsClient
+	permissionsFP        authorization.PermissionsClient
+	permissionsSP        authorization.PermissionsClient
+}
+
+func NewDiskValidator(log *logrus.Entry, diskEncryptionSetsFP, diskEncryptionSetsSP compute.DiskEncryptionSetsClient, permissionsFP, permissionsSP authorization.PermissionsClient) *defaultDiskValidator {
+	return &defaultDiskValidator{log: log, diskEncryptionSetsFP: diskEncryptionSetsFP, diskEncryptionSetsSP: diskEncryptionSetsSP, permissionsFP: permissionsFP, permissionsSP: permissionsSP}
+}
+
+func (dv *defaultDiskValidator) Validate(ctx context.Context, oc *api.OpenShiftCluster) error {
+	err := dv.validateOne(ctx, oc, dv.diskEncryptionSetsFP, dv.permissionsFP, AuthorizerFirstParty)
+	if err != nil {
+		return err
+	}
+	return dv.validateOne(ctx, oc, dv.diskEncryptionSetsSP, dv.permissionsSP, AuthorizerClusterServicePrincipal)
+}
+
+func (dv *defaultDiskValidator) validateOne(ctx context.Context, oc *api.OpenShiftCluster, diskClient compute.DiskEncryptionSetsClient, perms authorization.PermissionsClient, authType AuthorizerType) error {
 	dv.log.Print("ValidateDiskEncryptionSet")
 
 	// It is very likely that master and worker profiles use the same
@@ -50,12 +77,12 @@ func (dv *dynamic) ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenS
 			return err
 		}
 
-		err = dv.validateDiskEncryptionSetPermissions(ctx, &r, paths[i])
+		err = dv.validateDiskEncryptionSetPermissions(ctx, &r, paths[i], perms, authType)
 		if err != nil {
 			return err
 		}
 
-		err = dv.validateDiskEncryptionSetLocation(ctx, &r, oc.Location, paths[i])
+		err = dv.validateDiskEncryptionSetLocation(ctx, &r, oc.Location, paths[i], diskClient)
 		if err != nil {
 			return err
 		}
@@ -64,20 +91,20 @@ func (dv *dynamic) ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenS
 	return nil
 }
 
-func (dv *dynamic) validateDiskEncryptionSetPermissions(ctx context.Context, desr *azure.Resource, path string) error {
+func (dv *defaultDiskValidator) validateDiskEncryptionSetPermissions(ctx context.Context, desr *azure.Resource, path string, perms authorization.PermissionsClient, authType AuthorizerType) error {
 	dv.log.Print("validateDiskEncryptionSetPermissions")
 
 	errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
-	if dv.authorizerType == AuthorizerClusterServicePrincipal {
+	if authType == AuthorizerClusterServicePrincipal {
 		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
 	}
 
-	err := dv.validateActions(ctx, desr, []string{
+	err := validateActions(ctx, dv.log, perms, desr, []string{
 		"Microsoft.Compute/diskEncryptionSets/read",
 	})
 
 	if err == wait.ErrWaitTimeout {
-		return api.NewCloudError(http.StatusBadRequest, errCode, path, "The %s service principal does not have Reader permission on disk encryption set '%s'.", dv.authorizerType, desr.String())
+		return api.NewCloudError(http.StatusBadRequest, errCode, path, "The %s service principal does not have Reader permission on disk encryption set '%s'.", authType, desr.String())
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
@@ -87,10 +114,10 @@ func (dv *dynamic) validateDiskEncryptionSetPermissions(ctx context.Context, des
 	return err
 }
 
-func (dv *dynamic) validateDiskEncryptionSetLocation(ctx context.Context, desr *azure.Resource, location, path string) error {
+func (dv *defaultDiskValidator) validateDiskEncryptionSetLocation(ctx context.Context, desr *azure.Resource, location, path string, diskEncClient compute.DiskEncryptionSetsClient) error {
 	dv.log.Print("validateDiskEncryptionSetLocation")
 
-	des, err := dv.diskEncryptionSets.Get(ctx, desr.ResourceGroup, desr.ResourceName)
+	des, err := diskEncClient.Get(ctx, desr.ResourceGroup, desr.ResourceName)
 	if err != nil {
 		if detailedErr, ok := err.(autorest.DetailedError); ok &&
 			detailedErr.StatusCode == http.StatusNotFound {

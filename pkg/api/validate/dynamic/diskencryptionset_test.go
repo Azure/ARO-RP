@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"testing"
 
@@ -275,14 +276,14 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 						tt.mocks(permissionsClient, diskEncryptionSetsClient, cancel)
 					}
 
-					dv := &dynamic{
-						authorizerType:     authorizerType,
-						log:                logrus.NewEntry(logrus.StandardLogger()),
-						permissions:        permissionsClient,
-						diskEncryptionSets: diskEncryptionSetsClient,
+					nullLogger := logrus.New()
+					nullLogger.SetOutput(io.Discard)
+
+					dv := defaultDiskValidator{
+						log: logrus.NewEntry(nullLogger),
 					}
 
-					err := dv.ValidateDiskEncryptionSets(ctx, tt.oc)
+					err := dv.validateOne(ctx, tt.oc, diskEncryptionSetsClient, permissionsClient, authorizerType)
 					if err != nil && err.Error() != tt.wantErr ||
 						err == nil && tt.wantErr != "" {
 						t.Error(err)

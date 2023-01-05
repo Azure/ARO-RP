@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"testing"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -212,13 +213,11 @@ func TestValidateVMSku(t *testing.T) {
 				List(gomock.Any(), fmt.Sprintf("location eq %v", tt.targetLocation)).
 				Return(skus, tt.resourceSkusClientErr)
 
-			dv := dynamic{
-				authorizerType:     AuthorizerClusterServicePrincipal,
-				log:                logrus.NewEntry(logrus.StandardLogger()),
-				resourceSkusClient: resourceSkusClient,
-			}
+			logger := logrus.New()
+			logger.SetOutput(io.Discard)
 
-			err := dv.ValidateVMSku(context.Background(), tt.targetLocation, subscriptionID, oc)
+			dv := NewSKUValidator(resourceSkusClient)
+			err := dv.Validate(context.Background(), tt.targetLocation, subscriptionID, oc)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

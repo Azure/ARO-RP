@@ -4,26 +4,29 @@ package dynamic
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"net/http"
 
+	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/form3tech-oss/jwt-go"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 )
 
-func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string) error {
-	dv.log.Print("ValidateServicePrincipal")
+type ServicePrincipalValidator interface {
+	Validate(token *adal.ServicePrincipalToken) error
+}
 
-	token, err := dv.tokenClient.GetToken(ctx, dv.log, clientID, clientSecret, tenantID, dv.azEnv.ActiveDirectoryEndpoint, dv.azEnv.GraphEndpoint)
-	if err != nil {
-		return err
-	}
+type defaultSPValidator struct{}
 
+func NewServicePrincipalValidator() defaultSPValidator {
+	return defaultSPValidator{}
+}
+
+func (v defaultSPValidator) Validate(token *adal.ServicePrincipalToken) error {
 	p := &jwt.Parser{}
 	c := &azureclaim.AzureClaim{}
-	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
+	_, _, err := p.ParseUnverified(token.OAuthToken(), c)
 	if err != nil {
 		return err
 	}

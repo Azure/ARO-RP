@@ -17,18 +17,13 @@ type VirtualNetworksClient interface {
 	Get(ctx context.Context, resourceGroupName string, virtualNetworkName string, expand string) (vnet mgmtnetwork.VirtualNetwork, err error)
 }
 
-type virtualNetworksClient struct {
-	mgmtnetwork.VirtualNetworksClient
-}
-
-var _ VirtualNetworksClient = &virtualNetworksClient{}
+// Makes sure the interface is implemented, not very useful since it will error out other places.
+var _ VirtualNetworksClient = mgmtnetwork.VirtualNetworksClient{}
 
 // NewVirtualNetworksClient creates a new VirtualNetworksClient
-func NewVirtualNetworksClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) VirtualNetworksClient {
+func NewVirtualNetworksClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) mgmtnetwork.VirtualNetworksClient {
 	client := mgmtnetwork.NewVirtualNetworksClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 
-	return &virtualNetworksClient{
-		VirtualNetworksClient: client,
-	}
+	return client
 }

@@ -192,6 +192,7 @@ func TestValidateQuota(t *testing.T) {
 			}
 
 			err := validateQuota(ctx, oc, networkUsageClient, computeUsageClient)
+
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
