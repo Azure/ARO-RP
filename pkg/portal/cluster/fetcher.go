@@ -15,6 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/alertmanager"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
@@ -26,6 +27,7 @@ type FetchClient interface {
 	Machines(context.Context) (*MachineListInformation, error)
 	MachineSets(context.Context) (*MachineSetListInformation, error)
 	Statistics(context.Context, *http.Client, string, time.Duration, time.Time, string) ([]Metrics, error)
+	GetOpenShiftFiringAlerts(context.Context) ([]FiringAlert, error)
 }
 
 // client is an implementation of FetchClient. It currently contains a "fetcher"
@@ -44,10 +46,11 @@ type client struct {
 // contains Kubernetes clients and returns the frontend-suitable data
 // structures. The concrete implementation of FetchClient wraps this.
 type realFetcher struct {
-	log           *logrus.Entry
-	configCli     configclient.Interface
-	kubernetesCli kubernetes.Interface
-	machineClient machineclient.Interface
+	log                *logrus.Entry
+	configCli          configclient.Interface
+	kubernetesCli      kubernetes.Interface
+	machineClient      machineclient.Interface
+	alertManagerClient alertmanager.AlertManager
 }
 
 func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument) (*realFetcher, error) {
@@ -74,11 +77,14 @@ func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftCl
 		return nil, err
 	}
 
+	alertManagerClient := alertmanager.NewAlertManager(restConfig, log)
+
 	return &realFetcher{
-		log:           log,
-		configCli:     configCli,
-		kubernetesCli: kubernetesCli,
-		machineClient: machineClient,
+		log:                log,
+		configCli:          configCli,
+		kubernetesCli:      kubernetesCli,
+		machineClient:      machineClient,
+		alertManagerClient: alertManagerClient,
 	}, nil
 }
 

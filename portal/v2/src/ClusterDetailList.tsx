@@ -6,7 +6,7 @@ import { MachinesWrapper } from "./ClusterDetailListComponents/MachinesWrapper"
 import { MachineSetsWrapper } from "./ClusterDetailListComponents/MachineSetsWrapper"
 import { Statistics } from "./ClusterDetailListComponents/Statistics/Statistics"
 import { ClusterOperatorsWrapper } from "./ClusterDetailListComponents/ClusterOperatorsWrapper";
-
+import { ClusterAlertsWrapper } from "./ClusterDetailListComponents/ClusterAlertsWrapper";
 import { ICluster } from "./App"
 
 interface ClusterDetailComponentProps {
@@ -42,6 +42,8 @@ export interface WrapperProps {
   detailPanelSelected: string
   loaded: boolean
 }
+
+export let ClusterAlertsMap: any = {}
 
 interface IClusterDetailComponentState {
   item: IClusterDetails // why both state and props?
@@ -81,7 +83,17 @@ export class ClusterDetailComponent extends Component<ClusterDetailComponentProp
           <StatisticsView currentCluster={this.props.cluster!} detailPanelSelected={panel} loaded = {this.props.isDataLoaded} statisticsType = {type}/>
         )
       } else {
-        const DetailView = detailComponents.get(panel)
+        case "clusteralerts": {
+          return (
+            <ClusterAlertsWrapper
+              clusterName={this.props.item.name}
+              currentCluster={this.props.cluster!}
+              detailPanelSelected={this.props.detailPanelVisible}
+              loaded={this.props.isDataLoaded}
+            />
+          );
+        }
+      const DetailView = detailComponents.get(panel)
         return (
           <DetailView currentCluster={this.props.cluster!} detailPanelSelected={panel} loaded={this.props.isDataLoaded}/>
         )

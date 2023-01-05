@@ -73,6 +73,7 @@ export const kcmStatisticsKey = "kcmstatistics"
 export const dnsStatisticsKey = "dnsstatistics"
 export const ingressStatisticsKey = "ingressstatistics"
 export const clusterOperatorsKey = "clusteroperators"
+export const clusterAlertsKey = "clusteralerts" 
 
 const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
 
@@ -166,6 +167,12 @@ export function ClusterDetailPanel(props: {
           key: clusterOperatorsKey,
           url: '#clusteroperators',
           icon: 'Shapes',
+        },
+        {
+          name: 'ClusterAlerts',
+          key: clusterAlertsKey,
+          url: '#clusteralerts',
+          icon: 'Flag',
         },
       ],
     },

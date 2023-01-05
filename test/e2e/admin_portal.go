@@ -134,6 +134,86 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		}
 	})
 
+	It("Should be able to populate cluster alerts panel correctly", func() {
+		const (
+			clusterAlertEntries      = 2
+			clusterAlertsDivSelector = "div[name='ClusterAlerts']"
+		)
+
+		err := wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[data-automation-key='name']"))
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		cluster, err := wd.FindElement(selenium.ByCSSSelector, "div[data-automation-key='name']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		err = cluster.Click()
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		err = wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, clusterAlertsDivSelector))
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		clusterAlertsPanel, err := wd.FindElement(selenium.ByCSSSelector, clusterAlertsDivSelector)
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		err = clusterAlertsPanel.Click()
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailCell"), 2*time.Minute)
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		clusterAlertsPanelSpans, err := wd.FindElements(selenium.ByID, "ClusterDetailCell")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		Expect(len(clusterAlertsPanelSpans)).To(Equal(clusterAlertEntries * 3))
+
+		clusterAlertsPanelFields := clusterAlertsPanelSpans[0 : clusterAlertEntries-1]
+		clusterAlertsPanelColons := clusterAlertsPanelSpans[clusterAlertEntries : clusterAlertEntries*2-1]
+		clusterAlertsPanelValues := clusterAlertsPanelSpans[clusterAlertEntries*2 : len(clusterAlertsPanelSpans)-1]
+
+		for _, clusterAlertsPanelField := range clusterAlertsPanelFields {
+			clusterAlertsPanelText, err := clusterAlertsPanelField.Text()
+			if err != nil {
+				SaveScreenshotAndExit(wd, err)
+			}
+
+			Expect(clusterAlertsPanelText).To(Not(Equal("")))
+		}
+
+		for _, clusterAlertsPanelField := range clusterAlertsPanelColons {
+			clusterAlertsPanelText, err := clusterAlertsPanelField.Text()
+			if err != nil {
+				SaveScreenshotAndExit(wd, err)
+			}
+
+			Expect(clusterAlertsPanelText).To(Equal(":"))
+		}
+
+		for _, clusterAlertsPanelField := range clusterAlertsPanelValues {
+			clusterAlertsPanelText, err := clusterAlertsPanelField.Text()
+			if err != nil {
+				SaveScreenshotAndExit(wd, err)
+			}
+
+			Expect(clusterAlertsPanelText).To(Not(Equal("")))
+		}
+	})
+
 	It("Should be able to copy cluster resource id", func() {
 		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "button[aria-label='Copy Resource ID']"))
 

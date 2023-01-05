@@ -251,3 +251,28 @@ func (p *portal) statistics(w http.ResponseWriter, r *http.Request) {
 		p.log.Error(err)
 	}
 }
+
+func (p *portal) getOpenShiftFiringAlerts(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	fetcher, err := p.makeFetcher(ctx, r)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	getOpenShiftFiringAlerts, err := fetcher.GetOpenShiftFiringAlerts(ctx)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	b, err := json.MarshalIndent(getOpenShiftFiringAlerts, "", "    ")
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(b)
+}
