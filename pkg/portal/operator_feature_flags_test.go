@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/go-test/deep"
 	"github.com/gorilla/mux"
@@ -31,11 +30,6 @@ func TestOperatorFeatureFlags(t *testing.T) {
 	fixture := testdatabase.NewFixture().
 		WithOpenShiftClusters(dbOpenShiftClusters)
 
-	_, err := time.Parse(time.RFC3339, "2011-01-02T01:03:00Z")
-	if err != nil {
-		t.Error(err)
-	}
-
 	fixture.AddOpenShiftClusterDocuments(
 		&api.OpenShiftClusterDocument{
 			ID:  fakeID,
@@ -43,7 +37,11 @@ func TestOperatorFeatureFlags(t *testing.T) {
 			OpenShiftCluster: &api.OpenShiftCluster{
 				ID: fakeKey,
 				Properties: api.OpenShiftClusterProperties{
+					NetworkProfile: api.NetworkProfile{
+						APIServerPrivateEndpointIP: "1.2.3.4",
+					},
 					OperatorFlags: api.OperatorFlags{
+						"aro.newly.added":                          "false",
 						"aro.alertwebhook.enabled":                 "true",
 						"aro.autosizednodes.enable":                "false",
 						"aro.azuresubnets.enabled":                 "true",
@@ -74,7 +72,7 @@ func TestOperatorFeatureFlags(t *testing.T) {
 		},
 	)
 
-	err = fixture.Create()
+	err := fixture.Create()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +101,9 @@ func TestOperatorFeatureFlags(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedOperatorFlags := map[string]string{"aro.alertwebhook.enabled": "true",
+	expectedOperatorFlags := map[string]string{
+		"aro.newly.added":                          "false",
+		"aro.alertwebhook.enabled":                 "true",
 		"aro.autosizednodes.enable":                "false",
 		"aro.azuresubnets.enabled":                 "true",
 		"aro.azuresubnets.nsg.managed":             "false",

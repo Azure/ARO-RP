@@ -36,7 +36,7 @@ export function FeatureFlagsWrapper(props: {
   // updateData - updates the state of the component
   // can be used if we want a refresh button.
   // api/clusterdetail returns a single item.
-  const updateData = (newData: any) => {
+   const updateData = (newData: any) => {
     setData(newData)
     if (state && state.current) {
       state.current.setState({ item: newData, detailPanelSelected: props.detailPanelSelected })
@@ -53,7 +53,7 @@ export function FeatureFlagsWrapper(props: {
       setFetching(props.currentCluster.name)
     }
 
-    if (props.detailPanelSelected.toLowerCase() == "feature flags" && 
+    if (props.detailPanelSelected.toLowerCase() == "feature flags" &&
         fetching === "" &&
         props.loaded &&
         props.currentCluster.name != "") {
@@ -68,6 +68,6 @@ export function FeatureFlagsWrapper(props: {
       <Stack>
         <FeatureFlagsComponent item={data} clusterName={props.currentCluster != null ? props.currentCluster.name : ""}/>
       </Stack>
-    </Stack>   
+    </Stack>
   )
 }

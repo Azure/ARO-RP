@@ -1,10 +1,19 @@
 {
   "files": {
+<<<<<<< HEAD
     "main.js": "/static/js/main.6f933290.js",
     "index.html": "/index.html",
     "main.6f933290.js.map": "/static/js/main.6f933290.js.map"
   },
   "entrypoints": [
     "static/js/main.6f933290.js"
+=======
+    "main.js": "/static/js/main.48e773b0.js",
+    "index.html": "/index.html",
+    "main.48e773b0.js.map": "/static/js/main.48e773b0.js.map"
+  },
+  "entrypoints": [
+    "static/js/main.48e773b0.js"
+>>>>>>> 9f76ee8d3 (variable naming convention & cleaning comments)
   ]
 }

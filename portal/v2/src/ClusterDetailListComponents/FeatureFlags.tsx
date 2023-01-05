@@ -10,8 +10,8 @@ interface FeatureFlagsComponentProps {
 }
 
 interface IFeatureFlagsComponentState {
-    item: FeatureFlags
-}
+    item: FeatureFlags[]
+ }
 
 export const ShimmerStyle: Partial<IShimmerStyles> = {
     root: {
@@ -62,33 +62,6 @@ export const ValueStyle: IStackItemStyles = {
     }
 }
 
-const featureFlagsHeadings: FeatureFlags = {
-  "aro.alertwebhook.enabled": "ARO Alertwebhook Enabled",
-  "aro.autosizednodes.enable": "ARO Autosizednodes Enable",
-  "aro.azuresubnets.enabled": "ARO Azuresubnets Enabled",
-  "aro.azuresubnets.nsg.managed": "ARO Azuresubnets NSG Managed",
-  "aro.azuresubnets.serviceendpoint.managed": "ARO Azuresubnets Serviceendpoint Managed",
-  "aro.banner.enabled": "ARO Banner Enabled",
-  "aro.checker.enabled": "ARO Checker Enabled",
-  "aro.dnsmasq.enabled": "ARO Dnsmasq Enabled",
-  "aro.genevalogging.enabled": "ARO Genevalogging Enabled",
-  "aro.imageconfig.enabled": "ARO Imageconfig Enabled",
-  "aro.machine.enabled": "ARO Machine Enabled",
-  "aro.machinehealthcheck.enabled": "ARO Machinehealthcheck Enabled",
-  "aro.machinehealthcheck.managed": "ARO Machinehealthcheck Managed",
-  "aro.machineset.enabled": "ARO Machineset Enabled",
-  "aro.monitoring.enabled": "ARO Monitoring Enabled",
-  "aro.nodedrainer.enabled": "ARO Nodedrainer Enabled",
-  "aro.pullsecret.enabled": "ARO Pullsecret Enabled",
-  "aro.pullsecret.managed": "ARO Pullsecret Managed",
-  "aro.rbac.enabled": "ARO RBAC Enabled",
-  "aro.routefix.enabled": "ARO Routefix Enabled",
-  "aro.storageaccounts.enabled": "ARO Storageaccounts Enabled",
-  "aro.workaround.enabled": "ARO Workaround Enabled",
-  "rh.srep.muo.enabled": "RH SREP MUO Enabled",
-  "rh.srep.muo.managed": "RH SREP MUO Managed",
-}
-
 function ClusterDetailCell(
     value: any,
     ): any {
@@ -98,28 +71,28 @@ function ClusterDetailCell(
             </Stack.Item>
         }
     }
-    
-function opFeatureFlagsHeadings(item: any) {
-        const headerEntries = Object.entries(featureFlagsHeadings)
+
+function showFeatureFlags(item: [FeatureFlags]) {
+        const featureFlagsData = Object.entries(item)
         return (
         <Stack styles={contentStackStylesNormal}>
           <Stack horizontal>
             <Stack styles={KeyColumnStyle}>
-              {headerEntries.map((value: any, index: number) => (
-                <ClusterDetailCell style={KeyStyle} key={index} value={value[1]} />
+              {featureFlagsData.map((value: any, index: number) => (
+                <ClusterDetailCell style={KeyStyle} key={index} value={value[0]} />
               ))}
-            </Stack>
-      
+          </Stack>
+
             <Stack styles={KeyColumnStyle}>
-              {Array(headerEntries.length)
+              {Array(featureFlagsData.length)
                 .fill(":")
                 .map((value: any, index: number) => (
                   <ClusterDetailCell style={KeyStyle} key={index} value={value} />
                 ))}
             </Stack>
-      
+
             <Stack styles={ValueColumnStyle}>
-              {headerEntries.map((value: [any, any], index: number) => {
+              {featureFlagsData.map((value: [any, any], index: number) => {
                  return (
                      <ClusterDetailCell
                         style={ValueStyle}
@@ -138,17 +111,17 @@ function opFeatureFlagsHeadings(item: any) {
           </Stack>
         </Stack>
       )
-      } 
-      
-function opFeatureFlagsShimmer() {
-        const headerEntries = Object.entries(featureFlagsHeadings)
+      }
+
+function showFeatureFlagsShimmer(length: number) {
       return (
         <Stack>
           <Shimmer
             styles={headShimmerStyle}
             shimmerElements={headerShimmer}
             width="25%"></Shimmer>
-          {headerEntries.map((value: [any, any], index: number) => (
+            {Array(length)
+             .map((index: number) => (
             <Shimmer
               styles={ShimmerStyle}
               key={index}
@@ -156,21 +129,19 @@ function opFeatureFlagsShimmer() {
               width="75%"></Shimmer>
           ))}
         </Stack>
-      )
-      }
-    
+      )}
 export class FeatureFlagsComponent extends Component<FeatureFlagsComponentProps, IFeatureFlagsComponentState> {
-    
+
     constructor(props: FeatureFlagsComponentProps | Readonly<FeatureFlagsComponentProps>) {
         super(props);
     }
-    
+
     public render() {
         {
             if (this.props.item.length != 0) {
-              return opFeatureFlagsHeadings(this.props.item)
+              return showFeatureFlags(this.props.item)
             } else  {
-              return opFeatureFlagsShimmer()
+              return showFeatureFlagsShimmer(this.props.item.length)
             }
          }
     }
