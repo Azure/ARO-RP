@@ -5,9 +5,10 @@ package adminactions
 
 import (
 	"context"
-	"encoding/json"
+	"io"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -16,23 +17,37 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func (a *azureActions) ResourcesList(ctx context.Context) ([]byte, error) {
+var comaAsByteArray = []byte(",")
+
+func (a *azureActions) GroupResourceList(ctx context.Context) ([]mgmtfeatures.GenericResourceExpanded, error) {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	resources, err := a.resources.ListByResourceGroup(ctx, clusterRGName, "resourceType ne 'Microsoft.Compute/snapshots'", "", nil)
-	if err != nil {
-		return nil, err
-	}
+	return a.resources.ListByResourceGroup(ctx, clusterRGName, "", "", nil)
+}
 
+func (a *azureActions) ResourcesList(ctx context.Context, resources []mgmtfeatures.GenericResourceExpanded, writer io.WriteCloser) error {
+	defer writer.Close()
+
+	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
+	writer.Write([]byte("["))
 	// +4 because we expect +2 subnet and +1 vnets and optional +1 diskEncryptionSet
-	armResources := make([]arm.Resource, 0, len(resources)+4)
-	armResources, err = a.appendAzureNetworkResources(ctx, armResources)
+	armResources := make([]arm.Resource, 0, 4)
+	armResources, err := a.appendAzureNetworkResources(ctx, armResources)
 	if err != nil {
 		a.log.Warnf("error when getting network resources: %s", err)
 	}
 	armResources, err = a.appendAzureDiskEncryptionSetResources(ctx, armResources)
 	if err != nil {
 		a.log.Warnf("error when getting DiskEncryptionSet resources: %s", err)
+	}
+	hasWritten := false
+
+	for _, resource := range armResources {
+		if hasWritten {
+			writer.Write(comaAsByteArray)
+		}
+		a.writeObject(writer, resource)
+		hasWritten = true
 	}
 
 	for _, res := range resources {
@@ -44,35 +59,55 @@ func (a *azureActions) ResourcesList(ctx context.Context) ([]byte, error) {
 			a.log.Warnf("API version not found for type %q", *res.Type)
 			continue
 		}
+
+		if hasWritten {
+			writer.Write(comaAsByteArray)
+		}
+		hasWritten = true
+
 		switch *res.Type {
 		case "Microsoft.Compute/virtualMachines":
 			vm, err := a.virtualMachines.Get(ctx, clusterRGName, *res.Name, mgmtcompute.InstanceView)
 			if err != nil {
 				a.log.Warn(err) // can happen when the ARM cache is lagging
-				armResources = append(armResources, arm.Resource{
+				a.writeObject(writer, arm.Resource{
 					Resource: res,
 				})
 				continue
 			}
-			armResources = append(armResources, arm.Resource{
+			a.writeObject(writer, arm.Resource{
 				Resource: vm,
 			})
 		default:
 			gr, err := a.resources.GetByID(ctx, *res.ID, apiVersion)
 			if err != nil {
 				a.log.Warn(err) // can happen when the ARM cache is lagging
-				armResources = append(armResources, arm.Resource{
+				a.writeObject(writer, arm.Resource{
 					Resource: res,
 				})
 				continue
 			}
-			armResources = append(armResources, arm.Resource{
+			a.writeObject(writer, arm.Resource{
 				Resource: gr,
 			})
 		}
 	}
 
-	return json.Marshal(armResources)
+	_, err = writer.Write([]byte("]"))
+
+	return err
+}
+
+func (a *azureActions) writeObject(writer io.Writer, resource arm.Resource) {
+	bytes, err := resource.MarshalJSON()
+	if err != nil {
+		a.log.Warn(err) //very unlikely , only a handful of cases trigger an error
+		//here. and since we get the object from a database , it probably will never happen
+	}
+	_, err = writer.Write(bytes)
+	if err != nil {
+		a.log.Warn(err) //can happen if the the connection is closed for example
+	}
 }
 
 func (a *azureActions) appendAzureNetworkResources(ctx context.Context, armResources []arm.Resource) ([]arm.Resource, error) {
@@ -146,4 +181,12 @@ func (a *azureActions) appendAzureDiskEncryptionSetResources(ctx context.Context
 	})
 
 	return armResources, nil
+}
+
+func (a *azureActions) WriteToStream(ctx context.Context, writer io.WriteCloser) error {
+	resources, err := a.GroupResourceList(ctx)
+	go func() {
+		a.ResourcesList(ctx, resources, writer)
+	}()
+	return err
 }

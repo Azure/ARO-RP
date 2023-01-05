@@ -88,6 +88,8 @@ type frontend struct {
 	systemDataMachinePoolEnricher          func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
 	systemDataSyncIdentityProviderEnricher func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
 	systemDataSecretEnricher               func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
+
+	streamResponder StreamResponder
 }
 
 // Runnable represents a runnable object
@@ -149,6 +151,8 @@ func NewFrontend(ctx context.Context,
 		systemDataMachinePoolEnricher:          enrichMachinePoolSystemData,
 		systemDataSyncIdentityProviderEnricher: enrichSyncIdentityProviderSystemData,
 		systemDataSecretEnricher:               enrichSecretSystemData,
+
+		streamResponder: defaultResponder{},
 	}
 
 	l, err := f.env.Listen()

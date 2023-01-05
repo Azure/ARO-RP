@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
@@ -22,13 +24,22 @@ func (f *frontend) listAdminOpenShiftClusterResources(w http.ResponseWriter, r *
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	b, err := f._listAdminOpenShiftClusterResources(ctx, r, log)
+	reader, writer := io.Pipe()
+	err := f._listAdminOpenShiftClusterResources(ctx, r, writer, log)
 
-	adminReply(log, w, nil, b, err)
+	f.streamResponder.AdminReplyStream(log, w, nil, reader, err)
 }
 
 func (f *frontend) _listAdminOpenShiftClusterResources(
-	ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
+	ctx context.Context, r *http.Request, writer io.WriteCloser, log *logrus.Entry) error {
+	a, err := f._subfunction(ctx, r, writer, log)
+	if err != nil {
+		return err
+	}
+	return a.WriteToStream(ctx, writer)
+}
+
+func (f *frontend) _subfunction(ctx context.Context, r *http.Request, writer io.WriteCloser, log *logrus.Entry) (adminactions.AzureActions, error) {
 	vars := mux.Vars(r)
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
@@ -52,5 +63,5 @@ func (f *frontend) _listAdminOpenShiftClusterResources(
 		return nil, err
 	}
 
-	return a.ResourcesList(ctx)
+	return a, err
 }
