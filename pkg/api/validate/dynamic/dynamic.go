@@ -51,6 +51,7 @@ type Dynamic interface {
 	ValidateVnet(ctx context.Context, location string, subnets []Subnet, additionalCIDRs ...string) error
 	ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
 	ValidateProviders(ctx context.Context) error
+	ValidateQuota(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateVMSku(ctx context.Context, location string, subscriptionID string, oc *api.OpenShiftCluster) error

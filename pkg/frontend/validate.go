@@ -40,8 +40,8 @@ func (f *frontend) getSubscriptionDocument(ctx context.Context, key string) (*ap
 	return doc, err
 }
 
-func (f *frontend) validateSubscriptionState(ctx context.Context, path string, allowedStates ...api.SubscriptionState) (*api.SubscriptionDocument, error) {
-	doc, err := f.getSubscriptionDocument(ctx, path)
+func (f *frontend) validateSubscriptionState(ctx context.Context, key string, allowedStates ...api.SubscriptionState) (*api.SubscriptionDocument, error) {
+	doc, err := f.getSubscriptionDocument(ctx, key)
 	if err != nil {
 		return nil, err
 	}

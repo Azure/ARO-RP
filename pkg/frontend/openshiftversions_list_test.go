@@ -89,13 +89,14 @@ func TestListInstallVersions(t *testing.T) {
 			ti := newTestInfra(t).WithSubscriptions().WithOpenShiftVersions()
 			defer ti.done()
 
-			frontend, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, nil, nil, nil, nil, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, nil, nil, nil, nil, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			go frontend.Run(ctx, nil, nil)
+			go f.Run(ctx, nil, nil)
 
+			frontend, _ := f.(*frontend)
 			frontend.mu.Lock()
 			frontend.enabledOcpVersions = tt.changeFeed
 			frontend.mu.Unlock()

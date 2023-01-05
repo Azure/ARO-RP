@@ -79,6 +79,20 @@ func (mr *MockDynamicMockRecorder) ValidateProviders(arg0 interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateProviders", reflect.TypeOf((*MockDynamic)(nil).ValidateProviders), arg0)
 }
 
+// ValidateQuota mocks base method.
+func (m *MockDynamic) ValidateQuota(arg0 context.Context, arg1 *api.OpenShiftCluster) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateQuota", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateQuota indicates an expected call of ValidateQuota.
+func (mr *MockDynamicMockRecorder) ValidateQuota(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateQuota", reflect.TypeOf((*MockDynamic)(nil).ValidateQuota), arg0, arg1)
+}
+
 // ValidateServicePrincipal mocks base method.
 func (m *MockDynamic) ValidateServicePrincipal(arg0 context.Context, arg1, arg2, arg3 string) error {
 	m.ctrl.T.Helper()
