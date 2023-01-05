@@ -38,7 +38,7 @@ jobs:
 
       run_portal
       validate_portal_running
-      
+
       run_rp
       validate_rp_running
 
@@ -46,6 +46,7 @@ jobs:
 
       make test-e2e
     displayName: Execute Tests
+
   - script: |
       export CI=true
       . ./hack/e2e/run-rp-and-e2e.sh
@@ -63,6 +64,7 @@ jobs:
     artifact: must-gather
     displayName: Append must-gather to Pipeline
     condition: failed()
+
   - script: |
       export CI=true
       . ./hack/e2e/run-rp-and-e2e.sh
