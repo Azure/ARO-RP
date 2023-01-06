@@ -3,7 +3,7 @@
 
 from unittest.mock import Mock, patch
 from azext_aro._validators import (
-    validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group,
+    validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_outbound_type,
     validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_subnet, validate_subnets,
     validate_visibility, validate_vnet_resource_group_name, validate_worker_count, validate_worker_vm_disk_size_gb, validate_refresh_cluster_credentials
 )
@@ -775,3 +775,40 @@ def test_validate_refresh_cluster_credentials(test_description, namespace, expec
     else:
         with pytest.raises(expected_exception):
             validate_refresh_cluster_credentials(namespace)
+
+
+test_validate_outbound_type_data = [
+    (
+        "Should not raise exception when key is Loadbalancer.",
+        Mock(outbound_type='Loadbalancer'),
+        None
+    ),
+    (
+        "Should not raise exception when key is UserDefinedRouting.",
+        Mock(outbound_type='UserDefinedRouting'),
+        None
+    ),
+    (
+        "Should not raise exception when key is empty.",
+        Mock(outbound_type=None),
+        None
+    ),
+    (
+        "Should raise exception when key is a different value.",
+        Mock(outbound_type='testFail'),
+        InvalidArgumentValueError
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    "test_description, namespace, expected_exception",
+    test_validate_outbound_type_data,
+    ids=[i[0] for i in test_validate_outbound_type_data]
+)
+def test_validate_outbound_type(test_description, namespace, expected_exception):
+    if expected_exception is None:
+        validate_outbound_type(namespace)
+    else:
+        with pytest.raises(expected_exception):
+            validate_outbound_type(namespace)

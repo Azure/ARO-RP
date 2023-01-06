@@ -118,6 +118,13 @@ def validate_pull_secret(namespace):
         raise InvalidArgumentValueError("Invalid --pull-secret.") from e
 
 
+def validate_outbound_type(namespace):
+    outbound_type = getattr(namespace, 'outbound_type')
+    if outbound_type in {'UserDefinedRouting', 'Loadbalancer', None}:
+        return
+    raise InvalidArgumentValueError('Outbound type must be "UserDefinedRouting" or "Loadbalancer"')
+
+
 def validate_subnet(key):
     def _validate_subnet(cmd, namespace):
         subnet = getattr(namespace, key)
