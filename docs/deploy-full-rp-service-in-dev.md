@@ -31,9 +31,19 @@
 
 
 1. Run `make deploy`
-    > __NOTE:__ This will fail on the first attempt to run due to certificate and container mirroring requirements.
+    > __NOTE:__ This will fail on the first attempt to run due to certificate or AKS requirements.
 
     > __NOTE:__ If the deployment fails with `InvalidResourceReference` due to the RP Network Security Groups not found, delete the gateway predeploy deployment, and re-run.
+
+    > __NOTE:__ If the deployment fails with `A vault with the same name already exists in deleted state`, then you will need to recover the deleted keyvaults from a previous deploy using: `az keyvault recover --name <KEYVAULT_NAME>` for each keyvault, and re-run.
+
+1. Deploy AKS by running these commands from the ARO-RP root directory:
+    ```bash
+    . ./hack/devtools/deploy-shared-env.sh
+    deploy_aks_dev
+    ```
+
+1. Delete the "gateway-production-predeploy" deployment in the gateway resource group, and re-run `make deploy`
 
 1. Mirror the OpenShift images to your new ACR
     <!-- TODO (bv) allow mirroring through a pipeline would be faster and a nice to have -->
