@@ -47,7 +47,7 @@
     ```bash
     ./hack/hive-generate-config.sh
     ./hack/hive-dev-install.sh
-    ````
+    ```
 
 1. Delete the "gateway-production-predeploy" deployment in the gateway resource group, and re-run `make deploy`
 
