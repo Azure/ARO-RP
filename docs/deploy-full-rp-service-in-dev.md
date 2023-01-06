@@ -43,6 +43,12 @@
     deploy_aks_dev
     ```
 
+1. Install Hive into AKS
+    ```bash
+    ./hack/hive-generate-config.sh
+    ./hack/hive-dev-install.sh
+    ````
+
 1. Delete the "gateway-production-predeploy" deployment in the gateway resource group, and re-run `make deploy`
 
 1. Mirror the OpenShift images to your new ACR
