@@ -91,6 +91,9 @@ image-proxy: proxy
 	docker pull $(REGISTRY)/ubi8/ubi-minimal
 	docker build --platform=linux/amd64 --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) .
 
+image-net-utils:
+	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.net-utils -t ${RP_IMAGE_ACR}.azurecr.io/net-utils:latest
+
 publish-image-aro: image-aro
 	docker push $(ARO_IMAGE)
 ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
@@ -113,6 +116,9 @@ publish-image-fluentbit: image-fluentbit
 
 publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
+
+publish-image-net-utils: image-net-utils
+	docker push ${RP_IMAGE_ACR}.azurecr.io/net-utils:latest
 
 proxy:
 	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy

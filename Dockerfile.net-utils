@@ -1,0 +1,23 @@
+FROM registry.fedoraproject.org/fedora:latest
+
+LABEL MAINTAINER="aos-azure"
+
+# Autorest prerequisites
+RUN INSTALL_PKGS="\
+    bind-utils \
+    dnstop \
+    ethtool \
+    iftop \
+    iproute \
+    iputils \
+    ldns-utils \
+    mtr \
+    nmap \
+    nmap-ncat \
+    procps-ng \
+    traceroute \
+    wireshark-cli \
+    " && \
+    yum -y install $INSTALL_PKGS && rpm -V --nosize --nofiledigest --nomtime --nomode $INSTALL_PKGS && yum clean all && rm -rf /var/cache/*
+
+ENTRYPOINT ["/bin/bash"]
