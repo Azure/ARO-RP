@@ -33,10 +33,20 @@ endif
 
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 
+check-release:
+# Check that VERSION is a valid tag when building an official release (when RELEASE=True).
+ifeq ($(RELEASE), True)
+ifeq ($(TAG), $(VERSION))
+	@echo Building release version $(VERSION)
+else
+	$(error $(shell git describe --exact-match) Ensure there is an annotated tag (git tag -a) for git commit $(COMMIT))
+endif
+endif
+
 build-all:
 	go build -tags aro,containers_image_openpgp ./...
 
-aro: generate
+aro: check-release generate
 	go build -tags aro,containers_image_openpgp,codec.safe -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
 
 runlocal-rp:
@@ -122,7 +132,6 @@ run-portal:
 
 build-portal:
 	cd portal/v1 && npm install && npm run build && cd ../v2 && npm install && npm run build
-	make generate
 
 pyenv:
 	python3 -m venv pyenv

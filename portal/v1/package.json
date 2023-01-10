@@ -10,9 +10,10 @@
     "author": "Microsoft",
     "license": "Apache2",
     "dependencies": {
+        "@popperjs/core": "^2.11.6",
         "bootstrap": "^5.2.2",
         "jquery": "^3.6.1",
-        "@popperjs/core": "^2.11.6"
+        "tom-select": "^2.2.2"
     },
     "devDependencies": {
         "copy-webpack-plugin": "^11.0.0",

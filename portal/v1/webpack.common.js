@@ -9,7 +9,7 @@ module.exports = {
     entry: './src/index.js',
     output: {
         filename: '[name].js',
-        path: path.resolve(__dirname, 'build'),
+        path: path.resolve(__dirname, '../../pkg/portal/assets/v1/', 'build'),
         clean: true,
     },
     plugins: [

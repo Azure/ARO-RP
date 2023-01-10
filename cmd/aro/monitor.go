@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	pkgmonitor "github.com/Azure/ARO-RP/pkg/monitor"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/documentdb"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
@@ -83,12 +84,14 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer)
+	masterKeyClient := database.NewMasterKeyClient(_env, msiAuthorizer, documentdb.GetDatabaseAccountsClient())
+	dbAuthorizer, err := masterKeyClient.NewMasterKeyAuthorizer(ctx)
 	if err != nil {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, &noop.Noop{}, aead)
+	db := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, database.DefaultClient, &noop.Noop{}, aead)
+	dbc, err := db.GetDatabaseClient()
 	if err != nil {
 		return err
 	}

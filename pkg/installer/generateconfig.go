@@ -109,6 +109,12 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 		SoftwareDefinedNetwork = string(m.oc.Properties.NetworkProfile.SoftwareDefinedNetwork)
 	}
 
+	// determine outbound type based on cluster visibility
+	outboundType := azuretypes.LoadbalancerOutboundType
+	if m.oc.Properties.NetworkProfile.OutboundType == api.OutboundTypeUserDefinedRouting {
+		outboundType = azuretypes.UserDefinedRoutingOutboundType
+	}
+
 	installConfig := &installconfig.InstallConfig{
 		Config: &types.InstallConfig{
 			TypeMeta: metav1.TypeMeta{
@@ -182,7 +188,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 					ControlPlaneSubnet:       masterSubnetName,
 					ComputeSubnet:            workerSubnetName,
 					CloudName:                azuretypes.CloudEnvironment(m.env.Environment().Name),
-					OutboundType:             azuretypes.LoadbalancerOutboundType,
+					OutboundType:             outboundType,
 					ResourceGroupName:        resourceGroup,
 				},
 			},

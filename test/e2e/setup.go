@@ -81,7 +81,7 @@ var (
 
 func skipIfNotInDevelopmentEnv() {
 	if !_env.IsLocalDevelopmentMode() {
-		Skip("skipping portal tests in non-development environment")
+		Skip("skipping tests in non-development environment")
 	}
 }
 
@@ -89,7 +89,7 @@ func skipIfDockerNotWorking() {
 	// docker cmds will fail in INT until we figure out a solution since
 	// it is running from docker already
 	if !dockerSucceeded {
-		Skip("skipping portal tests as docker is not available")
+		Skip("skipping admin portal tests as docker is not available")
 	}
 }
 
@@ -400,7 +400,32 @@ func setup(ctx context.Context) error {
 		return err
 	}
 
-	setupSelenium(ctx)
+	cmd := exec.CommandContext(ctx, "which", "docker")
+	_, err = cmd.CombinedOutput()
+	if err == nil {
+		dockerSucceeded = true
+	}
+
+	if dockerSucceeded {
+		setupSelenium(ctx)
+	}
+
+	return nil
+}
+
+func done(ctx context.Context) error {
+	// terminate early if delete flag is set to false
+	if os.Getenv("CI") != "" && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
+		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
+		if err != nil {
+			return err
+		}
+
+		err = cluster.Delete(ctx, vnetResourceGroup, clusterName)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -419,7 +444,13 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
 
-	if err := tearDownSelenium(context.Background()); err != nil {
-		log.Printf(err.Error())
+	if dockerSucceeded {
+		if err := tearDownSelenium(context.Background()); err != nil {
+			log.Printf(err.Error())
+		}
+	}
+
+	if err := done(context.Background()); err != nil {
+		panic(err)
 	}
 })

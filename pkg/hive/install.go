@@ -6,10 +6,12 @@ package hive
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
@@ -167,6 +169,11 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 		}
 	}
 
+	clusterDomain := doc.OpenShiftCluster.Properties.ClusterProfile.Domain
+	if !strings.ContainsRune(clusterDomain, '.') {
+		clusterDomain += "." + os.Getenv("DOMAIN_NAME")
+	}
+
 	// Do not set InfraID here, as Hive wants to do that
 	return &hivev1.ClusterDeployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -192,6 +199,10 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 						Name: clusterServicePrincipalSecretName,
 					},
 				},
+			},
+			ControlPlaneConfig: hivev1.ControlPlaneConfigSpec{
+				APIServerIPOverride: doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
+				APIURLOverride:      fmt.Sprintf("api-int.%s:6443", clusterDomain),
 			},
 			PullSecretRef: &corev1.LocalObjectReference{
 				Name: pullsecretSecretName,

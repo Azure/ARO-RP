@@ -57,8 +57,13 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
 			steps.Action(m.migrateStorageAccounts),
 			steps.Action(m.fixSSH),
-			steps.Action(m.populateDatabaseIntIP),
 			//steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
+		)
+	}
+
+	if isEverything || isRenewCerts {
+		toRun = append(toRun,
+			steps.Action(m.populateDatabaseIntIP),
 		)
 	}
 
@@ -207,6 +212,7 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.ensureSSHKey),
 		steps.Action(m.ensureStorageSuffix),
 		steps.Action(m.populateMTUSize),
+		steps.Action(m.determineOutboundType),
 
 		steps.Action(m.createDNS),
 		steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID

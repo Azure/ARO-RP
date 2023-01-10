@@ -41,7 +41,7 @@ func Prepare(resources []kruntime.Object) error {
 		return err
 	}
 
-	sort.Slice(resources, func(i, j int) bool {
+	sort.SliceStable(resources, func(i, j int) bool {
 		return createOrder(resources[i], resources[j])
 	})
 

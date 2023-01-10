@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -279,6 +280,7 @@ func TestMUOReconciler(t *testing.T) {
 			}
 
 			r := &Reconciler{
+				log:               logrus.NewEntry(logrus.StandardLogger()),
 				arocli:            arocli,
 				kubernetescli:     kubecli,
 				deployer:          deployer,

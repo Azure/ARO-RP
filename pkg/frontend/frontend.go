@@ -68,7 +68,8 @@ type frontend struct {
 	kubeActionsFactory  kubeActionsFactory
 	azureActionsFactory azureActionsFactory
 	ocEnricherFactory   ocEnricherFactory
-	adminAction         adminactions.AzureActions
+
+	quotaValidator QuotaValidator
 
 	l net.Listener
 	s *http.Server
@@ -108,7 +109,7 @@ func NewFrontend(ctx context.Context,
 	aead encryption.AEAD,
 	kubeActionsFactory kubeActionsFactory,
 	azureActionsFactory azureActionsFactory,
-	ocEnricherFactory ocEnricherFactory) (Runnable, error) {
+	ocEnricherFactory ocEnricherFactory) (*frontend, error) {
 	f := &frontend{
 		auditLog:                      auditLog,
 		baseLog:                       baseLog,
@@ -124,6 +125,7 @@ func NewFrontend(ctx context.Context,
 		kubeActionsFactory:            kubeActionsFactory,
 		azureActionsFactory:           azureActionsFactory,
 		ocEnricherFactory:             ocEnricherFactory,
+		quotaValidator:                quotaValidator{},
 
 		// add default installation version so it's always supported
 		enabledOcpVersions: map[string]*api.OpenShiftVersion{
@@ -174,9 +176,8 @@ func NewFrontend(ctx context.Context,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 		},
-		PreferServerCipherSuites: true,
-		SessionTicketsDisabled:   true,
-		MinVersion:               tls.VersionTLS12,
+		SessionTicketsDisabled: true,
+		MinVersion:             tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,
@@ -268,6 +269,18 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.listInstallVersions).Name("listInstallVersions")
+
+	s = r.
+		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/detectors").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.listAppLensDetectors).Name("listAppLensDetectors")
+
+	s = r.
+		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/detectors/{detectorId}").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.getAppLensDetector).Name("getAppLensDetector")
 
 	// Admin actions
 	s = r.

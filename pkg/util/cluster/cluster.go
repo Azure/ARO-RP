@@ -27,8 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
-	mgmtredhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-04-01/redhatopenshift"
+	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
+	mgmtredhatopenshift20220904 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-09-04/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -497,19 +497,19 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 	}
 
-	ext := api.APIs[v20220401.APIVersion].OpenShiftClusterConverter.ToExternal(&oc)
+	ext := api.APIs[v20220904.APIVersion].OpenShiftClusterConverter.ToExternal(&oc)
 	data, err := json.Marshal(ext)
 	if err != nil {
 		return err
 	}
 
-	ocExt := mgmtredhatopenshift20220401.OpenShiftCluster{}
+	ocExt := mgmtredhatopenshift20220904.OpenShiftCluster{}
 	err = json.Unmarshal(data, &ocExt)
 	if err != nil {
 		return err
 	}
 
-	return c.openshiftclustersv20220401.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
+	return c.openshiftclustersv20220904.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
 }
 
 func (c *Cluster) registerSubscription(ctx context.Context) error {

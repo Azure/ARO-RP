@@ -172,6 +172,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 
 	case api.ProvisioningStateDeleting:
 		log.Print("deleting")
+		t := time.Now()
 
 		err = m.Delete(ctx)
 		if err != nil {
@@ -185,6 +186,11 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 
 		stop()
 
+		// This Sleep ensures that the monitor has enough time
+		// to capture the deletion (by reading from the changefeed)
+		// and stop monitoring the cluster.
+		// TODO: Provide better communication between RP and Monitor
+		time.Sleep(time.Until(t.Add(time.Second * 20)))
 		return ocb.dbOpenShiftClusters.Delete(ctx, doc)
 	}
 

@@ -25,6 +25,9 @@ var proxyResources = []string{
 	"OpenShiftVersion",
 }
 
+// resourceNamePattern is a regex pattern to validate resource names
+const resourceNamePattern = `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`
+
 func Run(api, outputDir string) error {
 	g, err := New(api)
 	if err != nil {
@@ -171,6 +174,10 @@ func Run(api, outputDir string) error {
 		azureResources = append(azureResources, "SyncSet", "MachinePool", "SyncIdentityProvider", "Secret")
 	}
 
+	if g.installVersionList {
+		azureResources = append(azureResources, "OpenShiftVersion")
+	}
+
 	for _, azureResource := range azureResources {
 		def, err := deepCopy(s.Definitions[azureResource])
 		if err != nil {
@@ -190,9 +197,7 @@ func Run(api, outputDir string) error {
 				properties = append(properties, property)
 			}
 		}
-
 		update.Properties = properties
-		s.Definitions[azureResource+"Update"] = update
 
 		// If this resource is not a proxy resource mark as tracked resource
 		// otherwise, its a proxy resource and we remove the proxyResource .Allof ref for the Update definition
@@ -204,9 +209,7 @@ func Run(api, outputDir string) error {
 				},
 			}
 		} else {
-			if def, ok := s.Definitions[azureResource+"Update"]; ok {
-				def.AllOf = []Schema{}
-			}
+			update.AllOf = []Schema{}
 		}
 
 		properties = nil
@@ -218,8 +221,15 @@ func Run(api, outputDir string) error {
 		}
 		s.Definitions[azureResource].Properties = properties
 
+		// Don't include an update object for "OpenShiftVersion" as it is not updatable via the API
+		azureResources := []string{azureResource}
+		if azureResource != "OpenShiftVersion" {
+			s.Definitions[azureResource+"Update"] = update
+			azureResources = append(azureResources, azureResource+"Update")
+		}
+
 		if g.systemData {
-			s.defineSystemData([]string{azureResource, azureResource + "Update"}, g.commonTypesVersion)
+			s.defineSystemData(azureResources, g.commonTypesVersion)
 		}
 	}
 

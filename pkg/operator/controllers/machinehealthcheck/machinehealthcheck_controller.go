@@ -11,6 +11,7 @@ import (
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -38,12 +39,15 @@ const (
 )
 
 type Reconciler struct {
+	log *logrus.Entry
+
 	arocli aroclient.Interface
 	dh     dynamichelper.Interface
 }
 
-func NewReconciler(arocli aroclient.Interface, dh dynamichelper.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
+		log:    log,
 		arocli: arocli,
 		dh:     dh,
 	}
@@ -56,9 +60,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(enabled) {
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(managed) {
 		err := r.dh.EnsureDeleted(ctx, "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck")
 		if err != nil {

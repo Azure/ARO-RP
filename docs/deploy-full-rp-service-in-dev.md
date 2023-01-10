@@ -17,6 +17,7 @@
     ```
 
 1. Create a full environment file, which overrides some default `./env` options when sourced
+    * if using a public key separate from `~/.ssh/id_rsa.pub`, source it with `export SSH_PUBLIC_KEY=~/.ssh/id_separate.pub`
     ```bash
     cp env-int.example env-int
     vi env-int

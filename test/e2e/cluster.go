@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"context"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -15,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/util/ready"
@@ -58,8 +56,12 @@ var _ = Describe("Cluster", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying the stateful set is ready")
-		err = wait.PollImmediate(10*time.Second, 15*time.Minute, ready.CheckStatefulSetIsReady(ctx, clients.Kubernetes.AppsV1().StatefulSets(testNamespace), "busybox"))
-		Expect(err).NotTo(HaveOccurred())
+		Eventually(func(g Gomega, ctx context.Context) {
+			s, err := clients.Kubernetes.AppsV1().StatefulSets(testNamespace).Get(ctx, "busybox", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+
+			g.Expect(ready.StatefulSetIsReady(s)).To(BeTrue(), "expect stateful to be ready")
+		}).WithContext(ctx).Should(Succeed())
 	})
 
 	It("can create load balancer services", func(ctx context.Context) {
@@ -102,8 +104,12 @@ var _ = Describe("Cluster", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying the deployment is ready")
-		err = wait.PollImmediate(10*time.Second, 5*time.Minute, ready.CheckDeploymentIsReady(ctx, clients.Kubernetes.AppsV1().Deployments(testNamespace), deployName))
-		Expect(err).NotTo(HaveOccurred())
+		Eventually(func(g Gomega, ctx context.Context) {
+			s, err := clients.Kubernetes.AppsV1().Deployments(testNamespace).Get(ctx, deployName, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+
+			g.Expect(ready.DeploymentIsReady(s)).To(BeTrue(), "expect stateful to be ready")
+		}).WithContext(ctx).Should(Succeed())
 	})
 })
 

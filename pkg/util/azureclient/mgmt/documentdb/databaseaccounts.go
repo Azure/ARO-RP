@@ -17,14 +17,23 @@ type DatabaseAccountsClient interface {
 	ListKeys(ctx context.Context, resourceGroupName string, accountName string) (result mgmtdocumentdb.DatabaseAccountListKeysResult, err error)
 }
 
+type NewDatabaseAccountsClient interface {
+	DatabaseAccountsClient
+	NewDatabaseAccountsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) DatabaseAccountsClient
+}
+
 type databaseAccountsClient struct {
 	mgmtdocumentdb.DatabaseAccountsClient
 }
 
 var _ DatabaseAccountsClient = &databaseAccountsClient{}
 
+func GetDatabaseAccountsClient() NewDatabaseAccountsClient {
+	return &databaseAccountsClient{}
+}
+
 // NewDatabaseAccountsClient creates a new DatabaseAccountsClient
-func NewDatabaseAccountsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) DatabaseAccountsClient {
+func (ac *databaseAccountsClient) NewDatabaseAccountsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) DatabaseAccountsClient {
 	client := mgmtdocumentdb.NewDatabaseAccountsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 

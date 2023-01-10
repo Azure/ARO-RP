@@ -155,7 +155,7 @@ func TestAAD(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			a.(*aad).now = func() time.Time { return time.Unix(0, 0) }
+			a.now = func() time.Time { return time.Unix(0, 0) }
 
 			var username string
 			var usernameok bool
@@ -166,7 +166,7 @@ func TestAAD(t *testing.T) {
 				groups, groupsok = r.Context().Value(ContextKeyGroups).([]string)
 			}))
 
-			r, err := tt.request(a.(*aad))
+			r, err := tt.request(a)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -261,7 +261,7 @@ func TestCheckAuthentication(t *testing.T) {
 				_, authenticated = r.Context().Value(ContextKeyUsername).(string)
 			}))
 
-			r, err := tt.request(a.(*aad))
+			r, err := tt.request(a)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -338,7 +338,7 @@ func TestLogin(t *testing.T) {
 
 			h := http.HandlerFunc(a.Login)
 
-			r, err := tt.request(a.(*aad))
+			r, err := tt.request(a)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -428,7 +428,7 @@ func TestLogout(t *testing.T) {
 
 			h := a.Logout("/bye")
 
-			r, err := tt.request(a.(*aad))
+			r, err := tt.request(a)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -451,7 +451,7 @@ func TestLogout(t *testing.T) {
 
 			var m map[interface{}]interface{}
 			cookies := w.Result().Cookies()
-			err = securecookie.DecodeMulti(SessionName, cookies[len(cookies)-1].Value, &m, a.(*aad).store.Codecs...)
+			err = securecookie.DecodeMulti(SessionName, cookies[len(cookies)-1].Value, &m, a.store.Codecs...)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -745,17 +745,17 @@ func TestCallback(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			a.(*aad).now = func() time.Time { return time.Unix(0, 0) }
-			a.(*aad).oauther = tt.oauther
+			a.now = func() time.Time { return time.Unix(0, 0) }
+			a.oauther = tt.oauther
 
-			r, err := tt.request(a.(*aad))
+			r, err := tt.request(a)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			w := httptest.NewRecorder()
 
-			a.(*aad).callback(w, r)
+			a.callback(w, r)
 
 			if tt.wantError != "" {
 				if w.Code != http.StatusInternalServerError {
@@ -772,7 +772,7 @@ func TestCallback(t *testing.T) {
 			type cookie map[interface{}]interface{}
 			var m cookie
 			cookies := w.Result().Cookies()
-			err = securecookie.DecodeMulti(SessionName, cookies[len(cookies)-1].Value, &m, a.(*aad).store.Codecs...)
+			err = securecookie.DecodeMulti(SessionName, cookies[len(cookies)-1].Value, &m, a.store.Codecs...)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -837,7 +837,7 @@ func TestClientAssertion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.(*aad).rt = roundtripper.RoundTripperFunc(func(*http.Request) (*http.Response, error) {
+	a.rt = roundtripper.RoundTripperFunc(func(*http.Request) (*http.Response, error) {
 		return nil, nil
 	})
 
@@ -847,7 +847,7 @@ func TestClientAssertion(t *testing.T) {
 	}
 	req.Form = url.Values{"test": []string{"value"}}
 
-	_, err = a.(*aad).clientAssertion(req)
+	_, err = a.clientAssertion(req)
 	if err != nil {
 		t.Fatal(err)
 	}

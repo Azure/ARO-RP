@@ -4,15 +4,20 @@
 if [[ $CI ]] ; then
     set -o pipefail
     set -x
+
     az account set -s $AZURE_SUBSCRIPTION_ID
-    export SECRET_SA_ACCOUNT_NAME=e2earosecrets
-    make secrets
+    SECRET_SA_ACCOUNT_NAME=e2earosecrets make secrets
     . secrets/env
     echo "##vso[task.setvariable variable=RP_MODE]$RP_MODE"
-    export HIVEKUBECONFIGPATH="secrets/e2e-aks-kubeconfig"
-    export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-    export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-    export PRIVATE_CLUSTER=true
+
+    set -a
+    HIVEKUBECONFIGPATH="secrets/e2e-aks-kubeconfig"
+    HIVE_KUBE_CONFIG_PATH_1="secrets/aks.kubeconfig"
+    CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+    DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+    PRIVATE_CLUSTER=true
+    E2E_DELETE_CLUSTER=false
+    set +a
 fi
 
 validate_rp_running() {

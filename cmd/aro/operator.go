@@ -26,7 +26,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/alertwebhook"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/autosizednodes"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/banner"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/checker"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/clusterdnschecker"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/ingresscertificatechecker"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/internetchecker"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/serviceprincipalchecker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
@@ -202,7 +205,9 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			arocli, maocli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machineset.ControllerName, err)
 		}
-		if err = (imageconfig.NewReconciler(arocli, configcli)).SetupWithManager(mgr); err != nil {
+		if err = (imageconfig.NewReconciler(
+			log.WithField("controller", imageconfig.ControllerName),
+			arocli, configcli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", imageconfig.ControllerName, err)
 		}
 		if err = (previewfeature.NewReconciler(
@@ -215,7 +220,9 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			arocli, maocli, kubernetescli, imageregistrycli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", storageaccounts.ControllerName, err)
 		}
-		if err = (muo.NewReconciler(arocli, kubernetescli, dh)).SetupWithManager(mgr); err != nil {
+		if err = (muo.NewReconciler(
+			log.WithField("controller", muo.ControllerName),
+			arocli, kubernetescli, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", muo.ControllerName, err)
 		}
 		if err = (autosizednodes.NewReconciler(
@@ -224,6 +231,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			return fmt.Errorf("unable to create controller %s: %v", autosizednodes.ControllerName, err)
 		}
 		if err = (machinehealthcheck.NewReconciler(
+			log.WithField("controller", machinehealthcheck.ControllerName),
 			arocli, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machinehealthcheck.ControllerName, err)
 		}
@@ -232,12 +240,27 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			arocli, operatorcli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", ingress.ControllerName, err)
 		}
+		if err = (serviceprincipalchecker.NewReconciler(
+			log.WithField("controller", serviceprincipalchecker.ControllerName),
+			arocli, kubernetescli, role)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", serviceprincipalchecker.ControllerName, err)
+		}
+		if err = (clusterdnschecker.NewReconciler(
+			log.WithField("controller", clusterdnschecker.ControllerName),
+			arocli, operatorcli, role)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", clusterdnschecker.ControllerName, err)
+		}
+		if err = (ingresscertificatechecker.NewReconciler(
+			log.WithField("controller", ingresscertificatechecker.ControllerName),
+			arocli, operatorcli, configcli, role)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", ingresscertificatechecker.ControllerName, err)
+		}
 	}
 
-	if err = (checker.NewReconciler(
-		log.WithField("controller", checker.ControllerName),
-		arocli, kubernetescli, maocli, operatorcli, configcli, role)).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller %s: %v", checker.ControllerName, err)
+	if err = (internetchecker.NewReconciler(
+		log.WithField("controller", internetchecker.ControllerName),
+		arocli, role)).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("unable to create controller %s: %v", internetchecker.ControllerName, err)
 	}
 
 	// +kubebuilder:scaffold:builder

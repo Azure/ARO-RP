@@ -11,9 +11,11 @@ import (
 	"crypto/x509"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -26,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	frontendmiddleware "github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/portal/assets"
 	"github.com/Azure/ARO-RP/pkg/portal/cluster"
 	"github.com/Azure/ARO-RP/pkg/portal/kubeconfig"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
@@ -131,12 +134,12 @@ func (p *portal) setupRouter() error {
 	r := mux.NewRouter()
 	r.Use(middleware.Panic(p.log))
 
-	assetv1, err := Asset("v1/build/index.html")
+	assetv1, err := assets.EmbeddedFiles.ReadFile("v1/build/index.html")
 	if err != nil {
 		return err
 	}
 
-	assetv2, err := Asset("v2/build/index.html")
+	assetv2, err := assets.EmbeddedFiles.ReadFile("v2/build/index.html")
 	if err != nil {
 		return err
 	}
@@ -211,9 +214,8 @@ func (p *portal) Run(ctx context.Context) error {
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 		},
-		PreferServerCipherSuites: true,
-		SessionTicketsDisabled:   true,
-		MinVersion:               tls.VersionTLS12,
+		SessionTicketsDisabled: true,
+		MinVersion:             tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,
@@ -255,21 +257,38 @@ func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 }
 
 func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
-	for _, name := range AssetNames() {
-		if name == "v1/build/index.html" {
+	var names []string
+
+	err := fs.WalkDir(assets.EmbeddedFiles, ".", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !entry.IsDir() {
+			names = append(names, path)
+		}
+		return nil
+	})
+
+	if err != nil {
+		p.log.Fatal(err)
+	}
+
+	for _, name := range names {
+		regexp, _ := regexp.Compile(`v[1,2]/build/.*\..*`)
+		name := regexp.FindString(name)
+		switch name {
+		case "v1/build/index.html":
 			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.index)
-			continue
-		}
-
-		if name == "v2/build/index.html" {
+		case "v2/build/index.html":
 			r.NewRoute().Methods(http.MethodGet).Path("/v2").HandlerFunc(p.indexV2)
-			continue
+		case "":
+		default:
+			fmtName := strings.TrimPrefix(name, "v1/build/")
+			fmtName = strings.TrimPrefix(fmtName, "v2/build/")
+
+			r.NewRoute().Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
 		}
-
-		fmtName := strings.TrimPrefix(name, "v1/build/")
-		fmtName = strings.TrimPrefix(fmtName, "v2/build/")
-
-		r.NewRoute().Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
 	}
 
 	r.NewRoute().Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
@@ -342,13 +361,13 @@ func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.Fetc
 
 func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		b, err := Asset(path)
+		asset, err := assets.EmbeddedFiles.ReadFile(path)
 		if err != nil {
 			p.internalServerError(w, err)
 			return
 		}
 
-		http.ServeContent(w, r, path, time.Time{}, bytes.NewReader(b))
+		http.ServeContent(w, r, path, time.Time{}, bytes.NewReader(asset))
 	}
 }
 

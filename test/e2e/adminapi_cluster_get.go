@@ -17,7 +17,7 @@ var _ = Describe("[Admin API] Get cluster action", func() {
 		resourceID := resourceIDFromEnv()
 
 		By("requesting the cluster document via RP admin API")
-		oc := adminGetCluster(ctx, resourceID)
+		oc := adminGetCluster(Default, ctx, resourceID)
 
 		By("checking that we received the expected cluster")
 		Expect(oc.ID).To(Equal(resourceID))

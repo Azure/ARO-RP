@@ -19,7 +19,7 @@
   },
   "scripts": {
     "start": "HTTPS=true react-app-rewired start",
-    "build": "react-app-rewired build",
+    "build": "BUILD_PATH=../../pkg/portal/assets/v2/build react-app-rewired build",
     "test": "react-app-rewired test",
     "eject": "react-scripts eject",
     "lint": "./node_modules/eslint/bin/eslint.js --format 'node_modules/eslint-friendly-formatter' ./src --ext .tsx --ext .js"
@@ -43,7 +43,7 @@
   "overrides": {
     "@svgr/webpack": "$@svgr/webpack",
     "minimatch": "^5.1.0",
-    "loader-utils": "^2.0.3"
+    "loader-utils": "^2.0.4"
   },
   "browserslist": {
     "production": [

@@ -12,6 +12,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -34,12 +35,15 @@ const (
 )
 
 type Reconciler struct {
+	log *logrus.Entry
+
 	arocli    aroclient.Interface
 	configcli configclient.Interface
 }
 
-func NewReconciler(arocli aroclient.Interface, configcli configclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli configclient.Interface) *Reconciler {
 	return &Reconciler{
+		log:       log,
 		arocli:    arocli,
 		configcli: configcli,
 	}
@@ -57,11 +61,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	// Check for cloud type
+	r.log.Debug("running")
 	requiredRegistries, err := GetCloudAwareRegistries(instance)
 	if err != nil {
 		// Not returning error as it will requeue again

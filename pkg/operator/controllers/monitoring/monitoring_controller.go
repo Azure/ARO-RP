@@ -66,9 +66,10 @@ type Reconciler struct {
 
 func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface) *Reconciler {
 	return &Reconciler{
+		log: log,
+
 		arocli:        arocli,
 		kubernetescli: kubernetescli,
-		log:           log,
 		jsonHandle:    new(codec.JsonHandle),
 	}
 }
@@ -80,10 +81,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	for _, f := range []func(context.Context, ctrl.Request) (ctrl.Result, error){
 		r.reconcileConfiguration,
 		r.reconcilePVC, // TODO(mj): This should be removed once we don't have PVC anymore

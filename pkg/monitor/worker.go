@@ -76,6 +76,8 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 	clustersIterator := mon.dbOpenShiftClusters.ChangeFeed()
 	subscriptionsIterator := mon.dbSubscriptions.ChangeFeed()
 
+	// Align this time with the deletion mechanism.
+	// Go to docs/monitoring.md for the details.
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
 

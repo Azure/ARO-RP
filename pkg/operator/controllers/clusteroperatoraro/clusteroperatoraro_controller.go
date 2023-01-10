@@ -23,6 +23,7 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
@@ -68,6 +69,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	r.log.Debug("running")
 	cluster, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
@@ -156,6 +158,12 @@ func (r *Reconciler) defaultOperator() *configv1.ClusterOperator {
 			Name: clusterOperatorName,
 		},
 		Status: configv1.ClusterOperatorStatus{
+			Versions: []configv1.OperandVersion{
+				{
+					Name:    "operator",
+					Version: version.GitCommit,
+				},
+			},
 			Conditions: []configv1.ClusterOperatorStatusCondition{
 				{
 					Type:               configv1.OperatorAvailable,
