@@ -81,6 +81,16 @@ deploy_aks_dev() {
             "sshRSAPublicKey=$(<secrets/proxy_id_rsa.pub)" >/dev/null
 }
 
+deploy_vpn_for_dedicated_rp() {
+    echo "########## Deploying Dev VPN in RG $RESOURCEGROUP ##########"
+    az deployment group create \
+        -g "$RESOURCEGROUP" \
+        -n dev-vpn \
+        --template-file pkg/deploy/assets/vpn-development.json \
+        --parameters \
+             "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
+}
+
 deploy_env_dev_override() {
     echo "########## Deploying env-development in RG $RESOURCEGROUP ##########"
     az deployment group create \
