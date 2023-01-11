@@ -91,7 +91,7 @@ func (r *MachineConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (a *MachineConfigReconciler) InjectClient(c client.Client) error {
-	a.client = c
+func (r *MachineConfigReconciler) InjectClient(c client.Client) error {
+	r.client = c
 	return nil
 }
