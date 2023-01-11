@@ -17,7 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-var comaAsByteArray = []byte(",")
+var commaAsByteArray = []byte(",")
 
 func (a *azureActions) GroupResourceList(ctx context.Context) ([]mgmtfeatures.GenericResourceExpanded, error) {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
@@ -44,7 +44,7 @@ func (a *azureActions) ResourcesList(ctx context.Context, resources []mgmtfeatur
 
 	for _, resource := range armResources {
 		if hasWritten {
-			writer.Write(comaAsByteArray)
+			writer.Write(commaAsByteArray)
 		}
 		a.writeObject(writer, resource)
 		hasWritten = true
@@ -61,7 +61,7 @@ func (a *azureActions) ResourcesList(ctx context.Context, resources []mgmtfeatur
 		}
 
 		if hasWritten {
-			writer.Write(comaAsByteArray)
+			writer.Write(commaAsByteArray)
 		}
 		hasWritten = true
 
@@ -103,10 +103,11 @@ func (a *azureActions) writeObject(writer io.Writer, resource arm.Resource) {
 	if err != nil {
 		a.log.Warn(err) //very unlikely , only a handful of cases trigger an error
 		//here. and since we get the object from a database , it probably will never happen
-	}
-	_, err = writer.Write(bytes)
-	if err != nil {
-		a.log.Warn(err) //can happen if the the connection is closed for example
+	} else {
+		_, err = writer.Write(bytes)
+		if err != nil {
+			a.log.Warn(err) //can happen if the the connection is closed for example
+		}
 	}
 }
 
