@@ -249,8 +249,11 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 }
 
 func mergeWithLogic(name, groupKind string, old, new kruntime.Object) (kruntime.Object, bool, string, error) {
-	if strings.HasPrefix(name, "gatekeeper") ||
-		strings.HasPrefix(groupKind, "ConstraintTemplate.templates.gatekeeper") {
+	if strings.HasPrefix(name, "gatekeeper") {
+		logrus.Printf("Skip updating %s: %s", name, groupKind)
+		return nil, false, "", nil
+	}
+	if strings.HasPrefix(groupKind, "ConstraintTemplate.templates.gatekeeper") {
 		return mergeGK(old, new)
 	}
 	return merge(old, new)
