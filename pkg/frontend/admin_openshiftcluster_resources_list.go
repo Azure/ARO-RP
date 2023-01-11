@@ -32,14 +32,14 @@ func (f *frontend) listAdminOpenShiftClusterResources(w http.ResponseWriter, r *
 
 func (f *frontend) _listAdminOpenShiftClusterResources(
 	ctx context.Context, r *http.Request, writer io.WriteCloser, log *logrus.Entry) error {
-	a, err := f.newStremAzureAction(ctx, r, log)
+	a, err := f.newStreamAzureAction(ctx, r, log)
 	if err != nil {
 		return err
 	}
 	return a.WriteToStream(ctx, writer)
 }
 
-func (f *frontend) newStremAzureAction(ctx context.Context, r *http.Request, log *logrus.Entry) (adminactions.AzureActions, error) {
+func (f *frontend) newStreamAzureAction(ctx context.Context, r *http.Request, log *logrus.Entry) (adminactions.AzureActions, error) {
 	vars := mux.Vars(r)
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
