@@ -135,7 +135,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return builder.Named(ControllerName).Complete(r)
 }
 
-func (a *Reconciler) InjectClient(c client.Client) error {
-	a.client = c
+func (r *Reconciler) InjectClient(c client.Client) error {
+	r.client = c
 	return nil
 }

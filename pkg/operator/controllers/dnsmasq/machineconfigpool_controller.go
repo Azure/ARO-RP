@@ -82,7 +82,7 @@ func (r *MachineConfigPoolReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (a *MachineConfigPoolReconciler) InjectClient(c client.Client) error {
-	a.client = c
+func (r *MachineConfigPoolReconciler) InjectClient(c client.Client) error {
+	r.client = c
 	return nil
 }
