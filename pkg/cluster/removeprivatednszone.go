@@ -7,7 +7,12 @@ import (
 	"context"
 	"strings"
 
+	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	"github.com/Azure/go-autorest/autorest/azure"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	v1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
+	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
@@ -27,125 +32,149 @@ func (m *manager) removePrivateDNSZone(ctx context.Context) error {
 
 	if len(zones) == 0 {
 		// fix up any clusters that we already upgraded
-		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			dns, err := m.configcli.ConfigV1().DNSes().Get(ctx, "cluster", metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-
-			if dns.Spec.PrivateZone == nil ||
-				!strings.HasPrefix(strings.ToLower(dns.Spec.PrivateZone.ID), strings.ToLower(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)) {
-				return nil
-			}
-
-			dns.Spec.PrivateZone = nil
-
-			_, err = m.configcli.ConfigV1().DNSes().Update(ctx, dns, metav1.UpdateOptions{})
-			return err
-		})
-		if err != nil {
+		if err := m.updateDNSs(ctx); err != nil {
 			m.log.Print(err)
 		}
-
 		return nil
 	}
 
-	mcps, err := m.mcocli.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{})
+	if !m.clusterHasSameNumberOfNodesAndMachineConfigPools(ctx) {
+		return nil
+	}
+
+	b, err := clusterVersionIsAtLeast4_4(ctx, m.configcli, m.log)
 	if err != nil {
+		return err
+	}
+	if !b {
+		return nil
+	}
+
+	if err = m.updateDNSs(ctx); err != nil {
 		m.log.Print(err)
 		return nil
 	}
 
-	var machineCount int
-	for _, mcp := range mcps.Items {
-		var found bool
-		for _, source := range mcp.Status.Configuration.Source {
-			if source.Name == "99-"+mcp.Name+"-aro-dns" {
-				found = true
-				break
-			}
-		}
+	m.removeZones(ctx, zones, resourceGroup)
+	return nil
+}
 
-		if !found {
-			m.log.Printf("ARO DNS config not found in MCP %s", mcp.Name)
-			return nil
-		}
+func (m *manager) clusterHasSameNumberOfNodesAndMachineConfigPools(ctx context.Context) bool {
+	machineConfigPoolList, err := m.mcocli.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		m.log.Print(err)
+		return false
+	}
 
-		if !ready.MachineConfigPoolIsReady(&mcp) {
-			m.log.Printf("MCP %s not ready", mcp.Name)
-			return nil
-		}
-
-		machineCount += int(mcp.Status.MachineCount)
+	nMachineConfigPools, errorOcurred := validateMachineConfigPoolsAndGetCounter(machineConfigPoolList.Items, m.log)
+	if errorOcurred {
+		return false
 	}
 
 	nodes, err := m.kubernetescli.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		m.log.Print(err)
-		return nil
+		return false
 	}
 
-	if len(nodes.Items) != machineCount {
-		m.log.Printf("cluster has %d nodes but %d under MCPs, not removing private DNS zone", len(nodes.Items), machineCount)
-		return nil
+	nNodes := len(nodes.Items)
+	if nNodes != nMachineConfigPools {
+		m.log.Printf("cluster has %d nodes but %d under MCPs, not removing private DNS zone", nNodes, nMachineConfigPools)
+		return false
 	}
+	return true
+}
 
-	cv, err := m.configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	v, err := version.GetClusterVersion(cv)
-	if err != nil {
-		m.log.Print(err)
-		return nil
-	}
+func validateMachineConfigPoolsAndGetCounter(machineConfigPools []mcv1.MachineConfigPool, logEntry *logrus.Entry) (nMachineConfigPools int, errOccurred bool) {
+	for _, mcp := range machineConfigPools {
+		if !mcpContainsARODNSConfig(mcp) {
+			logEntry.Printf("ARO DNS config not found in MCP %s", mcp.Name)
+			return 0, true
+		}
 
-	if v.Lt(version.NewVersion(4, 4)) {
-		// 4.3 uses SRV records for etcd
-		m.log.Printf("cluster version < 4.4, not removing private DNS zone")
-		return nil
-	}
+		if !ready.MachineConfigPoolIsReady(&mcp) {
+			logEntry.Printf("MCP %s not ready", mcp.Name)
+			return 0, true
+		}
 
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		dns, err := m.configcli.ConfigV1().DNSes().Get(ctx, "cluster", metav1.GetOptions{})
+		nMachineConfigPools += int(mcp.Status.MachineCount)
+	}
+	return nMachineConfigPools, false
+}
+
+func mcpContainsARODNSConfig(mcp mcv1.MachineConfigPool) bool {
+	for _, source := range mcp.Status.Configuration.Source {
+		mcpPrefix := "99-"
+		mcpSuffix := "-aro-dns"
+
+		if source.Name == mcpPrefix+mcp.Name+mcpSuffix {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *manager) updateDNSs(ctx context.Context) error {
+	fn := updateClusterDNSFn(ctx, m.configcli.ConfigV1().DNSes(), m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
+	return retry.RetryOnConflict(retry.DefaultRetry, fn)
+}
+
+func updateClusterDNSFn(ctx context.Context, dnsInterface v1.DNSInterface, resourceGroupID string) func() error {
+	return func() error {
+		dns, err := dnsInterface.Get(ctx, "cluster", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
 		if dns.Spec.PrivateZone == nil ||
-			!strings.HasPrefix(strings.ToLower(dns.Spec.PrivateZone.ID), strings.ToLower(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)) {
+			!strings.HasPrefix(
+				strings.ToLower(dns.Spec.PrivateZone.ID),
+				strings.ToLower(resourceGroupID)) {
 			return nil
 		}
 
 		dns.Spec.PrivateZone = nil
 
-		_, err = m.configcli.ConfigV1().DNSes().Update(ctx, dns, metav1.UpdateOptions{})
+		_, err = dnsInterface.Update(ctx, dns, metav1.UpdateOptions{})
 		return err
-	})
+	}
+}
+
+func clusterVersionIsAtLeast4_4(ctx context.Context, configcli configclient.Interface, logEntry *logrus.Entry) (bool, error) {
+	cv, err := configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
 	if err != nil {
-		m.log.Print(err)
-		return nil
+		return false, err
+	}
+	v, err := version.GetClusterVersion(cv)
+	if err != nil {
+		logEntry.Print(err)
+		return false, nil
 	}
 
-	for _, zone := range zones {
-		err = m.deletePrivateDNSVirtualNetworkLinks(ctx, *zone.ID)
-		if err != nil {
+	if v.Lt(version.NewVersion(4, 4)) {
+		// 4.3 uses SRV records for etcd
+		logEntry.Printf("cluster version < 4.4, not removing private DNS zone")
+		return false, nil
+	}
+	return true, nil
+}
+
+func (m *manager) removeZones(ctx context.Context, privateZones []mgmtprivatedns.PrivateZone, resourceGroup string) {
+	for _, privateZone := range privateZones {
+		if err := m.deletePrivateDNSVirtualNetworkLinks(ctx, *privateZone.ID); err != nil {
 			m.log.Print(err)
-			return nil
+			return
 		}
 
-		r, err := azure.ParseResourceID(*zone.ID)
+		r, err := azure.ParseResourceID(*privateZone.ID)
 		if err != nil {
 			m.log.Print(err)
-			return nil
+			return
 		}
 
-		err = m.privateZones.DeleteAndWait(ctx, resourceGroup, r.ResourceName, "")
-		if err != nil {
+		if err = m.privateZones.DeleteAndWait(ctx, resourceGroup, r.ResourceName, ""); err != nil {
 			m.log.Print(err)
-			return nil
+			return
 		}
 	}
-
-	return nil
 }
