@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	checkercommon "github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/common"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 )
@@ -37,18 +36,16 @@ type Reconciler struct {
 	log  *logrus.Entry
 	role string
 
-	arocli  aroclient.Interface
 	checker internetChecker
 
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, role string) *Reconciler {
+func NewReconciler(log *logrus.Entry, role string) *Reconciler {
 	return &Reconciler{
 		log:  log,
 		role: role,
 
-		arocli:  arocli,
 		checker: newInternetChecker(),
 	}
 }
@@ -70,7 +67,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	checkErr := r.checker.Check(instance.Spec.InternetChecker.URLs)
 	condition := r.condition(checkErr)
 
-	err = conditions.SetCondition(ctx, r.arocli, condition, r.role)
+	err = conditions.SetCondition(ctx, r.client, condition, r.role)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -88,7 +85,7 @@ func (r *Reconciler) reconcileDisabled(ctx context.Context) (ctrl.Result, error)
 		Status: operatorv1.ConditionUnknown,
 	}
 
-	return reconcile.Result{}, conditions.SetCondition(ctx, r.arocli, condition, r.role)
+	return reconcile.Result{}, conditions.SetCondition(ctx, r.client, condition, r.role)
 }
 
 func (r *Reconciler) condition(checkErr error) *operatorv1.OperatorCondition {

@@ -12,12 +12,12 @@ import (
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	checkercommon "github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
@@ -83,7 +83,6 @@ func TestReconcile(t *testing.T) {
 			}
 
 			clientFake := fake.NewClientBuilder().WithObjects(instance).Build()
-			arocliFake := arofake.NewSimpleClientset(instance)
 
 			r := &Reconciler{
 				log:  utillog.GetLogger(),
@@ -91,7 +90,6 @@ func TestReconcile(t *testing.T) {
 				checker: fakeChecker(func(ctx context.Context) error {
 					return tt.checkerReturnErr
 				}),
-				arocli: arocliFake,
 				client: clientFake,
 			}
 
@@ -105,7 +103,7 @@ func TestReconcile(t *testing.T) {
 				t.Error(cmp.Diff(tt.wantResult, result))
 			}
 
-			instance, err = arocliFake.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+			err = r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 			if err != nil {
 				t.Fatal(err)
 			}

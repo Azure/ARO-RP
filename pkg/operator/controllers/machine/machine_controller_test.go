@@ -16,11 +16,11 @@ import (
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -72,7 +72,6 @@ func TestMachineReconciler(t *testing.T) {
 		name           string
 		request        ctrl.Request
 		maocli         *machinefake.Clientset
-		arocli         *arofake.Clientset
 		wantConditions []operatorv1.OperatorCondition
 	}{
 		{
@@ -148,6 +147,8 @@ func TestMachineReconciler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
 			baseCluster := arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 				Status:     arov1alpha1.ClusterStatus{Conditions: []operatorv1.OperatorCondition{}},
@@ -159,23 +160,22 @@ func TestMachineReconciler(t *testing.T) {
 			}
 
 			clientFake := fake.NewClientBuilder().WithObjects(&baseCluster).Build()
-			arocliFake := arofake.NewSimpleClientset(&baseCluster)
 
 			r := &Reconciler{
 				maocli:                 tt.maocli,
 				log:                    logrus.NewEntry(logrus.StandardLogger()),
-				arocli:                 arocliFake,
 				isLocalDevelopmentMode: false,
 				role:                   "master",
 				client:                 clientFake,
 			}
 
-			_, err := r.Reconcile(context.Background(), tt.request)
+			_, err := r.Reconcile(ctx, tt.request)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			cluster, err := r.arocli.AroV1alpha1().Clusters().Get(context.Background(), arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+			cluster := &arov1alpha1.Cluster{}
+			err = r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster)
 			if err != nil {
 				t.Fatal(err)
 			}

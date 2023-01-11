@@ -5,19 +5,19 @@ package conditions
 
 import (
 	"context"
-	"reflect"
 	"testing"
 	"time"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/clock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 func TestSetCondition(t *testing.T) {
@@ -26,21 +26,20 @@ func TestSetCondition(t *testing.T) {
 	objectName := "cluster"
 	version := "unknown"
 
-	kubeclock = &clock.FakeClock{}
+	kubeclock = clock.NewFakeClock(time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC))
 	var transitionTime = metav1.Time{Time: kubeclock.Now()}
 
 	for _, tt := range []struct {
-		name      string
-		aroclient aroclient.Interface
-		objects   []kruntime.Object
-		input     *operatorv1.OperatorCondition
+		name    string
+		objects []client.Object
+		input   *operatorv1.OperatorCondition
 
 		expected arov1alpha1.ClusterStatus
 		wantErr  error
 	}{
 		{
 			name: "no condition provided",
-			objects: []kruntime.Object{&arov1alpha1.Cluster{
+			objects: []client.Object{&arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: objectName,
 				},
@@ -49,7 +48,7 @@ func TestSetCondition(t *testing.T) {
 		},
 		{
 			name: "new condition provided",
-			objects: []kruntime.Object{&arov1alpha1.Cluster{
+			objects: []client.Object{&arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: objectName,
 				},
@@ -65,8 +64,9 @@ func TestSetCondition(t *testing.T) {
 			expected: arov1alpha1.ClusterStatus{
 				Conditions: []operatorv1.OperatorCondition{
 					{
-						Type:   arov1alpha1.InternetReachableFromMaster,
-						Status: operatorv1.ConditionFalse,
+						Type:               arov1alpha1.InternetReachableFromMaster,
+						Status:             operatorv1.ConditionFalse,
+						LastTransitionTime: transitionTime,
 					},
 				},
 				OperatorVersion: version,
@@ -74,7 +74,7 @@ func TestSetCondition(t *testing.T) {
 		},
 		{
 			name: "condition provided without status change - only update operator version",
-			objects: []kruntime.Object{&arov1alpha1.Cluster{
+			objects: []client.Object{&arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: objectName,
 				},
@@ -104,7 +104,7 @@ func TestSetCondition(t *testing.T) {
 		},
 		{
 			name: "condition provided without status change - no update",
-			objects: []kruntime.Object{&arov1alpha1.Cluster{
+			objects: []client.Object{&arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: objectName,
 				},
@@ -113,7 +113,7 @@ func TestSetCondition(t *testing.T) {
 						{
 							Type:               arov1alpha1.InternetReachableFromMaster,
 							Status:             operatorv1.ConditionFalse,
-							LastTransitionTime: metav1.Time{Time: time.Date(1970, 0, 0, 0, 0, 0, 0, time.UTC)},
+							LastTransitionTime: metav1.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 						},
 					},
 					OperatorVersion: version,
@@ -122,14 +122,14 @@ func TestSetCondition(t *testing.T) {
 			input: &operatorv1.OperatorCondition{
 				Type:               arov1alpha1.InternetReachableFromMaster,
 				Status:             operatorv1.ConditionFalse,
-				LastTransitionTime: metav1.Time{Time: time.Date(2021, 0, 0, 0, 0, 0, 0, time.UTC)},
+				LastTransitionTime: metav1.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
 			expected: arov1alpha1.ClusterStatus{
 				Conditions: []operatorv1.OperatorCondition{
 					{
 						Type:               arov1alpha1.InternetReachableFromMaster,
 						Status:             operatorv1.ConditionFalse,
-						LastTransitionTime: metav1.Time{Time: time.Date(1970, 0, 0, 0, 0, 0, 0, time.UTC)},
+						LastTransitionTime: metav1.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 					},
 				},
 				OperatorVersion: version,
@@ -137,7 +137,7 @@ func TestSetCondition(t *testing.T) {
 		},
 		{
 			name: "update one of the existing conditions",
-			objects: []kruntime.Object{&arov1alpha1.Cluster{
+			objects: []client.Object{&arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: objectName,
 				},
@@ -176,7 +176,7 @@ func TestSetCondition(t *testing.T) {
 		},
 		{
 			name: "cleanup stale conditions",
-			objects: []kruntime.Object{&arov1alpha1.Cluster{
+			objects: []client.Object{&arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: objectName,
 				},
@@ -207,20 +207,28 @@ func TestSetCondition(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			client := arofake.NewSimpleClientset(tt.objects...)
+			clientFake := fake.NewClientBuilder().WithObjects(tt.objects...).Build()
 
-			err := SetCondition(ctx, client, tt.input, role)
+			err := SetCondition(ctx, clientFake, tt.input, role)
 			if err != nil && tt.wantErr != nil {
 				t.Fatal(err.Error())
 			}
 
-			result, err := client.AroV1alpha1().Clusters().Get(ctx, objectName, metav1.GetOptions{})
+			result := &arov1alpha1.Cluster{}
+			err = clientFake.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, result)
 			if err != nil {
 				t.Fatal(err.Error())
 			}
 
-			if !reflect.DeepEqual(result.Status, tt.expected) {
-				t.Fatal(cmp.Diff(result.Status, tt.expected))
+			// cmp.Diff correctly compares times the same time, but in different timezones
+			// unlike reflect.DeepEqual which compares field by field.
+			// We need this because fake client marshals and unmarshals objects
+			// due to this line[1] in apimachiner time than gets converted to a local time.
+			//
+			// [1] https://github.com/kubernetes/apimachinery/blob/24bec8a7ae9ed9efe31aa9239cc616d751c2bc69/pkg/apis/meta/v1/time.go#L115
+			diff := cmp.Diff(result.Status, tt.expected)
+			if diff != "" {
+				t.Fatal(diff)
 			}
 		})
 	}
