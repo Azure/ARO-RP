@@ -101,13 +101,14 @@ func (a *azureActions) ResourcesList(ctx context.Context, resources []mgmtfeatur
 func (a *azureActions) writeObject(writer io.Writer, resource arm.Resource) {
 	bytes, err := resource.MarshalJSON()
 	if err != nil {
-		a.log.Warn(err) //very unlikely , only a handful of cases trigger an error
-		//here. and since we get the object from a database , it probably will never happen
-	} else {
-		_, err = writer.Write(bytes)
-		if err != nil {
-			a.log.Warn(err) //can happen if the the connection is closed for example
-		}
+		a.log.Warn(err) // very unlikely , only a handful of cases trigger an error
+		// here. and since we get the object from a database , it probably will never happen
+		return
+	}
+
+	_, err = writer.Write(bytes)
+	if err != nil {
+		a.log.Warn(err) // can happen if the the connection is closed for example
 	}
 }
 
