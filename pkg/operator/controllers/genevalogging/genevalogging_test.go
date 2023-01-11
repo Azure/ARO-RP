@@ -18,7 +18,6 @@ import (
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -37,7 +36,6 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 	tests := []struct {
 		name              string
 		request           ctrl.Request
-		arocli            *arofake.Clientset
 		operatorFlags     arov1alpha1.OperatorFlags
 		validateDaemonset func(*appsv1.DaemonSet) []error
 	}{

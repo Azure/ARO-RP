@@ -8,12 +8,13 @@ import (
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -21,13 +22,14 @@ import (
 // This variable makes it easier to test conditions.
 var kubeclock clock.Clock = &clock.RealClock{}
 
-// TODO: Need to get rid of dependency on aroclient.Interface and replace it with a client from controller-runtime.
-func SetCondition(ctx context.Context, arocli aroclient.Interface, cond *operatorv1.OperatorCondition, role string) error {
+func SetCondition(ctx context.Context, c client.Client, cond *operatorv1.OperatorCondition, role string) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if cond == nil {
 			return nil
 		}
-		cluster, err := arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+
+		cluster := &arov1alpha1.Cluster{}
+		err := c.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster)
 		if err != nil {
 			return err
 		}
@@ -43,8 +45,7 @@ func SetCondition(ctx context.Context, arocli aroclient.Interface, cond *operato
 			return nil
 		}
 
-		_, err = arocli.AroV1alpha1().Clusters().UpdateStatus(ctx, cluster, metav1.UpdateOptions{})
-		return err
+		return c.Status().Update(ctx, cluster)
 	})
 }
 

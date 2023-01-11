@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 )
 
@@ -30,7 +29,6 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli aroclient.Interface
 	maocli machineclient.Interface
 
 	isLocalDevelopmentMode bool
@@ -39,10 +37,9 @@ type Reconciler struct {
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, maocli machineclient.Interface, isLocalDevelopmentMode bool, role string) *Reconciler {
+func NewReconciler(log *logrus.Entry, maocli machineclient.Interface, isLocalDevelopmentMode bool, role string) *Reconciler {
 	return &Reconciler{
 		log:                    log,
-		arocli:                 arocli,
 		maocli:                 maocli,
 		isLocalDevelopmentMode: isLocalDevelopmentMode,
 		role:                   role,
@@ -83,7 +80,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		cond.Message = sb.String()
 	}
 
-	return reconcile.Result{}, conditions.SetCondition(ctx, r.arocli, cond, r.role)
+	return reconcile.Result{}, conditions.SetCondition(ctx, r.client, cond, r.role)
 }
 
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
