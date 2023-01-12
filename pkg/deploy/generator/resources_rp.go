@@ -37,132 +37,111 @@ func (g *generator) rpManagedIdentity() *arm.Resource {
 	}
 }
 
-func (g *generator) rpSecurityGroup() []*arm.Resource {
-	resources := []*arm.Resource{}
-	condition_has_portal_source_ips := "[and(parameters('deployNSGs'), parameters('rpNsgPortalSourceAddressPrefixes'))]"
-	condition_no_portal_source_ips := "[and(parameters('deployNSGs'), not(parameters('rpNsgPortalSourceAddressPrefixes')))]"
-	conditions := []interface{}{}
+func (g *generator) rpSecurityGroupForPortalSourceAddressPrefixes() *arm.Resource {
+	return g.securityRules("rp-nsg/portal_in", &mgmtnetwork.SecurityRulePropertiesFormat{
+		Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+		SourcePortRange:          to.StringPtr("*"),
+		DestinationPortRange:     to.StringPtr("444"),
+		SourceAddressPrefixes:    &[]string{},
+		DestinationAddressPrefix: to.StringPtr("*"),
+		Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+		Priority:                 to.Int32Ptr(142),
+		Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+	}, "[not(empty(parameters('rpNsgPortalSourceAddressPrefixes')))]")
+}
 
-	if g.production {
-		conditions = append(conditions,
-			condition_has_portal_source_ips,
-			condition_no_portal_source_ips,
-		)
+func (g *generator) rpSecurityGroup() *arm.Resource {
+	rules := []mgmtnetwork.SecurityRule{
+		{
+			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+				SourcePortRange:          to.StringPtr("*"),
+				DestinationPortRange:     to.StringPtr("443"),
+				SourceAddressPrefix:      to.StringPtr("AzureResourceManager"),
+				DestinationAddressPrefix: to.StringPtr("*"),
+				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+				Priority:                 to.Int32Ptr(120),
+				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+			},
+			Name: to.StringPtr("rp_in_arm"),
+		},
+		{
+			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+				SourcePortRange:          to.StringPtr("*"),
+				DestinationPortRange:     to.StringPtr("443"),
+				SourceAddressPrefix:      to.StringPtr("GenevaActions"),
+				DestinationAddressPrefix: to.StringPtr("*"),
+				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+				Priority:                 to.Int32Ptr(130),
+				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+			},
+			Name: to.StringPtr("rp_in_geneva"),
+		},
+	}
+
+	if !g.production {
+		// override production ARM flag for more open configuration in development
+		rules[0].SecurityRulePropertiesFormat.SourceAddressPrefix = to.StringPtr("*")
+
+		rules = append(rules, mgmtnetwork.SecurityRule{
+			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+				SourcePortRange:          to.StringPtr("*"),
+				DestinationPortRange:     to.StringPtr("22"),
+				SourceAddressPrefix:      to.StringPtr("*"),
+				DestinationAddressPrefix: to.StringPtr("*"),
+				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+				Priority:                 to.Int32Ptr(125),
+				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+			},
+			Name: to.StringPtr("ssh_in"),
+		})
 	} else {
-		conditions = append(conditions, nil)
+		rules = append(rules,
+			mgmtnetwork.SecurityRule{
+				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+					SourcePortRange:          to.StringPtr("*"),
+					DestinationPortRange:     to.StringPtr("445"),
+					SourceAddressPrefix:      to.StringPtr("10.0.8.0/24"),
+					DestinationAddressPrefix: to.StringPtr("*"),
+					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+					Priority:                 to.Int32Ptr(140),
+					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+				},
+				Name: to.StringPtr("dbtoken_in_gateway_445"),
+			},
+			mgmtnetwork.SecurityRule{
+				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+					SourcePortRange:          to.StringPtr("*"),
+					DestinationPortRange:     to.StringPtr("8445"),
+					SourceAddressPrefix:      to.StringPtr("10.0.8.0/24"),
+					DestinationAddressPrefix: to.StringPtr("*"),
+					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+					Priority:                 to.Int32Ptr(141),
+					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+				},
+				Name: to.StringPtr("dbtoken_in_gateway_8445"),
+			},
+			mgmtnetwork.SecurityRule{
+				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+					SourcePortRange:          to.StringPtr("*"),
+					DestinationPortRange:     to.StringPtr("*"),
+					SourceAddressPrefix:      to.StringPtr("10.0.8.0/24"),
+					DestinationAddressPrefix: to.StringPtr("*"),
+					Access:                   mgmtnetwork.SecurityRuleAccessDeny,
+					Priority:                 to.Int32Ptr(145),
+					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+				},
+				Name: to.StringPtr("deny_in_gateway"),
+			},
+		)
 	}
 
-	for _, cond := range conditions {
-		rules := []mgmtnetwork.SecurityRule{
-			{
-				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-					SourcePortRange:          to.StringPtr("*"),
-					DestinationPortRange:     to.StringPtr("443"),
-					SourceAddressPrefix:      to.StringPtr("AzureResourceManager"),
-					DestinationAddressPrefix: to.StringPtr("*"),
-					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-					Priority:                 to.Int32Ptr(120),
-					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-				},
-				Name: to.StringPtr("rp_in_arm"),
-			},
-			{
-				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-					SourcePortRange:          to.StringPtr("*"),
-					DestinationPortRange:     to.StringPtr("443"),
-					SourceAddressPrefix:      to.StringPtr("GenevaActions"),
-					DestinationAddressPrefix: to.StringPtr("*"),
-					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-					Priority:                 to.Int32Ptr(130),
-					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-				},
-				Name: to.StringPtr("rp_in_geneva"),
-			},
-		}
-
-		if !g.production {
-			// override production ARM flag for more open configuration in development
-			rules[0].SecurityRulePropertiesFormat.SourceAddressPrefix = to.StringPtr("*")
-
-			rules = append(rules, mgmtnetwork.SecurityRule{
-				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-					SourcePortRange:          to.StringPtr("*"),
-					DestinationPortRange:     to.StringPtr("22"),
-					SourceAddressPrefix:      to.StringPtr("*"),
-					DestinationAddressPrefix: to.StringPtr("*"),
-					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-					Priority:                 to.Int32Ptr(125),
-					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-				},
-				Name: to.StringPtr("ssh_in"),
-			})
-		} else {
-			rules = append(rules,
-				mgmtnetwork.SecurityRule{
-					SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-						Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-						SourcePortRange:          to.StringPtr("*"),
-						DestinationPortRange:     to.StringPtr("445"),
-						SourceAddressPrefix:      to.StringPtr("10.0.8.0/24"),
-						DestinationAddressPrefix: to.StringPtr("*"),
-						Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-						Priority:                 to.Int32Ptr(140),
-						Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-					},
-					Name: to.StringPtr("dbtoken_in_gateway_445"),
-				},
-				mgmtnetwork.SecurityRule{
-					SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-						Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-						SourcePortRange:          to.StringPtr("*"),
-						DestinationPortRange:     to.StringPtr("8445"),
-						SourceAddressPrefix:      to.StringPtr("10.0.8.0/24"),
-						DestinationAddressPrefix: to.StringPtr("*"),
-						Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-						Priority:                 to.Int32Ptr(141),
-						Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-					},
-					Name: to.StringPtr("dbtoken_in_gateway_8445"),
-				},
-				mgmtnetwork.SecurityRule{
-					SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-						Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-						SourcePortRange:          to.StringPtr("*"),
-						DestinationPortRange:     to.StringPtr("*"),
-						SourceAddressPrefix:      to.StringPtr("10.0.8.0/24"),
-						DestinationAddressPrefix: to.StringPtr("*"),
-						Access:                   mgmtnetwork.SecurityRuleAccessDeny,
-						Priority:                 to.Int32Ptr(145),
-						Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-					},
-					Name: to.StringPtr("deny_in_gateway"),
-				},
-			)
-		}
-		if cond == condition_has_portal_source_ips {
-			rules = append(rules,
-				mgmtnetwork.SecurityRule{
-					SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-						Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-						SourcePortRange:          to.StringPtr("*"),
-						DestinationPortRange:     to.StringPtr("444"),
-						SourceAddressPrefixes:    to.StringSlicePtr([]string{}),
-						Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-						DestinationAddressPrefix: to.StringPtr("*"),
-						Priority:                 to.Int32Ptr(130),
-						Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-					},
-					Name: to.StringPtr("portal_in"),
-				},
-			)
-		}
-		resources = append(resources, g.securityGroup("rp-nsg", &rules, cond))
-	}
-
-	return resources
+	return g.securityGroup("rp-nsg", &rules, g.conditionStanza("deployNSGs"))
 }
 
 func (g *generator) rpPESecurityGroup() *arm.Resource {
