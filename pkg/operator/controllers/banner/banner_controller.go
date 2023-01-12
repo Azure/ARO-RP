@@ -7,7 +7,6 @@ import (
 	"context"
 
 	consolev1 "github.com/openshift/api/console/v1"
-	consoleclient "github.com/openshift/client-go/console/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -31,16 +30,13 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	consolecli consoleclient.Interface
-
 	client client.Client
 }
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, consolecli consoleclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry) *Reconciler {
 	return &Reconciler{
-		log:        log,
-		consolecli: consolecli,
+		log: log,
 	}
 }
 
