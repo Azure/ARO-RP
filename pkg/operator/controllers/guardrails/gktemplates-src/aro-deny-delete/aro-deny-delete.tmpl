@@ -21,11 +21,4 @@ spec:
   targets:
     - target: admission.k8s.gatekeeper.sh
       rego: |
-        package arodenydelete
-
-        violation[{"msg": msg}] {
-          input.review.operation == "DELETE"
-          deny_resource_name := input.parameters.name
-          deny_resource_name == input.review.object.metadata.name
-          msg := sprintf("Deleting resource - %v is not allowed", [deny_resource_name])
-        }
+{{ file.Read "gktemplates-src/aro-deny-delete/src.rego" | strings.Indent 8 | strings.TrimSuffix "\n" }}
