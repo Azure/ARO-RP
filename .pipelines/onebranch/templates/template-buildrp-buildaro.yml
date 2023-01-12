@@ -9,10 +9,10 @@ steps:
       export COMMIT=$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty)
       if [ -z "$TAG" ];
       then
-        if [ -z "$is_official_release"]
+        if [ "$is_official_release" = "True" ]
         then
           git describe --exact-match
-          echo "Ensure there is an annotated tag (git tag -a) for git commit $(COMMIT)"
+          echo "Ensure there is an annotated tag (git tag -a) for git commit ${COMMIT}"
           exit 1
         fi
         export VERSION=${COMMIT}
