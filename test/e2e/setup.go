@@ -23,6 +23,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
+	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"github.com/tebeka/selenium"
@@ -60,16 +61,17 @@ type clientSet struct {
 	NetworkSecurityGroups network.SecurityGroupsClient
 	Subnet                network.SubnetsClient
 
+	RestConfig         *rest.Config
+	HiveRestConfig     *rest.Config
+	Kubernetes         kubernetes.Interface
+	MachineAPI         machineclient.Interface
+	MachineConfig      mcoclient.Interface
+	AROClusters        aroclient.Interface
+	ConfigClient       configclient.Interface
+	Project            projectclient.Interface
+	Hive               hiveclient.Interface
 	HiveAKS            kubernetes.Interface
 	HiveClusterManager hive.ClusterManager
-
-	RestConfig    *rest.Config
-	Kubernetes    kubernetes.Interface
-	MachineAPI    machineclient.Interface
-	MachineConfig mcoclient.Interface
-	AROClusters   aroclient.Interface
-	ConfigClient  configclient.Interface
-	Project       projectclient.Interface
 }
 
 var (
@@ -295,17 +297,23 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	aksCfg, err := liveCfg.HiveRestConfig(ctx, 1)
+	hiveShard := 1
+	hiveRestConfig, err := liveCfg.HiveRestConfig(ctx, hiveShard)
 	if err != nil {
 		return nil, err
 	}
 
-	hiveAKS, err := kubernetes.NewForConfig(aksCfg)
+	hiveClientSet, err := hiveclient.NewForConfig(hiveRestConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	hiveCM, err := hive.NewFromConfig(log, _env, aksCfg)
+	hiveAKS, err := kubernetes.NewForConfig(hiveRestConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	hiveCM, err := hive.NewFromConfig(log, _env, hiveRestConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -323,16 +331,17 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		Subnet:                network.NewSubnetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		NetworkSecurityGroups: network.NewSecurityGroupsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
+		RestConfig:         restconfig,
+		HiveRestConfig:     hiveRestConfig,
+		Kubernetes:         cli,
+		MachineAPI:         machineapicli,
+		MachineConfig:      mcocli,
+		AROClusters:        arocli,
+		Project:            projectcli,
+		ConfigClient:       configcli,
+		Hive:               hiveClientSet,
 		HiveAKS:            hiveAKS,
 		HiveClusterManager: hiveCM,
-
-		RestConfig:    restconfig,
-		Kubernetes:    cli,
-		MachineAPI:    machineapicli,
-		MachineConfig: mcocli,
-		AROClusters:   arocli,
-		Project:       projectcli,
-		ConfigClient:  configcli,
 	}, nil
 }
 
