@@ -163,7 +163,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.access.redhat.com/ubi8/go-toolset:1.17.7",
 		"mcr.microsoft.com/azure-cli:latest",
 
-		"quay.io/app-sre/managed-upgrade-operator:v0.1.856-eebbe07",
+		"quay.io/app-sre/managed-upgrade-operator:v0.1.887-b00c935",
 		"quay.io/app-sre/hive:fec14dc",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
