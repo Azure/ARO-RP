@@ -307,8 +307,8 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		t.Parameters[param] = p
 	}
 
-	t.Resources = append(t.Resources, g.rpSecurityGroup()...)
 	t.Resources = append(t.Resources,
+		g.rpSecurityGroup(),
 		g.rpPESecurityGroup(),
 		g.rpVnet(),
 		g.rpPEVnet(),
@@ -318,6 +318,12 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		g.rpServiceKeyvault(),
 		g.rpServiceKeyvaultDynamic(),
 	)
+
+	if g.production {
+		t.Resources = append(t.Resources,
+			g.rpSecurityGroupForPortalSourceAddressPrefixes(),
+		)
+	}
 
 	return t
 }
