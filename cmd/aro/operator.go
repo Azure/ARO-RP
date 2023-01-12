@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	consoleclient "github.com/openshift/client-go/console/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
@@ -81,10 +80,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	configcli, err := configclient.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-	consolecli, err := consoleclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
@@ -187,7 +182,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			return fmt.Errorf("unable to create controller %s: %v", machine.ControllerName, err)
 		}
 		if err = (banner.NewReconciler(
-			log.WithField("controller", banner.ControllerName), consolecli)).SetupWithManager(mgr); err != nil {
+			log.WithField("controller", banner.ControllerName))).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", banner.ControllerName, err)
 		}
 		if err = (machineset.NewReconciler(
