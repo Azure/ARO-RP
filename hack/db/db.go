@@ -16,7 +16,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/documentdb"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -54,14 +53,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	masterKeyClient := database.NewMasterKeyClient(_env, authorizer, documentdb.GetDatabaseAccountsClient())
-	dbAuthorizer, err := masterKeyClient.NewMasterKeyAuthorizer(ctx)
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, authorizer)
 	if err != nil {
 		return err
 	}
 
-	db := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, database.DefaultClient, &noop.Noop{}, aead)
-	dbc, err := db.GetDatabaseClient()
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, &noop.Noop{}, aead)
 	if err != nil {
 		return err
 	}

@@ -46,8 +46,7 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	db := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, database.DefaultClient, m, nil)
-	dbc, err := db.GetDatabaseClient()
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil)
 	if err != nil {
 		return err
 	}
