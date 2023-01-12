@@ -32,6 +32,7 @@ func TestAdminStopVM(t *testing.T) {
 		resourceID     string
 		fixture        func(*testdatabase.Fixture)
 		vmName         string
+		deallocateVM   bool
 		mocks          func(*test, *mock_adminactions.MockAzureActions)
 		wantStatusCode int
 		wantResponse   []byte
@@ -40,9 +41,10 @@ func TestAdminStopVM(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			name:       "basic coverage",
-			vmName:     "aro-worker-australiasoutheast-7tcq7",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name:         "basic coverage",
+			vmName:       "aro-worker-australiasoutheast-7tcq7",
+			deallocateVM: false,
+			resourceID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
@@ -67,7 +69,7 @@ func TestAdminStopVM(t *testing.T) {
 				})
 			},
 			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
-				a.EXPECT().VMStopAndWait(gomock.Any(), tt.vmName).Return(nil)
+				a.EXPECT().VMStopAndWait(gomock.Any(), tt.vmName, tt.deallocateVM).Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
 		},
@@ -95,7 +97,7 @@ func TestAdminStopVM(t *testing.T) {
 			go f.Run(ctx, nil, nil)
 
 			resp, b, err := ti.request(http.MethodPost,
-				fmt.Sprintf("https://server/admin%s/stopvm?vmName=%s", tt.resourceID, tt.vmName),
+				fmt.Sprintf("https://server/admin%s/stopvm?vmName=%s&deallocateVM=%t", tt.resourceID, tt.vmName, tt.deallocateVM),
 				nil, nil)
 			if err != nil {
 				t.Error(err)

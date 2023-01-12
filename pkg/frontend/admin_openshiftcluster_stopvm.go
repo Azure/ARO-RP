@@ -25,11 +25,12 @@ func (f *frontend) postAdminOpenShiftClusterStopVM(w http.ResponseWriter, r *htt
 
 func (f *frontend) _postAdminOpenShiftClusterStopVM(log *logrus.Entry, ctx context.Context, r *http.Request) error {
 	vars := mux.Vars(r)
-	vmName := r.URL.Query().Get("vmName")
+	vmName, deallocateVm := r.URL.Query().Get("vmName"), r.URL.Query().Get("deallocateVM")
+
 	action, _, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), vars)
 	if err != nil {
 		return err
 	}
 
-	return action.VMStopAndWait(ctx, vmName)
+	return action.VMStopAndWait(ctx, vmName, (deallocateVm == "true"))
 }

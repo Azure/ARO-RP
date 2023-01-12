@@ -16,7 +16,7 @@ type VirtualMachinesClientAddons interface {
 	DeleteAndWait(ctx context.Context, resourceGroupName string, VMName string, forceDeletion *bool) error
 	RedeployAndWait(ctx context.Context, resourceGroupName string, VMName string) error
 	StartAndWait(ctx context.Context, resourceGroupName string, VMName string) error
-	StopAndWait(ctx context.Context, resourceGroupName string, VMName string) error
+	StopAndWait(ctx context.Context, resourceGroupName string, VMName string, deallocateVM bool) error
 	List(ctx context.Context, resourceGroupName string) (result []mgmtcompute.VirtualMachine, err error)
 }
 
@@ -56,13 +56,26 @@ func (c *virtualMachinesClient) StartAndWait(ctx context.Context, resourceGroupN
 	return future.WaitForCompletionRef(ctx, c.Client)
 }
 
-func (c *virtualMachinesClient) StopAndWait(ctx context.Context, resourceGroupName string, VMName string) error {
+func (c *virtualMachinesClient) StopAndWait(ctx context.Context, resourceGroupName string, VMName string, deallocateVM bool) error {
 	future, err := c.PowerOff(ctx, resourceGroupName, VMName, to.BoolPtr(false))
 	if err != nil {
 		return err
 	}
 
-	return future.WaitForCompletionRef(ctx, c.Client)
+	err = future.WaitForCompletionRef(ctx, c.Client)
+	if err != nil {
+		return err
+	}
+
+	if deallocateVM {
+		future, deallocErr := c.Deallocate(ctx, resourceGroupName, VMName)
+		if deallocErr != nil {
+			return deallocErr
+		}
+		err = future.WaitForCompletionRef(ctx, c.Client)
+	}
+
+	return err
 }
 
 func (c *virtualMachinesClient) List(ctx context.Context, resourceGroupName string) (result []mgmtcompute.VirtualMachine, err error) {
