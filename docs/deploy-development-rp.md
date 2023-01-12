@@ -163,19 +163,25 @@
   curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/serialconsole?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
   ```
 
-* Redeploy node of a dev cluster
+* Redeploy a VM in a dev cluster
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
   curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/redeployvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
   ```
 
-* Stop node of a dev cluster
+* Stop a VM in a dev cluster
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
   curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/stopvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
   ```
 
-* Start node of a dev cluster
+* Stop and deallocate a VM in a dev cluster
+  ```bash
+  VMNAME="aro-cluster-qplnw-master-0"
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/stopvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
+  ```
+
+* Start a VM in a dev cluster
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
   curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/startvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
