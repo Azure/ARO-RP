@@ -58,17 +58,17 @@ const (
 	defaultMutatingWebhookTimeout         = "1"
 
 	gkDeploymentPath  = "staticresources"
-	gkTemplatePath    = "gktemplates"
-	gkConstraintsPath = "gkconstraints"
+	gkTemplatePath    = "policies/gktemplates"
+	gkConstraintsPath = "policies/gkconstraints"
 )
 
 //go:embed staticresources
 var staticFiles embed.FS
 
-//go:embed gktemplates
+//go:embed policies/gktemplates
 var gkPolicyTemplates embed.FS
 
-//go:embed gkconstraints
+//go:embed policies/gkconstraints
 var gkPolicyConraints embed.FS
 
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
