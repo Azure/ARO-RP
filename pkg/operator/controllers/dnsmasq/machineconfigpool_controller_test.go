@@ -10,26 +10,18 @@ import (
 
 	"github.com/golang/mock/gomock"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 )
 
 func TestMachineConfigPoolReconciler(t *testing.T) {
-	fakeAro := func(objects ...kruntime.Object) *arofake.Clientset {
-		return arofake.NewSimpleClientset(objects...)
-	}
-	fakeMco := func(objects ...kruntime.Object) *mcofake.Clientset {
-		return mcofake.NewSimpleClientset(objects...)
-	}
 	fakeDh := func(controller *gomock.Controller) *mock_dynamichelper.MockInterface {
 		return mock_dynamichelper.NewMockInterface(controller)
 	}
@@ -49,16 +41,14 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 		controller := gomock.NewController(t)
 		defer controller.Finish()
 
-		arocli := fakeAro()
-		mcocli := fakeMco()
+		client := ctrlfake.NewClientBuilder().Build()
 		dh := fakeDh(controller)
 
-		r := &MachineConfigPoolReconciler{
-			log:    logrus.NewEntry(logrus.StandardLogger()),
-			arocli: arocli,
-			mcocli: mcocli,
-			dh:     dh,
-		}
+		r := NewMachineConfigPoolReconciler(
+			logrus.NewEntry(logrus.StandardLogger()),
+			client,
+			dh,
+		)
 
 		request := ctrl.Request{}
 
@@ -73,17 +63,15 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 		controller := gomock.NewController(t)
 		defer controller.Finish()
 
-		arocli := fakeAro(cluster(false))
-		mcocli := fakeMco()
+		client := ctrlfake.NewClientBuilder().WithObjects(cluster(false)).Build()
 
 		dh := fakeDh(controller)
 
-		r := &MachineConfigPoolReconciler{
-			log:    logrus.NewEntry(logrus.StandardLogger()),
-			arocli: arocli,
-			mcocli: mcocli,
-			dh:     dh,
-		}
+		r := NewMachineConfigPoolReconciler(
+			logrus.NewEntry(logrus.StandardLogger()),
+			client,
+			dh,
+		)
 
 		request := ctrl.Request{}
 
@@ -98,17 +86,15 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 		controller := gomock.NewController(t)
 		defer controller.Finish()
 
-		arocli := fakeAro(cluster(true))
-		mcocli := fakeMco()
+		client := ctrlfake.NewClientBuilder().WithObjects(cluster(true)).Build()
 
 		dh := fakeDh(controller)
 
-		r := &MachineConfigPoolReconciler{
-			log:    logrus.NewEntry(logrus.StandardLogger()),
-			arocli: arocli,
-			mcocli: mcocli,
-			dh:     dh,
-		}
+		r := NewMachineConfigPoolReconciler(
+			logrus.NewEntry(logrus.StandardLogger()),
+			client,
+			dh,
+		)
 
 		request := ctrl.Request{
 			NamespacedName: types.NamespacedName{
@@ -128,27 +114,28 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 		controller := gomock.NewController(t)
 		defer controller.Finish()
 
-		arocli := fakeAro(cluster(true))
-		mcocli := fakeMco(
-			&mcv1.MachineConfigPool{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "custom",
-					Finalizers: []string{MachineConfigPoolControllerName},
+		client := ctrlfake.NewClientBuilder().
+			WithObjects(
+				cluster(true),
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "custom",
+						Finalizers: []string{MachineConfigPoolControllerName},
+					},
+					Status: mcv1.MachineConfigPoolStatus{},
+					Spec:   mcv1.MachineConfigPoolSpec{},
 				},
-				Status: mcv1.MachineConfigPoolStatus{},
-				Spec:   mcv1.MachineConfigPoolSpec{},
-			},
-		)
+			).
+			Build()
 
 		dh := fakeDh(controller)
 		dh.EXPECT().Ensure(gomock.Any(), gomock.AssignableToTypeOf(&mcv1.MachineConfig{})).Times(1)
 
-		r := &MachineConfigPoolReconciler{
-			log:    logrus.NewEntry(logrus.StandardLogger()),
-			arocli: arocli,
-			mcocli: mcocli,
-			dh:     dh,
-		}
+		r := NewMachineConfigPoolReconciler(
+			logrus.NewEntry(logrus.StandardLogger()),
+			client,
+			dh,
+		)
 
 		request := ctrl.Request{
 			NamespacedName: types.NamespacedName{
