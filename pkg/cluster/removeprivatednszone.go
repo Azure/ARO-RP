@@ -90,7 +90,11 @@ func (m *manager) removePrivateDNSZone(ctx context.Context) error {
 		return nil
 	}
 
-	v, err := version.GetClusterVersion(ctx, m.configcli)
+	cv, err := m.configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	v, err := version.GetClusterVersion(cv)
 	if err != nil {
 		m.log.Print(err)
 		return nil

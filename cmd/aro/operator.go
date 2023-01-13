@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
@@ -81,10 +80,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 
 	client := mgr.GetClient()
 
-	configcli, err := configclient.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
 	kubernetescli, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return err
@@ -123,7 +118,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (clusteroperatoraro.NewReconciler(
 			log.WithField("controller", clusteroperatoraro.ControllerName),
-			client, configcli)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", clusteroperatoraro.ControllerName, err)
 		}
 		if err = (pullsecret.NewReconciler(
@@ -138,12 +133,12 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (workaround.NewReconciler(
 			log.WithField("controller", workaround.ControllerName),
-			client, configcli, kubernetescli, mcocli, restConfig)).SetupWithManager(mgr); err != nil {
+			client, kubernetescli, mcocli, restConfig)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", workaround.ControllerName, err)
 		}
 		if err = (routefix.NewReconciler(
 			log.WithField("controller", routefix.ControllerName),
-			client, configcli, kubernetescli, securitycli, restConfig)).SetupWithManager(mgr); err != nil {
+			client, kubernetescli, securitycli, restConfig)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", routefix.ControllerName, err)
 		}
 		if err = (monitoring.NewReconciler(
@@ -198,7 +193,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (imageconfig.NewReconciler(
 			log.WithField("controller", imageconfig.ControllerName),
-			client, configcli)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", imageconfig.ControllerName, err)
 		}
 		if err = (previewfeature.NewReconciler(
@@ -243,7 +238,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (ingresscertificatechecker.NewReconciler(
 			log.WithField("controller", ingresscertificatechecker.ControllerName),
-			client, operatorcli, configcli, role)).SetupWithManager(mgr); err != nil {
+			client, operatorcli, role)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", ingresscertificatechecker.ControllerName, err)
 		}
 	}

@@ -11,9 +11,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	configv1 "github.com/openshift/api/config/v1"
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -37,16 +35,13 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	configcli configclient.Interface
-
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, configcli configclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:       log,
-		configcli: configcli,
-		client:    client,
+		log:    log,
+		client: client,
 	}
 }
 
@@ -74,7 +69,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// Get image.config yaml
-	imageconfig, err := r.configcli.ConfigV1().Images().Get(ctx, request.Name, metav1.GetOptions{})
+	imageconfig := &configv1.Image{}
+	err = r.client.Get(ctx, types.NamespacedName{Name: request.Name}, imageconfig)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -106,8 +102,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// Update image config registry
-	_, err = r.configcli.ConfigV1().Images().Update(ctx, imageconfig, metav1.UpdateOptions{})
-	return reconcile.Result{}, err
+	return reconcile.Result{}, r.client.Update(ctx, imageconfig)
 }
 
 // SetupWithManager setup the manager
