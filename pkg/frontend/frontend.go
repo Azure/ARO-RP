@@ -540,7 +540,6 @@ func frontendOperationResultLog(log *logrus.Entry, method string, err error) {
 			return
 		} else if int(err) < 500 {
 			log = log.WithField("resultType", utillog.UserErrorResultType)
-
 		} else {
 			log = log.WithField("resultType", utillog.ServerErrorResultType)
 		}
