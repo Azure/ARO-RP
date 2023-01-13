@@ -44,6 +44,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 		return err
 	})
 
+	frontendOperationResultLog(log, r.Method, err)
 	reply(log, w, header, b, err)
 }
 
