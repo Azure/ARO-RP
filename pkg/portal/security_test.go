@@ -317,7 +317,7 @@ func TestSecurity(t *testing.T) {
 					if tt2.authenticated {
 						tt2.wantStatusCode = http.StatusOK
 					} else {
-						tt2.wantStatusCode = http.StatusForbidden
+						tt2.wantStatusCode = http.StatusTemporaryRedirect
 					}
 				}
 
