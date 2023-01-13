@@ -32,5 +32,5 @@ func (f *frontend) _postAdminOpenShiftClusterStopVM(log *logrus.Entry, ctx conte
 		return err
 	}
 
-	return action.VMStopAndWait(ctx, vmName, (deallocateVm == "true"))
+	return action.VMStopAndWait(ctx, vmName, strings.EqualFold(deallocateVm, "True"))
 }
