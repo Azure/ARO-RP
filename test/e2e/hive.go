@@ -5,6 +5,9 @@ package e2e
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -19,6 +22,14 @@ var (
 	clusterPlatformLabelKey string = "hive.openshift.io/cluster-platform"
 	clusterRegionLabelKey   string = "hive.openshift.io/cluster-region"
 	clusterPlatformValue    string = "azure"
+
+	controlPlaneAPIURLOverride = func(clusterDomain string, clusterLocation string) string {
+		if !strings.ContainsRune(clusterDomain, '.') {
+			clusterDomain += "." + clusterLocation + "." + os.Getenv("PARENT_DOMAIN_NAME")
+		}
+
+		return fmt.Sprintf("api-int.%s:6443", clusterDomain)
+	}
 )
 
 var _ = Describe("Hive-managed ARO cluster", func() {
@@ -54,5 +65,10 @@ var _ = Describe("Hive-managed ARO cluster", func() {
 		Expect(cd.Spec.Platform.Azure).NotTo(BeNil())
 		Expect(cd.Spec.Platform.Azure.BaseDomainResourceGroupName).To(Equal(oc.Properties.ClusterProfile.ResourceGroupID))
 		Expect(cd.Spec.Platform.Azure.Region).To(Equal(oc.Location))
+
+		By("verifying that the ClusterDeployment object spec includes the expected ControlPlaneConfig overrides")
+		Expect(cd.Spec.ControlPlaneConfig).NotTo(BeNil())
+		Expect(cd.Spec.ControlPlaneConfig.APIServerIPOverride).To(Equal(oc.Properties.NetworkProfile.APIServerPrivateEndpointIP))
+		Expect(cd.Spec.ControlPlaneConfig.APIURLOverride).To(Equal(controlPlaneAPIURLOverride(oc.Properties.ClusterProfile.Domain, oc.Location)))
 	})
 })
