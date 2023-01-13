@@ -6,8 +6,8 @@ package routefix
 import (
 	"context"
 
+	configv1 "github.com/openshift/api/config/v1"
 	securityv1 "github.com/openshift/api/security/v1"
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -38,7 +38,6 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	configcli     configclient.Interface
 	kubernetescli kubernetes.Interface
 	securitycli   securityclient.Interface
 
@@ -55,10 +54,9 @@ var (
 )
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, client client.Client, configcli configclient.Interface, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, restConfig *rest.Config) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, restConfig *rest.Config) *Reconciler {
 	return &Reconciler{
 		log:           log,
-		configcli:     configcli,
 		kubernetescli: kubernetescli,
 		securitycli:   securitycli,
 		client:        client,
@@ -86,7 +84,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// cluster version is not set to final until upgrade is completed. We need to
 	// detect if desired version is with the fix, so we can prevent stuck upgrade
 	// by deleting fix resources
-	clusterVersion, err := version.GetClusterDesiredVersion(ctx, r.configcli)
+	cv := &configv1.ClusterVersion{}
+	err = r.client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	clusterVersion, err := version.ParseVersion(cv.Status.Desired.Version)
 	if err != nil {
 		r.log.Errorf("error getting the OpenShift desired version: %v", err)
 		return reconcile.Result{}, err

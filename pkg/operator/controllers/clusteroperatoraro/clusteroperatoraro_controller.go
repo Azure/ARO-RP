@@ -7,7 +7,6 @@ import (
 	"context"
 
 	configv1 "github.com/openshift/api/config/v1"
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -40,20 +39,16 @@ const (
 )
 
 type Reconciler struct {
-	// TODO: Replace configcli with CO client
 	log *logrus.Entry
-
-	configcli configclient.Interface
 
 	client client.Client
 }
 
 // TODO: Decide whether we actually going to make any progress on this. If not - clean up.
-func NewReconciler(log *logrus.Entry, client client.Client, configcli configclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:       log,
-		configcli: configcli,
-		client:    client,
+		log:    log,
+		client: client,
 	}
 }
 
@@ -76,7 +71,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return err
 		}
 
-		co, err = r.configcli.ConfigV1().ClusterOperators().Update(ctx, co, metav1.UpdateOptions{})
+		err = r.client.Update(ctx, co)
 		if err != nil {
 			return err
 		}
@@ -119,26 +114,25 @@ func (r *Reconciler) setClusterOperatorStatus(ctx context.Context, co *configv1.
 		v1helpers.SetStatusCondition(&co.Status.Conditions, c)
 	}
 
-	_, err := r.configcli.ConfigV1().ClusterOperators().UpdateStatus(ctx, co, metav1.UpdateOptions{})
-	return err
+	return r.client.Status().Update(ctx, co)
 }
 
 func (r *Reconciler) getOrCreateClusterOperator(ctx context.Context) (*configv1.ClusterOperator, error) {
-	co, err := r.configcli.ConfigV1().ClusterOperators().Get(ctx, clusterOperatorName, metav1.GetOptions{})
+	co := &configv1.ClusterOperator{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: clusterOperatorName}, co)
 	if !kerrors.IsNotFound(err) {
 		return co, err
 	}
 
 	r.log.Infof("ClusterOperator does not exist, creating a new one.")
-	defaultCo := r.defaultOperator()
-	co, err = r.configcli.ConfigV1().ClusterOperators().Create(ctx, defaultCo, metav1.CreateOptions{})
+	co = r.defaultOperator()
+	err = r.client.Create(ctx, co)
 	if err != nil {
 		return nil, err
 	}
 
-	co.Status = defaultCo.Status
-
-	return r.configcli.ConfigV1().ClusterOperators().UpdateStatus(ctx, co, metav1.UpdateOptions{})
+	err = r.client.Status().Update(ctx, co)
+	return co, err
 }
 
 func (r *Reconciler) defaultOperator() *configv1.ClusterOperator {

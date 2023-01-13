@@ -10,7 +10,6 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
@@ -47,12 +46,12 @@ type Reconciler struct {
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, operatorcli operatorclient.Interface, configcli configclient.Interface, role string) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, operatorcli operatorclient.Interface, role string) *Reconciler {
 	return &Reconciler{
 		log:  log,
 		role: role,
 
-		checker: newIngressCertificateChecker(operatorcli, configcli),
+		checker: newIngressCertificateChecker(client, operatorcli),
 
 		client: client,
 	}

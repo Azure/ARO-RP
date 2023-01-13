@@ -15,9 +15,11 @@ import (
 	"errors"
 	"fmt"
 
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	configv1 "github.com/openshift/api/config/v1"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -37,19 +39,20 @@ type ingressCertificateChecker interface {
 }
 
 type checker struct {
+	client      client.Client
 	operatorcli operatorclient.Interface
-	configcli   configclient.Interface
 }
 
-func newIngressCertificateChecker(operatorcli operatorclient.Interface, configcli configclient.Interface) *checker {
+func newIngressCertificateChecker(client client.Client, operatorcli operatorclient.Interface) *checker {
 	return &checker{
+		client:      client,
 		operatorcli: operatorcli,
-		configcli:   configcli,
 	}
 }
 
 func (r *checker) Check(ctx context.Context) error {
-	cv, err := r.configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
+	cv := &configv1.ClusterVersion{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
 	if err != nil {
 		return err
 	}

@@ -13,6 +13,7 @@ import (
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestCheck(t *testing.T) {
@@ -74,9 +75,14 @@ func TestCheck(t *testing.T) {
 				configcliFake.Tracker().Add(tt.clusterVersion)
 			}
 
+			clientBuilder := ctrlfake.NewClientBuilder()
+			if tt.clusterVersion != nil {
+				clientBuilder = clientBuilder.WithObjects(tt.clusterVersion)
+			}
+
 			sp := &checker{
+				client:      clientBuilder.Build(),
 				operatorcli: operatorcliFake,
-				configcli:   configcliFake,
 			}
 
 			err := sp.Check(ctx)

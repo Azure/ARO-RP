@@ -7,7 +7,7 @@ import (
 	"context"
 	"time"
 
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	configv1 "github.com/openshift/api/config/v1"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,14 +33,12 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	configcli configclient.Interface
-
 	workarounds []Workaround
 
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, configcli configclient.Interface, kubernetescli kubernetes.Interface, mcocli mcoclient.Interface, restConfig *rest.Config) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, mcocli mcoclient.Interface, restConfig *rest.Config) *Reconciler {
 	dh, err := dynamichelper.New(log, restConfig)
 	if err != nil {
 		panic(err)
@@ -48,7 +46,6 @@ func NewReconciler(log *logrus.Entry, client client.Client, configcli configclie
 
 	return &Reconciler{
 		log:         log,
-		configcli:   configcli,
 		workarounds: []Workaround{NewSystemReserved(log, mcocli, dh), NewIfReload(log, kubernetescli)},
 		client:      client,
 	}
@@ -68,7 +65,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	r.log.Debug("running")
-	clusterVersion, err := version.GetClusterVersion(ctx, r.configcli)
+
+	cv := &configv1.ClusterVersion{}
+	err = r.client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	clusterVersion, err := version.GetClusterVersion(cv)
 	if err != nil {
 		r.log.Errorf("error getting the OpenShift version: %v", err)
 		return reconcile.Result{}, err
