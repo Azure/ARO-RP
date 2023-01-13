@@ -5,6 +5,7 @@ package hive
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
@@ -38,6 +39,7 @@ type ClusterManager interface {
 	Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error
 	IsClusterDeploymentReady(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error)
 	IsClusterInstallationComplete(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error)
+	GetClusterDeployment(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.ClusterDeployment, error)
 	ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error
 }
 
@@ -49,6 +51,29 @@ type clusterManager struct {
 	kubernetescli kubernetes.Interface
 
 	dh dynamichelper.Interface
+}
+
+func NewFromEnv(log *logrus.Entry, env env.Interface) (ClusterManager, error) {
+	ctx := context.Background()
+	installViaHive, err := env.LiveConfig().InstallViaHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	adoptViaHive, err := env.LiveConfig().AdoptByHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if installViaHive || adoptViaHive {
+		hiveShard := 1
+		hiveRestConfig, err := env.LiveConfig().HiveRestConfig(ctx, hiveShard)
+		if err != nil {
+			return nil, fmt.Errorf("failed getting RESTConfig for Hive shard %d: %w", hiveShard, err)
+		}
+		return NewFromConfig(log, env, hiveRestConfig)
+	}
+	return nil, errors.New("hive is not enabled")
 }
 
 // NewFromConfig creates a ClusterManager.
@@ -132,7 +157,7 @@ func (hr *clusterManager) Delete(ctx context.Context, doc *api.OpenShiftClusterD
 }
 
 func (hr *clusterManager) IsClusterDeploymentReady(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error) {
-	cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
+	cd, err := hr.GetClusterDeployment(ctx, doc)
 	if err != nil {
 		return false, err
 	}
@@ -181,6 +206,14 @@ func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc
 	}
 
 	return false, nil
+}
+
+func (hr *clusterManager) GetClusterDeployment(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.ClusterDeployment, error) {
+	cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return cd, nil
 }
 
 func (hr *clusterManager) ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error {

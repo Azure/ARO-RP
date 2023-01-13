@@ -399,3 +399,52 @@ func TestCreateNamespace(t *testing.T) {
 		})
 	}
 }
+
+func TestGetClusterDeployment(t *testing.T) {
+	fakeNamespace := "fake-namespace"
+	doc := &api.OpenShiftClusterDocument{
+		OpenShiftCluster: &api.OpenShiftCluster{
+			Properties: api.OpenShiftClusterProperties{
+				HiveProfile: api.HiveProfile{
+					Namespace: fakeNamespace,
+				},
+			},
+		},
+	}
+
+	cd := &hivev1.ClusterDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ClusterDeploymentName,
+			Namespace: fakeNamespace,
+		},
+	}
+
+	for _, tt := range []struct {
+		name    string
+		wantErr string
+	}{
+		{name: "cd exists and is returned"},
+		{name: "cd does not exist err returned", wantErr: `clusterdeployments.hive.openshift.io "cluster" not found`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClientset := hivefake.NewSimpleClientset()
+			if tt.wantErr == "" {
+				_ = fakeClientset.Tracker().Add(cd)
+			}
+			c := clusterManager{
+				hiveClientset: fakeClientset,
+				log:           logrus.NewEntry(logrus.StandardLogger()),
+			}
+
+			result, err := c.GetClusterDeployment(context.Background(), doc)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Fatal(err)
+			}
+
+			if result != nil && result.Name != cd.Name && result.Namespace != cd.Namespace {
+				t.Fatal("Unexpected cluster deployment returned", result)
+			}
+		})
+	}
+}
