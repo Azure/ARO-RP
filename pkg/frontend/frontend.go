@@ -30,6 +30,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -516,4 +517,36 @@ func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byt
 		_, _ = w.Write(b)
 		_, _ = w.Write([]byte{'\n'})
 	}
+}
+
+func frontendOperationResultLog(log *logrus.Entry, method string, err error) {
+	log = log.WithFields(logrus.Fields{
+		"LOGKIND":       "frontendqos",
+		"resultType":    utillog.SuccessResultType,
+		"operationType": method,
+	})
+
+	if err == nil {
+		log.Info("front end operation succeeded")
+		return
+	}
+
+	switch err := err.(type) {
+	case *api.CloudError:
+		log = log.WithField("resultType", utillog.UserErrorResultType)
+	case statusCodeError:
+		if int(err) < 300 && int(err) >= 200 {
+			log.Info("front end operation succeeded")
+			return
+		} else if int(err) < 500 {
+			log = log.WithField("resultType", utillog.UserErrorResultType)
+		} else {
+			log = log.WithField("resultType", utillog.ServerErrorResultType)
+		}
+	default:
+		log = log.WithField("resultType", utillog.ServerErrorResultType)
+	}
+
+	log = log.WithField("errorDetails", err.Error())
+	log.Info("front end operation failed")
 }
