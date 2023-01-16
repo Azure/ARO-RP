@@ -351,17 +351,17 @@ func (mr *MockAzureActionsMockRecorder) VMStartAndWait(arg0, arg1 interface{}) *
 }
 
 // VMStopAndWait mocks base method.
-func (m *MockAzureActions) VMStopAndWait(arg0 context.Context, arg1 string) error {
+func (m *MockAzureActions) VMStopAndWait(arg0 context.Context, arg1 string, arg2 bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VMStopAndWait", arg0, arg1)
+	ret := m.ctrl.Call(m, "VMStopAndWait", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // VMStopAndWait indicates an expected call of VMStopAndWait.
-func (mr *MockAzureActionsMockRecorder) VMStopAndWait(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockAzureActionsMockRecorder) VMStopAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMStopAndWait", reflect.TypeOf((*MockAzureActions)(nil).VMStopAndWait), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMStopAndWait", reflect.TypeOf((*MockAzureActions)(nil).VMStopAndWait), arg0, arg1, arg2)
 }
 
 // WriteToStream mocks base method.

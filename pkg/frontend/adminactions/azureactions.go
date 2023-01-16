@@ -32,7 +32,7 @@ type AzureActions interface {
 	NICReconcileFailedState(ctx context.Context, nicName string) error
 	VMRedeployAndWait(ctx context.Context, vmName string) error
 	VMStartAndWait(ctx context.Context, vmName string) error
-	VMStopAndWait(ctx context.Context, vmName string) error
+	VMStopAndWait(ctx context.Context, vmName string, deallocateVM bool) error
 	VMSizeList(ctx context.Context) ([]mgmtcompute.ResourceSku, error)
 	VMResize(ctx context.Context, vmName string, vmSize string) error
 	VMSerialConsole(ctx context.Context, w http.ResponseWriter, log *logrus.Entry, vmName string) error
@@ -105,9 +105,9 @@ func (a *azureActions) VMStartAndWait(ctx context.Context, vmName string) error 
 	return a.virtualMachines.StartAndWait(ctx, clusterRGName, vmName)
 }
 
-func (a *azureActions) VMStopAndWait(ctx context.Context, vmName string) error {
+func (a *azureActions) VMStopAndWait(ctx context.Context, vmName string, deallocateVM bool) error {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
-	return a.virtualMachines.StopAndWait(ctx, clusterRGName, vmName)
+	return a.virtualMachines.StopAndWait(ctx, clusterRGName, vmName, deallocateVM)
 }
 
 func (a *azureActions) VMSizeList(ctx context.Context) ([]mgmtcompute.ResourceSku, error) {
