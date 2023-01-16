@@ -48,10 +48,14 @@ func New(baseLog *logrus.Entry,
 	}
 
 	aadAuthenticatedRouter.NewRoute().Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.URL.Path += "/"
+		r.URL.Path += "/graph"
 		http.Redirect(w, r, r.URL.String(), http.StatusTemporaryRedirect)
 	})
-	aadAuthenticatedRouter.NewRoute().PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus/").Handler(rp)
+	aadAuthenticatedRouter.NewRoute().Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.URL.Path += "graph"
+		http.Redirect(w, r, r.URL.String(), http.StatusTemporaryRedirect)
+	})
+	aadAuthenticatedRouter.NewRoute().PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus/graph").Handler(rp)
 
 	return p
 }
