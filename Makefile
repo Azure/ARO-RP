@@ -124,6 +124,15 @@ publish-image-fluentbit: image-fluentbit
 publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
 
+image-e2e:
+	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-e2e -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
+
+publish-image-e2e: image-e2e
+	docker push $(ARO_IMAGE)
+
+extract-aro-docker:
+	hack/ci-utils/extractaro.sh ${ARO_IMAGE}
+
 proxy:
 	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
 
@@ -159,6 +168,10 @@ tunnel:
 
 e2e.test:
 	go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" -o e2e.test
+
+e2etools:
+	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/cluster
+	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/db
 
 test-e2e: e2e.test
 	./e2e.test $(E2E_FLAGS)

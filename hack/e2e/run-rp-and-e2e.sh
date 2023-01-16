@@ -4,8 +4,6 @@
 if [[ $CI ]] ; then
     set -o pipefail
 
-    az account set -s $AZURE_SUBSCRIPTION_ID
-    SECRET_SA_ACCOUNT_NAME=e2earosecrets make secrets
     . secrets/env
     echo "##vso[task.setvariable variable=RP_MODE]$RP_MODE"
 
@@ -138,16 +136,11 @@ clean_e2e_db() {
 
 delete_e2e_cluster() {
     echo "########## 🧹 Deleting Cluster $CLUSTER ##########"
-    go run ./hack/cluster delete
-}
-
-run_vpn() {
-    sudo openvpn --config secrets/$VPN --daemon --writepid vpnpid
-    sleep 10
-}
-
-kill_vpn() {
-    while read pid; do sudo kill $pid; done < vpnpid
+    if [[ $CI ]]; then
+        ./cluster delete
+    else
+        go run ./hack/cluster delete
+    fi
 }
 
 

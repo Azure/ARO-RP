@@ -8,6 +8,7 @@ gomock_reflect_*
 /*.key
 /*.kubeconfig
 /*.pem
+/*.tar
 /aro
 /dev-config.yaml
 /e2e.test
