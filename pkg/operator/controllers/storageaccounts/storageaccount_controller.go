@@ -8,7 +8,6 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -40,9 +39,8 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	kubernetescli    kubernetes.Interface
-	maocli           machineclient.Interface
-	imageregistrycli imageregistryclient.Interface
+	kubernetescli kubernetes.Interface
+	maocli        machineclient.Interface
 
 	client client.Client
 }
@@ -54,19 +52,18 @@ type reconcileManager struct {
 	instance       *arov1alpha1.Cluster
 	subscriptionID string
 
-	imageregistrycli imageregistryclient.Interface
-	kubeSubnets      subnet.KubeManager
-	storage          storage.AccountsClient
+	client      client.Client
+	kubeSubnets subnet.KubeManager
+	storage     storage.AccountsClient
 }
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, client client.Client, maocli machineclient.Interface, kubernetescli kubernetes.Interface, imageregistrycli imageregistryclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, maocli machineclient.Interface, kubernetescli kubernetes.Interface) *Reconciler {
 	return &Reconciler{
-		log:              log,
-		kubernetescli:    kubernetescli,
-		imageregistrycli: imageregistrycli,
-		maocli:           maocli,
-		client:           client,
+		log:           log,
+		kubernetescli: kubernetescli,
+		maocli:        maocli,
+		client:        client,
 	}
 }
 
@@ -112,9 +109,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		instance:       instance,
 		subscriptionID: resource.SubscriptionID,
 
-		imageregistrycli: r.imageregistrycli,
-		kubeSubnets:      subnet.NewKubeManager(r.maocli, resource.SubscriptionID),
-		storage:          storage.NewAccountsClient(&azEnv, resource.SubscriptionID, authorizer),
+		client:      r.client,
+		kubeSubnets: subnet.NewKubeManager(r.maocli, resource.SubscriptionID),
+		storage:     storage.NewAccountsClient(&azEnv, resource.SubscriptionID, authorizer),
 	}
 
 	return reconcile.Result{}, manager.reconcileAccounts(ctx)

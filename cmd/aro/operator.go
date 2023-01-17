@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 
-	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
@@ -92,10 +91,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 	securitycli, err := securityclient.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-	imageregistrycli, err := imageregistryclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
@@ -198,7 +193,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (storageaccounts.NewReconciler(
 			log.WithField("controller", storageaccounts.ControllerName),
-			client, maocli, kubernetescli, imageregistrycli)).SetupWithManager(mgr); err != nil {
+			client, maocli, kubernetescli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", storageaccounts.ControllerName, err)
 		}
 		if err = (muo.NewReconciler(
