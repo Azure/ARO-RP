@@ -35,9 +35,9 @@ const (
 	configName        = "dynamic-node"
 )
 
-func NewReconciler(log *logrus.Entry, mgr ctrl.Manager) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		client: mgr.GetClient(),
+		client: client,
 
 		log: log,
 	}

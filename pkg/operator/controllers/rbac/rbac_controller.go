@@ -35,10 +35,11 @@ type Reconciler struct {
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, dh dynamichelper.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
-		log: log,
-		dh:  dh,
+		log:    log,
+		dh:     dh,
+		client: client,
 	}
 }
 
@@ -105,9 +106,4 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&rbacv1.ClusterRoleBinding{}).
 		Named(ControllerName).
 		Complete(r)
-}
-
-func (r *Reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }

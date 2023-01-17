@@ -42,10 +42,11 @@ type Reconciler struct {
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, configcli configclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, configcli configclient.Interface) *Reconciler {
 	return &Reconciler{
 		log:       log,
 		configcli: configcli,
+		client:    client,
 	}
 }
 
@@ -119,11 +120,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&configv1.Image{}, builder.WithPredicates(imagePredicate)).
 		Named(ControllerName).
 		Complete(r)
-}
-
-func (r *Reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }
 
 // Switch case to ensure the correct registries are added depending on the cloud environment (Gov or Public cloud)

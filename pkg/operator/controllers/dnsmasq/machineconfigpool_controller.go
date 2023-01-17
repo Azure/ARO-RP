@@ -33,11 +33,12 @@ type MachineConfigPoolReconciler struct {
 	client client.Client
 }
 
-func NewMachineConfigPoolReconciler(log *logrus.Entry, mcocli mcoclient.Interface, dh dynamichelper.Interface) *MachineConfigPoolReconciler {
+func NewMachineConfigPoolReconciler(log *logrus.Entry, client client.Client, mcocli mcoclient.Interface, dh dynamichelper.Interface) *MachineConfigPoolReconciler {
 	return &MachineConfigPoolReconciler{
 		log:    log,
 		mcocli: mcocli,
 		dh:     dh,
+		client: client,
 	}
 }
 
@@ -80,9 +81,4 @@ func (r *MachineConfigPoolReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&mcv1.MachineConfigPool{}).
 		Named(MachineConfigPoolControllerName).
 		Complete(r)
-}
-
-func (r *MachineConfigPoolReconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }

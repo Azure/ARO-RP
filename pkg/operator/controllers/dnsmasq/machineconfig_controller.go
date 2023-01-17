@@ -36,11 +36,12 @@ type MachineConfigReconciler struct {
 
 var rxARODNS = regexp.MustCompile("^99-(.*)-aro-dns$")
 
-func NewMachineConfigReconciler(log *logrus.Entry, mcocli mcoclient.Interface, dh dynamichelper.Interface) *MachineConfigReconciler {
+func NewMachineConfigReconciler(log *logrus.Entry, client client.Client, mcocli mcoclient.Interface, dh dynamichelper.Interface) *MachineConfigReconciler {
 	return &MachineConfigReconciler{
 		log:    log,
 		mcocli: mcocli,
 		dh:     dh,
+		client: client,
 	}
 }
 
@@ -89,9 +90,4 @@ func (r *MachineConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&mcv1.MachineConfig{}).
 		Named(MachineConfigControllerName).
 		Complete(r)
-}
-
-func (r *MachineConfigReconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }

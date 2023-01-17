@@ -47,12 +47,14 @@ type Reconciler struct {
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, operatorcli operatorclient.Interface, configcli configclient.Interface, role string) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, operatorcli operatorclient.Interface, configcli configclient.Interface, role string) *Reconciler {
 	return &Reconciler{
 		log:  log,
 		role: role,
 
 		checker: newIngressCertificateChecker(operatorcli, configcli),
+
+		client: client,
 	}
 }
 
@@ -147,9 +149,4 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		)
 
 	return builder.Named(ControllerName).Complete(r)
-}
-
-func (r *Reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }

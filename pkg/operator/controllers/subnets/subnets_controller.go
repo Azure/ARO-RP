@@ -60,11 +60,12 @@ type reconcileManager struct {
 }
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, maocli machineclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, maocli machineclient.Interface) *Reconciler {
 	return &Reconciler{
 		log:           log,
 		kubernetescli: kubernetescli,
 		maocli:        maocli,
+		client:        client,
 	}
 }
 
@@ -166,9 +167,4 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForObject{}).            // to reconcile on node status change
 		Named(ControllerName).
 		Complete(r)
-}
-
-func (r *Reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }

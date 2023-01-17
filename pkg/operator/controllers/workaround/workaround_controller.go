@@ -40,7 +40,7 @@ type Reconciler struct {
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, configcli configclient.Interface, kubernetescli kubernetes.Interface, mcocli mcoclient.Interface, restConfig *rest.Config) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, configcli configclient.Interface, kubernetescli kubernetes.Interface, mcocli mcoclient.Interface, restConfig *rest.Config) *Reconciler {
 	dh, err := dynamichelper.New(log, restConfig)
 	if err != nil {
 		panic(err)
@@ -50,6 +50,7 @@ func NewReconciler(log *logrus.Entry, configcli configclient.Interface, kubernet
 		log:         log,
 		configcli:   configcli,
 		workarounds: []Workaround{NewSystemReserved(log, mcocli, dh), NewIfReload(log, kubernetescli)},
+		client:      client,
 	}
 }
 
@@ -94,9 +95,4 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}).
 		Named(ControllerName).
 		Complete(r)
-}
-
-func (r *Reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }

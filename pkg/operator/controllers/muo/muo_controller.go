@@ -68,12 +68,14 @@ type Reconciler struct {
 	readinessTimeout  time.Duration
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, dh dynamichelper.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
 		log: log,
 
 		kubernetescli: kubernetescli,
 		deployer:      deployer.NewDeployer(kubernetescli, dh, staticFiles, "staticresources"),
+
+		client: client,
 
 		readinessPollTime: 10 * time.Second,
 		readinessTimeout:  5 * time.Minute,
@@ -201,9 +203,4 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}, predicate.LabelChangedPredicate{})).
 		Named(ControllerName).
 		Complete(r)
-}
-
-func (r *Reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }

@@ -41,12 +41,14 @@ type Reconciler struct {
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, role string) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, role string) *Reconciler {
 	return &Reconciler{
 		log:  log,
 		role: role,
 
 		checker: newInternetChecker(),
+
+		client: client,
 	}
 }
 
@@ -128,9 +130,4 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate))
 
 	return builder.Named(ControllerName).Complete(r)
-}
-
-func (r *Reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }
