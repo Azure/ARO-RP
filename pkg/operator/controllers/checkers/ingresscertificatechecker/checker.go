@@ -16,8 +16,7 @@ import (
 	"fmt"
 
 	configv1 "github.com/openshift/api/config/v1"
-	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -39,14 +38,12 @@ type ingressCertificateChecker interface {
 }
 
 type checker struct {
-	client      client.Client
-	operatorcli operatorclient.Interface
+	client client.Client
 }
 
-func newIngressCertificateChecker(client client.Client, operatorcli operatorclient.Interface) *checker {
+func newIngressCertificateChecker(client client.Client) *checker {
 	return &checker{
-		client:      client,
-		operatorcli: operatorcli,
+		client: client,
 	}
 }
 
@@ -57,7 +54,8 @@ func (r *checker) Check(ctx context.Context) error {
 		return err
 	}
 
-	ingress, err := r.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get(ctx, "default", metav1.GetOptions{})
+	ingress := &operatorv1.IngressController{}
+	err = r.client.Get(ctx, types.NamespacedName{Namespace: "openshift-ingress-operator", Name: "default"}, ingress)
 	if err != nil {
 		return err
 	}

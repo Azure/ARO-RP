@@ -9,8 +9,6 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
-	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -66,23 +64,17 @@ func TestCheck(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			operatorcliFake := operatorfake.NewSimpleClientset()
-			if tt.ingressController != nil {
-				operatorcliFake.Tracker().Add(tt.ingressController)
-			}
-			configcliFake := configfake.NewSimpleClientset()
-			if tt.clusterVersion != nil {
-				configcliFake.Tracker().Add(tt.clusterVersion)
-			}
-
 			clientBuilder := ctrlfake.NewClientBuilder()
 			if tt.clusterVersion != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.clusterVersion)
 			}
 
+			if tt.ingressController != nil {
+				clientBuilder = clientBuilder.WithObjects(tt.ingressController)
+			}
+
 			sp := &checker{
-				client:      clientBuilder.Build(),
-				operatorcli: operatorcliFake,
+				client: clientBuilder.Build(),
 			}
 
 			err := sp.Check(ctx)

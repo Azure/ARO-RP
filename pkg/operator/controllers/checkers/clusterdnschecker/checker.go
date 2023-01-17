@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"strings"
 
-	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type clusterDNSChecker interface {
@@ -17,17 +18,18 @@ type clusterDNSChecker interface {
 }
 
 type checker struct {
-	operatorcli operatorclient.Interface
+	client client.Client
 }
 
-func newClusterDNSChecker(operatorcli operatorclient.Interface) *checker {
+func newClusterDNSChecker(client client.Client) *checker {
 	return &checker{
-		operatorcli: operatorcli,
+		client: client,
 	}
 }
 
 func (r *checker) Check(ctx context.Context) error {
-	dns, err := r.operatorcli.OperatorV1().DNSes().Get(ctx, "default", metav1.GetOptions{})
+	dns := &operatorv1.DNS{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: "default"}, dns)
 	if err != nil {
 		return err
 	}
