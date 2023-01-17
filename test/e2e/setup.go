@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/clientcmd/api/latest"
 
+	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
@@ -79,6 +80,8 @@ var (
 	_env              env.Core
 	vnetResourceGroup string
 	clusterName       string
+	clusterResourceID string
+	adminAPICluster   *admin.OpenShiftCluster
 	clients           *clientSet
 
 	dockerSucceeded bool
@@ -95,6 +98,12 @@ func skipIfDockerNotWorking() {
 	// it is running from docker already
 	if !dockerSucceeded {
 		Skip("skipping admin portal tests as docker is not available")
+	}
+}
+
+func skipIfNotHiveManagedCluster() {
+	if adminAPICluster.Properties.HiveProfile == (admin.HiveProfile{}) {
+		Skip("skipping tests because this ARO cluster has not been created/adopted by Hive")
 	}
 }
 
@@ -427,6 +436,10 @@ func setup(ctx context.Context) error {
 			return err
 		}
 	}
+
+	clusterResourceID = resourceIDFromEnv()
+
+	adminAPICluster = adminGetCluster(Default, ctx, clusterResourceID)
 
 	clients, err = newClientSet(ctx)
 	if err != nil {
