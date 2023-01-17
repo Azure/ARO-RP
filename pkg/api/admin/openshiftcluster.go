@@ -310,4 +310,9 @@ type SystemData struct {
 
 type HiveProfile struct {
 	Namespace string `json:"namespace,omitempty"`
+
+	// CreatedByHive is used during PUCM to skip adoption and reconciliation
+	// of clusters that were created by Hive to avoid deleting existing
+	// ClusterDeployments.
+	CreatedByHive bool `json:"createdByHive,omitempty"`
 }

@@ -124,7 +124,8 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 	}
 
 	out.Properties.HiveProfile = HiveProfile{
-		Namespace: oc.Properties.HiveProfile.Namespace,
+		Namespace:     oc.Properties.HiveProfile.Namespace,
+		CreatedByHive: oc.Properties.HiveProfile.CreatedByHive,
 	}
 	out.SystemData = SystemData{
 		CreatedBy:          oc.SystemData.CreatedBy,
@@ -174,6 +175,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.ArchitectureVersion = api.ArchitectureVersion(oc.Properties.ArchitectureVersion)
 	out.Properties.InfraID = oc.Properties.InfraID
 	out.Properties.HiveProfile.Namespace = oc.Properties.HiveProfile.Namespace
+	out.Properties.HiveProfile.CreatedByHive = oc.Properties.HiveProfile.CreatedByHive
 	out.Properties.ProvisioningState = api.ProvisioningState(oc.Properties.ProvisioningState)
 	out.Properties.LastProvisioningState = api.ProvisioningState(oc.Properties.LastProvisioningState)
 	out.Properties.FailedProvisioningState = api.ProvisioningState(oc.Properties.FailedProvisioningState)
