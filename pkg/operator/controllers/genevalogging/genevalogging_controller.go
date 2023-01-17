@@ -48,12 +48,13 @@ type Reconciler struct {
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, restConfig *rest.Config) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, restConfig *rest.Config) *Reconciler {
 	return &Reconciler{
 		log:           log,
 		securitycli:   securitycli,
 		kubernetescli: kubernetescli,
 		restConfig:    restConfig,
+		client:        client,
 	}
 }
 
@@ -128,9 +129,4 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&securityv1.SecurityContextConstraints{}).
 		Named(ControllerName).
 		Complete(r)
-}
-
-func (r *Reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }

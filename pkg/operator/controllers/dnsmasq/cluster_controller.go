@@ -37,11 +37,12 @@ type ClusterReconciler struct {
 	client client.Client
 }
 
-func NewClusterReconciler(log *logrus.Entry, mcocli mcoclient.Interface, dh dynamichelper.Interface) *ClusterReconciler {
+func NewClusterReconciler(log *logrus.Entry, client client.Client, mcocli mcoclient.Interface, dh dynamichelper.Interface) *ClusterReconciler {
 	return &ClusterReconciler{
 		log:    log,
 		mcocli: mcocli,
 		dh:     dh,
+		client: client,
 	}
 }
 
@@ -114,9 +115,4 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		Named(ClusterControllerName).
 		Complete(r)
-}
-
-func (a *ClusterReconciler) InjectClient(c client.Client) error {
-	a.client = c
-	return nil
 }

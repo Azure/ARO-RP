@@ -37,12 +37,13 @@ type Reconciler struct {
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, maocli machineclient.Interface, isLocalDevelopmentMode bool, role string) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, maocli machineclient.Interface, isLocalDevelopmentMode bool, role string) *Reconciler {
 	return &Reconciler{
 		log:                    log,
 		maocli:                 maocli,
 		isLocalDevelopmentMode: isLocalDevelopmentMode,
 		role:                   role,
+		client:                 client,
 	}
 }
 
@@ -88,9 +89,4 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&machinev1beta1.Machine{}).
 		Named(ControllerName).
 		Complete(r)
-}
-
-func (r *Reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }

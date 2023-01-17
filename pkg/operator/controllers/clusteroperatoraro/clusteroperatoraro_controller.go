@@ -49,10 +49,11 @@ type Reconciler struct {
 }
 
 // TODO: Decide whether we actually going to make any progress on this. If not - clean up.
-func NewReconciler(log *logrus.Entry, configcli configclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, configcli configclient.Interface) *Reconciler {
 	return &Reconciler{
 		log:       log,
 		configcli: configcli,
+		client:    client,
 	}
 }
 
@@ -190,9 +191,4 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&configv1.ClusterOperator{}).
 		Named(ControllerName).
 		Complete(r)
-}
-
-func (r *Reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }

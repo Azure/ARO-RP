@@ -34,9 +34,10 @@ type Reconciler struct {
 }
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log: log,
+		log:    log,
+		client: client,
 	}
 }
 
@@ -73,9 +74,4 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&source.Kind{Type: &consolev1.ConsoleNotification{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(aroBannerPredicate)).
 		Named(ControllerName).
 		Complete(r)
-}
-
-func (r *Reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }

@@ -38,10 +38,11 @@ type Reconciler struct {
 }
 
 // MachineSet reconciler watches MachineSet objects for changes, evaluates total worker replica count, and reverts changes if needed.
-func NewReconciler(log *logrus.Entry, maocli machineclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, maocli machineclient.Interface) *Reconciler {
 	return &Reconciler{
 		log:    log,
 		maocli: maocli,
+		client: client,
 	}
 }
 
@@ -106,9 +107,4 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&machinev1beta1.MachineSet{}, builder.WithPredicates(machineSetPredicate)).
 		Named(ControllerName).
 		Complete(r)
-}
-
-func (r *Reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }

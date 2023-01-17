@@ -46,12 +46,14 @@ type Reconciler struct {
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, role string) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, role string) *Reconciler {
 	return &Reconciler{
 		log:  log,
 		role: role,
 
 		checker: newServicePrincipalChecker(log, kubernetescli),
+
+		client: client,
 	}
 }
 
@@ -130,9 +132,4 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		)
 
 	return builder.Named(ControllerName).Complete(r)
-}
-
-func (r *Reconciler) InjectClient(c client.Client) error {
-	r.client = c
-	return nil
 }
