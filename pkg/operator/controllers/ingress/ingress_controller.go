@@ -7,9 +7,8 @@ import (
 	"context"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -34,16 +33,13 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	operatorcli operatorclient.Interface
-
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, operatorcli operatorclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:         log,
-		operatorcli: operatorcli,
-		client:      client,
+		log:    log,
+		client: client,
 	}
 }
 
@@ -60,7 +56,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	r.log.Debug("running")
-	ingress, err := r.operatorcli.OperatorV1().IngressControllers(openshiftIngressControllerNamespace).Get(ctx, openshiftIngressControllerName, metav1.GetOptions{})
+	ingress := &operatorv1.IngressController{}
+	err = r.client.Get(ctx, types.NamespacedName{Namespace: openshiftIngressControllerNamespace, Name: openshiftIngressControllerName}, ingress)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
@@ -68,7 +65,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	if ingress.Spec.Replicas != nil && *ingress.Spec.Replicas < minimumReplicas {
 		ingress.Spec.Replicas = to.Int32Ptr(minimumReplicas)
-		_, err := r.operatorcli.OperatorV1().IngressControllers(openshiftIngressControllerNamespace).Update(ctx, ingress, metav1.UpdateOptions{})
+		err := r.client.Update(ctx, ingress)
 		if err != nil {
 			r.log.Error(err)
 			return reconcile.Result{}, err

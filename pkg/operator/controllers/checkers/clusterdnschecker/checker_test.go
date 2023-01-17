@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
-	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestCheck(t *testing.T) {
@@ -73,13 +73,13 @@ func TestCheck(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			operatorcliMock := operatorfake.NewSimpleClientset()
+			clientBuilder := ctrlfake.NewClientBuilder()
 			if tt.DNS != nil {
-				operatorcliMock.Tracker().Add(tt.DNS)
+				clientBuilder = clientBuilder.WithObjects(tt.DNS)
 			}
 
 			sp := &checker{
-				operatorcli: operatorcliMock,
+				client: clientBuilder.Build(),
 			}
 
 			err := sp.Check(ctx)
