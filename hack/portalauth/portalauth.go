@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"encoding/gob"
 	"flag"
 	"fmt"
 	"net/http"
@@ -71,7 +70,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	session.Values[SessionKeyUsername] = username
 	session.Values[SessionKeyGroups] = strings.Split(*groups, ",")
-	session.Values[SessionKeyExpires] = time.Now().Add(time.Hour)
+	session.Values[SessionKeyExpires] = time.Now().Add(time.Hour).Unix()
 
 	encoded, err := securecookie.EncodeMulti(session.Name(), session.Values,
 		store.Codecs...)
@@ -87,8 +86,6 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 func main() {
 	log := utillog.GetLogger()
-
-	gob.Register(time.Time{})
 
 	if err := run(context.Background(), log); err != nil {
 		log.Fatal(err)

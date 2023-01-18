@@ -87,7 +87,7 @@ func TestAAD(t *testing.T) {
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					SessionKeyUsername: "username",
 					SessionKeyGroups:   []string{"group1", "group2"},
-					SessionKeyExpires:  time.Unix(1, 0),
+					SessionKeyExpires:  int64(1),
 				}, a.store.Codecs...)
 				if err != nil {
 					return nil, err
@@ -109,7 +109,7 @@ func TestAAD(t *testing.T) {
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					SessionKeyUsername: "username",
 					SessionKeyGroups:   []string{"group1", "group2"},
-					SessionKeyExpires:  time.Unix(-1, 0),
+					SessionKeyExpires:  int64(-1),
 				}, a.store.Codecs...)
 				if err != nil {
 					return nil, err
@@ -374,7 +374,7 @@ func TestLogout(t *testing.T) {
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					SessionKeyUsername: "username",
 					SessionKeyGroups:   []string{"group1", "group2"},
-					SessionKeyExpires:  time.Unix(1, 0),
+					SessionKeyExpires:  int64(0),
 				}, a.store.Codecs...)
 				if err != nil {
 					return nil, err
@@ -788,7 +788,7 @@ func TestCallback(t *testing.T) {
 				}
 
 				for _, l := range deep.Equal(m, cookie{
-					SessionKeyExpires:  time.Unix(3600, 0),
+					SessionKeyExpires:  int64(3600),
 					SessionKeyGroups:   groups,
 					SessionKeyUsername: username,
 				}) {
