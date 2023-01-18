@@ -9,9 +9,11 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 const (
@@ -48,7 +50,7 @@ func TestListFromCluster(t *testing.T) {
 			modify: func(worker *machinev1beta1.Machine, master *machinev1beta1.Machine) {
 				master.Spec.ProviderSpec.Value.Raw = []byte("")
 			},
-			wantErr: "unexpected end of JSON input",
+			wantErr: "json: error calling MarshalJSON for type *runtime.RawExtension: unexpected end of JSON input",
 		},
 		{
 			name:   "worker missing providerSpec",
@@ -56,7 +58,7 @@ func TestListFromCluster(t *testing.T) {
 			modify: func(worker *machinev1beta1.Machine, master *machinev1beta1.Machine) {
 				worker.Spec.ProviderSpec.Value.Raw = []byte("")
 			},
-			wantErr: "unexpected end of JSON input",
+			wantErr: "json: error calling MarshalJSON for type *runtime.RawExtension: unexpected end of JSON input",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -93,7 +95,7 @@ func TestListFromCluster(t *testing.T) {
 			}
 
 			m := kubeManager{
-				maocli:         machinefake.NewSimpleClientset(&workerMachine, &masterMachine),
+				client:         fake.NewClientBuilder().WithObjects(&workerMachine, &masterMachine).Build(),
 				subscriptionID: subscriptionId,
 			}
 

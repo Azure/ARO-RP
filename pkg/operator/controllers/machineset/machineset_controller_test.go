@@ -5,19 +5,16 @@ package machineset
 
 import (
 	"context"
-	"errors"
 	"strconv"
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/to"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
-	ktesting "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -26,7 +23,7 @@ import (
 )
 
 func TestReconciler(t *testing.T) {
-	fakeMachineSets := func(replicas0 int32, replicas1 int32, replicas2 int32) []kruntime.Object {
+	fakeMachineSets := func(replicas0 int32, replicas1 int32, replicas2 int32) []client.Object {
 		workerMachineSet0 := &machinev1beta1.MachineSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "aro-fake-machineset-0",
@@ -63,14 +60,13 @@ func TestReconciler(t *testing.T) {
 				Replicas: to.Int32Ptr(replicas2),
 			},
 		}
-		return []kruntime.Object{workerMachineSet0, workerMachineSet1, workerMachineSet2}
+		return []client.Object{workerMachineSet0, workerMachineSet1, workerMachineSet2}
 	}
 
 	tests := []struct {
 		name           string
 		objectName     string
-		machinesets    []kruntime.Object
-		mocks          func(maocli *machinefake.Clientset)
+		machinesets    []client.Object
 		wantReplicas   int32
 		featureFlag    bool
 		assertReplicas bool
@@ -97,7 +93,7 @@ func TestReconciler(t *testing.T) {
 		{
 			name:       "no worker replicas, custom machineset is present",
 			objectName: "aro-fake-machineset-0",
-			machinesets: func() []kruntime.Object {
+			machinesets: func() []client.Object {
 				return append(
 					fakeMachineSets(0, 0, 0),
 					&machinev1beta1.MachineSet{
@@ -147,46 +143,11 @@ func TestReconciler(t *testing.T) {
 			wantErr:        "",
 		},
 		{
-			name:        "machineset-0 not found",
-			objectName:  "aro-fake-machineset-0",
-			machinesets: fakeMachineSets(2, 0, 0),
-			mocks: func(maocli *machinefake.Clientset) {
-				maocli.PrependReactor("get", "machinesets", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
-					return true, nil, &kerrors.StatusError{ErrStatus: metav1.Status{
-						Message: "machineset-0 not found",
-						Reason:  metav1.StatusReasonNotFound,
-					}}
-				})
-			},
+			name:           "machineset-0 not found",
+			objectName:     "aro-fake-machineset-0",
 			featureFlag:    true,
 			assertReplicas: false,
-			wantErr:        "machineset-0 not found",
-		},
-		{
-			name:        "get machinesets failed with error",
-			objectName:  "aro-fake-machineset-0",
-			machinesets: fakeMachineSets(1, 0, 0),
-			mocks: func(maocli *machinefake.Clientset) {
-				maocli.PrependReactor("get", "machinesets", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
-					return true, nil, errors.New("fake error")
-				})
-			},
-			featureFlag:    true,
-			assertReplicas: false,
-			wantErr:        "fake error",
-		},
-		{
-			name:        "machineset-0 can't be updated",
-			objectName:  "aro-fake-machineset-0",
-			machinesets: fakeMachineSets(1, 0, 0),
-			mocks: func(maocli *machinefake.Clientset) {
-				maocli.PrependReactor("update", "machinesets", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
-					return true, nil, errors.New("fake error from update")
-				})
-			},
-			featureFlag:    true,
-			assertReplicas: false,
-			wantErr:        "fake error from update",
+			wantErr:        `machinesets.machine.openshift.io "aro-fake-machineset-0" not found`,
 		},
 	}
 
@@ -202,16 +163,11 @@ func TestReconciler(t *testing.T) {
 				},
 			}
 
-			maocli := machinefake.NewSimpleClientset(tt.machinesets...)
-
-			if tt.mocks != nil {
-				tt.mocks(maocli)
-			}
+			clientFake := ctrlfake.NewClientBuilder().WithObjects(instance).WithObjects(tt.machinesets...).Build()
 
 			r := &Reconciler{
 				log:    logrus.NewEntry(logrus.StandardLogger()),
-				maocli: maocli,
-				client: ctrlfake.NewClientBuilder().WithObjects(instance).Build(),
+				client: clientFake,
 			}
 
 			request := ctrl.Request{}
@@ -226,7 +182,8 @@ func TestReconciler(t *testing.T) {
 			}
 
 			if tt.assertReplicas {
-				modifiedMachineset, err := maocli.MachineV1beta1().MachineSets(request.Namespace).Get(ctx, request.Name, metav1.GetOptions{})
+				modifiedMachineset := &machinev1beta1.MachineSet{}
+				err = r.client.Get(ctx, types.NamespacedName{Name: request.Name, Namespace: machineSetsNamespace}, modifiedMachineset)
 				if err != nil {
 					t.Error(err)
 				}

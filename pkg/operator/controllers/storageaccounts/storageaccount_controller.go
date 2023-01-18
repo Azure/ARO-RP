@@ -8,7 +8,6 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -40,7 +39,6 @@ type Reconciler struct {
 	log *logrus.Entry
 
 	kubernetescli kubernetes.Interface
-	maocli        machineclient.Interface
 
 	client client.Client
 }
@@ -58,11 +56,10 @@ type reconcileManager struct {
 }
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, client client.Client, maocli machineclient.Interface, kubernetescli kubernetes.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface) *Reconciler {
 	return &Reconciler{
 		log:           log,
 		kubernetescli: kubernetescli,
-		maocli:        maocli,
 		client:        client,
 	}
 }
@@ -110,7 +107,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		subscriptionID: resource.SubscriptionID,
 
 		client:      r.client,
-		kubeSubnets: subnet.NewKubeManager(r.maocli, resource.SubscriptionID),
+		kubeSubnets: subnet.NewKubeManager(r.client, resource.SubscriptionID),
 		storage:     storage.NewAccountsClient(&azEnv, resource.SubscriptionID, authorizer),
 	}
 
