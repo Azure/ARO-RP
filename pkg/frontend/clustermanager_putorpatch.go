@@ -57,8 +57,8 @@ func (f *frontend) _putOrPatchSyncSet(ctx context.Context, log *logrus.Entry, r 
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 	vars := mux.Vars(r)
-
-	originalPath, err := f.extractOriginalPath(ctx, r, vars)
+	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
+	originalPath, err := f.extractOriginalPath(ctx, r, resType, resName, resGroupName)
 	if err != nil {
 		return nil, err
 	}
@@ -129,8 +129,9 @@ func (f *frontend) _putOrPatchMachinePool(ctx context.Context, log *logrus.Entry
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 	vars := mux.Vars(r)
+	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
 
-	originalPath, err := f.extractOriginalPath(ctx, r, vars)
+	originalPath, err := f.extractOriginalPath(ctx, r, resType, resName, resGroupName)
 	if err != nil {
 		return nil, err
 	}
@@ -201,8 +202,9 @@ func (f *frontend) _putOrPatchSyncIdentityProvider(ctx context.Context, log *log
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 	vars := mux.Vars(r)
+	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
 
-	originalPath, err := f.extractOriginalPath(ctx, r, vars)
+	originalPath, err := f.extractOriginalPath(ctx, r, resType, resName, resGroupName)
 	if err != nil {
 		return nil, err
 	}
@@ -273,8 +275,9 @@ func (f *frontend) _putOrPatchSecret(ctx context.Context, log *logrus.Entry, r *
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 	vars := mux.Vars(r)
+	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
 
-	originalPath, err := f.extractOriginalPath(ctx, r, vars)
+	originalPath, err := f.extractOriginalPath(ctx, r, resType, resName, resGroupName)
 	if err != nil {
 		return nil, err
 	}
@@ -340,7 +343,7 @@ func (f *frontend) _putOrPatchSecret(ctx context.Context, log *logrus.Entry, r *
 	return b, err
 }
 
-func (f *frontend) extractOriginalPath(ctx context.Context, r *http.Request, vars map[string]string) (string, error) {
+func (f *frontend) extractOriginalPath(ctx context.Context, r *http.Request, resType, resName, resGroupName string) (string, error) {
 	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return "", err
@@ -358,7 +361,7 @@ func (f *frontend) extractOriginalPath(ctx context.Context, r *http.Request, var
 	}
 
 	if ocp == nil || cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return "", api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+		return "", api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
 	}
 
 	return originalPath, err

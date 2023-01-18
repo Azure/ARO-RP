@@ -51,7 +51,8 @@ func (f *frontend) getClusterManagerConfiguration(w http.ResponseWriter, r *http
 func (f *frontend) _getSyncSetConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.SyncSetConverter) ([]byte, error) {
 	vars := mux.Vars(r)
 
-	doc, err := f.validateResourceForGet(ctx, vars, r.URL.Path, r)
+	resType, resName, ocmResType, ocmResName, resGroupName := vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"]
+	doc, err := f.validateResourceForGet(ctx, resType, resName, ocmResType, ocmResName, resGroupName, r.URL.Path, r)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +64,8 @@ func (f *frontend) _getSyncSetConfiguration(ctx context.Context, log *logrus.Ent
 func (f *frontend) _getMachinePoolConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.MachinePoolConverter) ([]byte, error) {
 	vars := mux.Vars(r)
 
-	doc, err := f.validateResourceForGet(ctx, vars, r.URL.Path, r)
+	resType, resName, ocmResType, ocmResName, resGroupName := vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"]
+	doc, err := f.validateResourceForGet(ctx, resType, resName, ocmResType, ocmResName, resGroupName, r.URL.Path, r)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +77,8 @@ func (f *frontend) _getMachinePoolConfiguration(ctx context.Context, log *logrus
 func (f *frontend) _getSyncIdentityProviderConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.SyncIdentityProviderConverter) ([]byte, error) {
 	vars := mux.Vars(r)
 
-	doc, err := f.validateResourceForGet(ctx, vars, r.URL.Path, r)
+	resType, resName, ocmResType, ocmResName, resGroupName := vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"]
+	doc, err := f.validateResourceForGet(ctx, resType, resName, ocmResType, ocmResName, resGroupName, r.URL.Path, r)
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +89,8 @@ func (f *frontend) _getSyncIdentityProviderConfiguration(ctx context.Context, lo
 
 func (f *frontend) _getSecretConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.SecretConverter) ([]byte, error) {
 	vars := mux.Vars(r)
-
-	doc, err := f.validateResourceForGet(ctx, vars, r.URL.Path, r)
+	resType, resName, ocmResType, ocmResName, resGroupName := vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"]
+	doc, err := f.validateResourceForGet(ctx, resType, resName, ocmResType, ocmResName, resGroupName, r.URL.Path, r)
 	if err != nil {
 		return nil, err
 	}
@@ -96,13 +99,13 @@ func (f *frontend) _getSecretConfiguration(ctx context.Context, log *logrus.Entr
 	return json.MarshalIndent(ext, "", "    ")
 }
 
-func (f *frontend) validateResourceForGet(ctx context.Context, vars map[string]string, path string, r *http.Request) (*api.ClusterManagerConfigurationDocument, error) {
+func (f *frontend) validateResourceForGet(ctx context.Context, resType, resName, ocmResType, ocmResName, resGroupName, path string, r *http.Request) (*api.ClusterManagerConfigurationDocument, error) {
 	doc, err := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
 	if err != nil {
 		switch {
 		case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 			return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
-				vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
+				resType, resName, ocmResType, ocmResName, resGroupName)
 		default:
 			return nil, err
 		}
