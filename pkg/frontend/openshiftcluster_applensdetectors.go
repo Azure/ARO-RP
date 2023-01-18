@@ -23,7 +23,13 @@ func (f *frontend) listAppLensDetectors(w http.ResponseWriter, r *http.Request) 
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
+	log.Info("Pre fetch app lens detectors")
+
 	b, err := f._listAppLensDetectors(ctx, r, log)
+
+	if err != nil {
+		log.Error(err, "Error fetching app lense detectors")
+	}
 
 	reply(log, w, nil, b, err)
 }
@@ -31,10 +37,17 @@ func (f *frontend) listAppLensDetectors(w http.ResponseWriter, r *http.Request) 
 func (f *frontend) _listAppLensDetectors(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
 	a, err := f._createAzureActionsFactory(ctx, r, log)
 	if err != nil {
+		log.Error(err, "Error creating Azure Actions Factory")
 		return nil, err
 	}
 
-	return a.AppLensListDetectors(ctx)
+	b, err := a.AppLensListDetectors(ctx)
+
+	if err != nil {
+		log.Error(err, "Error getting app lense list detectors from azure factory")
+	}
+
+	return b, err
 }
 
 func (f *frontend) getAppLensDetector(w http.ResponseWriter, r *http.Request) {
@@ -43,6 +56,10 @@ func (f *frontend) getAppLensDetector(w http.ResponseWriter, r *http.Request) {
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
 	b, err := f._appLensDetectors(ctx, r, log)
+
+	if err != nil {
+		log.Error(err, "Error getting app lens detectors")
+	}
 
 	reply(log, w, nil, b, err)
 }
@@ -54,7 +71,14 @@ func (f *frontend) _appLensDetectors(ctx context.Context, r *http.Request, log *
 	}
 
 	vars := mux.Vars(r)
-	return a.AppLensGetDetector(ctx, vars["detectorId"])
+
+	b, err := a.AppLensGetDetector(ctx, vars["detectorId"])
+
+	if err != nil {
+		log.Error(err, "Error getting app lense detector")
+	}
+
+	return b, err
 }
 
 func (f *frontend) _createAzureActionsFactory(ctx context.Context, r *http.Request, log *logrus.Entry) (adminactions.AzureActions, error) {
@@ -71,11 +95,13 @@ func (f *frontend) _createAzureActionsFactory(ctx context.Context, r *http.Reque
 
 	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
 	if err != nil {
+		log.Error(err, "Error getting subscription")
 		return nil, err
 	}
 
 	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
+		log.Error(err, "Error creating azure actions factory")
 		return nil, err
 	}
 

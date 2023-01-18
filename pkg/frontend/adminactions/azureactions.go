@@ -62,11 +62,13 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 	fpAuth, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID,
 		env.Environment().ResourceManagerEndpoint)
 	if err != nil {
+		log.Error(err, "Error getting fpAuth instance")
 		return nil, err
 	}
 
 	fpClientCertCred, err := env.FPNewClientCertificateCredential(env.Environment().AppLensTenantID)
 	if err != nil {
+		log.Error(err, "Error getting fp client cert")
 		return nil, err
 	}
 
