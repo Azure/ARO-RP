@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	createdByHiveLabelKey = "created-by-Hive"
+	createdByHiveLabelKey = "aro-created-by-Hive"
 	envSecretsName        = "aro-env-secret"
 	pullsecretSecretName  = "aro-pullsecret"
 	installConfigName     = "aro-installconfig"

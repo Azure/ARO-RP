@@ -152,7 +152,6 @@ func (m *manager) adminUpdate() []steps.Step {
 }
 
 func (m *manager) clusterWasCreatedByHive() bool {
-	// Check if the below "if" is still true!
 	if m.doc.OpenShiftCluster.Properties.HiveProfile.Namespace == "" {
 		return false
 	}
@@ -204,7 +203,7 @@ func (m *manager) runIntegratedInstaller(ctx context.Context) error {
 
 func (m *manager) runHiveInstaller(ctx context.Context) error {
 	var err error
-	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, createdByHiveMutator())
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, setFieldCreatedByHive(true))
 	if err != nil {
 		return err
 	}
@@ -220,9 +219,9 @@ func (m *manager) runHiveInstaller(ctx context.Context) error {
 	return m.hiveClusterManager.Install(ctx, m.subscriptionDoc, m.doc, version)
 }
 
-func createdByHiveMutator() database.OpenShiftClusterDocumentMutator {
+func setFieldCreatedByHive(createdByHive bool) database.OpenShiftClusterDocumentMutator {
 	return func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive = true
+		doc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive = createdByHive
 		return nil
 	}
 }
