@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 
-	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
@@ -79,10 +78,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	client := mgr.GetClient()
 
 	kubernetescli, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-	maocli, err := machineclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
@@ -163,12 +158,12 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (subnets.NewReconciler(
 			log.WithField("controller", subnets.ControllerName),
-			client, kubernetescli, maocli)).SetupWithManager(mgr); err != nil {
+			client, kubernetescli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", subnets.ControllerName, err)
 		}
 		if err = (machine.NewReconciler(
 			log.WithField("controller", machine.ControllerName),
-			client, maocli, isLocalDevelopmentMode, role)).SetupWithManager(mgr); err != nil {
+			client, isLocalDevelopmentMode, role)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machine.ControllerName, err)
 		}
 		if err = (banner.NewReconciler(
@@ -177,8 +172,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			return fmt.Errorf("unable to create controller %s: %v", banner.ControllerName, err)
 		}
 		if err = (machineset.NewReconciler(
-			log.WithField("controller", machineset.ControllerName),
-			client, maocli)).SetupWithManager(mgr); err != nil {
+			log.WithField("controller", machineset.ControllerName), client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machineset.ControllerName, err)
 		}
 		if err = (imageconfig.NewReconciler(
@@ -188,12 +182,12 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (previewfeature.NewReconciler(
 			log.WithField("controller", previewfeature.ControllerName),
-			client, kubernetescli, maocli)).SetupWithManager(mgr); err != nil {
+			client, kubernetescli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", previewfeature.ControllerName, err)
 		}
 		if err = (storageaccounts.NewReconciler(
 			log.WithField("controller", storageaccounts.ControllerName),
-			client, maocli, kubernetescli)).SetupWithManager(mgr); err != nil {
+			client, kubernetescli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", storageaccounts.ControllerName, err)
 		}
 		if err = (muo.NewReconciler(

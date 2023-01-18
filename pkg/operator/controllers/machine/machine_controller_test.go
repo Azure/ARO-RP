@@ -12,12 +12,12 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -26,7 +26,7 @@ import (
 
 func TestMachineReconciler(t *testing.T) {
 	// Fake cluster with AZs
-	newFakeMao1 := func(diskSize, imagePublisher, vmSize, masterVmSize string) *machinefake.Clientset {
+	newFakeMao1 := func(diskSize, imagePublisher, vmSize, masterVmSize string) []client.Object {
 		master0 := getValidMachine("foo-hx8z7-master-0", "", "", "", "", true)
 		master1 := getValidMachine("foo-hx8z7-master-1", "", "", "", "", true)
 		master2 := getValidMachine("foo-hx8z7-master-2", "", "", masterVmSize, "", true)
@@ -37,11 +37,11 @@ func TestMachineReconciler(t *testing.T) {
 		workerMachineSet1 := workerMachineSet("foo-hx8z7-machineset-1")
 		workerMachineSet2 := workerMachineSet("foo-hx8z7-machineset-2")
 
-		return machinefake.NewSimpleClientset(worker0, worker1, worker2, master0, master1, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
+		return []client.Object{worker0, worker1, worker2, master0, master1, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2}
 	}
 
 	// Fake cluster missing a master
-	newFakeMao2 := func() *machinefake.Clientset {
+	newFakeMao2 := func() []client.Object {
 		master0 := getValidMachine("foo-hx8z7-master-0", "", "", "", "", true)
 		master2 := getValidMachine("foo-hx8z7-master-2", "", "", "", "", true)
 		worker0 := getValidMachine("foo-hx8z7-worker-0", "", "", "", "", false)
@@ -51,11 +51,11 @@ func TestMachineReconciler(t *testing.T) {
 		workerMachineSet1 := workerMachineSet("foo-hx8z7-machineset-1")
 		workerMachineSet2 := workerMachineSet("foo-hx8z7-machineset-2")
 
-		return machinefake.NewSimpleClientset(worker0, worker1, worker2, master0, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
+		return []client.Object{worker0, worker1, worker2, master0, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2}
 	}
 
 	// Fake cluster missing a worker
-	newFakeMao3 := func() *machinefake.Clientset {
+	newFakeMao3 := func() []client.Object {
 		master0 := getValidMachine("foo-hx8z7-master-0", "", "", "", "", true)
 		master1 := getValidMachine("foo-hx8z7-master-1", "", "", "", "", true)
 		master2 := getValidMachine("foo-hx8z7-master-2", "", "", "", "", true)
@@ -65,18 +65,18 @@ func TestMachineReconciler(t *testing.T) {
 		workerMachineSet1 := workerMachineSet("foo-hx8z7-machineset-1")
 		workerMachineSet2 := workerMachineSet("foo-hx8z7-machineset-2")
 
-		return machinefake.NewSimpleClientset(worker0, worker1, master0, master1, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
+		return []client.Object{worker0, worker1, master0, master1, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2}
 	}
 
 	tests := []struct {
 		name           string
 		request        ctrl.Request
-		maocli         *machinefake.Clientset
+		objects        []client.Object
 		wantConditions []operatorv1.OperatorCondition
 	}{
 		{
-			name:   "valid",
-			maocli: newFakeMao1("", "", "", ""),
+			name:    "valid",
+			objects: newFakeMao1("", "", "", ""),
 			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
 				Status:  operatorv1.ConditionTrue,
@@ -85,8 +85,8 @@ func TestMachineReconciler(t *testing.T) {
 			}},
 		},
 		{
-			name:   "wrong vm size",
-			maocli: newFakeMao1("", "", "Standard_D4s_v9", ""),
+			name:    "wrong vm size",
+			objects: newFakeMao1("", "", "Standard_D4s_v9", ""),
 			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
 				Status:  operatorv1.ConditionFalse,
@@ -95,8 +95,8 @@ func TestMachineReconciler(t *testing.T) {
 			}},
 		},
 		{
-			name:   "wrong disk size",
-			maocli: newFakeMao1("64", "", "", ""),
+			name:    "wrong disk size",
+			objects: newFakeMao1("64", "", "", ""),
 			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
 				Status:  operatorv1.ConditionFalse,
@@ -105,8 +105,8 @@ func TestMachineReconciler(t *testing.T) {
 			}},
 		},
 		{
-			name:   "wrong image publisher",
-			maocli: newFakeMao1("", "bananas", "", ""),
+			name:    "wrong image publisher",
+			objects: newFakeMao1("", "bananas", "", ""),
 			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
 				Status:  operatorv1.ConditionFalse,
@@ -115,8 +115,8 @@ func TestMachineReconciler(t *testing.T) {
 			}},
 		},
 		{
-			name:   "wrong vm size on master",
-			maocli: newFakeMao1("", "", "", "Standard_D4s_v9"),
+			name:    "wrong vm size on master",
+			objects: newFakeMao1("", "", "", "Standard_D4s_v9"),
 			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
 				Status:  operatorv1.ConditionFalse,
@@ -125,8 +125,8 @@ func TestMachineReconciler(t *testing.T) {
 			}},
 		},
 		{
-			name:   "invalid master machine count",
-			maocli: newFakeMao2(),
+			name:    "invalid master machine count",
+			objects: newFakeMao2(),
 			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
 				Status:  operatorv1.ConditionFalse,
@@ -135,8 +135,8 @@ func TestMachineReconciler(t *testing.T) {
 			}},
 		},
 		{
-			name:   "invalid worker machine count",
-			maocli: newFakeMao3(),
+			name:    "invalid worker machine count",
+			objects: newFakeMao3(),
 			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
 				Status:  operatorv1.ConditionFalse,
@@ -159,10 +159,9 @@ func TestMachineReconciler(t *testing.T) {
 				},
 			}
 
-			clientFake := fake.NewClientBuilder().WithObjects(&baseCluster).Build()
+			clientFake := fake.NewClientBuilder().WithObjects(&baseCluster).WithObjects(tt.objects...).Build()
 
 			r := &Reconciler{
-				maocli:                 tt.maocli,
 				log:                    logrus.NewEntry(logrus.StandardLogger()),
 				isLocalDevelopmentMode: false,
 				role:                   "master",
