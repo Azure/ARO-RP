@@ -339,12 +339,15 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 
 func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, workerSubnet string) {
 	// pick a random 23 in range [10.3.0.0, 10.127.255.0]
-	// 10.0.0.0 is used by dev-vnet to host CI
-	// 10.1.0.0 is used by rp-vnet to host Proxy VM
-	// 10.2.0.0 is used by dev-vpn-vnet to host VirtualNetworkGateway
+	// 10.0.0.0/16 is used by dev-vnet to host CI
+	// 10.1.0.0/24 is used by rp-vnet to host Proxy VM
+	// 10.2.0.0/24 is used by dev-vpn-vnet to host VirtualNetworkGateway
 	var x, y int
 	rand.Seed(time.Now().UnixNano())
-	for x == 0 && y == 0 {
+	// Local Dev clusters are limited to /16 dev-vnet
+	if !c.ci {
+		x, y = 0, 2*rand.Intn(128)
+	} else {
 		x, y = rand.Intn((124))+3, 2*rand.Intn(128)
 	}
 	vnetPrefix = fmt.Sprintf("10.%d.%d.0/23", x, y)
