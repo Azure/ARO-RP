@@ -31,7 +31,7 @@ test_validate_cidr_data = [
     (
         "should return no error on address_prefix set on subnets, additional cidrs, no overlap",
         Mock(cli_ctx=None),
-        Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr="172.143.7.0/24", service_cidr="172.143.6.0/25"),
+        Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr="172.142.0.0/21", service_cidr="172.143.6.0/25"),
         Mock(**{"subnets.get.side_effect": [Mock(address_prefix="172.143.4.0/24"), Mock(address_prefix="172.143.5.0/25")]}),
         {
             "subscription": "subscription",
@@ -48,7 +48,7 @@ test_validate_cidr_data = [
     (
         "should return no error on multiple address_prefixes set on subnets, additional cidrs, no overlap",
         Mock(cli_ctx=None),
-        Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr="172.143.7.0/24", service_cidr="172.143.6.0/25"),
+        Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr="172.142.0.0/21", service_cidr="172.143.6.0/25"),
         Mock(**{"subnets.get.side_effect": [Mock(address_prefix=None,
                                                  address_prefixes=["172.143.4.0/24", "172.143.8.0/25"]),
                                             Mock(address_prefix=None,
@@ -81,6 +81,23 @@ test_validate_cidr_data = [
             "child_name_1": None
         },
         "172.143.4.0/24 is not valid as it overlaps with 172.143.4.0/25"
+    ),
+    (
+        "should return error on pod cidr not having enough addresses to create cluster",
+        Mock(cli_ctx=None),
+        Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr="172.143.4.0/24", service_cidr=None),
+        Mock(**{"subnets.get.side_effect": [Mock(address_prefix="172.143.5.0/24"), Mock(address_prefix="172.143.4.0/25")]}),
+        {
+            "subscription": "subscription",
+            "namespace": "MICROSOFT.NETWORK",
+            "type": "virtualnetworks",
+            "last_child_num": 1,
+            "child_type_1": "subnets",
+            "resource_group": None,
+            "name": None,
+            "child_name_1": None
+        },
+        "172.143.4.0/24 does not contain enough addresses for 3 master nodes (Requires cidr prefix of 21 or lower)"
     ),
 ]
 
@@ -177,7 +194,7 @@ test_validate_subnets_data = [
         "should return message when network security group is already attached to subnet",
         Mock(cli_ctx=None),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
-        Mock(**{"subnets.get.return_value": Mock(network_security_group="test", route_table=Mock(id="test"))}),
+        Mock(**{"subnets.get.return_value": Mock(network_security_group=Mock(id="test"), route_table=Mock(id="test"))}),
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=["Microsoft.Network/routeTables/*"], not_actions=[])]}),
         {
             "subscription": "subscription",

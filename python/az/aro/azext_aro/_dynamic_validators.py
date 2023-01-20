@@ -71,6 +71,17 @@ def get_subnet(client, subnet, subnet_parts):
     return subnet_obj
 
 
+def get_clients(key, cmd):
+    parts = parse_resource_id(key)
+    network_client = get_mgmt_service_client(
+        cmd.cli_ctx, ResourceType.MGMT_NETWORK)
+
+    auth_client = get_mgmt_service_client(
+        cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION, api_version="2015-07-01")
+
+    return parts, network_client, auth_client
+
+
 def dyn_validate_vnet(key):
     def _validate_vnet(cmd, namespace):
         errors = []
@@ -83,13 +94,7 @@ def dyn_validate_vnet(key):
 
             validate_vnet(cmd, namespace)
 
-            parts = parse_resource_id(vnet)
-
-            network_client = get_mgmt_service_client(
-                cmd.cli_ctx, ResourceType.MGMT_NETWORK)
-
-            auth_client = get_mgmt_service_client(
-                cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION, api_version="2015-07-01")
+            parts, network_client, auth_client = get_clients(vnet, cmd)
 
             try:
                 network_client.virtual_networks.get(parts['resource_group'], parts['name'])
@@ -129,13 +134,7 @@ def dyn_validate_subnet(key):
                 subnet = namespace.vnet + '/subnets/' + subnet
                 setattr(namespace, key, subnet)
 
-            parts = parse_resource_id(subnet)
-
-            network_client = get_mgmt_service_client(
-                cmd.cli_ctx, ResourceType.MGMT_NETWORK)
-
-            auth_client = get_mgmt_service_client(
-                cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION, api_version="2015-07-01")
+            parts, network_client, auth_client = get_clients(subnet, cmd)
 
             try:
                 subnet_obj = network_client.subnets.get(parts['resource_group'],
@@ -160,7 +159,7 @@ def dyn_validate_subnet(key):
                 "Microsoft.Network/routeTables/write"])
 
             if subnet_obj.network_security_group is not None:
-                message = f"A Network Security Group \"{subnet_obj.network_security_group}\" "\
+                message = f"A Network Security Group \"{subnet_obj.network_security_group.id}\" "\
                           "is already assigned to this subnet. Ensure there a no Network "\
                           "Security Groups assigned to cluster subnets before cluster creation"
                 error = [f"{key}", parts['child_name_1'], message]
@@ -191,6 +190,12 @@ def dyn_validate_cidr_ranges():
             cidr_array = {}
 
             if pod_cidr is not None:
+                node_mask = 23 - int(pod_cidr.split("/")[1])
+                if node_mask < 2:
+                    addresses.append(["Pod CIDR",
+                                      "Pod CIDR Capacity",
+                                      f"{pod_cidr} does not contain enough addresses for 3 master nodes " +
+                                      "(Requires cidr prefix of 21 or lower)"])
                 cidr_array["Pod CIDR"] = ipaddress.IPv4Network(pod_cidr)
             if service_cidr is not None:
                 cidr_array["Service CIDR"] = ipaddress.IPv4Network(service_cidr)
