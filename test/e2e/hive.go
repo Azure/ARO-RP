@@ -20,7 +20,6 @@ import (
 var (
 	clusterPlatformLabelKey string = "hive.openshift.io/cluster-platform"
 	clusterRegionLabelKey   string = "hive.openshift.io/cluster-region"
-	clusterPlatformValue    string = "azure"
 
 	controlPlaneAPIURLOverride = func(clusterDomain string, clusterLocation string) string {
 		if !strings.ContainsRune(clusterDomain, '.') {
@@ -45,7 +44,7 @@ var _ = Describe("Hive-managed ARO cluster", func() {
 		Expect(cd.ObjectMeta).NotTo(BeNil())
 		Expect(cd.ObjectMeta.Name).To(Equal(hive.ClusterDeploymentName))
 		Expect(cd.ObjectMeta.Labels).Should(HaveKey(clusterPlatformLabelKey))
-		Expect(cd.ObjectMeta.Labels[clusterPlatformLabelKey]).To(Equal(clusterPlatformValue))
+		Expect(cd.ObjectMeta.Labels[clusterPlatformLabelKey]).To(Equal("azure"))
 		Expect(cd.ObjectMeta.Labels).Should(HaveKey(clusterRegionLabelKey))
 		Expect(cd.ObjectMeta.Labels[clusterRegionLabelKey]).To(Equal(adminAPICluster.Location))
 
