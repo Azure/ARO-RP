@@ -1,6 +1,6 @@
 package aroprivilegednamespace
 
-violation[{"msg": msg, "details": {}}] {
+violation[{"msg": msg}] {
   input_priv_namespace(input.review.object.metadata.namespace)
   msg := sprintf("Operation in privileged namespace %v is not allowed", [input.review.object.metadata.namespace])
 }
