@@ -81,7 +81,6 @@ var (
 	vnetResourceGroup string
 	clusterName       string
 	clusterResourceID string
-	adminAPICluster   *admin.OpenShiftCluster
 	clients           *clientSet
 
 	dockerSucceeded bool
@@ -101,7 +100,7 @@ func skipIfDockerNotWorking() {
 	}
 }
 
-func skipIfNotHiveManagedCluster() {
+func skipIfNotHiveManagedCluster(adminAPICluster *admin.OpenShiftCluster) {
 	if adminAPICluster.Properties.HiveProfile == (admin.HiveProfile{}) {
 		Skip("skipping tests because this ARO cluster has not been created/adopted by Hive")
 	}
@@ -438,8 +437,6 @@ func setup(ctx context.Context) error {
 	}
 
 	clusterResourceID = resourceIDFromEnv()
-
-	adminAPICluster = adminGetCluster(Default, ctx, clusterResourceID)
 
 	clients, err = newClientSet(ctx)
 	if err != nil {

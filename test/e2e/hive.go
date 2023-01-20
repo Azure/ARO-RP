@@ -14,6 +14,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/hive"
 )
 
@@ -31,8 +32,12 @@ var (
 )
 
 var _ = Describe("Hive-managed ARO cluster", func() {
+	var adminAPICluster *admin.OpenShiftCluster
+
 	BeforeEach(func(ctx context.Context) {
-		skipIfNotHiveManagedCluster()
+		adminAPICluster = adminGetCluster(Default, ctx, clusterResourceID)
+
+		skipIfNotHiveManagedCluster(adminAPICluster)
 	})
 
 	It("has been properly created/adopted by Hive", func(ctx context.Context) {
