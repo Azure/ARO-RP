@@ -240,21 +240,7 @@ locations.
 
 1. Create an AAD application which will fake up the dbtoken client.
 
-   1. Create the application and set `requestedAccessTokenVersion`
-
-   ```bash
-   AZURE_DBTOKEN_CLIENT_ID="$(az ad app create --display-name dbtoken \
-      --oauth2-allow-implicit-flow false \
-      --query appId \
-      -o tsv)"
-
-   OBJ_ID="$(az ad app show --id $AZURE_DBTOKEN_CLIENT_ID --query id)"
-
-   > __NOTE:__: the graph API requires this to be done from a managed machine
-   az rest --method PATCH \
-      --uri https://graph.microsoft.com/v1.0/applications/$OBJ_ID/ \
-      --body '{"api":{"requestedAccessTokenVersion": 2}}'
-   ```
+   See [dbtoken-service.md](./dbtoken-service.md#setup) for details on setup.
 
 ## Certificates
 
@@ -473,13 +459,13 @@ each of the bash functions below.
    and re-run.
 
 1. Get the AKS kubeconfig and upload it to the storage account:
-   
+
    ```bash
    make aks.kubeconfig
    mv aks.kubeconfig secrets/
    make secrets-update
    ```
-   
+
 1. [Install Hive on the new AKS](https://github.com/Azure/ARO-RP/blob/master/docs/hive.md)
 
 1. Load the keys/certificates into the key vault:
