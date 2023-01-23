@@ -16,7 +16,7 @@ from azext_aro._validators import validate_vnet_resource_group_name
 from azext_aro._validators import validate_worker_count
 from azext_aro._validators import validate_worker_vm_disk_size_gb
 from azext_aro._validators import validate_refresh_cluster_credentials
-from azext_aro._validators import validate_install_version_format
+from azext_aro._validators import validate_version_format
 from azure.cli.core.commands.parameters import name_type
 from azure.cli.core.commands.parameters import get_enum_type, get_three_state_flag
 from azure.cli.core.commands.parameters import resource_group_name_type
@@ -54,9 +54,9 @@ def load_arguments(self, _):
                    help='Client secret of cluster service principal.',
                    validator=validate_client_secret(isCreate=True))
 
-        c.argument('install_version',
+        c.argument('version',
                    help='OpenShift version to use for cluster creation.',
-                   validator=validate_install_version_format)
+                   validator=validate_version_format)
 
         c.argument('pod_cidr',
                    help='CIDR of pod network. Must be a minimum of /18 or larger.',
