@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/gorilla/mux"
 	"github.com/pires/go-proxyproto"
 	"github.com/sirupsen/logrus"
 
@@ -63,9 +62,11 @@ type gateway struct {
 
 	dbGateway database.Gateway
 
-	httpsl net.Listener
-	httpl  net.Listener
-	s      *http.Server
+	httpsl       net.Listener
+	httpl        net.Listener
+	httpHealthl  net.Listener
+	server       *http.Server
+	healthServer *http.Server
 
 	allowList map[string]struct{}
 
@@ -88,7 +89,7 @@ const SocketSize = 65536
 
 // TODO: may one day want to limit gateway readiness on # active connections
 
-func NewGateway(ctx context.Context, env env.Core, baseLog, accessLog *logrus.Entry, dbGateway database.Gateway, httpsl, httpl net.Listener, acrResourceID, gatewayDomains string, m metrics.Emitter) (Runnable, error) {
+func NewGateway(ctx context.Context, env env.Core, baseLog, accessLog *logrus.Entry, dbGateway database.Gateway, httpsl, httpl, httpHealthl net.Listener, acrResourceID, gatewayDomains string, m metrics.Emitter) (Runnable, error) {
 	var domains []string
 	if gatewayDomains != "" {
 		domains = strings.Split(gatewayDomains, ",")
@@ -146,7 +147,10 @@ func NewGateway(ctx context.Context, env env.Core, baseLog, accessLog *logrus.En
 		httpl: &proxyproto.Listener{
 			Listener: httpl,
 		},
-		s: &http.Server{
+		httpHealthl: &proxyproto.Listener{
+			Listener: httpHealthl,
+		},
+		server: &http.Server{
 			ReadTimeout: 10 * time.Second,
 			IdleTimeout: 2 * time.Minute,
 			ErrorLog:    log.New(baseLog.Writer(), "", 0),
@@ -158,17 +162,27 @@ func NewGateway(ctx context.Context, env env.Core, baseLog, accessLog *logrus.En
 				return context.WithValue(ctx, contextKeyConnection, c)
 			},
 		},
+		healthServer: &http.Server{
+			ReadTimeout: 10 * time.Second,
+			IdleTimeout: 2 * time.Minute,
+			ErrorLog:    log.New(baseLog.Writer(), "", 0),
+			BaseContext: func(net.Listener) context.Context { return ctx },
+		},
 
 		allowList: allowList,
 		m:         m,
 	}
 
-	r := mux.NewRouter()
-	r.SkipClean(true) // otherwise CONNECT URLs get messed up
-	r.Use(middleware.Panic(baseLog))
-	r.NewRoute().Methods(http.MethodConnect).HandlerFunc(g.handleConnect)
-	r.NewRoute().Methods(http.MethodGet).Path("/healthz/ready").HandlerFunc(g.checkReady)
-	g.s.Handler = r
+	panicMiddleware := middleware.Panic(baseLog)
+
+	proxyRouter := http.NewServeMux()
+	proxyRouter.Handle("/", panicMiddleware(http.HandlerFunc(g.handleConnect)))
+
+	healthRouter := http.NewServeMux()
+	healthRouter.Handle("/healthz/ready", http.HandlerFunc(g.checkReady))
+
+	g.server.Handler = proxyRouter
+	g.healthServer.Handler = healthRouter
 
 	g.ready.Store(true)
 
@@ -183,7 +197,12 @@ func (g *gateway) Run(ctx context.Context, done chan<- struct{}) {
 
 	go func() {
 		// HTTP proxy connections are handled using the go HTTP stack
-		_ = g.s.Serve(g.httpl)
+		_ = g.server.Serve(g.httpl)
+	}()
+
+	go func() {
+		// listen for health check
+		_ = g.healthServer.Serve(g.httpHealthl)
 	}()
 
 	go func() {

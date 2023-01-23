@@ -102,11 +102,12 @@ func TestNewGateway(t *testing.T) {
 
 			httpl, _ := utilnet.Listen("tcp", ":8080", SocketSize)
 			httpsl, _ := utilnet.Listen("tcp", ":8443", SocketSize)
+			healthListener, _ := utilnet.Listen("tcp", ":8081", SocketSize)
 
 			env := mock_env.NewMockCore(controller)
 			tt.mocks(env)
 
-			gtwy, err := NewGateway(ctx, env, baseLog, baseLog, nil, httpsl, httpl, tt.acrResourceID, tt.gatewayDomains, metrics)
+			gtwy, err := NewGateway(ctx, env, baseLog, baseLog, nil, httpsl, httpl, healthListener, tt.acrResourceID, tt.gatewayDomains, metrics)
 
 			if tt.wantErr != "" {
 				if err == nil {
@@ -148,6 +149,7 @@ func TestNewGatewayDefaultConditions(t *testing.T) {
 
 	httpl, _ := utilnet.Listen("tcp", ":8080", SocketSize)
 	httpsl, _ := utilnet.Listen("tcp", ":8443", SocketSize)
+	healthListener, _ := utilnet.Listen("tcp", ":8081", SocketSize)
 	acrResourceID := "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/resourceName"
 	gatewayDomains := "doMain1,Domain2"
 	ctx := context.Background()
@@ -160,7 +162,7 @@ func TestNewGatewayDefaultConditions(t *testing.T) {
 	env.EXPECT().Environment().AnyTimes().Return(populatedEnv)
 	env.EXPECT().Location().AnyTimes().Return("location")
 
-	gtwy, _ := NewGateway(ctx, env, baseLog, baseLog, nil, httpsl, httpl, acrResourceID, gatewayDomains, metrics)
+	gtwy, _ := NewGateway(ctx, env, baseLog, baseLog, nil, httpsl, httpl, healthListener, acrResourceID, gatewayDomains, metrics)
 
 	gateway, _ := gtwy.(*gateway)
 
@@ -181,32 +183,32 @@ func TestNewGatewayDefaultConditions(t *testing.T) {
 		},
 		{
 			name:                           "Read timeout is set",
-			failedGatewayCreationCondition: gateway.s.ReadTimeout != 10*time.Second,
+			failedGatewayCreationCondition: gateway.server.ReadTimeout != 10*time.Second,
 			failedGatewayCreationReason:    "gateway http server timeout should be set to 10s",
 		},
 		{
 			name:                           "Idle timeout is set",
-			failedGatewayCreationCondition: gateway.s.IdleTimeout != 2*time.Minute,
+			failedGatewayCreationCondition: gateway.server.IdleTimeout != 2*time.Minute,
 			failedGatewayCreationReason:    "gateway http server timeout should be set to 2m0s",
 		},
 		{
 			name:                           "error log prefix is set",
-			failedGatewayCreationCondition: gateway.s.ErrorLog.Prefix() != "",
+			failedGatewayCreationCondition: gateway.server.ErrorLog.Prefix() != "",
 			failedGatewayCreationReason:    "gateway error log prefix should be blank",
 		},
 		{
 			name:                           "error log flags are set to 0",
-			failedGatewayCreationCondition: gateway.s.ErrorLog.Flags() != 0,
+			failedGatewayCreationCondition: gateway.server.ErrorLog.Flags() != 0,
 			failedGatewayCreationReason:    "gateway error log flags should be set to 0",
 		},
 		{
 			name:                           "baseContext is the context of the gateway",
-			failedGatewayCreationCondition: gateway.s.BaseContext(httpl) != ctx,
+			failedGatewayCreationCondition: gateway.server.BaseContext(httpl) != ctx,
 			failedGatewayCreationReason:    "gateway http server BaseContext should return the ctx of the gateway",
 		},
 		{
 			name:                           "gateway http server handler is set",
-			failedGatewayCreationCondition: gateway.s.Handler == nil,
+			failedGatewayCreationCondition: gateway.server.Handler == nil,
 			failedGatewayCreationReason:    "gateway http server should have its handler set",
 		},
 		{

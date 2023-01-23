@@ -264,6 +264,7 @@ ExecStart=/usr/bin/docker run \
   -e MDM_NAMESPACE \
   -m 2g \
   -p 80:8080 \
+  -p 8081:8081 \
   -p 443:8443 \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
