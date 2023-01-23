@@ -1,0 +1,18 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: privileged-namespace
+tests:
+- name: privileged-namespace
+  template: ../../gktemplates/aro-deny-privileged-namespace.yaml
+  constraint: ../../gkconstraints/aro-priv-ns-operations.yaml
+  cases:
+  - name: ns-allowed
+    object: gator-test/ns_allowed.yaml
+    assertions:
+    - violations: no
+  - name: ns-disallowed
+    object: gator-test/ns_disallowed.yaml
+    assertions:
+    - violations: yes
+      message: Operation in privileged namespace openshift-config is not allowed
