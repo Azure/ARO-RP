@@ -68,7 +68,7 @@ func (r *refresher) checkRefreshAndReset() bool {
 func (r *refresher) Run(ctx context.Context) error {
 	defer utilrecover.Panic(r.log)
 
-	go heartbeat.EmitHeartbeat(r.log, r.m, r.metricPrefix+"DbTokenRefresh", nil, r.checkRefreshAndReset)
+	go heartbeat.EmitHeartbeat(r.log, r.m, r.metricPrefix+".dbtokenrefresh", nil, r.checkRefreshAndReset)
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
