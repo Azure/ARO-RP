@@ -262,6 +262,6 @@ def validate_refresh_cluster_credentials(namespace):
 
 def validate_version_format(namespace):
     if namespace.version is not None and not re.match(r'^' +
-                                                        r'[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}' +
-                                                        r'$', namespace.version):
+                                                r'[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}' +
+                                                r'$', namespace.version):
         raise InvalidArgumentValueError('--version is invalid')
