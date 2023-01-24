@@ -10,6 +10,10 @@ resources:
   - container: container
     image: registry.access.redhat.com/ubi8/toolbox:8.7
     options: --user=0 --cap-add=NET_ADMIN --device /dev/net/tun --name vpn
+    ports:
+      - 8443:8443
+      - 8444:8444
+
 
 # Azure DevOps Pipeline running e2e tests
 variables:
@@ -68,6 +72,13 @@ jobs:
       validate_rp_running
 
       register_sub
+    displayName: Setup Tests
+    target: container
+
+  - script: |
+      export CI=true
+      . secrets/env
+      . ./hack/e2e/run-rp-and-e2e.sh
 
       make test-e2e -o e2e.test
     displayName: Execute Tests
