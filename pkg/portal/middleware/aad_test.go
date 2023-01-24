@@ -135,6 +135,7 @@ func TestAAD(t *testing.T) {
 					Header: http.Header{
 						"Cookie": []string{"session=xxx"},
 					},
+					URL: &url.URL{Path: ""},
 				}, nil
 			},
 			wantStatusCode: http.StatusTemporaryRedirect,
