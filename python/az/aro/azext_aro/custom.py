@@ -12,7 +12,7 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
-from azure.cli.core.azclierror import FileOperationError, ResourceNotFoundError, UnauthorizedError
+from azure.cli.core.azclierror import FileOperationError, ResourceNotFoundError, UnauthorizedError, ValidationError
 from azext_aro._aad import AADManager
 from azext_aro._rbac import assign_role_to_resource, \
     has_role_assignment_on_resource
@@ -278,12 +278,18 @@ def generate_random_id():
     return random_id
 
 
-def get_network_resources_from_subnets(cli_ctx, subnets):
+def get_network_resources_from_subnets(cli_ctx, subnets, fail):
     network_client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_NETWORK)
 
     subnet_resources = set()
     for sn in subnets:
         sid = parse_resource_id(sn)
+
+        if 'resource_group' not in sid or 'name' not in sid or 'resource_name' not in sid:
+            if fail:
+                raise ValidationError(f"""(ValidationError) Failed to validate subnet '{sn}'.
+                    Please retry, if issue persists: raise azure support ticket""")
+            logger.info("Failed to validate subnet '%s'", sn)
 
         subnet = network_client.subnets.get(resource_group_name=sid['resource_group'],
                                             virtual_network_name=sid['name'],
@@ -298,7 +304,7 @@ def get_network_resources_from_subnets(cli_ctx, subnets):
     return subnet_resources
 
 
-def get_cluster_network_resources(cli_ctx, oc):
+def get_cluster_network_resources(cli_ctx, oc, fail):
     master_subnet = oc.master_profile.subnet_id
     worker_subnets = set()
 
@@ -316,11 +322,11 @@ def get_cluster_network_resources(cli_ctx, oc):
         name=master_parts['name'],
     )
 
-    return get_network_resources(cli_ctx, worker_subnets | {master_subnet}, vnet)
+    return get_network_resources(cli_ctx, worker_subnets | {master_subnet}, vnet, fail)
 
 
-def get_network_resources(cli_ctx, subnets, vnet):
-    subnet_resources = get_network_resources_from_subnets(cli_ctx, subnets)
+def get_network_resources(cli_ctx, subnets, vnet, fail):
+    subnet_resources = get_network_resources_from_subnets(cli_ctx, subnets, fail)
 
     resources = set()
     resources.add(vnet)
@@ -421,7 +427,7 @@ def resolve_rp_client_id():
 def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
     try:
         # Get cluster resources we need to assign permissions on, sort to ensure the same order of operations
-        resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cli_ctx, oc)),
+        resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cli_ctx, oc, fail)),
                      ROLE_READER: sorted(get_disk_encryption_resources(oc))}
     except (CloudError, HttpOperationError) as e:
         if fail:
