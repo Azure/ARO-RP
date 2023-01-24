@@ -33,7 +33,7 @@ variables:
 jobs:
 - job: Python_Unit_Tests
   pool:
-    name: aro-ci-1es
+    name: 1es-aro-ci-pool
   variables:
     HOME: $(Agent.BuildDirectory)
   steps:
@@ -47,7 +47,7 @@ jobs:
 
 - job: Golang_Unit_Tests
   pool:
-    name: aro-ci-1es
+    name: 1es-aro-ci-pool
   variables:
     GOCACHE: /tmp/gocache
   steps:
@@ -110,7 +110,7 @@ jobs:
 
 - job: Lint_Admin_Portal
   pool:
-    name: aro-ci-1es
+    name: 1es-aro-ci-pool
   steps:
   - template: ./templates/template-checkout.yml
   - script: |
