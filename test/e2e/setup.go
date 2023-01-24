@@ -455,14 +455,19 @@ func setup(ctx context.Context) error {
 		return err
 	}
 
-	cmd := exec.CommandContext(ctx, "which", "docker")
-	_, err = cmd.CombinedOutput()
-	if err == nil {
+	if os.Getenv("AGENT_NAME") != "" {
+		// If we're running in Azure Pipelines, the container will be set up for us
 		dockerSucceeded = true
-	}
+	} else {
+		cmd := exec.CommandContext(ctx, "which", "docker")
+		_, err = cmd.CombinedOutput()
+		if err == nil {
+			dockerSucceeded = true
+		}
 
-	if dockerSucceeded {
-		setupSelenium(ctx)
+		if dockerSucceeded {
+			setupSelenium(ctx)
+		}
 	}
 
 	return nil
@@ -499,7 +504,8 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
 
-	if dockerSucceeded {
+	// Azure Pipelines will tear down the image if needed
+	if dockerSucceeded && os.Getenv("AGENT_NAME") == "" {
 		if err := tearDownSelenium(context.Background()); err != nil {
 			log.Printf(err.Error())
 		}
