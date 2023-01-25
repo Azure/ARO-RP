@@ -58,7 +58,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                apiserver_visibility=None,
                ingress_visibility=None,
                tags=None,
-               install_version=None,
+               version=None,
                no_wait=False):
     if not rp_mode_development():
         resource_client = get_mgmt_service_client(
@@ -106,7 +106,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
             resource_group_id=(f"/subscriptions/{subscription_id}"
                                f"/resourceGroups/{cluster_resource_group or 'aro-' + random_id}"),
             fips_validated_modules='Enabled' if fips_validated_modules else 'Disabled',
-            version=install_version or '',
+            version=version or '',
 
         ),
         service_principal_profile=openshiftcluster.ServicePrincipalProfile(

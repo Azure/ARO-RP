@@ -54,4 +54,4 @@ Release History
 1.0.7
 ++++++
 * Add support for get-versions (lists available installation versions of OpenShift per location)
-* Adds an aro create 'install-version' parameter (for specifying the cluster installation version)
+* Adds an aro create 'version' parameter (for specifying the cluster installation version)
