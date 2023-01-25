@@ -179,6 +179,10 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		hubPort  = 4444
 		hostPort = 8444
 	)
+	hubAddress := "localhost"
+	if os.Getenv("AGENT_NAME") != "" {
+		hubAddress = "selenium"
+	}
 
 	os.Setenv("SE_SESSION_REQUEST_TIMEOUT", "9000")
 
@@ -188,13 +192,13 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 	}
 	wd := selenium.WebDriver(nil)
 
-	_, err := url.ParseRequestURI(fmt.Sprintf("https://localhost:%d", hubPort))
+	_, err := url.ParseRequestURI(fmt.Sprintf("https://%s:%d", hubAddress, hubPort))
 	if err != nil {
 		panic(err)
 	}
 
 	for i := 0; i < 10; i++ {
-		wd, err = selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", hubPort))
+		wd, err = selenium.NewRemote(caps, fmt.Sprintf("http://%s:%d/wd/hub", hubAddress, hubPort))
 		if wd != nil {
 			err = nil
 			break

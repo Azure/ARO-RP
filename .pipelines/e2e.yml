@@ -12,7 +12,7 @@ resources:
     options: --user=0 --cap-add=NET_ADMIN --device /dev/net/tun --name vpn
   - container: selenium
     image: docker.io/selenium/standalone-edge:latest
-    options: --network=host --shm-size=2g
+    options: --shm-size=2g
 
 
 # Azure DevOps Pipeline running e2e tests
@@ -61,6 +61,7 @@ jobs:
       export CI=true
       . secrets/env
       . ./hack/e2e/run-rp-and-e2e.sh
+      export PORTAL_HOSTNAME="https://container:8444"
 
       # HACK: we don't currently trap an exit signal to kill the VPN and other things
       # properly which can result in a stale openvpn process running, causing connection
