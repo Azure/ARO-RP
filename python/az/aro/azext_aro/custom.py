@@ -166,13 +166,15 @@ def aro_validate(cmd,
                  vnet,
                  client_id,
                  client_secret,  # pylint: disable=unused-argument
+                 location,
+                 version,
                  vnet_resource_group_name=None,  # pylint: disable=unused-argument
                  disk_encryption_set=None,
                  pod_cidr=None,
                  service_cidr=None,
                  apiserver_visibility=None,
                  ingress_visibility=None,
-                 version=None):
+                 ):
 
     class oc:
         def __init__(self, disk_encryption_id, master_subnet_id, worker_subnet_id):
@@ -204,6 +206,8 @@ def aro_validate(cmd,
         logger.error(e.message)
         raise
 
+    versions = aro_get_versions(client, location)
+
     error_objects = validate_cluster_create(cmd,
                                             client,
                                             master_subnet,
@@ -212,6 +216,7 @@ def aro_validate(cmd,
                                             pod_cidr,
                                             service_cidr,
                                             version,
+                                            versions,
                                             apiserver_visibility,
                                             ingress_visibility,
                                             resources,

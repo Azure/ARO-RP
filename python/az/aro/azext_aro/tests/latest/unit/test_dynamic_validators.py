@@ -3,7 +3,7 @@
 
 from unittest.mock import Mock, patch
 from azext_aro._dynamic_validators import (
-    dyn_validate_cidr_ranges, dyn_validate_subnet, dyn_validate_vnet, dyn_validate_resource_permissions
+    dyn_validate_cidr_ranges, dyn_validate_subnet, dyn_validate_vnet, dyn_validate_resource_permissions, dyn_validate_visibility, dyn_validate_version
 )
 
 from azure.mgmt.authorization.models import Permission
@@ -13,7 +13,7 @@ import pytest
 test_validate_cidr_data = [
     (
         "should return no error on address_prefix set on subnets, no additional cidrs, no overlap",
-        Mock(cli_ctx=None),
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
         Mock(**{"subnets.get.side_effect": [Mock(address_prefix="172.143.5.0/24"), Mock(address_prefix="172.143.4.0/25")]}),
         {
@@ -30,7 +30,7 @@ test_validate_cidr_data = [
     ),
     (
         "should return no error on address_prefix set on subnets, additional cidrs, no overlap",
-        Mock(cli_ctx=None),
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr="172.142.0.0/21", service_cidr="172.143.6.0/25"),
         Mock(**{"subnets.get.side_effect": [Mock(address_prefix="172.143.4.0/24"), Mock(address_prefix="172.143.5.0/25")]}),
         {
@@ -47,7 +47,7 @@ test_validate_cidr_data = [
     ),
     (
         "should return no error on multiple address_prefixes set on subnets, additional cidrs, no overlap",
-        Mock(cli_ctx=None),
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr="172.142.0.0/21", service_cidr="172.143.6.0/25"),
         Mock(**{"subnets.get.side_effect": [Mock(address_prefix=None,
                                                  address_prefixes=["172.143.4.0/24", "172.143.8.0/25"]),
@@ -67,7 +67,7 @@ test_validate_cidr_data = [
     ),
     (
         "should error on address_prefix set on subnets, no additional cidrs, overlap",
-        Mock(cli_ctx=None),
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
         Mock(**{"subnets.get.side_effect": [Mock(address_prefix="172.143.4.0/24"), Mock(address_prefix="172.143.4.0/25")]}),
         {
@@ -84,7 +84,7 @@ test_validate_cidr_data = [
     ),
     (
         "should return error on pod cidr not having enough addresses to create cluster",
-        Mock(cli_ctx=None),
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr="172.143.4.0/24", service_cidr=None),
         Mock(**{"subnets.get.side_effect": [Mock(address_prefix="172.143.5.0/24"), Mock(address_prefix="172.143.4.0/25")]}),
         {
@@ -135,7 +135,7 @@ def test_validate_cidr(
 test_validate_subnets_data = [
     (
         "should not return missing permission when actions are permitted",
-        Mock(cli_ctx=None),
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
         Mock(**{"subnets.get.return_value": Mock(network_security_group=None, route_table=Mock(id="test"))}),
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=["Microsoft.Network/routeTables/*"], not_actions=[])]}),
@@ -154,7 +154,7 @@ test_validate_subnets_data = [
     ),
     (
         "should return missing permission when actions are not permitted",
-        Mock(cli_ctx=None),
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
         Mock(**{"subnets.get.return_value": Mock(network_security_group=None, route_table=Mock(id="test"))}),
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=[], not_actions=["Microsoft.Network/routeTables/*"])]}),
@@ -173,7 +173,7 @@ test_validate_subnets_data = [
     ),
     (
         "should return missing permission when actions are not present",
-        Mock(cli_ctx=None),
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
         Mock(**{"subnets.get.return_value": Mock(network_security_group=None, route_table=Mock(id="test"))}),
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=[], not_actions=[])]}),
@@ -192,7 +192,7 @@ test_validate_subnets_data = [
     ),
     (
         "should return message when network security group is already attached to subnet",
-        Mock(cli_ctx=None),
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
         Mock(**{"subnets.get.return_value": Mock(network_security_group=Mock(id="test"), route_table=Mock(id="test"))}),
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=["Microsoft.Network/routeTables/*"], not_actions=[])]}),
@@ -249,7 +249,7 @@ def test_validate_subnets(
 test_validate_vnets_data = [
     (
         "should not return missing permission when actions are permitted",
-        Mock(cli_ctx=None),
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
         Mock(**{"subnets.get.return_value": Mock(route_table=Mock(id="test"))}),
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=["Microsoft.Network/virtualNetworks/*"], not_actions=[])]}),
@@ -268,7 +268,7 @@ test_validate_vnets_data = [
     ),
     (
         "should return disabled permission when actions are not permitted",
-        Mock(cli_ctx=None),
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
         Mock(**{"subnets.get.return_value": Mock(route_table=Mock(id="test"))}),
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=[], not_actions=["Microsoft.Network/virtualNetworks/*"])]}),
@@ -287,7 +287,7 @@ test_validate_vnets_data = [
     ),
     (
         "should return missing permission when actions are not present",
-        Mock(cli_ctx=None),
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
         Mock(**{"subnets.get.return_value": Mock(route_table=Mock(id="test"))}),
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=[], not_actions=[])]}),
@@ -342,7 +342,7 @@ def test_validate_vnets(
 test_validate_resource_data = [
     (
         "should not return missing permission when role assignments are assigned",
-        Mock(cli_ctx=None),
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(),
         {
             "subscription": "subscription",
@@ -359,7 +359,7 @@ test_validate_resource_data = [
     ),
     (
         "should return missing permission when role assignments are not assigned",
-        Mock(cli_ctx=None),
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(),
         {
             "subscription": "subscription",
@@ -407,3 +407,92 @@ def test_validate_resources(
 
         if (missing_perms[0][2] != expected_missing_perms):
             raise Exception(f"Error returned was not expected\n Expected : {expected_missing_perms}\n Actual   : {missing_perms[0][2]}")
+
+
+test_validate_visibility_data = [
+    (
+        "should not return error when visibility is Public",
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
+        Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
+        "API Server",
+        "Public",
+        None
+    ),
+    (
+        "should not return error when visibility is Private",
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
+        Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
+        "API Server",
+        "Private",
+        None
+    ),
+    (
+        "should return error when visibility is random string",
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
+        Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
+        "API Server",
+        "Nothing",
+        "\"Nothing\" is not valid, options are \"Public\" or \"Private\""
+    )
+]
+
+
+@pytest.mark.parametrize(
+    "test_description, cmd_mock, namespace_mock, name, value, expected_errors",
+    test_validate_visibility_data,
+    ids=[i[0] for i in test_validate_visibility_data]
+)
+def test_validate_visibility(
+    # Test cases parameters:
+    test_description, cmd_mock, namespace_mock, name, value, expected_errors
+):
+
+    validate_visibility_fn = dyn_validate_visibility(name, value)
+    if expected_errors is None:
+        errors = validate_visibility_fn(cmd_mock, namespace_mock)
+
+        if (len(errors) > 0):
+            raise Exception(f"Unexpected Error: {errors[0][2]}")
+    else:
+        errors = validate_visibility_fn(cmd_mock, namespace_mock)
+
+        if (errors[0][2] != expected_errors):
+            raise Exception(f"Error returned was not expected\n Expected : {expected_errors}\n Actual   : {errors[0][2]}")
+
+test_validate_version_data = [
+    (
+        "should not return error when visibility is Public",
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
+        Mock(version="4.9.10", versions=["4.9.10"]),
+        None
+    ),
+    (
+        "should return error when visibility is random string",
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
+        Mock(version="72.2343.21212", versions=["4.9.10"]),
+        "72.2343.21212 is not a valid version, valid versions are ['4.9.10']"
+    )
+]
+
+
+@pytest.mark.parametrize(
+    "test_description, cmd_mock, namespace_mock, expected_errors",
+    test_validate_version_data,
+    ids=[i[0] for i in test_validate_version_data]
+)
+def test_validate_version(
+    # Test cases parameters:
+    test_description, cmd_mock, namespace_mock, expected_errors
+):
+
+    validate_version_fn = dyn_validate_version()
+    if expected_errors is None:
+        errors = validate_version_fn(cmd_mock, namespace_mock)
+
+        if (len(errors) > 0):
+            raise Exception(f"Unexpected Error: {errors[0][2]}")
+    else:
+        errors = validate_version_fn(cmd_mock, namespace_mock)
+
+        if (errors[0][2] != expected_errors):
+            raise Exception(f"Error returned was not expected\n Expected : {expected_errors}\n Actual   : {errors[0][2]}")

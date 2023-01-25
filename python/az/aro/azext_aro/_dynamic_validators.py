@@ -290,9 +290,9 @@ def dyn_validate_visibility(key, visibility):
         hook.add(message=f"Validating {key} Visibility")
 
         if visibility is not None and visibility is not "Public" and visibility is not "Private":
-            errors = [f"{key} Visibility",
+            errors.append([f"{key} Visibility",
                       visibility,
-                      f"{visibility} is not valid, options are \"Public\" or \"Private\""]
+                      f"\"{visibility}\" is not valid, options are \"Public\" or \"Private\""])
 
         hook.end()
         return errors
@@ -300,17 +300,22 @@ def dyn_validate_visibility(key, visibility):
 
 def dyn_validate_version():
     def _validate_version(cmd,
-                                       namespace  # pylint: disable=unused-argument
-                                       ):
+                          namespace):  # pylint: disable=unused-argument
         errors = []
 
         hook = cmd.cli_ctx.get_progress_controller()
-        hook.add(message="Validating Version Format")
-        try:
-            if (namespace.version):
-                validate_version_format(namespace.version)
-        except:
-            errors += ["OpenShift Version", namespace.version, f"{namespace.version} is an invalid format"]
+        hook.add(message="Validating OpenShift Version")
+
+        found = False
+        for version in namespace.versions:
+            if version == namespace.version:
+                found = True
+                break
+
+        if not found:
+            errors.append(["OpenShift Version",
+                       namespace.version,
+                       f"{namespace.version} is not a valid version, valid versions are {namespace.versions}"])
 
         hook.end()
         return errors
@@ -324,6 +329,7 @@ def validate_cluster_create(cmd,  # pylint: disable=unused-argument
                             pod_cidr,  # pylint: disable=unused-argument
                             service_cidr,  # pylint: disable=unused-argument
                             version,  # pylint: disable=unused-argument
+                            versions,  # pylint: disable=unused-argument
                             apiserver_visibility,
                             ingress_visibility,
                             resources,
