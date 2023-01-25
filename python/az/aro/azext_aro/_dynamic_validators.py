@@ -10,6 +10,7 @@ from azure.cli.core.profiles import ResourceType
 from azure.cli.core.azclierror import CLIInternalError, InvalidArgumentValueError, \
     RequiredArgumentMissingError
 from azure.core.exceptions import ResourceNotFoundError
+from azure.cli.core.commands.progress import IndeterminateStandardOut
 from knack.log import get_logger
 from msrestazure.tools import is_valid_resource_id
 from msrestazure.tools import parse_resource_id
@@ -85,33 +86,38 @@ def get_clients(key, cmd):
 def dyn_validate_vnet(key):
     def _validate_vnet(cmd, namespace):
         errors = []
-        with AutomaticSpinner("Validating Virtual Network Permissions"):
-            vnet = getattr(namespace, key)
 
-            if not is_valid_resource_id(vnet):
-                raise RequiredArgumentMissingError(
-                    f"Must specify --vnet if --{key.replace('_', '-')} is not an id.")
+        hook = cmd.cli_ctx.get_progress_controller()
+        hook.add(message="Validating Virtual Network Permissions")
 
-            validate_vnet(cmd, namespace)
+        vnet = getattr(namespace, key)
 
-            parts, network_client, auth_client = get_clients(vnet, cmd)
+        if not is_valid_resource_id(vnet):
+            raise RequiredArgumentMissingError(
+                f"Must specify --vnet if --{key.replace('_', '-')} is not an id.")
 
-            try:
-                network_client.virtual_networks.get(parts['resource_group'], parts['name'])
-            except Exception as err:
-                if isinstance(err, ResourceNotFoundError):
-                    raise InvalidArgumentValueError(
-                        f"Invalid --{key.replace('_', '-')}, error when getting '{vnet}': {str(err)}") from err
-                raise CLIInternalError(
-                    f"Unexpected error when getting subnet '{vnet}': {str(err)}") from err
+        validate_vnet(cmd, namespace)
 
-            errors = validate_resource(auth_client, key, parts, [
-                "Microsoft.Network/virtualNetworks/join/action",
-                "Microsoft.Network/virtualNetworks/read",
-                "Microsoft.Network/virtualNetworks/write",
-                "Microsoft.Network/virtualNetworks/subnets/join/action",
-                "Microsoft.Network/virtualNetworks/subnets/read",
-                "Microsoft.Network/virtualNetworks/subnets/write", ])
+        parts, network_client, auth_client = get_clients(vnet, cmd)
+
+        try:
+            network_client.virtual_networks.get(parts['resource_group'], parts['name'])
+        except Exception as err:
+            if isinstance(err, ResourceNotFoundError):
+                raise InvalidArgumentValueError(
+                    f"Invalid --{key.replace('_', '-')}, error when getting '{vnet}': {str(err)}") from err
+            raise CLIInternalError(
+                f"Unexpected error when getting subnet '{vnet}': {str(err)}") from err
+
+        errors = validate_resource(auth_client, key, parts, [
+            "Microsoft.Network/virtualNetworks/join/action",
+            "Microsoft.Network/virtualNetworks/read",
+            "Microsoft.Network/virtualNetworks/write",
+            "Microsoft.Network/virtualNetworks/subnets/join/action",
+            "Microsoft.Network/virtualNetworks/subnets/read",
+            "Microsoft.Network/virtualNetworks/subnets/write", ])
+
+        hook.end()
 
         return errors
 
@@ -121,116 +127,126 @@ def dyn_validate_vnet(key):
 def dyn_validate_subnet(key):
     def _validate_subnet(cmd, namespace):
         errors = []
-        with AutomaticSpinner(f"Validating {key} permissions"):
-            subnet = getattr(namespace, key)
 
-            if not is_valid_resource_id(subnet):
-                if not namespace.vnet:
-                    raise RequiredArgumentMissingError(
-                        f"Must specify --vnet if --{key.replace('_', '-')} is not an id.")
+        hook = cmd.cli_ctx.get_progress_controller()
+        hook.add(message=f"Validating {key} permissions")
 
-                validate_vnet(cmd, namespace)
+        subnet = getattr(namespace, key)
 
-                subnet = namespace.vnet + '/subnets/' + subnet
-                setattr(namespace, key, subnet)
+        if not is_valid_resource_id(subnet):
+            if not namespace.vnet:
+                raise RequiredArgumentMissingError(
+                    f"Must specify --vnet if --{key.replace('_', '-')} is not an id.")
 
-            parts, network_client, auth_client = get_clients(subnet, cmd)
+            validate_vnet(cmd, namespace)
 
-            try:
-                subnet_obj = network_client.subnets.get(parts['resource_group'],
-                                                        parts['name'],
-                                                        parts['child_name_1'])
+            subnet = namespace.vnet + '/subnets/' + subnet
+            setattr(namespace, key, subnet)
 
-                route_table_obj = subnet_obj.route_table
-                if route_table_obj is None:
-                    raise ResourceNotFoundError("Subnet is missing route table")
-            except Exception as err:
-                if isinstance(err, ResourceNotFoundError):
-                    raise InvalidArgumentValueError(
-                        f"Invalid --{key.replace('_', '-')}, error when getting '{subnet}': {str(err)}") from err
-                raise CLIInternalError(
-                    f"Unexpected error when getting subnet '{subnet}': {str(err)}") from err
+        parts, network_client, auth_client = get_clients(subnet, cmd)
 
-            route_parts = parse_resource_id(route_table_obj.id)
+        try:
+            subnet_obj = network_client.subnets.get(parts['resource_group'],
+                                                    parts['name'],
+                                                    parts['child_name_1'])
 
-            errors = validate_resource(auth_client, f"{key}_route_table", route_parts, [
-                "Microsoft.Network/routeTables/join/action",
-                "Microsoft.Network/routeTables/read",
-                "Microsoft.Network/routeTables/write"])
+            route_table_obj = subnet_obj.route_table
+            if route_table_obj is None:
+                raise ResourceNotFoundError("Subnet is missing route table")
+        except Exception as err:
+            if isinstance(err, ResourceNotFoundError):
+                raise InvalidArgumentValueError(
+                    f"Invalid --{key.replace('_', '-')}, error when getting '{subnet}': {str(err)}") from err
+            raise CLIInternalError(
+                f"Unexpected error when getting subnet '{subnet}': {str(err)}") from err
 
-            if subnet_obj.network_security_group is not None:
-                message = f"A Network Security Group \"{subnet_obj.network_security_group.id}\" "\
-                          "is already assigned to this subnet. Ensure there a no Network "\
-                          "Security Groups assigned to cluster subnets before cluster creation"
-                error = [f"{key}", parts['child_name_1'], message]
-                errors.append(error)
+        route_parts = parse_resource_id(route_table_obj.id)
 
+        errors = validate_resource(auth_client, f"{key}_route_table", route_parts, [
+            "Microsoft.Network/routeTables/join/action",
+            "Microsoft.Network/routeTables/read",
+            "Microsoft.Network/routeTables/write"])
+
+        if subnet_obj.network_security_group is not None:
+            message = f"A Network Security Group \"{subnet_obj.network_security_group.id}\" "\
+                        "is already assigned to this subnet. Ensure there a no Network "\
+                        "Security Groups assigned to cluster subnets before cluster creation"
+            error = [f"{key}", parts['child_name_1'], message]
+            errors.append(error)
+
+        hook.end()
         return errors
+
     return _validate_subnet
 
 
 def dyn_validate_cidr_ranges():
     def _validate_cidr_ranges(cmd, namespace):
         addresses = []
-        with AutomaticSpinner("Validating no overlapping CIDR Ranges on subnets"):
-            ERROR_KEY = "CIDR Range"
-            master_subnet = namespace.master_subnet
-            worker_subnet = namespace.worker_subnet
-            pod_cidr = namespace.pod_cidr
-            service_cidr = namespace.service_cidr
 
-            worker_parts = parse_resource_id(worker_subnet)
-            master_parts = parse_resource_id(master_subnet)
+        hook = cmd.cli_ctx.get_progress_controller()
+        hook.add(message="Validating no overlapping CIDR Ranges on subnets")
 
-            fn = validate_cidr("pod_cidr")
-            fn(namespace)
-            fn = validate_cidr("service_cidr")
-            fn(namespace)
+        ERROR_KEY = "CIDR Range"
+        master_subnet = namespace.master_subnet
+        worker_subnet = namespace.worker_subnet
+        pod_cidr = namespace.pod_cidr
+        service_cidr = namespace.service_cidr
 
-            cidr_array = {}
+        worker_parts = parse_resource_id(worker_subnet)
+        master_parts = parse_resource_id(master_subnet)
 
-            if pod_cidr is not None:
-                node_mask = 23 - int(pod_cidr.split("/")[1])
-                if node_mask < 2:
-                    addresses.append(["Pod CIDR",
-                                      "Pod CIDR Capacity",
-                                      f"{pod_cidr} does not contain enough addresses for 3 master nodes " +
-                                      "(Requires cidr prefix of 21 or lower)"])
-                cidr_array["Pod CIDR"] = ipaddress.IPv4Network(pod_cidr)
-            if service_cidr is not None:
-                cidr_array["Service CIDR"] = ipaddress.IPv4Network(service_cidr)
+        fn = validate_cidr("pod_cidr")
+        fn(namespace)
+        fn = validate_cidr("service_cidr")
+        fn(namespace)
 
-            network_client = get_mgmt_service_client(
-                cmd.cli_ctx, ResourceType.MGMT_NETWORK)
+        cidr_array = {}
 
-            worker_subnet_obj = get_subnet(network_client, worker_subnet, worker_parts)
+        if pod_cidr is not None:
+            node_mask = 23 - int(pod_cidr.split("/")[1])
+            if node_mask < 2:
+                addresses.append(["Pod CIDR",
+                                    "Pod CIDR Capacity",
+                                    f"{pod_cidr} does not contain enough addresses for 3 master nodes " +
+                                    "(Requires cidr prefix of 21 or lower)"])
+            cidr_array["Pod CIDR"] = ipaddress.IPv4Network(pod_cidr)
+        if service_cidr is not None:
+            cidr_array["Service CIDR"] = ipaddress.IPv4Network(service_cidr)
 
-            if worker_subnet_obj.address_prefix is None:
-                for address in worker_subnet_obj.address_prefixes:
-                    cidr_array["Worker Subnet CIDR -- " + address] = ipaddress.IPv4Network(address)
-            else:
-                cidr_array["Worker Subnet CIDR"] = ipaddress.IPv4Network(worker_subnet_obj.address_prefix)
+        network_client = get_mgmt_service_client(
+            cmd.cli_ctx, ResourceType.MGMT_NETWORK)
 
-            master_subnet_obj = get_subnet(network_client, master_subnet, master_parts)
+        worker_subnet_obj = get_subnet(network_client, worker_subnet, worker_parts)
 
-            if master_subnet_obj.address_prefix is None:
-                for address in master_subnet_obj.address_prefixes:
-                    cidr_array["Master Subnet CIDR -- " + address] = ipaddress.IPv4Network(address)
-            else:
-                cidr_array["Master Subnet CIDR"] = ipaddress.IPv4Network(master_subnet_obj.address_prefix)
+        if worker_subnet_obj.address_prefix is None:
+            for address in worker_subnet_obj.address_prefixes:
+                cidr_array["Worker Subnet CIDR -- " + address] = ipaddress.IPv4Network(address)
+        else:
+            cidr_array["Worker Subnet CIDR"] = ipaddress.IPv4Network(worker_subnet_obj.address_prefix)
 
-            ipv4_zero = ipaddress.IPv4Network("0.0.0.0/0")
+        master_subnet_obj = get_subnet(network_client, master_subnet, master_parts)
 
-            for item in cidr_array.items():
-                key = item[0]
-                cidr = item[1]
-                if not cidr.overlaps(ipv4_zero):
-                    addresses.append([ERROR_KEY, key, f"{cidr} is not valid as it does not overlap with {ipv4_zero}"])
-                for item2 in cidr_array.items():
-                    compare = item2[1]
-                    if cidr is not compare:
-                        if cidr.overlaps(compare):
-                            addresses.append([ERROR_KEY, key, f"{cidr} is not valid as it overlaps with {compare}"])
+        if master_subnet_obj.address_prefix is None:
+            for address in master_subnet_obj.address_prefixes:
+                cidr_array["Master Subnet CIDR -- " + address] = ipaddress.IPv4Network(address)
+        else:
+            cidr_array["Master Subnet CIDR"] = ipaddress.IPv4Network(master_subnet_obj.address_prefix)
+
+        ipv4_zero = ipaddress.IPv4Network("0.0.0.0/0")
+
+        for item in cidr_array.items():
+            key = item[0]
+            cidr = item[1]
+            if not cidr.overlaps(ipv4_zero):
+                addresses.append([ERROR_KEY, key, f"{cidr} is not valid as it does not overlap with {ipv4_zero}"])
+            for item2 in cidr_array.items():
+                compare = item2[1]
+                if cidr is not compare:
+                    if cidr.overlaps(compare):
+                        addresses.append([ERROR_KEY, key, f"{cidr} is not valid as it overlaps with {compare}"])
+
+        hook.end()
 
         return addresses
 
@@ -239,47 +255,79 @@ def dyn_validate_cidr_ranges():
 
 def dyn_validate_resource_permissions(service_principle_ids, resources):
     def _validate_resource_permissions(cmd,
-                                       namespace  # pylint: disable=unused-argument
-                                       ):
+                                       namespace):  # pylint: disable=unused-argument
         errors = []
-        with AutomaticSpinner("Validating resource permissions"):
-            for sp_id in service_principle_ids:
-                for role in sorted(resources):
-                    for resource in resources[role]:
-                        try:
-                            resource_contributor_exists = has_role_assignment_on_resource(cmd.cli_ctx,
-                                                                                          resource,
-                                                                                          sp_id,
-                                                                                          role)
-                            if not resource_contributor_exists:
-                                parts = parse_resource_id(resource)
-                                errors.append(["Resource Permissions",
-                                               parts['type'],
-                                               f"Resource {parts['name']} is missing role assignment {role}"])
-                        except CloudError as e:
-                            logger.error(e.message)
-                            raise
+
+        hook = cmd.cli_ctx.get_progress_controller()
+        hook.add(message="Validating resource permissions")
+
+        for sp_id in service_principle_ids:
+            for role in sorted(resources):
+                for resource in resources[role]:
+                    try:
+                        resource_contributor_exists = has_role_assignment_on_resource(cmd.cli_ctx,
+                                                                                        resource,
+                                                                                        sp_id,
+                                                                                        role)
+                        if not resource_contributor_exists:
+                            parts = parse_resource_id(resource)
+                            errors.append(["Resource Permissions",
+                                            parts['type'],
+                                            f"Resource {parts['name']} is missing role assignment {role}"])
+                    except CloudError as e:
+                        logger.error(e.message)
+                        raise
+        hook.end()
         return errors
     return _validate_resource_permissions
 
+def dyn_validate_visibility(key, visibility):
+    def _validate_visibility(cmd,
+                             namespace):
+        errors = []
+
+        hook = cmd.cli_ctx.get_progress_controller()
+        hook.add(message=f"Validating {key} Visibility")
+
+        if visibility is not None and visibility is not "Public" and visibility is not "Private":
+            errors = [f"{key} Visibility",
+                      visibility,
+                      f"{visibility} is not valid, options are \"Public\" or \"Private\""]
+
+        hook.end()
+        return errors
+    return _validate_visibility
+
+def dyn_validate_version():
+    def _validate_version(cmd,
+                                       namespace  # pylint: disable=unused-argument
+                                       ):
+        errors = []
+
+        hook = cmd.cli_ctx.get_progress_controller()
+        hook.add(message="Validating Version Format")
+        try:
+            if (namespace.version):
+                validate_version_format(namespace.version)
+        except:
+            errors += ["OpenShift Version", namespace.version, f"{namespace.version} is an invalid format"]
+
+        hook.end()
+        return errors
+    return _validate_version
 
 def validate_cluster_create(cmd,  # pylint: disable=unused-argument
                             client,  # pylint: disable=unused-argument
-                            resource_group_name,  # pylint: disable=unused-argument
                             master_subnet,  # pylint: disable=unused-argument
                             worker_subnet,  # pylint: disable=unused-argument
                             vnet,  # pylint: disable=unused-argument
                             pod_cidr,  # pylint: disable=unused-argument
                             service_cidr,  # pylint: disable=unused-argument
-                            location,  # pylint: disable=unused-argument
-                            client_id,  # pylint: disable=unused-argument
-                            master_vm_size,  # pylint: disable=unused-argument
-                            disk_encrpytion_set_id,  # pylint: disable=unused-argument
-                            worker_vm_size,  # pylint: disable=unused-argument
-                            worker_vm_disk_size_gb,  # pylint: disable=unused-argument
-                            worker_count,  # pylint: disable=unused-argument
-                            resources,  # pylint: disable=unused-argument
-                            service_principle_ids):  # pylint: disable=unused-argument
+                            version,  # pylint: disable=unused-argument
+                            apiserver_visibility,
+                            ingress_visibility,
+                            resources,
+                            service_principle_ids):
     error_object = []
 
     error_object.append(dyn_validate_vnet("vnet"))
@@ -287,5 +335,8 @@ def validate_cluster_create(cmd,  # pylint: disable=unused-argument
     error_object.append(dyn_validate_subnet("worker_subnet"))
     error_object.append(dyn_validate_cidr_ranges())
     error_object.append(dyn_validate_resource_permissions(service_principle_ids, resources))
+    error_object.append(dyn_validate_visibility("API Server", apiserver_visibility))
+    error_object.append(dyn_validate_visibility("Ingress", ingress_visibility))
+    error_object.append(dyn_validate_version())
 
     return error_object

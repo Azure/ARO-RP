@@ -28,6 +28,7 @@ from msrestazure.tools import resource_id, parse_resource_id
 from msrest.exceptions import HttpOperationError
 
 from tabulate import tabulate
+import textwrap
 
 logger = get_logger(__name__)
 
@@ -74,18 +75,8 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     validate_subnets(master_subnet, worker_subnet)
 
     subscription_id = get_subscription_id(cmd.cli_ctx)
+
     random_id = generate_random_id()
-
-    if rp_mode_development():
-        worker_vm_size = worker_vm_size or 'Standard_D2s_v3'
-    else:
-        worker_vm_size = worker_vm_size or 'Standard_D4s_v3'
-
-    if apiserver_visibility is not None:
-        apiserver_visibility = apiserver_visibility.capitalize()
-
-    if ingress_visibility is not None:
-        ingress_visibility = ingress_visibility.capitalize()
 
     aad = AADManager(cmd.cli_ctx)
     if client_id is None:
@@ -98,6 +89,17 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     rp_client_sp_id = aad.get_service_principal_id(resolve_rp_client_id())
     if not rp_client_sp_id:
         raise ResourceNotFoundError("RP service principal not found.")
+
+    if rp_mode_development():
+        worker_vm_size = worker_vm_size or 'Standard_D2s_v3'
+    else:
+        worker_vm_size = worker_vm_size or 'Standard_D4s_v3'
+
+    if apiserver_visibility is not None:
+        apiserver_visibility = apiserver_visibility.capitalize()
+
+    if ingress_visibility is not None:
+        ingress_visibility = ingress_visibility.capitalize()
 
     oc = openshiftcluster.OpenShiftCluster(
         location=location,
@@ -156,31 +158,23 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                        parameters=oc)
 
 
-def aro_validate(cmd,  # pylint: disable=too-many-locals
-                 client,  # pylint: disable=unused-argument
-                 resource_group_name,
-                 master_subnet,  # pylint: disable=unused-argument
-                 worker_subnet,  # pylint: disable=unused-argument
-                 vnet,  # pylint: disable=unused-argument
-                 location,  # pylint: disable=unused-argument
-                 client_id,  # pylint: disable=unused-argument
+def aro_validate(cmd,
+                 client,
+                 resource_group_name,  # pylint: disable=unused-argument
+                 master_subnet,
+                 worker_subnet,
+                 vnet,
+                 client_id,
                  client_secret,  # pylint: disable=unused-argument
                  vnet_resource_group_name=None,  # pylint: disable=unused-argument
-                 pod_cidr=None,  # pylint: disable=unused-argument
-                 service_cidr=None,  # pylint: disable=unused-argument
-                 master_vm_size=None,  # pylint: disable=unused-argument
-                 disk_encryption_set=None,  # pylint: disable=unused-argument
-                 worker_vm_size=None,  # pylint: disable=unused-argument
-                 worker_vm_disk_size_gb=None,  # pylint: disable=unused-argument
-                 worker_count=None,  # pylint: disable=unused-argument
-                 ):
+                 disk_encryption_set=None,
+                 pod_cidr=None,
+                 service_cidr=None,
+                 apiserver_visibility=None,
+                 ingress_visibility=None,
+                 version=None):
 
-    master_vm_size = master_vm_size or "Standard_D8s_v3"
-    worker_vm_size = worker_vm_size or 'Standard_D4s_v3'
-    worker_vm_disk_size_gb = worker_vm_disk_size_gb or 128
-    worker_count = worker_count or 3
-
-    class oc:  # pylint: disable=too-few-public-methods
+    class oc:
         def __init__(self, disk_encryption_id, master_subnet_id, worker_subnet_id):
             self.master_profile = openshiftcluster.MasterProfile(
                 subnet_id=master_subnet_id,
@@ -204,7 +198,7 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals
     cluster = oc(disk_encryption_set, master_subnet, worker_subnet)
     try:
         # Get cluster resources we need to assign permissions on, sort to ensure the same order of operations
-        resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cmd.cli_ctx, cluster)),
+        resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cmd.cli_ctx, cluster, True)),
                      ROLE_READER: sorted(get_disk_encryption_resources(cluster))}
     except (CloudError, HttpOperationError) as e:
         logger.error(e.message)
@@ -212,18 +206,14 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals
 
     error_objects = validate_cluster_create(cmd,
                                             client,
-                                            resource_group_name,
                                             master_subnet,
                                             worker_subnet,
-                                            vnet, pod_cidr,
+                                            vnet,
+                                            pod_cidr,
                                             service_cidr,
-                                            location,
-                                            client_id,
-                                            master_vm_size,
-                                            disk_encryption_set,
-                                            worker_vm_size,
-                                            worker_vm_disk_size_gb,
-                                            worker_count,
+                                            version,
+                                            apiserver_visibility,
+                                            ingress_visibility,
                                             resources,
                                             sp_obj_ids)
     errors = []
@@ -232,12 +222,16 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals
         error_obj = error_func(cmd, namespace)
         if error_obj != []:
             for err in error_obj:
-                errors.append(err)
+                # Wrap text so tabulate returns a pretty table
+                new_err = []
+                for txt in err:
+                    new_err.append(textwrap.fill(txt, width=160))
+                errors.append(new_err)
 
     if len(errors) > 0:
         logger.error("Issues found blocking cluster creation.\n")
         headers = ["Type", "Name", "Error"]
-        table = tabulate(errors, headers)
+        table = tabulate(errors, headers=headers, tablefmt="grid")
         print("%s\n", table)
     else:
         print("\nNo Issues on subscription blocking cluster creation\n")
