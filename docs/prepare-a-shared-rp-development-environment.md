@@ -342,9 +342,9 @@ import_certs_secrets
 
 Variable                 | Certificate Client | Subscription Type  | AAD App Name          | AAD App ID                           | Key Vault Name     |
 | ---                    | ---                | ---                | ---                   | ---                                  | ---                |
-| AZURE_FP_CLIENT_ID     | firstparty         | DEV                | aro-v4-fp-shared      | 1516efbc-0d48-4ade-a68e-a2872137fd79 | v4-eastus-svc      |
-| AZURE_ARM_CLIENT_ID    | arm                | DEV                | aro-v4-arm-shared     | 7c49e1a5-60ea-4353-9875-12bbcbf963b7 | v4-eastus-svc      |
-| AZURE_PORTAL_CLIENT_ID | portal-client      | DEV                | aro-v4-portal-shared  | f7912be2-16d3-4727-a6b7-4042ca854c98 | v4-eastus-svc      |
+| AZURE_FP_CLIENT_ID     | firstparty         | DEV                | aro-v4-fp-shared-dev      | 09698a54-6d82-4cc1-9f2c-1d8e81347a5e | v4-eastus-dev-svc      |
+| AZURE_ARM_CLIENT_ID    | arm                | DEV                | aro-v4-arm-shared-dev     | a4c8d763-7c9d-4b37-b312-ad15bfd7173b | v4-eastus-dev-svc      |
+| AZURE_PORTAL_CLIENT_ID | portal-client      | DEV                | aro-v4-portal-shared-dev  | dc1facc2-2d88-4cd7-8f50-a8c1900e0a02 | v4-eastus-dev-svc      |
 | AZURE_FP_CLIENT_ID     | firstparty         | INT                | aro-int-sp            | 71cfb175-ea3a-444e-8c03-b119b2752ce4 | aro-int-eastus-svc |
 
 
@@ -366,7 +366,7 @@ az ad app credential reset \
    --cert "$(base64 -w0 <secrets/portal-client.crt)" >/dev/null
 ```
 
-5. The RP makes API calls to kubernetes cluster via a proxy VMSS agent. For the agent to get the updated certificates, this vm needs to be redeployed. Proxy VM is currently deployed by the `deploy_env_dev` function in `deploy-shared-env.sh`. It makes use of `env-development.json`
+5. The RP makes API calls to kubernetes cluster via a proxy VMSS agent. For the agent to get the updated certificates, this vm needs to be deleted & redeployed. Proxy VM is currently deployed by the `deploy_env_dev` function in `deploy-shared-env.sh`. It makes use of `env-development.json`
 
 6. Run `[rharosecretsdev|e2earosecrets] make secrets-update` to upload it to your
 storage account so other people on your team can access it via `make secrets`
