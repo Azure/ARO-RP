@@ -33,6 +33,10 @@ jobs:
       export CI=true
       . ./hack/e2e/run-rp-and-e2e.sh
 
+      # HACK: we don't currently trap an exit signal to kill the VPN and other things
+      # properly which can result in a stale openvpn process running, causing connection
+      # issues.  This should fix that, but should be rethought.
+      sudo pkill openvpn
       run_vpn
       deploy_e2e_db
 
