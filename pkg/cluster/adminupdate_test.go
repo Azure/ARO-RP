@@ -206,6 +206,48 @@ func TestAdminUpdateSteps(t *testing.T) {
 				"[Action renewMDSDCertificate-fm]",
 			},
 		},
+		{
+			name: "adminUpdate() does not adopt Hive-created clusters",
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
+				doc := baseClusterDoc()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskEverything
+				doc.OpenShiftCluster.Properties.HiveProfile.Namespace = "some_namespace"
+				doc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive = true
+				return doc, true
+			},
+			shouldRunSteps: []string{
+				"[Action initializeKubernetesClients-fm]",
+				"[Action ensureBillingRecord-fm]",
+				"[Action ensureDefaults-fm]",
+				"[Action fixupClusterSPObjectID-fm]",
+				"[Action fixInfraID-fm]",
+				"[AuthorizationRefreshingAction [Action ensureResourceGroup-fm]]",
+				"[Action createOrUpdateDenyAssignment-fm]",
+				"[AuthorizationRefreshingAction [Action enableServiceEndpoints-fm]]",
+				"[Action populateRegistryStorageAccountName-fm]",
+				"[Action migrateStorageAccounts-fm]",
+				"[Action fixSSH-fm]",
+				"[Action populateDatabaseIntIP-fm]",
+				"[Action startVMs-fm]",
+				"[Condition apiServersReady-fm, timeout 30m0s]",
+				"[Action fixSREKubeconfig-fm]",
+				"[Action fixUserAdminKubeconfig-fm]",
+				"[Action createOrUpdateRouterIPFromCluster-fm]",
+				"[Action fixMCSCert-fm]",
+				"[Action fixMCSUserData-fm]",
+				"[Action ensureGatewayUpgrade-fm]",
+				"[Action configureAPIServerCertificate-fm]",
+				"[Action configureIngressCertificate-fm]",
+				"[Action populateRegistryStorageAccountName-fm]",
+				"[Action ensureMTUSize-fm]",
+				"[Action initializeOperatorDeployer-fm]",
+				"[Action ensureAROOperator-fm]",
+				"[Condition aroDeploymentReady-fm, timeout 20m0s]",
+				"[Condition ensureAROOperatorRunningDesiredVersion-fm, timeout 5m0s]",
+				"[Action updateProvisionedBy-fm]",
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			doc, adoptViaHive := tt.fixture()

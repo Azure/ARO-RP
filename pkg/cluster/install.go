@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/installer"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
@@ -130,7 +131,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	}
 
 	// Hive cluster adoption and reconciliation
-	if isEverything && m.adoptViaHive {
+	if isEverything && m.adoptViaHive && !m.clusterWasCreatedByHive() {
 		toRun = append(toRun,
 			steps.Action(m.hiveCreateNamespace),
 			steps.Action(m.hiveEnsureResources),
@@ -148,6 +149,14 @@ func (m *manager) adminUpdate() []steps.Step {
 	}
 
 	return toRun
+}
+
+func (m *manager) clusterWasCreatedByHive() bool {
+	if m.doc.OpenShiftCluster.Properties.HiveProfile.Namespace == "" {
+		return false
+	}
+
+	return m.doc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive
 }
 
 func (m *manager) Update(ctx context.Context) error {
@@ -193,6 +202,12 @@ func (m *manager) runIntegratedInstaller(ctx context.Context) error {
 }
 
 func (m *manager) runHiveInstaller(ctx context.Context) error {
+	var err error
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, setFieldCreatedByHive(true))
+	if err != nil {
+		return err
+	}
+
 	version, err := m.openShiftVersionFromVersion(ctx)
 	if err != nil {
 		return err
@@ -202,6 +217,13 @@ func (m *manager) runHiveInstaller(ctx context.Context) error {
 	// code since it's easier, but in the future, this data should be collected
 	// from Hive's outputs where needed.
 	return m.hiveClusterManager.Install(ctx, m.subscriptionDoc, m.doc, version)
+}
+
+func setFieldCreatedByHive(createdByHive bool) database.OpenShiftClusterDocumentMutator {
+	return func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive = createdByHive
+		return nil
+	}
 }
 
 func (m *manager) bootstrap() []steps.Step {

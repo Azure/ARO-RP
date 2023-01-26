@@ -25,6 +25,7 @@ import (
 )
 
 const (
+	createdByHiveLabelKey = "aro-created-by-Hive"
 	envSecretsName        = "aro-env-secret"
 	pullsecretSecretName  = "aro-pullsecret"
 	installConfigName     = "aro-installconfig"
@@ -182,6 +183,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 			Labels: map[string]string{
 				"hive.openshift.io/cluster-platform": "azure",
 				"hive.openshift.io/cluster-region":   doc.OpenShiftCluster.Location,
+				createdByHiveLabelKey:                "true",
 			},
 			Annotations: map[string]string{
 				"hive.openshift.io/try-install-once":                "true",
