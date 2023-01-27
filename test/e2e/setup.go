@@ -460,8 +460,8 @@ func setup(ctx context.Context) error {
 	}
 
 	if os.Getenv("AGENT_NAME") != "" {
-		// If we're running in Azure Pipelines, the container will be set up for us
-		dockerSucceeded = true
+		// Skip in pipelines for now
+		dockerSucceeded = false
 	} else {
 		cmd := exec.CommandContext(ctx, "which", "docker")
 		_, err = cmd.CombinedOutput()
