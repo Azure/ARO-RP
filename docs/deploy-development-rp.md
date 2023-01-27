@@ -137,6 +137,18 @@
      journalctl _COMM=aro -o json --since "15 min ago" -f | jq -r 'select (.COMPONENT != null and (.COMPONENT | contains("access"))|not) | .MESSAGE'
      ```
 
+## Connect ARO-RP with a Hive development cluster
+The env variables names defined in pkg/util/liveconfig/manager.go control the communication of the ARO-RP with Hive.
+- If you want to use ARO-RP + Hive, set *HIVE_KUBE_CONFIG_PATH* to the path of the kubeconfig of the AKS Dev cluster. [Info](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-openshift-cluster) about creating that kubeconfig (Step *Get an admin kubeconfig:*).
+- If you want to create clusters using the local ARO-RP + Hive instead of doing the standard cluster creation process (which doesn't use Hive), set *ARO_INSTALL_VIA_HIVE* to *true*.
+- If you want to enable the Hive adoption feature (which is performed during adminUpdate()), set *ARO_ADOPT_BY_HIVE* to *true*.
+
+After setting the above environment variables (using *export* direclty in the terminal or including them in the *env* file), connect to the [VPN](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-aks-cluster) (*Connect to the VPN* section).
+
+Then proceed to [run](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#run-the-rp-and-create-a-cluster) the ARO-RP as usual. 
+
+After that, when you [create](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#run-the-rp-and-create-a-cluster) a cluster, you will be using Hive behind the scenes. You can check the created Hive objects following [Debugging OpenShift Cluster](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-openshift-cluster) and using the *oc* command.
+
 ## Make Admin-Action API call(s) to a running local-rp
 
   ```bash
