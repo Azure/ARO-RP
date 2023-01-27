@@ -17,7 +17,7 @@ from msrestazure.tools import parse_resource_id
 from msrestazure.azure_exceptions import CloudError
 from azext_aro._validators import validate_vnet, validate_cidr
 from azext_aro._rbac import has_role_assignment_on_resource
-from humanfriendly.terminal.spinners import AutomaticSpinner
+import azext_aro.custom
 
 
 logger = get_logger(__name__)
@@ -281,23 +281,6 @@ def dyn_validate_resource_permissions(service_principle_ids, resources):
         return errors
     return _validate_resource_permissions
 
-def dyn_validate_visibility(key, visibility):
-    def _validate_visibility(cmd,
-                             namespace):
-        errors = []
-
-        hook = cmd.cli_ctx.get_progress_controller()
-        hook.add(message=f"Validating {key} Visibility")
-
-        if visibility is not None and visibility is not "Public" and visibility is not "Private":
-            errors.append([f"{key} Visibility",
-                      visibility,
-                      f"\"{visibility}\" is not valid, options are \"Public\" or \"Private\""])
-
-        hook.end()
-        return errors
-    return _validate_visibility
-
 def dyn_validate_version():
     def _validate_version(cmd,
                           namespace):  # pylint: disable=unused-argument
@@ -306,8 +289,10 @@ def dyn_validate_version():
         hook = cmd.cli_ctx.get_progress_controller()
         hook.add(message="Validating OpenShift Version")
 
+        versions = azext_aro.custom.aro_get_versions(namespace.client, namespace.location)
+
         found = False
-        for version in namespace.versions:
+        for version in versions:
             if version == namespace.version:
                 found = True
                 break
@@ -315,7 +300,7 @@ def dyn_validate_version():
         if not found:
             errors.append(["OpenShift Version",
                        namespace.version,
-                       f"{namespace.version} is not a valid version, valid versions are {namespace.versions}"])
+                       f"{namespace.version} is not a valid version, valid versions are {versions}"])
 
         hook.end()
         return errors
@@ -329,9 +314,7 @@ def validate_cluster_create(cmd,  # pylint: disable=unused-argument
                             pod_cidr,  # pylint: disable=unused-argument
                             service_cidr,  # pylint: disable=unused-argument
                             version,  # pylint: disable=unused-argument
-                            versions,  # pylint: disable=unused-argument
-                            apiserver_visibility,
-                            ingress_visibility,
+                            locations,  # pylint: disable=unused-argument
                             resources,
                             service_principle_ids):
     error_object = []
@@ -341,8 +324,6 @@ def validate_cluster_create(cmd,  # pylint: disable=unused-argument
     error_object.append(dyn_validate_subnet("worker_subnet"))
     error_object.append(dyn_validate_cidr_ranges())
     error_object.append(dyn_validate_resource_permissions(service_principle_ids, resources))
-    error_object.append(dyn_validate_visibility("API Server", apiserver_visibility))
-    error_object.append(dyn_validate_visibility("Ingress", ingress_visibility))
     error_object.append(dyn_validate_version())
 
     return error_object

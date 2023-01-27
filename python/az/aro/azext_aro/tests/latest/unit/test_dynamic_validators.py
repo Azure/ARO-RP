@@ -3,7 +3,7 @@
 
 from unittest.mock import Mock, patch
 from azext_aro._dynamic_validators import (
-    dyn_validate_cidr_ranges, dyn_validate_subnet, dyn_validate_vnet, dyn_validate_resource_permissions, dyn_validate_visibility, dyn_validate_version
+    dyn_validate_cidr_ranges, dyn_validate_subnet, dyn_validate_vnet, dyn_validate_resource_permissions, dyn_validate_version
 )
 
 from azure.mgmt.authorization.models import Permission
@@ -409,81 +409,38 @@ def test_validate_resources(
             raise Exception(f"Error returned was not expected\n Expected : {expected_missing_perms}\n Actual   : {missing_perms[0][2]}")
 
 
-test_validate_visibility_data = [
-    (
-        "should not return error when visibility is Public",
-        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
-        Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
-        "API Server",
-        "Public",
-        None
-    ),
-    (
-        "should not return error when visibility is Private",
-        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
-        Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
-        "API Server",
-        "Private",
-        None
-    ),
-    (
-        "should return error when visibility is random string",
-        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
-        Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
-        "API Server",
-        "Nothing",
-        "\"Nothing\" is not valid, options are \"Public\" or \"Private\""
-    )
-]
-
-
-@pytest.mark.parametrize(
-    "test_description, cmd_mock, namespace_mock, name, value, expected_errors",
-    test_validate_visibility_data,
-    ids=[i[0] for i in test_validate_visibility_data]
-)
-def test_validate_visibility(
-    # Test cases parameters:
-    test_description, cmd_mock, namespace_mock, name, value, expected_errors
-):
-
-    validate_visibility_fn = dyn_validate_visibility(name, value)
-    if expected_errors is None:
-        errors = validate_visibility_fn(cmd_mock, namespace_mock)
-
-        if (len(errors) > 0):
-            raise Exception(f"Unexpected Error: {errors[0][2]}")
-    else:
-        errors = validate_visibility_fn(cmd_mock, namespace_mock)
-
-        if (errors[0][2] != expected_errors):
-            raise Exception(f"Error returned was not expected\n Expected : {expected_errors}\n Actual   : {errors[0][2]}")
-
 test_validate_version_data = [
     (
         "should not return error when visibility is Public",
         Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
-        Mock(version="4.9.10", versions=["4.9.10"]),
+        Mock(version="4.9.10"),
+        ["4.9.10"],
         None
     ),
     (
         "should return error when visibility is random string",
         Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
-        Mock(version="72.2343.21212", versions=["4.9.10"]),
+        Mock(version="72.2343.21212"),
+        ["4.9.10"],
         "72.2343.21212 is not a valid version, valid versions are ['4.9.10']"
     )
 ]
 
 
 @pytest.mark.parametrize(
-    "test_description, cmd_mock, namespace_mock, expected_errors",
+    "test_description, cmd_mock, namespace_mock, get_versions_mock_return_value, expected_errors",
     test_validate_version_data,
     ids=[i[0] for i in test_validate_version_data]
 )
+@ patch('azext_aro.custom.aro_get_versions')
 def test_validate_version(
+
+    # Mocked Functions
+    aro_get_versions_mock,
     # Test cases parameters:
-    test_description, cmd_mock, namespace_mock, expected_errors
+    test_description, cmd_mock, namespace_mock, get_versions_mock_return_value, expected_errors
 ):
+    aro_get_versions_mock.return_value = get_versions_mock_return_value
 
     validate_version_fn = dyn_validate_version()
     if expected_errors is None:
