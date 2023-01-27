@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
+	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -59,27 +60,6 @@ func (m *manager) deleteNic(ctx context.Context, nicName string) error {
 		}
 	}
 	return m.interfaces.DeleteAndWait(ctx, resourceGroup, *nic.Name)
-}
-
-func (m *manager) deletePrivateDNSVirtualNetworkLinks(ctx context.Context, resourceID string) error {
-	r, err := azure.ParseResourceID(resourceID)
-	if err != nil {
-		return err
-	}
-
-	virtualNetworkLinks, err := m.virtualNetworkLinks.List(ctx, r.ResourceGroup, r.ResourceName, nil)
-	if err != nil {
-		return err
-	}
-
-	for _, virtualNetworkLink := range virtualNetworkLinks {
-		err = m.virtualNetworkLinks.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, *virtualNetworkLink.Name, "")
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string) error {
@@ -216,7 +196,7 @@ func (m *manager) deleteResources(ctx context.Context) error {
 
 			case "microsoft.network/privatednszones":
 				m.log.Printf("deleting private DNS nested resources of %s", *resource.ID)
-				err = m.deletePrivateDNSVirtualNetworkLinks(ctx, *resource.ID)
+				err = utilnet.DeletePrivateDNSVirtualNetworkLinks(ctx, m.virtualNetworkLinks, *resource.ID)
 				if err != nil {
 					return err
 				}

@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
+	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -32,7 +33,7 @@ func (m *manager) removePrivateDNSZone(ctx context.Context) error {
 
 	if len(zones) == 0 {
 		// fix up any clusters that we already upgraded
-		if err := m.updateDNSs(ctx); err != nil {
+		if err := utilnet.UpdateDNSs(ctx, m.configcli.ConfigV1().DNSes(), m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID); err != nil {
 			m.log.Print(err)
 		}
 		return nil
@@ -42,20 +43,16 @@ func (m *manager) removePrivateDNSZone(ctx context.Context) error {
 		return nil
 	}
 
-	b, err := clusterVersionIsAtLeast4_4(ctx, m.configcli, m.log)
-	if err != nil {
-		return err
-	}
-	if !b {
+	if !version.ClusterVersionIsGreaterThan4_3(ctx, m.configcli, m.log) {
 		return nil
 	}
 
-	if err = m.updateDNSs(ctx); err != nil {
+	if err = utilnet.UpdateDNSs(ctx, m.configcli.ConfigV1().DNSes(), m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID); err != nil {
 		m.log.Print(err)
 		return nil
 	}
 
-	m.removeZones(ctx, zones, resourceGroup)
+	utilnet.RemoveZones(ctx, m.log, m.virtualNetworkLinks, m.privateZones, zones, resourceGroup)
 	return nil
 }
 
@@ -87,7 +84,7 @@ func (m *manager) clusterHasSameNumberOfNodesAndMachineConfigPools(ctx context.C
 
 func validateMachineConfigPoolsAndGetCounter(machineConfigPools []mcv1.MachineConfigPool, logEntry *logrus.Entry) (nMachineConfigPools int, errOccurred bool) {
 	for _, mcp := range machineConfigPools {
-		if !mcpContainsARODNSConfig(mcp) {
+		if !utilnet.McpContainsARODNSConfig(mcp) {
 			logEntry.Printf("ARO DNS config not found in MCP %s", mcp.Name)
 			return 0, true
 		}
@@ -161,7 +158,7 @@ func clusterVersionIsAtLeast4_4(ctx context.Context, configcli configclient.Inte
 
 func (m *manager) removeZones(ctx context.Context, privateZones []mgmtprivatedns.PrivateZone, resourceGroup string) {
 	for _, privateZone := range privateZones {
-		if err := m.deletePrivateDNSVirtualNetworkLinks(ctx, *privateZone.ID); err != nil {
+		if err := utilnet.DeletePrivateDNSVirtualNetworkLinks(ctx, m.virtualNetworkLinks, *privateZone.ID); err != nil {
 			m.log.Print(err)
 			return
 		}
