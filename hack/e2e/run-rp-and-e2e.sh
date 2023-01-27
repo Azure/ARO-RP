@@ -3,7 +3,6 @@
 
 if [[ $CI ]] ; then
     set -o pipefail
-    set -x
 
     az account set -s $AZURE_SUBSCRIPTION_ID
     SECRET_SA_ACCOUNT_NAME=e2earosecrets make secrets
