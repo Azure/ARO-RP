@@ -20,6 +20,8 @@ import (
 
 // Tests the kubeconfig ability to get and manipulate the cluster
 var _ = Describe("AKS cluster present", Pending, func() {
+	BeforeEach(skipIfNotInDevelopmentEnv)
+
 	ctx := context.Background()
 
 	// TODO: remove this when all regions have the AKS
