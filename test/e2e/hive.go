@@ -32,6 +32,8 @@ var (
 )
 
 var _ = Describe("Hive-managed ARO cluster", func() {
+	BeforeEach(skipIfNotInDevelopmentEnv)
+
 	var adminAPICluster *admin.OpenShiftCluster
 
 	BeforeEach(func(ctx context.Context) {
