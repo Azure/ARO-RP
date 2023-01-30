@@ -60,6 +60,9 @@ Install the `libgpgme-dev` package.
 
     # Install gpgme
     brew install gpgme
+
+    # Install diffutils to avoid errors during test runs
+    brew install diffutils
     ```
 
 1. Modify your `~/.zshrc` (or `~/.bashrc` for Bash): this prepends `PATH` with GNU Utils paths;
