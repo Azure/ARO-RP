@@ -21,12 +21,12 @@ func TestValidate(t *testing.T) {
 
 	router.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 
 	router.
 		Path("/providers/{resourceProviderNamespace}/operations").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 
 	router.

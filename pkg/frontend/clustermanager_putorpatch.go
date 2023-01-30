@@ -28,7 +28,9 @@ func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, 
 		err    error
 	)
 
-	err = f.validateOcmResourceType(vars)
+	apiVersion, ocmResourceType := r.URL.Query().Get(api.APIVersionKey), vars["ocmResourceType"]
+
+	err = f.validateOcmResourceType(apiVersion, ocmResourceType)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", err.Error())
 		return
@@ -38,13 +40,13 @@ func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, 
 		var err error
 		switch vars["ocmResourceType"] {
 		case "syncset":
-			b, err = f._putOrPatchSyncSet(ctx, log, r, &header, f.apis[vars["api-version"]].SyncSetConverter, f.apis[vars["api-version"]].ClusterManagerStaticValidator)
+			b, err = f._putOrPatchSyncSet(ctx, log, r, &header, f.apis[apiVersion].SyncSetConverter, f.apis[apiVersion].ClusterManagerStaticValidator)
 		case "machinepool":
-			b, err = f._putOrPatchMachinePool(ctx, log, r, &header, f.apis[vars["api-version"]].MachinePoolConverter, f.apis[vars["api-version"]].ClusterManagerStaticValidator)
+			b, err = f._putOrPatchMachinePool(ctx, log, r, &header, f.apis[apiVersion].MachinePoolConverter, f.apis[apiVersion].ClusterManagerStaticValidator)
 		case "syncidentityprovider":
-			b, err = f._putOrPatchSyncIdentityProvider(ctx, log, r, &header, f.apis[vars["api-version"]].SyncIdentityProviderConverter, f.apis[vars["api-version"]].ClusterManagerStaticValidator)
+			b, err = f._putOrPatchSyncIdentityProvider(ctx, log, r, &header, f.apis[apiVersion].SyncIdentityProviderConverter, f.apis[apiVersion].ClusterManagerStaticValidator)
 		case "secret":
-			b, err = f._putOrPatchSecret(ctx, log, r, &header, f.apis[vars["api-version"]].SecretConverter, f.apis[vars["api-version"]].ClusterManagerStaticValidator)
+			b, err = f._putOrPatchSecret(ctx, log, r, &header, f.apis[apiVersion].SecretConverter, f.apis[apiVersion].ClusterManagerStaticValidator)
 		}
 		return err
 	})

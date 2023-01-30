@@ -21,7 +21,9 @@ func (f *frontend) deleteClusterManagerConfiguration(w http.ResponseWriter, r *h
 	vars := mux.Vars(r)
 	var err error
 
-	err = f.validateOcmResourceType(vars)
+	apiVersion, ocmResourceType := r.URL.Query().Get(api.APIVersionKey), vars["ocmResourceType"]
+
+	err = f.validateOcmResourceType(apiVersion, ocmResourceType)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", err.Error())
 		return

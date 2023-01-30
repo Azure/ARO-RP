@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gorilla/mux"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -18,10 +16,9 @@ import (
 func Authenticated(env env.Interface) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			vars := mux.Vars(r)
-
+			apiVersion := r.URL.Query().Get(api.APIVersionKey)
 			var clientAuthorizer clientauthorizer.ClientAuthorizer
-			if vars["api-version"] == admin.APIVersion || strings.HasPrefix(r.URL.Path, "/admin") {
+			if apiVersion == admin.APIVersion || strings.HasPrefix(r.URL.Path, "/admin") {
 				clientAuthorizer = env.AdminClientAuthorizer()
 			} else {
 				clientAuthorizer = env.ArmClientAuthorizer()

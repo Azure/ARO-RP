@@ -27,7 +27,6 @@ import (
 func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	vars := mux.Vars(r)
 
 	var header http.Header
 	var b []byte
@@ -38,9 +37,10 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
 	referer := r.Header.Get("Referer")
 
+	apiVersion := r.URL.Query().Get(api.APIVersionKey)
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchOpenShiftCluster(ctx, log, body, correlationData, systemData, r.URL.Path, originalPath, r.Method, referer, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter, f.apis[vars["api-version"]].OpenShiftClusterStaticValidator, mux.Vars(r))
+		b, err = f._putOrPatchOpenShiftCluster(ctx, log, body, correlationData, systemData, r.URL.Path, originalPath, r.Method, referer, &header, f.apis[apiVersion].OpenShiftClusterConverter, f.apis[apiVersion].OpenShiftClusterStaticValidator, mux.Vars(r), apiVersion)
 		return err
 	})
 
@@ -48,7 +48,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	reply(log, w, header, b, err)
 }
 
-func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, body []byte, correlationData *api.CorrelationData, systemData *api.SystemData, path, originalPath, method, referer string, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator, vars map[string]string) ([]byte, error) {
+func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, body []byte, correlationData *api.CorrelationData, systemData *api.SystemData, path, originalPath, method, referer string, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator, vars map[string]string, apiVersion string) ([]byte, error) {
 	subscription, err := f.validateSubscriptionState(ctx, path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, err
@@ -196,7 +196,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 
 		// TODO: Get rid of the special case
-		if vars["api-version"] == admin.APIVersion {
+		if apiVersion == admin.APIVersion {
 			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
 			doc.OpenShiftCluster.Properties.LastAdminUpdateError = ""
 		} else {
