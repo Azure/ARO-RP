@@ -55,7 +55,7 @@ func TestServer(t *testing.T) {
 			wantStatusCode: http.StatusOK,
 		},
 		{
-			name: "GET /token returns 405",
+			name: "GET unauthorized /token returns 403",
 			req: &http.Request{
 				Method: http.MethodGet,
 				URL: &url.URL{
@@ -64,7 +64,7 @@ func TestServer(t *testing.T) {
 					Path:   "/token",
 				},
 			},
-			wantStatusCode: http.StatusMethodNotAllowed,
+			wantStatusCode: http.StatusForbidden,
 		},
 		{
 			name: "POST /token?permission=good returns 403 (no auth)",
@@ -187,6 +187,31 @@ func TestServer(t *testing.T) {
 				},
 			},
 			wantStatusCode: http.StatusInternalServerError,
+		},
+		{
+			name: "get /token?permission=perm returns 405",
+			permissionClientFactory: func(controller *gomock.Controller) func(userid string) cosmosdb.PermissionClient {
+				return func(userid string) cosmosdb.PermissionClient {
+					permc := mock_cosmosdb.NewMockPermissionClient(controller)
+					permc.EXPECT().Get(gomock.Any(), "perm").Return(&cosmosdb.Permission{
+						Token: "token",
+					}, nil)
+					return permc
+				}
+			},
+			req: &http.Request{
+				Method: http.MethodGet,
+				URL: &url.URL{
+					Scheme:   "http",
+					Host:     "localhost",
+					Path:     "/token",
+					RawQuery: "permission=perm",
+				},
+				Header: http.Header{
+					"Authorization": []string{`Bearer {"sub": "00000000-0000-0000-0000-000000000000"}`},
+				},
+			},
+			wantStatusCode: http.StatusMethodNotAllowed,
 		},
 		{
 			name: "POST /token?permission=perm returns 200",

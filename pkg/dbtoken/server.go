@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -96,23 +95,31 @@ func NewServer(
 	}, nil
 }
 
+var healthProbe http.Handler = http.HandlerFunc(healthCheck)
+
+func healthCheck(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.NotFound(w, r)
+		return
+	}
+	// empty 200
+}
+
 func (s *server) Run(ctx context.Context) error {
 	go heartbeat.EmitHeartbeat(s.log, s.m, "dbtoken.heartbeat", nil, func() bool { return true })
 
-	r := mux.NewRouter()
-	r.Use(middleware.Panic(s.log))
+	logHandler := Log(s.accessLog)
+	panicMiddleware := middleware.Panic(s.log)
 
-	unauthenticatedRouter := r.NewRoute().Subrouter()
-	unauthenticatedRouter.Use(Log(s.accessLog))
-	s.unauthenticatedRoutes(unauthenticatedRouter)
+	muxRouter := http.NewServeMux()
 
-	authenticatedRouter := r.NewRoute().Subrouter()
-	authenticatedRouter.Use(s.authenticate)
-	authenticatedRouter.Use(Log(s.accessLog))
-	s.authenticatedRoutes(authenticatedRouter)
+	muxRouter.Handle("/healthz/ready", panicMiddleware(logHandler(healthProbe)))
+
+	tokenRefresh := panicMiddleware(s.authenticate(logHandler(http.HandlerFunc(s.token))))
+	muxRouter.Handle("/token", tokenRefresh)
 
 	srv := &http.Server{
-		Handler:     r,
+		Handler:     muxRouter,
 		ReadTimeout: 10 * time.Second,
 		IdleTimeout: 2 * time.Minute,
 		ErrorLog:    log.New(s.log.Writer(), "", 0),
@@ -120,14 +127,6 @@ func (s *server) Run(ctx context.Context) error {
 	}
 
 	return srv.Serve(s.l)
-}
-
-func (s *server) unauthenticatedRoutes(r *mux.Router) {
-	r.NewRoute().Methods(http.MethodGet).Path("/healthz/ready").HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-}
-
-func (s *server) authenticatedRoutes(r *mux.Router) {
-	r.NewRoute().Methods(http.MethodPost).Path("/token").HandlerFunc(s.token)
 }
 
 func (s *server) authenticate(h http.Handler) http.Handler {
@@ -158,6 +157,10 @@ func (s *server) authenticate(h http.Handler) http.Handler {
 }
 
 func (s *server) token(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	ctx := r.Context()
 
 	permission := r.URL.Query().Get("permission")
