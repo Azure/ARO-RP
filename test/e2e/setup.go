@@ -179,6 +179,10 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		hubPort  = 4444
 		hostPort = 8444
 	)
+	hubAddress := "localhost"
+	if os.Getenv("AGENT_NAME") != "" {
+		hubAddress = "selenium"
+	}
 
 	os.Setenv("SE_SESSION_REQUEST_TIMEOUT", "9000")
 
@@ -188,13 +192,13 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 	}
 	wd := selenium.WebDriver(nil)
 
-	_, err := url.ParseRequestURI(fmt.Sprintf("https://localhost:%d", hubPort))
+	_, err := url.ParseRequestURI(fmt.Sprintf("https://%s:%d", hubAddress, hubPort))
 	if err != nil {
 		panic(err)
 	}
 
 	for i := 0; i < 10; i++ {
-		wd, err = selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", hubPort))
+		wd, err = selenium.NewRemote(caps, fmt.Sprintf("http://%s:%d/wd/hub", hubAddress, hubPort))
 		if wd != nil {
 			err = nil
 			break
@@ -218,7 +222,19 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		log.Infof("Could not get to %s. With error : %s", host, err.Error())
 	}
 
-	cmd := exec.Command("go", "run", "./hack/portalauth", "-username", "test", "-groups", "$AZURE_PORTAL_ELEVATED_GROUP_IDS", "2>", "/dev/null")
+	var portalAuthCmd string
+	var portalAuthArgs = make([]string, 0)
+	if os.Getenv("CI") != "" {
+		// In CI we have a prebuilt portalauth binary
+		portalAuthCmd = "./portalauth"
+	} else {
+		portalAuthCmd = "go"
+		portalAuthArgs = []string{"run", "./hack/portalauth"}
+	}
+
+	portalAuthArgs = append(portalAuthArgs, "-username", "test", "-groups", "$AZURE_PORTAL_ELEVATED_GROUP_IDS")
+
+	cmd := exec.Command(portalAuthCmd, portalAuthArgs...)
 	output, err := cmd.Output()
 	if err != nil {
 		log.Fatalf("Error occurred creating session cookie\n Output: %s\n Error: %s\n", output, err)
@@ -443,14 +459,19 @@ func setup(ctx context.Context) error {
 		return err
 	}
 
-	cmd := exec.CommandContext(ctx, "which", "docker")
-	_, err = cmd.CombinedOutput()
-	if err == nil {
-		dockerSucceeded = true
-	}
+	if os.Getenv("AGENT_NAME") != "" {
+		// Skip in pipelines for now
+		dockerSucceeded = false
+	} else {
+		cmd := exec.CommandContext(ctx, "which", "docker")
+		_, err = cmd.CombinedOutput()
+		if err == nil {
+			dockerSucceeded = true
+		}
 
-	if dockerSucceeded {
-		setupSelenium(ctx)
+		if dockerSucceeded {
+			setupSelenium(ctx)
+		}
 	}
 
 	return nil
@@ -487,7 +508,8 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
 
-	if dockerSucceeded {
+	// Azure Pipelines will tear down the image if needed
+	if dockerSucceeded && os.Getenv("AGENT_NAME") == "" {
 		if err := tearDownSelenium(context.Background()); err != nil {
 			log.Printf(err.Error())
 		}

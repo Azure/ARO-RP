@@ -6,6 +6,14 @@ resources:
   - pipeline: e2e
     source: CI
     trigger: true
+  containers:
+  - container: container
+    image: registry.access.redhat.com/ubi8/toolbox:8.7
+    options: --user=0 --cap-add=NET_ADMIN --device /dev/net/tun --name vpn
+  - container: selenium
+    image: docker.io/selenium/standalone-edge:latest
+    options: --shm-size=2g
+
 
 # Azure DevOps Pipeline running e2e tests
 variables:
@@ -16,10 +24,18 @@ jobs:
 - job: E2E
   timeoutInMinutes: 180
   pool:
-    name: ARO-CI
-    demands: go-1.17
+    name: 1es-aro-ci-pool
+  #services:
+  #  selenium: selenium
   steps:
   - template: ./templates/template-checkout.yml
+
+  - script: |
+      set -xe
+      sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+      sudo dnf install -y openvpn make
+    displayName: Setup (Container)
+    target: container
 
   - template: ./templates/template-az-cli-login.yml
     parameters:
@@ -27,29 +43,37 @@ jobs:
   - template: ./templates/template-push-images-to-acr.yml
     parameters:
       rpImageACR: $(RP_IMAGE_ACR)
-      buildCommand: publish-image-aro
+  - script: |
+      make extract-aro-docker
+    displayName: Extract ARO binaries from build
+
+  - script: |
+      az account set -s $AZURE_SUBSCRIPTION_ID
+      SECRET_SA_ACCOUNT_NAME=e2earosecrets make secrets
+      . secrets/env
+
+      export CI=true
+      . ./hack/e2e/run-rp-and-e2e.sh
+      deploy_e2e_db
+    displayName: Setup (Azure)
 
   - script: |
       export CI=true
+      . secrets/env
       . ./hack/e2e/run-rp-and-e2e.sh
 
-      # HACK: we don't currently trap an exit signal to kill the VPN and other things
-      # properly which can result in a stale openvpn process running, causing connection
-      # issues.  This should fix that, but should be rethought.
-      sudo pkill openvpn
       run_vpn
-      deploy_e2e_db
-
-      run_portal
-      validate_portal_running
+      # run_portal
+      # validate_portal_running
 
       run_rp
       validate_rp_running
 
       register_sub
 
-      make test-e2e
+      make test-e2e -o e2e.test
     displayName: Execute Tests
+    target: container
 
   - script: |
       export CI=true
@@ -64,21 +88,28 @@ jobs:
       tar cf must-gather.tar.gz must-gather.local.*
     displayName: Collect must-gather
     condition: failed()
+    target: container
   - publish: must-gather.tar.gz
     artifact: must-gather
     displayName: Append must-gather to Pipeline
     condition: failed()
+    target: container
 
   - script: |
       export CI=true
       . ./hack/e2e/run-rp-and-e2e.sh
 
       delete_e2e_cluster
-      clean_e2e_db
       kill_rp
       kill_vpn
     displayName: Cleanup
     condition: always()
+    target: container
+  - script: |
+      export CI=true
+      . ./hack/e2e/run-rp-and-e2e.sh
+      clean_e2e_db
+    displayName: Cleanup (Azure)
   - template: ./templates/template-az-cli-logout.yml
 
   - task: PublishTestResults@2
