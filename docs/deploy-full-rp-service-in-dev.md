@@ -63,7 +63,7 @@
         ```bash
         make aks.kubeconfig
         ./hack/hive-generate-config.sh
-        ./hack/hive-dev-install.sh
+        KUBECONFIG=$(pwd)/aks.kubeconfig ./hack/hive-dev-install.sh
         ```
 
 1. Mirror the OpenShift images to your new ACR
