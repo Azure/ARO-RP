@@ -316,30 +316,37 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	liveCfg, err := _env.NewLiveConfigManager(ctx)
-	if err != nil {
-		return nil, err
-	}
+	var hiveRestConfig *rest.Config
+	var hiveClientSet *hiveclient.Clientset
+	var hiveAKS *kubernetes.Clientset
+	var hiveCM hive.ClusterManager
 
-	hiveShard := 1
-	hiveRestConfig, err := liveCfg.HiveRestConfig(ctx, hiveShard)
-	if err != nil {
-		return nil, err
-	}
+	if !_env.IsLocalDevelopmentMode() {
+		liveCfg, err := _env.NewLiveConfigManager(ctx)
+		if err != nil {
+			return nil, err
+		}
 
-	hiveClientSet, err := hiveclient.NewForConfig(hiveRestConfig)
-	if err != nil {
-		return nil, err
-	}
+		hiveShard := 1
+		hiveRestConfig, err = liveCfg.HiveRestConfig(ctx, hiveShard)
+		if err != nil {
+			return nil, err
+		}
 
-	hiveAKS, err := kubernetes.NewForConfig(hiveRestConfig)
-	if err != nil {
-		return nil, err
-	}
+		hiveClientSet, err = hiveclient.NewForConfig(hiveRestConfig)
+		if err != nil {
+			return nil, err
+		}
 
-	hiveCM, err := hive.NewFromConfig(log, _env, hiveRestConfig)
-	if err != nil {
-		return nil, err
+		hiveAKS, err = kubernetes.NewForConfig(hiveRestConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		hiveCM, err = hive.NewFromConfig(log, _env, hiveRestConfig)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &clientSet{
