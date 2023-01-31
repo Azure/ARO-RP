@@ -1,0 +1,18 @@
+apiVersion: machine.openshift.io/v1beta1
+kind: Machine
+metadata:
+  generation: 3
+  labels:
+    machine.openshift.io/cluster-api-cluster: aro-testing-xxxxx
+    machine.openshift.io/cluster-api-machineset: aro-testing-xxxxx-eastus1
+    machine.openshift.io/instance-type: Standard_D4s_v3
+    machine.openshift.io/region: eastus
+    machine.openshift.io/zone: "1"
+  name: aro-testing-xxxxx-eastus1-xxxx
+  namespace: openshift-machine-api
+  ownerReferences:
+  - apiVersion: machine.openshift.io/v1beta1
+    blockOwnerDeletion: true
+    controller: true
+    kind: MachineSet
+    name: aro-testing-xxxxx-eastus1

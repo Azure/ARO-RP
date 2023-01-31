@@ -3,6 +3,7 @@ kind: AROPrivilegedNamespace
 metadata:
   name: aro-privileged-namespace-deny
 spec:
+  enforcementAction: {{.Enforcement}}
   match:
     kinds:
       - apiGroups: [""]

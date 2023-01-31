@@ -174,7 +174,7 @@ metadata:
 tests:
 - name: privileged-namespace
   template: ../../gktemplates/aro-deny-privileged-namespace.yaml
-  constraint: ../../gkconstraints/aro-priv-ns-operations.yaml
+  constraint: ../../gkconstraints-test/aro-priv-ns-operations.yaml
   cases:
   - name: ns-allowed-pod
     object: gator-test/ns_allowed_pod.yaml
@@ -191,6 +191,7 @@ tests:
     - violations: yes
       message: User test-user not allowed to operate in namespace openshift-config
 ```
+gkconstraints-test here stores the target yaml files after expanding "{{.Enforcement}}" symbol.
 
 gator tests ConstraintTemplate and Constraint together, items under cases keyword are test cases indicator, everyone pointing to a yaml file in gator-test, which provides test input for one scenario, example:
 
@@ -218,11 +219,12 @@ the assertions section is the expected result
 
 gator test is done via cmd:
 
-```sh
-gator verify . [-v] #-v for verbose
-```
-
 test.sh executes both opa test and gator verify
 ```sh
 ARO-RP/pkg/operator/controllers/guardrails/policies$ ./scripts/test.sh
+```
+
+or below cmd after test.sh has been executed:
+```sh
+gator verify . [-v] #-v for verbose
 ```

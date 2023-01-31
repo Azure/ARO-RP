@@ -5,7 +5,7 @@ metadata:
 tests:
 - name: privileged-namespace
   template: ../../gktemplates/aro-deny-privileged-namespace.yaml
-  constraint: ../../gkconstraints/aro-priv-ns-operations.yaml
+  constraint: ../../gkconstraints-test/aro-priv-ns-operations.yaml
   cases:
   - name: ns-allowed-pod
     object: gator-test/ns_allowed_pod.yaml

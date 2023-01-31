@@ -1,0 +1,22 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: deny-labels
+tests:
+- name: machines-deny
+  template: ../../gktemplates/aro-deny-labels.yaml
+  constraint: ../../gkconstraints-test/aro-machines-deny.yaml
+  cases:
+  - name: master-machine-deny
+    object: gator-test/master-machine-deny.yaml
+    assertions:
+    - violations: yes
+      message: "Operation not allowed. Label <machine.openshift.io/cluster-api-machine-role: master> matches deny regex: <master>"
+  - name: worker-machine-allowed
+    object: gator-test/worker-machine-allowed.yaml
+    assertions:
+    - violations: no
+  - name: no-label-machine-allowed
+    object: gator-test/no-label-machine-allowed.yaml
+    assertions:
+    - violations: no

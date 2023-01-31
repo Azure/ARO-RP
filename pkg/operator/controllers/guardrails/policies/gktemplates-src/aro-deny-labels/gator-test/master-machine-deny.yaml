@@ -1,0 +1,15 @@
+apiVersion: machine.openshift.io/v1beta1
+kind: Machine
+metadata:
+  finalizers:
+  - machine.machine.openshift.io
+  generation: 2
+  labels:
+    machine.openshift.io/cluster-api-cluster: aro-testing-xxxxx
+    machine.openshift.io/cluster-api-machine-role: master
+    machine.openshift.io/cluster-api-machine-type: master
+    machine.openshift.io/instance-type: Standard_D8s_v3
+    machine.openshift.io/region: eastus
+    machine.openshift.io/zone: "1"
+  name: aro-testing-xxxxx-master-0
+  namespace: openshift-machine-api
