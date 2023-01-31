@@ -29,11 +29,42 @@
     make dev-config.yaml
     ```
 
+1. Run `make deploy`. This will fail on the first attempt to run due to AKS not being installed, so after the first failure, please skip to the next step to deploy the VPN Gateway and then deploy AKS.
+    > __NOTE:__ If the deployment fails with `InvalidResourceReference` due to the RP Network Security Groups not found, delete the "gateway-production-predeploy" deployment in the gateway resource group, and re-run `make deploy`.
 
-1. Run `make deploy`
-    > __NOTE:__ This will fail on the first attempt to run due to certificate and container mirroring requirements.
+    > __NOTE:__ If the deployment fails with `A vault with the same name already exists in deleted state`, then you will need to recover the deleted keyvaults from a previous deploy using: `az keyvault recover --name <KEYVAULT_NAME>` for each keyvault, and re-run.
 
-    > __NOTE:__ If the deployment fails with `InvalidResourceReference` due to the RP Network Security Groups not found, delete the gateway predeploy deployment, and re-run.
+1. Deploy a VPN Gateway
+    This is required in order to be able to connect to AKS from your local machine:
+    ```bash
+    source ./hack/devtools/deploy-shared-env.sh
+    deploy_vpn_for_dedicated_rp
+    ```
+
+1. Deploy AKS by running these commands from the ARO-RP root directory:
+    ```bash
+    source ./hack/devtools/deploy-shared-env.sh
+    deploy_aks_dev
+    ```
+    > __NOTE:__ If the AKS deployment fails with missing RP VNETs, delete the "gateway-production-predeploy" deployment in the gateway resource group, and re-run `make deploy` and then re-run `deploy_aks_dev`.
+
+1. Install Hive into AKS
+    1. Download the VPN config. Please note that this action will _**OVER WRITE**_ the `secrets/vpn-$LOCATION.ovpn` on your local machine. **DO NOT** run `make secrets-update` after doing this, as you will overwrite existing config, until such time as you have run `make secrets` to get the config restored.
+        ```bash
+        vpn_configuration
+        ```
+
+    1. Connect to the Dev VPN in a new terminal:
+        ```bash
+        sudo openvpn secrets/vpn-$LOCATION.ovpn
+        ```
+
+    1. Now that your machine is able access the AKS cluster, you can deploy Hive:
+        ```bash
+        make aks.kubeconfig
+        ./hack/hive-generate-config.sh
+        KUBECONFIG=$(pwd)/aks.kubeconfig ./hack/hive-dev-install.sh
+        ```
 
 1. Mirror the OpenShift images to your new ACR
     <!-- TODO (bv) allow mirroring through a pipeline would be faster and a nice to have -->
@@ -56,6 +87,10 @@
         > The `latest` argument will take the InstallStream from `pkg/util/version/const.go` and mirror that version
         ```bash
         go run -tags aro ./cmd/aro mirror latest
+        ```
+        If you are going to test or work with multi-version installs, then you should mirror any additional versions as well, for example for 4.11.21 it would be
+        ```bash
+        go run -tags aro ./cmd/aro mirror 4.11.21
         ```
 
     1. Push the ARO and Fluentbit images to your ACR
