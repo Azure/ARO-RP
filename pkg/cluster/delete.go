@@ -196,7 +196,7 @@ func (m *manager) deleteResources(ctx context.Context) error {
 
 			case "microsoft.network/privatednszones":
 				m.log.Printf("deleting private DNS nested resources of %s", *resource.ID)
-				err = utilnet.DeletePrivateDNSVirtualNetworkLinks(ctx, m.virtualNetworkLinks, *resource.ID)
+				err = utilnet.DeletePrivateDNSVNetLinks(ctx, m.virtualNetworkLinks, *resource.ID)
 				if err != nil {
 					return err
 				}

@@ -12,13 +12,18 @@ import (
 
 	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	"github.com/Azure/go-autorest/autorest/azure"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	v1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
-	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
+	"github.com/Azure/ARO-RP/pkg/util/ready"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 // Listen returns a listener with its send and receive buffer sizes set, such
@@ -85,36 +90,100 @@ func setBuffers(rc syscall.RawConn, sz int) error {
 	return err
 }
 
-func managedDomainSuffixes() []string {
-	return []string{
-		publicCloudManagedDomainSuffix,
-		govCloudManagedDomainSuffix,
-	}
+type PrivateZoneRemovalConfig struct {
+	Log                *logrus.Entry
+	PrivateZonesClient privatedns.PrivateZonesClient
+	Configcli          configclient.Interface
+	Mcocli             mcoclient.Interface
+	Kubernetescli      kubernetes.Interface
+	VNetLinksClient    privatedns.VirtualNetworkLinksClient
+	ResourceGroupID    string
 }
 
-func IsManagedDomain(domain string) bool {
-	suffixes := managedDomainSuffixes()
-	for _, suffix := range suffixes {
-		if strings.HasSuffix(domain, suffix) {
-			return true
+func RemovePrivateDNSZone(ctx context.Context, config PrivateZoneRemovalConfig) error {
+	if config.PrivateZonesClient == nil {
+		return errors.New("privateZonesClient is nil")
+	}
+
+	resourceGroup := stringutils.LastTokenByte(config.ResourceGroupID, '/')
+	privateZones, err := config.PrivateZonesClient.ListByResourceGroup(ctx, resourceGroup, nil)
+	if err != nil {
+		config.Log.Print(err)
+		return nil
+	}
+
+	if config.Configcli == nil {
+		return errors.New("configcli is nil")
+	}
+
+	if len(privateZones) == 0 {
+		// fix up any clusters that we already upgraded
+		if err := UpdateDNSes(ctx, config.Configcli.ConfigV1().DNSes(), config.ResourceGroupID); err != nil {
+			config.Log.Print(err)
 		}
+		return nil
 	}
-	return false
+
+	if config.Mcocli == nil {
+		return errors.New("mcocli is nil")
+	}
+
+	if config.Kubernetescli == nil {
+		return errors.New("kubernetescli is nil")
+	}
+
+	mcpLister := config.Mcocli.MachineconfigurationV1().MachineConfigPools()
+	nodeLister := config.Kubernetescli.CoreV1().Nodes()
+	sameNumberOfNodesAndMachines, err := ready.SameNumberOfNodesAndMachines(ctx, mcpLister, nodeLister)
+	if err != nil {
+		config.Log.Print(err)
+		return nil
+	}
+
+	if !sameNumberOfNodesAndMachines {
+		return nil
+	}
+
+	clusterVersionIsLessThan4_4, err := version.ClusterVersionIsLessThan4_4(ctx, config.Configcli)
+	if err != nil {
+		config.Log.Print(err)
+		return nil
+	}
+
+	if clusterVersionIsLessThan4_4 {
+		config.Log.Printf("cluster version < 4.4, not removing private DNS zone")
+		return nil
+	}
+
+	if err = UpdateDNSes(ctx, config.Configcli.ConfigV1().DNSes(), config.ResourceGroupID); err != nil {
+		config.Log.Print(err)
+		return nil
+	}
+
+	if err := RemoveZones(ctx, config.VNetLinksClient, config.PrivateZonesClient, privateZones, resourceGroup); err != nil {
+		config.Log.Print(err)
+		return nil
+	}
+	return nil
 }
 
-func DeletePrivateDNSVirtualNetworkLinks(ctx context.Context, virtualNetworkLinksClient privatedns.VirtualNetworkLinksClient, resourceID string) error {
+func DeletePrivateDNSVNetLinks(ctx context.Context, vNetLinksClient privatedns.VirtualNetworkLinksClient, resourceID string) error {
 	r, err := azure.ParseResourceID(resourceID)
 	if err != nil {
 		return err
 	}
 
-	virtualNetworkLinks, err := virtualNetworkLinksClient.List(ctx, r.ResourceGroup, r.ResourceName, nil)
+	if vNetLinksClient == nil {
+		return errors.New("vNetLinksClient is nil")
+	}
+
+	vNetLinks, err := vNetLinksClient.List(ctx, r.ResourceGroup, r.ResourceName, nil)
 	if err != nil {
 		return err
 	}
 
-	for _, virtualNetworkLink := range virtualNetworkLinks {
-		err = virtualNetworkLinksClient.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, *virtualNetworkLink.Name, "")
+	for _, vNetLink := range vNetLinks {
+		err = vNetLinksClient.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, *vNetLink.Name, "")
 		if err != nil {
 			return err
 		}
@@ -123,34 +192,48 @@ func DeletePrivateDNSVirtualNetworkLinks(ctx context.Context, virtualNetworkLink
 	return nil
 }
 
-func RemoveZones(ctx context.Context, log *logrus.Entry, virtualNetworkLinksClient privatedns.VirtualNetworkLinksClient, privateZonesClient privatedns.PrivateZonesClient, privateZones []mgmtprivatedns.PrivateZone, resourceGroup string) {
+func RemoveZones(ctx context.Context,
+	vNetLinksClient privatedns.VirtualNetworkLinksClient,
+	privateZoneClient privatedns.PrivateZonesClient,
+	privateZones []mgmtprivatedns.PrivateZone,
+	resourceGroup string) error {
 	for _, privateZone := range privateZones {
-		if err := DeletePrivateDNSVirtualNetworkLinks(ctx, virtualNetworkLinksClient, *privateZone.ID); err != nil {
-			log.Print(err)
-			return
+		if err := DeletePrivateDNSVNetLinks(ctx, vNetLinksClient, *privateZone.ID); err != nil {
+			return err
 		}
 
 		r, err := azure.ParseResourceID(*privateZone.ID)
 		if err != nil {
-			log.Print(err)
-			return
+			return err
 		}
 
-		if err = privateZonesClient.DeleteAndWait(ctx, resourceGroup, r.ResourceName, ""); err != nil {
-			log.Print(err)
-			return
+		if privateZoneClient == nil {
+			return errors.New("privateZoneClient is nil")
+		}
+
+		if err := privateZoneClient.DeleteAndWait(ctx, resourceGroup, r.ResourceName, ""); err != nil {
+			return err
 		}
 	}
+	return nil
 }
 
-func UpdateDNSs(ctx context.Context, dnsInterface v1.DNSInterface, resourceGroupID string) error {
-	fn := updateClusterDNSFn(ctx, dnsInterface, resourceGroupID)
+func UpdateDNSes(ctx context.Context, dnsI DNSIClient, resourceGroupID string) error {
+	fn := updateClusterDNSFn(ctx, dnsI, resourceGroupID)
 	return retry.RetryOnConflict(retry.DefaultRetry, fn)
 }
 
-func updateClusterDNSFn(ctx context.Context, dnsInterface v1.DNSInterface, resourceGroupID string) func() error {
+type DNSIClient interface {
+	v1.DNSInterface
+}
+
+func updateClusterDNSFn(ctx context.Context, dnsClient DNSIClient, resourceGroupID string) func() error {
 	return func() error {
-		dns, err := dnsInterface.Get(ctx, "cluster", metav1.GetOptions{})
+		if dnsClient == nil {
+			return errors.New("dnsClient interface is nil")
+		}
+
+		dns, err := dnsClient.Get(ctx, "cluster", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -164,19 +247,7 @@ func updateClusterDNSFn(ctx context.Context, dnsInterface v1.DNSInterface, resou
 
 		dns.Spec.PrivateZone = nil
 
-		_, err = dnsInterface.Update(ctx, dns, metav1.UpdateOptions{})
+		_, err = dnsClient.Update(ctx, dns, metav1.UpdateOptions{})
 		return err
 	}
-}
-
-func McpContainsARODNSConfig(mcp mcv1.MachineConfigPool) bool {
-	for _, source := range mcp.Status.Configuration.Source {
-		mcpPrefix := "99-"
-		mcpSuffix := "-aro-dns"
-
-		if source.Name == mcpPrefix+mcp.Name+mcpSuffix {
-			return true
-		}
-	}
-	return false
 }

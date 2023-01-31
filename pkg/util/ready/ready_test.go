@@ -16,6 +16,8 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
+
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestNodeIsReady(t *testing.T) {
@@ -649,4 +651,340 @@ func TestCheckPodsAreReadyError(t *testing.T) {
 	if err == nil {
 		t.Fatalf("check pod error is: %v", err)
 	}
+}
+
+func TestTotalMachinesInTheMCPs(t *testing.T) {
+	mcpPrefix := "99-"
+	mcpSuffix := "-aro-dns"
+
+	type testCase struct {
+		name               string
+		machineConfigPools []mcv1.MachineConfigPool
+		want               int
+		wantErr            string
+	}
+	testCases := []testCase{
+		{
+			name: "totalMachinesInTheMCPs returns ARO DNS config not found error",
+			want: 0,
+			machineConfigPools: []mcv1.MachineConfigPool{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "mcp_name",
+					},
+					Status: mcv1.MachineConfigPoolStatus{
+						ObservedGeneration: 0,
+						Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+							Source: []corev1.ObjectReference{{Name: "non matching name"}},
+						},
+					},
+				},
+			},
+			wantErr: "ARO DNS config not found in MCP mcp_name",
+		},
+		{
+			name:    "totalMachinesInTheMCPs returns MCP is not ready error",
+			want:    0,
+			wantErr: "MCP mcp_name not ready",
+			machineConfigPools: []mcv1.MachineConfigPool{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "mcp_name",
+						Generation: 1,
+					},
+					Status: mcv1.MachineConfigPoolStatus{
+						MachineCount:        1,
+						UpdatedMachineCount: 1,
+						ReadyMachineCount:   0,
+						ObservedGeneration:  1,
+						Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+							Source: []corev1.ObjectReference{{Name: mcpPrefix + "mcp_name" + mcpSuffix}},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "totalMachinesInTheMCPs returns 1",
+			want: 1,
+			machineConfigPools: []mcv1.MachineConfigPool{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "mcp_name",
+						Generation: 1,
+					},
+					Status: mcv1.MachineConfigPoolStatus{
+						MachineCount:        1,
+						UpdatedMachineCount: 1,
+						ReadyMachineCount:   1,
+						ObservedGeneration:  1,
+						Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+							Source: []corev1.ObjectReference{
+								{
+									Name: mcpPrefix + "mcp_name" + mcpSuffix,
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: "",
+		},
+		{
+			name:               "totalMachinesInTheMCPs returns 0 and no error when there are no machine config pools",
+			want:               0,
+			machineConfigPools: nil,
+			wantErr:            "",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := TotalMachinesInTheMCPs(tc.machineConfigPools)
+			utilerror.AssertErrorMessage(t, err, tc.wantErr)
+
+			if got != tc.want {
+				t.Fatalf("expected %v, but got %v", tc.want, got)
+			}
+		})
+	}
+}
+
+func TestMcpContainsARODNSConfig(t *testing.T) {
+	mcpPrefix := "99-"
+	mcpSuffix := "-aro-dns"
+
+	type testCase struct {
+		name string
+		mcp  mcv1.MachineConfigPool
+		want bool
+	}
+
+	testcases := []testCase{
+		{
+			name: "Mcp contains ARO DNS config",
+			mcp: mcv1.MachineConfigPool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mcp_name",
+				},
+				Status: mcv1.MachineConfigPoolStatus{
+					ObservedGeneration: 0,
+					Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+						Source: []corev1.ObjectReference{
+							{
+								Name: mcpPrefix + "mcp_name" + mcpSuffix,
+							},
+						},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "Mcp does not contain ARO DNS config due to wrong source name",
+			mcp: mcv1.MachineConfigPool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mcp_name",
+				},
+				Status: mcv1.MachineConfigPoolStatus{
+					ObservedGeneration: 0,
+					Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+						Source: []corev1.ObjectReference{
+							{
+								Name: "non matching name",
+							},
+						},
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "Mcp does not contain ARO DNS config due to empty status",
+			mcp: mcv1.MachineConfigPool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mcp_name",
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := MCPContainsARODNSConfig(tc.mcp)
+			if got != tc.want {
+				t.Fatalf("expected %v, but got %v", tc.want, got)
+			}
+		})
+	}
+}
+
+type fakeMcpLister struct {
+	expected    *mcv1.MachineConfigPoolList
+	expectedErr error
+}
+
+func (m *fakeMcpLister) List(ctx context.Context, opts metav1.ListOptions) (*mcv1.MachineConfigPoolList, error) {
+	return m.expected, m.expectedErr
+}
+
+type fakeNodeLister struct {
+	expected    *corev1.NodeList
+	expectedErr error
+}
+
+func (m *fakeNodeLister) List(ctx context.Context, opts metav1.ListOptions) (*corev1.NodeList, error) {
+	return m.expected, m.expectedErr
+}
+
+func TestSameNumberOfNodesAndMachines(t *testing.T) {
+	t.Run("should return nil mcpLister error", func(t *testing.T) {
+		got, err := SameNumberOfNodesAndMachines(context.Background(), nil, nil)
+		wantErr := "mcpLister is nil"
+
+		if got != false {
+			t.Fatalf("got %v, but wanted %v", got, false)
+		}
+		utilerror.AssertErrorMessage(t, err, wantErr)
+	})
+	t.Run("should return nil nodeLister error", func(t *testing.T) {
+		mcpLister := &fakeMcpLister{}
+		got, err := SameNumberOfNodesAndMachines(context.Background(), mcpLister, nil)
+		wantErr := "nodeLister is nil"
+
+		if got != false {
+			t.Fatalf("got %v, but wanted %v", got, false)
+		}
+		utilerror.AssertErrorMessage(t, err, wantErr)
+	})
+
+	t.Run("should propagate error from mcpLister.List()", func(t *testing.T) {
+		expectedErr := "some_error"
+		mcpLister := &fakeMcpLister{expectedErr: errors.New(expectedErr)}
+		nodeLister := &fakeNodeLister{}
+
+		got, err := SameNumberOfNodesAndMachines(context.Background(), mcpLister, nodeLister)
+		if got != false {
+			t.Fatalf("got %v, but wanted %v", got, false)
+		}
+		utilerror.AssertErrorMessage(t, err, expectedErr)
+	})
+	t.Run("should propagate error from TotalMachinesInTheMCPs()", func(t *testing.T) {
+		expectedErr := "ARO DNS config not found in MCP mcp_name"
+		badMachineConfigPools := []mcv1.MachineConfigPool{
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "mcp_name"},
+				Status: mcv1.MachineConfigPoolStatus{
+					ObservedGeneration: 0,
+					Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+						Source: []corev1.ObjectReference{{Name: "non matching name"}},
+					},
+				},
+			},
+		}
+		machineConfigPoolList := &mcv1.MachineConfigPoolList{Items: badMachineConfigPools}
+		mcpLister := &fakeMcpLister{expected: machineConfigPoolList}
+		nodeLister := &fakeNodeLister{}
+
+		got, err := SameNumberOfNodesAndMachines(context.Background(), mcpLister, nodeLister)
+		if got != false {
+			t.Fatalf("got %v, but wanted %v", got, false)
+		}
+		utilerror.AssertErrorMessage(t, err, expectedErr)
+	})
+
+	t.Run("should propagate error from nodeLister", func(t *testing.T) {
+		expectedErr := "some_error"
+
+		machineConfigPools := []mcv1.MachineConfigPool{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "mcp_name",
+					Generation: 1,
+				},
+				Status: mcv1.MachineConfigPoolStatus{
+					MachineCount:        1,
+					UpdatedMachineCount: 1,
+					ReadyMachineCount:   1,
+					ObservedGeneration:  1,
+					Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+						Source: []corev1.ObjectReference{{Name: "99-" + "mcp_name" + "-aro-dns"}},
+					},
+				},
+			},
+		}
+		machineConfigPoolList := &mcv1.MachineConfigPoolList{Items: machineConfigPools}
+		mcpLister := &fakeMcpLister{expected: machineConfigPoolList}
+		nodeLister := &fakeNodeLister{expectedErr: errors.New(expectedErr)}
+
+		got, err := SameNumberOfNodesAndMachines(context.Background(), mcpLister, nodeLister)
+		if got != false {
+			t.Fatalf("got %v, but wanted %v", got, false)
+		}
+		utilerror.AssertErrorMessage(t, err, expectedErr)
+	})
+
+	t.Run("should return true and no error", func(t *testing.T) {
+		expectedErr := ""
+		machineConfigPools := []mcv1.MachineConfigPool{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "mcp_name",
+					Generation: 1,
+				},
+				Status: mcv1.MachineConfigPoolStatus{
+					MachineCount:        1,
+					UpdatedMachineCount: 1,
+					ReadyMachineCount:   1,
+					ObservedGeneration:  1,
+					Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+						Source: []corev1.ObjectReference{{Name: "99-" + "mcp_name" + "-aro-dns"}},
+					},
+				},
+			},
+		}
+		machineConfigPoolList := &mcv1.MachineConfigPoolList{Items: machineConfigPools}
+		mcpLister := &fakeMcpLister{expected: machineConfigPoolList}
+
+		nodes := &corev1.NodeList{Items: []corev1.Node{{}}}
+		nodeLister := &fakeNodeLister{expected: nodes}
+
+		got, err := SameNumberOfNodesAndMachines(context.Background(), mcpLister, nodeLister)
+		if got != true {
+			t.Fatalf("got %v, but wanted %v", got, true)
+		}
+		utilerror.AssertErrorMessage(t, err, expectedErr)
+	})
+
+	t.Run("should return false and error due to different number of total machines and nodes", func(t *testing.T) {
+		expectedErr := "cluster has 3 nodes but 1 under MCPs, not removing private DNS zone"
+		machineConfigPools := []mcv1.MachineConfigPool{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "mcp_name",
+					Generation: 1,
+				},
+				Status: mcv1.MachineConfigPoolStatus{
+					MachineCount:        1,
+					UpdatedMachineCount: 1,
+					ReadyMachineCount:   1,
+					ObservedGeneration:  1,
+					Configuration: mcv1.MachineConfigPoolStatusConfiguration{
+						Source: []corev1.ObjectReference{{Name: "99-" + "mcp_name" + "-aro-dns"}},
+					},
+				},
+			},
+		}
+		machineConfigPoolList := &mcv1.MachineConfigPoolList{Items: machineConfigPools}
+		mcpLister := &fakeMcpLister{expected: machineConfigPoolList}
+
+		nodes := &corev1.NodeList{Items: []corev1.Node{{}, {}, {}}}
+		nodeLister := &fakeNodeLister{expected: nodes}
+
+		got, err := SameNumberOfNodesAndMachines(context.Background(), mcpLister, nodeLister)
+		if got != false {
+			t.Fatalf("got %v, but wanted %v", got, false)
+		}
+		utilerror.AssertErrorMessage(t, err, expectedErr)
+	})
 }

@@ -9,7 +9,7 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func GetClusterVersion(cv *configv1.ClusterVersion) (*Version, error) {
@@ -22,17 +22,16 @@ func GetClusterVersion(cv *configv1.ClusterVersion) (*Version, error) {
 	return nil, errors.New("unknown cluster version")
 }
 
-func ClusterVersionIsGreaterThan4_3(ctx context.Context, configcli configclient.Interface, logEntry *logrus.Entry) bool {
-	v, err := GetClusterVersion(ctx, configcli)
+func ClusterVersionIsLessThan4_4(ctx context.Context, configcli configclient.Interface) (bool, error) {
+	cv, err := configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
 	if err != nil {
-		logEntry.Print(err)
-		return false
+		return false, err
+	}
+	v, err := GetClusterVersion(cv)
+	if err != nil {
+		return false, err
 	}
 
-	if v.Lt(NewVersion(4, 4)) {
-		// 4.3 uses SRV records for etcd
-		logEntry.Printf("cluster version < 4.4, not removing private DNS zone")
-		return false
-	}
-	return true
+	// 4.3 uses SRV records for etcd
+	return v.Lt(NewVersion(4, 4)), nil
 }

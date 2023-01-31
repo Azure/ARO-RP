@@ -5,6 +5,7 @@ package ready
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
@@ -192,4 +193,76 @@ func CheckMachineConfigPoolIsReady(ctx context.Context, cli mcoclientv1.MachineC
 
 		return MachineConfigPoolIsReady(s), nil
 	}
+}
+
+type MCPLister interface {
+	List(ctx context.Context, opts metav1.ListOptions) (*mcv1.MachineConfigPoolList, error)
+}
+
+type NodeLister interface {
+	List(ctx context.Context, opts metav1.ListOptions) (*corev1.NodeList, error)
+}
+
+// SameNumberOfNodesAndMachines returns true if the cluster has the same number of nodes and total machines,
+// and an error if any. Otherwise it returns false and nil.
+func SameNumberOfNodesAndMachines(ctx context.Context, mcpLister MCPLister, nodeLister NodeLister) (bool, error) {
+	if mcpLister == nil {
+		return false, fmt.Errorf("mcpLister is nil")
+	}
+
+	if nodeLister == nil {
+		return false, fmt.Errorf("nodeLister is nil")
+	}
+
+	machineConfigPoolList, err := mcpLister.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	totalMachines, err := TotalMachinesInTheMCPs(machineConfigPoolList.Items)
+	if err != nil {
+		return false, err
+	}
+
+	nodes, err := nodeLister.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	nNodes := len(nodes.Items)
+	if nNodes != totalMachines {
+		return false, fmt.Errorf("cluster has %d nodes but %d under MCPs, not removing private DNS zone", nNodes, totalMachines)
+	}
+
+	return true, nil
+}
+
+// TotalMachinesInTheMCPs returns the total number of machines in the machineConfigPools
+// and an error, if any.
+func TotalMachinesInTheMCPs(machineConfigPools []mcv1.MachineConfigPool) (int, error) {
+	totalMachines := 0
+	for _, mcp := range machineConfigPools {
+		if !MCPContainsARODNSConfig(mcp) {
+			return 0, fmt.Errorf("ARO DNS config not found in MCP %s", mcp.Name)
+		}
+
+		if !MachineConfigPoolIsReady(&mcp) {
+			return 0, fmt.Errorf("MCP %s not ready", mcp.Name)
+		}
+
+		totalMachines += int(mcp.Status.MachineCount)
+	}
+	return totalMachines, nil
+}
+
+func MCPContainsARODNSConfig(mcp mcv1.MachineConfigPool) bool {
+	for _, source := range mcp.Status.Configuration.Source {
+		mcpPrefix := "99-"
+		mcpSuffix := "-aro-dns"
+
+		if source.Name == mcpPrefix+mcp.Name+mcpSuffix {
+			return true
+		}
+	}
+	return false
 }
