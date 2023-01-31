@@ -338,14 +338,14 @@ import_certs_secrets
 
 4. The OpenVPN configuration file needs to be manually updated. To achieve this, edit the `vpn-<region>.ovpn` file and add the `vpn-client` certificate and private key
 
-5. Next, we need to update certificates owned by FP Service Principal. Current configuration in DEV and INT is listed below
+5. Next, we need to update certificates owned by FP Service Principal. Current configuration in DEV and INT is listed below. You can get the `AAD APP ID` from the `secrets/env` file
 
-Variable                 | Certificate Client | Subscription Type  | AAD App Name          | AAD App ID                           | Key Vault Name     |
-| ---                    | ---                | ---                | ---                   | ---                                  | ---                |
-| AZURE_FP_CLIENT_ID     | firstparty         | DEV                | aro-v4-fp-shared      | 1516efbc-0d48-4ade-a68e-a2872137fd79 | v4-eastus-svc      |
-| AZURE_ARM_CLIENT_ID    | arm                | DEV                | aro-v4-arm-shared     | 7c49e1a5-60ea-4353-9875-12bbcbf963b7 | v4-eastus-svc      |
-| AZURE_PORTAL_CLIENT_ID | portal-client      | DEV                | aro-v4-portal-shared  | f7912be2-16d3-4727-a6b7-4042ca854c98 | v4-eastus-svc      |
-| AZURE_FP_CLIENT_ID     | firstparty         | INT                | aro-int-sp            | 71cfb175-ea3a-444e-8c03-b119b2752ce4 | aro-int-eastus-svc |
+Variable                 | Certificate Client | Subscription Type  | AAD App Name | Key Vault Name     |
+| ---                    | ---                | ---                | ---                |  ---                |
+| AZURE_FP_CLIENT_ID     | firstparty         | DEV                | aro-v4-fp-shared-dev      |  v4-eastus-dev-svc      |
+| AZURE_ARM_CLIENT_ID    | arm                | DEV                | aro-v4-arm-shared-dev     |  v4-eastus-dev-svc      |
+| AZURE_PORTAL_CLIENT_ID | portal-client      | DEV                | aro-v4-portal-shared-dev  |  v4-eastus-dev-svc      |
+| AZURE_FP_CLIENT_ID     | firstparty         | INT                | aro-int-sp            |  aro-int-eastus-svc |
 
 
 ```bash
@@ -366,7 +366,7 @@ az ad app credential reset \
    --cert "$(base64 -w0 <secrets/portal-client.crt)" >/dev/null
 ```
 
-5. The RP makes API calls to kubernetes cluster via a proxy VMSS agent. For the agent to get the updated certificates, this vm needs to be redeployed. Proxy VM is currently deployed by the `deploy_env_dev` function in `deploy-shared-env.sh`. It makes use of `env-development.json`
+5. The RP makes API calls to kubernetes cluster via a proxy VMSS agent. For the agent to get the updated certificates, this vm needs to be deleted & redeployed. Proxy VM is currently deployed by the `deploy_env_dev` function in `deploy-shared-env.sh`. It makes use of `env-development.json`
 
 6. Run `[rharosecretsdev|e2earosecrets] make secrets-update` to upload it to your
 storage account so other people on your team can access it via `make secrets`
