@@ -29,7 +29,7 @@ var _ = Describe("AKS cluster present", Pending, func() {
 	//       no need for external configuration option
 	//       the list can be found by looking at deployment
 	//       pipelines and comparing where AKS was not deployed
-	regionswithoutAKS := []string{
+regionsWithoutAKS := []string{
 		"australiacentral",
 		"australiacentral2",
 		"qatarcentral",
