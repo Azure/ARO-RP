@@ -321,7 +321,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	var hiveAKS *kubernetes.Clientset
 	var hiveCM hive.ClusterManager
 
-	if !_env.IsLocalDevelopmentMode() {
+	if _env.IsLocalDevelopmentMode() {
 		liveCfg, err := _env.NewLiveConfigManager(ctx)
 		if err != nil {
 			return nil, err
