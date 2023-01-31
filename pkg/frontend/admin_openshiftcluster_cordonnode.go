@@ -29,6 +29,7 @@ func (f *frontend) postAdminOpenShiftClusterCordonNode(w http.ResponseWriter, r 
 
 func (f *frontend) _postAdminOpenShiftClusterCordonNode(ctx context.Context, r *http.Request, log *logrus.Entry) error {
 	vars := mux.Vars(r)
+	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
 
 	vmName := r.URL.Query().Get("vmName")
 	shouldCordon := strings.EqualFold(r.URL.Query().Get("shouldCordon"), "true")
@@ -42,7 +43,7 @@ func (f *frontend) _postAdminOpenShiftClusterCordonNode(ctx context.Context, r *
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
 	case err != nil:
 		return err
 	}

@@ -41,6 +41,7 @@ func (f *frontend) _listAdminOpenShiftClusterResources(
 
 func (f *frontend) newStreamAzureAction(ctx context.Context, r *http.Request, log *logrus.Entry) (adminactions.AzureActions, error) {
 	vars := mux.Vars(r)
+	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
@@ -48,7 +49,7 @@ func (f *frontend) newStreamAzureAction(ctx context.Context, r *http.Request, lo
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
 			"The Resource '%s/%s' under resource group '%s' was not found.",
-			vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+			resType, resName, resGroupName)
 	case err != nil:
 		return nil, err
 	}

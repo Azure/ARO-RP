@@ -59,12 +59,13 @@ func (f *frontend) _appLensDetectors(ctx context.Context, r *http.Request, log *
 
 func (f *frontend) _createAzureActionsFactory(ctx context.Context, r *http.Request, log *logrus.Entry) (adminactions.AzureActions, error) {
 	vars := mux.Vars(r)
+	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
 
 	resourceID := strings.TrimSuffix(r.URL.Path, "/detectors")
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
 	case err != nil:
 		return nil, err
 	}
